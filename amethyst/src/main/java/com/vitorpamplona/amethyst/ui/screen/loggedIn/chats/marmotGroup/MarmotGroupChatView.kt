@@ -139,11 +139,12 @@ fun MarmotGroupMessageComposer(
                                 onMessageSent()
                             } catch (e: Exception) {
                                 launch(Dispatchers.Main) {
-                                    Toast.makeText(
-                                        context,
-                                        "Failed to send message: ${e.message}",
-                                        Toast.LENGTH_SHORT,
-                                    ).show()
+                                    Toast
+                                        .makeText(
+                                            context,
+                                            "Failed to send message: ${e.message}",
+                                            Toast.LENGTH_SHORT,
+                                        ).show()
                                 }
                             }
                         }

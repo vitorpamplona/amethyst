@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.marmot
 
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
+import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -38,65 +39,70 @@ class MarmotSubscriptionManagerTest {
     private val groupId2 = "c".repeat(64)
 
     @Test
-    fun testSubscribeGroup() {
-        val manager = MarmotSubscriptionManager(userPubKey)
+    fun testSubscribeGroup() =
+        runTest {
+            val manager = MarmotSubscriptionManager(userPubKey)
 
-        manager.subscribeGroup(groupId1)
+            manager.subscribeGroup(groupId1)
 
-        assertTrue(manager.isSubscribed(groupId1))
-        assertEquals(setOf(groupId1), manager.activeGroupIds())
-    }
-
-    @Test
-    fun testSubscribeGroupWithSince() {
-        val manager = MarmotSubscriptionManager(userPubKey)
-        val since = 1700000000L
-
-        manager.subscribeGroup(groupId1, since)
-
-        assertTrue(manager.isSubscribed(groupId1))
-
-        val filters = manager.activeGroupFilters()
-        assertEquals(1, filters.size)
-        assertEquals(since, filters[0].since)
-    }
+            assertTrue(manager.isSubscribed(groupId1))
+            assertEquals(setOf(groupId1), manager.activeGroupIds())
+        }
 
     @Test
-    fun testUnsubscribeGroup() {
-        val manager = MarmotSubscriptionManager(userPubKey)
+    fun testSubscribeGroupWithSince() =
+        runTest {
+            val manager = MarmotSubscriptionManager(userPubKey)
+            val since = 1700000000L
 
-        manager.subscribeGroup(groupId1)
-        manager.unsubscribeGroup(groupId1)
+            manager.subscribeGroup(groupId1, since)
 
-        assertFalse(manager.isSubscribed(groupId1))
-        assertTrue(manager.activeGroupIds().isEmpty())
-    }
+            assertTrue(manager.isSubscribed(groupId1))
 
-    @Test
-    fun testMultipleGroups() {
-        val manager = MarmotSubscriptionManager(userPubKey)
-
-        manager.subscribeGroup(groupId1)
-        manager.subscribeGroup(groupId2)
-
-        assertEquals(setOf(groupId1, groupId2), manager.activeGroupIds())
-
-        val filters = manager.activeGroupFilters()
-        assertEquals(2, filters.size)
-    }
+            val filters = manager.activeGroupFilters()
+            assertEquals(1, filters.size)
+            assertEquals(since, filters[0].since)
+        }
 
     @Test
-    fun testUpdateGroupSince() {
-        val manager = MarmotSubscriptionManager(userPubKey)
-        val newSince = 1700000000L
+    fun testUnsubscribeGroup() =
+        runTest {
+            val manager = MarmotSubscriptionManager(userPubKey)
 
-        manager.subscribeGroup(groupId1)
-        manager.updateGroupSince(groupId1, newSince)
+            manager.subscribeGroup(groupId1)
+            manager.unsubscribeGroup(groupId1)
 
-        val filters = manager.activeGroupFilters()
-        assertEquals(1, filters.size)
-        assertEquals(newSince, filters[0].since)
-    }
+            assertFalse(manager.isSubscribed(groupId1))
+            assertTrue(manager.activeGroupIds().isEmpty())
+        }
+
+    @Test
+    fun testMultipleGroups() =
+        runTest {
+            val manager = MarmotSubscriptionManager(userPubKey)
+
+            manager.subscribeGroup(groupId1)
+            manager.subscribeGroup(groupId2)
+
+            assertEquals(setOf(groupId1, groupId2), manager.activeGroupIds())
+
+            val filters = manager.activeGroupFilters()
+            assertEquals(2, filters.size)
+        }
+
+    @Test
+    fun testUpdateGroupSince() =
+        runTest {
+            val manager = MarmotSubscriptionManager(userPubKey)
+            val newSince = 1700000000L
+
+            manager.subscribeGroup(groupId1)
+            manager.updateGroupSince(groupId1, newSince)
+
+            val filters = manager.activeGroupFilters()
+            assertEquals(1, filters.size)
+            assertEquals(newSince, filters[0].since)
+        }
 
     @Test
     fun testGiftWrapFilter() {
@@ -110,39 +116,42 @@ class MarmotSubscriptionManagerTest {
     }
 
     @Test
-    fun testGiftWrapFilterWithSince() {
-        val manager = MarmotSubscriptionManager(userPubKey)
-        val since = 1700000000L
+    fun testGiftWrapFilterWithSince() =
+        runTest {
+            val manager = MarmotSubscriptionManager(userPubKey)
+            val since = 1700000000L
 
-        manager.updateGiftWrapSince(since)
-        val filter = manager.giftWrapFilter()
+            manager.updateGiftWrapSince(since)
+            val filter = manager.giftWrapFilter()
 
-        assertEquals(since, filter.since)
-    }
-
-    @Test
-    fun testActiveGroupFiltersContainCorrectKind() {
-        val manager = MarmotSubscriptionManager(userPubKey)
-
-        manager.subscribeGroup(groupId1)
-        val filters = manager.activeGroupFilters()
-
-        assertEquals(1, filters.size)
-        assertEquals(listOf(GroupEvent.KIND), filters[0].kinds)
-        assertNotNull(filters[0].tags)
-        assertEquals(listOf(groupId1), filters[0].tags!!["h"])
-    }
+            assertEquals(since, filter.since)
+        }
 
     @Test
-    fun testBuildFiltersIncludesBothTypes() {
-        val manager = MarmotSubscriptionManager(userPubKey)
+    fun testActiveGroupFiltersContainCorrectKind() =
+        runTest {
+            val manager = MarmotSubscriptionManager(userPubKey)
 
-        manager.subscribeGroup(groupId1)
-        val allFilters = manager.buildFilters()
+            manager.subscribeGroup(groupId1)
+            val filters = manager.activeGroupFilters()
 
-        // Should have 1 group filter + 1 gift wrap filter
-        assertEquals(2, allFilters.size)
-    }
+            assertEquals(1, filters.size)
+            assertEquals(listOf(GroupEvent.KIND), filters[0].kinds)
+            assertNotNull(filters[0].tags)
+            assertEquals(listOf(groupId1), filters[0].tags!!["h"])
+        }
+
+    @Test
+    fun testBuildFiltersIncludesBothTypes() =
+        runTest {
+            val manager = MarmotSubscriptionManager(userPubKey)
+
+            manager.subscribeGroup(groupId1)
+            val allFilters = manager.buildFilters()
+
+            // Should have 1 group filter + 1 gift wrap filter
+            assertEquals(2, allFilters.size)
+        }
 
     @Test
     fun testBuildFiltersWithNoGroupsHasGiftWrapOnly() {
@@ -164,31 +173,33 @@ class MarmotSubscriptionManagerTest {
     }
 
     @Test
-    fun testSyncWithGroupManager() {
-        val manager = MarmotSubscriptionManager(userPubKey)
+    fun testSyncWithGroupManager() =
+        runTest {
+            val manager = MarmotSubscriptionManager(userPubKey)
 
-        // Start with one group
-        manager.subscribeGroup(groupId1)
+            // Start with one group
+            manager.subscribeGroup(groupId1)
 
-        // Sync with group manager that has different groups
-        manager.syncWithGroupManager(setOf(groupId2))
+            // Sync with group manager that has different groups
+            manager.syncWithGroupManager(setOf(groupId2))
 
-        // groupId1 should be removed, groupId2 added
-        assertFalse(manager.isSubscribed(groupId1))
-        assertTrue(manager.isSubscribed(groupId2))
-    }
+            // groupId1 should be removed, groupId2 added
+            assertFalse(manager.isSubscribed(groupId1))
+            assertTrue(manager.isSubscribed(groupId2))
+        }
 
     @Test
-    fun testClear() {
-        val manager = MarmotSubscriptionManager(userPubKey)
+    fun testClear() =
+        runTest {
+            val manager = MarmotSubscriptionManager(userPubKey)
 
-        manager.subscribeGroup(groupId1)
-        manager.subscribeGroup(groupId2)
-        manager.updateGiftWrapSince(1700000000L)
+            manager.subscribeGroup(groupId1)
+            manager.subscribeGroup(groupId2)
+            manager.updateGiftWrapSince(1700000000L)
 
-        manager.clear()
+            manager.clear()
 
-        assertTrue(manager.activeGroupIds().isEmpty())
-        assertNull(manager.giftWrapFilter().since)
-    }
+            assertTrue(manager.activeGroupIds().isEmpty())
+            assertNull(manager.giftWrapFilter().since)
+        }
 }

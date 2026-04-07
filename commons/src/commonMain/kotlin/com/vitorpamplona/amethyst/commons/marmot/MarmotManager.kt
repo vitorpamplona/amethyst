@@ -121,6 +121,14 @@ class MarmotManager(
         welcomeEvent: WelcomeEvent,
         nostrGroupId: HexKey,
     ): WelcomeResult {
+        // Validate that the provided nostrGroupId matches the WelcomeEvent's h-tag if present
+        val eventGroupId = welcomeEvent.nostrGroupId()
+        if (eventGroupId != null && eventGroupId != nostrGroupId) {
+            return WelcomeResult.Error(
+                "nostrGroupId mismatch: expected $nostrGroupId but WelcomeEvent has $eventGroupId",
+            )
+        }
+
         val result = inboundProcessor.processWelcome(welcomeEvent, nostrGroupId)
 
         if (result is WelcomeResult.Joined) {
@@ -153,6 +161,20 @@ class MarmotManager(
         keyPackageEventId: HexKey,
         relays: List<NormalizedRelayUrl>,
     ): Pair<OutboundGroupEvent, WelcomeDelivery?> {
+        // Verify that the KeyPackage credential matches the expected member pubkey
+        val kp =
+            com.vitorpamplona.quartz.marmot.mls.messages.MlsKeyPackage.decodeTls(
+                com.vitorpamplona.quartz.marmot.mls.codec
+                    .TlsReader(keyPackageBytes),
+            )
+        val credential = kp.leafNode.credential
+        require(credential is Credential.Basic) {
+            "KeyPackage must use BasicCredential"
+        }
+        require(credential.identity.toHexKey() == memberPubKey) {
+            "KeyPackage credential identity does not match memberPubKey"
+        }
+
         val commitResult = groupManager.addMember(nostrGroupId, keyPackageBytes)
         val commitEvent = outboundProcessor.buildCommitEvent(nostrGroupId, commitResult.commitBytes)
 

@@ -47,6 +47,7 @@ class MarmotGroupChatroom(
     var relays = MutableStateFlow<List<String>>(emptyList())
     var memberCount = MutableStateFlow(0)
     var newestMessage: Note? = null
+    val unreadCount = MutableStateFlow(0)
 
     private var changesFlow: WeakReference<MutableSharedFlow<ListChange<Note>>> = WeakReference(null)
 
@@ -73,6 +74,7 @@ class MarmotGroupChatroom(
                 newestMessage = msg
             }
 
+            unreadCount.value += 1
             changesFlow.get()?.tryEmit(ListChange.Addition(msg))
             return true
         }
@@ -93,6 +95,10 @@ class MarmotGroupChatroom(
             return true
         }
         return false
+    }
+
+    fun markAsRead() {
+        unreadCount.value = 0
     }
 
     fun pruneMessagesToTheLatestOnly(): Set<Note> {

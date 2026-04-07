@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup
 
+import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -57,7 +58,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import android.widget.Toast
 import com.vitorpamplona.amethyst.commons.marmot.GroupMemberInfo
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -85,8 +85,10 @@ fun MarmotGroupInfoScreen(
     val groupRelays by chatroom.relays.collectAsStateWithLifecycle()
     var members by remember { mutableStateOf(emptyList<GroupMemberInfo>()) }
     var showLeaveDialog by remember { mutableStateOf(false) }
+    var isLeaving by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val myPubkey = accountViewModel.account.signer.pubKey
+    val context = LocalContext.current
 
     LaunchedEffect(nostrGroupId) {
         members = accountViewModel.marmotGroupMembers(nostrGroupId)
@@ -224,10 +226,24 @@ fun MarmotGroupInfoScreen(
             groupName = displayName ?: "this group",
             onConfirm = {
                 showLeaveDialog = false
+                isLeaving = true
                 scope.launch(Dispatchers.IO) {
-                    accountViewModel.leaveMarmotGroup(nostrGroupId)
+                    try {
+                        accountViewModel.leaveMarmotGroup(nostrGroupId)
+                        accountViewModel.account.marmotGroupList.removeGroup(nostrGroupId)
+                        nav.nav(Route.MarmotGroupList)
+                    } catch (e: Exception) {
+                        isLeaving = false
+                        launch(Dispatchers.Main) {
+                            Toast
+                                .makeText(
+                                    context,
+                                    "Failed to leave group: ${e.message}",
+                                    Toast.LENGTH_LONG,
+                                ).show()
+                        }
+                    }
                 }
-                nav.nav(Route.MarmotGroupList)
             },
             onDismiss = { showLeaveDialog = false },
         )

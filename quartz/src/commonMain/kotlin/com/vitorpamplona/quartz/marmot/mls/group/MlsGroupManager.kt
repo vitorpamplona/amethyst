@@ -25,8 +25,10 @@ import com.vitorpamplona.quartz.marmot.mls.codec.TlsWriter
 import com.vitorpamplona.quartz.marmot.mls.crypto.MlsCryptoProvider
 import com.vitorpamplona.quartz.marmot.mls.messages.CommitResult
 import com.vitorpamplona.quartz.marmot.mls.messages.KeyPackageBundle
+import com.vitorpamplona.quartz.marmot.mls.schedule.KeySchedule
 import com.vitorpamplona.quartz.marmot.mls.schedule.SecretTree
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -401,6 +403,33 @@ class MlsGroupManager(
             "group-event".encodeToByteArray(),
             32,
         )
+
+    /**
+     * Return exporter secrets from retained epochs for a group.
+     *
+     * Used by the inbound processor to attempt outer decryption with
+     * previous epoch keys when the current epoch's key fails (e.g.,
+     * after a commit has advanced the epoch but late-arriving messages
+     * still use the old exporter key).
+     *
+     * @param nostrGroupId hex-encoded Nostr group ID
+     * @return list of retained exporter secrets (most recent first), each
+     *         derived via MLS-Exporter("marmot", "group-event", 32)
+     */
+    fun retainedExporterSecrets(nostrGroupId: HexKey): List<ByteArray> {
+        val retained = retainedEpochs[nostrGroupId] ?: return emptyList()
+        return retained
+            .filter { it.exporterSecret.isNotEmpty() }
+            .sortedByDescending { it.epoch }
+            .map { epochSecrets ->
+                KeySchedule.mlsExporter(
+                    epochSecrets.exporterSecret,
+                    "marmot",
+                    "group-event".encodeToByteArray(),
+                    32,
+                )
+            }
+    }
 
     // --- Private Helpers ---
 

@@ -77,11 +77,12 @@ fun CreateGroupScreen(
                         } catch (e: Exception) {
                             isCreating = false
                             launch(Dispatchers.Main) {
-                                Toast.makeText(
-                                    context,
-                                    "Failed to create group: ${e.message}",
-                                    Toast.LENGTH_LONG,
-                                ).show()
+                                Toast
+                                    .makeText(
+                                        context,
+                                        "Failed to create group: ${e.message}",
+                                        Toast.LENGTH_LONG,
+                                    ).show()
                             }
                         }
                     }

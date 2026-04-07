@@ -31,6 +31,11 @@ class TlsReader(
     private var position: Int = 0,
     private val limit: Int = data.size,
 ) {
+    companion object {
+        /** Maximum allowed size for a single opaque field (1 MB) */
+        const val MAX_OPAQUE_SIZE = 1_048_576
+    }
+
     val remaining: Int get() = limit - position
 
     val hasRemaining: Boolean get() = position < limit
@@ -87,12 +92,18 @@ class TlsReader(
     /** Read a variable-length opaque with 2-byte length prefix */
     fun readOpaque2(): ByteArray {
         val length = readUint16()
+        require(length <= MAX_OPAQUE_SIZE) {
+            "Opaque2 length $length exceeds maximum allowed size $MAX_OPAQUE_SIZE"
+        }
         return readBytes(length)
     }
 
     /** Read a variable-length opaque with 4-byte length prefix */
     fun readOpaque4(): ByteArray {
         val length = readUint32().toInt()
+        require(length <= MAX_OPAQUE_SIZE) {
+            "Opaque4 length $length exceeds maximum allowed size $MAX_OPAQUE_SIZE"
+        }
         return readBytes(length)
     }
 
@@ -130,6 +141,9 @@ class TlsReader(
     /** Read a variable-length opaque with QUIC-style VarInt length prefix */
     fun readOpaqueVarInt(): ByteArray {
         val length = readVarInt()
+        require(length <= MAX_OPAQUE_SIZE) {
+            "OpaqueVarInt length $length exceeds maximum allowed size $MAX_OPAQUE_SIZE"
+        }
         return readBytes(length)
     }
 

@@ -153,6 +153,7 @@ class MlsGroup private constructor(
             senderDataSecret = epochSecrets.senderDataSecret,
             encryptionSecret = epochSecrets.encryptionSecret,
             leafCount = tree.leafCount,
+            exporterSecret = epochSecrets.exporterSecret,
         )
 
     val memberCount: Int
