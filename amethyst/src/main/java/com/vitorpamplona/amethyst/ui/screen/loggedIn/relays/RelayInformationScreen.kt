@@ -154,6 +154,7 @@ import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.nns.NNSEvent
+import com.vitorpamplona.quartz.experimental.notifications.wake.WakeUpEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -688,6 +689,7 @@ fun kindDisplayName(kind: Int): Int =
         VideoShortEvent.KIND -> R.string.kind_shorts
         VoiceEvent.KIND -> R.string.kind_voice_msg
         VoiceReplyEvent.KIND -> R.string.kind_voice_reply
+        WakeUpEvent.KIND -> R.string.kind_wake
         WebBookmarkEvent.KIND -> R.string.kind_web_bookmark
         WikiNoteEvent.KIND -> R.string.kind_wiki
         else -> -1

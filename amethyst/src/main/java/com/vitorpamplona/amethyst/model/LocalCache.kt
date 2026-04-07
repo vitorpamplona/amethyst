@@ -61,6 +61,7 @@ import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.nns.NNSEvent
+import com.vitorpamplona.quartz.experimental.notifications.wake.WakeUpEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
@@ -2694,6 +2695,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is VideoShortEvent -> consumeRegularEvent(event, relay, wasVerified)
                 is VoiceEvent -> consumeRegularEvent(event, relay, wasVerified)
                 is VoiceReplyEvent -> consumeRegularEvent(event, relay, wasVerified)
+                is WakeUpEvent -> consumeRegularEvent(event, relay, wasVerified)
                 is WebBookmarkEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is WikiNoteEvent -> consume(event, relay, wasVerified)
                 is PaymentTargetsEvent -> consume(event, relay, wasVerified)
