@@ -118,8 +118,13 @@ class MlsGroupManager(
                                 .map { RetainedEpochSecrets.decodeTls(TlsReader(it)) }
                                 .toMutableList()
                     }
-                } catch (_: Exception) {
-                    // Corrupted state — remove it so it doesn't block future joins
+                } catch (e: Exception) {
+                    // Corrupted state — log and remove it so it doesn't block future joins
+                    Log.e(
+                        "MlsGroupManager",
+                        "Corrupted state for group $nostrGroupId, deleting: ${e.message}",
+                        e,
+                    )
                     store.delete(nostrGroupId)
                 }
             }

@@ -31,6 +31,8 @@ import com.vitorpamplona.quartz.marmot.mls.tree.LeafNode
 import com.vitorpamplona.quartz.marmot.mls.tree.LeafNodeSource
 import com.vitorpamplona.quartz.marmot.mls.tree.Lifetime
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * Manages KeyPackage creation and rotation lifecycle (MIP-00).
@@ -50,6 +52,7 @@ import com.vitorpamplona.quartz.utils.TimeUtils
  * KeyPackage slots, rotating consumed ones promptly.
  */
 class KeyPackageRotationManager {
+    private val mutex = Mutex()
     private val activeBundles = mutableMapOf<String, KeyPackageBundle>()
     private val pendingRotations = mutableSetOf<String>()
 

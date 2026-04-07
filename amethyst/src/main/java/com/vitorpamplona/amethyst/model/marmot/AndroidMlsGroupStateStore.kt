@@ -54,7 +54,7 @@ class AndroidMlsGroupStateStore(
     ) = withContext(Dispatchers.IO) {
         val file = stateFile(nostrGroupId)
         file.parentFile?.mkdirs()
-        file.writeBytes(encryption.encrypt(state))
+        atomicWrite(file, encryption.encrypt(state))
     }
 
     override suspend fun load(nostrGroupId: String): ByteArray? =
@@ -112,7 +112,7 @@ class AndroidMlsGroupStateStore(
             offset += len
         }
 
-        file.writeBytes(encryption.encrypt(buffer))
+        atomicWrite(file, encryption.encrypt(buffer))
     }
 
     override suspend fun loadRetainedEpochs(nostrGroupId: String): List<ByteArray> =
@@ -144,4 +144,21 @@ class AndroidMlsGroupStateStore(
             }
             result
         }
+
+    /**
+     * Write data atomically: write to a temp file first, then rename.
+     * This avoids corrupted state if the app crashes mid-write.
+     */
+    private fun atomicWrite(
+        target: File,
+        data: ByteArray,
+    ) {
+        val tempFile = File(target.parentFile, "${target.name}.tmp")
+        tempFile.writeBytes(data)
+        if (!tempFile.renameTo(target)) {
+            // Fallback: if rename fails (e.g., cross-filesystem), copy and delete
+            tempFile.copyTo(target, overwrite = true)
+            tempFile.delete()
+        }
+    }
 }

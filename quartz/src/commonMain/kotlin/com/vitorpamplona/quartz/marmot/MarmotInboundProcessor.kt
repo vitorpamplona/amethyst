@@ -171,8 +171,7 @@ class MarmotInboundProcessor(
         val result =
             try {
                 // Step 1: Outer ChaCha20-Poly1305 decryption
-                val exporterKey = groupManager.exporterSecret(groupId)
-                val mlsBytes = GroupEventEncryption.decrypt(groupEvent.encryptedContent(), exporterKey)
+                val mlsBytes = decryptOuterLayer(groupId, groupEvent.encryptedContent())
 
                 // Step 2: Parse the MLS message
                 val mlsMessage = MlsMessage.decodeTls(TlsReader(mlsBytes))
@@ -362,8 +361,7 @@ class MarmotInboundProcessor(
         commitEvent: GroupEvent,
     ): GroupEventResult =
         try {
-            val exporterKey = groupManager.exporterSecret(groupId)
-            val mlsBytes = GroupEventEncryption.decrypt(commitEvent.encryptedContent(), exporterKey)
+            val mlsBytes = decryptOuterLayer(groupId, commitEvent.encryptedContent())
             val mlsMessage = MlsMessage.decodeTls(TlsReader(mlsBytes))
 
             when (mlsMessage.wireFormat) {
@@ -400,6 +398,41 @@ class MarmotInboundProcessor(
         } catch (e: Exception) {
             GroupEventResult.Error(groupId, "Failed to apply commit: ${e.message}", e)
         }
+
+    /**
+     * Decrypt the outer ChaCha20-Poly1305 layer, trying the current epoch's
+     * exporter key first and falling back to retained epoch exporter keys.
+     *
+     * After a commit advances the epoch, late-arriving messages encrypted
+     * with the previous epoch's exporter key would fail without this fallback.
+     */
+    private fun decryptOuterLayer(
+        groupId: HexKey,
+        encryptedContent: String,
+    ): ByteArray {
+        // Try current epoch key first
+        try {
+            val exporterKey = groupManager.exporterSecret(groupId)
+            return GroupEventEncryption.decrypt(encryptedContent, exporterKey)
+        } catch (_: Exception) {
+            // Current epoch key failed — try retained epoch keys
+        }
+
+        // Try retained epoch exporter keys (most recent first)
+        val retainedKeys = groupManager.retainedExporterSecrets(groupId)
+        for (retainedKey in retainedKeys) {
+            try {
+                return GroupEventEncryption.decrypt(encryptedContent, retainedKey)
+            } catch (_: Exception) {
+                // This retained key didn't work — try the next one
+            }
+        }
+
+        // All keys exhausted — throw to let callers produce an error result
+        throw IllegalStateException(
+            "Outer decryption failed with current and ${retainedKeys.size} retained epoch key(s)",
+        )
+    }
 
     private fun hexToBytes(hex: HexKey?): ByteArray {
         if (hex == null) return ByteArray(0)
