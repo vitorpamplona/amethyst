@@ -875,6 +875,7 @@
     <string name="settings">Ustawienia</string>
     <string name="account_settings">Ustawienia konta</string>
     <string name="app_settings">Ustawienia aplikacji</string>
+    <string name="danger_zone">Niebezpieczna strefa</string>
     <string name="connectivity_type_always">Zawsze</string>
     <string name="connectivity_type_wifi_only">Tylko WiFi</string>
     <string name="connectivity_type_unmetered_wifi_only">Nielimitowany Wi-Fi</string>
@@ -1291,6 +1292,7 @@
     <string name="inbox_relays_not_found_examples">Dobre opcje to:\n - nos.lol\n - nostr.mom\n - nostr.bitcoiner.social</string>
     <string name="dm_upload">Wgrywanie DM</string>
     <string name="relay_settings">Ustawienia Transmiterów</string>
+    <string name="relay_reorder">Zmień kolejność transmiterów</string>
     <string name="public_home_section">Publiczne transmitery domowe</string>
     <string name="public_home_section_explainer_profile">Użytkownik publikuje swoje wpisy na tych transmiterach</string>
     <string name="public_home_section_explainer">Ten typ transmitera przechowuje całą zawartość. Amethyst będzie wysyłać Twoje posty tutaj, a inni będą korzystać z tych transmiterów, aby znaleźć Twoje treści. Wstaw od 1 do 3 transmiterów. Mogą to być transmitery prywatne, płatne lub publiczne.</string>
