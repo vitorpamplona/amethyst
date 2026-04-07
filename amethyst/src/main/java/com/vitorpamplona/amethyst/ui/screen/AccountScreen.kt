@@ -43,8 +43,8 @@ import com.vitorpamplona.quartz.utils.Log
 @Composable
 fun AccountScreen(accountSessionManager: AccountSessionManager) {
     // Pauses relay services when the app pauses
-    ManageRelayServices()
     ManageWebOkHttp()
+    ManageRelayServices()
 
     val accountState by accountSessionManager.accountContent.collectAsStateWithLifecycle()
 
