@@ -1480,8 +1480,10 @@ class AccountViewModel(
         val groupRelays =
             metadata
                 ?.relays
-                ?.mapNotNull { com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer.normalizeOrNull(it) }
-                ?.toSet()
+                ?.mapNotNull {
+                    com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+                        .normalizeOrNull(it)
+                }?.toSet()
         return if (!groupRelays.isNullOrEmpty()) groupRelays else account.outboxRelays.flow.value
     }
 

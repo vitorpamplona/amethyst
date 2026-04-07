@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.marmot.mls.messages.CommitResult
 import com.vitorpamplona.quartz.marmot.mls.messages.KeyPackageBundle
 import com.vitorpamplona.quartz.marmot.mls.schedule.KeySchedule
 import com.vitorpamplona.quartz.marmot.mls.schedule.SecretTree
+import com.vitorpamplona.quartz.marmot.mls.tree.Extension
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.sync.Mutex
@@ -363,6 +364,23 @@ class MlsGroupManager(
             val group = requireGroup(nostrGroupId)
             retainEpochSecrets(nostrGroupId, group)
             group.proposeSigningKeyRotation()
+            val result = group.commit()
+            persistGroup(nostrGroupId)
+            result
+        }
+
+    /**
+     * Update group extensions (e.g., MIP-01 metadata) via a GroupContextExtensions proposal.
+     * Creates the proposal, commits it, and persists the new state.
+     */
+    suspend fun updateGroupExtensions(
+        nostrGroupId: HexKey,
+        extensions: List<Extension>,
+    ): CommitResult =
+        mutex.withLock {
+            val group = requireGroup(nostrGroupId)
+            retainEpochSecrets(nostrGroupId, group)
+            group.proposeGroupContextExtensions(extensions)
             val result = group.commit()
             persistGroup(nostrGroupId)
             result
