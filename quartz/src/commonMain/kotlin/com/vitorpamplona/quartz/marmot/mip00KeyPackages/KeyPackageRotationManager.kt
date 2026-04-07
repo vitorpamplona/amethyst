@@ -152,9 +152,10 @@ class KeyPackageRotationManager {
      * Clear a slot from the pending rotation set after a new KeyPackage
      * has been published.
      */
-    fun clearPendingRotation(dTagSlot: String) {
-        pendingRotations.remove(dTagSlot)
-    }
+    suspend fun clearPendingRotation(dTagSlot: String) =
+        mutex.withLock {
+            pendingRotations.remove(dTagSlot)
+        }
 
     /**
      * Check if any slots need rotation.
@@ -174,12 +175,14 @@ class KeyPackageRotationManager {
      * @param dTagSlot the slot to rotate
      * @return the new [KeyPackageBundle] ready for publishing
      */
-    fun rotateSlot(
+    suspend fun rotateSlot(
         identity: ByteArray,
         dTagSlot: String,
     ): KeyPackageBundle {
         val bundle = generateKeyPackage(identity, dTagSlot)
-        pendingRotations.remove(dTagSlot)
+        mutex.withLock {
+            pendingRotations.remove(dTagSlot)
+        }
         return bundle
     }
 

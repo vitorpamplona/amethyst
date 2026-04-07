@@ -305,6 +305,16 @@ class MlsGroup private constructor(
     }
 
     /**
+     * Create a GroupContextExtensions proposal to update the group's extensions.
+     * Used for changing group metadata (name, description, etc.) via MIP-01.
+     */
+    fun proposeGroupContextExtensions(extensions: List<Extension>): Proposal.GroupContextExtensions {
+        val proposal = Proposal.GroupContextExtensions(extensions)
+        pendingProposals.add(PendingProposal(proposal, myLeafIndex))
+        return proposal
+    }
+
+    /**
      * Create a PSK proposal to include a pre-shared key in the next epoch.
      * The PSK must be registered via registerPsk() before committing.
      */

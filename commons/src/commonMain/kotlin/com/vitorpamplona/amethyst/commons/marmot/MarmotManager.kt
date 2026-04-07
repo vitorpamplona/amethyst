@@ -218,6 +218,23 @@ class MarmotManager(
         return outboundEvent
     }
 
+    /**
+     * Update group metadata (name, description, etc.) via a GroupContextExtensions proposal.
+     * Creates a GCE proposal, commits it, and returns the commit event to publish.
+     */
+    suspend fun updateGroupMetadata(
+        nostrGroupId: HexKey,
+        metadata: MarmotGroupData,
+    ): OutboundGroupEvent {
+        val group =
+            groupManager.getGroup(nostrGroupId)
+                ?: throw IllegalStateException("Not a member of group $nostrGroupId")
+        group.proposeGroupContextExtensions(listOf(metadata.toExtension()))
+        val commitResult = group.commit()
+        groupManager.saveGroupState(nostrGroupId)
+        return outboundProcessor.buildCommitEvent(nostrGroupId, commitResult.commitBytes)
+    }
+
     // --- KeyPackage Management ---
 
     /**

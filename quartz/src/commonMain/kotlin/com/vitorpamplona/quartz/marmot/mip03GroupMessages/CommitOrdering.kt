@@ -84,6 +84,11 @@ object CommitOrdering {
     class EpochCommitTracker {
         private val pendingByGroupEpoch = mutableMapOf<GroupEpochKey, MutableList<GroupEvent>>()
 
+        companion object {
+            /** Maximum number of (group, epoch) entries to track before evicting oldest. */
+            const val MAX_TRACKED_EPOCHS = 1000
+        }
+
         /**
          * Adds a commit for a given group and epoch.
          *
@@ -98,6 +103,17 @@ object CommitOrdering {
         ) {
             val key = GroupEpochKey(groupId, epoch)
             pendingByGroupEpoch.getOrPut(key) { mutableListOf() }.add(commit)
+
+            // Evict oldest entries if the tracker grows too large
+            if (pendingByGroupEpoch.size > MAX_TRACKED_EPOCHS) {
+                val oldestKeys =
+                    pendingByGroupEpoch.keys
+                        .sortedBy { it.epoch }
+                        .take(pendingByGroupEpoch.size - MAX_TRACKED_EPOCHS)
+                for (oldKey in oldestKeys) {
+                    pendingByGroupEpoch.remove(oldKey)
+                }
+            }
         }
 
         /**

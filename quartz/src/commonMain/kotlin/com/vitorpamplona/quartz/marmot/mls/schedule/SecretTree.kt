@@ -64,9 +64,12 @@ class SecretTree(
      */
     private val skippedKeys = mutableMapOf<Pair<Int, Int>, KeyNonceGeneration>()
 
-    /** Maximum number of skipped key entries to retain (prevents unbounded memory growth). */
     private companion object {
+        /** Maximum number of skipped key entries to retain (prevents unbounded memory growth). */
         const val MAX_SKIPPED_KEYS = 1000
+
+        /** Maximum consumed generation entries to track per sender before pruning. */
+        const val MAX_CONSUMED_GENERATIONS_PER_SENDER = 1000
     }
 
     init {
@@ -157,6 +160,12 @@ class SecretTree(
             "Replay detected: generation $generation from sender $leafIndex already consumed"
         }
         senderConsumed.add(generation)
+
+        // Prune consumed generations below the current minimum for this sender
+        if (senderConsumed.size > MAX_CONSUMED_GENERATIONS_PER_SENDER) {
+            val minGeneration = state.applicationGeneration
+            senderConsumed.removeAll { it < minGeneration }
+        }
 
         // Fast-forward the ratchet, caching intermediate key/nonce pairs
         var secret = state.applicationSecret

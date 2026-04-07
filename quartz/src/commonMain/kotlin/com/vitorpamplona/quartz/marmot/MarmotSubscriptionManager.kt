@@ -22,6 +22,8 @@ package com.vitorpamplona.quartz.marmot
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * Subscription state for a single Marmot group.

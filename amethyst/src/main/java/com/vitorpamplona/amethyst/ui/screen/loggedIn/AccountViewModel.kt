@@ -1452,7 +1452,7 @@ class AccountViewModel(
                 description = text,
             )
         val innerEvent = account.signer.sign<com.vitorpamplona.quartz.nip01Core.core.Event>(template)
-        val relays = account.outboxRelays.flow.value
+        val relays = marmotGroupRelays(nostrGroupId)
         account.sendMarmotGroupMessage(nostrGroupId, innerEvent, relays)
     }
 
@@ -1467,8 +1467,22 @@ class AccountViewModel(
     fun hasPublishedKeyPackage(): Boolean = account.hasPublishedKeyPackage()
 
     suspend fun leaveMarmotGroup(nostrGroupId: String) {
-        val relays = account.outboxRelays.flow.value
+        val relays = marmotGroupRelays(nostrGroupId)
         account.leaveMarmotGroup(nostrGroupId, relays)
+    }
+
+    /**
+     * Get the relay set for a Marmot group from MLS GroupContext metadata.
+     * Falls back to outbox relays if the group has no configured relays.
+     */
+    private fun marmotGroupRelays(nostrGroupId: String): Set<NormalizedRelayUrl> {
+        val metadata = account.marmotManager?.groupMetadata(nostrGroupId)
+        val groupRelays =
+            metadata
+                ?.relays
+                ?.mapNotNull { com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer.normalizeOrNull(it) }
+                ?.toSet()
+        return if (!groupRelays.isNullOrEmpty()) groupRelays else account.outboxRelays.flow.value
     }
 
     fun marmotGroupMembers(nostrGroupId: String): List<com.vitorpamplona.amethyst.commons.marmot.GroupMemberInfo> = account.marmotManager?.memberPubkeys(nostrGroupId) ?: emptyList()

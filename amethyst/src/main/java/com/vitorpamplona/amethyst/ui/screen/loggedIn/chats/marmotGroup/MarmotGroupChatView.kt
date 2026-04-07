@@ -75,9 +75,10 @@ fun MarmotGroupChatView(
 
     WatchLifecycleAndUpdateModel(feedViewModel)
 
-    val chatroom = remember(nostrGroupId) {
-        accountViewModel.account.marmotGroupList.getOrCreateGroup(nostrGroupId)
-    }
+    val chatroom =
+        remember(nostrGroupId) {
+            accountViewModel.account.marmotGroupList.getOrCreateGroup(nostrGroupId)
+        }
 
     DisposableEffect(nostrGroupId) {
         chatroom.markAsRead()
