@@ -79,8 +79,11 @@ import kotlinx.coroutines.sync.withLock
  * The epoch secret retention window is [EPOCH_RETENTION_WINDOW] = 2, meaning secrets
  * for the current and previous epoch are kept for late-message decryption.
  *
- * Thread safety: All public methods are suspending and should be called
- * from a single coroutine context (e.g., the Account's scope).
+ * Thread safety: All suspending mutation methods are guarded by a [Mutex]
+ * to prevent concurrent state corruption. Non-suspending read methods
+ * ([getGroup], [isMember], [activeGroupIds], [encrypt], [decrypt],
+ * [decryptOrNull], [exporterSecret]) must be called from the same
+ * coroutine context that owns this manager (e.g., the Account's scope).
  *
  * @see MlsGroup The low-level MLS state machine
  * @see MlsGroupStateStore Storage abstraction for group state persistence

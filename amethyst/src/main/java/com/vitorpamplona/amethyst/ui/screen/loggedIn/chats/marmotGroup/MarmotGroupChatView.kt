@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -36,6 +37,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
@@ -110,6 +112,7 @@ fun MarmotGroupMessageComposer(
     val scope = rememberCoroutineScope()
     val messageState = remember { TextFieldState() }
     val canPost by remember { derivedStateOf { messageState.text.isNotBlank() } }
+    val context = LocalContext.current
 
     Column(modifier = EditFieldModifier) {
         ThinPaddingTextField(
@@ -130,9 +133,19 @@ fun MarmotGroupMessageComposer(
                     val text = messageState.text.toString().trim()
                     if (text.isNotEmpty()) {
                         scope.launch(Dispatchers.IO) {
-                            accountViewModel.sendMarmotGroupMessage(nostrGroupId, text)
-                            messageState.clearText()
-                            onMessageSent()
+                            try {
+                                accountViewModel.sendMarmotGroupMessage(nostrGroupId, text)
+                                messageState.clearText()
+                                onMessageSent()
+                            } catch (e: Exception) {
+                                launch(Dispatchers.Main) {
+                                    Toast.makeText(
+                                        context,
+                                        "Failed to send message: ${e.message}",
+                                        Toast.LENGTH_SHORT,
+                                    ).show()
+                                }
+                            }
                         }
                     }
                 }

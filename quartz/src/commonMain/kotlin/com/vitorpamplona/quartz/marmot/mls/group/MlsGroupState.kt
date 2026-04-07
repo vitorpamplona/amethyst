@@ -171,6 +171,7 @@ data class RetainedEpochSecrets(
     val senderDataSecret: ByteArray,
     val encryptionSecret: ByteArray,
     val leafCount: Int,
+    val exporterSecret: ByteArray = ByteArray(0),
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -185,15 +186,29 @@ data class RetainedEpochSecrets(
         writer.putOpaqueVarInt(senderDataSecret)
         writer.putOpaqueVarInt(encryptionSecret)
         writer.putUint32(leafCount.toLong())
+        writer.putOpaqueVarInt(exporterSecret)
     }
 
     companion object {
-        fun decodeTls(reader: TlsReader): RetainedEpochSecrets =
-            RetainedEpochSecrets(
-                epoch = reader.readUint64(),
-                senderDataSecret = reader.readOpaqueVarInt(),
-                encryptionSecret = reader.readOpaqueVarInt(),
-                leafCount = reader.readUint32().toInt(),
+        fun decodeTls(reader: TlsReader): RetainedEpochSecrets {
+            val epoch = reader.readUint64()
+            val senderDataSecret = reader.readOpaqueVarInt()
+            val encryptionSecret = reader.readOpaqueVarInt()
+            val leafCount = reader.readUint32().toInt()
+            // exporterSecret was added later; tolerate its absence in older serialized data
+            val exporterSecret =
+                if (reader.hasRemaining) {
+                    reader.readOpaqueVarInt()
+                } else {
+                    ByteArray(0)
+                }
+            return RetainedEpochSecrets(
+                epoch = epoch,
+                senderDataSecret = senderDataSecret,
+                encryptionSecret = encryptionSecret,
+                leafCount = leafCount,
+                exporterSecret = exporterSecret,
             )
+        }
     }
 }

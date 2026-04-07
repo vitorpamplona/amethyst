@@ -105,6 +105,7 @@ class MarmotManager(
             }
 
             is GroupEventResult.CommitPending,
+            is GroupEventResult.Duplicate,
             is GroupEventResult.Error,
             -> {}
         }

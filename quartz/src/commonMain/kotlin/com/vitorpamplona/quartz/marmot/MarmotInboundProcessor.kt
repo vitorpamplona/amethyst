@@ -72,6 +72,13 @@ sealed class GroupEventResult {
     ) : GroupEventResult()
 
     /**
+     * The event was already processed (duplicate).
+     */
+    data class Duplicate(
+        val groupId: HexKey,
+    ) : GroupEventResult()
+
+    /**
      * The event could not be processed.
      */
     data class Error(
@@ -119,6 +126,16 @@ class MarmotInboundProcessor(
     private val keyPackageRotationManager: KeyPackageRotationManager,
 ) {
     private val commitTracker = CommitOrdering.EpochCommitTracker()
+    private val processedEventIds = LinkedHashSet<String>()
+
+    companion object {
+        private const val MAX_PROCESSED_IDS = 10_000
+
+        /**
+         * Check if an unwrapped event is a Marmot WelcomeEvent.
+         */
+        fun isWelcomeEvent(event: Event): Boolean = event.kind == WelcomeEvent.KIND
+    }
 
     /**
      * Process an inbound GroupEvent (kind:445).
@@ -136,6 +153,13 @@ class MarmotInboundProcessor(
      * @return the processing result
      */
     suspend fun processGroupEvent(groupEvent: GroupEvent): GroupEventResult {
+        // Deduplicate already-processed events
+        val eventId = groupEvent.id
+        if (eventId in processedEventIds) {
+            val gId = groupEvent.groupId()
+            return GroupEventResult.Duplicate(gId ?: "")
+        }
+
         val groupId =
             groupEvent.groupId()
                 ?: return GroupEventResult.Error(null, "GroupEvent missing h tag (group ID)")
@@ -144,22 +168,39 @@ class MarmotInboundProcessor(
             return GroupEventResult.Error(groupId, "Not a member of group $groupId")
         }
 
-        return try {
-            // Step 1: Outer ChaCha20-Poly1305 decryption
-            val exporterKey = groupManager.exporterSecret(groupId)
-            val mlsBytes = GroupEventEncryption.decrypt(groupEvent.encryptedContent(), exporterKey)
+        val result =
+            try {
+                // Step 1: Outer ChaCha20-Poly1305 decryption
+                val exporterKey = groupManager.exporterSecret(groupId)
+                val mlsBytes = GroupEventEncryption.decrypt(groupEvent.encryptedContent(), exporterKey)
 
-            // Step 2: Parse the MLS message
-            val mlsMessage = MlsMessage.decodeTls(TlsReader(mlsBytes))
+                // Step 2: Parse the MLS message
+                val mlsMessage = MlsMessage.decodeTls(TlsReader(mlsBytes))
 
-            when (mlsMessage.wireFormat) {
-                WireFormat.PRIVATE_MESSAGE -> processPrivateMessage(groupId, mlsMessage, groupEvent)
-                WireFormat.PUBLIC_MESSAGE -> processPublicMessage(groupId, mlsMessage, groupEvent)
-                else -> GroupEventResult.Error(groupId, "Unexpected wire format: ${mlsMessage.wireFormat}")
+                when (mlsMessage.wireFormat) {
+                    WireFormat.PRIVATE_MESSAGE -> processPrivateMessage(groupId, mlsMessage, groupEvent)
+                    WireFormat.PUBLIC_MESSAGE -> processPublicMessage(groupId, mlsMessage, groupEvent)
+                    else -> GroupEventResult.Error(groupId, "Unexpected wire format: ${mlsMessage.wireFormat}")
+                }
+            } catch (e: Exception) {
+                GroupEventResult.Error(groupId, "Failed to process GroupEvent: ${e.message}", e)
             }
-        } catch (e: Exception) {
-            GroupEventResult.Error(groupId, "Failed to process GroupEvent: ${e.message}", e)
+
+        // Track successfully processed events for deduplication
+        if (result !is GroupEventResult.Error) {
+            processedEventIds.add(eventId)
+            // Trim the set if it exceeds the max size
+            if (processedEventIds.size > MAX_PROCESSED_IDS) {
+                val iterator = processedEventIds.iterator()
+                val toRemove = processedEventIds.size - MAX_PROCESSED_IDS
+                repeat(toRemove) {
+                    iterator.next()
+                    iterator.remove()
+                }
+            }
         }
+
+        return result
     }
 
     /**
@@ -363,12 +404,5 @@ class MarmotInboundProcessor(
     private fun hexToBytes(hex: HexKey?): ByteArray {
         if (hex == null) return ByteArray(0)
         return hex.hexToByteArray()
-    }
-
-    companion object {
-        /**
-         * Check if an unwrapped event is a Marmot WelcomeEvent.
-         */
-        fun isWelcomeEvent(event: Event): Boolean = event.kind == WelcomeEvent.KIND
     }
 }
