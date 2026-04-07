@@ -22,8 +22,10 @@ package com.vitorpamplona.quartz.marmot.mip01Groups
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsReader
+import com.vitorpamplona.quartz.marmot.mls.codec.TlsWriter
 import com.vitorpamplona.quartz.marmot.mls.tree.Extension
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 
 /**

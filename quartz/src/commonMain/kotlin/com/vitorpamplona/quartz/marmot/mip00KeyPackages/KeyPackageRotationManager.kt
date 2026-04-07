@@ -63,7 +63,7 @@ class KeyPackageRotationManager {
      * @param dTagSlot the d-tag slot for addressable replacement
      * @return a [KeyPackageBundle] containing the KeyPackage and all private keys
      */
-    fun generateKeyPackage(
+    suspend fun generateKeyPackage(
         identity: ByteArray,
         dTagSlot: String = KeyPackageUtils.PRIMARY_SLOT,
     ): KeyPackageBundle {
@@ -96,7 +96,9 @@ class KeyPackageRotationManager {
             )
 
         val bundle = KeyPackageBundle(keyPackage, initKp.privateKey, encKp.privateKey, sigKp.privateKey)
-        activeBundles[dTagSlot] = bundle
+        mutex.withLock {
+            activeBundles[dTagSlot] = bundle
+        }
         return bundle
     }
 
@@ -120,24 +122,26 @@ class KeyPackageRotationManager {
      * The slot will be included in [pendingRotationSlots] and should be
      * rotated by the caller.
      */
-    fun markConsumed(dTagSlot: String) {
-        activeBundles.remove(dTagSlot)
-        pendingRotations.add(dTagSlot)
-    }
+    suspend fun markConsumed(dTagSlot: String) =
+        mutex.withLock {
+            activeBundles.remove(dTagSlot)
+            pendingRotations.add(dTagSlot)
+        }
 
     /**
      * Mark a slot as consumed by looking up the KeyPackage reference.
      */
-    fun markConsumedByRef(keyPackageRef: ByteArray) {
-        val entry =
-            activeBundles.entries.find { (_, bundle) ->
-                bundle.keyPackage.reference().contentEquals(keyPackageRef)
+    suspend fun markConsumedByRef(keyPackageRef: ByteArray) =
+        mutex.withLock {
+            val entry =
+                activeBundles.entries.find { (_, bundle) ->
+                    bundle.keyPackage.reference().contentEquals(keyPackageRef)
+                }
+            if (entry != null) {
+                activeBundles.remove(entry.key)
+                pendingRotations.add(entry.key)
             }
-        if (entry != null) {
-            activeBundles.remove(entry.key)
-            pendingRotations.add(entry.key)
         }
-    }
 
     /**
      * Get the d-tag slots that need rotation (KeyPackage was consumed).

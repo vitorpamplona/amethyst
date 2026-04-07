@@ -491,6 +491,15 @@ class MlsGroup private constructor(
      * Encrypt an application message as a PrivateMessage.
      */
     fun encrypt(plaintext: ByteArray): ByteArray {
+        // Trim sentKeys if it grows too large
+        if (sentKeys.size > MAX_SENT_KEYS) {
+            val sortedKeys = sentKeys.keys.sorted()
+            val toRemove = sortedKeys.take(sentKeys.size - MAX_SENT_KEYS)
+            for (key in toRemove) {
+                sentKeys.remove(key)
+            }
+        }
+
         val kng = secretTree.nextApplicationKeyNonce(myLeafIndex)
         sentKeys[kng.generation] = kng
         val ciphertext = MlsCryptoProvider.aeadEncrypt(kng.key, kng.nonce, ByteArray(0), plaintext)
@@ -1190,6 +1199,7 @@ class MlsGroup private constructor(
     }
 
     companion object {
+        private const val MAX_SENT_KEYS = 10_000
         private const val RATCHET_TREE_EXTENSION_TYPE = 0x0001
         private const val REQUIRED_CAPABILITIES_EXTENSION_TYPE = 0x0002
         private const val EXTERNAL_PUB_EXTENSION_TYPE = 0x0003

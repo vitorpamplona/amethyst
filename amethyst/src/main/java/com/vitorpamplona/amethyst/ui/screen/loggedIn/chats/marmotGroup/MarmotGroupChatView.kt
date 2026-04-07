@@ -31,6 +31,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -73,6 +74,15 @@ fun MarmotGroupChatView(
         )
 
     WatchLifecycleAndUpdateModel(feedViewModel)
+
+    val chatroom = remember(nostrGroupId) {
+        accountViewModel.account.marmotGroupList.getOrCreateGroup(nostrGroupId)
+    }
+
+    DisposableEffect(nostrGroupId) {
+        chatroom.markAsRead()
+        onDispose { }
+    }
 
     Column(Modifier.fillMaxHeight()) {
         Column(
