@@ -22,6 +22,8 @@ package com.vitorpamplona.quartz.marmot
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * Subscription state for a single Marmot group.
@@ -52,6 +54,7 @@ data class GroupSubscriptionState(
 class MarmotSubscriptionManager(
     private val userPubKey: HexKey,
 ) {
+    private val mutex = Mutex()
     private val groupSubscriptions = mutableMapOf<HexKey, GroupSubscriptionState>()
     private var giftWrapSince: Long? = null
 
@@ -62,10 +65,10 @@ class MarmotSubscriptionManager(
      * @param nostrGroupId hex-encoded Nostr group ID
      * @param since optional timestamp to resume from (e.g., last seen event)
      */
-    fun subscribeGroup(
+    suspend fun subscribeGroup(
         nostrGroupId: HexKey,
         since: Long? = null,
-    ) {
+    ) = mutex.withLock {
         groupSubscriptions[nostrGroupId] =
             GroupSubscriptionState(
                 nostrGroupId = nostrGroupId,
@@ -78,27 +81,29 @@ class MarmotSubscriptionManager(
      * Unsubscribe from a group's events.
      * Call this when leaving a group.
      */
-    fun unsubscribeGroup(nostrGroupId: HexKey) {
-        groupSubscriptions.remove(nostrGroupId)
-    }
+    suspend fun unsubscribeGroup(nostrGroupId: HexKey) =
+        mutex.withLock {
+            groupSubscriptions.remove(nostrGroupId)
+        }
 
     /**
      * Update the `since` timestamp for a group after processing events.
      * This ensures reconnections only fetch newer events.
      */
-    fun updateGroupSince(
+    suspend fun updateGroupSince(
         nostrGroupId: HexKey,
         since: Long,
-    ) {
+    ) = mutex.withLock {
         groupSubscriptions[nostrGroupId]?.since = since
     }
 
     /**
      * Update the `since` timestamp for gift wrap subscriptions.
      */
-    fun updateGiftWrapSince(since: Long) {
-        giftWrapSince = since
-    }
+    suspend fun updateGiftWrapSince(since: Long) =
+        mutex.withLock {
+            giftWrapSince = since
+        }
 
     /**
      * Returns all active group IDs being tracked.
@@ -185,26 +190,32 @@ class MarmotSubscriptionManager(
      *
      * @param activeGroupIds the set of group IDs from [MlsGroupManager.activeGroupIds]
      */
-    fun syncWithGroupManager(activeGroupIds: Set<HexKey>) {
-        // Add new groups
-        for (groupId in activeGroupIds) {
-            if (!groupSubscriptions.containsKey(groupId)) {
-                subscribeGroup(groupId)
+    suspend fun syncWithGroupManager(activeGroupIds: Set<HexKey>) =
+        mutex.withLock {
+            // Add new groups
+            for (groupId in activeGroupIds) {
+                if (!groupSubscriptions.containsKey(groupId)) {
+                    groupSubscriptions[groupId] =
+                        GroupSubscriptionState(
+                            nostrGroupId = groupId,
+                            active = true,
+                        )
+                }
+            }
+
+            // Remove stale groups
+            val staleGroups = groupSubscriptions.keys - activeGroupIds
+            for (groupId in staleGroups) {
+                groupSubscriptions.remove(groupId)
             }
         }
-
-        // Remove stale groups
-        val staleGroups = groupSubscriptions.keys - activeGroupIds
-        for (groupId in staleGroups) {
-            unsubscribeGroup(groupId)
-        }
-    }
 
     /**
      * Clear all subscription state.
      */
-    fun clear() {
-        groupSubscriptions.clear()
-        giftWrapSince = null
-    }
+    suspend fun clear() =
+        mutex.withLock {
+            groupSubscriptions.clear()
+            giftWrapSince = null
+        }
 }

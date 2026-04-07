@@ -51,23 +51,45 @@ class MarmotGroupEventsEoseManager(
         val manager = key.account.marmotManager ?: return emptyList()
         if (!key.account.isWriteable()) return emptyList()
 
-        // Build Marmot filters (kind:445 per group + kind:30443 own key packages)
-        val marmotFilters = manager.subscriptionManager.activeGroupFilters()
-        val ownKeyPackageFilter = manager.subscriptionManager.ownKeyPackageFilter()
-        val allFilters = marmotFilters + ownKeyPackageFilter
+        val result = mutableListOf<RelayBasedFilter>()
+        val fallbackRelays = key.account.homeRelays.flow.value
 
-        // Send to the home relays (where group events are relayed)
-        val relays = key.account.homeRelays.flow.value
-        if (relays.isEmpty()) return emptyList()
+        // Per-group kind:445 filters — route each to the group's own relays
+        val groupStates = manager.subscriptionManager.activeGroupIds()
+        for (groupId in groupStates) {
+            val filter =
+                manager.subscriptionManager.let { sub ->
+                    // Build the filter for this specific group
+                    val groupFilters = sub.activeGroupFilters()
+                    // activeGroupFilters() returns one filter per group; match by tag content
+                    groupFilters.find { f ->
+                        f.tags?.any { it.value?.contains(groupId) == true } == true
+                    }
+                } ?: continue
 
-        return relays.flatMap { relay ->
-            allFilters.map { filter ->
-                RelayBasedFilter(
-                    relay = relay,
-                    filter = filter,
-                )
+            // Use group-specific relays from MLS metadata; fall back to home relays
+            val metadata = manager.groupMetadata(groupId)
+            val groupRelays =
+                metadata
+                    ?.relays
+                    ?.mapNotNull {
+                        com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer.normalizeOrNull(it)
+                    }?.toSet()
+            val relaysForGroup = if (!groupRelays.isNullOrEmpty()) groupRelays else fallbackRelays
+            for (relay in relaysForGroup) {
+                result.add(RelayBasedFilter(relay = relay, filter = filter))
             }
         }
+
+        // Own KeyPackage filter (kind:30443) — use home relays
+        if (fallbackRelays.isNotEmpty()) {
+            val ownKeyPackageFilter = manager.subscriptionManager.ownKeyPackageFilter()
+            for (relay in fallbackRelays) {
+                result.add(RelayBasedFilter(relay = relay, filter = ownKeyPackageFilter))
+            }
+        }
+
+        return result
     }
 
     val userJobMap = mutableMapOf<User, List<Job>>()

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -36,6 +37,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -44,7 +46,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlin.random.Random
+import java.security.SecureRandom
 
 @Composable
 fun CreateGroupScreen(
@@ -54,6 +56,7 @@ fun CreateGroupScreen(
     var groupName by remember { mutableStateOf("") }
     var isCreating by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     Scaffold(
         topBar = {
@@ -62,14 +65,26 @@ fun CreateGroupScreen(
                 onPost = {
                     isCreating = true
                     scope.launch(Dispatchers.IO) {
-                        val nostrGroupId = Random.nextBytes(32).toHexKey()
-                        accountViewModel.createMarmotGroup(nostrGroupId)
-                        if (groupName.isNotBlank()) {
-                            accountViewModel.account.marmotGroupList
-                                .getOrCreateGroup(nostrGroupId)
-                                .displayName.value = groupName
+                        try {
+                            val nostrGroupId = ByteArray(32).also { SecureRandom().nextBytes(it) }.toHexKey()
+                            accountViewModel.createMarmotGroup(nostrGroupId)
+                            if (groupName.isNotBlank()) {
+                                accountViewModel.account.marmotGroupList
+                                    .getOrCreateGroup(nostrGroupId)
+                                    .displayName.value = groupName
+                            }
+                            nav.nav(Route.MarmotGroupChat(nostrGroupId))
+                        } catch (e: Exception) {
+                            isCreating = false
+                            launch(Dispatchers.Main) {
+                                Toast
+                                    .makeText(
+                                        context,
+                                        "Failed to create group: ${e.message}",
+                                        Toast.LENGTH_LONG,
+                                    ).show()
+                            }
                         }
-                        nav.nav(Route.MarmotGroupChat(nostrGroupId))
                     }
                 },
                 isActive = { !isCreating },

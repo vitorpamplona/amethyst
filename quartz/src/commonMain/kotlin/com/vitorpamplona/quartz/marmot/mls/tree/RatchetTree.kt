@@ -109,6 +109,13 @@ class RatchetTree(
         for (i in 0 until _leafCount) {
             if (getLeaf(i) == null) {
                 setLeaf(i, leafNode)
+                // Blank the direct path (RFC 9420 Section 7.7)
+                val directPath = BinaryTree.directPath(i, _leafCount)
+                for (nodeIdx in directPath) {
+                    if (nodeIdx < nodes.size) {
+                        nodes[nodeIdx] = null
+                    }
+                }
                 return i
             }
         }
@@ -121,6 +128,13 @@ class RatchetTree(
             nodes.add(null)
         }
         setLeaf(newLeafIndex, leafNode)
+        // Blank the direct path for the new leaf
+        val directPath = BinaryTree.directPath(newLeafIndex, _leafCount)
+        for (nodeIdx in directPath) {
+            if (nodeIdx < nodes.size) {
+                nodes[nodeIdx] = null
+            }
+        }
         return newLeafIndex
     }
 
@@ -247,18 +261,18 @@ class RatchetTree(
 
         var currentSecret = leafSecret
         for (nodeIdx in directPath) {
-            // path_secret[n] = DeriveSecret(path_secret[n-1], "path")
-            val pathSecret = MlsCryptoProvider.deriveSecret(currentSecret, "path")
-
-            // node_secret = DeriveSecret(path_secret, "node")
-            val nodeSecret = MlsCryptoProvider.deriveSecret(pathSecret, "node")
+            // RFC 9420 Section 7.4: path_secret[0] = leafSecret,
+            // node_secret[n] = DeriveSecret(path_secret[n], "node")
+            val nodeSecret = MlsCryptoProvider.deriveSecret(currentSecret, "node")
 
             // Derive HPKE key pair from node_secret
             val privateKey = MlsCryptoProvider.expandWithLabel(nodeSecret, "hpke", ByteArray(0), 32)
             val publicKey = X25519.publicFromPrivate(privateKey)
 
-            results.add(PathSecretAndKey(pathSecret, privateKey, publicKey))
-            currentSecret = pathSecret
+            results.add(PathSecretAndKey(currentSecret, privateKey, publicKey))
+
+            // path_secret[n+1] = DeriveSecret(path_secret[n], "path")
+            currentSecret = MlsCryptoProvider.deriveSecret(currentSecret, "path")
         }
 
         return results
@@ -344,9 +358,20 @@ class RatchetTree(
 
             val tree = RatchetTree()
             tree.nodes.addAll(nodesList)
-            // Leaf count is derived from the total serialized node count.
-            // nodeCount = 2 * leafCount - 1
-            tree._leafCount = (nodesList.size + 1) / 2
+            // Leaf count must account for tree trimming: the serialized tree
+            // may have trailing blank nodes removed. Count actual leaves by
+            // scanning for the highest occupied leaf position.
+            var maxLeafIndex = -1
+            for (i in nodesList.indices) {
+                if (BinaryTree.isLeaf(i) && nodesList[i] != null) {
+                    maxLeafIndex = BinaryTree.nodeToLeaf(i)
+                }
+            }
+            // Leaf count is at least maxLeafIndex + 1, but also must be at
+            // least (nodesList.size + 1) / 2 since parent nodes at high indices
+            // imply leaves beyond the serialized range.
+            val fromNodes = (nodesList.size + 1) / 2
+            tree._leafCount = maxOf(fromNodes, maxLeafIndex + 1)
             return tree
         }
     }

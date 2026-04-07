@@ -31,6 +31,8 @@ import com.vitorpamplona.quartz.marmot.mls.tree.LeafNode
 import com.vitorpamplona.quartz.marmot.mls.tree.LeafNodeSource
 import com.vitorpamplona.quartz.marmot.mls.tree.Lifetime
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * Manages KeyPackage creation and rotation lifecycle (MIP-00).
@@ -50,6 +52,7 @@ import com.vitorpamplona.quartz.utils.TimeUtils
  * KeyPackage slots, rotating consumed ones promptly.
  */
 class KeyPackageRotationManager {
+    private val mutex = Mutex()
     private val activeBundles = mutableMapOf<String, KeyPackageBundle>()
     private val pendingRotations = mutableSetOf<String>()
 
@@ -60,7 +63,7 @@ class KeyPackageRotationManager {
      * @param dTagSlot the d-tag slot for addressable replacement
      * @return a [KeyPackageBundle] containing the KeyPackage and all private keys
      */
-    fun generateKeyPackage(
+    suspend fun generateKeyPackage(
         identity: ByteArray,
         dTagSlot: String = KeyPackageUtils.PRIMARY_SLOT,
     ): KeyPackageBundle {
@@ -93,7 +96,9 @@ class KeyPackageRotationManager {
             )
 
         val bundle = KeyPackageBundle(keyPackage, initKp.privateKey, encKp.privateKey, sigKp.privateKey)
-        activeBundles[dTagSlot] = bundle
+        mutex.withLock {
+            activeBundles[dTagSlot] = bundle
+        }
         return bundle
     }
 
@@ -117,24 +122,26 @@ class KeyPackageRotationManager {
      * The slot will be included in [pendingRotationSlots] and should be
      * rotated by the caller.
      */
-    fun markConsumed(dTagSlot: String) {
-        activeBundles.remove(dTagSlot)
-        pendingRotations.add(dTagSlot)
-    }
+    suspend fun markConsumed(dTagSlot: String) =
+        mutex.withLock {
+            activeBundles.remove(dTagSlot)
+            pendingRotations.add(dTagSlot)
+        }
 
     /**
      * Mark a slot as consumed by looking up the KeyPackage reference.
      */
-    fun markConsumedByRef(keyPackageRef: ByteArray) {
-        val entry =
-            activeBundles.entries.find { (_, bundle) ->
-                bundle.keyPackage.reference().contentEquals(keyPackageRef)
+    suspend fun markConsumedByRef(keyPackageRef: ByteArray) =
+        mutex.withLock {
+            val entry =
+                activeBundles.entries.find { (_, bundle) ->
+                    bundle.keyPackage.reference().contentEquals(keyPackageRef)
+                }
+            if (entry != null) {
+                activeBundles.remove(entry.key)
+                pendingRotations.add(entry.key)
             }
-        if (entry != null) {
-            activeBundles.remove(entry.key)
-            pendingRotations.add(entry.key)
         }
-    }
 
     /**
      * Get the d-tag slots that need rotation (KeyPackage was consumed).
@@ -145,9 +152,10 @@ class KeyPackageRotationManager {
      * Clear a slot from the pending rotation set after a new KeyPackage
      * has been published.
      */
-    fun clearPendingRotation(dTagSlot: String) {
-        pendingRotations.remove(dTagSlot)
-    }
+    suspend fun clearPendingRotation(dTagSlot: String) =
+        mutex.withLock {
+            pendingRotations.remove(dTagSlot)
+        }
 
     /**
      * Check if any slots need rotation.
@@ -167,12 +175,14 @@ class KeyPackageRotationManager {
      * @param dTagSlot the slot to rotate
      * @return the new [KeyPackageBundle] ready for publishing
      */
-    fun rotateSlot(
+    suspend fun rotateSlot(
         identity: ByteArray,
         dTagSlot: String,
     ): KeyPackageBundle {
         val bundle = generateKeyPackage(identity, dTagSlot)
-        pendingRotations.remove(dTagSlot)
+        mutex.withLock {
+            pendingRotations.remove(dTagSlot)
+        }
         return bundle
     }
 

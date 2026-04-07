@@ -59,6 +59,11 @@ class MarmotGroupList {
         }
     }
 
+    fun removeGroup(nostrGroupId: HexKey) {
+        rooms.remove(nostrGroupId)
+        _groupListChanges.tryEmit(nostrGroupId)
+    }
+
     fun allGroupIds(): List<HexKey> {
         val result = mutableListOf<HexKey>()
         rooms.forEach { key, _ -> result.add(key) }

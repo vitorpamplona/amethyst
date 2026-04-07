@@ -105,6 +105,9 @@ class MlsGroup private constructor(
     private val pskStore: MutableMap<String, ByteArray> = mutableMapOf(),
     private val pendingProposals: MutableList<PendingProposal> = mutableListOf(),
     private val sentKeys: MutableMap<Int, com.vitorpamplona.quartz.marmot.mls.schedule.KeyNonceGeneration> = mutableMapOf(),
+    /** Staged keys from proposeSigningKeyRotation — only promoted on successful commit */
+    private var pendingSigningKey: ByteArray? = null,
+    private var pendingEncryptionKey: ByteArray? = null,
 ) {
     val groupId: ByteArray get() = groupContext.groupId
     val epoch: Long get() = groupContext.epoch
@@ -150,6 +153,7 @@ class MlsGroup private constructor(
             senderDataSecret = epochSecrets.senderDataSecret,
             encryptionSecret = epochSecrets.encryptionSecret,
             leafCount = tree.leafCount,
+            exporterSecret = epochSecrets.exporterSecret,
         )
 
     val memberCount: Int
@@ -293,10 +297,20 @@ class MlsGroup private constructor(
         val proposal = Proposal.Update(newLeafNode)
         pendingProposals.add(PendingProposal(proposal, myLeafIndex))
 
-        // Stage the new keys — they take effect when commit() is called
-        signingPrivateKey = newSigKp.privateKey
-        encryptionPrivateKey = newEncKp.privateKey
+        // Stage the new keys — they take effect only when commit() succeeds
+        pendingSigningKey = newSigKp.privateKey
+        pendingEncryptionKey = newEncKp.privateKey
 
+        return proposal
+    }
+
+    /**
+     * Create a GroupContextExtensions proposal to update the group's extensions.
+     * Used for changing group metadata (name, description, etc.) via MIP-01.
+     */
+    fun proposeGroupContextExtensions(extensions: List<Extension>): Proposal.GroupContextExtensions {
+        val proposal = Proposal.GroupContextExtensions(extensions)
+        pendingProposals.add(PendingProposal(proposal, myLeafIndex))
         return proposal
     }
 
@@ -347,11 +361,14 @@ class MlsGroup private constructor(
         val addedMembers = mutableListOf<Pair<Int, MlsKeyPackage>>()
         for (pending in proposals) {
             val p = pending.proposal
-            // Track added members for Welcome generation (before apply changes leaf count)
             if (p is Proposal.Add) {
-                addedMembers.add(tree.leafCount to p.keyPackage)
+                // applyProposal calls tree.addLeaf() which returns the actual leaf index
+                // (may reuse a blank slot instead of appending)
+                val leafIndex = applyProposalAdd(p)
+                addedMembers.add(leafIndex to p.keyPackage)
+            } else {
+                applyProposal(p, pending.senderLeafIndex)
             }
-            applyProposal(p, pending.senderLeafIndex)
         }
 
         // Generate new path secrets on the updated tree
@@ -465,6 +482,12 @@ class MlsGroup private constructor(
                 null
             }
 
+        // Promote staged keys from proposeSigningKeyRotation if present
+        pendingSigningKey?.let { signingPrivateKey = it }
+        pendingEncryptionKey?.let { encryptionPrivateKey = it }
+        pendingSigningKey = null
+        pendingEncryptionKey = null
+
         pendingProposals.clear()
         sentKeys.clear()
 
@@ -478,6 +501,15 @@ class MlsGroup private constructor(
      * Encrypt an application message as a PrivateMessage.
      */
     fun encrypt(plaintext: ByteArray): ByteArray {
+        // Trim sentKeys if it grows too large
+        if (sentKeys.size > MAX_SENT_KEYS) {
+            val sortedKeys = sentKeys.keys.sorted()
+            val toRemove = sortedKeys.take(sentKeys.size - MAX_SENT_KEYS)
+            for (key in toRemove) {
+                sentKeys.remove(key)
+            }
+        }
+
         val kng = secretTree.nextApplicationKeyNonce(myLeafIndex)
         sentKeys[kng.generation] = kng
         val ciphertext = MlsCryptoProvider.aeadEncrypt(kng.key, kng.nonce, ByteArray(0), plaintext)
@@ -605,6 +637,13 @@ class MlsGroup private constructor(
         senderLeafIndex: Int,
         confirmationTag: ByteArray? = null,
     ) {
+        require(senderLeafIndex >= 0 && senderLeafIndex < tree.leafCount) {
+            "Invalid sender leaf index: $senderLeafIndex"
+        }
+        require(tree.getLeaf(senderLeafIndex) != null) {
+            "Sender leaf is blank at index $senderLeafIndex"
+        }
+
         val commit = Commit.decodeTls(TlsReader(commitBytes))
 
         // Apply proposals (resolve references from pending pool)
@@ -640,6 +679,11 @@ class MlsGroup private constructor(
             }
             tree.setLeaf(senderLeafIndex, updatePath.leafNode)
             tree.applyUpdatePath(senderLeafIndex, updatePath.nodes)
+
+            // Verify parent hash chain (RFC 9420 Section 7.9.2)
+            require(verifyParentHash(senderLeafIndex, updatePath)) {
+                "Parent hash verification failed for UpdatePath"
+            }
 
             // Decrypt path secret from our copath node
             val directPath = BinaryTree.directPath(senderLeafIndex, tree.leafCount)
@@ -726,7 +770,7 @@ class MlsGroup private constructor(
         // Verify confirmation tag (RFC 9420 Section 6.1)
         if (confirmationTag != null) {
             val expectedTag = computeConfirmationTag(epochSecrets.confirmationKey, newConfirmedTranscriptHash)
-            require(confirmationTag.contentEquals(expectedTag)) {
+            require(constantTimeEquals(confirmationTag, expectedTag)) {
                 "Confirmation tag verification failed"
             }
         }
@@ -846,7 +890,7 @@ class MlsGroup private constructor(
         for (pskProposal in pskProposals) {
             val pskValue =
                 pskStore[pskProposal.pskId.toHexKey()]
-                    ?: ByteArray(MlsCryptoProvider.HASH_OUTPUT_LENGTH) // Unknown PSK = zeros
+                    ?: throw IllegalStateException("PSK not found in store: ${pskProposal.pskId.toHexKey()}")
             pskSecret = MlsCryptoProvider.hkdfExtract(pskSecret, pskValue)
         }
         return pskSecret
@@ -978,7 +1022,37 @@ class MlsGroup private constructor(
                 .MacInstance("HmacSHA256", epochSecrets.membershipKey)
         mac.update(authenticatedContentBytes)
         val expectedTag = mac.doFinal()
-        return expectedTag.contentEquals(membershipTag)
+        return constantTimeEquals(expectedTag, membershipTag)
+    }
+
+    /**
+     * Constant-time byte array comparison to prevent timing side-channels.
+     * Returns true only if both arrays have the same length and contents.
+     */
+    private fun constantTimeEquals(
+        a: ByteArray,
+        b: ByteArray,
+    ): Boolean {
+        if (a.size != b.size) return false
+        var result = 0
+        for (i in a.indices) {
+            result = result or (a[i].toInt() xor b[i].toInt())
+        }
+        return result == 0
+    }
+
+    /**
+     * Apply an Add proposal and return the assigned leaf index.
+     */
+    private fun applyProposalAdd(proposal: Proposal.Add): Int {
+        val lifetime = proposal.keyPackage.leafNode.lifetime
+        if (lifetime != null) {
+            val now = TimeUtils.now()
+            require(now >= lifetime.notBefore && now <= lifetime.notAfter) {
+                "KeyPackage lifetime expired or not yet valid"
+            }
+        }
+        return tree.addLeaf(proposal.keyPackage.leafNode)
     }
 
     private fun applyProposal(
@@ -987,15 +1061,7 @@ class MlsGroup private constructor(
     ) {
         when (proposal) {
             is Proposal.Add -> {
-                // Validate KeyPackage lifetime (RFC 9420 Section 10.1)
-                val lifetime = proposal.keyPackage.leafNode.lifetime
-                if (lifetime != null) {
-                    val now = TimeUtils.now()
-                    require(now >= lifetime.notBefore && now <= lifetime.notAfter) {
-                        "KeyPackage lifetime expired or not yet valid"
-                    }
-                }
-                tree.addLeaf(proposal.keyPackage.leafNode)
+                applyProposalAdd(proposal)
             }
 
             is Proposal.Remove -> {
@@ -1143,6 +1209,7 @@ class MlsGroup private constructor(
     }
 
     companion object {
+        private const val MAX_SENT_KEYS = 10_000
         private const val RATCHET_TREE_EXTENSION_TYPE = 0x0001
         private const val REQUIRED_CAPABILITIES_EXTENSION_TYPE = 0x0002
         private const val EXTERNAL_PUB_EXTENSION_TYPE = 0x0003
@@ -1300,7 +1367,7 @@ class MlsGroup private constructor(
 
             // Find our leaf index by matching our signature key
             val mySignatureKey = Ed25519.publicFromPrivate(bundle.signaturePrivateKey)
-            var myLeafIndex = 0
+            var myLeafIndex = -1
             for (i in 0 until tree.leafCount) {
                 val leaf = tree.getLeaf(i)
                 if (leaf != null && leaf.signatureKey.contentEquals(mySignatureKey)) {
@@ -1308,13 +1375,15 @@ class MlsGroup private constructor(
                     break
                 }
             }
+            require(myLeafIndex >= 0) { "Joiner's signature key not found in ratchet tree" }
 
             // Verify GroupInfo signature using signer's key from the tree
             val signerLeaf = tree.getLeaf(groupInfo.signer)
-            if (signerLeaf != null) {
-                require(groupInfo.verifySignature(signerLeaf.signatureKey)) {
-                    "Invalid GroupInfo signature"
-                }
+            requireNotNull(signerLeaf) {
+                "Signer leaf is null at index ${groupInfo.signer} — cannot verify GroupInfo signature"
+            }
+            require(groupInfo.verifySignature(signerLeaf.signatureKey)) {
+                "Invalid GroupInfo signature"
             }
 
             // Derive epoch secrets directly from memberSecret (RFC 9420 Section 8.3)
@@ -1351,6 +1420,15 @@ class MlsGroup private constructor(
 
             val secretTree = SecretTree(epochSecrets.encryptionSecret, tree.leafCount)
 
+            // Compute interim_transcript_hash from confirmed_transcript_hash + confirmation_tag
+            val confirmMac = MacInstance("HmacSHA256", epochSecrets.confirmationKey)
+            confirmMac.update(groupContext.confirmedTranscriptHash)
+            val confirmationTag = confirmMac.doFinal()
+            val interimInput = TlsWriter()
+            interimInput.putBytes(groupContext.confirmedTranscriptHash)
+            interimInput.putOpaqueVarInt(confirmationTag)
+            val interimTranscriptHash = MlsCryptoProvider.hash(interimInput.toByteArray())
+
             return MlsGroup(
                 groupContext = groupContext,
                 tree = tree,
@@ -1360,7 +1438,7 @@ class MlsGroup private constructor(
                 initSecret = epochSecrets.initSecret,
                 signingPrivateKey = bundle.signaturePrivateKey,
                 encryptionPrivateKey = bundle.encryptionPrivateKey,
-                interimTranscriptHash = ByteArray(0),
+                interimTranscriptHash = interimTranscriptHash,
             )
         }
 

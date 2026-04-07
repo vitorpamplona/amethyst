@@ -22,8 +22,10 @@ package com.vitorpamplona.quartz.marmot.mip01Groups
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsReader
+import com.vitorpamplona.quartz.marmot.mls.codec.TlsWriter
 import com.vitorpamplona.quartz.marmot.mls.tree.Extension
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 
 /**
@@ -88,6 +90,45 @@ data class MarmotGroupData(
 
     /** Whether this group has an encrypted image set */
     fun hasImage(): Boolean = imageHash != null && imageKey != null && imageNonce != null
+
+    /**
+     * Encode this MarmotGroupData to TLS wire format bytes.
+     * Mirrors the [decodeTls] format.
+     */
+    fun encodeTls(): ByteArray {
+        val writer = TlsWriter()
+        writer.putUint16(version)
+        writer.putBytes(nostrGroupId.hexToByteArray())
+        writer.putOpaque2(name.encodeToByteArray())
+        writer.putOpaque2(description.encodeToByteArray())
+
+        // Admin pubkeys: concatenated 32-byte keys within a length-prefixed block
+        val adminBytes = ByteArray(adminPubkeys.size * 32)
+        adminPubkeys.forEachIndexed { index, key ->
+            key.hexToByteArray().copyInto(adminBytes, index * 32)
+        }
+        writer.putOpaque2(adminBytes)
+
+        // Relays: length-prefixed block of length-prefixed UTF-8 strings
+        val relayWriter = TlsWriter()
+        for (relay in relays) {
+            relayWriter.putOpaque2(relay.encodeToByteArray())
+        }
+        writer.putOpaque2(relayWriter.toByteArray())
+
+        // Optional image fields
+        writer.putOpaque2(imageHash?.hexToByteArray() ?: ByteArray(0))
+        writer.putOpaque2(imageKey ?: ByteArray(0))
+        writer.putOpaque2(imageNonce ?: ByteArray(0))
+        writer.putOpaque2(imageUploadKey ?: ByteArray(0))
+
+        return writer.toByteArray()
+    }
+
+    /**
+     * Convert this MarmotGroupData to an MLS Extension for use in GroupContextExtensions proposals.
+     */
+    fun toExtension(): Extension = Extension(EXTENSION_ID_INT, encodeTls())
 
     companion object {
         const val CURRENT_VERSION = 2
