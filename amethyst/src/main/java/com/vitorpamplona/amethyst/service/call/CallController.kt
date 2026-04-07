@@ -531,14 +531,12 @@ class CallController(
 
     // ---- UI toggle controls ----
 
-    @Synchronized
     fun toggleAudioMute() {
         val muted = !_isAudioMuted.value
         _isAudioMuted.value = muted
         localAudioTrackInternal?.setEnabled(!muted)
     }
 
-    @Synchronized
     fun toggleVideo() {
         val enabling = !_isVideoEnabled.value
 
@@ -815,7 +813,6 @@ class CallController(
 
     // ---- Cleanup ----
 
-    @Synchronized
     fun cleanup() {
         Log.d(TAG) { "cleanup: disposing ${peerSessionMgr.allSessionKeys().size} peer sessions, state=${callManager.state.value::class.simpleName}" }
         // Each block is wrapped individually so that a failure in one
