@@ -23,22 +23,50 @@ package com.vitorpamplona.quartz.utils.secp256k1
 /**
  * Android field multiply/square with API-level-gated intrinsics.
  *
- * Dispatches ONCE per call to an API-level-specific implementation. Each implementation
- * uses fieldMulReduceWith/fieldSqrReduceWith (inline) with the best available intrinsic
- * inlined directly at the call site. This eliminates the per-multiply-high wrapper call
- * overhead that hurts ART's JIT:
+ * Each API level gets its OWN private function with the inline expansion,
+ * so ART's JIT can fully optimize each as a standalone ~200 DEX-instruction
+ * method. Previously, having all 3 branches inline-expanded in a single
+ * function created ~600 DEX instructions, causing ART's register allocator
+ * to produce suboptimal code with excessive stack spills.
  *
- * Before: FieldP.mul → U256.mulWide → unsignedMultiplyHigh (branch) → Math.xxx
- *         = 2 extra function calls per multiply-high × 20 per field mul = 40 calls
- *
- * After:  FieldP.mul → fieldMulReduce → (one of the inlined paths)
- *         = 1 function call total, Math.xxx is inlined directly into the loop
- *
- * The API level check is the outermost branch (not inside the hot loop), so ART
- * profiles and JIT-compiles only the hot path.
+ * The dispatch functions (fieldMulReduce/fieldSqrReduce) are tiny (~15 DEX
+ * instructions) and always take the same branch, so ART profiles and
+ * devirtualizes them efficiently.
  */
 
 private val API = android.os.Build.VERSION.SDK_INT
+
+// ==================== Multiply: separate methods per API level ====================
+
+@Suppress("NewApi")
+private fun fieldMulApi35(
+    out: LongArray,
+    a: LongArray,
+    b: LongArray,
+    w: LongArray,
+) {
+    fieldMulReduceWith(out, a, b, w) { x, y -> Math.unsignedMultiplyHigh(x, y) }
+}
+
+private fun fieldMulApi31(
+    out: LongArray,
+    a: LongArray,
+    b: LongArray,
+    w: LongArray,
+) {
+    fieldMulReduceWith(out, a, b, w) { x, y ->
+        Math.multiplyHigh(x, y) + (x and (y shr 63)) + (y and (x shr 63))
+    }
+}
+
+private fun fieldMulFallback(
+    out: LongArray,
+    a: LongArray,
+    b: LongArray,
+    w: LongArray,
+) {
+    fieldMulReduceWith(out, a, b, w) { x, y -> unsignedMultiplyHighFallback(x, y) }
+}
 
 @Suppress("NewApi")
 internal actual fun fieldMulReduce(
@@ -48,14 +76,41 @@ internal actual fun fieldMulReduce(
     w: LongArray,
 ) {
     if (API >= 35) {
-        fieldMulReduceWith(out, a, b, w) { x, y -> Math.unsignedMultiplyHigh(x, y) }
+        fieldMulApi35(out, a, b, w)
     } else if (API >= 31) {
-        fieldMulReduceWith(out, a, b, w) { x, y ->
-            Math.multiplyHigh(x, y) + (x and (y shr 63)) + (y and (x shr 63))
-        }
+        fieldMulApi31(out, a, b, w)
     } else {
-        fieldMulReduceWith(out, a, b, w) { x, y -> unsignedMultiplyHighFallback(x, y) }
+        fieldMulFallback(out, a, b, w)
     }
+}
+
+// ==================== Square: separate methods per API level ====================
+
+@Suppress("NewApi")
+private fun fieldSqrApi35(
+    out: LongArray,
+    a: LongArray,
+    w: LongArray,
+) {
+    fieldSqrReduceWith(out, a, w) { x, y -> Math.unsignedMultiplyHigh(x, y) }
+}
+
+private fun fieldSqrApi31(
+    out: LongArray,
+    a: LongArray,
+    w: LongArray,
+) {
+    fieldSqrReduceWith(out, a, w) { x, y ->
+        Math.multiplyHigh(x, y) + (x and (y shr 63)) + (y and (x shr 63))
+    }
+}
+
+private fun fieldSqrFallback(
+    out: LongArray,
+    a: LongArray,
+    w: LongArray,
+) {
+    fieldSqrReduceWith(out, a, w) { x, y -> unsignedMultiplyHighFallback(x, y) }
 }
 
 @Suppress("NewApi")
@@ -65,12 +120,10 @@ internal actual fun fieldSqrReduce(
     w: LongArray,
 ) {
     if (API >= 35) {
-        fieldSqrReduceWith(out, a, w) { x, y -> Math.unsignedMultiplyHigh(x, y) }
+        fieldSqrApi35(out, a, w)
     } else if (API >= 31) {
-        fieldSqrReduceWith(out, a, w) { x, y ->
-            Math.multiplyHigh(x, y) + (x and (y shr 63)) + (y and (x shr 63))
-        }
+        fieldSqrApi31(out, a, w)
     } else {
-        fieldSqrReduceWith(out, a, w) { x, y -> unsignedMultiplyHighFallback(x, y) }
+        fieldSqrFallback(out, a, w)
     }
 }
