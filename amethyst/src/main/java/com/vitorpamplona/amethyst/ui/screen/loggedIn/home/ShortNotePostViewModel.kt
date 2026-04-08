@@ -151,6 +151,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
@@ -356,22 +357,23 @@ open class ShortNotePostViewModel :
                 delay(1000)
                 lastComputedText = text
 
-                coroutineScope {
-                    WritingTone.entries
-                        .map { tone ->
-                            async {
-                                try {
-                                    assistant.transform(text, tone)
-                                } catch (e: Exception) {
-                                    if (e is CancellationException) throw e
-                                    null
+                val results =
+                    coroutineScope {
+                        WritingTone.entries
+                            .map { tone ->
+                                async {
+                                    try {
+                                        assistant.transform(text, tone)
+                                    } catch (e: Exception) {
+                                        if (e is CancellationException) throw e
+                                        null
+                                    }
                                 }
-                            }
-                        }.forEach { deferred ->
-                            val result = deferred.await() ?: return@forEach
-                            aiResults = aiResults + (result.tone to result)
-                        }
-                }
+                            }.awaitAll()
+                            .filterNotNull()
+                            .associateBy { it.tone }
+                    }
+                aiResults = results
             }
     }
 
