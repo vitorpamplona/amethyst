@@ -18,27 +18,11 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.topNavFeeds.global
+package com.vitorpamplona.amethyst.model.topNavFeeds.relay
 
-import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedFlowsType
-import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
+import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavPerRelayFilterSet
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import kotlinx.coroutines.flow.FlowCollector
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 
-class GlobalFeedFlow(
-    val outboxRelays: StateFlow<Set<NormalizedRelayUrl>>,
-    val proxyRelays: StateFlow<Set<NormalizedRelayUrl>>,
-    val relayFeeds: StateFlow<Set<NormalizedRelayUrl>>,
-) : IFeedFlowsType {
-    val default = GlobalTopNavFilter(outboxRelays, proxyRelays, relayFeeds)
-
-    override fun flow() = MutableStateFlow(default)
-
-    override fun startValue(): GlobalTopNavFilter = default
-
-    override suspend fun startValue(collector: FlowCollector<IFeedTopNavFilter>) {
-        collector.emit(startValue())
-    }
-}
+class RelayTopNavPerRelayFilterSet(
+    val relayUrl: NormalizedRelayUrl,
+) : IFeedTopNavPerRelayFilterSet

@@ -31,12 +31,14 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.allcommunities.All
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.community.SingleCommunityTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.relay.RelayTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserAndFollowListEoseManager
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.HomeQueryState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip01Core.filterHomePostsByGeohashes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip01Core.filterHomePostsByGlobal
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip01Core.filterHomePostsByHashtags
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip01Core.filterHomePostsByRelay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip64Chess.filterHomePostsByChess
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip72Communities.filterHomePostsByAllCommunities
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip72Communities.filterHomePostsByCommunity
@@ -70,6 +72,7 @@ class HomeOutboxEventsEoseManager(
             is HashtagTopNavPerRelayFilterSet -> filterHomePostsByHashtags(feedSettings, since, newThreadSince)
             is LocationTopNavPerRelayFilterSet -> filterHomePostsByGeohashes(feedSettings, since, newThreadSince)
             is MutedAuthorsTopNavPerRelayFilterSet -> filterHomePostsByAuthors(feedSettings, since, newThreadSince, repliesSince)
+            is RelayTopNavPerRelayFilterSet -> filterHomePostsByRelay(feedSettings, since, newThreadSince, repliesSince)
             is SingleCommunityTopNavPerRelayFilterSet -> filterHomePostsByCommunity(feedSettings, since, newThreadSince)
             else -> emptyList()
         }

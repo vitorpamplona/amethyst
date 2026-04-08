@@ -194,7 +194,7 @@ class NotificationFeedFilter(
 
         return noteEvent?.kind in NOTIFICATION_KINDS &&
             (noteEvent is LnZapEvent || notifAuthor != loggedInUserHex) &&
-            (isChessEvent || filterParams.isGlobal(it.relays) || notifAuthor == null || filterParams.isAuthorInFollows(notifAuthor)) &&
+            (isChessEvent || filterParams.isGlobal() || notifAuthor == null || filterParams.isAuthorInFollows(notifAuthor)) &&
             noteEvent?.isTaggedUser(loggedInUserHex) ?: false &&
             (filterParams.isHiddenList || notifAuthor == null || !account.isHidden(notifAuthor)) &&
             (noteEvent !is PrivateDmEvent || !account.isDecryptedContentHidden(noteEvent)) &&

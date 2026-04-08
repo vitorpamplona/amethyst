@@ -18,41 +18,36 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.topNavFeeds.global
+package com.vitorpamplona.amethyst.model.topNavFeeds.hashtag
 
-import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedFlowsType
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
-import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 
-@Immutable
-class GlobalTopNavFilter(
+class HashtagFeedFlow(
+    val hashtag: String,
     val outboxRelays: StateFlow<Set<NormalizedRelayUrl>>,
     val proxyRelays: StateFlow<Set<NormalizedRelayUrl>>,
-    val relayFeeds: StateFlow<Set<NormalizedRelayUrl>>,
-) : IFeedTopNavFilter {
-    override fun matchAuthor(pubkey: HexKey): Boolean = true
+) : IFeedFlowsType {
+    fun buildFilter(relays: Set<NormalizedRelayUrl>) = HashtagTopNavFilter(setOf(hashtag), relays)
 
-    override fun match(noteEvent: Event) = true
-
-    override fun toPerRelayFlow(cache: LocalCache): Flow<GlobalTopNavPerRelayFilterSet> =
-        combine(outboxRelays, proxyRelays, relayFeeds) { outboxRelays, proxyRelays, relayFeeds ->
-            if (proxyRelays.isNotEmpty()) {
-                GlobalTopNavPerRelayFilterSet(proxyRelays.associateWith { GlobalTopNavPerRelayFilter })
-            } else {
-                GlobalTopNavPerRelayFilterSet((relayFeeds + outboxRelays).associateWith { GlobalTopNavPerRelayFilter })
-            }
+    override fun flow(): Flow<IFeedTopNavFilter> =
+        combine(outboxRelays, proxyRelays) { outbox, proxy ->
+            if (proxy.isNotEmpty()) buildFilter(proxy) else buildFilter(outbox)
         }
 
-    override fun startValue(cache: LocalCache): GlobalTopNavPerRelayFilterSet =
+    override fun startValue(): HashtagTopNavFilter =
         if (proxyRelays.value.isNotEmpty()) {
-            GlobalTopNavPerRelayFilterSet(proxyRelays.value.associateWith { GlobalTopNavPerRelayFilter })
+            buildFilter(proxyRelays.value)
         } else {
-            GlobalTopNavPerRelayFilterSet((relayFeeds.value + outboxRelays.value).associateWith { GlobalTopNavPerRelayFilter })
+            buildFilter(outboxRelays.value)
         }
+
+    override suspend fun startValue(collector: FlowCollector<IFeedTopNavFilter>) {
+        collector.emit(startValue())
+    }
 }

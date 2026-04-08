@@ -118,7 +118,7 @@ fun HomeScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    WatchAccountForHomeScreen(newThreadsFeedState, repliesFeedState, accountViewModel)
+    WatchAccountForHomeScreen(liveFeedState, newThreadsFeedState, repliesFeedState, accountViewModel)
 
     WatchLifecycleAndUpdateModel(liveFeedState)
     WatchLifecycleAndUpdateModel(newThreadsFeedState)
@@ -441,6 +441,7 @@ fun CrossfadeCheckIfVideoIsOnline(
 
 @Composable
 fun WatchAccountForHomeScreen(
+    liveFeedState: ChannelFeedContentState,
     newThreadsFeedState: FeedContentState,
     repliesFeedState: FeedContentState,
     accountViewModel: AccountViewModel,
@@ -450,6 +451,7 @@ fun WatchAccountForHomeScreen(
     LaunchedEffect(accountViewModel, homeFollowList) {
         newThreadsFeedState.checkKeysInvalidateDataAndSendToTop()
         repliesFeedState.checkKeysInvalidateDataAndSendToTop()
+        liveFeedState.checkKeysInvalidateDataAndSendToTop()
     }
 }
 

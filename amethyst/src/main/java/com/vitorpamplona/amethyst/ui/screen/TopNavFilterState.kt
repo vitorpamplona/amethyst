@@ -146,7 +146,6 @@ class TopNavFilterState(
                 FeedDefinition(
                     TopFilter.Hashtag(it),
                     HashtagName(it),
-                    route = Route.Hashtag(it),
                 )
             }
 
@@ -155,7 +154,6 @@ class TopNavFilterState(
                 FeedDefinition(
                     TopFilter.Geohash(it),
                     GeoHashName(it),
-                    route = Route.Geohash(it),
                 )
             }
 
@@ -173,7 +171,6 @@ class TopNavFilterState(
                 FeedDefinition(
                     TopFilter.Relay(relayUrl.url),
                     RelayName(relayUrl),
-                    route = Route.RelayFeed(relayUrl.url),
                 )
             }
 
