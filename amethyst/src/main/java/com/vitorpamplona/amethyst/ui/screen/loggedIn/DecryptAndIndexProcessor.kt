@@ -497,7 +497,7 @@ class GroupEventHandler(
                 }
 
                 is GroupEventResult.Duplicate -> {
-                    Log.d("GroupEventHandler") { "Duplicate event for group ${result.groupId}" }
+                    Log.d("GroupEventHandler") { "Duplicate GroupEvent for group ${result.groupId}" }
                 }
 
                 is GroupEventResult.Error -> {

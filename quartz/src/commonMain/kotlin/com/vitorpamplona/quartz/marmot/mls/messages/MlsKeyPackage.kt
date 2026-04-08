@@ -122,7 +122,7 @@ data class MlsKeyPackage(
             val version = reader.readUint16()
             require(version == 1) { "Unsupported MLS version: $version" }
             val cipherSuite = reader.readUint16()
-            require(cipherSuite == 1) { "Unsupported ciphersuite: $cipherSuite" }
+            require(cipherSuite in 1..0xFFFF) { "Invalid ciphersuite: $cipherSuite" }
             return MlsKeyPackage(
                 version = version,
                 cipherSuite = cipherSuite,

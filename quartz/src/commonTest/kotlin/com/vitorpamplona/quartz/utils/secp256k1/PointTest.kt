@@ -286,10 +286,10 @@ class PointTest {
     fun liftXGenerator() {
         val x = LongArray(4)
         val y = LongArray(4)
-        assertTrue(ECPoint.liftX(x, y, ECPoint.GX))
+        assertTrue(KeyCodec.liftX(x, y, ECPoint.GX))
         assertEquals(toHex(ECPoint.GX), toHex(x))
         // liftX returns even y
-        assertTrue(ECPoint.hasEvenY(y))
+        assertTrue(KeyCodec.hasEvenY(y))
     }
 
     @Test
@@ -297,27 +297,27 @@ class PointTest {
         // p itself is not a valid x coordinate
         val x = LongArray(4)
         val y = LongArray(4)
-        assertFalse(ECPoint.liftX(x, y, FieldP.P))
+        assertFalse(KeyCodec.liftX(x, y, FieldP.P))
     }
 
     // ==================== Serialization round-trips ====================
 
     @Test
     fun compressDecompressRoundTrip() {
-        val compressed = ECPoint.serializeCompressed(ECPoint.GX, ECPoint.GY)
+        val compressed = KeyCodec.serializeCompressed(ECPoint.GX, ECPoint.GY)
         val x = LongArray(4)
         val y = LongArray(4)
-        assertTrue(ECPoint.parsePublicKey(compressed, x, y))
+        assertTrue(KeyCodec.parsePublicKey(compressed, x, y))
         assertEquals(toHex(ECPoint.GX), toHex(x))
         assertEquals(toHex(ECPoint.GY), toHex(y))
     }
 
     @Test
     fun uncompressedRoundTrip() {
-        val uncompressed = ECPoint.serializeUncompressed(ECPoint.GX, ECPoint.GY)
+        val uncompressed = KeyCodec.serializeUncompressed(ECPoint.GX, ECPoint.GY)
         val x = LongArray(4)
         val y = LongArray(4)
-        assertTrue(ECPoint.parsePublicKey(uncompressed, x, y))
+        assertTrue(KeyCodec.parsePublicKey(uncompressed, x, y))
         assertEquals(toHex(ECPoint.GX), toHex(x))
         assertEquals(toHex(ECPoint.GY), toHex(y))
     }
@@ -326,8 +326,8 @@ class PointTest {
     fun parseInvalidKey() {
         val x = LongArray(4)
         val y = LongArray(4)
-        assertFalse(ECPoint.parsePublicKey(ByteArray(10), x, y))
-        assertFalse(ECPoint.parsePublicKey(ByteArray(33), x, y)) // wrong prefix (0x00)
+        assertFalse(KeyCodec.parsePublicKey(ByteArray(10), x, y))
+        assertFalse(KeyCodec.parsePublicKey(ByteArray(33), x, y)) // wrong prefix (0x00)
     }
 
     @Test
@@ -366,9 +366,9 @@ class PointTest {
         assertEquals(0x03.toByte(), compressed[0]) // Odd y → 03 prefix
         val x = LongArray(4)
         val y = LongArray(4)
-        assertTrue(ECPoint.parsePublicKey(compressed, x, y))
+        assertTrue(KeyCodec.parsePublicKey(compressed, x, y))
         // Round-trip: compress again should give same result
-        val recompressed = ECPoint.serializeCompressed(x, y)
+        val recompressed = KeyCodec.serializeCompressed(x, y)
         assertEquals(compressed.toList(), recompressed.toList())
     }
 }

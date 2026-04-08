@@ -51,6 +51,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
@@ -70,6 +71,7 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNo
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.layouts.GenericRepostLayout
+import com.vitorpamplona.amethyst.ui.layouts.NoteComposeLayout
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeEditDraftTo
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
@@ -178,8 +180,6 @@ import com.vitorpamplona.amethyst.ui.theme.HalfDoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.HalfPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
 import com.vitorpamplona.amethyst.ui.theme.Height4dpModifier
-import com.vitorpamplona.amethyst.ui.theme.RowColSpacing10dp
-import com.vitorpamplona.amethyst.ui.theme.RowColSpacing5dp
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.ui.theme.Size30dp
@@ -189,12 +189,9 @@ import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.UserNameMaxRowHeight
 import com.vitorpamplona.amethyst.ui.theme.UserNameRowHeight
-import com.vitorpamplona.amethyst.ui.theme.WidthAuthorPictureModifier
-import com.vitorpamplona.amethyst.ui.theme.boostedNoteModifier
 import com.vitorpamplona.amethyst.ui.theme.channelNotePictureModifier
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
-import com.vitorpamplona.amethyst.ui.theme.normalWithTopMarginNoteModifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
@@ -550,33 +547,74 @@ private fun CheckNewAndRenderNote(
             accountViewModel,
         )
 
-    ClickableNote(
+    InnerNoteWithReactions(
         baseNote = baseNote,
         backgroundColor = backgroundColor,
-        modifier = modifier,
+        clickModifier = clickableNoteModifier(baseNote, modifier, accountViewModel, showPopup, nav),
+        isBoostedNote = isBoostedNote,
+        isQuotedNote = isQuotedNote,
+        unPackReply = unPackReply,
+        makeItShort = makeItShort,
+        canPreview = canPreview,
+        isPinned = isPinned,
+        quotesLeft = quotesLeft,
         accountViewModel = accountViewModel,
-        showPopup = showPopup,
         nav = nav,
-    ) {
-        InnerNoteWithReactions(
-            baseNote = baseNote,
-            backgroundColor = backgroundColor,
-            isBoostedNote = isBoostedNote,
-            isQuotedNote = isQuotedNote,
-            unPackReply = unPackReply,
-            makeItShort = makeItShort,
-            canPreview = canPreview,
-            isPinned = isPinned,
-            quotesLeft = quotesLeft,
-            accountViewModel = accountViewModel,
-            nav = nav,
-            moreOptions = moreOptions,
-        )
-    }
+        moreOptions = moreOptions,
+    )
 }
 
+/**
+ * Creates a [Modifier] with [combinedClickable] for note navigation (click to open,
+ * long-press for quick action popup). Remembered by [baseNote] and [modifier] to avoid
+ * recreating the click handler on every recomposition.
+ *
+ * Used directly on [NoteComposeLayout]'s modifier in [InnerNoteWithReactions] to avoid
+ * a wrapping Column node. For callers that need a wrapping container, use [ClickableNote].
+ */
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
+fun clickableNoteModifier(
+    baseNote: Note,
+    modifier: Modifier,
+    accountViewModel: AccountViewModel,
+    showPopup: () -> Unit,
+    nav: INav,
+): Modifier =
+    remember(baseNote, modifier) {
+        modifier
+            .combinedClickable(
+                onClick = {
+                    val redirectToNote =
+                        if (baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent) {
+                            baseNote.replyTo?.lastOrNull() ?: baseNote
+                        } else {
+                            baseNote
+                        }
+
+                    nav.nav {
+                        if (redirectToNote.event is DraftWrapEvent) {
+                            withContext(Dispatchers.IO) {
+                                routeEditDraftTo(redirectToNote, accountViewModel.account)
+                            }
+                        } else {
+                            routeFor(redirectToNote, accountViewModel.account)
+                        }
+                    }
+                },
+                onLongClick = showPopup,
+            )
+    }
+
+/**
+ * Wraps [content] in a Column with click handling and animated background.
+ *
+ * Kept for callers outside NoteCompose (e.g. ChannelCardCompose) that need a
+ * container for non-NoteComposeLayout content. For NoteCompose itself,
+ * [InnerNoteWithReactions] applies [clickableNoteModifier] directly on the
+ * [NoteComposeLayout] modifier to eliminate this Column wrapper node.
+ */
+@Composable
 fun ClickableNote(
     baseNote: Note,
     modifier: Modifier,
@@ -586,39 +624,20 @@ fun ClickableNote(
     nav: INav,
     content: @Composable () -> Unit,
 ) {
-    val updatedModifier =
-        remember(baseNote, modifier) {
-            modifier
-                .combinedClickable(
-                    onClick = {
-                        val redirectToNote =
-                            if (baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent) {
-                                baseNote.replyTo?.lastOrNull() ?: baseNote
-                            } else {
-                                baseNote
-                            }
-
-                        nav.nav {
-                            if (redirectToNote.event is DraftWrapEvent) {
-                                withContext(Dispatchers.IO) {
-                                    routeEditDraftTo(redirectToNote, accountViewModel.account)
-                                }
-                            } else {
-                                routeFor(redirectToNote, accountViewModel.account)
-                            }
-                        }
-                    },
-                    onLongClick = showPopup,
-                )
-        }
-
-    Column(modifier = updatedModifier.background(backgroundColor.value)) { content() }
+    Column(
+        modifier =
+            clickableNoteModifier(baseNote, modifier, accountViewModel, showPopup, nav)
+                .background(backgroundColor.value),
+    ) {
+        content()
+    }
 }
 
 @Composable
 fun InnerNoteWithReactions(
     baseNote: Note,
     backgroundColor: MutableState<Color>,
+    clickModifier: Modifier = Modifier,
     isBoostedNote: Boolean,
     isQuotedNote: Boolean,
     unPackReply: ReplyRenderType,
@@ -632,74 +651,94 @@ fun InnerNoteWithReactions(
 ) {
     val notBoostedNorQuote = !isBoostedNote && !isQuotedNote
     val editState = observeEdits(baseNote = baseNote, accountViewModel = accountViewModel)
+    val isNotRepost = baseNote.event !is RepostEvent && baseNote.event !is GenericRepostEvent
+    val showSecondRow = isNotRepost && notBoostedNorQuote && accountViewModel.settings.isCompleteUIMode()
 
-    Row(
+    NoteComposeLayout(
         modifier =
-            if (!isBoostedNote) {
-                normalWithTopMarginNoteModifier
-            } else {
-                boostedNoteModifier
-            },
-        horizontalArrangement = RowColSpacing10dp,
-    ) {
-        if (notBoostedNorQuote) {
-            Column(WidthAuthorPictureModifier, verticalArrangement = RowColSpacing5dp) {
-                // Draws the boosted picture outside the boosted card.
+            clickModifier
+                .drawBehind { drawRect(backgroundColor.value) }
+                .fillMaxWidth(),
+        addPadding = !isBoostedNote,
+        showAuthorColumn = notBoostedNorQuote,
+        showSecondRow = showSecondRow,
+        showContentSpacer = isNotRepost,
+        authorPicture = {
+            if (notBoostedNorQuote) {
                 Box(modifier = Size55Modifier, contentAlignment = Alignment.BottomEnd) {
                     RenderAuthorImages(baseNote, nav, accountViewModel)
                 }
-
+            }
+        },
+        relayBadges = {
+            if (notBoostedNorQuote) {
                 BadgeBox(baseNote, accountViewModel, nav)
             }
-        }
-
-        Column(Modifier.fillMaxWidth()) {
-            val showSecondRow =
-                baseNote.event !is RepostEvent &&
-                    baseNote.event !is GenericRepostEvent &&
-                    !isBoostedNote &&
-                    !isQuotedNote &&
-                    accountViewModel.settings.isCompleteUIMode()
-            NoteBody(
+        },
+        firstRow = {
+            FirstUserInfoRow(
                 baseNote = baseNote,
                 showAuthorPicture = isQuotedNote,
-                unPackReply = unPackReply,
-                makeItShort = makeItShort,
-                canPreview = canPreview,
-                showSecondRow = showSecondRow,
                 isPinned = isPinned,
-                quotesLeft = quotesLeft,
-                backgroundColor = backgroundColor,
                 editState = editState,
                 accountViewModel = accountViewModel,
                 nav = nav,
                 moreOptions = moreOptions,
             )
-
-            RenderApprovalIfNeeded(baseNote, accountViewModel, nav)
-        }
-    }
-
-    val isNotRepost = baseNote.event !is RepostEvent && baseNote.event !is GenericRepostEvent && baseNote.event !is DraftWrapEvent
-
-    if (isNotRepost) {
-        if (makeItShort) {
-            Spacer(modifier = DoubleVertSpacer)
-        } else {
-            ReactionsRow(
+        },
+        secondRow = {
+            if (showSecondRow) {
+                SecondUserInfoRow(
+                    baseNote,
+                    editState,
+                    accountViewModel,
+                    nav,
+                )
+            }
+        },
+        noteContent = {
+            RenderNoteRow(
                 baseNote = baseNote,
-                showReactionDetail = notBoostedNorQuote,
-                addPadding = !isBoostedNote,
+                backgroundColor = backgroundColor,
+                makeItShort = makeItShort,
+                canPreview = canPreview,
                 editState = editState,
+                quotesLeft = quotesLeft,
+                unPackReply = unPackReply,
                 accountViewModel = accountViewModel,
                 nav = nav,
             )
-        }
-    } else {
-        if (baseNote.event is DraftWrapEvent) {
-            Spacer(modifier = DoubleVertSpacer)
-        }
-    }
+
+            if (!makeItShort) {
+                val noteEvent = baseNote.event
+                val zapSplits = remember(noteEvent) { noteEvent?.hasZapSplitSetup() ?: false }
+                if (zapSplits && noteEvent != null) {
+                    Spacer(modifier = HalfDoubleVertSpacer)
+                    DisplayZapSplits(noteEvent, false, accountViewModel, nav)
+                }
+            }
+
+            RenderApprovalIfNeeded(baseNote, accountViewModel, nav)
+        },
+        reactionsRow = {
+            if (isNotRepost && baseNote.event !is DraftWrapEvent) {
+                if (makeItShort) {
+                    Spacer(modifier = DoubleVertSpacer)
+                } else {
+                    ReactionsRow(
+                        baseNote = baseNote,
+                        showReactionDetail = notBoostedNorQuote,
+                        addPadding = !isBoostedNote,
+                        editState = editState,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                }
+            } else if (baseNote.event is DraftWrapEvent) {
+                Spacer(modifier = DoubleVertSpacer)
+            }
+        },
+    )
 }
 
 @Composable

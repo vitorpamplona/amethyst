@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.call
+package com.vitorpamplona.amethyst.service.call
 
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -31,8 +31,9 @@ import kotlinx.coroutines.launch
 /**
  * Handles the Reject action from the incoming call notification.
  *
- * The Accept action launches [CallActivity] directly via PendingIntent.getActivity
- * to comply with Android 12+ notification trampoline restrictions.
+ * The Accept action launches [com.vitorpamplona.amethyst.ui.call.CallActivity]
+ * directly via PendingIntent.getActivity to comply with Android 12+
+ * notification trampoline restrictions.
  */
 class CallNotificationReceiver : BroadcastReceiver() {
     @OptIn(DelicateCoroutinesApi::class)
@@ -44,7 +45,7 @@ class CallNotificationReceiver : BroadcastReceiver() {
             ACTION_REJECT_CALL -> {
                 NotificationUtils.cancelCallNotification(context)
 
-                val callManager = ActiveCallHolder.callManager ?: return
+                val callManager = CallSessionBridge.callManager ?: return
                 GlobalScope.launch {
                     callManager.rejectCall()
                 }

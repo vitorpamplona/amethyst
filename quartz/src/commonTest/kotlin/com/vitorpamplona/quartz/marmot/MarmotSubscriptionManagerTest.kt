@@ -142,24 +142,24 @@ class MarmotSubscriptionManagerTest {
         }
 
     @Test
-    fun testBuildFiltersIncludesBothTypes() =
+    fun testBuildFiltersIncludesAllTypes() =
         runTest {
             val manager = MarmotSubscriptionManager(userPubKey)
 
             manager.subscribeGroup(groupId1)
             val allFilters = manager.buildFilters()
 
-            // Should have 1 group filter + 1 gift wrap filter
-            assertEquals(2, allFilters.size)
+            // Should have 1 group filter + 1 gift wrap filter + 1 own key package filter
+            assertEquals(3, allFilters.size)
         }
 
     @Test
-    fun testBuildFiltersWithNoGroupsHasGiftWrapOnly() {
+    fun testBuildFiltersWithNoGroupsHasGiftWrapAndKeyPackage() {
         val manager = MarmotSubscriptionManager(userPubKey)
         val allFilters = manager.buildFilters()
 
-        // Only the gift wrap filter
-        assertEquals(1, allFilters.size)
+        // Gift wrap filter + own key package filter
+        assertEquals(2, allFilters.size)
         assertEquals(listOf(GiftWrapEvent.KIND), allFilters[0].kinds)
     }
 

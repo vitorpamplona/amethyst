@@ -1895,6 +1895,38 @@ class Account(
         client.publish(outbound.signedEvent, groupRelays)
     }
 
+    /**
+     * Remove a member from a Marmot MLS group.
+     * Publishes the commit GroupEvent to group relays.
+     */
+    suspend fun removeMarmotGroupMember(
+        nostrGroupId: HexKey,
+        targetLeafIndex: Int,
+        groupRelays: Set<NormalizedRelayUrl>,
+    ) {
+        val manager = marmotManager ?: return
+        if (!isWriteable()) return
+
+        val outbound = manager.removeMember(nostrGroupId, targetLeafIndex)
+        client.publish(outbound.signedEvent, groupRelays)
+    }
+
+    /**
+     * Update a Marmot MLS group's metadata (name, description, etc.).
+     * Publishes the commit GroupEvent to group relays.
+     */
+    suspend fun updateMarmotGroupMetadata(
+        nostrGroupId: HexKey,
+        metadata: com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData,
+        groupRelays: Set<NormalizedRelayUrl>,
+    ) {
+        val manager = marmotManager ?: return
+        if (!isWriteable()) return
+
+        val outbound = manager.updateGroupMetadata(nostrGroupId, metadata)
+        client.publish(outbound.signedEvent, groupRelays)
+    }
+
     suspend fun createStatus(newStatus: String) = sendMyPublicAndPrivateOutbox(UserStatusAction.create(newStatus, signer))
 
     suspend fun publishCallSignaling(wrap: EphemeralGiftWrapEvent) {

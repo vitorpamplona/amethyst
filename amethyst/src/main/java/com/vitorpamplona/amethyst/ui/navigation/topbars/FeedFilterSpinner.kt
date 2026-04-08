@@ -44,7 +44,7 @@ import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Public
-import androidx.compose.material.icons.outlined.SensorDoor
+import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -527,7 +527,7 @@ private fun FeedIcon(
             else -> {
                 when (item.name) {
                     is GeoHashName -> Icons.Outlined.LocationOn
-                    is RelayName -> Icons.Outlined.SensorDoor
+                    is RelayName -> Icons.Outlined.Storage
                     is CommunityName -> Icons.Outlined.Groups
                     is PeopleListName -> Icons.AutoMirrored.Outlined.ViewList
                     else -> Icons.Outlined.Person

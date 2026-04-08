@@ -33,7 +33,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.GroupAdd
+import androidx.compose.material.icons.filled.PersonRemove
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -108,6 +110,12 @@ fun MarmotGroupInfoScreen(
                 },
                 title = { Text("Group Info") },
                 actions = {
+                    IconButton(onClick = { nav.nav(Route.MarmotGroupEditInfo(nostrGroupId)) }) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "Edit Group Info",
+                        )
+                    }
                     IconButton(onClick = { nav.nav(Route.MarmotGroupAddMember(nostrGroupId)) }) {
                         Icon(
                             imageVector = Icons.Default.GroupAdd,
@@ -194,9 +202,28 @@ fun MarmotGroupInfoScreen(
                 HorizontalDivider()
             }
 
-            // Leave group section
+            // Group actions section
             item {
                 HorizontalDivider(modifier = Modifier.padding(top = 8.dp))
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .clickable { nav.nav(Route.MarmotGroupRemoveMember(nostrGroupId)) }
+                            .padding(horizontal = 16.dp, vertical = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.PersonRemove,
+                        contentDescription = "Remove Member",
+                    )
+                    Text(
+                        text = "Remove Member",
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                }
+                HorizontalDivider()
                 Row(
                     modifier =
                         Modifier

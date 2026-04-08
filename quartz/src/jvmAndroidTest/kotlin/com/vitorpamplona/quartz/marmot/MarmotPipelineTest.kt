@@ -318,11 +318,11 @@ class MarmotPipelineTest {
             val inbound = MarmotInboundProcessor(manager, keyPackageRotationManager)
 
             // Initially no pending commits
-            assertTrue(inbound.pendingCommitEpochs().isEmpty())
+            assertTrue(inbound.pendingCommitGroupEpochs().isEmpty())
 
             // Clear works without error
             inbound.clearPendingCommits()
-            assertTrue(inbound.pendingCommitEpochs().isEmpty())
+            assertTrue(inbound.pendingCommitGroupEpochs().isEmpty())
         }
     }
 

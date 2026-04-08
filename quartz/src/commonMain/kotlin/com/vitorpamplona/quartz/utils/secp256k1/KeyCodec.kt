@@ -61,6 +61,23 @@ internal object KeyCodec {
         return true
     }
 
+    /** liftX with caller-provided temp buffer (avoids 1 LongArray alloc). */
+    fun liftX(
+        outX: LongArray,
+        outY: LongArray,
+        x: LongArray,
+        tmp: LongArray,
+    ): Boolean {
+        if (U256.cmp(x, FieldP.P) >= 0) return false
+        FieldP.sqr(tmp, x)
+        FieldP.mul(tmp, tmp, x)
+        FieldP.add(tmp, tmp, B)
+        if (!FieldP.sqrt(outY, tmp)) return false
+        U256.copyInto(outX, x)
+        if (outY[0] and 1L != 0L) FieldP.neg(outY, outY)
+        return true
+    }
+
     /** Check if y-coordinate is even (LSB = 0). */
     fun hasEvenY(y: LongArray): Boolean = y[0] and 1L == 0L
 
