@@ -22,12 +22,15 @@ package com.vitorpamplona.amethyst.ui.layouts
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.BottomAppBarScrollBehavior
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.unit.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -42,6 +45,7 @@ fun DisappearingFloatingButton(
     Box(
         modifier =
             Modifier
+                .size(75.dp)
                 .layout { measurable, constraints ->
                     val placeable = measurable.measure(constraints)
                     // Adjust the height of the layout so the FAB doesn't leave a "hole"
@@ -50,12 +54,13 @@ fun DisappearingFloatingButton(
                         placeable.placeRelative(0, 0)
                     }
                 }.graphicsLayer {
+                    this.translationY = this.size.height / 3.5f
                     this.scaleX = progress
                     this.scaleY = progress
                     this.alpha = progress
-                    // Clip the content as it shrinks to prevent overflow
                     clip = true
                 },
+        contentAlignment = Alignment.TopCenter,
         content = content,
     )
 }
