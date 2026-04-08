@@ -496,6 +496,10 @@ class GroupEventHandler(
                     Log.d("GroupEventHandler", "Commit pending for group ${result.groupId}, epoch=${result.epoch}")
                 }
 
+                is GroupEventResult.Duplicate -> {
+                    Log.d("GroupEventHandler", "Duplicate event for group ${result.groupId}")
+                }
+
                 is GroupEventResult.Error -> {
                     Log.w("GroupEventHandler") { "Error processing GroupEvent: ${result.message}" }
                 }
