@@ -18,38 +18,23 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.call
+package com.vitorpamplona.quartz.nipACWebRtcCalls.events
 
-import com.vitorpamplona.amethyst.commons.call.CallManager
-import com.vitorpamplona.amethyst.service.call.CallController
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.Kind
+import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallIdTag
 
-/**
- * Holds references to the active call state so that [CallActivity] can access
- * the same [CallManager] and [CallController] owned by [AccountViewModel] in
- * the main activity. Both activities run in the same process.
- */
-object ActiveCallHolder {
-    var callManager: CallManager? = null
-        private set
-    var callController: CallController? = null
-        private set
-    var accountViewModel: AccountViewModel? = null
-        private set
-
-    fun set(
-        callManager: CallManager,
-        callController: CallController?,
-        accountViewModel: AccountViewModel,
-    ) {
-        this.callManager = callManager
-        this.callController = callController
-        this.accountViewModel = accountViewModel
-    }
-
-    fun clear() {
-        callManager = null
-        callController = null
-        accountViewModel = null
-    }
+@Immutable
+abstract class WebRTCEvent(
+    id: HexKey,
+    pubKey: HexKey,
+    createdAt: Long,
+    kind: Kind,
+    tags: Array<Array<String>>,
+    content: String,
+    sig: HexKey,
+) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
+    fun callId() = tags.firstNotNullOfOrNull(CallIdTag::parse)
 }

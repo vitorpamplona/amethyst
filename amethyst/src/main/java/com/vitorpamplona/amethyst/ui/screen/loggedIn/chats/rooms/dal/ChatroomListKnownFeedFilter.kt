@@ -77,7 +77,12 @@ class ChatroomListKnownFeedFilter(
                         .firstOrNull()
                 }
 
-        return (privateMessages + publicChannels + ephemeralChats).sortedWith(DefaultFeedOrder)
+        val marmotGroups =
+            account.marmotGroupList.rooms.mapNotNull { _, chatroom ->
+                chatroom.newestMessage
+            }
+
+        return (privateMessages + publicChannels + ephemeralChats + marmotGroups).sortedWith(DefaultFeedOrder)
     }
 
     override fun updateListWith(

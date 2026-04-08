@@ -997,6 +997,7 @@
     <string name="settings">Settings</string>
     <string name="account_settings">Account Settings</string>
     <string name="app_settings">App Settings</string>
+    <string name="danger_zone">Danger Zone</string>
     <string name="connectivity_type_always">Always</string>
     <string name="connectivity_type_wifi_only">Wifi-only</string>
     <string name="connectivity_type_unmetered_wifi_only">Unmetered WiFi</string>
@@ -1506,6 +1507,7 @@
 
     <string name="dm_upload">DM Upload</string>
     <string name="relay_settings">Relay Settings</string>
+    <string name="relay_reorder">Reorder relay</string>
     <string name="public_home_section">Public Outbox/Home Relays</string>
     <string name="public_home_section_explainer_profile">User is posting his content to these relays</string>
     <string name="public_home_section_explainer">This relay type stores all your content. Amethyst will send your posts here and others will use these relays to find your content. Insert between 1–3 relays. They can be personal relays, paid relays or public relays.</string>
@@ -1675,6 +1677,7 @@
     <string name="select_list_to_filter">Select an option to filter the feed</string>
     <string name="feed_group_feeds">Feeds</string>
     <string name="feed_group_hashtags">Hashtags</string>
+    <string name="feed_group_locations">Locations</string>
     <string name="feed_group_communities">Communities</string>
     <string name="feed_group_lists">Lists</string>
     <string name="feed_group_relays">Relays</string>
@@ -1789,6 +1792,7 @@
     <string name="connected">Connected</string>
     <string name="social_proof">Social proof</string>
     <string name="poll_submit">Submit</string>
+    <string name="poll_view_results">View results</string>
     <string name="restart">Restart</string>
     <string name="chess_accept">Accept</string>
     <string name="chess_decline">Decline</string>
@@ -1931,6 +1935,7 @@
     <string name="kind_shorts">Shorts</string>
     <string name="kind_voice_msg">Voice Msg</string>
     <string name="kind_voice_reply">Voice Reply</string>
+    <string name="kind_wake">WakeUp</string>
     <string name="kind_web_bookmark">Web Bookmark</string>
     <string name="kind_wiki">Wiki</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">Start with a great feed by following the same people as someone you trust.</string>

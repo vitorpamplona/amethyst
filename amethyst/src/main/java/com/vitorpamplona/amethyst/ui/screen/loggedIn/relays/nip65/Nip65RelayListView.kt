@@ -36,9 +36,13 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayCountResult
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayDragState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayUrlEditField
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.rememberRelayDragState
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
+import com.vitorpamplona.amethyst.ui.theme.HorzHalfVertPadding
+import com.vitorpamplona.amethyst.ui.theme.HorzPadding
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
@@ -54,12 +58,24 @@ fun Nip65RelayList(
     val homeFeedState by postViewModel.homeRelays.collectAsStateWithLifecycle()
     val notifFeedState by postViewModel.notificationRelays.collectAsStateWithLifecycle()
 
+    val homeDragState =
+        rememberRelayDragState(
+            onMove = { from, to -> postViewModel.moveHomeRelay(from, to) },
+            itemCount = { homeFeedState.size },
+        )
+    val notifDragState =
+        rememberRelayDragState(
+            onMove = { from, to -> postViewModel.moveNotifRelay(from, to) },
+            itemCount = { notifFeedState.size },
+        )
+
     Row(verticalAlignment = Alignment.CenterVertically) {
         LazyColumn(
             contentPadding = FeedPadding,
+            userScrollEnabled = !homeDragState.isDragging && !notifDragState.isDragging,
         ) {
-            renderNip65HomeItems(homeFeedState, postViewModel, accountViewModel, newNav)
-            renderNip65NotifItems(notifFeedState, postViewModel, accountViewModel, newNav)
+            renderNip65HomeItems(homeFeedState, postViewModel, accountViewModel, newNav, dragState = homeDragState)
+            renderNip65NotifItems(notifFeedState, postViewModel, accountViewModel, newNav, dragState = notifDragState)
         }
     }
 }
@@ -72,14 +88,19 @@ fun Nip65InboxRelayList(
     nav: INav,
 ) {
     val newNav = rememberExtendedNav(nav, onClose)
-
     val notifFeedState by postViewModel.notificationRelays.collectAsStateWithLifecycle()
+    val dragState =
+        rememberRelayDragState(
+            onMove = { from, to -> postViewModel.moveNotifRelay(from, to) },
+            itemCount = { notifFeedState.size },
+        )
 
     Row(verticalAlignment = Alignment.CenterVertically) {
         LazyColumn(
             contentPadding = FeedPadding,
+            userScrollEnabled = !dragState.isDragging,
         ) {
-            renderNip65NotifItems(notifFeedState, postViewModel, accountViewModel, newNav)
+            renderNip65NotifItems(notifFeedState, postViewModel, accountViewModel, newNav, dragState = dragState)
         }
     }
 }
@@ -92,14 +113,19 @@ fun Nip65OutboxRelayList(
     nav: INav,
 ) {
     val newNav = rememberExtendedNav(nav, onClose)
-
     val homeFeedState by postViewModel.homeRelays.collectAsStateWithLifecycle()
+    val dragState =
+        rememberRelayDragState(
+            onMove = { from, to -> postViewModel.moveHomeRelay(from, to) },
+            itemCount = { homeFeedState.size },
+        )
 
     Row(verticalAlignment = Alignment.CenterVertically) {
         LazyColumn(
             contentPadding = FeedPadding,
+            userScrollEnabled = !dragState.isDragging,
         ) {
-            renderNip65HomeItems(homeFeedState, postViewModel, accountViewModel, newNav)
+            renderNip65HomeItems(homeFeedState, postViewModel, accountViewModel, newNav, dragState = dragState)
         }
     }
 }
@@ -110,13 +136,17 @@ fun LazyListScope.renderNip65HomeItems(
     accountViewModel: AccountViewModel,
     nav: INav,
     countResults: Map<NormalizedRelayUrl, RelayCountResult> = emptyMap(),
+    dragState: RelayDragState? = null,
 ) {
     itemsIndexed(feedState, key = { _, item -> "Nip65Home" + item.relay.url }) { index, item ->
         BasicRelaySetupInfoDialog(
             item,
             onDelete = { postViewModel.deleteHomeRelay(item) },
             nip11CachedRetriever = Amethyst.instance.nip11Cache,
+            modifier = HorzHalfVertPadding,
             countResult = countResults[item.relay],
+            index = index,
+            dragState = dragState,
             accountViewModel = accountViewModel,
             nav = nav,
         )
@@ -126,6 +156,7 @@ fun LazyListScope.renderNip65HomeItems(
         Spacer(modifier = StdVertSpacer)
         RelayUrlEditField(
             onNewRelay = { postViewModel.addHomeRelay(relaySetupInfoBuilder(it)) },
+            modifier = HorzPadding,
             accountViewModel = accountViewModel,
             nav = nav,
         )
@@ -138,13 +169,17 @@ fun LazyListScope.renderNip65NotifItems(
     accountViewModel: AccountViewModel,
     nav: INav,
     countResults: Map<NormalizedRelayUrl, RelayCountResult> = emptyMap(),
+    dragState: RelayDragState? = null,
 ) {
     itemsIndexed(feedState, key = { _, item -> "Nip65Notif" + item.relay.url }) { index, item ->
         BasicRelaySetupInfoDialog(
             item,
             onDelete = { postViewModel.deleteNotifRelay(item) },
             nip11CachedRetriever = Amethyst.instance.nip11Cache,
+            modifier = HorzHalfVertPadding,
             countResult = countResults[item.relay],
+            index = index,
+            dragState = dragState,
             accountViewModel = accountViewModel,
             nav = nav,
         )
@@ -154,6 +189,7 @@ fun LazyListScope.renderNip65NotifItems(
         Spacer(modifier = StdVertSpacer)
         RelayUrlEditField(
             onNewRelay = { postViewModel.addNotifRelay(relaySetupInfoBuilder(it)) },
+            modifier = HorzPadding,
             accountViewModel = accountViewModel,
             nav = nav,
         )

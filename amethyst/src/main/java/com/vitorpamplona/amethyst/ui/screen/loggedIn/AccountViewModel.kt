@@ -218,6 +218,7 @@ class AccountViewModel(
                 scope = viewModelScope,
                 publishWrap = { wrap -> account.publishCallSignaling(wrap) },
                 signerProvider = { account.signer },
+                localPubKey = account.signer.pubKey,
             )
 
         // Set callbacks before exposing controller to avoid timing races
@@ -228,9 +229,9 @@ class AccountViewModel(
         callManager.onPeerLeft = { peerPubKey -> controller.disposePeerSession(peerPubKey) }
         callController = controller
 
-        // Populate ActiveCallHolder so CallActivity can launch even when the app
+        // Populate CallSessionBridge so CallActivity can launch even when the app
         // is in the background (e.g. full-screen incoming call intent).
-        com.vitorpamplona.amethyst.ui.call.ActiveCallHolder
+        com.vitorpamplona.amethyst.service.call.CallSessionBridge
             .set(callManager, controller, this)
     }
 
@@ -1128,6 +1129,13 @@ class AccountViewModel(
 
     fun dismissPollNotification(noteId: String) = account.dismissPollNotification(noteId)
 
+    fun hasViewedPollResults(noteId: String) = account.hasViewedPollResults(noteId)
+
+    fun markPollResultsViewed(
+        noteId: String,
+        pollEndsAt: Long?,
+    ) = account.markPollResultsViewed(noteId, pollEndsAt)
+
     fun dontTranslateFrom() = account.settings.syncedSettings.languages.dontTranslateFrom.value
 
     fun translateTo() = account.settings.syncedSettings.languages.translateTo.value
@@ -1430,6 +1438,85 @@ class AccountViewModel(
                 }
             }
         }
+    }
+
+    // --- Marmot Group Messaging ---
+
+    suspend fun sendMarmotGroupMessage(
+        nostrGroupId: String,
+        text: String,
+    ) {
+        val template =
+            com.vitorpamplona.quartz.nip01Core.signers.eventTemplate<com.vitorpamplona.quartz.nip01Core.core.Event>(
+                kind = 9,
+                description = text,
+            )
+        val innerEvent = account.signer.sign<com.vitorpamplona.quartz.nip01Core.core.Event>(template)
+        val relays = marmotGroupRelays(nostrGroupId)
+        account.sendMarmotGroupMessage(nostrGroupId, innerEvent, relays)
+    }
+
+    suspend fun createMarmotGroup(nostrGroupId: String) {
+        account.createMarmotGroup(nostrGroupId)
+    }
+
+    suspend fun publishMarmotKeyPackage() {
+        account.publishMarmotKeyPackage()
+    }
+
+    fun hasPublishedKeyPackage(): Boolean = account.hasPublishedKeyPackage()
+
+    suspend fun leaveMarmotGroup(nostrGroupId: String) {
+        val relays = marmotGroupRelays(nostrGroupId)
+        account.leaveMarmotGroup(nostrGroupId, relays)
+    }
+
+    /**
+     * Get the relay set for a Marmot group from MLS GroupContext metadata.
+     * Falls back to outbox relays if the group has no configured relays.
+     */
+    private fun marmotGroupRelays(nostrGroupId: String): Set<NormalizedRelayUrl> {
+        val metadata = account.marmotManager?.groupMetadata(nostrGroupId)
+        val groupRelays =
+            metadata
+                ?.relays
+                ?.mapNotNull {
+                    com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+                        .normalizeOrNull(it)
+                }?.toSet()
+        return if (!groupRelays.isNullOrEmpty()) groupRelays else account.outboxRelays.flow.value
+    }
+
+    fun marmotGroupMembers(nostrGroupId: String): List<com.vitorpamplona.amethyst.commons.marmot.GroupMemberInfo> = account.marmotManager?.memberPubkeys(nostrGroupId) ?: emptyList()
+
+    suspend fun addMarmotGroupMember(
+        nostrGroupId: String,
+        memberPubKey: String,
+    ): String = account.fetchKeyPackageAndAddMember(nostrGroupId, memberPubKey)
+
+    suspend fun removeMarmotGroupMember(
+        nostrGroupId: String,
+        targetLeafIndex: Int,
+    ) {
+        val relays = marmotGroupRelays(nostrGroupId)
+        account.removeMarmotGroupMember(nostrGroupId, targetLeafIndex, relays)
+    }
+
+    suspend fun updateMarmotGroupMetadata(
+        nostrGroupId: String,
+        name: String,
+        description: String,
+    ) {
+        val currentMetadata =
+            account.marmotManager?.groupMetadata(nostrGroupId)
+                ?: throw IllegalStateException("Group metadata not found")
+        val updatedMetadata =
+            currentMetadata.copy(
+                name = name,
+                description = description,
+            )
+        val relays = marmotGroupRelays(nostrGroupId)
+        account.updateMarmotGroupMetadata(nostrGroupId, updatedMetadata, relays)
     }
 
     override fun onCleared() {

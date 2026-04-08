@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.model
 
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupList
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
@@ -100,6 +101,9 @@ interface IAccount {
 
     /** Chatroom list for private DM conversations */
     val chatroomList: ChatroomList
+
+    /** Marmot MLS group chat list */
+    val marmotGroupList: MarmotGroupList
 
     /** Whether a note is acceptable (not hidden, not blocked, etc.) */
     fun isAcceptable(note: Note): Boolean

@@ -56,6 +56,22 @@ class SecretTree(
     /** Consumed (sender, generation) pairs for replay detection (RFC 9420 Section 9.1) */
     private val consumedGenerations = mutableMapOf<Int, MutableSet<Int>>()
 
+    /**
+     * Cache of key/nonce pairs for skipped generations.
+     * Key: (leafIndex, generation) -> derived KeyNonceGeneration.
+     * When fast-forwarding a ratchet, intermediate generations are saved here
+     * so that out-of-order messages arriving later can still be decrypted.
+     */
+    private val skippedKeys = mutableMapOf<Pair<Int, Int>, KeyNonceGeneration>()
+
+    private companion object {
+        /** Maximum number of skipped key entries to retain (prevents unbounded memory growth). */
+        const val MAX_SKIPPED_KEYS = 1000
+
+        /** Maximum consumed generation entries to track per sender before pruning. */
+        const val MAX_CONSUMED_GENERATIONS_PER_SENDER = 1000
+    }
+
     init {
         // Seed the root
         treeSecrets[BinaryTree.root(leafCount)] = encryptionSecret
@@ -111,11 +127,27 @@ class SecretTree(
     /**
      * Get the (key, nonce) for a specific generation, consuming secrets up to that point.
      * Used when decrypting an out-of-order message.
+     *
+     * When fast-forwarding past intermediate generations, their key/nonce pairs
+     * are cached in [skippedKeys] so that out-of-order messages arriving later
+     * can still be decrypted.
      */
     fun applicationKeyNonceForGeneration(
         leafIndex: Int,
         generation: Int,
     ): KeyNonceGeneration {
+        // Check skipped keys cache first (out-of-order message for a previously skipped generation)
+        val cachedKey = skippedKeys.remove(Pair(leafIndex, generation))
+        if (cachedKey != null) {
+            // Still mark as consumed for replay detection
+            val senderConsumed = consumedGenerations.getOrPut(leafIndex) { mutableSetOf() }
+            require(generation !in senderConsumed) {
+                "Replay detected: generation $generation from sender $leafIndex already consumed"
+            }
+            senderConsumed.add(generation)
+            return cachedKey
+        }
+
         val state = getOrInitSender(leafIndex)
 
         require(generation >= state.applicationGeneration) {
@@ -129,10 +161,22 @@ class SecretTree(
         }
         senderConsumed.add(generation)
 
-        // Fast-forward the ratchet
+        // Prune consumed generations below the current minimum for this sender
+        if (senderConsumed.size > MAX_CONSUMED_GENERATIONS_PER_SENDER) {
+            val minGeneration = state.applicationGeneration
+            senderConsumed.removeAll { it < minGeneration }
+        }
+
+        // Fast-forward the ratchet, caching intermediate key/nonce pairs
         var secret = state.applicationSecret
         var gen = state.applicationGeneration
         while (gen < generation) {
+            // Save the intermediate generation's key/nonce for later out-of-order retrieval
+            val intermediateKng = deriveKeyNonce(secret, gen)
+            val cacheKey = Pair(leafIndex, gen)
+            if (skippedKeys.size < MAX_SKIPPED_KEYS) {
+                skippedKeys[cacheKey] = intermediateKng
+            }
             secret = MlsCryptoProvider.expandWithLabel(secret, "secret", generationContext(gen), MlsCryptoProvider.HASH_OUTPUT_LENGTH)
             gen++
         }

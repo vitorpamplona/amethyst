@@ -20,19 +20,35 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.home
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size26Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
+
+@Composable
+fun NewNoteButtonPreview() {
+    ThemeComparisonRow {
+        Box(Modifier.size(200.dp), contentAlignment = Alignment.Center) {
+            NewNoteButton(EmptyNav())
+        }
+    }
+}
 
 @Composable
 fun NewNoteButton(nav: INav) {

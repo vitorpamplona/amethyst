@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.service.notifications
 import android.app.NotificationManager
 import android.content.Context
 import android.graphics.drawable.BitmapDrawable
+import androidx.compose.runtime.getValue
 import androidx.core.content.ContextCompat
 import coil3.ImageLoader
 import coil3.asDrawable
@@ -39,8 +40,12 @@ import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.sendCh
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.sendDMNotification
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.sendReactionNotification
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.sendZapNotification
+import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.ScreenAuthAccount
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderQueryState
 import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.experimental.notifications.wake.WakeUpEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
@@ -62,6 +67,12 @@ import com.vitorpamplona.quartz.nip64Chess.move.LiveChessMoveEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallOfferEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
 import java.math.BigDecimal
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -107,6 +118,7 @@ class EventNotificationConsumer(
         notificationEvent: Event,
         account: Account,
     ) {
+        Log.d(TAG) { "New Notification ${notificationEvent.kind} ${notificationEvent.id} Arrived for ${account.signer.pubKey}" }
         val consumed = LocalCache.hasConsumed(notificationEvent)
         Log.d(TAG) { "New Notification ${notificationEvent.kind} ${notificationEvent.id} Arrived for ${account.signer.pubKey} consumed= $consumed" }
         if (!consumed) {
@@ -114,8 +126,9 @@ class EventNotificationConsumer(
             if (!notificationManager().areNotificationsEnabled()) return
             Log.d(TAG, "Notifications are enabled")
 
-            unwrapAndConsume(notificationEvent, account.signer)?.let { innerEvent ->
-                Log.d(TAG) { "Unwrapped consume ${innerEvent.javaClass.simpleName}" }
+            unwrapAndConsume(notificationEvent, account.signer)?.let { innerNote ->
+                val innerEvent = innerNote.event
+                Log.d(TAG) { "Unwrapped consume ${innerEvent?.javaClass?.simpleName}" }
 
                 when (innerEvent) {
                     is PrivateDmEvent -> {
@@ -149,6 +162,51 @@ class EventNotificationConsumer(
                     is CallOfferEvent -> {
                         notifyIncomingCall(innerEvent, account)
                     }
+
+                    is WakeUpEvent -> {
+                        wakeUpFor(innerEvent, innerNote, account)
+                    }
+                }
+            }
+        }
+    }
+
+    suspend fun wakeUpFor(
+        event: WakeUpEvent,
+        note: Note,
+        account: Account,
+    ) {
+        coroutineScope {
+            // keeps the relay connection active for 30 seconds.
+            launch {
+                try {
+                    withTimeout(30_000L) {
+                        Amethyst.instance.relayProxyClientConnector.relayServices
+                            .collect()
+                    }
+                } catch (_: TimeoutCancellationException) {
+                }
+            }
+
+            // keeps the subscription to download this event active for 30 seconds.
+            launch {
+                val accountState = ScreenAuthAccount(account)
+                val eventState = EventFinderQueryState(note, account)
+                val authorState = UserFinderQueryState(note.author ?: LocalCache.getOrCreateUser(event.pubKey), account)
+
+                try {
+                    Amethyst.instance.authCoordinator.subscribe(accountState)
+                    Amethyst.instance.sources.eventFinder
+                        .subscribe(eventState)
+                    Amethyst.instance.sources.userFinder
+                        .subscribe(authorState)
+                    delay(30_000)
+                } finally {
+                    Amethyst.instance.authCoordinator.unsubscribe(accountState)
+                    Amethyst.instance.sources.eventFinder
+                        .unsubscribe(eventState)
+                    Amethyst.instance.sources.userFinder
+                        .unsubscribe(authorState)
                 }
             }
         }
@@ -182,7 +240,7 @@ class EventNotificationConsumer(
     private suspend fun unwrapAndConsume(
         event: Event,
         signer: NostrSigner,
-    ): Event? {
+    ): Note? {
         if (LocalCache.hasConsumed(event)) return null
 
         return when (event) {
@@ -206,9 +264,10 @@ class EventNotificationConsumer(
                     // clear the encrypted payload to save memory
                     LocalCache.getOrCreateNote(event.id).event = event.copyNoContent()
 
+                    val note = LocalCache.getOrCreateNote(inner.id)
                     // this is not verifiable
                     if (LocalCache.justConsume(inner, null, true)) {
-                        inner
+                        note
                     } else {
                         null
                     }
@@ -218,8 +277,9 @@ class EventNotificationConsumer(
             }
 
             else -> {
+                val note = LocalCache.getOrCreateNote(event.id)
                 LocalCache.justConsume(event, null, false)
-                event
+                note
             }
         }
     }

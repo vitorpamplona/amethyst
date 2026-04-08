@@ -384,6 +384,8 @@
     <string name="migrate_bookmarks_success">Bokmärken migrerade</string>
     <string name="drafts">Utkast</string>
     <string name="polls">Omröstningar</string>
+    <string name="open_polls">Öppna</string>
+    <string name="closed_polls">Stängda</string>
     <string name="pictures">Bilder</string>
     <string name="shorts">Kortfilmer</string>
     <string name="longs">Videor</string>
@@ -698,6 +700,7 @@
     <string name="call_camera_off">Kamera av</string>
     <string name="call_speaker">Högtalare</string>
     <string name="call_earpiece">Hörlur</string>
+    <string name="call_bluetooth">Bluetooth</string>
     <string name="call_voice">Röstsamtal</string>
     <string name="call_video">Videosamtal</string>
     <string name="call_waiting_for_others">Väntar på att andra ska ansluta\u2026</string>
@@ -870,6 +873,7 @@
     <string name="settings">Inställningar</string>
     <string name="account_settings">Kontoinställningar</string>
     <string name="app_settings">Appinställningar</string>
+    <string name="danger_zone">Riskzon</string>
     <string name="connectivity_type_always">Alltid</string>
     <string name="connectivity_type_wifi_only">Endast Wi-Fi</string>
     <string name="connectivity_type_unmetered_wifi_only">Obegränsad WiFi</string>
@@ -1286,6 +1290,7 @@
     <string name="inbox_relays_not_found_examples">Bra alternativ är:\n - nos.lol\n - nostr.mom\n - nostr.bitcoiner.social</string>
     <string name="dm_upload">DM uppladdning</string>
     <string name="relay_settings">Relä inställningar</string>
+    <string name="relay_reorder">Ordna om relä</string>
     <string name="public_home_section">Offentliga hemreläer</string>
     <string name="public_home_section_explainer_profile">Användaren publicerar sitt innehåll på dessa reläer</string>
     <string name="public_home_section_explainer">Denna typ av relä lagrar allt ditt innehåll. Amethyst skickar dina inlägg hit och andra kommer att använda dessa reläer för att hitta ditt innehåll. Sätt in mellan 1–3 reläer. De kan vara personliga reläer, betalda reläer eller offentliga reläer.</string>
@@ -1429,6 +1434,7 @@
     <string name="select_list_to_filter">Välj en lista för att filtrera flödet</string>
     <string name="feed_group_feeds">Flöden</string>
     <string name="feed_group_hashtags">Hashtaggar</string>
+    <string name="feed_group_locations">Platser</string>
     <string name="feed_group_communities">Gemenskaper</string>
     <string name="feed_group_lists">Listor</string>
     <string name="feed_group_relays">Reläer</string>
@@ -1529,6 +1535,7 @@
     <string name="connected">Ansluten</string>
     <string name="social_proof">Socialt bevis</string>
     <string name="poll_submit">Skicka</string>
+    <string name="poll_view_results">Visa resultat</string>
     <string name="restart">Starta om</string>
     <string name="chess_accept">Acceptera</string>
     <string name="chess_decline">Avböj</string>
@@ -1670,6 +1677,7 @@
     <string name="kind_shorts">Shorts</string>
     <string name="kind_voice_msg">Röstmeddelande</string>
     <string name="kind_voice_reply">Röstsvar</string>
+    <string name="kind_wake">Väckning</string>
     <string name="kind_web_bookmark">Webbbokmärke</string>
     <string name="kind_wiki">Wiki</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">Kom igång med ett bra flöde genom att följa samma personer som någon du litar på.</string>

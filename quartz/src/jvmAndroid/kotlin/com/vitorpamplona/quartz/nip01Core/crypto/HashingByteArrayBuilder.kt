@@ -21,8 +21,8 @@
 package com.vitorpamplona.quartz.nip01Core.crypto
 
 import com.fasterxml.jackson.core.util.BufferRecycler
-import com.vitorpamplona.quartz.utils.sha256.Sha256Pool
 import java.io.OutputStream
+import java.security.MessageDigest
 import kotlin.math.max
 import kotlin.math.min
 
@@ -34,20 +34,15 @@ import kotlin.math.min
  */
 class HashingByteArrayBuilder(
     private val bufferRecycler: BufferRecycler,
-    private val hashPool: Sha256Pool,
+    private val hasher: MessageDigest,
 ) : OutputStream() {
     var buf: ByteArray = bufferRecycler.allocByteBuffer(BufferRecycler.BYTE_WRITE_CONCAT_BUFFER)
     var bufLength: Int = 0
 
-    // lazy minimizes lock conflicts with the pool
-    val hasher by lazy {
-        hashPool.acquire()
-    }
-
     fun release() {
         bufLength = 0
         bufferRecycler.releaseByteBuffer(BufferRecycler.BYTE_WRITE_CONCAT_BUFFER, buf)
-        hashPool.release(hasher)
+        hasher.reset()
         buf = EMPTY_ARRAY
     }
 

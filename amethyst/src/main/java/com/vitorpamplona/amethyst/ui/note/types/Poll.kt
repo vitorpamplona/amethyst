@@ -265,11 +265,14 @@ fun RenderPollCard(
 
     RenderPollCard(
         card = card,
+        noteId = event.id,
         onRespond = { responses ->
             accountViewModel.launchSigner {
                 accountViewModel.account.pollRespond(event, responses)
             }
         },
+        onViewResults = { accountViewModel.markPollResultsViewed(event.id, event.endsAt()) },
+        hasViewedResults = { accountViewModel.hasViewedPollResults(event.id) },
         resultContent = galleryUser,
         labelContent = labelContent,
     )
@@ -278,7 +281,10 @@ fun RenderPollCard(
 @Composable
 fun RenderPollCard(
     card: PollCard,
+    noteId: String = "",
     onRespond: (Set<String>) -> Unit,
+    onViewResults: () -> Unit = {},
+    hasViewedResults: () -> Boolean = { false },
     resultContent: @Composable RowScope.(user: User) -> Unit,
     labelContent: @Composable ColumnScope.(code: String, label: String) -> Unit,
 ) {
@@ -296,12 +302,29 @@ fun RenderPollCard(
                 val haveIVoted by card.haveIVotedFlow.collectAsStateWithLifecycle(haveIVoted)
                 if (haveIVoted) {
                     RenderResults(card, resultContent, labelContent)
-                } else if (card.hasEnded()) {
+                } else if (card.hasEnded() || hasViewedResults()) {
                     RenderResults(card, resultContent, labelContent)
                 } else {
-                    when (card.type) {
-                        PollType.SINGLE_CHOICE -> RenderSingleChoiceOptions(card, labelContent, onRespond)
-                        PollType.MULTI_CHOICE -> RenderMultiChoiceOptions(card, labelContent, onRespond)
+                    var viewingResults by remember { mutableStateOf(false) }
+                    if (viewingResults) {
+                        RenderResults(card, resultContent, labelContent)
+                    } else {
+                        when (card.type) {
+                            PollType.SINGLE_CHOICE -> RenderSingleChoiceOptions(card, labelContent, onRespond)
+                            PollType.MULTI_CHOICE -> RenderMultiChoiceOptions(card, labelContent, onRespond)
+                        }
+
+                        Text(
+                            text = stringRes(R.string.poll_view_results),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier =
+                                Modifier
+                                    .clickable {
+                                        onViewResults()
+                                        viewingResults = true
+                                    }.padding(vertical = 4.dp),
+                        )
                     }
                 }
             }
@@ -615,7 +638,7 @@ fun RenderPollManualPreview() {
 
     ThemeComparisonColumn {
         Column(Modifier.padding(10.dp)) {
-            RenderPollCard(poll, {}, {}) { _, label ->
+            RenderPollCard(poll, onRespond = {}, resultContent = {}) { _, label ->
                 Text(
                     text = label,
                 )
@@ -663,7 +686,7 @@ fun RenderPollManualLongPreview() {
 
     ThemeComparisonColumn {
         Column(Modifier.padding(10.dp)) {
-            RenderPollCard(poll, {}, {}) { _, label ->
+            RenderPollCard(poll, onRespond = {}, resultContent = {}) { _, label ->
                 Text(
                     text = label,
                 )

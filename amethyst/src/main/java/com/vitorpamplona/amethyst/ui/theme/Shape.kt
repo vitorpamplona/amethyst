@@ -155,6 +155,8 @@ val HalfVertPadding = Modifier.padding(vertical = 5.dp)
 val HorzPadding = Modifier.padding(horizontal = 10.dp)
 val VertPadding = Modifier.padding(vertical = 10.dp)
 
+val HorzHalfVertPadding = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+
 val DoubleHorzPadding = Modifier.padding(horizontal = 20.dp)
 val DoubleVertPadding = Modifier.padding(vertical = 20.dp)
 
@@ -342,6 +344,9 @@ val PostKeyboard =
 
 val SettingsCategoryFirstModifier = Modifier.padding(bottom = 8.dp)
 val SettingsCategorySpacingModifier = Modifier.padding(top = 24.dp, bottom = 8.dp)
+
+val SettingsCategoryFirstWithHorzBorderModifier = Modifier.padding(bottom = 8.dp, start = 10.dp, end = 10.dp)
+val SettingsCategorySpacingWithHorzBorderModifier = Modifier.padding(top = 24.dp, bottom = 8.dp, start = 10.dp, end = 10.dp)
 
 val SquaredQuoteBorderModifier = Modifier.aspectRatio(1f).clip(shape = QuoteBorder)
 val FillWidthQuoteBorderModifier = Modifier.fillMaxWidth().clip(shape = QuoteBorder)

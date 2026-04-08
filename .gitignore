@@ -166,3 +166,4 @@ desktopApp/src/jvmMain/appResources/windows/
 
 # Git worktrees
 .worktrees/
+.claude/worktrees/

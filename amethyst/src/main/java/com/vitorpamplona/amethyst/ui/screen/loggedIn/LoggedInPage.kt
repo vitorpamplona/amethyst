@@ -55,6 +55,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.VideoFilte
 import com.vitorpamplona.quartz.nip55AndroidSigner.client.IActivityLauncher
 import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.NostrSignerWithClientTag
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @Composable
@@ -137,7 +138,7 @@ fun NotificationRegistration(accountViewModel: AccountViewModel) {
         if (notificationPermissionState.status.isGranted) {
             LifecycleResumeEffect(key1 = accountViewModel, notificationPermissionState.status.isGranted) {
                 Log.d("RegisterAccounts", "Registering for push notifications")
-                scope.launch {
+                scope.launch(Dispatchers.IO) {
                     PushNotificationUtils.checkAndInit(
                         LocalPreferences.allSavedAccounts(),
                         accountViewModel.httpClientBuilder::okHttpClientForPushRegistration,
@@ -152,7 +153,7 @@ fun NotificationRegistration(accountViewModel: AccountViewModel) {
         // no need for push permissions before 33
         LifecycleResumeEffect(key1 = accountViewModel) {
             Log.d("RegisterAccounts", "Registering for push notifications")
-            scope.launch {
+            scope.launch(Dispatchers.IO) {
                 PushNotificationUtils.checkAndInit(
                     LocalPreferences.allSavedAccounts(),
                     accountViewModel.httpClientBuilder::okHttpClientForPushRegistration,

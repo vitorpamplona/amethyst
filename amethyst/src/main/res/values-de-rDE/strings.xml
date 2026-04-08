@@ -390,8 +390,11 @@ anz der Bedingungen ist erforderlich</string>
     <string name="migrate_bookmarks_success">Lesezeichen erfolgreich migriert</string>
     <string name="drafts">Entwürfe</string>
     <string name="polls">Umfragen</string>
+    <string name="open_polls">Offen</string>
+    <string name="closed_polls">Geschlossen</string>
     <string name="pictures">Bilder</string>
     <string name="shorts">Kurzvideos</string>
+    <string name="longs">Videos</string>
     <string name="private_bookmarks">Private Lesezeichen</string>
     <string name="public_bookmarks">Öffentliche Lesezeichen</string>
     <string name="add_to_private_bookmarks">Zu den privaten Lesezeichen hinzufügen</string>
@@ -703,6 +706,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="call_camera_off">Kamera aus</string>
     <string name="call_speaker">Lautsprecher</string>
     <string name="call_earpiece">Ohrhörer</string>
+    <string name="call_bluetooth">Bluetooth</string>
     <string name="call_voice">Sprachanruf</string>
     <string name="call_video">Videoanruf</string>
     <string name="call_waiting_for_others">Warte auf andere Teilnehmer\u2026</string>
@@ -875,6 +879,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="settings">Einstellungen</string>
     <string name="account_settings">Kontoeinstellungen</string>
     <string name="app_settings">App-Einstellungen</string>
+    <string name="danger_zone">Gefahrenzone</string>
     <string name="connectivity_type_always">Immer</string>
     <string name="connectivity_type_wifi_only">Nur WLAN</string>
     <string name="connectivity_type_unmetered_wifi_only">Unbegrenztes WLAN</string>
@@ -1208,6 +1213,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="article_description_placeholder">Eine kurze Beschreibung deines Artikels\u2026</string>
     <string name="url_slug">URL-Slug</string>
     <string name="url_slug_placeholder">artikel-url-slug</string>
+    <string name="tags_label"># Tags</string>
     <string name="add_a_tag">Tag hinzufügen\u2026</string>
     <string name="start_writing_article">Beginne deinen Artikel zu schreiben\u2026</string>
     <string name="open_all_reactions_to_this_post">Alle Reaktionen auf diesen Beitrag öffnen</string>
@@ -1290,6 +1296,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="inbox_relays_not_found_examples">Gute Optionen sind:\n - nos.lol\n - nostr.mom\n - nostr.bitcoiner.social</string>
     <string name="dm_upload">DM-Upload</string>
     <string name="relay_settings">Relaiseinstellungen</string>
+    <string name="relay_reorder">Relay neu anordnen</string>
     <string name="public_home_section">Öffentliche Heimrelais</string>
     <string name="public_home_section_explainer_profile">Der Benutzer veröffentlicht seine Inhalte auf diesen Relays</string>
     <string name="public_home_section_explainer">Dieser Relais-Typ speichert alle Ihre Inhalte. Amethyst sendet Ihre Beiträge hierher und andere werden diese Relais verwenden, um Ihre Inhalte zu finden. Fügen Sie 1–3 Relais ein. Sie können persönliche Relais, bezahlte Relais oder öffentliche Relais sein.</string>
@@ -1433,6 +1440,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="select_list_to_filter">Liste zum Filtern des Feeds auswählen</string>
     <string name="feed_group_feeds">Feeds</string>
     <string name="feed_group_hashtags">Hash-Tags</string>
+    <string name="feed_group_locations">Standorte</string>
     <string name="feed_group_communities">Gemeinschaften</string>
     <string name="feed_group_lists">Listen</string>
     <string name="feed_group_relays">Relais</string>
@@ -1533,6 +1541,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="connected">Verbunden</string>
     <string name="social_proof">Sozialer Nachweis</string>
     <string name="poll_submit">Absenden</string>
+    <string name="poll_view_results">Ergebnisse anzeigen</string>
     <string name="restart">Neu starten</string>
     <string name="chess_accept">Annehmen</string>
     <string name="chess_decline">Ablehnen</string>
@@ -1674,6 +1683,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="kind_shorts">Shorts</string>
     <string name="kind_voice_msg">Sprachnachricht</string>
     <string name="kind_voice_reply">Sprachantwort</string>
+    <string name="kind_wake">Aufwachen</string>
     <string name="kind_web_bookmark">Web-Lesezeichen</string>
     <string name="kind_wiki">Wiki</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">Starte mit einem großartigen Feed, indem du dieselben Personen folgst wie jemand, dem du vertraust.</string>

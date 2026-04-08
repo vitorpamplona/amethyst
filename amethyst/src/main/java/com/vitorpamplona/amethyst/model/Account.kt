@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.model
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.LocalPreferences
+import com.vitorpamplona.amethyst.commons.marmot.MarmotManager
 import com.vitorpamplona.amethyst.commons.model.IAccount
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatListDecryptionCache
@@ -129,6 +130,9 @@ import com.vitorpamplona.quartz.experimental.profileGallery.dimension
 import com.vitorpamplona.quartz.experimental.profileGallery.fromEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.hash
 import com.vitorpamplona.quartz.experimental.profileGallery.mimeType
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageUtils
+import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupStateStore
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -251,6 +255,7 @@ class Account(
     val cache: LocalCache,
     val client: INostrClient,
     val scope: CoroutineScope,
+    val mlsGroupStateStore: MlsGroupStateStore? = null,
 ) : IAccount {
     private var userProfileCache: User? = null
 
@@ -373,10 +378,15 @@ class Account(
     val draftsDecryptionCache = DraftEventCache(signer)
 
     override val chatroomList = cache.getOrCreateChatroomList(signer.pubKey)
+    override val marmotGroupList =
+        com.vitorpamplona.amethyst.commons.model.marmotGroups
+            .MarmotGroupList()
 
     val newNotesPreProcessor = EventProcessor(this, cache)
 
     val otsState = OtsState(signer, cache, otsResolverBuilder, scope, settings)
+
+    val marmotManager: MarmotManager? = mlsGroupStateStore?.let { MarmotManager(signer, it) }
 
     val paymentTargetsState = NipA3PaymentTargetsState(signer, cache, scope, settings)
 
@@ -1704,6 +1714,219 @@ class Account(
         }
     }
 
+    // --- Marmot Group Messaging ---
+
+    /**
+     * Send a message to a Marmot MLS group.
+     * Encrypts the inner event and publishes the GroupEvent to group relays.
+     */
+    suspend fun sendMarmotGroupMessage(
+        nostrGroupId: HexKey,
+        innerEvent: Event,
+        groupRelays: Set<NormalizedRelayUrl>,
+    ) {
+        val manager = marmotManager ?: return
+        if (!isWriteable()) return
+
+        val outbound = manager.buildGroupMessage(nostrGroupId, innerEvent)
+        cache.justConsumeMyOwnEvent(outbound.signedEvent)
+        client.publish(outbound.signedEvent, groupRelays)
+    }
+
+    /**
+     * Fetch a user's KeyPackage from relays and add them to a Marmot group.
+     * Returns a status message describing the outcome.
+     */
+    @OptIn(kotlin.io.encoding.ExperimentalEncodingApi::class)
+    suspend fun fetchKeyPackageAndAddMember(
+        nostrGroupId: HexKey,
+        memberPubKey: HexKey,
+    ): String {
+        val manager = marmotManager ?: return "Error: Marmot not initialized"
+        if (!isWriteable()) return "Error: Account is read-only"
+
+        // Build filter for the member's KeyPackages
+        val filter = manager.subscriptionManager.keyPackageFilter(memberPubKey)
+        val relays = outboxRelays.flow.value
+
+        // Query across outbox relays
+        val filterMap = relays.associateWith { listOf(filter) }
+
+        val event =
+            client.fetchFirst(
+                filters = filterMap,
+            )
+
+        if (event == null) {
+            return "Error: No KeyPackage found for this user. They may not have published one yet."
+        }
+
+        if (event !is com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent) {
+            return "Error: Unexpected event type received"
+        }
+
+        val keyPackageBase64 = event.keyPackageBase64()
+        if (keyPackageBase64.isBlank()) {
+            return "Error: KeyPackage event has empty content"
+        }
+
+        val keyPackageBytes =
+            kotlin.io.encoding.Base64
+                .decode(keyPackageBase64)
+        val keyPackageEventId = event.id
+        val groupRelays = relays.toList()
+
+        addMarmotGroupMember(
+            nostrGroupId = nostrGroupId,
+            memberPubKey = memberPubKey,
+            keyPackageBytes = keyPackageBytes,
+            keyPackageEventId = keyPackageEventId,
+            groupRelays = groupRelays,
+        )
+
+        return "Success: Member added to group"
+    }
+
+    /**
+     * Add a member to a Marmot MLS group.
+     * Publishes the commit GroupEvent, then sends the Welcome gift wrap.
+     */
+    suspend fun addMarmotGroupMember(
+        nostrGroupId: HexKey,
+        memberPubKey: HexKey,
+        keyPackageBytes: ByteArray,
+        keyPackageEventId: HexKey,
+        groupRelays: List<NormalizedRelayUrl>,
+    ) {
+        val manager = marmotManager ?: return
+        if (!isWriteable()) return
+
+        val (commitEvent, welcomeDelivery) =
+            manager.addMember(
+                nostrGroupId = nostrGroupId,
+                memberPubKey = memberPubKey,
+                keyPackageBytes = keyPackageBytes,
+                keyPackageEventId = keyPackageEventId,
+                relays = groupRelays,
+            )
+
+        // Publish commit first (critical ordering)
+        client.publish(commitEvent.signedEvent, groupRelays.toSet())
+
+        // Then send Welcome gift wrap to the new member
+        if (welcomeDelivery != null) {
+            val relayList = computeRelayListToBroadcast(welcomeDelivery.giftWrapEvent)
+            client.publish(welcomeDelivery.giftWrapEvent, relayList)
+        }
+    }
+
+    /**
+     * Publish or rotate KeyPackage events.
+     */
+    suspend fun publishMarmotKeyPackages() {
+        val manager = marmotManager ?: return
+        if (!isWriteable()) return
+
+        val relays = outboxRelays.flow.value.toList()
+
+        if (manager.needsKeyPackageRotation()) {
+            val rotatedEvents = manager.rotateConsumedKeyPackages(relays)
+            rotatedEvents.forEach { event ->
+                cache.justConsumeMyOwnEvent(event)
+                client.publish(event, outboxRelays.flow.value)
+            }
+        }
+    }
+
+    /**
+     * Generate and publish initial KeyPackage for this account.
+     */
+    suspend fun publishMarmotKeyPackage() {
+        val manager = marmotManager ?: return
+        if (!isWriteable()) return
+
+        val relays = outboxRelays.flow.value.toList()
+        val event = manager.generateKeyPackageEvent(relays)
+        cache.justConsumeMyOwnEvent(event)
+        client.publish(event, outboxRelays.flow.value)
+    }
+
+    /**
+     * Check if a KeyPackage has been published, either locally generated
+     * in this session or found in the local cache from a previous session.
+     */
+    fun hasPublishedKeyPackage(): Boolean {
+        // Check in-memory bundles first (current session)
+        val manager = marmotManager
+        if (manager != null && manager.hasActiveKeyPackages()) return true
+
+        // Check local cache for our own kind:30443 events (from previous sessions / relay downloads)
+        val address =
+            com.vitorpamplona.quartz.nip01Core.core.Address(
+                KeyPackageEvent.KIND,
+                signer.pubKey,
+                KeyPackageUtils.PRIMARY_SLOT,
+            )
+        val note = cache.getAddressableNoteIfExists(address)
+        return note?.event != null
+    }
+
+    /**
+     * Create a new Marmot MLS group.
+     */
+    suspend fun createMarmotGroup(nostrGroupId: HexKey) {
+        val manager = marmotManager ?: return
+        if (!isWriteable()) return
+        manager.createGroup(nostrGroupId)
+    }
+
+    /**
+     * Leave a Marmot MLS group.
+     * Publishes the SelfRemove proposal and removes local state.
+     */
+    suspend fun leaveMarmotGroup(
+        nostrGroupId: HexKey,
+        groupRelays: Set<NormalizedRelayUrl>,
+    ) {
+        val manager = marmotManager ?: return
+        if (!isWriteable()) return
+
+        val outbound = manager.leaveGroup(nostrGroupId)
+        client.publish(outbound.signedEvent, groupRelays)
+    }
+
+    /**
+     * Remove a member from a Marmot MLS group.
+     * Publishes the commit GroupEvent to group relays.
+     */
+    suspend fun removeMarmotGroupMember(
+        nostrGroupId: HexKey,
+        targetLeafIndex: Int,
+        groupRelays: Set<NormalizedRelayUrl>,
+    ) {
+        val manager = marmotManager ?: return
+        if (!isWriteable()) return
+
+        val outbound = manager.removeMember(nostrGroupId, targetLeafIndex)
+        client.publish(outbound.signedEvent, groupRelays)
+    }
+
+    /**
+     * Update a Marmot MLS group's metadata (name, description, etc.).
+     * Publishes the commit GroupEvent to group relays.
+     */
+    suspend fun updateMarmotGroupMetadata(
+        nostrGroupId: HexKey,
+        metadata: com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData,
+        groupRelays: Set<NormalizedRelayUrl>,
+    ) {
+        val manager = marmotManager ?: return
+        if (!isWriteable()) return
+
+        val outbound = manager.updateGroupMetadata(nostrGroupId, metadata)
+        client.publish(outbound.signedEvent, groupRelays)
+    }
+
     suspend fun createStatus(newStatus: String) = sendMyPublicAndPrivateOutbox(UserStatusAction.create(newStatus, signer))
 
     suspend fun publishCallSignaling(wrap: EphemeralGiftWrapEvent) {
@@ -2152,8 +2375,27 @@ class Account(
 
     fun dismissPollNotification(noteId: String) = settings.dismissPollNotification(noteId)
 
+    fun hasViewedPollResults(noteId: String) = settings.hasViewedPollResults(noteId)
+
+    fun markPollResultsViewed(
+        noteId: String,
+        pollEndsAt: Long?,
+    ) = settings.markPollResultsViewed(noteId, pollEndsAt)
+
     init {
         Log.d("AccountRegisterObservers", "Init")
+
+        // Restore Marmot MLS group state on startup
+        if (marmotManager != null) {
+            scope.launch(Dispatchers.IO) {
+                marmotManager.restoreAll()
+                // Sync MIP-01 metadata from restored groups to chatrooms
+                marmotManager.activeGroupIds().forEach { groupId ->
+                    val chatroom = marmotGroupList.getOrCreateGroup(groupId)
+                    marmotManager.syncMetadataTo(groupId, chatroom)
+                }
+            }
+        }
 
         scope.launch {
             cache.antiSpam.flowSpam.collect {

@@ -118,15 +118,20 @@ data class MlsKeyPackage(
     }
 
     companion object {
-        fun decodeTls(reader: TlsReader): MlsKeyPackage =
-            MlsKeyPackage(
-                version = reader.readUint16(),
-                cipherSuite = reader.readUint16(),
+        fun decodeTls(reader: TlsReader): MlsKeyPackage {
+            val version = reader.readUint16()
+            require(version == 1) { "Unsupported MLS version: $version" }
+            val cipherSuite = reader.readUint16()
+            require(cipherSuite in 1..0xFFFF) { "Invalid ciphersuite: $cipherSuite" }
+            return MlsKeyPackage(
+                version = version,
+                cipherSuite = cipherSuite,
                 initKey = reader.readOpaqueVarInt(),
                 leafNode = LeafNode.decodeTls(reader),
                 extensions = reader.readVectorVarInt { Extension.decodeTls(it) },
                 signature = reader.readOpaqueVarInt(),
             )
+        }
     }
 }
 

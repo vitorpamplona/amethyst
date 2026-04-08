@@ -82,6 +82,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayUrlEditF
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.ui.theme.HorzHalfVertPadding
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
@@ -208,6 +209,7 @@ fun RequestToVanishScreen(
                     BasicRelaySetupInfoDialog(
                         info,
                         onDelete = { selectedRelayUrls -= selectedRelayUrls },
+                        modifier = HorzHalfVertPadding,
                         nip11CachedRetriever = nip11CachedRetriever,
                         accountViewModel = accountViewModel,
                         nav = nav,
@@ -221,6 +223,7 @@ fun RequestToVanishScreen(
                         allRelaysSelected = false
                     },
                     nip11CachedRetriever = nip11CachedRetriever,
+                    modifier = Modifier,
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )

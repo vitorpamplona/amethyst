@@ -38,8 +38,11 @@ import coil3.asDrawable
 import coil3.request.ImageRequest
 import coil3.request.allowHardware
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -584,8 +587,8 @@ object NotificationUtils {
             )
 
         val rejectIntent =
-            Intent(applicationContext, com.vitorpamplona.amethyst.ui.call.CallNotificationReceiver::class.java).apply {
-                action = com.vitorpamplona.amethyst.ui.call.CallNotificationReceiver.ACTION_REJECT_CALL
+            Intent(applicationContext, com.vitorpamplona.amethyst.service.call.CallNotificationReceiver::class.java).apply {
+                action = com.vitorpamplona.amethyst.service.call.CallNotificationReceiver.ACTION_REJECT_CALL
             }
 
         val rejectPendingIntent =
@@ -621,6 +624,40 @@ object NotificationUtils {
         val notificationManager: NotificationManager =
             applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.cancel("call", CALL_NOTIFICATION_ID)
+    }
+
+    suspend fun showIncomingCallNotification(
+        callerPubKey: String,
+        context: Context,
+    ) {
+        val callerUser = LocalCache.getUserIfExists(callerPubKey)
+        val callerName = callerUser?.toBestDisplayName() ?: callerPubKey.take(8) + "..."
+        val uri = "nostr:${callerPubKey.hexToByteArray().toNpub()}"
+
+        val callerBitmap =
+            callerUser?.profilePicture()?.let { pictureUrl ->
+                withContext(Dispatchers.IO) {
+                    try {
+                        val request =
+                            ImageRequest
+                                .Builder(context)
+                                .data(pictureUrl)
+                                .allowHardware(false)
+                                .build()
+                        val result = coil3.ImageLoader(context).execute(request)
+                        (result.image?.asDrawable(context.resources) as? BitmapDrawable)?.bitmap
+                    } catch (_: Exception) {
+                        null
+                    }
+                }
+            }
+
+        sendCallNotification(
+            callerName = callerName,
+            callerBitmap = callerBitmap,
+            uri = uri,
+            applicationContext = context,
+        )
     }
 
     private fun NotificationManager.isDuplicate(notId: Int): Boolean {

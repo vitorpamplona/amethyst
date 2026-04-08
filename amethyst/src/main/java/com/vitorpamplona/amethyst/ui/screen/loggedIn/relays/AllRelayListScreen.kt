@@ -37,7 +37,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -47,7 +46,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
@@ -68,6 +66,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayExporter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayListCollection
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayZipExporter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.rememberRelayDragState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.connected.ConnectedRelayListViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.connected.renderConnectedItems
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.dm.DMRelayListViewModel
@@ -89,12 +88,11 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.search.SearchRelayLi
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.search.renderSearchItems
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.trusted.TrustedRelayListViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.trusted.renderTrustedItems
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsRow
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.RowColSpacing
-import com.vitorpamplona.amethyst.ui.theme.SettingsCategoryFirstModifier
-import com.vitorpamplona.amethyst.ui.theme.SettingsCategorySpacingModifier
+import com.vitorpamplona.amethyst.ui.theme.SettingsCategoryFirstWithHorzBorderModifier
+import com.vitorpamplona.amethyst.ui.theme.SettingsCategorySpacingWithHorzBorderModifier
 import com.vitorpamplona.amethyst.ui.theme.grayText
 
 @Composable
@@ -201,6 +199,67 @@ fun MappedAllRelayListView(
     val indexerCounts by indexerViewModel.countResults.collectAsStateWithLifecycle()
     val searchCounts by searchViewModel.countResults.collectAsStateWithLifecycle()
 
+    val homeDragState =
+        rememberRelayDragState(
+            onMove = { from, to -> nip65ViewModel.moveHomeRelay(from, to) },
+            itemCount = { homeFeedState.size },
+        )
+    val notifDragState =
+        rememberRelayDragState(
+            onMove = { from, to -> nip65ViewModel.moveNotifRelay(from, to) },
+            itemCount = { notifFeedState.size },
+        )
+    val dmDragState =
+        rememberRelayDragState(
+            onMove = { from, to -> dmViewModel.moveRelay(from, to) },
+            itemCount = { dmFeedState.size },
+        )
+    val privateOutboxDragState =
+        rememberRelayDragState(
+            onMove = { from, to -> privateOutboxViewModel.moveRelay(from, to) },
+            itemCount = { privateOutboxFeedState.size },
+        )
+    val proxyDragState =
+        rememberRelayDragState(
+            onMove = { from, to -> proxyViewModel.moveRelay(from, to) },
+            itemCount = { proxyRelays.size },
+        )
+    val broadcastDragState =
+        rememberRelayDragState(
+            onMove = { from, to -> broadcastViewModel.moveRelay(from, to) },
+            itemCount = { broadcastRelays.size },
+        )
+    val indexerDragState =
+        rememberRelayDragState(
+            onMove = { from, to -> indexerViewModel.moveRelay(from, to) },
+            itemCount = { indexerRelays.size },
+        )
+    val searchDragState =
+        rememberRelayDragState(
+            onMove = { from, to -> searchViewModel.moveRelay(from, to) },
+            itemCount = { searchFeedState.size },
+        )
+    val localDragState =
+        rememberRelayDragState(
+            onMove = { from, to -> localViewModel.moveRelay(from, to) },
+            itemCount = { localFeedState.size },
+        )
+    val trustedDragState =
+        rememberRelayDragState(
+            onMove = { from, to -> trustedViewModel.moveRelay(from, to) },
+            itemCount = { trustedFeedState.size },
+        )
+    val feedsDragState =
+        rememberRelayDragState(
+            onMove = { from, to -> relayFeedsViewModel.moveRelay(from, to) },
+            itemCount = { relayFeedsFeedState.size },
+        )
+    val blockedDragState =
+        rememberRelayDragState(
+            onMove = { from, to -> blockedViewModel.moveRelay(from, to) },
+            itemCount = { blockedFeedState.size },
+        )
+
     Scaffold(
         topBar = {
             SavingTopBar(
@@ -254,14 +313,21 @@ fun MappedAllRelayListView(
             )
         },
     ) { pad ->
+        val anyDragging =
+            homeDragState.isDragging || notifDragState.isDragging ||
+                dmDragState.isDragging || privateOutboxDragState.isDragging ||
+                proxyDragState.isDragging || broadcastDragState.isDragging ||
+                indexerDragState.isDragging || searchDragState.isDragging ||
+                localDragState.isDragging || trustedDragState.isDragging ||
+                feedsDragState.isDragging || blockedDragState.isDragging
+
         LazyColumn(
             contentPadding = FeedPadding,
+            userScrollEnabled = !anyDragging,
             modifier =
                 Modifier
                     .fillMaxSize()
                     .padding(
-                        start = 10.dp,
-                        end = 10.dp,
                         top = pad.calculateTopPadding(),
                         bottom = pad.calculateBottomPadding(),
                     ).consumeWindowInsets(pad)
@@ -271,140 +337,122 @@ fun MappedAllRelayListView(
                 SettingsCategory(
                     R.string.public_home_section,
                     R.string.public_home_section_explainer,
-                    SettingsCategoryFirstModifier,
+                    SettingsCategoryFirstWithHorzBorderModifier,
                 )
             }
-            renderNip65HomeItems(homeFeedState, nip65ViewModel, accountViewModel, nav, outboxCounts)
+            renderNip65HomeItems(homeFeedState, nip65ViewModel, accountViewModel, nav, outboxCounts, homeDragState)
 
             item {
                 SettingsCategory(
                     R.string.public_notif_section,
                     R.string.public_notif_section_explainer,
-                    SettingsCategorySpacingModifier,
+                    SettingsCategorySpacingWithHorzBorderModifier,
                 )
             }
-            renderNip65NotifItems(notifFeedState, nip65ViewModel, accountViewModel, nav, inboxCounts)
+            renderNip65NotifItems(notifFeedState, nip65ViewModel, accountViewModel, nav, inboxCounts, notifDragState)
 
             item {
                 SettingsCategoryWithButton(
                     R.string.private_inbox_section,
                     R.string.private_inbox_section_explainer,
-                    SettingsCategorySpacingModifier,
+                    SettingsCategorySpacingWithHorzBorderModifier,
                     action = {
                         ResetDMRelays(dmViewModel)
                     },
                 )
             }
-            renderDMItems(dmFeedState, dmViewModel, accountViewModel, nav, dmCounts)
+            renderDMItems(dmFeedState, dmViewModel, accountViewModel, nav, dmCounts, dmDragState)
 
             item {
                 SettingsCategory(
                     R.string.private_outbox_section,
                     R.string.private_outbox_section_explainer,
-                    SettingsCategorySpacingModifier,
+                    SettingsCategorySpacingWithHorzBorderModifier,
                 )
             }
-            renderPrivateOutboxItems(privateOutboxFeedState, privateOutboxViewModel, accountViewModel, nav, privateHomeCounts)
+            renderPrivateOutboxItems(privateOutboxFeedState, privateOutboxViewModel, accountViewModel, nav, privateHomeCounts, privateOutboxDragState)
 
             item {
                 SettingsCategory(
                     R.string.proxy_section,
                     R.string.proxy_section_explainer,
-                    SettingsCategorySpacingModifier,
+                    SettingsCategorySpacingWithHorzBorderModifier,
                 )
             }
-            renderProxyItems(proxyRelays, proxyViewModel, accountViewModel, nav, proxyCounts)
+            renderProxyItems(proxyRelays, proxyViewModel, accountViewModel, nav, proxyCounts, proxyDragState)
 
             item {
                 SettingsCategory(
                     R.string.broadcast_section,
                     R.string.broadcast_section_explainer,
-                    SettingsCategorySpacingModifier,
+                    SettingsCategorySpacingWithHorzBorderModifier,
                 )
             }
-            renderBroadcastItems(broadcastRelays, broadcastViewModel, accountViewModel, nav)
+            renderBroadcastItems(broadcastRelays, broadcastViewModel, accountViewModel, nav, broadcastDragState)
 
             item {
                 SettingsCategoryWithButton(
                     R.string.indexer_section,
                     R.string.indexer_section_explainer,
-                    SettingsCategorySpacingModifier,
+                    SettingsCategorySpacingWithHorzBorderModifier,
                 ) {
                     ResetIndexerRelays(indexerViewModel)
                 }
             }
-            renderIndexerItems(indexerRelays, indexerViewModel, accountViewModel, nav, indexerCounts)
+            renderIndexerItems(indexerRelays, indexerViewModel, accountViewModel, nav, indexerCounts, indexerDragState)
 
             item {
                 SettingsCategoryWithButton(
                     R.string.search_section,
                     R.string.search_section_explainer,
-                    SettingsCategorySpacingModifier,
+                    SettingsCategorySpacingWithHorzBorderModifier,
                 ) {
                     ResetSearchRelays(searchViewModel)
                 }
             }
-            renderSearchItems(searchFeedState, searchViewModel, accountViewModel, nav, searchCounts)
+            renderSearchItems(searchFeedState, searchViewModel, accountViewModel, nav, searchCounts, searchDragState)
 
             item {
                 SettingsCategory(
                     R.string.local_section,
                     R.string.local_section_explainer,
-                    SettingsCategorySpacingModifier,
+                    SettingsCategorySpacingWithHorzBorderModifier,
                 )
             }
-            item {
-                val sendKind0 by accountViewModel.account.settings.syncedSettings.security.sendKind0EventsToLocalRelay
-                    .collectAsStateWithLifecycle()
-                var checked by remember(sendKind0) { mutableStateOf(sendKind0) }
-
-                SettingsRow(
-                    R.string.send_kind0_to_local_relay_title,
-                    R.string.send_kind0_to_local_relay_description,
-                ) {
-                    Switch(
-                        checked = checked,
-                        onCheckedChange = {
-                            checked = it
-                            accountViewModel.toggleSendKind0ToLocalRelay(it)
-                        },
-                    )
-                }
-            }
-            renderLocalItems(localFeedState, localViewModel, accountViewModel, nav)
+            renderLocalItems(localFeedState, localViewModel, accountViewModel, nav, localDragState)
 
             item {
                 SettingsCategory(
                     R.string.trusted_section,
                     R.string.trusted_section_explainer,
-                    SettingsCategorySpacingModifier,
+                    SettingsCategorySpacingWithHorzBorderModifier,
                 )
             }
-            renderTrustedItems(trustedFeedState, trustedViewModel, accountViewModel, nav)
+            renderTrustedItems(trustedFeedState, trustedViewModel, accountViewModel, nav, trustedDragState)
 
             item {
                 SettingsCategory(
                     R.string.favorite_section,
                     R.string.favorite_section_explainer,
-                    SettingsCategorySpacingModifier,
+                    SettingsCategorySpacingWithHorzBorderModifier,
                 )
             }
-            renderRelayFeedsItems(relayFeedsFeedState, relayFeedsViewModel, accountViewModel, nav)
+            renderRelayFeedsItems(relayFeedsFeedState, relayFeedsViewModel, accountViewModel, nav, feedsDragState)
 
             item {
                 SettingsCategory(
                     R.string.blocked_section,
                     R.string.blocked_section_explainer,
-                    SettingsCategorySpacingModifier,
+                    SettingsCategorySpacingWithHorzBorderModifier,
                 )
             }
-            renderBlockedItems(blockedFeedState, blockedViewModel, accountViewModel, nav)
+            renderBlockedItems(blockedFeedState, blockedViewModel, accountViewModel, nav, blockedDragState)
 
             item {
                 SettingsCategory(
                     R.string.connected_section,
                     R.string.connected_section_description,
-                    SettingsCategorySpacingModifier,
+                    SettingsCategorySpacingWithHorzBorderModifier,
                 )
             }
             renderConnectedItems(connectedRelays, connectedViewModel, accountViewModel, nav)

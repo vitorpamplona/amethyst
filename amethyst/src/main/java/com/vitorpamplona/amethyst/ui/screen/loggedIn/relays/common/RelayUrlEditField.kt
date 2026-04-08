@@ -111,6 +111,7 @@ fun RelayUrlEditFieldPreview() {
             onNewRelay = {},
             relaySuggestions = relaySuggestions,
             nip11CachedRetriever = Nip11CachedRetriever { TODO() },
+            modifier = Modifier,
             accountViewModel = accountViewModel,
             nav = EmptyNav(),
         )
@@ -120,12 +121,14 @@ fun RelayUrlEditFieldPreview() {
 @Composable
 fun RelayUrlEditField(
     onNewRelay: (NormalizedRelayUrl) -> Unit,
+    modifier: Modifier,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     RelayUrlEditField(
         onNewRelay = onNewRelay,
         nip11CachedRetriever = Amethyst.instance.nip11Cache,
+        modifier = modifier,
         accountViewModel = accountViewModel,
         nav = nav,
     )
@@ -135,6 +138,7 @@ fun RelayUrlEditField(
 fun RelayUrlEditField(
     onNewRelay: (NormalizedRelayUrl) -> Unit,
     nip11CachedRetriever: Nip11CachedRetriever,
+    modifier: Modifier,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -143,6 +147,7 @@ fun RelayUrlEditField(
         onNewRelay = onNewRelay,
         relaySuggestions = relaySuggestions,
         nip11CachedRetriever = nip11CachedRetriever,
+        modifier = modifier,
         accountViewModel = accountViewModel,
         nav = nav,
     )
@@ -153,6 +158,7 @@ fun RelayUrlEditField(
     onNewRelay: (NormalizedRelayUrl) -> Unit,
     relaySuggestions: IRelaySuggestionState,
     nip11CachedRetriever: Nip11CachedRetriever,
+    modifier: Modifier,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -169,7 +175,7 @@ fun RelayUrlEditField(
         }
     }
 
-    Column {
+    Column(modifier) {
         OutlinedTextField(
             label = { Text(text = stringRes(R.string.add_a_relay)) },
             modifier = Modifier.fillMaxWidth(),

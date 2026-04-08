@@ -29,17 +29,17 @@ object PushNotificationUtils {
     var lastToken: String? = null
     var hasInit: List<AccountInfo>? = null
 
-    private val pushHandler = PushDistributorHandler
-
     suspend fun checkAndInit(
         accounts: List<AccountInfo>,
         okHttpClient: (String) -> OkHttpClient,
     ) = with(Dispatchers.IO) {
-        if (!pushHandler.savedDistributorExists()) return@with
+        if (!PushDistributorHandler.savedDistributorExists()) return@with
 
         val currentDistributor = PushDistributorHandler.getSavedDistributor()
         PushDistributorHandler.saveDistributor(currentDistributor)
-        val token = pushHandler.getSavedEndpoint()
+        val token = PushDistributorHandler.getSavedEndpoint()
+
+        if (token.isEmpty()) return@with
 
         if (hasInit?.equals(accounts) == true && lastToken == token) {
             return@with

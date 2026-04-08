@@ -73,6 +73,11 @@ actual object X25519 {
 
         val secret = ka.generateSecret()
 
+        // Check for small-subgroup attack (RFC 9180 Section 4.1)
+        require(!secret.all { it == 0.toByte() }) {
+            "DH produced all-zero shared secret (possible small-subgroup attack)"
+        }
+
         // XDH returns big-endian, X25519 shared secret is 32 bytes
         // Pad or trim to KEY_LENGTH
         return if (secret.size == KEY_LENGTH) {
@@ -119,18 +124,20 @@ actual object X25519 {
 
     /**
      * Extract raw scalar bytes from JCA XECPrivateKey.
+     * Scalar is in little-endian byte order per JCA spec.
      */
     private fun extractPrivateKeyBytes(privKey: java.security.interfaces.XECPrivateKey): ByteArray {
         val scalar = privKey.scalar.orElseThrow { IllegalStateException("No scalar in private key") }
         return if (scalar.size == KEY_LENGTH) {
             scalar
         } else if (scalar.size < KEY_LENGTH) {
-            // Pad with leading zeros
+            // Pad with trailing zeros (little-endian: high-order bytes at end)
             val result = ByteArray(KEY_LENGTH)
-            scalar.copyInto(result, KEY_LENGTH - scalar.size)
+            scalar.copyInto(result, 0)
             result
         } else {
-            scalar.copyOfRange(scalar.size - KEY_LENGTH, scalar.size)
+            // Take only the first KEY_LENGTH bytes (little-endian low-order bytes)
+            scalar.copyOfRange(0, KEY_LENGTH)
         }
     }
 
@@ -153,12 +160,11 @@ actual object X25519 {
     private fun bigIntegerToBytes(bi: java.math.BigInteger): ByteArray {
         val beBytes = bi.toByteArray()
         val result = ByteArray(KEY_LENGTH)
-        // BigInteger is big-endian, possibly with leading zero byte
-        val start = if (beBytes.size > KEY_LENGTH) beBytes.size - KEY_LENGTH else 0
-        val length = minOf(beBytes.size, KEY_LENGTH)
-        // Reverse into little-endian result
-        for (i in 0 until length) {
-            result[i] = beBytes[beBytes.size - 1 - i + start]
+        // BigInteger is big-endian, possibly with a leading zero sign byte.
+        // Reverse into little-endian, taking at most KEY_LENGTH bytes from the low end.
+        val bytesToCopy = minOf(beBytes.size, KEY_LENGTH)
+        for (i in 0 until bytesToCopy) {
+            result[i] = beBytes[beBytes.size - 1 - i]
         }
         return result
     }

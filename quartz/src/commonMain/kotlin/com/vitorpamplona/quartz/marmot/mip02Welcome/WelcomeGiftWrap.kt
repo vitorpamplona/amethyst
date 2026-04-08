@@ -57,6 +57,7 @@ object WelcomeGiftWrap {
         relays: List<NormalizedRelayUrl>,
         recipientPubKey: HexKey,
         signer: NostrSigner,
+        nostrGroupId: HexKey? = null,
         createdAt: Long = TimeUtils.now(),
     ): GiftWrapEvent {
         // Step 1: Build the WelcomeEvent template and sign it
@@ -65,6 +66,7 @@ object WelcomeGiftWrap {
                 welcomeBase64 = welcomeBase64,
                 keyPackageEventId = keyPackageEventId,
                 relays = relays,
+                nostrGroupId = nostrGroupId,
                 createdAt = createdAt,
             )
         val welcomeEvent: WelcomeEvent = signer.sign(welcomeTemplate)

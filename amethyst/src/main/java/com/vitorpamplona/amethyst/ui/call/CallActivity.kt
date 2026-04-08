@@ -33,11 +33,13 @@ import android.os.Bundle
 import android.util.Rational
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.lifecycleScope
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.call.CallState
+import com.vitorpamplona.amethyst.service.call.CallSessionBridge
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.compose.RelayAuthSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.StringResSetup
@@ -55,6 +57,16 @@ class CallActivity : AppCompatActivity() {
     // "user swiped PiP away" from "user pressed Home from full-screen call".
     private var wasInPipMode = false
 
+    // Launcher for requesting call permissions when accepting from notification
+    private val permissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { results ->
+            if (hasCallPermissions(this, isVideo = pendingAcceptIsVideo)) {
+                acceptCall()
+            }
+        }
+
+    private var pendingAcceptIsVideo = false
+
     private val pipActionReceiver =
         object : BroadcastReceiver() {
             @OptIn(DelicateCoroutinesApi::class)
@@ -64,11 +76,11 @@ class CallActivity : AppCompatActivity() {
             ) {
                 when (intent.action) {
                     ACTION_PIP_HANGUP -> {
-                        GlobalScope.launch { ActiveCallHolder.callManager?.hangup() }
+                        GlobalScope.launch { CallSessionBridge.callManager?.hangup() }
                     }
 
                     ACTION_PIP_TOGGLE_MUTE -> {
-                        ActiveCallHolder.callController?.toggleAudioMute()
+                        CallSessionBridge.callController?.toggleAudioMute()
                         updatePipParams()
                     }
                 }
@@ -91,9 +103,9 @@ class CallActivity : AppCompatActivity() {
             )
         }
 
-        val callManager = ActiveCallHolder.callManager
-        val callController = ActiveCallHolder.callController
-        val accountViewModel = ActiveCallHolder.accountViewModel
+        val callManager = CallSessionBridge.callManager
+        val callController = CallSessionBridge.callController
+        val accountViewModel = CallSessionBridge.accountViewModel
 
         if (callManager == null || accountViewModel == null) {
             finish()
@@ -142,8 +154,23 @@ class CallActivity : AppCompatActivity() {
         com.vitorpamplona.amethyst.service.notifications.NotificationUtils
             .cancelCallNotification(this)
 
-        val callController = ActiveCallHolder.callController ?: return
-        val callManager = ActiveCallHolder.callManager ?: return
+        val callManager = CallSessionBridge.callManager ?: return
+        val state = callManager.state.value
+        if (state !is CallState.IncomingCall) return
+
+        val isVideo = state.callType == com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType.VIDEO
+        pendingAcceptIsVideo = isVideo
+
+        if (hasCallPermissions(this, isVideo)) {
+            acceptCall()
+        } else {
+            permissionLauncher.launch(buildCallPermissions(isVideo))
+        }
+    }
+
+    private fun acceptCall() {
+        val callController = CallSessionBridge.callController ?: return
+        val callManager = CallSessionBridge.callManager ?: return
         val state = callManager.state.value
         if (state is CallState.IncomingCall) {
             callController.acceptIncomingCall(state.sdpOffer)
@@ -173,16 +200,36 @@ class CallActivity : AppCompatActivity() {
         // We must NOT hang up when the user simply presses Home from the full-screen
         // call UI (that enters PiP via onUserLeaveHint instead).
         if (wasInPipMode && !isInPictureInPictureMode) {
-            val state = ActiveCallHolder.callManager?.state?.value
+            val state = CallSessionBridge.callManager?.state?.value
             if (state is CallState.Connected || state is CallState.Connecting || state is CallState.Offering) {
-                GlobalScope.launch { ActiveCallHolder.callManager?.hangup() }
+                GlobalScope.launch { CallSessionBridge.callManager?.hangup() }
             }
             finishAndRemoveTask()
         }
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     override fun onDestroy() {
         unregisterPipReceiver()
+
+        // Safety net: if the Activity is destroyed while a call is still
+        // ringing/offering, ensure the call is hung up so audio stops.
+        val manager = CallSessionBridge.callManager
+        when (manager?.state?.value) {
+            is CallState.IncomingCall -> {
+                GlobalScope.launch { manager.rejectCall() }
+            }
+
+            is CallState.Offering,
+            is CallState.Connecting,
+            is CallState.Connected,
+            -> {
+                GlobalScope.launch { manager.hangup() }
+            }
+
+            else -> {}
+        }
+
         super.onDestroy()
     }
 
@@ -197,7 +244,7 @@ class CallActivity : AppCompatActivity() {
 
     private fun enterPipIfActive() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
-        val callManager = ActiveCallHolder.callManager ?: return
+        val callManager = CallSessionBridge.callManager ?: return
         val state = callManager.state.value
         val isActive =
             state is CallState.Connected ||
@@ -237,7 +284,7 @@ class CallActivity : AppCompatActivity() {
     }
 
     private fun computePipAspectRatio(): Rational {
-        val controller = ActiveCallHolder.callController ?: return Rational(9, 16)
+        val controller = CallSessionBridge.callController ?: return Rational(9, 16)
         val isVideoActive = controller.isRemoteVideoActive.value
         val videoRatio = controller.remoteVideoAspectRatio.value
 
@@ -256,7 +303,7 @@ class CallActivity : AppCompatActivity() {
         val actions = mutableListOf<RemoteAction>()
 
         // Mute / Unmute toggle
-        val isMuted = ActiveCallHolder.callController?.isAudioMuted?.value == true
+        val isMuted = CallSessionBridge.callController?.isAudioMuted?.value == true
         val muteIntent =
             PendingIntent.getBroadcast(
                 this,

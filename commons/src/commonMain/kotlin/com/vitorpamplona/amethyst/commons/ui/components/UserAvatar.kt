@@ -42,6 +42,16 @@ import com.vitorpamplona.amethyst.commons.robohash.CachedRobohash
 import com.vitorpamplona.amethyst.commons.ui.theme.isLight
 
 /**
+ * Wrapper class for profile picture URLs that signals Coil to use the thumbnail
+ * disk cache fetcher instead of the normal network pipeline. Passing this as the
+ * model to AsyncImage avoids string concatenation/parsing and lets Coil route
+ * by type via Fetcher.Factory<ProfilePictureUrl>.
+ */
+data class ProfilePictureUrl(
+    val url: String,
+)
+
+/**
  * Shared avatar component that displays a user's profile picture with Robohash fallback.
  *
  * @param userHex The user's public key hex (used for Robohash generation)
@@ -51,6 +61,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.isLight
  * @param contentDescription Accessibility description
  * @param loadProfilePicture Whether to load the profile picture (false = show robohash only)
  * @param loadRobohash Whether to generate robohash (false = show generic icon)
+ * @param useThumbnailCache Whether to use the thumbnail disk cache for faster repeated loads
  */
 @Composable
 fun UserAvatar(
@@ -61,6 +72,7 @@ fun UserAvatar(
     contentDescription: String? = null,
     loadProfilePicture: Boolean = true,
     loadRobohash: Boolean = true,
+    useThumbnailCache: Boolean = false,
 ) {
     val avatarModifier =
         remember(size, modifier) {
@@ -69,7 +81,14 @@ fun UserAvatar(
                 .clip(shape = CircleShape)
         }
 
-    if (pictureUrl != null && loadProfilePicture) {
+    val imageModel: Any? =
+        if (pictureUrl != null && useThumbnailCache) {
+            ProfilePictureUrl(pictureUrl)
+        } else {
+            pictureUrl
+        }
+
+    if (imageModel != null && loadProfilePicture) {
         // Show profile picture with robohash/icon as fallback
         val fallbackPainter =
             if (loadRobohash) {
@@ -83,7 +102,7 @@ fun UserAvatar(
             }
 
         AsyncImage(
-            model = pictureUrl,
+            model = imageModel,
             contentDescription = contentDescription,
             modifier = avatarModifier,
             placeholder = fallbackPainter,

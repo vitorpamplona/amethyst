@@ -83,6 +83,7 @@ kotlin {
         commonTest {
             dependencies {
                 implementation(libs.kotlin.test)
+                implementation(libs.kotlinx.coroutines.test)
             }
         }
 
@@ -121,6 +122,9 @@ kotlin {
         getByName("androidHostTest") {
             dependencies {
                 implementation(libs.junit)
+
+                // Bitcoin secp256k1 bindings
+                implementation(libs.secp256k1.kmp.jni.jvm)
             }
         }
 

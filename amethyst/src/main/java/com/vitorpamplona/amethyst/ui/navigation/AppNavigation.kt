@@ -41,13 +41,13 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.call.CallState
+import com.vitorpamplona.amethyst.service.call.CallSessionBridge
 import com.vitorpamplona.amethyst.service.crashreports.DisplayCrashMessages
 import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.compose.DisplayNotifyMessages
 import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataScreen
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.AllMediaServersScreen
 import com.vitorpamplona.amethyst.ui.actions.paymentTargets.PaymentTargetsScreen
 import com.vitorpamplona.amethyst.ui.broadcast.DisplayBroadcastProgress
-import com.vitorpamplona.amethyst.ui.call.ActiveCallHolder
 import com.vitorpamplona.amethyst.ui.call.CallActivity
 import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.components.toasts.DisplayErrorMessages
@@ -71,6 +71,13 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.list.metadat
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.membershipManagement.ArticleBookmarkListManagementScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.membershipManagement.PostBookmarkListManagementScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.old.OldBookmarkListScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.AddMemberScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.CreateGroupScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.EditGroupInfoScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.MarmotGroupChatScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.MarmotGroupInfoScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.MarmotGroupListScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.RemoveMemberScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.ChatroomByAuthorScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.ChatroomScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.NewGroupDMScreen
@@ -179,7 +186,7 @@ private fun ObserveIncomingCalls(accountViewModel: AccountViewModel) {
     LaunchedEffect(callState) {
         val state = callState
         if (state is CallState.IncomingCall) {
-            ActiveCallHolder.set(accountViewModel.callManager, accountViewModel.callController, accountViewModel)
+            CallSessionBridge.set(accountViewModel.callManager, accountViewModel.callController, accountViewModel)
             CallActivity.launch(context)
         }
     }
@@ -281,6 +288,15 @@ fun BuildNavigation(
 
         composableFromEndArgs<Route.Room> { ChatroomScreen(it.toKey(), it.message, it.replyId, it.draftId, it.expiresDays, accountViewModel, nav) }
         composableFromEndArgs<Route.RoomByAuthor> { ChatroomByAuthorScreen(it.id, null, accountViewModel, nav) }
+
+        composableFromEnd<Route.MarmotGroupList> { MarmotGroupListScreen(accountViewModel, nav) }
+        composableFromEndArgs<Route.MarmotGroupChat> { MarmotGroupChatScreen(it.nostrGroupId, accountViewModel, nav) }
+        composableFromEndArgs<Route.MarmotGroupInfo> { MarmotGroupInfoScreen(it.nostrGroupId, accountViewModel, nav) }
+
+        composableFromBottom<Route.CreateMarmotGroup> { CreateGroupScreen(accountViewModel, nav) }
+        composableFromBottomArgs<Route.MarmotGroupAddMember> { AddMemberScreen(it.nostrGroupId, accountViewModel, nav) }
+        composableFromBottomArgs<Route.MarmotGroupRemoveMember> { RemoveMemberScreen(it.nostrGroupId, accountViewModel, nav) }
+        composableFromBottomArgs<Route.MarmotGroupEditInfo> { EditGroupInfoScreen(it.nostrGroupId, accountViewModel, nav) }
 
         composableFromEndArgs<Route.PublicChatChannel> {
             PublicChatChannelScreen(it.id, it.draftId, it.replyTo, accountViewModel, nav)

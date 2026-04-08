@@ -67,57 +67,95 @@ object CommitOrdering {
     }
 
     /**
-     * Tracks pending commits per epoch and resolves conflicts.
+     * Key for tracking pending commits: must be unique per (group, epoch) pair
+     * since epoch numbers are not globally unique across different groups.
+     */
+    data class GroupEpochKey(
+        val groupId: String,
+        val epoch: Long,
+    )
+
+    /**
+     * Tracks pending commits per (group, epoch) and resolves conflicts.
      *
      * Accumulate commits as they arrive from relays, then call [resolve]
-     * to determine which commit wins for each epoch.
+     * to determine which commit wins for each (group, epoch).
      */
     class EpochCommitTracker {
-        private val pendingByEpoch = mutableMapOf<Long, MutableList<GroupEvent>>()
+        private val pendingByGroupEpoch = mutableMapOf<GroupEpochKey, MutableList<GroupEvent>>()
+
+        companion object {
+            /** Maximum number of (group, epoch) entries to track before evicting oldest. */
+            const val MAX_TRACKED_EPOCHS = 1000
+        }
 
         /**
-         * Adds a commit for a given epoch.
+         * Adds a commit for a given group and epoch.
          *
+         * @param groupId the Nostr group ID
          * @param epoch the MLS epoch number this commit targets
          * @param commit the GroupEvent containing the commit
          */
         fun addCommit(
+            groupId: String,
             epoch: Long,
             commit: GroupEvent,
         ) {
-            pendingByEpoch.getOrPut(epoch) { mutableListOf() }.add(commit)
+            val key = GroupEpochKey(groupId, epoch)
+            pendingByGroupEpoch.getOrPut(key) { mutableListOf() }.add(commit)
+
+            // Evict oldest entries if the tracker grows too large
+            if (pendingByGroupEpoch.size > MAX_TRACKED_EPOCHS) {
+                val oldestKeys =
+                    pendingByGroupEpoch.keys
+                        .sortedBy { it.epoch }
+                        .take(pendingByGroupEpoch.size - MAX_TRACKED_EPOCHS)
+                for (oldKey in oldestKeys) {
+                    pendingByGroupEpoch.remove(oldKey)
+                }
+            }
         }
 
         /**
-         * Returns pending commits for a specific epoch.
+         * Returns pending commits for a specific group and epoch.
          */
-        fun pendingForEpoch(epoch: Long): List<GroupEvent> = pendingByEpoch[epoch] ?: emptyList()
+        fun pendingForEpoch(
+            groupId: String,
+            epoch: Long,
+        ): List<GroupEvent> = pendingByGroupEpoch[GroupEpochKey(groupId, epoch)] ?: emptyList()
 
         /**
-         * Resolves the winning commit for a specific epoch.
+         * Resolves the winning commit for a specific group and epoch.
          *
+         * @param groupId the Nostr group ID
          * @param epoch the MLS epoch to resolve
-         * @return the winning commit, or null if no commits exist for this epoch
+         * @return the winning commit, or null if no commits exist for this (group, epoch)
          */
-        fun resolve(epoch: Long): GroupEvent? = selectWinner(pendingByEpoch[epoch] ?: emptyList())
+        fun resolve(
+            groupId: String,
+            epoch: Long,
+        ): GroupEvent? = selectWinner(pendingByGroupEpoch[GroupEpochKey(groupId, epoch)] ?: emptyList())
 
         /**
-         * Clears pending commits for an epoch after it has been resolved.
+         * Clears pending commits for a (group, epoch) after it has been resolved.
          */
-        fun clearEpoch(epoch: Long) {
-            pendingByEpoch.remove(epoch)
+        fun clearEpoch(
+            groupId: String,
+            epoch: Long,
+        ) {
+            pendingByGroupEpoch.remove(GroupEpochKey(groupId, epoch))
         }
 
         /**
-         * Returns all epochs that have pending commits.
+         * Returns all (group, epoch) keys that have pending commits.
          */
-        fun pendingEpochs(): Set<Long> = pendingByEpoch.keys.toSet()
+        fun pendingGroupEpochs(): Set<GroupEpochKey> = pendingByGroupEpoch.keys.toSet()
 
         /**
          * Clears all pending state.
          */
         fun clear() {
-            pendingByEpoch.clear()
+            pendingByGroupEpoch.clear()
         }
     }
 }

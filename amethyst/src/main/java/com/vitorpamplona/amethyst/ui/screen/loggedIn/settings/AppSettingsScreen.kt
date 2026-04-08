@@ -389,11 +389,12 @@ fun SettingsRow(
 fun SettingsRow(
     name: Int,
     description: Int,
+    modifier: Modifier = Modifier.fillMaxWidth(),
     content: @Composable () -> Unit,
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(5.dp),
     ) {
         Column(
