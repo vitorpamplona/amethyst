@@ -124,8 +124,7 @@ internal object FieldP {
         b: LongArray,
     ) {
         val w = wide.get()
-        U256.mulWide(w, a, b)
-        reduceWide(out, w)
+        fieldMulReduce(out, a, b, w)
     }
 
     /** Multiply with caller-provided wide buffer (hot path — no ThreadLocal lookup). */
@@ -135,8 +134,7 @@ internal object FieldP {
         b: LongArray,
         w: LongArray,
     ) {
-        U256.mulWide(w, a, b)
-        reduceWide(out, w)
+        fieldMulReduce(out, a, b, w)
     }
 
     /** Square with ThreadLocal wide buffer (convenience for non-hot paths). */
@@ -145,8 +143,7 @@ internal object FieldP {
         a: LongArray,
     ) {
         val w = wide.get()
-        U256.sqrWide(w, a)
-        reduceWide(out, w)
+        fieldSqrReduce(out, a, w)
     }
 
     /** Square with caller-provided wide buffer (hot path — no ThreadLocal lookup). */
@@ -155,8 +152,7 @@ internal object FieldP {
         a: LongArray,
         w: LongArray,
     ) {
-        U256.sqrWide(w, a)
-        reduceWide(out, w)
+        fieldSqrReduce(out, a, w)
     }
 
     /**
