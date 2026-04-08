@@ -67,27 +67,54 @@ internal object FieldP {
         val carry = U256.addTo(out, a, b)
         if (carry != 0) {
             // Overflow past 2^256: add 2^256 mod p = 2^32 + 977 = 0x1000003D1
-            // This fits in 33 bits. Add to limb[0] with carry propagation.
-            val s1 = out[0] + 4294968273L // 2^32 + 977
+            val s1 = out[0] + 4294968273L
             val c1 = if (s1.toULong() < out[0].toULong()) 1L else 0L
             out[0] = s1
             if (c1 != 0L) {
-                for (i in 1 until 4) {
-                    out[i]++
-                    if (out[i] != 0L) break
+                out[1]++
+                if (out[1] == 0L) {
+                    out[2]++
+                    if (out[2] == 0L) out[3]++
                 }
             }
         }
         reduceSelf(out)
     }
 
+    /**
+     * out = a - b mod p. Specialized add-back for P = [P0, -1, -1, -1]:
+     * adding -1 to limbs 1-3 with carry=1 is identity, so only the carry=0
+     * case needs work (subtract 1 with borrow propagation). ~500 calls/verify.
+     */
     fun sub(
         out: LongArray,
         a: LongArray,
         b: LongArray,
     ) {
         val borrow = U256.subTo(out, a, b)
-        if (borrow != 0) U256.addTo(out, out, P)
+        if (borrow != 0) {
+            // Add P = [P0, -1, -1, -1].
+            val s0 = out[0] + P0
+            val c0 = if (s0.toULong() < out[0].toULong()) 1L else 0L
+            out[0] = s0
+            // For limbs 1-3: adding P[i]=-1 with carry c:
+            //   c=1 → result unchanged, carry out=1 (identity propagation)
+            //   c=0 → result = out[i]-1, carry out = (out[i] != 0) ? 1 : 0
+            // So if c0=1, limbs 1-3 are untouched. If c0=0, subtract 1 with borrow:
+            if (c0 == 0L) {
+                if (out[1] != 0L) {
+                    out[1]--
+                } else {
+                    out[1] = -1L // 0-1 wraps
+                    if (out[2] != 0L) {
+                        out[2]--
+                    } else {
+                        out[2] = -1L
+                        out[3]--
+                    }
+                }
+            }
+        }
     }
 
     /** Multiply with ThreadLocal wide buffer (convenience for non-hot paths). */
@@ -132,39 +159,80 @@ internal object FieldP {
         reduceWide(out, w)
     }
 
+    /**
+     * out = -a mod p = P - a. Specialized for P = [P0, -1, -1, -1]:
+     * P[i]-a[i] = ~a[i] for i>=1 (bitwise NOT), with borrow from limb 0.
+     * Avoids generic U256.subTo + P array reads (~260 calls/verify).
+     */
     fun neg(
         out: LongArray,
         a: LongArray,
     ) {
         if (U256.isZero(a)) {
-            for (i in 0 until 4) out[i] = 0L
-        } else {
-            U256.subTo(out, P, a)
+            out[0] = 0L
+            out[1] = 0L
+            out[2] = 0L
+            out[3] = 0L
+            return
         }
+        // P - a: limb 0 is P0 - a[0], limbs 1-3 are (-1) - a[i] = ~a[i]
+        out[0] = P0 - a[0]
+        val borrow = if (a[0].toULong() > P0.toULong()) 1L else 0L
+        // ~a[i] - borrow. New borrow only if ~a[i] == 0 (i.e., a[i] == -1) and borrow == 1
+        out[1] = a[1].inv() - borrow
+        val b1 = if (a[1] == -1L && borrow != 0L) 1L else 0L
+        out[2] = a[2].inv() - b1
+        val b2 = if (a[2] == -1L && b1 != 0L) 1L else 0L
+        out[3] = a[3].inv() - b2
     }
 
     /**
      * out = a / 2 mod p. Branchless: if odd, add p first (p is odd → a+p is even).
+     * Unrolled, with P[1..3]=-1 inlined as `mask` (since -1 & mask = mask).
      */
     fun half(
         out: LongArray,
         a: LongArray,
     ) {
         val mask = -(a[0] and 1L) // all 1s if odd, all 0s if even
-        var carry = 0L
-        for (i in 0 until 4) {
-            val pMasked = P[i] and mask
-            val s1 = a[i] + pMasked
-            val c1 = if (s1.toULong() < a[i].toULong()) 1L else 0L
-            val s2 = s1 + carry
-            val c2 = if (s2.toULong() < s1.toULong()) 1L else 0L
-            out[i] = s2
-            carry = c1 + c2
-        }
-        // Right-shift by 1
-        for (i in 0 until 3) {
-            out[i] = (out[i] ushr 1) or (out[i + 1] shl 63)
-        }
+        val p0 = P0 and mask // P[0] masked; P[1..3] are -1, so P[i]&mask = mask
+        var s1: Long
+        var s2: Long
+        var c1: Long
+        var c2: Long
+
+        // Conditional add: out = a + (P & mask), unrolled
+        // Limb 0
+        s1 = a[0] + p0
+        c1 = if (s1.toULong() < a[0].toULong()) 1L else 0L
+        out[0] = s1
+        var carry = c1
+        // Limb 1
+        s1 = a[1] + mask
+        c1 = if (s1.toULong() < a[1].toULong()) 1L else 0L
+        s2 = s1 + carry
+        c2 = if (s2.toULong() < s1.toULong()) 1L else 0L
+        out[1] = s2
+        carry = c1 + c2
+        // Limb 2
+        s1 = a[2] + mask
+        c1 = if (s1.toULong() < a[2].toULong()) 1L else 0L
+        s2 = s1 + carry
+        c2 = if (s2.toULong() < s1.toULong()) 1L else 0L
+        out[2] = s2
+        carry = c1 + c2
+        // Limb 3
+        s1 = a[3] + mask
+        c1 = if (s1.toULong() < a[3].toULong()) 1L else 0L
+        s2 = s1 + carry
+        c2 = if (s2.toULong() < s1.toULong()) 1L else 0L
+        out[3] = s2
+        carry = c1 + c2
+
+        // Right-shift by 1 (unrolled)
+        out[0] = (out[0] ushr 1) or (out[1] shl 63)
+        out[1] = (out[1] ushr 1) or (out[2] shl 63)
+        out[2] = (out[2] ushr 1) or (out[3] shl 63)
         out[3] = (out[3] ushr 1) or (carry shl 63)
     }
 
@@ -298,81 +366,122 @@ internal object FieldP {
 
     // ==================== Reduction ====================
 
+    // P[0] cached as a constant to avoid array load in the hot reduceSelf path.
+    private const val P0 = -4294968273L // 0xFFFFFFFEFFFFFC2F
+
     fun reduceSelf(a: LongArray) {
         // Exploit P's structure: P = [P0, -1, -1, -1] where P[1..3] = 0xFFFFFFFFFFFFFFFF.
         // a >= P only if a[3]==a[2]==a[1]==-1 AND a[0] >= P[0]. The first check (a[3]==-1)
         // fails >99.99% of the time for random field elements, making this a single branch.
         if (a[3] == -1L && a[2] == -1L && a[1] == -1L &&
-            (a[0] xor Long.MIN_VALUE) >= (P[0] xor Long.MIN_VALUE)
+            (a[0] xor Long.MIN_VALUE) >= (P0 xor Long.MIN_VALUE)
         ) {
-            U256.subTo(a, a, P)
+            // Inline P subtraction: when a[1..3] = -1 and a[0] >= P0,
+            // a - P = [a[0] - P0, 0, 0, 0] (no borrows since P[1..3] = -1).
+            a[0] -= P0
+            a[1] = 0L
+            a[2] = 0L
+            a[3] = 0L
         }
     }
 
     /**
-     * Reduce 512-bit value mod p.
+     * Reduce 512-bit value mod p. Fully unrolled for ART JIT.
      *
      * Uses hi × 2^256 ≡ hi × C (mod p) where C = 2^32 + 977 = 4294968273.
-     * Since C < 2^33, hi[i] × C fits in 97 bits. We use unsignedMultiplyHigh
-     * to get the upper 64 bits of each limb×C product.
-     *
-     * Three stages:
-     * 1. Fold 512→~260 bits: lo + hi × C, producing at most ~34-bit carry
-     * 2. Fold carry × C back into limb[0..3]; propagate carries (may overflow 256 bits)
-     * 3. If round 2 overflowed, fold the single-bit overflow (≡ C) once more
-     * Final reduceSelf handles the at-most-one subtraction of p.
+     * Three stages: fold 512→~260 bits, fold carry×C, final reduceSelf.
      */
     fun reduceWide(
         out: LongArray,
         w: LongArray,
     ) {
-        // Round 1: acc = lo + hi × C
         val c = 4294968273L // 2^32 + 977
-        var carry = 0L
-        for (i in 0 until 4) {
-            val hcLo = w[i + 4] * c
-            val hcHi = unsignedMultiplyHigh(w[i + 4], c)
+        var hcLo: Long
+        var hcHi: Long
+        var s1: Long
+        var s2: Long
+        var c1: Long
+        var c2: Long
 
-            // acc = w[i] + hcLo + carry
-            val s1 = w[i] + hcLo
-            val c1 = if (s1.toULong() < w[i].toULong()) 1L else 0L
-            val s2 = s1 + carry
-            val c2 = if (s2.toULong() < s1.toULong()) 1L else 0L
-            out[i] = s2
-            carry = hcHi + c1 + c2
-        }
+        // Round 1: acc = lo + hi × C (4 limbs, unrolled)
+
+        // Limb 0 (no carry input)
+        hcLo = w[4] * c
+        hcHi = unsignedMultiplyHigh(w[4], c)
+        s1 = w[0] + hcLo
+        c1 = if (s1.toULong() < w[0].toULong()) 1L else 0L
+        out[0] = s1
+        var carry = hcHi + c1
+
+        // Limb 1
+        hcLo = w[5] * c
+        hcHi = unsignedMultiplyHigh(w[5], c)
+        s1 = w[1] + hcLo
+        c1 = if (s1.toULong() < w[1].toULong()) 1L else 0L
+        s2 = s1 + carry
+        c2 = if (s2.toULong() < s1.toULong()) 1L else 0L
+        out[1] = s2
+        carry = hcHi + c1 + c2
+
+        // Limb 2
+        hcLo = w[6] * c
+        hcHi = unsignedMultiplyHigh(w[6], c)
+        s1 = w[2] + hcLo
+        c1 = if (s1.toULong() < w[2].toULong()) 1L else 0L
+        s2 = s1 + carry
+        c2 = if (s2.toULong() < s1.toULong()) 1L else 0L
+        out[2] = s2
+        carry = hcHi + c1 + c2
+
+        // Limb 3
+        hcLo = w[7] * c
+        hcHi = unsignedMultiplyHigh(w[7], c)
+        s1 = w[3] + hcLo
+        c1 = if (s1.toULong() < w[3].toULong()) 1L else 0L
+        s2 = s1 + carry
+        c2 = if (s2.toULong() < s1.toULong()) 1L else 0L
+        out[3] = s2
+        carry = hcHi + c1 + c2
 
         // Round 2: if carry > 0, fold carry × C back in
         if (carry != 0L) {
             val ccLo = carry * c
             val ccHi = unsignedMultiplyHigh(carry, c)
-            val s1 = out[0] + ccLo
-            val c1 = if (s1.toULong() < out[0].toULong()) 1L else 0L
+            s1 = out[0] + ccLo
+            c1 = if (s1.toULong() < out[0].toULong()) 1L else 0L
             out[0] = s1
+            // Propagate carry (unrolled, with early exit)
             var prop = ccHi + c1
-            for (i in 1 until 4) {
-                if (prop == 0L) break
-                val s = out[i] + prop
-                prop = if (s.toULong() < out[i].toULong()) 1L else 0L
-                out[i] = s
-            }
-            // Round 2 carry propagation may overflow past 256 bits.
-            // This happens when out[0..3] were all 0xFF..FF and the add cascades.
-            // Overflow of 1 means 2^256 ≡ C (mod p), so add C to out[0..3].
             if (prop != 0L) {
-                val s2 = out[0] + c
-                val c2 = if (s2.toULong() < out[0].toULong()) 1L else 0L
-                out[0] = s2
-                if (c2 != 0L) {
-                    for (i in 1 until 4) {
-                        out[i]++
-                        if (out[i] != 0L) break
+                s1 = out[1] + prop
+                prop = if (s1.toULong() < out[1].toULong()) 1L else 0L
+                out[1] = s1
+                if (prop != 0L) {
+                    s1 = out[2] + prop
+                    prop = if (s1.toULong() < out[2].toULong()) 1L else 0L
+                    out[2] = s1
+                    if (prop != 0L) {
+                        s1 = out[3] + prop
+                        prop = if (s1.toULong() < out[3].toULong()) 1L else 0L
+                        out[3] = s1
+                    }
+                }
+            }
+            // Overflow past 256 bits: 2^256 ≡ C (mod p)
+            if (prop != 0L) {
+                s1 = out[0] + c
+                c1 = if (s1.toULong() < out[0].toULong()) 1L else 0L
+                out[0] = s1
+                if (c1 != 0L) {
+                    out[1]++
+                    if (out[1] == 0L) {
+                        out[2]++
+                        if (out[2] == 0L) out[3]++
                     }
                 }
             }
         }
 
-        // Final: at most one subtraction of p
         reduceSelf(out)
     }
 

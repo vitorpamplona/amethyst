@@ -71,6 +71,58 @@ internal object Glv {
         )
     }
 
+    /**
+     * Allocation-free splitScalar using pre-allocated scratch from PointScratch.
+     * Eliminates ~26 LongArray allocations per call (called 2× per verify = ~52 allocs saved).
+     */
+    fun splitScalarInto(
+        outK1: LongArray,
+        outK2: LongArray,
+        k: LongArray,
+        w: LongArray,
+        t1: LongArray,
+        t2: LongArray,
+    ): Split {
+        // c1 = mulShift384(k, G1)
+        mulShift384Into(t1, k, G1, w)
+        // c2 = mulShift384(k, G2)
+        mulShift384Into(t2, k, G2, w)
+
+        // r2 = add(mul(c1, MINUS_B1), mul(c2, MINUS_B2))
+        // Use outK1 as temp for mul(c1, MINUS_B1), outK2 as temp for mul(c2, MINUS_B2)
+        ScalarN.mulTo(outK1, t1, MINUS_B1, w)
+        ScalarN.mulTo(outK2, t2, MINUS_B2, w)
+        ScalarN.addTo(outK2, outK1, outK2) // outK2 = r2
+
+        // r1 = add(mul(r2, MINUS_LAMBDA), k)
+        ScalarN.mulTo(outK1, outK2, MINUS_LAMBDA, w)
+        ScalarN.addTo(outK1, outK1, k) // outK1 = r1
+
+        val neg1 = U256.cmp(outK1, N_HALF) > 0
+        val neg2 = U256.cmp(outK2, N_HALF) > 0
+        if (neg1) ScalarN.negTo(outK1, outK1)
+        if (neg2) ScalarN.negTo(outK2, outK2)
+        return Split(outK1, outK2, neg1, neg2)
+    }
+
+    /** Allocation-free mulShift384. */
+    private fun mulShift384Into(
+        out: LongArray,
+        k: LongArray,
+        g: LongArray,
+        w: LongArray,
+    ) {
+        U256.mulWide(w, k, g)
+        out[0] = w[6]
+        out[1] = w[7]
+        out[2] = 0L
+        out[3] = 0L
+        if (w[5] < 0) { // bit 63 of w[5] = bit 383 (rounding)
+            out[0]++
+            if (out[0] == 0L) out[1]++
+        }
+    }
+
     // ==================== wNAF Encoding ====================
 
     /**

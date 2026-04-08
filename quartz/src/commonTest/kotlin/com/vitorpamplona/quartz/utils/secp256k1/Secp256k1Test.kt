@@ -336,4 +336,67 @@ class Secp256k1Test {
                 .sha256(tagHash + tagHash + msg)
         assertEquals(expected.toHexKey(), result.toHexKey())
     }
+
+    // ============================================================
+    // Same-pubkey batch verification
+    // ============================================================
+
+    @Test
+    fun batchSamePubkeyAllValid() {
+        val seckey = "67E56582298859DDAE725F972992A07C6C4FB9F62A8FFF58CE3CA926A1063530".hexToByteArray()
+        val pub = Secp256k1.pubKeyCompress(Secp256k1.pubkeyCreate(seckey)).copyOfRange(1, 33)
+        val sigs = mutableListOf<ByteArray>()
+        val msgs = mutableListOf<ByteArray>()
+        for (i in 0 until 10) {
+            val msg = ByteArray(32) { (i * 7 + it).toByte() }
+            val sig = Secp256k1.signSchnorr(msg, seckey, null)
+            assertTrue(Secp256k1.verifySchnorr(sig, msg, pub), "Individual verify failed for event $i")
+            sigs.add(sig)
+            msgs.add(msg)
+        }
+        assertTrue(Secp256k1.verifySchnorrBatch(pub, sigs, msgs))
+    }
+
+    @Test
+    fun batchSamePubkeyWithInvalid() {
+        val seckey = "67E56582298859DDAE725F972992A07C6C4FB9F62A8FFF58CE3CA926A1063530".hexToByteArray()
+        val pub = Secp256k1.pubKeyCompress(Secp256k1.pubkeyCreate(seckey)).copyOfRange(1, 33)
+        val msg1 = ByteArray(32) { 0x01 }
+        val msg2 = ByteArray(32) { 0x02 }
+        val sig1 = Secp256k1.signSchnorr(msg1, seckey, null)
+        val sig2 = Secp256k1.signSchnorr(msg2, seckey, null)
+        // Corrupt sig2
+        val badSig2 = sig2.copyOf()
+        badSig2[63] = (badSig2[63].toInt() xor 0x01).toByte()
+        assertFalse(Secp256k1.verifySchnorrBatch(pub, listOf(sig1, badSig2), listOf(msg1, msg2)))
+    }
+
+    @Test
+    fun batchSamePubkeyEmpty() {
+        val pub = "67E56582298859DDAE725F972992A07C6C4FB9F62A8FFF58CE3CA926A1063530".hexToByteArray()
+        assertTrue(Secp256k1.verifySchnorrBatch(pub, emptyList(), emptyList()))
+    }
+
+    @Test
+    fun batchSamePubkeySingleFallback() {
+        val seckey = "67E56582298859DDAE725F972992A07C6C4FB9F62A8FFF58CE3CA926A1063530".hexToByteArray()
+        val pub = Secp256k1.pubKeyCompress(Secp256k1.pubkeyCreate(seckey)).copyOfRange(1, 33)
+        val msg = ByteArray(32) { 0x42 }
+        val sig = Secp256k1.signSchnorr(msg, seckey, null)
+        assertTrue(Secp256k1.verifySchnorrBatch(pub, listOf(sig), listOf(msg)))
+    }
+
+    @Test
+    fun batchSamePubkeyLargeBatch() {
+        val seckey = "3982F19BEF1615BCCFBB05E321C10E1D4CBA3DF0E841C2E41EEB6016347653C3".hexToByteArray()
+        val pub = Secp256k1.pubKeyCompress(Secp256k1.pubkeyCreate(seckey)).copyOfRange(1, 33)
+        val sigs = mutableListOf<ByteArray>()
+        val msgs = mutableListOf<ByteArray>()
+        for (i in 0 until 32) {
+            val msg = ByteArray(64) { (i * 13 + it).toByte() }
+            sigs.add(Secp256k1.signSchnorr(msg, seckey, null))
+            msgs.add(msg)
+        }
+        assertTrue(Secp256k1.verifySchnorrBatch(pub, sigs, msgs))
+    }
 }
