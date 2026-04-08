@@ -34,17 +34,18 @@ import kotlinx.coroutines.flow.combine
 class GlobalTopNavFilter(
     val outboxRelays: StateFlow<Set<NormalizedRelayUrl>>,
     val proxyRelays: StateFlow<Set<NormalizedRelayUrl>>,
+    val relayFeeds: StateFlow<Set<NormalizedRelayUrl>>,
 ) : IFeedTopNavFilter {
     override fun matchAuthor(pubkey: HexKey): Boolean = true
 
     override fun match(noteEvent: Event) = true
 
     override fun toPerRelayFlow(cache: LocalCache): Flow<GlobalTopNavPerRelayFilterSet> =
-        combine(outboxRelays, proxyRelays) { outboxRelays, proxyRelays ->
+        combine(outboxRelays, proxyRelays, relayFeeds) { outboxRelays, proxyRelays, relayFeeds ->
             if (proxyRelays.isNotEmpty()) {
                 GlobalTopNavPerRelayFilterSet(proxyRelays.associateWith { GlobalTopNavPerRelayFilter })
             } else {
-                GlobalTopNavPerRelayFilterSet(outboxRelays.associateWith { GlobalTopNavPerRelayFilter })
+                GlobalTopNavPerRelayFilterSet((relayFeeds + outboxRelays).associateWith { GlobalTopNavPerRelayFilter })
             }
         }
 
@@ -52,6 +53,6 @@ class GlobalTopNavFilter(
         if (proxyRelays.value.isNotEmpty()) {
             GlobalTopNavPerRelayFilterSet(proxyRelays.value.associateWith { GlobalTopNavPerRelayFilter })
         } else {
-            GlobalTopNavPerRelayFilterSet(outboxRelays.value.associateWith { GlobalTopNavPerRelayFilter })
+            GlobalTopNavPerRelayFilterSet((relayFeeds.value + outboxRelays.value).associateWith { GlobalTopNavPerRelayFilter })
         }
 }

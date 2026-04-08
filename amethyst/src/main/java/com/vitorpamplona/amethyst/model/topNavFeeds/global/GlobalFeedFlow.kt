@@ -30,8 +30,9 @@ import kotlinx.coroutines.flow.StateFlow
 class GlobalFeedFlow(
     val outboxRelays: StateFlow<Set<NormalizedRelayUrl>>,
     val proxyRelays: StateFlow<Set<NormalizedRelayUrl>>,
+    val relayFeeds: StateFlow<Set<NormalizedRelayUrl>>,
 ) : IFeedFlowsType {
-    val default = GlobalTopNavFilter(outboxRelays, proxyRelays)
+    val default = GlobalTopNavFilter(outboxRelays, proxyRelays, relayFeeds)
 
     override fun flow() = MutableStateFlow(default)
 

@@ -57,6 +57,7 @@ class FeedTopNavFilterState(
     val followsRelays: StateFlow<Set<NormalizedRelayUrl>>,
     val blockedRelays: StateFlow<Set<NormalizedRelayUrl>>,
     val proxyRelays: StateFlow<Set<NormalizedRelayUrl>>,
+    val relayFeeds: StateFlow<Set<NormalizedRelayUrl>>,
     val caches: FeedDecryptionCaches,
     val signer: NostrSigner,
     val scope: CoroutineScope,
@@ -64,7 +65,7 @@ class FeedTopNavFilterState(
     fun loadFlowsFor(listName: TopFilter): IFeedFlowsType =
         when (listName) {
             TopFilter.Global -> {
-                GlobalFeedFlow(followsRelays, proxyRelays)
+                GlobalFeedFlow(followsRelays, proxyRelays, relayFeeds)
             }
 
             TopFilter.AllFollows -> {

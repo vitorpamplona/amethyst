@@ -408,6 +408,7 @@ class Account(
             followsRelays = defaultGlobalRelays.flow,
             blockedRelays = blockedRelayList.flow,
             proxyRelays = proxyRelayList.flow,
+            relayFeeds = relayFeedsList.flow,
             caches = feedDecryptionCaches,
             signer = signer,
             scope = scope,
