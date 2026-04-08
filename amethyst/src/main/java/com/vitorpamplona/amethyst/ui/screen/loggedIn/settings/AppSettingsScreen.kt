@@ -121,6 +121,7 @@ fun SettingsScreen(sharedPrefs: UiSettingsFlow) {
         ImmersiveScrollingChoice(sharedPrefs)
         FeatureSetChoice(sharedPrefs)
         GalleryChoice(sharedPrefs)
+        AiWritingHelpChoice(sharedPrefs)
         PushNotificationSettingsRow(sharedPrefs)
     }
 }
@@ -363,6 +364,26 @@ fun GalleryChoice(sharedPrefs: UiSettingsFlow) {
         galleryIndex.screenCode,
     ) {
         sharedPrefs.gallerySet.tryEmit(parseGalleryType(it))
+    }
+}
+
+@Composable
+fun AiWritingHelpChoice(sharedPrefs: UiSettingsFlow) {
+    val aiIndex by sharedPrefs.automaticallyProposeAiImprovements.collectAsState()
+
+    val booleanItems =
+        persistentListOf(
+            TitleExplainer(stringRes(ConnectivityType.ALWAYS.resourceId)),
+            TitleExplainer(stringRes(ConnectivityType.NEVER.resourceId)),
+        )
+
+    SettingsRow(
+        R.string.ai_writing_setting_title,
+        R.string.ai_writing_setting_description,
+        booleanItems,
+        aiIndex.screenCode,
+    ) {
+        sharedPrefs.automaticallyProposeAiImprovements.tryEmit(parseBooleanType(it))
     }
 }
 

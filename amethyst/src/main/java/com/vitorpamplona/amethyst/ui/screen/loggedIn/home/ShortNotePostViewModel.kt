@@ -41,9 +41,16 @@ import com.vitorpamplona.amethyst.commons.compose.replaceCurrentWord
 import com.vitorpamplona.amethyst.commons.compose.setTextAndPlaceCursorAtBeginning
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState.EmojiMedia
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.BooleanType
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.ai.MockWritingAssistant
+import com.vitorpamplona.amethyst.service.ai.WritingAssistant
+import com.vitorpamplona.amethyst.service.ai.WritingAssistantFactory
+import com.vitorpamplona.amethyst.service.ai.WritingAssistantStatus
+import com.vitorpamplona.amethyst.service.ai.WritingResult
+import com.vitorpamplona.amethyst.service.ai.WritingTone
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
@@ -140,7 +147,13 @@ import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -290,6 +303,96 @@ open class ShortNotePostViewModel :
 
     // Anonymous Reply
     var wantsAnonymousPost by mutableStateOf(false)
+
+    // AI Writing Help for testing
+    private val useMockAi = false
+
+    var aiResults by mutableStateOf<Map<WritingTone, WritingResult>>(emptyMap())
+    var aiSelectedResult by mutableStateOf<WritingResult?>(null)
+    var aiStatus by mutableStateOf<WritingAssistantStatus>(WritingAssistantStatus.Unavailable)
+    private var writingAssistant: WritingAssistant? = null
+    private var aiComputeJob: Job? = null
+    private var lastComputedText: String = ""
+
+    val showAiPanel: Boolean
+        get() {
+            val prefEnabled =
+                accountViewModel.settings.uiSettingsFlow.automaticallyProposeAiImprovements.value ==
+                    BooleanType.ALWAYS
+            return prefEnabled && aiStatus is WritingAssistantStatus.Available && aiResults.isNotEmpty()
+        }
+
+    fun initWritingAssistant(context: android.content.Context) {
+        if (writingAssistant == null) {
+            writingAssistant =
+                if (useMockAi) {
+                    MockWritingAssistant()
+                } else {
+                    WritingAssistantFactory.create(context)
+                }
+            viewModelScope.launch(Dispatchers.IO) {
+                aiStatus = writingAssistant?.checkAvailability() ?: WritingAssistantStatus.Unavailable
+            }
+        }
+    }
+
+    fun precomputeAiResults() {
+        val assistant = writingAssistant ?: return
+        if (aiStatus !is WritingAssistantStatus.Available) return
+        val prefEnabled =
+            accountViewModel.settings.uiSettingsFlow.automaticallyProposeAiImprovements.value ==
+                BooleanType.ALWAYS
+        if (!prefEnabled) return
+
+        val text = message.text.toString().trim()
+        if (text.isBlank() || text == lastComputedText) return
+
+        aiComputeJob?.cancel()
+        aiResults = emptyMap()
+        aiSelectedResult = null
+
+        aiComputeJob =
+            viewModelScope.launch(Dispatchers.IO) {
+                delay(1000)
+                lastComputedText = text
+
+                val results =
+                    coroutineScope {
+                        WritingTone.entries
+                            .map { tone ->
+                                async {
+                                    try {
+                                        assistant.transform(text, tone)
+                                    } catch (e: Exception) {
+                                        if (e is CancellationException) throw e
+                                        null
+                                    }
+                                }
+                            }.awaitAll()
+                            .filterNotNull()
+                            .associateBy { it.tone }
+                    }
+                aiResults = results
+            }
+    }
+
+    fun selectAiResult(tone: WritingTone) {
+        aiSelectedResult = aiResults[tone]
+    }
+
+    fun applyAiResult() {
+        aiSelectedResult?.let {
+            message.setTextAndPlaceCursorAtEnd(it.transformedText)
+            aiSelectedResult = null
+            aiResults = emptyMap()
+            lastComputedText = ""
+            draftTag.newVersion()
+        }
+    }
+
+    fun dismissAiResult() {
+        aiSelectedResult = null
+    }
 
     fun lnAddress(): String? = account.userProfile().lnAddress()
 
@@ -1131,6 +1234,7 @@ open class ShortNotePostViewModel :
             emojiSuggestions?.processCurrentWord(lastWord)
         }
 
+        precomputeAiResults()
         draftTag.newVersion()
     }
 
@@ -1372,6 +1476,8 @@ open class ShortNotePostViewModel :
 
     override fun onCleared() {
         super.onCleared()
+        writingAssistant?.close()
+        writingAssistant = null
         Log.d("Init") { "OnCleared: ${this.javaClass.simpleName}" }
     }
 
