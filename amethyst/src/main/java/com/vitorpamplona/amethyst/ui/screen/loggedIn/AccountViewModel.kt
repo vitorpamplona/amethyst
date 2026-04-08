@@ -229,9 +229,9 @@ class AccountViewModel(
         callManager.onPeerLeft = { peerPubKey -> controller.disposePeerSession(peerPubKey) }
         callController = controller
 
-        // Populate ActiveCallHolder so CallActivity can launch even when the app
+        // Populate CallSessionBridge so CallActivity can launch even when the app
         // is in the background (e.g. full-screen incoming call intent).
-        com.vitorpamplona.amethyst.ui.call.ActiveCallHolder
+        com.vitorpamplona.amethyst.service.call.CallSessionBridge
             .set(callManager, controller, this)
     }
 

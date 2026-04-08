@@ -41,13 +41,13 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.call.CallState
+import com.vitorpamplona.amethyst.service.call.CallSessionBridge
 import com.vitorpamplona.amethyst.service.crashreports.DisplayCrashMessages
 import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.compose.DisplayNotifyMessages
 import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataScreen
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.AllMediaServersScreen
 import com.vitorpamplona.amethyst.ui.actions.paymentTargets.PaymentTargetsScreen
 import com.vitorpamplona.amethyst.ui.broadcast.DisplayBroadcastProgress
-import com.vitorpamplona.amethyst.ui.call.ActiveCallHolder
 import com.vitorpamplona.amethyst.ui.call.CallActivity
 import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.components.toasts.DisplayErrorMessages
@@ -184,7 +184,7 @@ private fun ObserveIncomingCalls(accountViewModel: AccountViewModel) {
     LaunchedEffect(callState) {
         val state = callState
         if (state is CallState.IncomingCall) {
-            ActiveCallHolder.set(accountViewModel.callManager, accountViewModel.callController, accountViewModel)
+            CallSessionBridge.set(accountViewModel.callManager, accountViewModel.callController, accountViewModel)
             CallActivity.launch(context)
         }
     }

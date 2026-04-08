@@ -41,6 +41,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 class CallManager(
     private val signer: NostrSigner,
@@ -49,6 +51,12 @@ class CallManager(
     private val publishEvent: (EphemeralGiftWrapEvent) -> Unit,
 ) {
     private val factory = WebRtcCallFactory()
+
+    /** Serializes all state-mutating operations.  Signaling events can arrive
+     *  from multiple relay coroutines concurrently; without this lock a hangup
+     *  and an answer could race, causing the answer to overwrite an Ended
+     *  transition and leaking WebRTC resources. */
+    private val stateMutex = Mutex()
 
     private val _state = MutableStateFlow<CallState>(CallState.Idle)
     val state: StateFlow<CallState> = _state.asStateFlow()
@@ -69,13 +77,13 @@ class CallManager(
 
     private var timeoutJob: Job? = null
     private var resetJob: Job? = null
-    private val processedEventIds = mutableSetOf<String>()
+    private val processedEventIds = LinkedHashSet<String>()
 
     /** Call IDs for which we have seen a hangup, reject, or answer-elsewhere
      *  signal.  Checked before transitioning to [CallState.IncomingCall] so
      *  that stale offer events replayed by relays after an app restart do not
      *  trigger ringing for calls that already ended. */
-    private val completedCallIds = mutableSetOf<String>()
+    private val completedCallIds = LinkedHashSet<String>()
 
     /** Timestamp (epoch seconds) when this CallManager was created.  Events
      *  created before this are from a previous app session and should not
@@ -90,6 +98,23 @@ class CallManager(
         const val CALL_TIMEOUT_MS = 60_000L // 60 seconds ringing timeout
         const val ENDED_DISPLAY_MS = 2_000L // show "call ended" briefly before resetting
         const val MAX_EVENT_AGE_SECONDS = 20L // discard signaling events older than this
+        const val MAX_PROCESSED_EVENT_IDS = 2_000 // cap dedup set to prevent unbounded growth
+        const val MAX_COMPLETED_CALL_IDS = 200 // cap completed-call set
+    }
+
+    /** Adds [value] to a [LinkedHashSet], evicting the oldest entries when
+     *  the set exceeds [maxSize]. Insertion-order iteration of LinkedHashSet
+     *  ensures oldest entries are removed first. */
+    private fun <T> cappedAdd(
+        set: LinkedHashSet<T>,
+        value: T,
+        maxSize: Int,
+    ) {
+        set.add(value)
+        while (set.size > maxSize) {
+            val oldest = set.iterator().next()
+            set.remove(oldest)
+        }
     }
 
     private fun isEventTooOld(event: Event): Boolean {
@@ -109,11 +134,11 @@ class CallManager(
      * Sets state to Offering. Called by CallController before creating
      * per-peer offers in group calls.
      */
-    fun beginOffering(
+    suspend fun beginOffering(
         callId: String,
         calleePubKeys: Set<HexKey>,
         callType: CallType,
-    ) {
+    ) = stateMutex.withLock {
         _state.value = CallState.Offering(callId, calleePubKeys, callType)
         startTimeout(callId)
     }
@@ -237,15 +262,22 @@ class CallManager(
     }
 
     suspend fun acceptCall(sdpAnswer: String) {
-        val current = _state.value
-        if (current !is CallState.IncomingCall) {
-            Log.d("CallManager") { "acceptCall: state is ${current::class.simpleName}, not IncomingCall — ignoring" }
-            return
-        }
+        val current: CallState.IncomingCall
+        val discovered: Set<HexKey>
+        stateMutex.withLock {
+            val s = _state.value
+            if (s !is CallState.IncomingCall) {
+                Log.d("CallManager") { "acceptCall: state is ${s::class.simpleName}, not IncomingCall — ignoring" }
+                return
+            }
+            current = s
 
-        Log.d("CallManager") { "acceptCall: callId=${current.callId}, transitioning to Connecting, sdpAnswerLength=${sdpAnswer.length}" }
-        _state.value = CallState.Connecting(current.callId, current.peerPubKeys() - signer.pubKey, current.callType)
-        cancelTimeout()
+            Log.d("CallManager") { "acceptCall: callId=${current.callId}, transitioning to Connecting, sdpAnswerLength=${sdpAnswer.length}" }
+            _state.value = CallState.Connecting(current.callId, current.peerPubKeys() - signer.pubKey, current.callType)
+            cancelTimeout()
+            discovered = discoveredCalleePeers.toSet()
+            discoveredCalleePeers.clear()
+        }
 
         val allRecipients = current.groupMembers + signer.pubKey
         Log.d("CallManager") { "acceptCall: publishing answer to ${allRecipients.size} recipients" }
@@ -255,8 +287,6 @@ class CallManager(
 
         // Trigger callee-to-callee mesh connections with peers we discovered
         // while still ringing (their answers arrived before we accepted).
-        val discovered = discoveredCalleePeers.toSet()
-        discoveredCalleePeers.clear()
         if (discovered.isNotEmpty()) {
             Log.d("CallManager") { "acceptCall: triggering mesh setup with ${discovered.size} discovered peers: ${discovered.map { it.take(8) }}" }
             for (peer in discovered) {
@@ -266,10 +296,13 @@ class CallManager(
     }
 
     suspend fun rejectCall() {
-        val current = _state.value
-        if (current !is CallState.IncomingCall) return
-
-        transitionToEnded(current.callId, current.peerPubKeys(), EndReason.REJECTED)
+        val current: CallState.IncomingCall
+        stateMutex.withLock {
+            val s = _state.value
+            if (s !is CallState.IncomingCall) return
+            current = s
+            transitionToEnded(current.callId, current.peerPubKeys(), EndReason.REJECTED)
+        }
 
         val allRecipients = current.groupMembers + signer.pubKey
         val result = factory.createGroupReject(allRecipients, current.callId, signer = signer)
@@ -455,22 +488,24 @@ class CallManager(
         publishEvent(result.wrap)
     }
 
-    fun onPeerConnected() {
-        val current = _state.value
-        if (current !is CallState.Connecting) {
-            Log.d("CallManager") { "onPeerConnected: state is ${current::class.simpleName}, not Connecting — ignoring" }
-            return
-        }
+    suspend fun onPeerConnected() {
+        stateMutex.withLock {
+            val current = _state.value
+            if (current !is CallState.Connecting) {
+                Log.d("CallManager") { "onPeerConnected: state is ${current::class.simpleName}, not Connecting — ignoring" }
+                return
+            }
 
-        Log.d("CallManager") { "onPeerConnected: Connecting -> Connected! callId=${current.callId}" }
-        _state.value =
-            CallState.Connected(
-                callId = current.callId,
-                peerPubKeys = current.peerPubKeys,
-                callType = current.callType,
-                startedAtEpoch = TimeUtils.now(),
-                pendingPeerPubKeys = current.pendingPeerPubKeys,
-            )
+            Log.d("CallManager") { "onPeerConnected: Connecting -> Connected! callId=${current.callId}" }
+            _state.value =
+                CallState.Connected(
+                    callId = current.callId,
+                    peerPubKeys = current.peerPubKeys,
+                    callType = current.callType,
+                    startedAtEpoch = TimeUtils.now(),
+                    pendingPeerPubKeys = current.pendingPeerPubKeys,
+                )
+        }
     }
 
     suspend fun invitePeer(
@@ -509,30 +544,32 @@ class CallManager(
     suspend fun hangup() {
         val peerPubKeys: Set<HexKey>
         val callId: String
-        when (val current = _state.value) {
-            is CallState.Offering -> {
-                peerPubKeys = current.peerPubKeys
-                callId = current.callId
+        stateMutex.withLock {
+            when (val current = _state.value) {
+                is CallState.Offering -> {
+                    peerPubKeys = current.peerPubKeys
+                    callId = current.callId
+                }
+
+                is CallState.Connecting -> {
+                    peerPubKeys = current.peerPubKeys + current.pendingPeerPubKeys
+                    callId = current.callId
+                }
+
+                is CallState.Connected -> {
+                    peerPubKeys = current.allPeerPubKeys
+                    callId = current.callId
+                }
+
+                else -> {
+                    return
+                }
             }
 
-            is CallState.Connecting -> {
-                peerPubKeys = current.peerPubKeys + current.pendingPeerPubKeys
-                callId = current.callId
-            }
-
-            is CallState.Connected -> {
-                peerPubKeys = current.allPeerPubKeys
-                callId = current.callId
-            }
-
-            else -> {
-                return
-            }
+            // Transition immediately so the UI stops ringing/ringback before
+            // the (potentially slow) signing + relay publish completes.
+            transitionToEnded(callId, peerPubKeys, EndReason.HANGUP)
         }
-
-        // Transition immediately so the UI stops ringing/ringback before
-        // the (potentially slow) signing + relay publish completes.
-        transitionToEnded(callId, peerPubKeys, EndReason.HANGUP)
 
         val result = factory.createGroupHangup(peerPubKeys, callId, signer = signer)
         result.wraps.forEach { publishEvent(it) }
@@ -613,47 +650,51 @@ class CallManager(
         }
     }
 
-    fun onSignalingEvent(event: Event) {
+    suspend fun onSignalingEvent(event: Event) {
         if (isEventTooOld(event)) {
             Log.d("CallManager") { "Discarding old event kind=${event.kind} age=${TimeUtils.now() - event.createdAt}s" }
             return
         }
-        if (!processedEventIds.add(event.id)) return
 
-        // Filter out our own ICE candidates and hangups echoed back from relays.
-        // These are never useful: ICE candidates are for the remote peer, and
-        // hangups are already handled locally by hangup() → transitionToEnded.
-        // Self-answers and self-rejects are NOT filtered here because they serve
-        // as "answered/rejected elsewhere" signals when in IncomingCall state.
-        if (event.pubKey == signer.pubKey && (event is CallIceCandidateEvent || event is CallHangupEvent)) {
-            Log.d("CallManager") { "Ignoring self-event kind=${event.kind} id=${event.id.take(8)}" }
-            return
-        }
+        stateMutex.withLock {
+            if (event.id in processedEventIds) return
+            cappedAdd(processedEventIds, event.id, MAX_PROCESSED_EVENT_IDS)
 
-        Log.d("CallManager") { "Processing signaling event kind=${event.kind} id=${event.id.take(8)} state=${_state.value::class.simpleName}" }
-
-        // Record call-ids from termination signals so that a later offer
-        // for the same call is recognised as stale (common after app restart
-        // when relay replays events out of order).
-        if (event is CallHangupEvent || event is CallRejectEvent) {
-            val terminatedCallId =
-                when (event) {
-                    is CallHangupEvent -> event.callId()
-                    is CallRejectEvent -> event.callId()
-                    else -> null
-                }
-            if (terminatedCallId != null) {
-                completedCallIds.add(terminatedCallId)
+            // Filter out our own ICE candidates and hangups echoed back from relays.
+            // These are never useful: ICE candidates are for the remote peer, and
+            // hangups are already handled locally by hangup() → transitionToEnded.
+            // Self-answers and self-rejects are NOT filtered here because they serve
+            // as "answered/rejected elsewhere" signals when in IncomingCall state.
+            if (event.pubKey == signer.pubKey && (event is CallIceCandidateEvent || event is CallHangupEvent)) {
+                Log.d("CallManager") { "Ignoring self-event kind=${event.kind} id=${event.id.take(8)}" }
+                return
             }
-        }
 
-        when (event) {
-            is CallOfferEvent -> onIncomingCallEvent(event)
-            is CallAnswerEvent -> onCallAnswered(event)
-            is CallRejectEvent -> onCallRejected(event)
-            is CallHangupEvent -> onPeerHangup(event)
-            is CallIceCandidateEvent -> onIceCandidate(event)
-            is CallRenegotiateEvent -> onRenegotiate(event)
+            Log.d("CallManager") { "Processing signaling event kind=${event.kind} id=${event.id.take(8)} state=${_state.value::class.simpleName}" }
+
+            // Record call-ids from termination signals so that a later offer
+            // for the same call is recognised as stale (common after app restart
+            // when relay replays events out of order).
+            if (event is CallHangupEvent || event is CallRejectEvent) {
+                val terminatedCallId =
+                    when (event) {
+                        is CallHangupEvent -> event.callId()
+                        is CallRejectEvent -> event.callId()
+                        else -> null
+                    }
+                if (terminatedCallId != null) {
+                    cappedAdd(completedCallIds, terminatedCallId, MAX_COMPLETED_CALL_IDS)
+                }
+            }
+
+            when (event) {
+                is CallOfferEvent -> onIncomingCallEvent(event)
+                is CallAnswerEvent -> onCallAnswered(event)
+                is CallRejectEvent -> onCallRejected(event)
+                is CallHangupEvent -> onPeerHangup(event)
+                is CallIceCandidateEvent -> onIceCandidate(event)
+                is CallRenegotiateEvent -> onRenegotiate(event)
+            }
         }
     }
 
@@ -704,7 +745,8 @@ class CallManager(
         peerPubKeys: Set<HexKey>,
         reason: EndReason,
     ) {
-        completedCallIds.add(callId)
+        cappedAdd(completedCallIds, callId, MAX_COMPLETED_CALL_IDS)
+        discoveredCalleePeers.clear()
         _state.value = CallState.Ended(callId, peerPubKeys, reason)
         cancelTimeout()
         resetJob?.cancel()

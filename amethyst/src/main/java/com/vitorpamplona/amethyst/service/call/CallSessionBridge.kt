@@ -18,18 +18,17 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.call
+package com.vitorpamplona.amethyst.service.call
 
 import com.vitorpamplona.amethyst.commons.call.CallManager
-import com.vitorpamplona.amethyst.service.call.CallController
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 /**
- * Holds references to the active call state so that [CallActivity] can access
- * the same [CallManager] and [CallController] owned by [AccountViewModel] in
- * the main activity. Both activities run in the same process.
+ * Process-level singleton that bridges the active call state between
+ * the main activity (which owns [AccountViewModel]) and [com.vitorpamplona.amethyst.ui.call.CallActivity]
+ * (which runs in its own window but in the same process).
  */
-object ActiveCallHolder {
+object CallSessionBridge {
     var callManager: CallManager? = null
         private set
     var callController: CallController? = null
