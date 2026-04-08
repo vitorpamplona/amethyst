@@ -176,6 +176,32 @@ internal object ECPoint {
         Array(G_TABLE_SIZE) { AffinePoint(FieldP.mul(gOddTable[it].x, Glv.BETA), gOddTable[it].y.copyOf()) }
     }
 
+    // ==================== P-side wNAF table cache ====================
+    //
+    // In mulDoubleG (verify), we build an 8-entry wNAF-5 affine table for the
+    // public key P on every call: [1P, 3P, 5P, ..., 15P] plus their GLV λ
+    // counterparts. This costs ~437 field ops (~27% of mulDoubleG, ~20% of verify).
+    //
+    // For Nostr, the same pubkeys are verified repeatedly (many events per author).
+    // This cache stores the P-side affine tables keyed by the point's x-coordinate,
+    // so repeated verifications for the same pubkey skip the table build entirely.
+    //
+    // 256 entries × 16 AffinePoints × 64 bytes = ~256KB total cache.
+
+    private const val P_TABLE_CACHE_SIZE = 256
+    private const val P_TABLE_CACHE_MASK = P_TABLE_CACHE_SIZE - 1
+
+    private class CachedPTable(
+        val px: LongArray, // x-coordinate of the point (cache key, 4 limbs)
+        val pOdd: Array<AffinePoint>, // 8 affine odd-multiples of P
+        val pLamOdd: Array<AffinePoint>, // 8 affine odd-multiples of λ(P)
+    )
+
+    private val pTableCache = arrayOfNulls<CachedPTable>(P_TABLE_CACHE_SIZE)
+
+    /** Hash a field element to a cache slot index. */
+    private fun cacheSlot(px: LongArray): Int = (px[0].toInt() xor px[1].toInt().shl(3)) and P_TABLE_CACHE_MASK
+
     private fun buildGOddTable(): Array<AffinePoint> {
         val g = MutablePoint()
         g.setAffine(GX, GY)
@@ -738,22 +764,45 @@ internal object ECPoint {
         val gOdd = gOddTable
         val gLam = gLamTable
 
-        // P odd-multiples [1P, 3P, 5P, ..., 15P] — uses pre-allocated scratch tables
-        doublePoint(sc.p2, p, sc)
-        val pOddJac = sc.pOddJac
-        pOddJac[0].copyFrom(p)
-        for (i in 1 until pTableSize) addPoints(pOddJac[i], pOddJac[i - 1], sc.p2, sc)
-        val pLamOddJac = sc.pLamOddJac
-        for (i in 0 until pTableSize) {
-            FieldP.mul(pLamOddJac[i].x, pOddJac[i].x, Glv.BETA, sc.w)
-            pOddJac[i].y.copyInto(pLamOddJac[i].y)
-            pOddJac[i].z.copyInto(pLamOddJac[i].z)
-        }
+        // P-side tables: check cache first, build only on miss.
+        // On cache hit, copies 16 affine points from cache (~trivial vs ~437 field ops to build).
+        val pOdd: Array<AffinePoint>
+        val pLamOdd: Array<AffinePoint>
+        val cacheSlot = cacheSlot(p.x)
+        val cached = pTableCache[cacheSlot]
+        if (cached != null && U256.cmp(cached.px, p.x) == 0) {
+            // Cache hit — use cached affine tables directly (no copy needed)
+            pOdd = cached.pOdd
+            pLamOdd = cached.pLamOdd
+        } else {
+            // Cache miss — build tables and store in cache
+            doublePoint(sc.p2, p, sc)
+            val pOddJac = sc.pOddJac
+            pOddJac[0].copyFrom(p)
+            for (i in 1 until pTableSize) addPoints(pOddJac[i], pOddJac[i - 1], sc.p2, sc)
+            val pLamOddJac = sc.pLamOddJac
+            for (i in 0 until pTableSize) {
+                FieldP.mul(pLamOddJac[i].x, pOddJac[i].x, Glv.BETA, sc.w)
+                pOddJac[i].y.copyInto(pLamOddJac[i].y)
+                pOddJac[i].z.copyInto(pLamOddJac[i].z)
+            }
+            // Batch-convert to affine (into scratch arrays)
+            batchToAffinePair(pOddJac, pLamOddJac, sc.pOddAff, sc.pLamOddAff, sc)
 
-        // Effective-affine: batch-convert P-side tables (shared Z inversion)
-        val pOdd = sc.pOddAff
-        val pLamOdd = sc.pLamOddAff
-        batchToAffinePair(pOddJac, pLamOddJac, pOdd, pLamOdd, sc)
+            // Store in cache (allocate new arrays so they're independent of scratch)
+            val cachedPOdd =
+                Array(pTableSize) {
+                    AffinePoint(sc.pOddAff[it].x.copyOf(), sc.pOddAff[it].y.copyOf())
+                }
+            val cachedPLamOdd =
+                Array(pTableSize) {
+                    AffinePoint(sc.pLamOddAff[it].x.copyOf(), sc.pLamOddAff[it].y.copyOf())
+                }
+            pTableCache[cacheSlot] = CachedPTable(p.x.copyOf(), cachedPOdd, cachedPLamOdd)
+
+            pOdd = cachedPOdd
+            pLamOdd = cachedPLamOdd
+        }
 
         // Find highest non-zero digit across all 4 streams
         var bits = 129 + WINDOW_G // max possible wNAF length
