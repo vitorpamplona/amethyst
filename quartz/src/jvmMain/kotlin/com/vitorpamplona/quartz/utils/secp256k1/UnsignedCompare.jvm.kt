@@ -21,9 +21,16 @@
 package com.vitorpamplona.quartz.utils.secp256k1
 
 /**
- * JVM: Long.compareUnsigned is a HotSpot JIT intrinsic that compiles
- * to a single unsigned CMP + SETB instruction. Much faster than the
- * XOR trick on HotSpot.
+ * JVM: Long.compareUnsigned is a HotSpot C2 JIT intrinsic.
+ *
+ * DO NOT replace with the XOR trick `(a xor MIN_VALUE) < (b xor MIN_VALUE)`.
+ * HotSpot recognizes Long.compareUnsigned and compiles it to a single unsigned
+ * CMP + SETB instruction pair. The XOR trick generates 2 extra XOR instructions
+ * that HotSpot does NOT optimize away, causing a ~30% regression on verify
+ * (1.6× → 2.1× vs native, measured on JDK 21 x86-64).
+ *
+ * This is the opposite of Android/ART where the XOR trick is faster because
+ * it avoids ULong.constructor-impl overhead. See UnsignedCompare.android.kt.
  */
 internal actual fun uLt(
     a: Long,

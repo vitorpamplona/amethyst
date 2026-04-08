@@ -21,8 +21,12 @@
 package com.vitorpamplona.quartz.utils.secp256k1
 
 /**
- * Native: XOR-with-MIN_VALUE trick (no JVM intrinsics available).
- * Kotlin/Native AOT compiles this to efficient unsigned compare.
+ * Native: XOR-with-MIN_VALUE trick for unsigned comparison.
+ *
+ * No JVM intrinsics available on Kotlin/Native. The XOR trick compiles
+ * to efficient unsigned compare via Kotlin/Native's LLVM backend.
+ * See UnsignedCompare.android.kt for detailed rationale on why this
+ * approach is preferred over toULong().
  */
 internal actual fun uLt(
     a: Long,

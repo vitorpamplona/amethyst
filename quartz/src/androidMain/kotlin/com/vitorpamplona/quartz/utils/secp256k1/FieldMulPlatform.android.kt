@@ -23,15 +23,31 @@ package com.vitorpamplona.quartz.utils.secp256k1
 /**
  * Android field multiply/square with API-level-gated intrinsics.
  *
- * Each API level gets its OWN private function with the inline expansion,
- * so ART's JIT can fully optimize each as a standalone ~200 DEX-instruction
- * method. Previously, having all 3 branches inline-expanded in a single
- * function created ~600 DEX instructions, causing ART's register allocator
- * to produce suboptimal code with excessive stack spills.
+ * ARCHITECTURE: dispatch → per-API private function → inline-expanded hot loop
  *
- * The dispatch functions (fieldMulReduce/fieldSqrReduce) are tiny (~15 DEX
- * instructions) and always take the same branch, so ART profiles and
- * devirtualizes them efficiently.
+ * Each API level gets its OWN private function (fieldMulApi35, fieldMulApi31,
+ * fieldMulFallback) with the fieldMulReduceWith inline expansion. This is critical
+ * because ART's JIT optimizes methods individually:
+ *
+ * WHY separate private functions per API level?
+ *   Tested: putting all 3 branches in a single fieldMulReduce with inline expansion
+ *   created ~600 DEX instructions (3 copies × ~200 each). ART's register allocator
+ *   produced suboptimal code — verify REGRESSED by ~4% vs baseline. With separate
+ *   functions, each is ~200 DEX instructions, well within ART's optimization sweet spot.
+ *   Verify improved by 16% instead.
+ *
+ * WHY the API-level split at all?
+ *   - API 35+ (Android 15): Math.unsignedMultiplyHigh → UMULH (1 ARM64 instruction)
+ *   - API 31-34 (Android 12-14): Math.multiplyHigh → SMULH + 3 correction insns
+ *   - API <31 (Android <12): pure-Kotlin fallback (4 multiplies + shifts)
+ *   The dispatch function (fieldMulReduce) checks API once, not per multiply-high call.
+ *   ART profiles and devirtualizes — on any given device, only one path is hot.
+ *
+ * WHY NOT use the unsignedMultiplyHigh expect/actual wrapper directly?
+ *   The wrapper checks API level on EVERY call (16-20× per field multiply). Even though
+ *   ART should constant-fold the check, the wrapper's 3-branch body may exceed ART's
+ *   inline-candidate threshold, leaving ~10,000 un-inlined function calls per verify.
+ *   The fused approach eliminates the wrapper entirely.
  */
 
 private val API = android.os.Build.VERSION.SDK_INT

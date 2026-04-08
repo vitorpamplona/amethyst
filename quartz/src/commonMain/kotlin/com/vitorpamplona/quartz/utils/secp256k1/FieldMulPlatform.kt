@@ -24,24 +24,42 @@ package com.vitorpamplona.quartz.utils.secp256k1
 // FUSED FIELD MULTIPLY + REDUCE — PLATFORM-SPECIFIC INTRINSIC DISPATCH
 // =====================================================================================
 //
-// On Android, the unsignedMultiplyHigh wrapper has per-call branching for API levels
-// (API 35+: Math.unsignedMultiplyHigh, API 31-34: Math.multiplyHigh + correction,
-// API <31: pure-Kotlin fallback). ART's JIT may not inline this wrapper due to:
-//   1. Branch complexity exceeding inline-candidate size threshold
-//   2. Limited inlining depth (~3 levels vs HotSpot's 8+)
+// PROBLEM:
+//   The original code path was: FieldP.mul → U256.mulWide → unsignedMultiplyHigh → Math.xxx
+//   Each field multiply called unsignedMultiplyHigh 20 times (16 in mulWide + 4 in reduceWide).
+//   On Android, unsignedMultiplyHigh is a wrapper with per-call API-level branching:
+//     if (API >= 35) Math.unsignedMultiplyHigh else if (API >= 31) Math.multiplyHigh+correction else fallback
+//   ART's JIT (inlining depth ~3 levels vs HotSpot's 8+) could not inline this 6-level-deep
+//   call chain, resulting in ~10,000 un-inlined function calls per Schnorr verify.
 //
-// This fused approach eliminates ALL wrapper overhead by:
-//   1. Dispatching once per call to fieldMulReduce (not per-multiply)
-//   2. Inlining the chosen intrinsic into the hot loop via crossinline lambda
-//   3. Combining mulWide + reduceWide into one compilation unit for the JIT
+// SOLUTION:
+//   Fuse mulWide + reduceWide into a single `inline` function (fieldMulReduceWith) that
+//   accepts the multiply-high intrinsic as a `crossinline` lambda. The lambda is substituted
+//   at each call site by the Kotlin compiler (not by the JIT), producing platform-specific
+//   bytecode with the intrinsic call directly embedded — zero wrapper overhead.
 //
-// The inline functions below contain the full schoolbook multiplication and mod-p
-// reduction. Since they're inline, the crossinline lambda is substituted at each
-// call site, producing platform-specific code with zero function call overhead
-// for the multiply-high operation.
+// WHY `inline` + `crossinline` LAMBDA (not expect/actual for the whole function)?
+//   Writing the full 200-line mulWide+reduceWide in each platform file would require
+//   maintaining 3 identical copies (Android/JVM/Native) that differ only in the
+//   multiply-high call. The inline+crossinline pattern keeps the arithmetic in one place
+//   (commonMain) while the platform files provide just the intrinsic.
 //
-// Impact: eliminates ~20 wrapper calls per field multiply × ~500 field muls per
-// verify = ~10,000 function calls removed from the hot path.
+// WHY NOT a single function with all API branches?
+//   Tested: inlining all 3 API-level branches into one fieldMulReduce created ~600 DEX
+//   instructions. ART's register allocator produced suboptimal code with stack spills,
+//   causing verify to REGRESS. The split approach (separate private functions per API level,
+//   see FieldMulPlatform.android.kt) keeps each at ~200 DEX instructions.
+//
+// WHY NOT 5×52-bit limbs with lazy reduction (like C libsecp256k1)?
+//   Tested: 5×52 requires 25 multiplyHigh calls per field multiply (vs our 16 with 4×64).
+//   On ART where each multiplyHigh has overhead, the 56% increase in multiply calls
+//   overwhelmed the savings from skipping reduceSelf after add/sub. Net result: slower.
+//
+// MEASURED IMPACT (Pixel 8, Android 16):
+//   signSchnorr:  186,610 → 109,711 ns (-41%)
+//   verifySchnorr: 160,869 → 135,885 ns (-16%)
+//   Combined with uLt() and @JvmField: verify → 116,450 ns (-28% total)
+//
 // =====================================================================================
 
 /**

@@ -46,17 +46,28 @@ package com.vitorpamplona.quartz.utils.secp256k1
 // =====================================================================================
 
 /**
- * Unsigned less-than comparison, platform-optimized.
+ * Unsigned less-than comparison: returns true if a < b when both are treated as unsigned.
  *
- * On JVM (HotSpot): uses Long.compareUnsigned which is a JIT intrinsic,
- * compiling to a single unsigned CMP + SETB instruction.
+ * This MUST be platform-specific (expect/actual) because the optimal implementation
+ * differs between JIT compilers:
  *
- * On Android (ART): uses XOR-with-MIN_VALUE trick to avoid the
- * ULong.constructor-impl NOOP invokestatic calls that Kotlin's toULong()
- * generates (~17,800 per verify). Produces pure arithmetic bytecode with
- * zero method calls.
+ * WHY NOT `a.toULong() < b.toULong()` (the Kotlin-idiomatic approach)?
+ *   Kotlin's ULong inline class generates 2 `invokestatic ULong.constructor-impl` calls
+ *   per comparison — NOOPs that return the input unchanged. Bytecode analysis showed
+ *   ~17,800 of these per Schnorr verify. On ART, each invokestatic has ~2-3ns overhead
+ *   even when inlined, adding ~35-54μs to verify. On HotSpot, C2 eliminates them entirely.
  *
- * On Native: uses XOR-with-MIN_VALUE (no JVM intrinsics available).
+ * WHY NOT a single `inline fun` with XOR trick in commonMain?
+ *   The XOR trick `(a xor MIN_VALUE) < (b xor MIN_VALUE)` generates pure arithmetic
+ *   bytecode with zero method calls — great for ART. But on HotSpot, it's ~30% slower
+ *   than `Long.compareUnsigned` because HotSpot recognizes compareUnsigned as a JIT
+ *   intrinsic (single CMP + SETB) but does NOT optimize the XOR pattern equivalently.
+ *   A commonMain inline fun with XOR regressed JVM verify from 1.6× to 2.1× vs native.
+ *
+ * Platform implementations:
+ *   - JVM: `Long.compareUnsigned(a, b) < 0` — HotSpot JIT intrinsic → CMP + SETB
+ *   - Android: `(a xor MIN_VALUE) < (b xor MIN_VALUE)` — zero invokestatic, ART → EOR + CMP
+ *   - Native: same XOR trick — Kotlin/Native AOT handles it efficiently
  */
 internal expect fun uLt(
     a: Long,

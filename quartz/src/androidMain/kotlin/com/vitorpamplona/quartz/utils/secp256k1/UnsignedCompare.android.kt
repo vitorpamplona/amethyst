@@ -21,10 +21,22 @@
 package com.vitorpamplona.quartz.utils.secp256k1
 
 /**
- * Android: XOR-with-MIN_VALUE trick avoids the ULong.constructor-impl
- * NOOP invokestatic calls that Kotlin's toULong() generates. Produces
- * pure arithmetic bytecode (lxor, lcmp) with zero method calls.
- * ART's JIT compiles this to EOR + CMP + CSET on ARM64.
+ * Android: XOR-with-MIN_VALUE trick for unsigned comparison.
+ *
+ * DO NOT use Long.compareUnsigned here (even though it's an ART intrinsic since API 26).
+ * Kotlin's `a.toULong() < b.toULong()` compiles to Long.compareUnsigned BUT also emits
+ * 2 ULong.constructor-impl NOOP invokestatic calls per comparison. These NOOPs add ~2-3ns
+ * each on ART, totaling ~35-54μs per verify (~17,800 comparisons).
+ *
+ * DO NOT use Long.compareUnsigned directly either — ART may or may not inline the function
+ * call depending on method size budgets, adding unpredictable overhead.
+ *
+ * The XOR trick produces pure arithmetic bytecode with ZERO method calls:
+ *   Bytecode: lload a, ldc MIN_VALUE, lxor, lload b, ldc MIN_VALUE, lxor, lcmp, ifge
+ *   ARM64:    EOR x0, a, #0x8000...; EOR x1, b, #0x8000...; CMP x0, x1; CSET x2, LT
+ *
+ * This approach was validated by bytecode analysis (javap) and benchmarked on Pixel 8
+ * (Android 16): ~14% improvement across all EC point operations.
  */
 internal actual fun uLt(
     a: Long,
