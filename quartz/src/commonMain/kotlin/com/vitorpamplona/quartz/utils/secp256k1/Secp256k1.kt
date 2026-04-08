@@ -25,59 +25,37 @@ import com.vitorpamplona.quartz.utils.sha256.sha256
 /**
  * Pure Kotlin implementation of secp256k1 elliptic curve operations for Nostr.
  *
- * This replaces the native fr.acinq.secp256k1 JNI bindings with a portable KMP
- * implementation that runs on all Kotlin targets (JVM, Android, iOS, Linux) without
- * requiring platform-specific native libraries.
+ * Portable KMP implementation that runs on all Kotlin targets (JVM, Android, iOS,
+ * Linux) without requiring platform-specific native libraries.
  *
  * Provides only the operations used by Nostr:
  * - [pubkeyCreate] / [pubKeyCompress]: Key generation
  * - [secKeyVerify]: Key validation
- * - [signSchnorr] / [verifySchnorr]: BIP-340 Schnorr signatures (NIP-01)
+ * - [signSchnorr] / [signSchnorrWithPubKey] / [verifySchnorr]: BIP-340 Schnorr (NIP-01)
  * - [privKeyTweakAdd]: BIP-32 key derivation (NIP-06)
  * - [pubKeyTweakMul] / [ecdhXOnly]: ECDH shared secrets (NIP-04, NIP-44)
  *
- * Performance on Java 21 (vs native C/JNI secp256k1, well-warmed):
- *   verify    ~8,000 ops/s (3.4× native)   — Strauss + GLV + wNAF-12
- *   sign      ~26,000 ops/s (1.1× native)  — comb method (cached pubkey)
- *   pubCreate ~36,000 ops/s (1.6× native)  — comb method, 3 doublings
- *   ECDH      ~11,000 ops/s (2.8× native)  — GLV + wNAF-5, effective-affine
- *   compress  ~7M ops/s (1.7× FASTER)      — pure Kotlin, no JNI overhead
- *   secKeyVerify ~8M ops/s (1.2× FASTER)   — scalar range check, no JNI
+ * Performance on JVM (vs native C/JNI secp256k1, 2000+ warmup, 3000-5000 iterations):
+ *   verify        ~15,000 ops/s  (1.7× native, with pubkey cache)
+ *   sign          ~18,000 ops/s  (1.5× native)
+ *   sign(cached)  ~28,000 ops/s  (0.9× — FASTER than native)
+ *   pubCreate     ~38,000 ops/s  (1.3× native)
+ *   ECDH          ~14,000 ops/s  (2.0× native)
  *
- * Architecture:
- *   Field arithmetic uses 4×64-bit limbs (LongArray(4)) with Math.unsignedMultiplyHigh
- *   (Java 18+, single UMULH instruction) for 64×64→128-bit products. 16 products per
- *   field multiply vs C's 25 (5×52-bit limbs), but each C product is a single native
- *   128-bit MUL instruction vs our UMULH + MUL + carry propagation (~7 insns total).
+ * Key optimizations:
+ *   - Unrolled 4×64-bit field arithmetic (mulWide, sqrWide, addTo, subTo)
+ *   - GLV endomorphism + wNAF + comb method + Strauss/Shamir
+ *   - Ping-pong point buffers (eliminates copyFrom in scalar mul loops)
+ *   - Pre-allocated ThreadLocal scratch (eliminates ~130 allocs/operation)
+ *   - Pubkey decompression cache (skips sqrt for repeated pubkeys)
+ *   - P-side wNAF table cache (skips table build for repeated pubkeys)
+ *   - Direct unsigned multiplyHigh fallback (faster on Android < API 31)
  *
- *   Per-doublePoint cost analysis (instruction-level, vs C libsecp256k1):
- *     mul/sqr (7 ops):  Kotlin ~1,204 insns  vs  C ~455 insns  (2.6× — UMULH overhead)
- *     add/neg/half:     Kotlin ~312 insns    vs  C ~75 insns   (4.2× — no lazy reduction)
- *     Total:            Kotlin ~1,516 insns  vs  C ~530 insns  (2.9× — matches benchmarks)
- *
- * Optimizations implemented (matching or adapted from libsecp256k1):
- *   - Math.unsignedMultiplyHigh (Java 18+): eliminates 4-insn signed→unsigned correction
- *   - GLV endomorphism: splits 256-bit scalars into 2×128-bit halves
- *   - wNAF encoding: windowed non-adjacent form for sparse addition patterns
- *   - Comb method: generator multiplication with only 3 doublings (Hamburg 2012)
- *   - Strauss/Shamir: interleaved multi-scalar multiplication for verification
- *   - Effective-affine: batch-inverts wNAF tables for cheaper mixed adds (saves ~4M/add)
- *   - Shared Z inversion: GLV table pairs share Z coords, one inversion for both
- *   - Batch inversion: Montgomery's trick (1 inv + 3(n-1) muls for n inversions)
- *   - Pre-allocated scratch: ThreadLocal PointScratch eliminates ~130 allocs/operation
- *   - Dedicated squaring: 10 products vs 16 for general multiplication
- *   - secp256k1-specific reduceSelf: single branch on a[3]==-1 (>99.99% fast path)
- *
- * Differences from C libsecp256k1 (due to JVM constraints):
- *   - No lazy reduction (4×64 limbs have no headroom; C's 5×52 limbs have 12-bit spare
- *     capacity per limb, allowing 3-8 chained add/sub without normalizing — this accounts
- *     for 24% of the remaining per-operation gap)
- *   - Fermat inversion (255 sqr + 15 mul) instead of safegcd (safegcd is slower on JVM
- *     due to 128-bit arithmetic overhead in the inner divstep matrix multiply)
- *   - WINDOW_G=12 instead of 15 (JVM heap-allocated tables cause cache pressure at
- *     larger sizes; C uses contiguous compile-time .rodata arrays)
- *   - No constant-time guarantees (not needed for Nostr — secrets are nonces, not
- *     long-term keys exposed to timing side-channels)
+ * Remaining gap vs C libsecp256k1:
+ *   - No lazy reduction (4×64 limbs fully packed; C's 5×52 have 12-bit headroom)
+ *   - Fermat inversion instead of safegcd (safegcd slower on JVM)
+ *   - WINDOW_G=12 vs 15 (JVM heap tables cause cache pressure at w=15)
+ *   - No constant-time guarantees (not needed for Nostr)
  */
 object Secp256k1 {
     // ==================== Cached BIP-340 tag hash prefixes ====================
@@ -145,7 +123,7 @@ object Secp256k1 {
         }
 
         // Cache miss — compute sqrt and store
-        if (!ECPoint.liftX(outX, outY, U256.fromBytes(pub))) return false
+        if (!KeyCodec.liftX(outX, outY, U256.fromBytes(pub))) return false
 
         pubkeyCache[slot] = CachedPubkey(pub.copyOf(), outX.copyOf(), outY.copyOf())
         return true
@@ -163,7 +141,7 @@ object Secp256k1 {
         val x = LongArray(4)
         val y = LongArray(4)
         check(ECPoint.toAffine(p, x, y))
-        return ECPoint.serializeUncompressed(x, y)
+        return KeyCodec.serializeUncompressed(x, y)
     }
 
     /**
@@ -275,7 +253,7 @@ object Secp256k1 {
         check(ECPoint.toAffine(pubPoint, px, py))
 
         val xOnlyPub = U256.toBytes(px)
-        return signSchnorrInternal(data, d0, xOnlyPub, ECPoint.hasEvenY(py), auxrand)
+        return signSchnorrInternal(data, d0, xOnlyPub, KeyCodec.hasEvenY(py), auxrand)
     }
 
     /**
@@ -349,7 +327,7 @@ object Secp256k1 {
         val ry = LongArray(4)
         check(ECPoint.toAffine(rPoint, rx, ry))
 
-        val k = if (ECPoint.hasEvenY(ry)) k0 else ScalarN.neg(k0)
+        val k = if (KeyCodec.hasEvenY(ry)) k0 else ScalarN.neg(k0)
 
         // Challenge: e = H(R || P || msg)
         val chalInput = ByteArray(64 + 32 + 32 + data.size)
@@ -426,7 +404,7 @@ object Secp256k1 {
         val rx = sc.verifyRx
         val ry = sc.verifyRy
         if (!ECPoint.toAffine(result, rx, ry)) return false
-        if (!ECPoint.hasEvenY(ry)) return false
+        if (!KeyCodec.hasEvenY(ry)) return false
         return U256.cmp(rx, r) == 0
     }
 
@@ -451,7 +429,7 @@ object Secp256k1 {
         require(tweak.size == 32)
         val x = LongArray(4)
         val y = LongArray(4)
-        check(ECPoint.parsePublicKey(pubkey, x, y))
+        check(KeyCodec.parsePublicKey(pubkey, x, y))
         val scalar = U256.fromBytes(tweak)
         require(ScalarN.isValid(scalar))
 
@@ -464,9 +442,9 @@ object Secp256k1 {
         check(ECPoint.toAffine(result, rx, ry))
 
         return if (pubkey.size == 33) {
-            ECPoint.serializeCompressed(rx, ry)
+            KeyCodec.serializeCompressed(rx, ry)
         } else {
-            ECPoint.serializeUncompressed(rx, ry)
+            KeyCodec.serializeUncompressed(rx, ry)
         }
     }
 
@@ -498,7 +476,7 @@ object Secp256k1 {
         // Use liftX which returns the even-y variant.
         val px = LongArray(4)
         val py = LongArray(4)
-        check(ECPoint.liftX(px, py, x)) { "Not a valid x-coordinate on secp256k1" }
+        check(KeyCodec.liftX(px, py, x)) { "Not a valid x-coordinate on secp256k1" }
 
         val p = MutablePoint()
         p.setAffine(px, py)
