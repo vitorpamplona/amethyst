@@ -78,6 +78,7 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.TopFilter
+import com.vitorpamplona.amethyst.service.call.CallSessionBridge.accountViewModel
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.ui.components.LoadingAnimation
@@ -150,9 +151,25 @@ fun FeedFilterSpinner(
             Spacer(modifier = Size20Modifier)
 
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(currentText)
+                val filter = selected?.code
+                if (filter is TopFilter.Geohash) {
+                    LoadCityName(
+                        geohashStr = filter.tag,
+                        onLoading = {
+                            Row {
+                                Text(filter.tag)
+                                Spacer(modifier = StdHorzSpacer)
+                                LoadingAnimation(indicatorSize = 12.dp, circleWidth = 2.dp)
+                            }
+                        },
+                    ) { cityName ->
+                        Text(cityName)
+                    }
+                } else {
+                    Text(currentText)
+                }
 
-                if (selected?.code is TopFilter.AroundMe) {
+                if (filter is TopFilter.AroundMe) {
                     val locationPermissionState = rememberPermissionState(Manifest.permission.ACCESS_COARSE_LOCATION)
                     if (!locationPermissionState.status.isGranted) {
                         LaunchedEffect(locationPermissionState) { locationPermissionState.launchPermissionRequest() }
