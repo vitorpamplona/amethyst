@@ -62,7 +62,6 @@ class FilterByListParams(
         if (followLists == null) return false
 
         return when (followLists) {
-            is GlobalTopNavFilter -> true
             is RelayTopNavFilter -> comingFrom.contains(followLists.relayUrl)
             else -> followLists.match(noteEvent)
         }
@@ -75,7 +74,6 @@ class FilterByListParams(
         if (followLists == null) return false
 
         return when (followLists) {
-            is GlobalTopNavFilter -> true
             is RelayTopNavFilter -> comingFrom.contains(followLists.relayUrl)
             else -> followLists.matchAuthor(address.pubKeyHex)
         }
