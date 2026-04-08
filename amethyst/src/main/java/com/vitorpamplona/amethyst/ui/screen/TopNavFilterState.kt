@@ -162,7 +162,6 @@ class TopNavFilterState(
                 FeedDefinition(
                     TopFilter.Community(communityNote.address),
                     CommunityName(communityNote),
-                    route = Route.Community(communityNote.address.kind, communityNote.address.pubKeyHex, communityNote.address.dTag),
                 )
             }
 
