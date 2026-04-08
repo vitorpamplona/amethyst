@@ -120,6 +120,15 @@ private fun DisplayAllAccounts(
     accountSessionManager: AccountSessionManager,
 ) {
     val accounts by LocalPreferences.accountsFlow().collectAsStateWithLifecycle()
+
+    // Trigger lazy load from encrypted storage if the flow hasn't been populated yet.
+    // accountsFlow() starts as null and only gets a value when allSavedAccounts() is called.
+    LaunchedEffect(Unit) {
+        if (accounts == null) {
+            LocalPreferences.allSavedAccounts()
+        }
+    }
+
     accounts?.forEach { acc -> DisplayAccount(acc, accountViewModel, accountSessionManager) }
 }
 
