@@ -81,13 +81,40 @@ internal object FieldP {
         reduceSelf(out)
     }
 
+    /**
+     * out = a - b mod p. Specialized add-back for P = [P0, -1, -1, -1]:
+     * adding -1 to limbs 1-3 with carry=1 is identity, so only the carry=0
+     * case needs work (subtract 1 with borrow propagation). ~500 calls/verify.
+     */
     fun sub(
         out: LongArray,
         a: LongArray,
         b: LongArray,
     ) {
         val borrow = U256.subTo(out, a, b)
-        if (borrow != 0) U256.addTo(out, out, P)
+        if (borrow != 0) {
+            // Add P = [P0, -1, -1, -1].
+            val s0 = out[0] + P0
+            val c0 = if (s0.toULong() < out[0].toULong()) 1L else 0L
+            out[0] = s0
+            // For limbs 1-3: adding P[i]=-1 with carry c:
+            //   c=1 → result unchanged, carry out=1 (identity propagation)
+            //   c=0 → result = out[i]-1, carry out = (out[i] != 0) ? 1 : 0
+            // So if c0=1, limbs 1-3 are untouched. If c0=0, subtract 1 with borrow:
+            if (c0 == 0L) {
+                if (out[1] != 0L) {
+                    out[1]--
+                } else {
+                    out[1] = -1L // 0-1 wraps
+                    if (out[2] != 0L) {
+                        out[2]--
+                    } else {
+                        out[2] = -1L
+                        out[3]--
+                    }
+                }
+            }
+        }
     }
 
     /** Multiply with ThreadLocal wide buffer (convenience for non-hot paths). */
@@ -132,15 +159,31 @@ internal object FieldP {
         reduceWide(out, w)
     }
 
+    /**
+     * out = -a mod p = P - a. Specialized for P = [P0, -1, -1, -1]:
+     * P[i]-a[i] = ~a[i] for i>=1 (bitwise NOT), with borrow from limb 0.
+     * Avoids generic U256.subTo + P array reads (~260 calls/verify).
+     */
     fun neg(
         out: LongArray,
         a: LongArray,
     ) {
         if (U256.isZero(a)) {
-            for (i in 0 until 4) out[i] = 0L
-        } else {
-            U256.subTo(out, P, a)
+            out[0] = 0L
+            out[1] = 0L
+            out[2] = 0L
+            out[3] = 0L
+            return
         }
+        // P - a: limb 0 is P0 - a[0], limbs 1-3 are (-1) - a[i] = ~a[i]
+        out[0] = P0 - a[0]
+        val borrow = if (a[0].toULong() > P0.toULong()) 1L else 0L
+        // ~a[i] - borrow. New borrow only if ~a[i] == 0 (i.e., a[i] == -1) and borrow == 1
+        out[1] = a[1].inv() - borrow
+        val b1 = if (a[1] == -1L && borrow != 0L) 1L else 0L
+        out[2] = a[2].inv() - b1
+        val b2 = if (a[2] == -1L && b1 != 0L) 1L else 0L
+        out[3] = a[3].inv() - b2
     }
 
     /**
