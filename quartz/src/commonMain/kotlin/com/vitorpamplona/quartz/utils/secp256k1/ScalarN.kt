@@ -198,9 +198,9 @@ internal object ScalarN {
                     0L
                 }
             val s1 = hiTimesNC[i] + loVal
-            val c1 = if (s1.toULong() < hiTimesNC[i].toULong()) 1L else 0L
+            val c1 = if (uLt(s1, hiTimesNC[i])) 1L else 0L
             val s2 = s1 + carry
-            val c2 = if (s2.toULong() < s1.toULong()) 1L else 0L
+            val c2 = if (uLt(s2, s1)) 1L else 0L
             w[i] = s2
             carry = c1 + c2
         }
@@ -238,9 +238,9 @@ internal object ScalarN {
                     saved3
                 }
             val s1 = loVal + hi2NC[i]
-            val c1 = if (s1.toULong() < loVal.toULong()) 1L else 0L
+            val c1 = if (uLt(s1, loVal)) 1L else 0L
             val s2 = s1 + c2
-            val cc = if (s2.toULong() < s1.toULong()) 1L else 0L
+            val cc = if (uLt(s2, s1)) 1L else 0L
             out[i] = s2
             c2 = c1 + cc
         }
@@ -252,13 +252,13 @@ internal object ScalarN {
             val c1lo = ov * N_COMPLEMENT[1]
             val c1hi = unsignedMultiplyHigh(ov, N_COMPLEMENT[1])
             val s0 = out[0] + c0lo
-            val carry0 = if (s0.toULong() < out[0].toULong()) 1L else 0L
+            val carry0 = if (uLt(s0, out[0])) 1L else 0L
             out[0] = s0
             val s1 = out[1] + c0hi + c1lo + carry0
-            val carry1 = if (s1.toULong() < out[1].toULong()) 1L else 0L
+            val carry1 = if (uLt(s1, out[1])) 1L else 0L
             out[1] = s1
             val s2 = out[2] + c1hi + ov + carry1
-            val carry2 = if (s2.toULong() < out[2].toULong()) 1L else 0L
+            val carry2 = if (uLt(s2, out[2])) 1L else 0L
             out[2] = s2
             out[3] += carry2
         }

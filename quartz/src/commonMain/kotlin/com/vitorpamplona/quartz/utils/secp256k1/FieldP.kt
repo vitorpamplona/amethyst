@@ -68,7 +68,7 @@ internal object FieldP {
         if (carry != 0) {
             // Overflow past 2^256: add 2^256 mod p = 2^32 + 977 = 0x1000003D1
             val s1 = out[0] + 4294968273L
-            val c1 = if (s1.toULong() < out[0].toULong()) 1L else 0L
+            val c1 = if (uLt(s1, out[0])) 1L else 0L
             out[0] = s1
             if (c1 != 0L) {
                 out[1]++
@@ -95,7 +95,7 @@ internal object FieldP {
         if (borrow != 0) {
             // Add P = [P0, -1, -1, -1].
             val s0 = out[0] + P0
-            val c0 = if (s0.toULong() < out[0].toULong()) 1L else 0L
+            val c0 = if (uLt(s0, out[0])) 1L else 0L
             out[0] = s0
             // For limbs 1-3: adding P[i]=-1 with carry c:
             //   c=1 → result unchanged, carry out=1 (identity propagation)
@@ -173,7 +173,7 @@ internal object FieldP {
         }
         // P - a: limb 0 is P0 - a[0], limbs 1-3 are (-1) - a[i] = ~a[i]
         out[0] = P0 - a[0]
-        val borrow = if (a[0].toULong() > P0.toULong()) 1L else 0L
+        val borrow = if (uLt(P0, a[0])) 1L else 0L
         // ~a[i] - borrow. New borrow only if ~a[i] == 0 (i.e., a[i] == -1) and borrow == 1
         out[1] = a[1].inv() - borrow
         val b1 = if (a[1] == -1L && borrow != 0L) 1L else 0L
@@ -200,28 +200,28 @@ internal object FieldP {
         // Conditional add: out = a + (P & mask), unrolled
         // Limb 0
         s1 = a[0] + p0
-        c1 = if (s1.toULong() < a[0].toULong()) 1L else 0L
+        c1 = if (uLt(s1, a[0])) 1L else 0L
         out[0] = s1
         var carry = c1
         // Limb 1
         s1 = a[1] + mask
-        c1 = if (s1.toULong() < a[1].toULong()) 1L else 0L
+        c1 = if (uLt(s1, a[1])) 1L else 0L
         s2 = s1 + carry
-        c2 = if (s2.toULong() < s1.toULong()) 1L else 0L
+        c2 = if (uLt(s2, s1)) 1L else 0L
         out[1] = s2
         carry = c1 + c2
         // Limb 2
         s1 = a[2] + mask
-        c1 = if (s1.toULong() < a[2].toULong()) 1L else 0L
+        c1 = if (uLt(s1, a[2])) 1L else 0L
         s2 = s1 + carry
-        c2 = if (s2.toULong() < s1.toULong()) 1L else 0L
+        c2 = if (uLt(s2, s1)) 1L else 0L
         out[2] = s2
         carry = c1 + c2
         // Limb 3
         s1 = a[3] + mask
-        c1 = if (s1.toULong() < a[3].toULong()) 1L else 0L
+        c1 = if (uLt(s1, a[3])) 1L else 0L
         s2 = s1 + carry
-        c2 = if (s2.toULong() < s1.toULong()) 1L else 0L
+        c2 = if (uLt(s2, s1)) 1L else 0L
         out[3] = s2
         carry = c1 + c2
 
@@ -405,7 +405,7 @@ internal object FieldP {
         hcLo = w[4] * c
         hcHi = unsignedMultiplyHigh(w[4], c)
         s1 = w[0] + hcLo
-        c1 = if (s1.toULong() < w[0].toULong()) 1L else 0L
+        c1 = if (uLt(s1, w[0])) 1L else 0L
         out[0] = s1
         var carry = hcHi + c1
 
@@ -413,9 +413,9 @@ internal object FieldP {
         hcLo = w[5] * c
         hcHi = unsignedMultiplyHigh(w[5], c)
         s1 = w[1] + hcLo
-        c1 = if (s1.toULong() < w[1].toULong()) 1L else 0L
+        c1 = if (uLt(s1, w[1])) 1L else 0L
         s2 = s1 + carry
-        c2 = if (s2.toULong() < s1.toULong()) 1L else 0L
+        c2 = if (uLt(s2, s1)) 1L else 0L
         out[1] = s2
         carry = hcHi + c1 + c2
 
@@ -423,9 +423,9 @@ internal object FieldP {
         hcLo = w[6] * c
         hcHi = unsignedMultiplyHigh(w[6], c)
         s1 = w[2] + hcLo
-        c1 = if (s1.toULong() < w[2].toULong()) 1L else 0L
+        c1 = if (uLt(s1, w[2])) 1L else 0L
         s2 = s1 + carry
-        c2 = if (s2.toULong() < s1.toULong()) 1L else 0L
+        c2 = if (uLt(s2, s1)) 1L else 0L
         out[2] = s2
         carry = hcHi + c1 + c2
 
@@ -433,9 +433,9 @@ internal object FieldP {
         hcLo = w[7] * c
         hcHi = unsignedMultiplyHigh(w[7], c)
         s1 = w[3] + hcLo
-        c1 = if (s1.toULong() < w[3].toULong()) 1L else 0L
+        c1 = if (uLt(s1, w[3])) 1L else 0L
         s2 = s1 + carry
-        c2 = if (s2.toULong() < s1.toULong()) 1L else 0L
+        c2 = if (uLt(s2, s1)) 1L else 0L
         out[3] = s2
         carry = hcHi + c1 + c2
 
@@ -444,21 +444,21 @@ internal object FieldP {
             val ccLo = carry * c
             val ccHi = unsignedMultiplyHigh(carry, c)
             s1 = out[0] + ccLo
-            c1 = if (s1.toULong() < out[0].toULong()) 1L else 0L
+            c1 = if (uLt(s1, out[0])) 1L else 0L
             out[0] = s1
             // Propagate carry (unrolled, with early exit)
             var prop = ccHi + c1
             if (prop != 0L) {
                 s1 = out[1] + prop
-                prop = if (s1.toULong() < out[1].toULong()) 1L else 0L
+                prop = if (uLt(s1, out[1])) 1L else 0L
                 out[1] = s1
                 if (prop != 0L) {
                     s1 = out[2] + prop
-                    prop = if (s1.toULong() < out[2].toULong()) 1L else 0L
+                    prop = if (uLt(s1, out[2])) 1L else 0L
                     out[2] = s1
                     if (prop != 0L) {
                         s1 = out[3] + prop
-                        prop = if (s1.toULong() < out[3].toULong()) 1L else 0L
+                        prop = if (uLt(s1, out[3])) 1L else 0L
                         out[3] = s1
                     }
                 }
@@ -466,7 +466,7 @@ internal object FieldP {
             // Overflow past 256 bits: 2^256 ≡ C (mod p)
             if (prop != 0L) {
                 s1 = out[0] + c
-                c1 = if (s1.toULong() < out[0].toULong()) 1L else 0L
+                c1 = if (uLt(s1, out[0])) 1L else 0L
                 out[0] = s1
                 if (c1 != 0L) {
                     out[1]++

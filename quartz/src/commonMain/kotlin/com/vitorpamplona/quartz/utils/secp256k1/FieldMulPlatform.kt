@@ -110,19 +110,19 @@ internal inline fun fieldMulReduceWith(
 
     lo = a0 * b1
     s = lo + carry
-    c1 = if (s.toULong() < lo.toULong()) 1L else 0L
+    c1 = if (uLt(s, lo)) 1L else 0L
     w[1] = s
     carry = umulh(a0, b1) + c1
 
     lo = a0 * b2
     s = lo + carry
-    c1 = if (s.toULong() < lo.toULong()) 1L else 0L
+    c1 = if (uLt(s, lo)) 1L else 0L
     w[2] = s
     carry = umulh(a0, b2) + c1
 
     lo = a0 * b3
     s = lo + carry
-    c1 = if (s.toULong() < lo.toULong()) 1L else 0L
+    c1 = if (uLt(s, lo)) 1L else 0L
     w[3] = s
     w[4] = umulh(a0, b3) + c1
 
@@ -131,7 +131,7 @@ internal inline fun fieldMulReduceWith(
     hi = umulh(a1, b0)
     prev = w[1]
     s = prev + lo
-    c1 = if (s.toULong() < prev.toULong()) 1L else 0L
+    c1 = if (uLt(s, prev)) 1L else 0L
     w[1] = s
     carry = hi + c1
 
@@ -139,9 +139,9 @@ internal inline fun fieldMulReduceWith(
     hi = umulh(a1, b1)
     prev = w[2]
     s = prev + lo
-    c1 = if (s.toULong() < prev.toULong()) 1L else 0L
+    c1 = if (uLt(s, prev)) 1L else 0L
     s += carry
-    c2 = if (s.toULong() < carry.toULong()) 1L else 0L
+    c2 = if (uLt(s, carry)) 1L else 0L
     w[2] = s
     carry = hi + c1 + c2
 
@@ -149,9 +149,9 @@ internal inline fun fieldMulReduceWith(
     hi = umulh(a1, b2)
     prev = w[3]
     s = prev + lo
-    c1 = if (s.toULong() < prev.toULong()) 1L else 0L
+    c1 = if (uLt(s, prev)) 1L else 0L
     s += carry
-    c2 = if (s.toULong() < carry.toULong()) 1L else 0L
+    c2 = if (uLt(s, carry)) 1L else 0L
     w[3] = s
     carry = hi + c1 + c2
 
@@ -159,9 +159,9 @@ internal inline fun fieldMulReduceWith(
     hi = umulh(a1, b3)
     prev = w[4]
     s = prev + lo
-    c1 = if (s.toULong() < prev.toULong()) 1L else 0L
+    c1 = if (uLt(s, prev)) 1L else 0L
     s += carry
-    c2 = if (s.toULong() < carry.toULong()) 1L else 0L
+    c2 = if (uLt(s, carry)) 1L else 0L
     w[4] = s
     w[5] = hi + c1 + c2
 
@@ -170,7 +170,7 @@ internal inline fun fieldMulReduceWith(
     hi = umulh(a2, b0)
     prev = w[2]
     s = prev + lo
-    c1 = if (s.toULong() < prev.toULong()) 1L else 0L
+    c1 = if (uLt(s, prev)) 1L else 0L
     w[2] = s
     carry = hi + c1
 
@@ -178,9 +178,9 @@ internal inline fun fieldMulReduceWith(
     hi = umulh(a2, b1)
     prev = w[3]
     s = prev + lo
-    c1 = if (s.toULong() < prev.toULong()) 1L else 0L
+    c1 = if (uLt(s, prev)) 1L else 0L
     s += carry
-    c2 = if (s.toULong() < carry.toULong()) 1L else 0L
+    c2 = if (uLt(s, carry)) 1L else 0L
     w[3] = s
     carry = hi + c1 + c2
 
@@ -188,9 +188,9 @@ internal inline fun fieldMulReduceWith(
     hi = umulh(a2, b2)
     prev = w[4]
     s = prev + lo
-    c1 = if (s.toULong() < prev.toULong()) 1L else 0L
+    c1 = if (uLt(s, prev)) 1L else 0L
     s += carry
-    c2 = if (s.toULong() < carry.toULong()) 1L else 0L
+    c2 = if (uLt(s, carry)) 1L else 0L
     w[4] = s
     carry = hi + c1 + c2
 
@@ -198,9 +198,9 @@ internal inline fun fieldMulReduceWith(
     hi = umulh(a2, b3)
     prev = w[5]
     s = prev + lo
-    c1 = if (s.toULong() < prev.toULong()) 1L else 0L
+    c1 = if (uLt(s, prev)) 1L else 0L
     s += carry
-    c2 = if (s.toULong() < carry.toULong()) 1L else 0L
+    c2 = if (uLt(s, carry)) 1L else 0L
     w[5] = s
     w[6] = hi + c1 + c2
 
@@ -209,7 +209,7 @@ internal inline fun fieldMulReduceWith(
     hi = umulh(a3, b0)
     prev = w[3]
     s = prev + lo
-    c1 = if (s.toULong() < prev.toULong()) 1L else 0L
+    c1 = if (uLt(s, prev)) 1L else 0L
     w[3] = s
     carry = hi + c1
 
@@ -217,9 +217,9 @@ internal inline fun fieldMulReduceWith(
     hi = umulh(a3, b1)
     prev = w[4]
     s = prev + lo
-    c1 = if (s.toULong() < prev.toULong()) 1L else 0L
+    c1 = if (uLt(s, prev)) 1L else 0L
     s += carry
-    c2 = if (s.toULong() < carry.toULong()) 1L else 0L
+    c2 = if (uLt(s, carry)) 1L else 0L
     w[4] = s
     carry = hi + c1 + c2
 
@@ -227,9 +227,9 @@ internal inline fun fieldMulReduceWith(
     hi = umulh(a3, b2)
     prev = w[5]
     s = prev + lo
-    c1 = if (s.toULong() < prev.toULong()) 1L else 0L
+    c1 = if (uLt(s, prev)) 1L else 0L
     s += carry
-    c2 = if (s.toULong() < carry.toULong()) 1L else 0L
+    c2 = if (uLt(s, carry)) 1L else 0L
     w[5] = s
     carry = hi + c1 + c2
 
@@ -237,9 +237,9 @@ internal inline fun fieldMulReduceWith(
     hi = umulh(a3, b3)
     prev = w[6]
     s = prev + lo
-    c1 = if (s.toULong() < prev.toULong()) 1L else 0L
+    c1 = if (uLt(s, prev)) 1L else 0L
     s += carry
-    c2 = if (s.toULong() < carry.toULong()) 1L else 0L
+    c2 = if (uLt(s, carry)) 1L else 0L
     w[6] = s
     w[7] = hi + c1 + c2
 
@@ -280,13 +280,13 @@ internal inline fun fieldSqrReduceWith(
 
     lo = a0 * a2
     s = lo + carry
-    c1 = if (s.toULong() < lo.toULong()) 1L else 0L
+    c1 = if (uLt(s, lo)) 1L else 0L
     w[2] = s
     carry = umulh(a0, a2) + c1
 
     lo = a0 * a3
     s = lo + carry
-    c1 = if (s.toULong() < lo.toULong()) 1L else 0L
+    c1 = if (uLt(s, lo)) 1L else 0L
     w[3] = s
     w[4] = umulh(a0, a3) + c1
 
@@ -294,7 +294,7 @@ internal inline fun fieldSqrReduceWith(
     hi = umulh(a1, a2)
     prev = w[3]
     s = prev + lo
-    c1 = if (s.toULong() < prev.toULong()) 1L else 0L
+    c1 = if (uLt(s, prev)) 1L else 0L
     w[3] = s
     carry = hi + c1
 
@@ -302,9 +302,9 @@ internal inline fun fieldSqrReduceWith(
     hi = umulh(a1, a3)
     prev = w[4]
     s = prev + lo
-    c1 = if (s.toULong() < prev.toULong()) 1L else 0L
+    c1 = if (uLt(s, prev)) 1L else 0L
     s += carry
-    c2 = if (s.toULong() < carry.toULong()) 1L else 0L
+    c2 = if (uLt(s, carry)) 1L else 0L
     w[4] = s
     w[5] = hi + c1 + c2
 
@@ -312,7 +312,7 @@ internal inline fun fieldSqrReduceWith(
     hi = umulh(a2, a3)
     prev = w[5]
     s = prev + lo
-    c1 = if (s.toULong() < prev.toULong()) 1L else 0L
+    c1 = if (uLt(s, prev)) 1L else 0L
     w[5] = s
     w[6] = hi + c1
 
@@ -342,44 +342,44 @@ internal inline fun fieldSqrReduceWith(
     hi = umulh(a0, a0)
     w[0] = lo
     s = w[1] + hi
-    c1 = if (s.toULong() < w[1].toULong()) 1L else 0L
+    c1 = if (uLt(s, w[1])) 1L else 0L
     w[1] = s
     var dCarry = c1
 
     lo = a1 * a1
     hi = umulh(a1, a1)
     s = w[2] + lo
-    c1 = if (s.toULong() < w[2].toULong()) 1L else 0L
+    c1 = if (uLt(s, w[2])) 1L else 0L
     s += dCarry
-    c2 = if (s.toULong() < dCarry.toULong()) 1L else 0L
+    c2 = if (uLt(s, dCarry)) 1L else 0L
     w[2] = s
     prev = w[3] + hi
-    val c3a = if (prev.toULong() < w[3].toULong()) 1L else 0L
+    val c3a = if (uLt(prev, w[3])) 1L else 0L
     prev += c1 + c2
-    val c4a = if (prev.toULong() < (c1 + c2).toULong()) 1L else 0L
+    val c4a = if (uLt(prev, c1 + c2)) 1L else 0L
     w[3] = prev
     dCarry = c3a + c4a
 
     lo = a2 * a2
     hi = umulh(a2, a2)
     s = w[4] + lo
-    c1 = if (s.toULong() < w[4].toULong()) 1L else 0L
+    c1 = if (uLt(s, w[4])) 1L else 0L
     s += dCarry
-    c2 = if (s.toULong() < dCarry.toULong()) 1L else 0L
+    c2 = if (uLt(s, dCarry)) 1L else 0L
     w[4] = s
     prev = w[5] + hi
-    val c3b = if (prev.toULong() < w[5].toULong()) 1L else 0L
+    val c3b = if (uLt(prev, w[5])) 1L else 0L
     prev += c1 + c2
-    val c4b = if (prev.toULong() < (c1 + c2).toULong()) 1L else 0L
+    val c4b = if (uLt(prev, c1 + c2)) 1L else 0L
     w[5] = prev
     dCarry = c3b + c4b
 
     lo = a3 * a3
     hi = umulh(a3, a3)
     s = w[6] + lo
-    c1 = if (s.toULong() < w[6].toULong()) 1L else 0L
+    c1 = if (uLt(s, w[6])) 1L else 0L
     s += dCarry
-    c2 = if (s.toULong() < dCarry.toULong()) 1L else 0L
+    c2 = if (uLt(s, dCarry)) 1L else 0L
     w[6] = s
     prev = w[7] + hi
     prev += c1 + c2
@@ -412,34 +412,34 @@ internal inline fun reduceWideInline(
     hcLo = w[4] * c
     hcHi = umulh(w[4], c)
     s1 = w[0] + hcLo
-    c1 = if (s1.toULong() < w[0].toULong()) 1L else 0L
+    c1 = if (uLt(s1, w[0])) 1L else 0L
     out[0] = s1
     var carry = hcHi + c1
 
     hcLo = w[5] * c
     hcHi = umulh(w[5], c)
     s1 = w[1] + hcLo
-    c1 = if (s1.toULong() < w[1].toULong()) 1L else 0L
+    c1 = if (uLt(s1, w[1])) 1L else 0L
     s2 = s1 + carry
-    c2 = if (s2.toULong() < s1.toULong()) 1L else 0L
+    c2 = if (uLt(s2, s1)) 1L else 0L
     out[1] = s2
     carry = hcHi + c1 + c2
 
     hcLo = w[6] * c
     hcHi = umulh(w[6], c)
     s1 = w[2] + hcLo
-    c1 = if (s1.toULong() < w[2].toULong()) 1L else 0L
+    c1 = if (uLt(s1, w[2])) 1L else 0L
     s2 = s1 + carry
-    c2 = if (s2.toULong() < s1.toULong()) 1L else 0L
+    c2 = if (uLt(s2, s1)) 1L else 0L
     out[2] = s2
     carry = hcHi + c1 + c2
 
     hcLo = w[7] * c
     hcHi = umulh(w[7], c)
     s1 = w[3] + hcLo
-    c1 = if (s1.toULong() < w[3].toULong()) 1L else 0L
+    c1 = if (uLt(s1, w[3])) 1L else 0L
     s2 = s1 + carry
-    c2 = if (s2.toULong() < s1.toULong()) 1L else 0L
+    c2 = if (uLt(s2, s1)) 1L else 0L
     out[3] = s2
     carry = hcHi + c1 + c2
 
@@ -448,27 +448,27 @@ internal inline fun reduceWideInline(
         val ccLo = carry * c
         val ccHi = umulh(carry, c)
         s1 = out[0] + ccLo
-        c1 = if (s1.toULong() < out[0].toULong()) 1L else 0L
+        c1 = if (uLt(s1, out[0])) 1L else 0L
         out[0] = s1
         var prop = ccHi + c1
         if (prop != 0L) {
             s1 = out[1] + prop
-            prop = if (s1.toULong() < out[1].toULong()) 1L else 0L
+            prop = if (uLt(s1, out[1])) 1L else 0L
             out[1] = s1
             if (prop != 0L) {
                 s1 = out[2] + prop
-                prop = if (s1.toULong() < out[2].toULong()) 1L else 0L
+                prop = if (uLt(s1, out[2])) 1L else 0L
                 out[2] = s1
                 if (prop != 0L) {
                     s1 = out[3] + prop
-                    prop = if (s1.toULong() < out[3].toULong()) 1L else 0L
+                    prop = if (uLt(s1, out[3])) 1L else 0L
                     out[3] = s1
                 }
             }
         }
         if (prop != 0L) {
             s1 = out[0] + c
-            c1 = if (s1.toULong() < out[0].toULong()) 1L else 0L
+            c1 = if (uLt(s1, out[0])) 1L else 0L
             out[0] = s1
             if (c1 != 0L) {
                 out[1]++

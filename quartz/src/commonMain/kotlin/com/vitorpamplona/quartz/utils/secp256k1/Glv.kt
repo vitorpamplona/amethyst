@@ -224,7 +224,7 @@ internal object Glv {
         for (i in limb until s.size) {
             val old = s[i]
             s[i] = old + if (i == limb) addVal else 1L
-            if (s[i].toULong() >= old.toULong() || (i == limb && addVal == 0L)) break
+            if (!uLt(s[i], old) || (i == limb && addVal == 0L)) break
             // overflowed — carry to next limb
         }
     }
