@@ -874,6 +874,7 @@
     <string name="settings">Nastavení</string>
     <string name="account_settings">Nastavení účtu</string>
     <string name="app_settings">Nastavení aplikace</string>
+    <string name="danger_zone">Nebezpečná zóna</string>
     <string name="connectivity_type_always">Vždy</string>
     <string name="connectivity_type_wifi_only">Pouze Wi-Fi</string>
     <string name="connectivity_type_unmetered_wifi_only">Neomezená WiFi</string>
@@ -1290,6 +1291,7 @@
     <string name="inbox_relays_not_found_examples">Dobré možnosti jsou:\n - nos.lol\n - nostr.mom\n - nostr.bitcoiner.social</string>
     <string name="dm_upload">Nahrát v DM</string>
     <string name="relay_settings">Nastavení relé</string>
+    <string name="relay_reorder">Přeřadit relé</string>
     <string name="public_home_section">Veřejná domácí relé</string>
     <string name="public_home_section_explainer_profile">Uživatel zveřejňuje svůj obsah na těchto přenašečích</string>
     <string name="public_home_section_explainer">Tento typ relé ukládá veškerý váš obsah. Amethyst sem pošle vaše příspěvky a ostatní použijí tato relé, aby našli váš obsah. Vložte mezi 1–3 relé. Mohou to být osobní relé, placená relé nebo veřejná relé.</string>
@@ -1676,6 +1678,7 @@
     <string name="kind_shorts">Krátká videa</string>
     <string name="kind_voice_msg">Hlasová zpráva</string>
     <string name="kind_voice_reply">Hlasová odpověď</string>
+    <string name="kind_wake">Probuzení</string>
     <string name="kind_web_bookmark">Webová záložka</string>
     <string name="kind_wiki">Wiki</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">Začněte se skvělým feedem tím, že budete sledovat stejné lidi jako někdo, komu důvěřujete.</string>
@@ -1935,7 +1938,4 @@
     <string name="relay_members_removed">%1$d členů odebráno z relé</string>
     <string name="relay_join_request">Žádost o připojení k relé</string>
     <string name="relay_leave_request">Žádost o opuštění relé</string>
-    <string name="danger_zone">Nebezpečná zóna</string>
-    <string name="kind_wake">Probuzení</string>
-    <string name="relay_reorder">Přeřadit relé</string>
 </resources>
