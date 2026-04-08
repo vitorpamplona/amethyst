@@ -49,6 +49,8 @@ class MultiOrchestrator(
 
     fun hasVideo() = list.any { it.media.mimeType?.startsWith("video", ignoreCase = true) == true }
 
+    fun hasGif() = list.any { it.media.isGif() }
+
     fun hasNonMedia() = list.any { it.media.isNotMedia() }
 
     suspend fun upload(
@@ -61,6 +63,7 @@ class MultiOrchestrator(
         useH265: Boolean = false,
         stripMetadata: Boolean = true,
         onStrippingFailed: suspend () -> Boolean = { true },
+        convertGifToMp4: Boolean = false,
     ): Result {
         coroutineScope {
             val jobs =
@@ -78,6 +81,7 @@ class MultiOrchestrator(
                             useH265,
                             stripMetadata,
                             onStrippingFailed,
+                            convertGifToMp4 = convertGifToMp4,
                         )
                     }
                 }
@@ -99,6 +103,7 @@ class MultiOrchestrator(
         useH265: Boolean = false,
         stripMetadata: Boolean = true,
         onStrippingFailed: suspend () -> Boolean = { true },
+        convertGifToMp4: Boolean = false,
     ): Result {
         coroutineScope {
             val jobs =
@@ -117,6 +122,7 @@ class MultiOrchestrator(
                             useH265,
                             stripMetadata,
                             onStrippingFailed,
+                            convertGifToMp4 = convertGifToMp4,
                         )
                     }
                 }

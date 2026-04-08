@@ -47,14 +47,36 @@ class MediaCompressor {
         mediaQuality: CompressorQuality,
         applicationContext: Context,
         useH265: Boolean = false,
+        convertGifToMp4: Boolean = false,
     ): MediaCompressorResult {
+        checkNotInMainThread()
+
+        // Convert GIF to MP4 if requested (before quality check, since this is a format conversion)
+        if (convertGifToMp4 && contentType?.contains("gif", ignoreCase = true) == true) {
+            Log.d("MediaCompressor") { "Converting GIF to MP4" }
+            val converted = GifToMp4Converter.convert(uri, applicationContext)
+            if (converted != null) {
+                // Optionally compress the resulting video
+                if (mediaQuality != CompressorQuality.UNCOMPRESSED) {
+                    return VideoCompressionHelper.compressVideo(
+                        converted.uri,
+                        converted.contentType,
+                        applicationContext,
+                        mediaQuality,
+                        useH265,
+                    )
+                }
+                return converted
+            }
+            Log.w("MediaCompressor") { "GIF to MP4 conversion failed, uploading as original GIF" }
+            return MediaCompressorResult(uri, contentType, null)
+        }
+
         // Skip compression if user selected uncompressed
         if (mediaQuality == CompressorQuality.UNCOMPRESSED) {
             Log.d("MediaCompressor", "UNCOMPRESSED quality selected, skipping compression.")
             return MediaCompressorResult(uri, contentType, null)
         }
-
-        checkNotInMainThread()
 
         // branch into compression based on content type
         return when {

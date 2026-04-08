@@ -79,7 +79,7 @@ fun ImageVideoDescription(
     uris: MultiOrchestrator,
     defaultServer: ServerName,
     isUploading: Boolean,
-    onAdd: (String, ServerName, Boolean, Int, Boolean, Boolean) -> Unit,
+    onAdd: (String, ServerName, Boolean, Int, Boolean, Boolean, Boolean) -> Unit,
     onDelete: (SelectedMediaProcessing) -> Unit,
     onCancel: () -> Unit,
     accountViewModel: AccountViewModel,
@@ -109,6 +109,8 @@ fun ImageVideoDescription(
     var useH265Codec by remember { mutableStateOf(false) }
 
     var stripMetadata by remember { mutableStateOf(accountViewModel.account.settings.stripLocationOnUpload) }
+
+    var convertGifToMp4 by remember { mutableStateOf(false) }
 
     Column(
         modifier =
@@ -333,6 +335,19 @@ fun ImageVideoDescription(
                 )
             }
 
+            if (uris.hasGif()) {
+                SettingSwitchItem(
+                    title = R.string.convert_gif_to_mp4_label,
+                    description = R.string.convert_gif_to_mp4_description,
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp),
+                    checked = convertGifToMp4,
+                    onCheckedChange = { convertGifToMp4 = it },
+                )
+            }
+
             Button(
                 modifier =
                     Modifier
@@ -341,7 +356,7 @@ fun ImageVideoDescription(
                 enabled = !isUploading,
                 onClick = {
                     val effectiveStripMetadata = if (isVideoWithCompression) false else stripMetadata
-                    onAdd(message, selectedServer, sensitiveContent, mediaQualitySlider, useH265Codec, effectiveStripMetadata)
+                    onAdd(message, selectedServer, sensitiveContent, mediaQualitySlider, useH265Codec, effectiveStripMetadata, convertGifToMp4)
                 },
                 shape = QuoteBorder,
                 colors =
