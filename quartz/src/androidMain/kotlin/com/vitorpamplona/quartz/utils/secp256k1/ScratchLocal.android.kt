@@ -26,5 +26,6 @@ internal actual class ScratchLocal<T> actual constructor(
 ) {
     private val tl = ThreadLocal.withInitial(initializer)
 
+    @Suppress("NULLABILITY_MISMATCH_BASED_ON_JAVA_ANNOTATIONS")
     actual fun get(): T = tl.get()
 }

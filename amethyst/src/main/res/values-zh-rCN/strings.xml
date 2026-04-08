@@ -1683,6 +1683,7 @@
     <string name="kind_shorts">短篇</string>
     <string name="kind_voice_msg">语音消息</string>
     <string name="kind_voice_reply">语音回复</string>
+    <string name="kind_wake">唤醒</string>
     <string name="kind_web_bookmark">网络书签</string>
     <string name="kind_wiki">维基</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">关注你信任的人所关注的人来开启优质的源。</string>

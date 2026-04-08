@@ -229,9 +229,9 @@ class AccountViewModel(
         callManager.onPeerLeft = { peerPubKey -> controller.disposePeerSession(peerPubKey) }
         callController = controller
 
-        // Populate ActiveCallHolder so CallActivity can launch even when the app
+        // Populate CallSessionBridge so CallActivity can launch even when the app
         // is in the background (e.g. full-screen incoming call intent).
-        com.vitorpamplona.amethyst.ui.call.ActiveCallHolder
+        com.vitorpamplona.amethyst.service.call.CallSessionBridge
             .set(callManager, controller, this)
     }
 
@@ -1493,6 +1493,31 @@ class AccountViewModel(
         nostrGroupId: String,
         memberPubKey: String,
     ): String = account.fetchKeyPackageAndAddMember(nostrGroupId, memberPubKey)
+
+    suspend fun removeMarmotGroupMember(
+        nostrGroupId: String,
+        targetLeafIndex: Int,
+    ) {
+        val relays = marmotGroupRelays(nostrGroupId)
+        account.removeMarmotGroupMember(nostrGroupId, targetLeafIndex, relays)
+    }
+
+    suspend fun updateMarmotGroupMetadata(
+        nostrGroupId: String,
+        name: String,
+        description: String,
+    ) {
+        val currentMetadata =
+            account.marmotManager?.groupMetadata(nostrGroupId)
+                ?: throw IllegalStateException("Group metadata not found")
+        val updatedMetadata =
+            currentMetadata.copy(
+                name = name,
+                description = description,
+            )
+        val relays = marmotGroupRelays(nostrGroupId)
+        account.updateMarmotGroupMetadata(nostrGroupId, updatedMetadata, relays)
+    }
 
     override fun onCleared() {
         Log.d("AccountViewModel", "onCleared")

@@ -139,14 +139,14 @@ class CommitOrderingTest {
         val epoch1Commit1 = makeGroupEvent("bbb", 1000)
         val epoch1Commit2 = makeGroupEvent("aaa", 1001)
 
-        tracker.addCommit(1L, epoch1Commit1)
-        tracker.addCommit(1L, epoch1Commit2)
+        tracker.addCommit(groupId, 1L, epoch1Commit1)
+        tracker.addCommit(groupId, 1L, epoch1Commit2)
 
-        assertEquals(2, tracker.pendingForEpoch(1L).size)
-        assertEquals(0, tracker.pendingForEpoch(2L).size)
+        assertEquals(2, tracker.pendingForEpoch(groupId, 1L).size)
+        assertEquals(0, tracker.pendingForEpoch(groupId, 2L).size)
 
         // Resolve: epoch1Commit1 wins (earlier timestamp)
-        val winner = tracker.resolve(1L)
+        val winner = tracker.resolve(groupId, 1L)
         assertEquals(epoch1Commit1, winner)
     }
 
@@ -156,30 +156,35 @@ class CommitOrderingTest {
         val e1 = makeGroupEvent("aaa", 1000)
         val e2 = makeGroupEvent("bbb", 2000)
 
-        tracker.addCommit(1L, e1)
-        tracker.addCommit(2L, e2)
+        tracker.addCommit(groupId, 1L, e1)
+        tracker.addCommit(groupId, 2L, e2)
 
-        assertEquals(setOf(1L, 2L), tracker.pendingEpochs())
+        val expectedKeys =
+            setOf(
+                CommitOrdering.GroupEpochKey(groupId, 1L),
+                CommitOrdering.GroupEpochKey(groupId, 2L),
+            )
+        assertEquals(expectedKeys, tracker.pendingGroupEpochs())
 
-        tracker.clearEpoch(1L)
-        assertEquals(setOf(2L), tracker.pendingEpochs())
+        tracker.clearEpoch(groupId, 1L)
+        assertEquals(setOf(CommitOrdering.GroupEpochKey(groupId, 2L)), tracker.pendingGroupEpochs())
     }
 
     @Test
     fun testEpochCommitTracker_ClearAll() {
         val tracker = CommitOrdering.EpochCommitTracker()
-        tracker.addCommit(1L, makeGroupEvent("aaa", 1000))
-        tracker.addCommit(2L, makeGroupEvent("bbb", 2000))
+        tracker.addCommit(groupId, 1L, makeGroupEvent("aaa", 1000))
+        tracker.addCommit(groupId, 2L, makeGroupEvent("bbb", 2000))
 
         tracker.clear()
 
-        assertTrue(tracker.pendingEpochs().isEmpty())
-        assertNull(tracker.resolve(1L))
+        assertTrue(tracker.pendingGroupEpochs().isEmpty())
+        assertNull(tracker.resolve(groupId, 1L))
     }
 
     @Test
     fun testEpochCommitTracker_ResolveEmpty() {
         val tracker = CommitOrdering.EpochCommitTracker()
-        assertNull(tracker.resolve(999L))
+        assertNull(tracker.resolve(groupId, 999L))
     }
 }

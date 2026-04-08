@@ -276,7 +276,7 @@
             android:exported="false" />
 
         <receiver
-            android:name=".ui.call.CallNotificationReceiver"
+            android:name=".service.call.CallNotificationReceiver"
             android:exported="false" />
 
     </application>

@@ -637,14 +637,27 @@ class MlsGroup private constructor(
         senderLeafIndex: Int,
         confirmationTag: ByteArray? = null,
     ) {
-        require(senderLeafIndex >= 0 && senderLeafIndex < tree.leafCount) {
-            "Invalid sender leaf index: $senderLeafIndex"
-        }
-        require(tree.getLeaf(senderLeafIndex) != null) {
-            "Sender leaf is blank at index $senderLeafIndex"
-        }
-
         val commit = Commit.decodeTls(TlsReader(commitBytes))
+
+        // External commits (containing ExternalInit) have a sender that is not
+        // yet in the tree — their leaf will be added via the UpdatePath below.
+        val isExternalCommit =
+            commit.proposals.any {
+                it is ProposalOrRef.Inline && it.proposal is Proposal.ExternalInit
+            }
+
+        if (isExternalCommit) {
+            require(senderLeafIndex >= 0 && senderLeafIndex <= tree.leafCount) {
+                "Invalid sender leaf index for external commit: $senderLeafIndex"
+            }
+        } else {
+            require(senderLeafIndex >= 0 && senderLeafIndex < tree.leafCount) {
+                "Invalid sender leaf index: $senderLeafIndex"
+            }
+            require(tree.getLeaf(senderLeafIndex) != null) {
+                "Sender leaf is blank at index $senderLeafIndex"
+            }
+        }
 
         // Apply proposals (resolve references from pending pool)
         for (proposalOrRef in commit.proposals) {
