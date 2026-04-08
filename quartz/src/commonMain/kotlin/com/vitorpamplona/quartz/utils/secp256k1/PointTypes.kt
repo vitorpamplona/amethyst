@@ -127,14 +127,16 @@ internal class PointScratch {
     val splitK1 = LongArray(4) // output k1
     val splitK2 = LongArray(4) // output k2
 
-    // Pre-allocated scratch for verifySchnorr (avoids per-call allocations)
-    val verifyPx = LongArray(4)
-    val verifyPy = LongArray(4)
-    val verifyR = LongArray(4)
-    val verifyS = LongArray(4)
-    val verifyE = LongArray(4)
-    val verifyRx = LongArray(4)
-    val verifyRy = LongArray(4)
-    val verifyPPoint = MutablePoint()
-    val verifyResult = MutablePoint()
+    // Pre-allocated scratch for toAffine / toAffineX (avoids 3 LongArray allocs per call)
+    val zInv = LongArray(4)
+    val zInv2 = LongArray(4)
+    val zInv3 = LongArray(4)
+
+    // Pre-allocated scratch for Secp256k1 entry points (avoids per-call allocations)
+    val entryPx = LongArray(4) // liftX / parsePublicKey output
+    val entryPy = LongArray(4)
+    val entryPoint = MutablePoint() // pubkeyCreate, signSchnorr, ecdhXOnly
+    val entryResult = MutablePoint() // mulG / mul output
+    val entryTmp = LongArray(4) // liftX temp, auxrand XOR, nonce, etc.
+    val entryTmp2 = LongArray(4) // secondary temp for signSchnorr R-point
 }

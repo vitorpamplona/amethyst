@@ -173,14 +173,14 @@ internal object ScalarN {
         val lo1 = w[1]
         val lo2 = w[2]
         val lo3 = w[3]
-        val hi0 = w[4]
-        val hi1 = w[5]
-        val hi2 = w[6]
-        val hi3 = w[7]
-        val hiArr = longArrayOf(hi0, hi1, hi2, hi3)
+        // Use `out` as temporary storage for hi limbs (avoids longArrayOf allocation)
+        out[0] = w[4]
+        out[1] = w[5]
+        out[2] = w[6]
+        out[3] = w[7]
 
         val hiTimesNC = w // reuse w as scratch
-        U256.mulWide(hiTimesNC, hiArr, N_COMPLEMENT)
+        U256.mulWide(hiTimesNC, out, N_COMPLEMENT)
 
         // sum = hiTimesNC + lo
         var carry = 0L
@@ -213,14 +213,17 @@ internal object ScalarN {
             return
         }
 
-        // Round 2
-        val hi2Arr = longArrayOf(w[4], w[5], w[6], w[7])
+        // Round 2: reuse out for hi2 limbs (avoids longArrayOf allocation)
+        out[0] = w[4]
+        out[1] = w[5]
+        out[2] = w[6]
+        out[3] = w[7]
         val saved0 = w[0]
         val saved1 = w[1]
         val saved2 = w[2]
         val saved3 = w[3]
         val hi2NC = w
-        U256.mulWide(hi2NC, hi2Arr, N_COMPLEMENT)
+        U256.mulWide(hi2NC, out, N_COMPLEMENT)
 
         var c2 = 0L
         for (i in 0 until 4) {

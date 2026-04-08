@@ -855,11 +855,7 @@ internal object ECPoint {
 
     // ==================== Coordinate Conversion ====================
 
-    /**
-     * Convert from Jacobian (X, Y, Z) to affine (x, y) = (X/Z², Y/Z³).
-     * Requires one field inversion (the most expensive single operation).
-     * Returns false if the point is at infinity.
-     */
+    /** Convert Jacobian → affine (convenience, allocates temps). For one-time init paths. */
     fun toAffine(
         p: MutablePoint,
         outX: LongArray,
@@ -877,21 +873,32 @@ internal object ECPoint {
         return true
     }
 
-    /**
-     * Convert from Jacobian to affine, returning only the x-coordinate: x = X/Z².
-     * Saves 2 multiplications vs full toAffine (no zInv3, no outY computation).
-     * Used by ecdhXOnly where only the x-coordinate of the shared point is needed.
-     */
+    /** Convert Jacobian → affine using pre-allocated scratch (hot path). */
+    fun toAffine(
+        p: MutablePoint,
+        outX: LongArray,
+        outY: LongArray,
+        s: PointScratch,
+    ): Boolean {
+        if (p.isInfinity()) return false
+        FieldP.inv(s.zInv, p.z)
+        FieldP.sqr(s.zInv2, s.zInv)
+        FieldP.mul(s.zInv3, s.zInv2, s.zInv)
+        FieldP.mul(outX, p.x, s.zInv2)
+        FieldP.mul(outY, p.y, s.zInv3)
+        return true
+    }
+
+    /** Convert Jacobian → affine x-only using pre-allocated scratch (hot path). */
     fun toAffineX(
         p: MutablePoint,
         outX: LongArray,
+        s: PointScratch,
     ): Boolean {
         if (p.isInfinity()) return false
-        val zInv = LongArray(4)
-        val zInv2 = LongArray(4)
-        FieldP.inv(zInv, p.z)
-        FieldP.sqr(zInv2, zInv)
-        FieldP.mul(outX, p.x, zInv2)
+        FieldP.inv(s.zInv, p.z)
+        FieldP.sqr(s.zInv2, s.zInv)
+        FieldP.mul(outX, p.x, s.zInv2)
         return true
     }
 }

@@ -136,12 +136,10 @@ object Secp256k1 {
         require(seckey.size == 32)
         val scalar = U256.fromBytes(seckey)
         require(ScalarN.isValid(scalar))
-        val p = MutablePoint()
-        ECPoint.mulG(p, scalar)
-        val x = LongArray(4)
-        val y = LongArray(4)
-        check(ECPoint.toAffine(p, x, y))
-        return KeyCodec.serializeUncompressed(x, y)
+        val sc = ECPoint.getScratch()
+        ECPoint.mulG(sc.entryResult, scalar)
+        check(ECPoint.toAffine(sc.entryResult, sc.entryPx, sc.entryPy, sc))
+        return KeyCodec.serializeUncompressed(sc.entryPx, sc.entryPy)
     }
 
     /**
@@ -246,14 +244,12 @@ object Secp256k1 {
         require(ScalarN.isValid(d0))
 
         // Derive public key (one G multiplication + one inversion)
-        val pubPoint = MutablePoint()
-        ECPoint.mulG(pubPoint, d0)
-        val px = LongArray(4)
-        val py = LongArray(4)
-        check(ECPoint.toAffine(pubPoint, px, py))
+        val sc = ECPoint.getScratch()
+        ECPoint.mulG(sc.entryResult, d0)
+        check(ECPoint.toAffine(sc.entryResult, sc.entryPx, sc.entryPy, sc))
 
-        val xOnlyPub = U256.toBytes(px)
-        return signSchnorrInternal(data, d0, xOnlyPub, KeyCodec.hasEvenY(py), auxrand)
+        val xOnlyPub = U256.toBytes(sc.entryPx)
+        return signSchnorrInternal(data, d0, xOnlyPub, KeyCodec.hasEvenY(sc.entryPy), auxrand)
     }
 
     /**
@@ -297,23 +293,31 @@ object Secp256k1 {
         pubKeyHasEvenY: Boolean,
         auxrand: ByteArray?,
     ): ByteArray {
-        val d = if (pubKeyHasEvenY) d0 else ScalarN.neg(d0)
+        val sc = ECPoint.getScratch()
+        val tmp = sc.entryTmp
+
+        val d =
+            if (pubKeyHasEvenY) {
+                d0
+            } else {
+                ScalarN.negTo(tmp, d0)
+                tmp
+            }
         val dBytes = U256.toBytes(d)
 
-        val t =
-            if (auxrand != null) {
-                require(auxrand.size == 32)
-                val auxHash = sha256(AUX_PREFIX + auxrand)
-                val tArr = LongArray(4)
-                U256.xorTo(tArr, U256.fromBytes(dBytes), U256.fromBytes(auxHash))
-                U256.toBytes(tArr)
-            } else {
-                dBytes
-            }
+        val tBytes: ByteArray
+        if (auxrand != null) {
+            require(auxrand.size == 32)
+            val auxHash = sha256(AUX_PREFIX + auxrand)
+            U256.xorTo(sc.entryTmp2, U256.fromBytes(dBytes), U256.fromBytes(auxHash))
+            tBytes = U256.toBytes(sc.entryTmp2)
+        } else {
+            tBytes = dBytes
+        }
 
         val nonceInput = ByteArray(64 + 32 + 32 + data.size)
         NONCE_PREFIX.copyInto(nonceInput, 0)
-        t.copyInto(nonceInput, 64)
+        tBytes.copyInto(nonceInput, 64)
         pBytes.copyInto(nonceInput, 96)
         data.copyInto(nonceInput, 128)
         val rand = sha256(nonceInput)
@@ -321,11 +325,10 @@ object Secp256k1 {
         require(!U256.isZero(k0))
 
         // R = k0·G
-        val rPoint = MutablePoint()
-        ECPoint.mulG(rPoint, k0)
-        val rx = LongArray(4)
-        val ry = LongArray(4)
-        check(ECPoint.toAffine(rPoint, rx, ry))
+        ECPoint.mulG(sc.entryResult, k0)
+        val rx = sc.entryPx
+        val ry = sc.entryPy
+        check(ECPoint.toAffine(sc.entryResult, rx, ry, sc))
 
         val k = if (KeyCodec.hasEvenY(ry)) k0 else ScalarN.neg(k0)
 
@@ -371,14 +374,12 @@ object Secp256k1 {
         // Use thread-local scratch to avoid per-verify allocations.
         // Saves ~10 LongArray(4) + 2 MutablePoint = ~14 object allocations per call.
         val sc = ECPoint.getScratch()
-        val px = sc.verifyPx
-        val py = sc.verifyPy
-        if (!liftXCached(px, py, pub)) return false
+        if (!liftXCached(sc.entryPx, sc.entryPy, pub)) return false
 
-        val r = sc.verifyR
+        val r = sc.entryTmp
         U256.fromBytesInto(r, signature, 0)
         if (U256.cmp(r, FieldP.P) >= 0) return false
-        val s = sc.verifyS
+        val s = sc.entryTmp2
         U256.fromBytesInto(s, signature, 32)
         if (U256.cmp(s, ScalarN.N) >= 0) return false
 
@@ -389,23 +390,20 @@ object Secp256k1 {
         pub.copyInto(hashInput, 96)
         data.copyInto(hashInput, 128)
         val eHash = sha256(hashInput)
-        val e = sc.verifyE
+        // Reuse entryPx for e (liftX result already copied into pPoint below)
+        val e = sc.zInv // safe: zInv not used until toAffine after mulDoubleG
         U256.fromBytesInto(e, eHash, 0)
         if (U256.cmp(e, ScalarN.N) >= 0) U256.subTo(e, e, ScalarN.N) // inline reduce
 
         // R = s·G + (-e)·P via Shamir's trick
         ScalarN.negTo(e, e) // negate in-place
-        val pPoint = sc.verifyPPoint
-        pPoint.setAffine(px, py)
-        val result = sc.verifyResult
-        ECPoint.mulDoubleG(result, s, pPoint, e)
+        sc.entryPoint.setAffine(sc.entryPx, sc.entryPy) // copies px/py, so entryPx is free
+        ECPoint.mulDoubleG(sc.entryResult, s, sc.entryPoint, e)
 
-        if (result.isInfinity()) return false
-        val rx = sc.verifyRx
-        val ry = sc.verifyRy
-        if (!ECPoint.toAffine(result, rx, ry)) return false
-        if (!KeyCodec.hasEvenY(ry)) return false
-        return U256.cmp(rx, r) == 0
+        if (sc.entryResult.isInfinity()) return false
+        if (!ECPoint.toAffine(sc.entryResult, sc.entryPx, sc.entryPy, sc)) return false
+        if (!KeyCodec.hasEvenY(sc.entryPy)) return false
+        return U256.cmp(sc.entryPx, r) == 0
     }
 
     // ==================== Tweak operations ====================
@@ -427,24 +425,19 @@ object Secp256k1 {
         tweak: ByteArray,
     ): ByteArray {
         require(tweak.size == 32)
-        val x = LongArray(4)
-        val y = LongArray(4)
-        check(KeyCodec.parsePublicKey(pubkey, x, y))
+        val sc = ECPoint.getScratch()
+        check(KeyCodec.parsePublicKey(pubkey, sc.entryPx, sc.entryPy))
         val scalar = U256.fromBytes(tweak)
         require(ScalarN.isValid(scalar))
 
-        val p = MutablePoint()
-        p.setAffine(x, y)
-        val result = MutablePoint()
-        ECPoint.mul(result, p, scalar)
-        val rx = LongArray(4)
-        val ry = LongArray(4)
-        check(ECPoint.toAffine(result, rx, ry))
+        sc.entryPoint.setAffine(sc.entryPx, sc.entryPy)
+        ECPoint.mul(sc.entryResult, sc.entryPoint, scalar)
+        check(ECPoint.toAffine(sc.entryResult, sc.entryPx, sc.entryPy, sc))
 
         return if (pubkey.size == 33) {
-            KeyCodec.serializeCompressed(rx, ry)
+            KeyCodec.serializeCompressed(sc.entryPx, sc.entryPy)
         } else {
-            KeyCodec.serializeUncompressed(rx, ry)
+            KeyCodec.serializeUncompressed(sc.entryPx, sc.entryPy)
         }
     }
 
@@ -466,25 +459,22 @@ object Secp256k1 {
         scalar: ByteArray,
     ): ByteArray {
         require(xOnlyPub.size == 32 && scalar.size == 32)
-        val x = U256.fromBytes(xOnlyPub)
-        require(U256.cmp(x, FieldP.P) < 0)
+        val sc = ECPoint.getScratch()
+        U256.fromBytesInto(sc.entryTmp, xOnlyPub, 0)
+        require(U256.cmp(sc.entryTmp, FieldP.P) < 0)
         val k = U256.fromBytes(scalar)
         require(ScalarN.isValid(k))
 
         // Compute y = sqrt(x³ + 7). We need SOME valid y for EC point operations,
         // but the result's x-coordinate is the same regardless of y sign.
-        // Use liftX which returns the even-y variant.
-        val px = LongArray(4)
-        val py = LongArray(4)
-        check(KeyCodec.liftX(px, py, x)) { "Not a valid x-coordinate on secp256k1" }
+        check(KeyCodec.liftX(sc.entryPx, sc.entryPy, sc.entryTmp, sc.entryTmp2)) {
+            "Not a valid x-coordinate on secp256k1"
+        }
 
-        val p = MutablePoint()
-        p.setAffine(px, py)
-        val result = MutablePoint()
-        ECPoint.mul(result, p, k)
-        val rx = LongArray(4)
-        check(ECPoint.toAffineX(result, rx))
-        return U256.toBytes(rx)
+        sc.entryPoint.setAffine(sc.entryPx, sc.entryPy)
+        ECPoint.mul(sc.entryResult, sc.entryPoint, k)
+        check(ECPoint.toAffineX(sc.entryResult, sc.entryPx, sc))
+        return U256.toBytes(sc.entryPx)
     }
 
     /** BIP-340 tagged hash (for tags not cached above). */
