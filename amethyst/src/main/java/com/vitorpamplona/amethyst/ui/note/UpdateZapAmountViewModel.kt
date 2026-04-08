@@ -61,7 +61,7 @@ class UpdateZapAmountViewModel : ViewModel() {
         this.amountSet = accountViewModel.account.settings.syncedSettings.zaps.zapAmountChoices.value
         this.selectedZapType = accountViewModel.account.settings.syncedSettings.zaps.defaultZapType.value
 
-        val nip47 = accountViewModel.account.settings.zapPaymentRequest.value
+        val nip47 = accountViewModel.account.settings.defaultZapPaymentRequest()
 
         this.walletConnectPubkey = nip47?.pubKeyHex?.let { TextFieldValue(it) } ?: TextFieldValue("")
         this.walletConnectRelay = nip47?.relayUri?.url?.let { TextFieldValue(it) } ?: TextFieldValue("")
@@ -125,23 +125,16 @@ class UpdateZapAmountViewModel : ViewModel() {
         nextAmount = TextFieldValue("")
     }
 
-    fun hasChanged(): Boolean =
-        (
+    fun hasChanged(): Boolean {
+        val defaultUri = accountViewModel.account.settings.defaultZapPaymentRequest()
+        return (
             selectedZapType != accountViewModel.account.settings.syncedSettings.zaps.defaultZapType.value ||
                 amountSet != accountViewModel.account.settings.syncedSettings.zaps.zapAmountChoices.value ||
-                walletConnectPubkey.text != (
-                    accountViewModel.account.settings.zapPaymentRequest.value
-                        ?.pubKeyHex ?: ""
-                ) ||
-                walletConnectRelay.text != (
-                    accountViewModel.account.settings.zapPaymentRequest.value
-                        ?.relayUri ?: ""
-                ) ||
-                walletConnectSecret.text != (
-                    accountViewModel.account.settings.zapPaymentRequest.value
-                        ?.secret ?: ""
-                )
+                walletConnectPubkey.text != (defaultUri?.pubKeyHex ?: "") ||
+                walletConnectRelay.text != (defaultUri?.relayUri?.url ?: "") ||
+                walletConnectSecret.text != (defaultUri?.secret ?: "")
         )
+    }
 
     fun updateNIP47(uri: String) {
         val contact = Nip47WalletConnect.parse(uri)

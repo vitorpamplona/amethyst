@@ -1380,6 +1380,27 @@
     <string name="wallet_filter_all">All</string>
     <string name="wallet_filter_zaps">Zaps</string>
     <string name="wallet_filter_non_zaps">Non-Zaps</string>
+    <string name="wallet_add">Add Wallet</string>
+    <string name="wallet_default">Default</string>
+    <string name="wallet_set_default">Set as Default</string>
+    <string name="wallet_remove">Remove</string>
+    <string name="wallet_remove_confirm">Remove this wallet?</string>
+    <string name="wallet_remove_confirm_description">This will remove the wallet connection. You can always add it back later.</string>
+    <string name="wallet_name">Wallet Name</string>
+    <string name="wallet_name_hint">My Wallet</string>
+    <string name="wallet_your_wallets">Your Wallets</string>
+    <string name="wallet_manage">Manage Wallets</string>
+    <string name="wallet_no_wallets">No wallets connected</string>
+    <string name="wallet_no_wallets_description">Connect one or more NWC wallets to send and receive payments.</string>
+    <string name="wallet_add_connection">Add NWC Connection</string>
+    <string name="wallet_paste_uri">Paste nostr+walletconnect:// URI</string>
+    <string name="wallet_save">Save</string>
+    <string name="wallet_rename">Rename</string>
+    <string name="wallet_rename_title">Rename Wallet</string>
+    <string name="wallet_edit">Edit</string>
+    <string name="wallet_invalid_uri">Invalid NWC connection URI</string>
+    <string name="wallet_move_up">Move Up</string>
+    <string name="wallet_move_down">Move Down</string>
     <string name="route_security_filters">Security Filters</string>
     <string name="route_import_follows">Import Follows</string>
 

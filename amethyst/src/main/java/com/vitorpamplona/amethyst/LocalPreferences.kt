@@ -28,6 +28,8 @@ import androidx.core.content.edit
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.model.UiSettings
+import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcWalletEntry
+import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcWalletEntryNorm
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
@@ -101,7 +103,9 @@ private object PrefKeys {
     const val DEFAULT_PICTURES_FOLLOW_LIST = "defaultPicturesFollowList"
     const val DEFAULT_SHORTS_FOLLOW_LIST = "defaultShortsFollowList"
     const val DEFAULT_LONGS_FOLLOW_LIST = "defaultLongsFollowList"
-    const val ZAP_PAYMENT_REQUEST_SERVER = "zapPaymentServer"
+    const val ZAP_PAYMENT_REQUEST_SERVER = "zapPaymentServer" // legacy, kept for migration
+    const val NWC_WALLETS = "nwcWallets"
+    const val DEFAULT_NWC_WALLET_ID = "defaultNwcWalletId"
     const val LATEST_USER_METADATA = "latestUserMetadata"
     const val LATEST_CONTACT_LIST = "latestContactList"
     const val LATEST_DM_RELAY_LIST = "latestDMRelayList"
@@ -342,7 +346,18 @@ object LocalPreferences {
                     putString(PrefKeys.DEFAULT_SHORTS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultShortsFollowList.value))
                     putString(PrefKeys.DEFAULT_LONGS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultLongsFollowList.value))
 
-                    putOrRemove(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER, settings.zapPaymentRequest.value?.denormalize())
+                    val walletEntries = settings.nwcWallets.value.mapNotNull { it.denormalize() }
+                    if (walletEntries.isNotEmpty()) {
+                        putString(PrefKeys.NWC_WALLETS, JsonMapper.toJson(walletEntries))
+                    } else {
+                        remove(PrefKeys.NWC_WALLETS)
+                    }
+                    settings.defaultNwcWalletId.value?.let {
+                        putString(PrefKeys.DEFAULT_NWC_WALLET_ID, it)
+                    } ?: remove(PrefKeys.DEFAULT_NWC_WALLET_ID)
+
+                    // Remove legacy key after migration
+                    remove(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER)
 
                     putOrRemove(PrefKeys.LATEST_CONTACT_LIST, settings.backupContactList)
 
@@ -495,6 +510,8 @@ object LocalPreferences {
                     val defaultLongsFollowListStr = getString(PrefKeys.DEFAULT_LONGS_FOLLOW_LIST, null)
 
                     val zapPaymentRequestServerStr = getString(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER, null)
+                    val nwcWalletsStr = getString(PrefKeys.NWC_WALLETS, null)
+                    val defaultNwcWalletIdStr = getString(PrefKeys.DEFAULT_NWC_WALLET_ID, null)
                     val defaultFileServerStr = getString(PrefKeys.DEFAULT_FILE_SERVER, null)
 
                     val pendingAttestationsStr = getString(PrefKeys.PENDING_ATTESTATIONS, null)
@@ -531,7 +548,32 @@ object LocalPreferences {
                     val defaultShortsFollowList = async { parseOrNull<TopFilter>(defaultShortsFollowListStr) ?: TopFilter.Global }
                     val defaultLongsFollowList = async { parseOrNull<TopFilter>(defaultLongsFollowListStr) ?: TopFilter.Global }
 
-                    val zapPaymentRequestServer = async { parseOrNull<Nip47WalletConnect.Nip47URI>(zapPaymentRequestServerStr) }
+                    val nwcWalletsLoaded =
+                        async {
+                            val nwcWalletEntries = parseOrNull<List<NwcWalletEntry>>(nwcWalletsStr)
+                            if (nwcWalletEntries != null && nwcWalletEntries.isNotEmpty()) {
+                                val wallets = nwcWalletEntries.mapNotNull { it.normalize() }
+                                val defaultId = defaultNwcWalletIdStr ?: wallets.firstOrNull()?.id
+                                Pair(wallets, defaultId)
+                            } else {
+                                val legacyUri = parseOrNull<Nip47WalletConnect.Nip47URI>(zapPaymentRequestServerStr)
+                                val legacyNorm = legacyUri?.normalize()
+                                if (legacyNorm != null) {
+                                    val migrated =
+                                        NwcWalletEntryNorm(
+                                            id =
+                                                java.util.UUID
+                                                    .randomUUID()
+                                                    .toString(),
+                                            name = "Wallet",
+                                            uri = legacyNorm,
+                                        )
+                                    Pair(listOf(migrated), migrated.id)
+                                } else {
+                                    Pair(emptyList(), null)
+                                }
+                            }
+                        }
                     val defaultFileServer = async { parseOrNull<ServerName>(defaultFileServerStr) ?: DEFAULT_MEDIA_SERVERS[0] }
 
                     val viewedPollResultNoteIds = async { parseOrNull<Map<String, Long>>(viewedPollResultNoteIdsStr) ?: mapOf() }
@@ -580,7 +622,8 @@ object LocalPreferences {
                         defaultPicturesFollowList = MutableStateFlow(defaultPicturesFollowList.await()),
                         defaultShortsFollowList = MutableStateFlow(defaultShortsFollowList.await()),
                         defaultLongsFollowList = MutableStateFlow(defaultLongsFollowList.await()),
-                        zapPaymentRequest = MutableStateFlow(zapPaymentRequestServer.await()?.normalize()),
+                        nwcWallets = MutableStateFlow(nwcWalletsLoaded.await().first),
+                        defaultNwcWalletId = MutableStateFlow(nwcWalletsLoaded.await().second),
                         hideDeleteRequestDialog = hideDeleteRequestDialog,
                         hideBlockAlertDialog = hideBlockAlertDialog,
                         hideNIP17WarningDialog = hideNIP17WarningDialog,

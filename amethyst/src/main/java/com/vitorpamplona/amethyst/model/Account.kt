@@ -270,7 +270,7 @@ class Account(
 
     val userMetadata = UserMetadataState(signer, cache, scope, settings)
 
-    override val nip47SignerState = NwcSignerState(signer, nwcFilterAssembler, cache, scope, settings.zapPaymentRequest)
+    override val nip47SignerState = NwcSignerState(signer, nwcFilterAssembler, cache, scope, settings)
 
     val nip65RelayList = Nip65RelayListState(signer, cache, scope, settings)
     val localRelayList = LocalRelayListState(signer, cache, scope, settings)
@@ -613,6 +613,15 @@ class Account(
         onResponse: (Response?) -> Unit,
     ) {
         val (event, relay) = nip47SignerState.sendNwcRequest(request, onResponse)
+        client.publish(event, setOf(relay))
+    }
+
+    suspend fun sendNwcRequestToWallet(
+        walletUri: Nip47WalletConnect.Nip47URINorm,
+        request: Request,
+        onResponse: (Response?) -> Unit,
+    ) {
+        val (event, relay) = nip47SignerState.sendNwcRequestToWallet(walletUri, request, onResponse)
         client.publish(event, setOf(relay))
     }
 
