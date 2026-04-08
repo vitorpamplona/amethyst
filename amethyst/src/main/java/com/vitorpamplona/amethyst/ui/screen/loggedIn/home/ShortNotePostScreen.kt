@@ -563,9 +563,9 @@ private fun NewPostScreenBody(
 
         AiWritingHelpPanel(
             isVisible = postViewModel.showAiPanel,
-            isProcessing = postViewModel.isAiProcessing,
-            result = postViewModel.aiResult,
-            onToneSelected = postViewModel::requestAiTransform,
+            readyResults = postViewModel.aiResults,
+            selectedResult = postViewModel.aiSelectedResult,
+            onToneSelected = postViewModel::selectAiResult,
             onApply = postViewModel::applyAiResult,
             onDismiss = postViewModel::dismissAiResult,
         )

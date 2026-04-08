@@ -147,7 +147,12 @@ import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -302,17 +307,19 @@ open class ShortNotePostViewModel :
     // TODO: Remove useMockAi before shipping. Set to true to test UI without Gemini Nano.
     private val useMockAi = true
 
-    var aiResult by mutableStateOf<WritingResult?>(null)
+    var aiResults by mutableStateOf<Map<WritingTone, WritingResult>>(emptyMap())
+    var aiSelectedResult by mutableStateOf<WritingResult?>(null)
     var aiStatus by mutableStateOf<WritingAssistantStatus>(WritingAssistantStatus.Unavailable)
-    var isAiProcessing by mutableStateOf(false)
     private var writingAssistant: WritingAssistant? = null
+    private var aiComputeJob: Job? = null
+    private var lastComputedText: String = ""
 
     val showAiPanel: Boolean
         get() {
             val prefEnabled =
                 accountViewModel.settings.uiSettingsFlow.automaticallyProposeAiImprovements.value ==
                     BooleanType.ALWAYS
-            return prefEnabled && aiStatus is WritingAssistantStatus.Available
+            return prefEnabled && aiStatus is WritingAssistantStatus.Available && aiResults.isNotEmpty()
         }
 
     fun initWritingAssistant(context: android.content.Context) {
@@ -329,35 +336,61 @@ open class ShortNotePostViewModel :
         }
     }
 
-    fun requestAiTransform(tone: WritingTone) {
-        val text = message.text.toString()
-        if (text.isBlank() || isAiProcessing) return
+    fun precomputeAiResults() {
+        val assistant = writingAssistant ?: return
+        if (aiStatus !is WritingAssistantStatus.Available) return
+        val prefEnabled =
+            accountViewModel.settings.uiSettingsFlow.automaticallyProposeAiImprovements.value ==
+                BooleanType.ALWAYS
+        if (!prefEnabled) return
 
-        isAiProcessing = true
-        aiResult = null
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val result = writingAssistant?.transform(text, tone)
-                aiResult = result
-            } catch (e: Exception) {
-                if (e is kotlinx.coroutines.CancellationException) throw e
-                aiResult = null
-            } finally {
-                isAiProcessing = false
+        val text = message.text.toString().trim()
+        if (text.isBlank() || text == lastComputedText) return
+
+        aiComputeJob?.cancel()
+        aiResults = emptyMap()
+        aiSelectedResult = null
+
+        aiComputeJob =
+            viewModelScope.launch(Dispatchers.IO) {
+                delay(1000)
+                lastComputedText = text
+
+                coroutineScope {
+                    WritingTone.entries
+                        .map { tone ->
+                            async {
+                                try {
+                                    assistant.transform(text, tone)
+                                } catch (e: Exception) {
+                                    if (e is CancellationException) throw e
+                                    null
+                                }
+                            }
+                        }.forEach { deferred ->
+                            val result = deferred.await() ?: return@forEach
+                            aiResults = aiResults + (result.tone to result)
+                        }
+                }
             }
-        }
+    }
+
+    fun selectAiResult(tone: WritingTone) {
+        aiSelectedResult = aiResults[tone]
     }
 
     fun applyAiResult() {
-        aiResult?.let {
+        aiSelectedResult?.let {
             message.setTextAndPlaceCursorAtEnd(it.transformedText)
-            aiResult = null
+            aiSelectedResult = null
+            aiResults = emptyMap()
+            lastComputedText = ""
             draftTag.newVersion()
         }
     }
 
     fun dismissAiResult() {
-        aiResult = null
+        aiSelectedResult = null
     }
 
     fun lnAddress(): String? = account.userProfile().lnAddress()
@@ -1200,6 +1233,7 @@ open class ShortNotePostViewModel :
             emojiSuggestions?.processCurrentWord(lastWord)
         }
 
+        precomputeAiResults()
         draftTag.newVersion()
     }
 

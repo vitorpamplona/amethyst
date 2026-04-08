@@ -26,24 +26,20 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
@@ -55,8 +51,8 @@ import com.vitorpamplona.amethyst.ui.stringRes
 @Composable
 fun AiWritingHelpPanel(
     isVisible: Boolean,
-    isProcessing: Boolean,
-    result: WritingResult?,
+    readyResults: Map<WritingTone, WritingResult>,
+    selectedResult: WritingResult?,
     onToneSelected: (WritingTone) -> Unit,
     onApply: () -> Unit,
     onDismiss: () -> Unit,
@@ -72,19 +68,7 @@ fun AiWritingHelpPanel(
                     .fillMaxWidth()
                     .padding(horizontal = 8.dp),
         ) {
-            if (isProcessing) {
-                Box(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 12.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
-                }
-            }
-
-            result?.let {
+            selectedResult?.let {
                 AiResultCard(
                     result = it,
                     onApply = onApply,
@@ -92,7 +76,11 @@ fun AiWritingHelpPanel(
                 )
             }
 
-            ToneChipRow(onToneSelected = onToneSelected)
+            ToneChipRow(
+                readyTones = readyResults.keys,
+                selectedTone = selectedResult?.tone,
+                onToneSelected = onToneSelected,
+            )
         }
     }
 }
@@ -141,7 +129,11 @@ private fun AiResultCard(
 }
 
 @Composable
-private fun ToneChipRow(onToneSelected: (WritingTone) -> Unit) {
+private fun ToneChipRow(
+    readyTones: Set<WritingTone>,
+    selectedTone: WritingTone?,
+    onToneSelected: (WritingTone) -> Unit,
+) {
     val scrollState = rememberScrollState()
     Row(
         modifier =
@@ -152,11 +144,13 @@ private fun ToneChipRow(onToneSelected: (WritingTone) -> Unit) {
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         WritingTone.entries.forEach { tone ->
-            FilterChip(
-                selected = false,
-                onClick = { onToneSelected(tone) },
-                label = { Text(toneDisplayName(tone)) },
-            )
+            if (tone in readyTones) {
+                FilterChip(
+                    selected = tone == selectedTone,
+                    onClick = { onToneSelected(tone) },
+                    label = { Text(toneDisplayName(tone)) },
+                )
+            }
         }
     }
 }
