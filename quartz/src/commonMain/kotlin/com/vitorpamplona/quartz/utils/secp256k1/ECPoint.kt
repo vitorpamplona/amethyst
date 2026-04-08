@@ -24,111 +24,28 @@ package com.vitorpamplona.quartz.utils.secp256k1
 // ELLIPTIC CURVE POINT OPERATIONS ON secp256k1
 // =====================================================================================
 //
-// This file implements point arithmetic on the secp256k1 elliptic curve: y² = x³ + 7 (mod p).
-// It provides point addition, doubling, scalar multiplication, and serialization.
-//
-// JACOBIAN COORDINATES
-// ====================
-// Points are stored in Jacobian projective coordinates (X, Y, Z) which represent the
-// affine point (X/Z², Y/Z³). This avoids expensive field inversions during intermediate
-// steps of scalar multiplication — inversion is only needed once at the very end to
-// convert back to affine (x, y) form.
-//
-// The "point at infinity" (identity element) is represented by Z = 0.
+// Point arithmetic on the secp256k1 curve: y² = x³ + 7 (mod p).
+// See PointTypes.kt for MutablePoint, AffinePoint, and PointScratch.
 //
 // POINT FORMULAS
 // ==============
 // - doublePoint: 3M+4S (uses fe_half for L=(3/2)·X², same as libsecp256k1)
-// - addMixed (Jacobian + Affine): 8M+3S (used for precomputed table lookups)
-// - addPoints (Jacobian + Jacobian): 11M+5S (used when both points are Jacobian)
+// - addMixed (Jacobian + Affine): 8M+3S (precomputed table lookups)
+// - addPoints (Jacobian + Jacobian): 11M+5S (both points Jacobian)
 //
-// SCALAR MULTIPLICATION STRATEGIES
-// ================================
-// Three methods are used depending on the context:
+// SCALAR MULTIPLICATION
+// =====================
+// 1. mulG (Generator): Comb method, only 3 doublings + ~43 table lookups.
+// 2. mul (Arbitrary): GLV + wNAF-5, ~130 shared doublings.
+// 3. mulDoubleG (Verify: s·G + e·P): Strauss/Shamir + GLV + wNAF, 4 streams.
 //
-// 1. mulG (Generator multiplication): Comb method (Hamburg 2012).
-//    Arranges scalar bits into a 4×66 matrix, processes 4 rows with 11 table lookups
-//    each. Only 3 doublings total. Uses a precomputed 704-entry affine table (~45KB).
-//    Cost: ~43 mixed additions + 3 doublings ≈ 494 field ops.
-//    Used by: pubkeyCreate, signSchnorr.
-//
-// 2. mul (Arbitrary point multiplication): GLV endomorphism + wNAF-5 (Glv.kt).
-//    Splits the 256-bit scalar into two ~128-bit halves via the secp256k1 endomorphism,
-//    then processes both with wNAF encoding in a single pass of ~130 shared doublings.
-//    P-side tables are batch-inverted to affine (effective-affine technique) so the
-//    main loop uses addMixed (8M+3S) instead of addPoints (11M+5S), saving ~4M per add.
-//    Used by: pubKeyTweakMul (ECDH), ecdhXOnly.
-//
-// 3. mulDoubleG (Verification: s·G + e·P): Strauss/Shamir trick with GLV + wNAF.
-//    Splits both scalars via GLV into 4 half-scalar streams. G-side uses a precomputed
-//    1024-entry affine wNAF-12 table (~128KB); P-side tables batch-inverted to affine.
-//    All 4 streams share ~130 doublings with mixed additions throughout.
-//    Used by: verifySchnorr.
-//
-// BATCH INVERSION
-// ===============
-// Montgomery's trick: convert n Jacobian→affine with 1 inversion + 3(n-1) muls instead
-// of n individual inversions. Used for wNAF table construction and G table initialization.
-//
-// PRECOMPUTED TABLES
-// ==================
-// All tables are lazily initialized on first use (Kotlin `by lazy`):
-// - combTable: 704 affine points for mulG (~45KB, built once per process)
-// - gOddTable: 1024 affine points for G-side wNAF-12 (~128KB, batch-inverted)
-// - gLamTable: 1024 affine points for λ(G)-side wNAF-12 (~128KB, derived from gOddTable)
-//
-// Note: C libsecp256k1 uses WINDOW_G=15 (8192 entries, 1MB) as compile-time .rodata.
-// On JVM, w=15 is slower due to cache pressure from heap-allocated AffinePoint objects.
-// w=12 (1024 entries, ~128KB) is the sweet spot — fits in L2, fewer additions than w=8.
+// PRECOMPUTED TABLES (lazily initialized)
+// =======================================
+// - combTable: 704 affine points for mulG (~45KB)
+// - gOddTable: 1024 affine points for G-side wNAF-12 (~128KB)
+// - gLamTable: 1024 affine points for λ(G)-side wNAF-12 (~128KB)
+// - pTableCache: 256-entry cache of P-side wNAF tables (~256KB, for verify)
 // =====================================================================================
-
-/**
- * Mutable Jacobian point for in-place computation.
- *
- * Points are mutable to avoid allocating new objects during the inner loop of scalar
- * multiplication, which performs thousands of doublings and additions per operation.
- */
-internal class MutablePoint(
-    val x: LongArray = LongArray(4),
-    val y: LongArray = LongArray(4),
-    val z: LongArray = LongArray(4),
-) {
-    fun isInfinity(): Boolean = U256.isZero(z)
-
-    fun setInfinity() {
-        for (i in 0 until 4) {
-            x[i] = 0L
-            z[i] = 0L
-        }
-        y[0] = 1L
-        for (i in 1 until 4) y[i] = 0L
-    }
-
-    fun copyFrom(other: MutablePoint) {
-        other.x.copyInto(x)
-        other.y.copyInto(y)
-        other.z.copyInto(z)
-    }
-
-    fun setAffine(
-        ax: LongArray,
-        ay: LongArray,
-    ) {
-        ax.copyInto(x)
-        ay.copyInto(y)
-        z[0] = 1L
-        for (i in 1 until 4) z[i] = 0L
-    }
-}
-
-/**
- * Affine point (x, y) — no Z coordinate.
- * Used for precomputed tables where we want compact storage and mixed addition.
- */
-internal class AffinePoint(
-    val x: LongArray = LongArray(4),
-    val y: LongArray = LongArray(4),
-)
 
 internal object ECPoint {
     // ==================== Generator point G ====================
@@ -175,6 +92,34 @@ internal object ECPoint {
     private val gLamTable: Array<AffinePoint> by lazy {
         Array(G_TABLE_SIZE) { AffinePoint(FieldP.mul(gOddTable[it].x, Glv.BETA), gOddTable[it].y.copyOf()) }
     }
+
+    // ==================== P-side wNAF table cache ====================
+    //
+    // In mulDoubleG (verify), we build an 8-entry wNAF-5 affine table for the
+    // public key P on every call: [1P, 3P, 5P, ..., 15P] plus their GLV λ
+    // counterparts. This costs ~437 field ops (~27% of mulDoubleG, ~20% of verify).
+    //
+    // For Nostr, the same pubkeys are verified repeatedly (many events per author).
+    // This cache stores the P-side affine tables keyed by the point's x-coordinate,
+    // so repeated verifications for the same pubkey skip the table build entirely.
+    //
+    // 256 entries × 16 AffinePoints × 64 bytes = ~256KB total cache.
+
+    // 1024 entries to cover ~1000 followed pubkeys with minimal collisions.
+    // Memory: 1024 × 16 AffinePoints × 64 bytes = ~1MB. Acceptable for mobile.
+    private const val P_TABLE_CACHE_SIZE = 1024
+    private const val P_TABLE_CACHE_MASK = P_TABLE_CACHE_SIZE - 1
+
+    private class CachedPTable(
+        val px: LongArray, // x-coordinate of the point (cache key, 4 limbs)
+        val pOdd: Array<AffinePoint>, // 8 affine odd-multiples of P
+        val pLamOdd: Array<AffinePoint>, // 8 affine odd-multiples of λ(P)
+    )
+
+    private val pTableCache = arrayOfNulls<CachedPTable>(P_TABLE_CACHE_SIZE)
+
+    /** Hash a field element to a cache slot index. */
+    private fun cacheSlot(px: LongArray): Int = (px[0].toInt() xor px[1].toInt().shl(3)) and P_TABLE_CACHE_MASK
 
     private fun buildGOddTable(): Array<AffinePoint> {
         val g = MutablePoint()
@@ -302,51 +247,7 @@ internal object ECPoint {
         }
     }
 
-    // ==================== Thread-local scratch buffers ====================
-
-    /**
-     * Scratch space for point operations. Each thread gets its own set of temporary
-     * field elements and a wide buffer to avoid allocation and ThreadLocal lookups
-     * in the inner loops. The 12 temp buffers (t[0]..t[11]) are shared across
-     * doublePoint and addPoints — this is safe because these functions only call
-     * each other in the equal-point degenerate case, which returns immediately
-     * after the recursive call without using the temps further.
-     *
-     * The wide buffer (LongArray(8)) is pre-fetched once per top-level operation
-     * and passed through to FieldP.mul/sqr, avoiding ~500+ ThreadLocal.get() calls
-     * per scalar multiplication (~20-30ns each on JVM).
-     */
-    internal class PointScratch {
-        val t = Array(12) { LongArray(4) }
-        val dblCopy = MutablePoint() // Copy buffer for in-place doubling (out === input)
-        val w = LongArray(8) // Wide buffer for FieldP.mul/sqr — shared, avoids ThreadLocal
-
-        // Pre-allocated scratch for wNAF encoding (avoids IntArray allocation per call).
-        // Size 145 = 129 (max bits after GLV split) + 15 (max window) + 1 (headroom).
-        val wnaf1 = IntArray(145)
-        val wnaf2 = IntArray(145)
-        val wnaf3 = IntArray(145) // mulDoubleG needs 4 wNAF arrays
-        val wnaf4 = IntArray(145)
-        val wnafTmp = LongArray(4) // scratch for wnaf scalar copy (GLV scalars are up to 4 limbs)
-
-        // Pre-allocated scratch for wNAF mixed addition
-        val mixTmp = MutablePoint()
-        val mixNegY = LongArray(4)
-
-        // Pre-allocated P-side tables for mul/mulDoubleG (avoids ~80 LongArray allocs per call)
-        val pOddJac = Array(8) { MutablePoint() }
-        val pLamOddJac = Array(8) { MutablePoint() }
-        val pOddAff = Array(8) { AffinePoint() }
-        val pLamOddAff = Array(8) { AffinePoint() }
-        val p2 = MutablePoint() // doublePoint temp for table building
-
-        // Pre-allocated batch inversion temps (avoids 12 LongArray allocs per call)
-        val cumZ = Array(8) { LongArray(4) }
-        val batchInv = LongArray(4)
-        val batchZInv = LongArray(4)
-        val batchZInv2 = LongArray(4)
-        val batchZInv3 = LongArray(4)
-    }
+    // ==================== Thread-local scratch ====================
 
     private val scratch = ScratchLocal { PointScratch() }
 
@@ -563,8 +464,8 @@ internal object ECPoint {
         val wnd = 5
         val tableSize = 1 shl (wnd - 2) // 8 entries
 
-        // Split scalar via GLV: scalar = k₁ + k₂·λ
-        val split = Glv.splitScalar(scalar)
+        // Split scalar via GLV: scalar = k₁ + k₂·λ (allocation-free)
+        val split = Glv.splitScalarInto(s.splitK1, s.splitK2, scalar, s.splitWide, s.splitT1, s.splitT2)
         Glv.wnafInto(s.wnaf1, s.wnafTmp, split.k1, wnd, 129)
         Glv.wnafInto(s.wnaf2, s.wnafTmp, split.k2, wnd, 129)
         val wnaf1 = s.wnaf1
@@ -596,15 +497,31 @@ internal object ECPoint {
             bits--
         }
 
-        out.setInfinity()
-        val tmp = s.mixTmp
+        // Ping-pong: alternate between two point buffers to avoid copyFrom after
+        // every addition. Saves ~20 copyFroms per call (each = 12 Long copies).
+        // Also avoids the internal copy in doublePoint (out===inp path).
+        var cur = out
+        var alt = s.mixTmp
+        cur.setInfinity()
         val negY = s.mixNegY
 
         for (i in bits - 1 downTo 0) {
-            doublePoint(out, out, s)
-            addWnafMixed(out, tmp, negY, wnaf1, i, pOdd, split.negK1, s)
-            addWnafMixed(out, tmp, negY, wnaf2, i, pLamOdd, split.negK2, s)
+            doublePoint(alt, cur, s)
+            var t = cur
+            cur = alt
+            alt = t
+            if (addWnafMixedPP(cur, alt, negY, wnaf1, i, pOdd, split.negK1, s)) {
+                t = cur
+                cur = alt
+                alt = t
+            }
+            if (addWnafMixedPP(cur, alt, negY, wnaf2, i, pLamOdd, split.negK2, s)) {
+                t = cur
+                cur = alt
+                alt = t
+            }
         }
+        if (cur !== out) out.copyFrom(cur)
     }
 
     /**
@@ -628,12 +545,20 @@ internal object ECPoint {
 
         val s = scratch.get()
         val table = combTable
-        out.setInfinity()
-        val tmp = MutablePoint()
+
+        // Ping-pong: alternate between out and s.mixTmp to avoid copyFrom after
+        // every addMixed and the internal copy in in-place doublePoint.
+        // Also eliminates the MutablePoint() allocation that was here before.
+        var cur = out
+        var alt = s.mixTmp
+        cur.setInfinity()
 
         for (combOff in COMB_SPACING - 1 downTo 0) {
             if (combOff < COMB_SPACING - 1) {
-                doublePoint(out, out, s)
+                doublePoint(alt, cur, s)
+                val t = cur
+                cur = alt
+                alt = t
             }
             for (block in 0 until COMB_BLOCKS) {
                 var mask = 0
@@ -645,11 +570,14 @@ internal object ECPoint {
                 }
                 if (mask != 0) {
                     val entry = table[block * COMB_POINTS + mask]
-                    addMixed(tmp, out, entry.x, entry.y, s)
-                    out.copyFrom(tmp)
+                    addMixed(alt, cur, entry.x, entry.y, s)
+                    val t = cur
+                    cur = alt
+                    alt = t
                 }
             }
         }
+        if (cur !== out) out.copyFrom(cur)
     }
 
     /**
@@ -674,13 +602,14 @@ internal object ECPoint {
         val wP = 5 // Window for P-side (table built per-call, keep small)
         val pTableSize = 1 shl (wP - 2) // 8 entries for P
 
-        // Split scalars via GLV decomposition
-        val sSplit = Glv.splitScalar(s)
-        val eSplit = Glv.splitScalar(e)
-
-        // Build wNAF: G-side uses wider window (cached table), P-side uses w=5
+        // Split scalars via GLV decomposition (allocation-free).
+        // sSplit writes into splitK1/K2, then wNAF encodes them immediately
+        // before eSplit overwrites the same scratch buffers.
+        val sSplit = Glv.splitScalarInto(sc.splitK1, sc.splitK2, s, sc.splitWide, sc.splitT1, sc.splitT2)
         Glv.wnafInto(sc.wnaf1, sc.wnafTmp, sSplit.k1, WINDOW_G, 129)
         Glv.wnafInto(sc.wnaf2, sc.wnafTmp, sSplit.k2, WINDOW_G, 129)
+        // Now safe to reuse splitK1/K2 for the e scalar
+        val eSplit = Glv.splitScalarInto(sc.splitK1, sc.splitK2, e, sc.splitWide, sc.splitT1, sc.splitT2)
         Glv.wnafInto(sc.wnaf3, sc.wnafTmp, eSplit.k1, wP, 129)
         Glv.wnafInto(sc.wnaf4, sc.wnafTmp, eSplit.k2, wP, 129)
         val wnafS1 = sc.wnaf1
@@ -692,22 +621,45 @@ internal object ECPoint {
         val gOdd = gOddTable
         val gLam = gLamTable
 
-        // P odd-multiples [1P, 3P, 5P, ..., 15P] — uses pre-allocated scratch tables
-        doublePoint(sc.p2, p, sc)
-        val pOddJac = sc.pOddJac
-        pOddJac[0].copyFrom(p)
-        for (i in 1 until pTableSize) addPoints(pOddJac[i], pOddJac[i - 1], sc.p2, sc)
-        val pLamOddJac = sc.pLamOddJac
-        for (i in 0 until pTableSize) {
-            FieldP.mul(pLamOddJac[i].x, pOddJac[i].x, Glv.BETA, sc.w)
-            pOddJac[i].y.copyInto(pLamOddJac[i].y)
-            pOddJac[i].z.copyInto(pLamOddJac[i].z)
-        }
+        // P-side tables: check cache first, build only on miss.
+        // On cache hit, copies 16 affine points from cache (~trivial vs ~437 field ops to build).
+        val pOdd: Array<AffinePoint>
+        val pLamOdd: Array<AffinePoint>
+        val cacheSlot = cacheSlot(p.x)
+        val cached = pTableCache[cacheSlot]
+        if (cached != null && U256.cmp(cached.px, p.x) == 0) {
+            // Cache hit — use cached affine tables directly (no copy needed)
+            pOdd = cached.pOdd
+            pLamOdd = cached.pLamOdd
+        } else {
+            // Cache miss — build tables and store in cache
+            doublePoint(sc.p2, p, sc)
+            val pOddJac = sc.pOddJac
+            pOddJac[0].copyFrom(p)
+            for (i in 1 until pTableSize) addPoints(pOddJac[i], pOddJac[i - 1], sc.p2, sc)
+            val pLamOddJac = sc.pLamOddJac
+            for (i in 0 until pTableSize) {
+                FieldP.mul(pLamOddJac[i].x, pOddJac[i].x, Glv.BETA, sc.w)
+                pOddJac[i].y.copyInto(pLamOddJac[i].y)
+                pOddJac[i].z.copyInto(pLamOddJac[i].z)
+            }
+            // Batch-convert to affine (into scratch arrays)
+            batchToAffinePair(pOddJac, pLamOddJac, sc.pOddAff, sc.pLamOddAff, sc)
 
-        // Effective-affine: batch-convert P-side tables (shared Z inversion)
-        val pOdd = sc.pOddAff
-        val pLamOdd = sc.pLamOddAff
-        batchToAffinePair(pOddJac, pLamOddJac, pOdd, pLamOdd, sc)
+            // Store in cache (allocate new arrays so they're independent of scratch)
+            val cachedPOdd =
+                Array(pTableSize) {
+                    AffinePoint(sc.pOddAff[it].x.copyOf(), sc.pOddAff[it].y.copyOf())
+                }
+            val cachedPLamOdd =
+                Array(pTableSize) {
+                    AffinePoint(sc.pLamOddAff[it].x.copyOf(), sc.pLamOddAff[it].y.copyOf())
+                }
+            pTableCache[cacheSlot] = CachedPTable(p.x.copyOf(), cachedPOdd, cachedPLamOdd)
+
+            pOdd = cachedPOdd
+            pLamOdd = cachedPLamOdd
+        }
 
         // Find highest non-zero digit across all 4 streams
         var bits = 129 + WINDOW_G // max possible wNAF length
@@ -717,75 +669,75 @@ internal object ECPoint {
             bits--
         }
 
-        out.setInfinity()
-        val tmp = sc.mixTmp
+        // Ping-pong: alternate between out and sc.mixTmp to avoid copyFrom after
+        // every addition (~170 copies per verify → at most 1). Also avoids the
+        // internal copy buffer in doublePoint's out===inp path (~130 per verify).
+        var cur = out
+        var alt = sc.mixTmp
+        cur.setInfinity()
         val negY = sc.mixNegY
 
         for (i in bits - 1 downTo 0) {
-            doublePoint(out, out, sc)
+            doublePoint(alt, cur, sc)
+            var t = cur
+            cur = alt
+            alt = t
             // Streams 1-2: G-side (affine tables, mixed addition)
-            addWnafMixed(out, tmp, negY, wnafS1, i, gOdd, sSplit.negK1, sc)
-            addWnafMixed(out, tmp, negY, wnafS2, i, gLam, sSplit.negK2, sc)
+            if (addWnafMixedPP(cur, alt, negY, wnafS1, i, gOdd, sSplit.negK1, sc)) {
+                t = cur
+                cur = alt
+                alt = t
+            }
+            if (addWnafMixedPP(cur, alt, negY, wnafS2, i, gLam, sSplit.negK2, sc)) {
+                t = cur
+                cur = alt
+                alt = t
+            }
             // Streams 3-4: P-side (affine tables via effective-affine, mixed addition)
-            addWnafMixed(out, tmp, negY, wnafE1, i, pOdd, eSplit.negK1, sc)
-            addWnafMixed(out, tmp, negY, wnafE2, i, pLamOdd, eSplit.negK2, sc)
+            if (addWnafMixedPP(cur, alt, negY, wnafE1, i, pOdd, eSplit.negK1, sc)) {
+                t = cur
+                cur = alt
+                alt = t
+            }
+            if (addWnafMixedPP(cur, alt, negY, wnafE2, i, pLamOdd, eSplit.negK2, sc)) {
+                t = cur
+                cur = alt
+                alt = t
+            }
         }
+        if (cur !== out) out.copyFrom(cur)
     }
 
     /**
-     * Process one wNAF digit with mixed addition.
-     * The effective sign is: (wNAF digit sign) XOR (GLV negation flag).
-     * Positive = add as-is, negative = negate the table entry's y.
+     * Process one wNAF digit with mixed addition (ping-pong version).
+     * Reads from `cur`, writes result to `alt`. Returns true if an addition was
+     * performed (caller should swap cur/alt references).
+     *
+     * This avoids the copyFrom after every addition — the caller swaps references
+     * instead (free: just local variable reassignment).
      */
-    private fun addWnafMixed(
-        out: MutablePoint,
-        tmp: MutablePoint,
+    private fun addWnafMixedPP(
+        cur: MutablePoint,
+        alt: MutablePoint,
         negY: LongArray,
         wnafDigits: IntArray,
         bitIndex: Int,
         table: Array<AffinePoint>,
         glvNeg: Boolean,
         s: PointScratch,
-    ) {
-        if (bitIndex >= wnafDigits.size) return
+    ): Boolean {
+        if (bitIndex >= wnafDigits.size) return false
         val d = wnafDigits[bitIndex]
-        if (d == 0) return
+        if (d == 0) return false
         val idx = (if (d > 0) d else -d) / 2
         val effectiveNeg = (d < 0) xor glvNeg
         if (!effectiveNeg) {
-            addMixed(tmp, out, table[idx].x, table[idx].y, s)
+            addMixed(alt, cur, table[idx].x, table[idx].y, s)
         } else {
             FieldP.neg(negY, table[idx].y)
-            addMixed(tmp, out, table[idx].x, negY, s)
+            addMixed(alt, cur, table[idx].x, negY, s)
         }
-        out.copyFrom(tmp)
-    }
-
-    /** Process one wNAF digit with full Jacobian addition (for P-side tables). */
-    private fun addWnafJacobian(
-        out: MutablePoint,
-        tmp: MutablePoint,
-        negScratch: MutablePoint,
-        wnafDigits: IntArray,
-        bitIndex: Int,
-        table: Array<MutablePoint>,
-        glvNeg: Boolean,
-        s: PointScratch,
-    ) {
-        if (bitIndex >= wnafDigits.size) return
-        val d = wnafDigits[bitIndex]
-        if (d == 0) return
-        val idx = (if (d > 0) d else -d) / 2
-        val effectiveNeg = (d < 0) xor glvNeg
-        if (!effectiveNeg) {
-            addPoints(tmp, out, table[idx], s)
-        } else {
-            table[idx].x.copyInto(negScratch.x)
-            FieldP.neg(negScratch.y, table[idx].y)
-            table[idx].z.copyInto(negScratch.z)
-            addPoints(tmp, out, negScratch, s)
-        }
-        out.copyFrom(tmp)
+        return true
     }
 
     // ==================== Batch Affine Conversion (Montgomery's Trick) ====================
@@ -905,11 +857,7 @@ internal object ECPoint {
 
     // ==================== Coordinate Conversion ====================
 
-    /**
-     * Convert from Jacobian (X, Y, Z) to affine (x, y) = (X/Z², Y/Z³).
-     * Requires one field inversion (the most expensive single operation).
-     * Returns false if the point is at infinity.
-     */
+    /** Convert Jacobian → affine (convenience, allocates temps). For one-time init paths. */
     fun toAffine(
         p: MutablePoint,
         outX: LongArray,
@@ -927,47 +875,32 @@ internal object ECPoint {
         return true
     }
 
-    /**
-     * Convert from Jacobian to affine, returning only the x-coordinate: x = X/Z².
-     * Saves 2 multiplications vs full toAffine (no zInv3, no outY computation).
-     * Used by ecdhXOnly where only the x-coordinate of the shared point is needed.
-     */
-    fun toAffineX(
+    /** Convert Jacobian → affine using pre-allocated scratch (hot path). */
+    fun toAffine(
         p: MutablePoint,
         outX: LongArray,
+        outY: LongArray,
+        s: PointScratch,
     ): Boolean {
         if (p.isInfinity()) return false
-        val zInv = LongArray(4)
-        val zInv2 = LongArray(4)
-        FieldP.inv(zInv, p.z)
-        FieldP.sqr(zInv2, zInv)
-        FieldP.mul(outX, p.x, zInv2)
+        FieldP.inv(s.zInv, p.z)
+        FieldP.sqr(s.zInv2, s.zInv)
+        FieldP.mul(s.zInv3, s.zInv2, s.zInv)
+        FieldP.mul(outX, p.x, s.zInv2)
+        FieldP.mul(outY, p.y, s.zInv3)
         return true
     }
 
-    // ==================== Key Encoding (delegates to KeyCodec) ====================
-
-    fun liftX(
+    /** Convert Jacobian → affine x-only using pre-allocated scratch (hot path). */
+    fun toAffineX(
+        p: MutablePoint,
         outX: LongArray,
-        outY: LongArray,
-        x: LongArray,
-    ) = KeyCodec.liftX(outX, outY, x)
-
-    fun hasEvenY(y: LongArray) = KeyCodec.hasEvenY(y)
-
-    fun parsePublicKey(
-        pubkey: ByteArray,
-        outX: LongArray,
-        outY: LongArray,
-    ) = KeyCodec.parsePublicKey(pubkey, outX, outY)
-
-    fun serializeUncompressed(
-        x: LongArray,
-        y: LongArray,
-    ) = KeyCodec.serializeUncompressed(x, y)
-
-    fun serializeCompressed(
-        x: LongArray,
-        y: LongArray,
-    ) = KeyCodec.serializeCompressed(x, y)
+        s: PointScratch,
+    ): Boolean {
+        if (p.isInfinity()) return false
+        FieldP.inv(s.zInv, p.z)
+        FieldP.sqr(s.zInv2, s.zInv)
+        FieldP.mul(outX, p.x, s.zInv2)
+        return true
+    }
 }
