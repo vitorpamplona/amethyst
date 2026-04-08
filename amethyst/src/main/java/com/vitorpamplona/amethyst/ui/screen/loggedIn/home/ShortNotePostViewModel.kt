@@ -41,6 +41,7 @@ import com.vitorpamplona.amethyst.commons.compose.replaceCurrentWord
 import com.vitorpamplona.amethyst.commons.compose.setTextAndPlaceCursorAtBeginning
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState.EmojiMedia
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.BooleanType
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -301,11 +302,18 @@ open class ShortNotePostViewModel :
     // TODO: Remove useMockAi before shipping. Set to true to test UI without Gemini Nano.
     private val useMockAi = true
 
-    var wantsAiHelp by mutableStateOf(false)
     var aiResult by mutableStateOf<WritingResult?>(null)
     var aiStatus by mutableStateOf<WritingAssistantStatus>(WritingAssistantStatus.Unavailable)
     var isAiProcessing by mutableStateOf(false)
     private var writingAssistant: WritingAssistant? = null
+
+    val showAiPanel: Boolean
+        get() {
+            val prefEnabled =
+                accountViewModel.settings.uiSettingsFlow.automaticallyProposeAiImprovements.value ==
+                    BooleanType.ALWAYS
+            return prefEnabled && aiStatus is WritingAssistantStatus.Available
+        }
 
     fun initWritingAssistant(context: android.content.Context) {
         if (writingAssistant == null) {

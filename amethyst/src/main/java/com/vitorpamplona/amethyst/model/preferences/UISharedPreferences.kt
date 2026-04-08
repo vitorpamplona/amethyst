@@ -102,6 +102,7 @@ class UiSharedPreferences(
         val UI_DONT_ASK_FOR_NOTIFICATION_PERMISSIONS = booleanPreferencesKey("ui.dont_ask_for_notification_permissions")
         val UI_FEATURE_SET = stringPreferencesKey("ui.feature_set")
         val UI_GALLERY_SET = stringPreferencesKey("ui.gallery_set")
+        val UI_PROPOSE_AI_IMPROVEMENTS = stringPreferencesKey("ui.propose_ai_improvements")
 
         suspend fun uiPreferences(context: Context): UiSettings? =
             try {
@@ -120,6 +121,7 @@ class UiSharedPreferences(
                     dontAskForNotificationPermissions = preferences[UI_DONT_ASK_FOR_NOTIFICATION_PERMISSIONS] ?: false,
                     featureSet = preferences[UI_FEATURE_SET]?.let { FeatureSetType.valueOf(it) } ?: FeatureSetType.SIMPLIFIED,
                     gallerySet = preferences[UI_GALLERY_SET]?.let { ProfileGalleryType.valueOf(it) } ?: ProfileGalleryType.CLASSIC,
+                    automaticallyProposeAiImprovements = preferences[UI_PROPOSE_AI_IMPROVEMENTS]?.let { BooleanType.valueOf(it) } ?: BooleanType.NEVER,
                 )
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
@@ -155,6 +157,7 @@ class UiSharedPreferences(
                     preferences[UI_DONT_ASK_FOR_NOTIFICATION_PERMISSIONS] = sharedSettings.dontAskForNotificationPermissions
                     preferences[UI_FEATURE_SET] = sharedSettings.featureSet.name
                     preferences[UI_GALLERY_SET] = sharedSettings.gallerySet.name
+                    preferences[UI_PROPOSE_AI_IMPROVEMENTS] = sharedSettings.automaticallyProposeAiImprovements.name
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e

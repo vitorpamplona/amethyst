@@ -38,6 +38,7 @@ class UiSettingsFlow(
     val dontAskForNotificationPermissions: MutableStateFlow<Boolean> = MutableStateFlow(false),
     val featureSet: MutableStateFlow<FeatureSetType> = MutableStateFlow(FeatureSetType.SIMPLIFIED),
     val gallerySet: MutableStateFlow<ProfileGalleryType> = MutableStateFlow(ProfileGalleryType.CLASSIC),
+    val automaticallyProposeAiImprovements: MutableStateFlow<BooleanType> = MutableStateFlow(BooleanType.NEVER),
 ) {
     val listOfFlows: List<Flow<Any?>> =
         listOf<Flow<Any?>>(
@@ -52,6 +53,7 @@ class UiSettingsFlow(
             dontAskForNotificationPermissions,
             featureSet,
             gallerySet,
+            automaticallyProposeAiImprovements,
         )
 
     // emits at every change in any of the propertyes.
@@ -69,6 +71,7 @@ class UiSettingsFlow(
                 flows[8] as Boolean,
                 flows[9] as FeatureSetType,
                 flows[10] as ProfileGalleryType,
+                flows[11] as BooleanType,
             )
         }
 
@@ -85,6 +88,7 @@ class UiSettingsFlow(
             dontAskForNotificationPermissions.value,
             featureSet.value,
             gallerySet.value,
+            automaticallyProposeAiImprovements.value,
         )
 
     fun update(torSettings: UiSettings): Boolean {
@@ -134,6 +138,10 @@ class UiSettingsFlow(
             gallerySet.tryEmit(torSettings.gallerySet)
             any = true
         }
+        if (automaticallyProposeAiImprovements.value != torSettings.automaticallyProposeAiImprovements) {
+            automaticallyProposeAiImprovements.tryEmit(torSettings.automaticallyProposeAiImprovements)
+            any = true
+        }
 
         return any
     }
@@ -164,6 +172,7 @@ class UiSettingsFlow(
                 MutableStateFlow(uiSettings.dontAskForNotificationPermissions),
                 MutableStateFlow(uiSettings.featureSet),
                 MutableStateFlow(uiSettings.gallerySet),
+                MutableStateFlow(uiSettings.automaticallyProposeAiImprovements),
             )
     }
 }

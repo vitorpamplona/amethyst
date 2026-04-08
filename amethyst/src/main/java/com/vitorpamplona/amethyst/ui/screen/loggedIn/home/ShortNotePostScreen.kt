@@ -65,7 +65,6 @@ import androidx.core.net.toUri
 import androidx.core.util.Consumer
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.service.ai.WritingAssistantStatus
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.FileServerSelectionRow
 import com.vitorpamplona.amethyst.ui.actions.uploads.MAX_VOICE_RECORD_SECONDS
@@ -83,7 +82,6 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.PostingTopBar
 import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
-import com.vitorpamplona.amethyst.ui.note.creators.aihelp.AiWritingHelpButton
 import com.vitorpamplona.amethyst.ui.note.creators.aihelp.AiWritingHelpPanel
 import com.vitorpamplona.amethyst.ui.note.creators.contentWarning.ContentSensitivityExplainer
 import com.vitorpamplona.amethyst.ui.note.creators.contentWarning.MarkAsSensitiveButton
@@ -564,7 +562,7 @@ private fun NewPostScreenBody(
         }
 
         AiWritingHelpPanel(
-            isVisible = postViewModel.wantsAiHelp,
+            isVisible = postViewModel.showAiPanel,
             isProcessing = postViewModel.isAiProcessing,
             result = postViewModel.aiResult,
             onToneSelected = postViewModel::requestAiTransform,
@@ -665,12 +663,6 @@ private fun BottomRowActions(postViewModel: ShortNotePostViewModel) {
         if (postViewModel.canAddInvoice && postViewModel.hasLnAddress()) {
             AddLnInvoiceButton(postViewModel.wantsInvoice) {
                 postViewModel.wantsInvoice = !postViewModel.wantsInvoice
-            }
-        }
-
-        if (postViewModel.aiStatus is WritingAssistantStatus.Available) {
-            AiWritingHelpButton(postViewModel.wantsAiHelp) {
-                postViewModel.wantsAiHelp = !postViewModel.wantsAiHelp
             }
         }
     }

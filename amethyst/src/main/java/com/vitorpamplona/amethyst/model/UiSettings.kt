@@ -38,6 +38,7 @@ data class UiSettings(
     val dontAskForNotificationPermissions: Boolean = false,
     val featureSet: FeatureSetType = FeatureSetType.SIMPLIFIED,
     val gallerySet: ProfileGalleryType = ProfileGalleryType.CLASSIC,
+    val automaticallyProposeAiImprovements: BooleanType = BooleanType.NEVER,
 )
 
 enum class ThemeType(
