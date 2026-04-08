@@ -46,26 +46,22 @@ package com.vitorpamplona.quartz.utils.secp256k1
 // =====================================================================================
 
 /**
- * Unsigned less-than comparison without ULong inline class overhead.
+ * Unsigned less-than comparison, platform-optimized.
  *
- * Kotlin's `uLt(a, b)` generates 2 invokestatic calls to
- * ULong.constructor-impl (NOOPs that return the input unchanged) plus
- * Long.compareUnsigned per comparison. On ART, these extra invokestatic
- * calls add ~2-3ns each × ~18,000 comparisons per verify = ~36-54μs.
+ * On JVM (HotSpot): uses Long.compareUnsigned which is a JIT intrinsic,
+ * compiling to a single unsigned CMP + SETB instruction.
  *
- * This inline function uses the XOR-with-MIN_VALUE trick directly,
- * producing pure arithmetic bytecode with ZERO method calls:
- *   lload a, ldc MIN_VALUE, lxor, lload b, ldc MIN_VALUE, lxor, lcmp, ifge
+ * On Android (ART): uses XOR-with-MIN_VALUE trick to avoid the
+ * ULong.constructor-impl NOOP invokestatic calls that Kotlin's toULong()
+ * generates (~17,800 per verify). Produces pure arithmetic bytecode with
+ * zero method calls.
  *
- * vs the toULong() path:
- *   lload a, invokestatic ULong.constructor-impl, lload b,
- *   invokestatic ULong.constructor-impl, invokestatic Long.compareUnsigned, ifge
+ * On Native: uses XOR-with-MIN_VALUE (no JVM intrinsics available).
  */
-@Suppress("NOTHING_TO_INLINE")
-internal inline fun uLt(
+internal expect fun uLt(
     a: Long,
     b: Long,
-): Boolean = (a xor Long.MIN_VALUE) < (b xor Long.MIN_VALUE)
+): Boolean
 
 /**
  * Raw 256-bit unsigned integer arithmetic using 4×64-bit limbs.
