@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.service.notifications
 
+import android.app.AlarmManager
+import android.app.ForegroundServiceStartNotAllowedException
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -30,6 +32,7 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
+import android.os.SystemClock
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
@@ -51,7 +54,6 @@ import kotlinx.coroutines.launch
  *
  * This service:
  * - Keeps the shared NostrClient alive by collecting the relayServices flow
- * - Adds notification-specific subscriptions on inbox relays
  * - Routes incoming events through EventNotificationConsumer
  * - Survives app backgrounding (connections stay open)
  * - Uses specialUse foreground service type (no Android 15 time limit)
@@ -60,6 +62,14 @@ import kotlinx.coroutines.launch
  * When the app is in the foreground, both the UI and this service are subscribers.
  * When the app backgrounds, UI subscriptions drop but this service's subscriptions
  * remain, keeping inbox relay connections alive. No reconnection needed.
+ *
+ * Auto-restart mechanisms (inspired by ntfy):
+ * - START_STICKY: Android restarts killed services
+ * - onTaskRemoved(): 1-second alarm restart when swiped from recents
+ * - onDestroy(): broadcast to AutoRestartReceiver for WorkManager restart
+ * - AlarmManager watchdog (external, ServiceWatchdogManager)
+ * - WorkManager catch-up (external, NotificationCatchUpWorker)
+ * - BOOT_COMPLETED + MY_PACKAGE_REPLACED receivers (external, BootCompletedReceiver)
  */
 class NotificationRelayService : Service() {
     companion object {
@@ -70,12 +80,18 @@ class NotificationRelayService : Service() {
         private const val ACTION_START = "com.vitorpamplona.amethyst.START_NOTIFICATION_SERVICE"
         private const val ACTION_STOP = "com.vitorpamplona.amethyst.STOP_NOTIFICATION_SERVICE"
 
+        const val ACTION_AUTO_RESTART = "com.vitorpamplona.amethyst.AUTO_RESTART_NOTIFICATION_SERVICE"
+
         fun start(context: Context) {
             val intent =
                 Intent(context, NotificationRelayService::class.java).apply {
                     action = ACTION_START
                 }
-            ContextCompat.startForegroundService(context, intent)
+            try {
+                ContextCompat.startForegroundService(context, intent)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to start foreground service", e)
+            }
         }
 
         fun stop(context: Context) {
@@ -86,9 +102,8 @@ class NotificationRelayService : Service() {
             context.startService(intent)
         }
 
-        fun isEnabled(context: Context): Boolean {
-            // Check if service should be enabled based on account settings
-            return try {
+        fun isEnabled(context: Context): Boolean =
+            try {
                 Amethyst.instance.sessionManager
                     .loggedInAccount()
                     ?.settings
@@ -97,12 +112,12 @@ class NotificationRelayService : Service() {
             } catch (e: Exception) {
                 false
             }
-        }
     }
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var relayServiceCollectorJob: Job? = null
     private var connectedRelayCount = 0
+    private var foregroundStarted = false
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -110,6 +125,7 @@ class NotificationRelayService : Service() {
         super.onCreate()
         Log.d(TAG, "Service created")
         createNotificationChannel()
+        initializeForeground()
     }
 
     override fun onStartCommand(
@@ -126,25 +142,90 @@ class NotificationRelayService : Service() {
 
             else -> {
                 Log.d(TAG, "Starting service")
-                startForegroundWithNotification()
+                // Safety: also call startForeground from onStartCommand in case
+                // onCreate didn't complete before onStartCommand fired (ntfy #1520)
+                initializeForeground()
                 startRelayConnection()
             }
         }
         return START_STICKY
     }
 
-    private fun startForegroundWithNotification() {
-        val notification = buildNotification(0)
-        ServiceCompat.startForeground(
-            this,
-            NOTIFICATION_ID,
-            notification,
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
-            } else {
-                0
-            },
+    /**
+     * Called when the user swipes the app from recents. Some OEMs kill the
+     * foreground service at this point. Schedule an alarm to restart in 1 second.
+     */
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        super.onTaskRemoved(rootIntent)
+        if (!isEnabled(this)) return
+
+        Log.d(TAG, "Task removed, scheduling restart alarm")
+        val restartIntent =
+            Intent(this, NotificationRelayService::class.java).apply {
+                action = ACTION_START
+            }
+        val pendingIntent =
+            PendingIntent.getService(
+                this,
+                2,
+                restartIntent,
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_ONE_SHOT,
+            )
+        val alarmManager = getSystemService(ALARM_SERVICE) as AlarmManager
+        alarmManager.set(
+            AlarmManager.ELAPSED_REALTIME,
+            SystemClock.elapsedRealtime() + 1000,
+            pendingIntent,
         )
+    }
+
+    /**
+     * Called when the service is being destroyed. Send a broadcast to
+     * AutoRestartReceiver which will enqueue a WorkManager task to restart.
+     * This catches kills that START_STICKY might miss.
+     */
+    override fun onDestroy() {
+        Log.d(TAG, "Service destroyed")
+        relayServiceCollectorJob?.cancel()
+        scope.cancel()
+
+        if (isEnabled(this)) {
+            Log.d(TAG, "Broadcasting auto-restart request")
+            val intent =
+                Intent(this, AutoRestartReceiver::class.java).apply {
+                    action = ACTION_AUTO_RESTART
+                }
+            sendBroadcast(intent)
+        }
+
+        super.onDestroy()
+    }
+
+    private fun initializeForeground() {
+        if (foregroundStarted) return
+        try {
+            val notification = buildNotification(0)
+            ServiceCompat.startForeground(
+                this,
+                NOTIFICATION_ID,
+                notification,
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+                } else {
+                    0
+                },
+            )
+            foregroundStarted = true
+        } catch (e: Exception) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+                e is ForegroundServiceStartNotAllowedException
+            ) {
+                Log.w(TAG, "Foreground service start not allowed, stopping self")
+                stopSelf()
+            } else {
+                Log.e(TAG, "Failed to start foreground", e)
+            }
+        }
     }
 
     private fun startRelayConnection() {
@@ -156,7 +237,7 @@ class NotificationRelayService : Service() {
                 // By collecting it here, relay connections survive app backgrounding.
                 launch {
                     Amethyst.instance.relayProxyClientConnector.relayServices.collectLatest {
-                        Log.d(TAG, "Relay services state updated: $it")
+                        Log.d(TAG) { "Relay services state updated: $it" }
                     }
                 }
 
@@ -237,12 +318,5 @@ class NotificationRelayService : Service() {
             }
         val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.createNotificationChannel(channel)
-    }
-
-    override fun onDestroy() {
-        Log.d(TAG, "Service destroyed")
-        relayServiceCollectorJob?.cancel()
-        scope.cancel()
-        super.onDestroy()
     }
 }

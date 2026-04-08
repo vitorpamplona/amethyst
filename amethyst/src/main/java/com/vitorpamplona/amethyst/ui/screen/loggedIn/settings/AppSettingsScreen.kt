@@ -31,6 +31,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
@@ -43,6 +46,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -60,6 +64,7 @@ import com.vitorpamplona.amethyst.model.parseConnectivityType
 import com.vitorpamplona.amethyst.model.parseFeatureSetType
 import com.vitorpamplona.amethyst.model.parseGalleryType
 import com.vitorpamplona.amethyst.model.parseThemeType
+import com.vitorpamplona.amethyst.service.notifications.BatteryOptimizationHelper
 import com.vitorpamplona.amethyst.ui.components.PushNotificationSettingsRow
 import com.vitorpamplona.amethyst.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.ui.components.TitleExplainer
@@ -519,5 +524,52 @@ fun AlwaysOnNotificationServiceChoice(accountViewModel: AccountViewModel) {
                 accountViewModel.account.settings.toggleAlwaysOnNotificationService()
             },
         )
+    }
+
+    if (enabled) {
+        BatteryOptimizationBanner()
+    }
+}
+
+@Composable
+fun BatteryOptimizationBanner() {
+    val context = LocalContext.current
+    val isExempt =
+        remember {
+            BatteryOptimizationHelper.isIgnoringBatteryOptimizations(context)
+        }
+
+    if (!isExempt) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors =
+                CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                ),
+        ) {
+            Column(
+                modifier = Modifier.padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(
+                    text = stringRes(R.string.battery_optimization_title),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                )
+                Text(
+                    text = stringRes(R.string.battery_optimization_description),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                )
+                Button(
+                    onClick = {
+                        BatteryOptimizationHelper.requestBatteryOptimizationExemption(context)
+                    },
+                ) {
+                    Text(stringRes(R.string.battery_optimization_fix_now))
+                }
+            }
+        }
     }
 }

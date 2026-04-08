@@ -56,6 +56,9 @@
     <!-- Always-on notification service: restart after reboot -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
+    <!-- Always-on notification service: battery optimization exemption -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
     <!-- Keeps screen on while playing videos -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
@@ -288,6 +291,10 @@
 
         <receiver
             android:name=".service.notifications.ServiceWatchdogManager$WatchdogReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".service.notifications.AutoRestartReceiver"
             android:exported="false" />
 
         <receiver

@@ -929,6 +929,10 @@
     <string name="always_on_notif_setting_title">Always-on notification service</string>
     <string name="always_on_notif_setting_description">Keeps a persistent connection to your inbox relays for instant notification delivery. Shows an ongoing notification. Uses more battery but ensures you never miss a message.</string>
 
+    <string name="battery_optimization_title">Battery optimization active</string>
+    <string name="battery_optimization_description">Android may restrict relay connections in the background. Disable battery optimization for Amethyst to ensure reliable notifications.</string>
+    <string name="battery_optimization_fix_now">Fix now</string>
+
     <string name="reply_notify">Notify: </string>
 
     <string name="channel_list_join_conversation">Join Conversation</string>

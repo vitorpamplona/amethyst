@@ -24,7 +24,9 @@ import android.content.Context
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
@@ -83,7 +85,36 @@ class NotificationCatchUpWorker(
 
         fun cancel(context: Context) {
             WorkManager.getInstance(context).cancelUniqueWork(WORK_NAME)
+            WorkManager.getInstance(context).cancelUniqueWork(WORK_NAME_ON_NETWORK)
             Log.d(TAG, "Cancelled periodic catch-up work")
+        }
+
+        private const val WORK_NAME_ON_NETWORK = "notification_catch_up_on_network"
+
+        /**
+         * Enqueues a one-time catch-up task that runs as soon as network
+         * connectivity is available. Call this when the service detects
+         * network loss to ensure it restarts immediately when network returns,
+         * rather than waiting for the next periodic worker.
+         */
+        fun scheduleOnNetworkAvailable(context: Context) {
+            val constraints =
+                Constraints
+                    .Builder()
+                    .setRequiredNetworkType(NetworkType.CONNECTED)
+                    .build()
+
+            val request =
+                OneTimeWorkRequestBuilder<NotificationCatchUpWorker>()
+                    .setConstraints(constraints)
+                    .build()
+
+            WorkManager.getInstance(context).enqueueUniqueWork(
+                WORK_NAME_ON_NETWORK,
+                ExistingWorkPolicy.KEEP,
+                request,
+            )
+            Log.d(TAG, "Scheduled one-time catch-up on network available")
         }
     }
 
@@ -91,6 +122,11 @@ class NotificationCatchUpWorker(
         Log.d(TAG, "Starting notification catch-up")
 
         return try {
+            // If the foreground service should be running but isn't, restart it
+            if (NotificationRelayService.isEnabled(applicationContext)) {
+                NotificationRelayService.start(applicationContext)
+            }
+
             val appModules = Amethyst.instance
 
             // Collecting relayServices ensures connections are active.
