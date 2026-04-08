@@ -20,20 +20,43 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
 import com.vitorpamplona.amethyst.ui.note.UpdateZapAmountContent
 import com.vitorpamplona.amethyst.ui.note.UpdateZapAmountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.WalletViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
 @Composable
 fun NIP47SetupScreen(
@@ -44,17 +67,22 @@ fun NIP47SetupScreen(
     val postViewModel: UpdateZapAmountViewModel = viewModel()
     postViewModel.init(accountViewModel)
 
+    val walletViewModel: WalletViewModel = viewModel()
+    walletViewModel.init(accountViewModel)
+
     LaunchedEffect(accountViewModel, postViewModel) {
         postViewModel.load()
+        walletViewModel.loadLnAddress()
     }
 
-    NIP47SetupScreen(postViewModel, accountViewModel, nav, nip47)
+    NIP47SetupScreen(postViewModel, walletViewModel, accountViewModel, nav, nip47)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NIP47SetupScreen(
     postViewModel: UpdateZapAmountViewModel,
+    walletViewModel: WalletViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
     nip47: String?,
@@ -76,10 +104,89 @@ fun NIP47SetupScreen(
         },
     ) {
         Column(Modifier.padding(it)) {
-            UpdateZapAmountContent(postViewModel, onClose = {
-                postViewModel.cancel()
-                nav.popBack()
-            }, nip47, accountViewModel)
+            UpdateZapAmountContent(
+                postViewModel,
+                onClose = {
+                    postViewModel.cancel()
+                    nav.popBack()
+                },
+                nip47,
+                accountViewModel,
+            ) {
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                LightningAddressSetupSection(walletViewModel)
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                PaymentTargetsSetupRow(nav)
+            }
+        }
+    }
+}
+
+@Composable
+private fun LightningAddressSetupSection(walletViewModel: WalletViewModel) {
+    val lnAddress by walletViewModel.lnAddress.collectAsState()
+
+    Column(
+        modifier = Modifier.padding(horizontal = 0.dp, vertical = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            text = stringRes(R.string.lightning_address),
+            color = MaterialTheme.colorScheme.primary,
+            style = MaterialTheme.typography.titleSmall,
+        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            OutlinedTextField(
+                value = lnAddress,
+                onValueChange = { walletViewModel.updateLnAddress(it) },
+                modifier = Modifier.weight(1f),
+                placeholder = {
+                    Text(
+                        text = "me@mylightningnode.com",
+                        color = MaterialTheme.colorScheme.placeholderText,
+                    )
+                },
+                singleLine = true,
+            )
+            TextButton(onClick = { walletViewModel.saveLnAddress() }) {
+                Text(text = stringRes(R.string.save))
+            }
+        }
+    }
+}
+
+@Composable
+private fun PaymentTargetsSetupRow(nav: INav) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = Icons.Outlined.AccountBalanceWallet,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colorScheme.primary,
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = stringRes(R.string.payment_targets),
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
+        TextButton(onClick = { nav.nav(Route.EditPaymentTargets) }) {
+            Text(
+                text = stringRes(R.string.manage),
+                fontWeight = FontWeight.SemiBold,
+            )
         }
     }
 }
