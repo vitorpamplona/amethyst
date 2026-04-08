@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.global.GlobalTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsByOutboxTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsByProxyTopNavFilter
+import com.vitorpamplona.amethyst.model.topNavFeeds.relay.RelayTopNavFilter
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -68,10 +69,14 @@ class FilterByListParams(
         followLists is GlobalTopNavFilter &&
             comingFrom.any { followLists.outboxRelays.value.contains(it) }
 
+    fun isFromRelay(comingFrom: List<NormalizedRelayUrl>) =
+        followLists is RelayTopNavFilter &&
+            comingFrom.contains(followLists.relayUrl)
+
     fun match(
         noteEvent: Event,
         comingFrom: List<NormalizedRelayUrl>,
-    ) = ((isGlobal(comingFrom)) || isEventInList(noteEvent)) &&
+    ) = ((isGlobal(comingFrom)) || isFromRelay(comingFrom) || isEventInList(noteEvent)) &&
         (isHiddenList || isNotHidden(noteEvent.pubKey)) &&
         isNotInTheFuture(noteEvent) &&
         !hasExcessiveHashtags(noteEvent)
@@ -80,7 +85,7 @@ class FilterByListParams(
         address: Address?,
         comingFrom: List<NormalizedRelayUrl>,
     ) = address != null &&
-        (isGlobal(comingFrom) || isAuthorInFollows(address)) &&
+        (isGlobal(comingFrom) || isFromRelay(comingFrom) || isAuthorInFollows(address)) &&
         (isHiddenList || isNotHidden(address.pubKeyHex))
 
     companion object {

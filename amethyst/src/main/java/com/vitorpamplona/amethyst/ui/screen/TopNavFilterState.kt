@@ -173,7 +173,6 @@ class TopNavFilterState(
                 FeedDefinition(
                     TopFilter.Relay(relayUrl.url),
                     RelayName(relayUrl),
-                    route = Route.RelayFeed(relayUrl.url),
                 )
             }
 

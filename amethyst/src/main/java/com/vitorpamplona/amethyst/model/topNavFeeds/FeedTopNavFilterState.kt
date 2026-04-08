@@ -31,6 +31,7 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.aroundMe.AroundMeFeedFlow
 import com.vitorpamplona.amethyst.model.topNavFeeds.chess.ChessFeedFlow
 import com.vitorpamplona.amethyst.model.topNavFeeds.global.GlobalFeedFlow
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.NoteFeedFlow
+import com.vitorpamplona.amethyst.model.topNavFeeds.relay.RelayFeedFlow
 import com.vitorpamplona.amethyst.model.topNavFeeds.unknown.UnknownFeedFlow
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -136,7 +137,7 @@ class FeedTopNavFilterState(
             }
 
             is TopFilter.Relay -> {
-                UnknownFeedFlow(listName)
+                RelayFeedFlow(NormalizedRelayUrl(listName.url))
             }
         }
 
