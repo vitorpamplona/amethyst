@@ -36,6 +36,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -73,7 +74,7 @@ fun WalletScreen(
     nav: INav,
 ) {
     val walletViewModel: WalletViewModel = viewModel()
-    walletViewModel.init(accountViewModel.account)
+    walletViewModel.init(accountViewModel)
 
     val hasWallet by walletViewModel.hasWalletSetup.collectAsState()
 
@@ -87,6 +88,16 @@ fun WalletScreen(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = stringRes(R.string.back),
                         )
+                    }
+                },
+                actions = {
+                    if (hasWallet) {
+                        IconButton(onClick = { nav.nav(Route.Nip47NWCSetup()) }) {
+                            Icon(
+                                imageVector = Icons.Outlined.Settings,
+                                contentDescription = stringRes(R.string.settings),
+                            )
+                        }
                     }
                 },
             )

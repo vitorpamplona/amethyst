@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.GetBalanceMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.GetBalanceSuccessResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.GetInfoMethod
@@ -86,9 +87,13 @@ private const val PAYMENT_FAILED = "Payment failed"
 
 class WalletViewModel : ViewModel() {
     private var account: Account? = null
+    private var accountViewModel: AccountViewModel? = null
 
     private val _hasWalletSetup = MutableStateFlow(false)
     val hasWalletSetup = _hasWalletSetup.asStateFlow()
+
+    private val _lnAddress = MutableStateFlow("")
+    val lnAddress = _lnAddress.asStateFlow()
 
     private val _balanceSats = MutableStateFlow<Long?>(null)
     val balanceSats = _balanceSats.asStateFlow()
@@ -137,13 +142,44 @@ class WalletViewModel : ViewModel() {
             onTimeout()
         }
 
-    fun init(account: Account) {
-        this.account = account
-        _hasWalletSetup.value = account.nip47SignerState.hasWalletConnectSetup()
+    fun init(accountViewModel: AccountViewModel) {
+        this.accountViewModel = accountViewModel
+        this.account = accountViewModel.account
+        _hasWalletSetup.value = accountViewModel.account.nip47SignerState.hasWalletConnectSetup()
     }
 
     fun refreshWalletSetup() {
         _hasWalletSetup.value = account?.nip47SignerState?.hasWalletConnectSetup() == true
+    }
+
+    fun loadLnAddress() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val info =
+                account
+                    ?.userProfile()
+                    ?.metadataOrNull()
+                    ?.flow
+                    ?.value
+                    ?.info
+            _lnAddress.value = info?.lud16 ?: ""
+        }
+    }
+
+    fun updateLnAddress(address: String) {
+        _lnAddress.value = address
+    }
+
+    fun saveLnAddress() {
+        val accountVm = accountViewModel ?: return
+        accountVm.launchSigner {
+            saveLnAddressSuspend()
+        }
+    }
+
+    suspend fun saveLnAddressSuspend() {
+        val acc = account ?: return
+        val event = acc.userMetadata.sendNewUserMetadata(lnAddress = _lnAddress.value)
+        acc.sendLiterallyEverywhere(event)
     }
 
     fun fetchBalance() {

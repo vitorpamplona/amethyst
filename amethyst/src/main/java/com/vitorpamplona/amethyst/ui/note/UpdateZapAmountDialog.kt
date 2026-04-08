@@ -46,6 +46,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
@@ -148,6 +149,7 @@ fun UpdateZapAmountContent(
     onClose: () -> Unit,
     nip47uri: String? = null,
     accountViewModel: AccountViewModel,
+    trailingContent: @Composable ColumnScope.() -> Unit = {},
 ) {
     val context = LocalContext.current
     val clipboardManager = LocalClipboard.current
@@ -648,6 +650,8 @@ fun UpdateZapAmountContent(
                 }
             }
         }
+
+        trailingContent()
 
         Spacer(modifier = Modifier.height(16.dp))
     }

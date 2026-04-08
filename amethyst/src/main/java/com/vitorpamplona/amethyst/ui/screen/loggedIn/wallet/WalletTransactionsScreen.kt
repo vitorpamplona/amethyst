@@ -83,7 +83,7 @@ fun WalletTransactionsScreen(
     val walletViewModel: WalletViewModel = viewModel()
 
     LaunchedEffect(accountViewModel) {
-        walletViewModel.init(accountViewModel.account)
+        walletViewModel.init(accountViewModel)
         walletViewModel.fetchTransactions()
     }
 

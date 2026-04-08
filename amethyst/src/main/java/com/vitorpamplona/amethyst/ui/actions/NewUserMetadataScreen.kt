@@ -228,22 +228,6 @@ fun NewUserMetadataScreen(
                 Spacer(modifier = Modifier.height(10.dp))
 
                 OutlinedTextField(
-                    label = { Text(text = stringRes(R.string.lightning_address)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    value = postViewModel.lnAddress.value,
-                    onValueChange = { postViewModel.lnAddress.value = it },
-                    placeholder = {
-                        Text(
-                            text = "me@mylightningnode.com",
-                            color = MaterialTheme.colorScheme.placeholderText,
-                        )
-                    },
-                    singleLine = true,
-                )
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                OutlinedTextField(
                     label = { Text(text = stringRes(R.string.nip_05) + " (NIP-05)") },
                     modifier = Modifier.fillMaxWidth(),
                     value = postViewModel.nip05.value,
