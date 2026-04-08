@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.relay.RelayFeedFlow
 import com.vitorpamplona.amethyst.model.topNavFeeds.unknown.UnknownFeedFlow
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -137,7 +138,7 @@ class FeedTopNavFilterState(
             }
 
             is TopFilter.Relay -> {
-                RelayFeedFlow(NormalizedRelayUrl(listName.url))
+                RelayFeedFlow(listName.url.normalizeRelayUrl())
             }
         }
 

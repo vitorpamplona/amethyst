@@ -43,7 +43,7 @@ fun filterHomePostsByRelay(
             filter =
                 Filter(
                     kinds = HomePostsNewThreadKinds1,
-                    limit = 50,
+                    limit = 500,
                     since = sinceTime ?: newThreadSince,
                 ),
         ),
@@ -52,7 +52,7 @@ fun filterHomePostsByRelay(
             filter =
                 Filter(
                     kinds = HomePostsNewThreadKinds2,
-                    limit = 5,
+                    limit = 100,
                     since = sinceTime ?: newThreadSince,
                 ),
         ),
@@ -61,7 +61,7 @@ fun filterHomePostsByRelay(
             filter =
                 Filter(
                     kinds = HomePostsConversationKinds,
-                    limit = 50,
+                    limit = 500,
                     since = sinceTime ?: repliesSince,
                 ),
         ),
