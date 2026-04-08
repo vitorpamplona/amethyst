@@ -82,7 +82,7 @@ fun WalletReceiveScreen(
     val walletViewModel: WalletViewModel = viewModel()
 
     LaunchedEffect(accountViewModel) {
-        walletViewModel.init(accountViewModel.account)
+        walletViewModel.init(accountViewModel)
     }
 
     DisposableEffect(Unit) {
