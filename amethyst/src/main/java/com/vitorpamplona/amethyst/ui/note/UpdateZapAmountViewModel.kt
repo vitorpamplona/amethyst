@@ -84,6 +84,12 @@ class UpdateZapAmountViewModel : ViewModel() {
     }
 
     fun sendPost() {
+        accountViewModel.launchSigner {
+            sendPostSuspend()
+        }
+    }
+
+    suspend fun sendPostSuspend() {
         val nip47Update =
             if (walletConnectRelay.text.isNotBlank() && walletConnectPubkey.text.isNotBlank()) {
                 val pubkeyHex =
@@ -110,7 +116,7 @@ class UpdateZapAmountViewModel : ViewModel() {
                 null
             }
 
-        accountViewModel.updateZapAmounts(amountSet, selectedZapType, nip47Update)
+        accountViewModel.account.updateZapAmounts(amountSet, selectedZapType, nip47Update)
 
         nextAmount = TextFieldValue("")
     }

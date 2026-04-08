@@ -171,11 +171,15 @@ class WalletViewModel : ViewModel() {
 
     fun saveLnAddress() {
         val accountVm = accountViewModel ?: return
-        val acc = account ?: return
         accountVm.launchSigner {
-            val event = acc.userMetadata.sendNewUserMetadata(lnAddress = _lnAddress.value)
-            acc.sendLiterallyEverywhere(event)
+            saveLnAddressSuspend()
         }
+    }
+
+    suspend fun saveLnAddressSuspend() {
+        val acc = account ?: return
+        val event = acc.userMetadata.sendNewUserMetadata(lnAddress = _lnAddress.value)
+        acc.sendLiterallyEverywhere(event)
     }
 
     fun fetchBalance() {

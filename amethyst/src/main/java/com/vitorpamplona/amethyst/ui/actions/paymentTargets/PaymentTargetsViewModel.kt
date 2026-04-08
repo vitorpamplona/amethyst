@@ -79,9 +79,15 @@ class PaymentTargetsViewModel : ViewModel() {
     fun savePaymentTargets() {
         if (isModified) {
             accountViewModel.launchSigner {
-                account.savePaymentTargets(_paymentTargets.value)
-                refresh()
+                savePaymentTargetsSuspend()
             }
+        }
+    }
+
+    suspend fun savePaymentTargetsSuspend() {
+        if (isModified) {
+            account.savePaymentTargets(_paymentTargets.value)
+            refresh()
         }
     }
 }
