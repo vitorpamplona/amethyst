@@ -26,82 +26,61 @@ NIP-17 DM inbox relays ───────────WebSocket──┘      
 
 The service shares the **same `NostrClient` instance** as the UI. This is the key design
 decision. When the app is in the foreground, both the UI and the service are collecting
-the `relayServices` flow and have active subscriptions. When the app backgrounds, UI
-subscriptions drop but the service's subscriptions remain, keeping inbox and DM relay
-connections alive. When the app returns to the foreground, the UI piggybacks on the
-already-open connections. **Zero reconnection, zero dropped messages.**
+the `relayServices` flow. The `AccountFilterAssembler` subscription from the Compose UI
+tree stays active as long as the Activity exists (even when stopped/backgrounded),
+keeping notification and DM relay connections alive. When the app returns to the
+foreground, the UI piggybacks on the already-open connections. **Zero reconnection, zero
+dropped messages.**
 
 ```
-BACKGROUND MODE:
-  inbox-relay-1 ──WebSocket──> [Service: svc:notif subscription]
-  inbox-relay-2 ──WebSocket──> [Service: svc:notif subscription]
-  dm-relay-1 ────WebSocket──> [Service: svc:giftwrap subscription]
+BACKGROUND MODE (service running):
+  inbox-relay-1 ──WebSocket──> [AccountFilterAssembler: notifications, metadata, follows]
+  inbox-relay-2 ──WebSocket──> [AccountFilterAssembler: notifications, metadata, follows]
+  dm-relay-1 ────WebSocket──> [AccountFilterAssembler: gift wraps]
+  (outbox relays disconnected — no Home/Video/Discovery subscriptions)
 
-APP OPENS:
-  inbox-relay-1 ──WebSocket──> [Same connection] <── UI adds feed subscriptions
-  inbox-relay-2 ──WebSocket──> [Same connection] <── UI adds feed subscriptions
-  dm-relay-1 ────WebSocket──> [Same connection]  <── UI adds chat subscriptions
-  outbox-relay-3 ──WebSocket──> [New connection]  <── feed-only relay
+APP FOREGROUNDS:
+  inbox-relay-1 ──WebSocket──> [Same connection] <── Home/Discovery subs resume
+  inbox-relay-2 ──WebSocket──> [Same connection] <── Home/Discovery subs resume
+  dm-relay-1 ────WebSocket──> [Same connection]  <── ChatroomList subs resume
+  outbox-relay-3 ──WebSocket──> [New connection]  <── Home/Video feed relay
 ```
 
-## Relay Subscriptions
+## Subscription Architecture
 
-The service maintains two independent subscriptions on the shared `NostrClient`:
+### What the service does
 
-### `svc:notif` — Notification Inbox Relays
+The service does NOT create its own relay subscriptions. It only keeps the
+`RelayProxyClientConnector` alive by collecting `relayServices`. The actual subscriptions
+come from the `AccountFilterAssembler` in the Compose tree (`LoggedInPage`), which
+stays active as long as the Activity exists and covers:
 
-Subscribes to the user's NIP-65 inbox relays (from `Account.notificationRelays.flow`)
-for notification-relevant event kinds:
+- **Metadata** — user profile, relay lists, mute lists, follows (via `AccountMetadataEoseManager`)
+- **Follows** — follow list changes that affect notification filtering (via `AccountFollowsLoaderSubAssembler`)
+- **Notifications** — mentions, zaps, reactions on NIP-65 inbox relays (via `AccountNotificationsEoseFromInboxRelaysManager`)
+- **Gift wraps** — NIP-59 encrypted DMs on NIP-17 DM relays (via `AccountGiftWrapsEoseManager`)
+- **Drafts** — draft events (via `AccountDraftsEoseManager`)
 
-- **Summary kinds**: TextNote, Reaction, Repost, LnZap (limit 2000)
-- **Per-key kinds**: Reports, Zaps, Channel Messages, Polls, Badges, etc. (limit 500)
-- **Per-key kinds 2**: Git events, Highlights, Comments, Calendar events (limit 200)
-- **Per-key kinds 3**: Attestation events (limit 10)
+This is critical because notification filtering depends on follow lists, mute lists,
+and relay configurations. If the service maintained its own isolated subscriptions,
+it would miss follow list changes and display notifications from muted users.
 
-All filtered by `p` tag matching the user's pubkey.
+### What pauses on background
 
-**Why separate from the UI's subscriptions?** The UI's `AccountNotificationsEoseFromInboxRelaysManager`
-is part of `AccountFilterAssembler`, which is driven by the Compose lifecycle. When the
-app backgrounds and composables leave composition, these subscriptions are dropped. The
-relay pool then disconnects relays that no longer have any active subscriptions. The
-service's `svc:notif` subscription ensures notification inbox relays stay connected.
+Heavy feed subscriptions use `LifecycleAwareKeyDataSourceSubscription` which subscribes
+on `ON_START` and unsubscribes on `ON_STOP`. When the app backgrounds:
 
-### `svc:giftwrap` — DM Inbox Relays
+| Subscription | Behavior | Why |
+|-------------|----------|-----|
+| `AccountFilterAssembler` | **Stays active** | Needed for notifications, DMs, follow/mute list changes |
+| `HomeFilterAssembler` | **Pauses** | Home feed data with nobody viewing wastes bandwidth |
+| `VideoFilterAssembler` | **Pauses** | Video feed data with nobody viewing wastes bandwidth |
+| `DiscoveryFilterAssembler` | **Pauses** | Discovery feed data with nobody viewing wastes bandwidth |
+| `ChatroomListFilterAssembler` | **Pauses** | Chatroom list updates with nobody viewing waste bandwidth |
 
-Subscribes to the user's DM inbox relays (from `Account.dmRelays.flow`) for NIP-59
-gift-wrapped messages:
-
-- **Kinds**: GiftWrapEvent (1059), EphemeralGiftWrapEvent
-- **Tag filter**: `p` tag matching the user's pubkey
-- **Lookback**: 2 days from `since` timestamp
-
-The DM relay set is broader than the notification relay set — it combines NIP-17 DM relays
-(ChatMessageRelayListEvent, kind 10050), NIP-65 inbox relays, private outbox relays, and
-local relays.
-
-**Why?** DM relays may be completely different from notification inbox relays. Without
-this subscription, DM relays that aren't also notification inbox relays would disconnect
-when the app backgrounds, and incoming encrypted DMs would be missed.
-
-### Reactive Updates
-
-Both subscriptions reactively update when relay lists change:
-
-```kotlin
-combine(
-    account.notificationRelays.flow,
-    account.dmRelays.flow,
-) { notifRelays, dmRelays ->
-    Pair(notifRelays, dmRelays)
-}.collectLatest { (notifRelays, dmRelays) ->
-    updateNotificationSubscription(account, notifRelays)
-    updateGiftWrapSubscription(account, dmRelays)
-}
-```
-
-If the user adds or removes relays from their NIP-65 or NIP-17 lists, the service's
-subscriptions are updated immediately. The shared relay pool handles connecting to new
-relays and disconnecting from removed ones.
+When the feed subscriptions pause, the relay pool automatically disconnects outbox relays
+that no longer have any active subscriptions. Only inbox and DM relays stay connected
+(because `AccountFilterAssembler` still has active subscriptions on them).
 
 ## Foreground Service
 
@@ -284,7 +263,8 @@ The always-on notification service is **opt-in** (off by default). Users enable 
 
 | File | Purpose |
 |------|---------|
-| `NotificationRelayService.kt` | Foreground service, relay subscriptions, auto-restart |
+| `NotificationRelayService.kt` | Foreground service, keeps relay connections alive, auto-restart |
+| `LifecycleAwareKeyDataSourceSubscription.kt` | Pauses heavy feed subs when app backgrounds |
 | `BootCompletedReceiver.kt` | Restart on boot and app update |
 | `AutoRestartReceiver.kt` | Restart via WorkManager when service is destroyed |
 | `NotificationCatchUpWorker.kt` | Periodic and on-demand catch-up worker |

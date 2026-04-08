@@ -38,38 +38,30 @@ import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip01Notifications.filterNotificationsToPubkey
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip01Notifications.filterSummaryNotificationsToPubkey
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip59GiftWraps.filterGiftWrapsToPubkey
 import com.vitorpamplona.amethyst.ui.MainActivity
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.Log
-import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
 /**
  * A foreground service that maintains persistent WebSocket connections to the user's
  * inbox relays for real-time notification delivery.
  *
- * This service:
- * - Keeps the shared NostrClient alive by collecting the relayServices flow
- * - Routes incoming events through EventNotificationConsumer
- * - Survives app backgrounding (connections stay open)
- * - Uses specialUse foreground service type (no Android 15 time limit)
+ * This service keeps the shared NostrClient alive by collecting the relayServices flow.
+ * It does NOT create its own relay subscriptions — instead, it relies on the
+ * AccountFilterAssembler subscription from the Compose UI tree, which stays active
+ * as long as the Activity is alive (even when stopped/backgrounded). That subscription
+ * covers notifications, gift wraps, metadata, follows, relay lists, and drafts.
  *
- * The key insight is that this service shares the same NostrClient as the UI.
- * When the app is in the foreground, both the UI and this service are subscribers.
- * When the app backgrounds, UI subscriptions drop but this service's subscriptions
- * remain, keeping inbox relay connections alive. No reconnection needed.
+ * Heavy feed subscriptions (Home, Video, Discovery, ChatroomList) are managed
+ * separately with lifecycle awareness — they pause when the app backgrounds
+ * and resume when it foregrounds. This prevents bandwidth waste on feeds
+ * nobody is viewing.
  *
  * Auto-restart mechanisms (inspired by ntfy):
  * - START_STICKY: Android restarts killed services
@@ -126,9 +118,6 @@ class NotificationRelayService : Service() {
     private var relayServiceCollectorJob: Job? = null
     private var connectedRelayCount = 0
     private var foregroundStarted = false
-
-    private val subIdNotifications = "svc:notif"
-    private val subIdGiftWraps = "svc:giftwrap"
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -198,16 +187,6 @@ class NotificationRelayService : Service() {
     override fun onDestroy() {
         Log.d(TAG, "Service destroyed")
         relayServiceCollectorJob?.cancel()
-
-        // Clean up our subscriptions so the relay pool can disconnect
-        // relays that are no longer needed by anyone
-        try {
-            Amethyst.instance.client.unsubscribe(subIdNotifications)
-            Amethyst.instance.client.unsubscribe(subIdGiftWraps)
-        } catch (e: Exception) {
-            // App might already be torn down
-        }
-
         scope.cancel()
 
         if (isEnabled(this)) {
@@ -249,28 +228,32 @@ class NotificationRelayService : Service() {
         }
     }
 
+    /**
+     * Keeps the relay infrastructure alive. The service collects two flows:
+     *
+     * 1. relayServices: Keeps the RelayProxyClientConnector active (connectivity,
+     *    Tor, network changes). Without this, the client disconnects 30s after
+     *    the UI stops collecting.
+     *
+     * 2. connectedRelaysFlow: Updates the persistent notification with relay count.
+     *
+     * The service does NOT create its own relay subscriptions. Instead, it relies on
+     * the AccountFilterAssembler subscription that lives in the Compose tree (LoggedInPage).
+     * That subscription stays active as long as the Activity exists (even when stopped)
+     * and covers: metadata, follows, notifications (inbox relays), gift wraps (DM relays),
+     * drafts, and relay list changes. Since the service keeps the client connected,
+     * those subscriptions remain active on the relays.
+     */
     private fun startRelayConnection() {
         relayServiceCollectorJob?.cancel()
         relayServiceCollectorJob =
             scope.launch {
-                // Collecting the relayServices flow keeps the RelayProxyClientConnector alive.
-                // This is the same flow that ManageRelayServices() composable collects in the UI.
-                // By collecting it here, relay connections survive app backgrounding.
                 launch {
                     Amethyst.instance.relayProxyClientConnector.relayServices.collectLatest {
                         Log.d(TAG) { "Relay services state updated: $it" }
                     }
                 }
 
-                // Maintain notification + DM subscriptions on inbox relays.
-                // When the UI backgrounds, its subscriptions drop and relays that are
-                // only needed for those subscriptions disconnect. By opening our own
-                // subscriptions here, we ensure inbox + DM relay connections persist.
-                launch {
-                    maintainInboxSubscriptions()
-                }
-
-                // Monitor connected relay count to update the notification
                 launch {
                     Amethyst.instance.client.connectedRelaysFlow().collectLatest { relays ->
                         val count = relays.size
@@ -281,99 +264,6 @@ class NotificationRelayService : Service() {
                     }
                 }
             }
-    }
-
-    /**
-     * Watches the logged-in account's notification inbox relays and DM inbox relays,
-     * maintaining lightweight subscriptions on them. This ensures these relay connections
-     * persist even when the UI's subscriptions drop.
-     *
-     * Notification relays: NIP-65 inbox + local relays → subscribe to mentions, zaps, etc.
-     * DM relays: NIP-17 DM relays + NIP-65 inbox + private outbox + local relays → gift wraps
-     */
-    private suspend fun maintainInboxSubscriptions() {
-        // Wait for account to be available
-        Amethyst.instance.sessionManager.accountContent.collectLatest { state ->
-            val account =
-                (state as? com.vitorpamplona.amethyst.ui.screen.AccountState.LoggedIn)?.account
-
-            if (account == null || !account.isWriteable()) {
-                // No account or read-only — close any existing subscriptions
-                Amethyst.instance.client.unsubscribe(subIdNotifications)
-                Amethyst.instance.client.unsubscribe(subIdGiftWraps)
-                return@collectLatest
-            }
-
-            // Reactively update subscriptions when relay lists change
-            combine(
-                account.notificationRelays.flow,
-                account.dmRelays.flow,
-            ) { notifRelays, dmRelays ->
-                Pair(notifRelays, dmRelays)
-            }.collectLatest { (notifRelays, dmRelays) ->
-                updateNotificationSubscription(account, notifRelays)
-                updateGiftWrapSubscription(account, dmRelays)
-            }
-        }
-    }
-
-    private fun updateNotificationSubscription(
-        account: Account,
-        relays: Set<NormalizedRelayUrl>,
-    ) {
-        if (relays.isEmpty()) {
-            Amethyst.instance.client.unsubscribe(subIdNotifications)
-            return
-        }
-
-        val pubkey = account.signer.pubKey
-        val since = TimeUtils.oneWeekAgo()
-        val filters = mutableMapOf<NormalizedRelayUrl, List<Filter>>()
-
-        relays.forEach { relay ->
-            val relayFilters =
-                (
-                    filterSummaryNotificationsToPubkey(relay, pubkey, since) +
-                        filterNotificationsToPubkey(relay, pubkey, since)
-                ).map { it.filter }
-
-            if (relayFilters.isNotEmpty()) {
-                filters[relay] = relayFilters
-            }
-        }
-
-        if (filters.isNotEmpty()) {
-            Amethyst.instance.client.subscribe(subIdNotifications, filters)
-            Log.d(TAG) { "Subscribed to notifications on ${filters.size} relays" }
-        }
-    }
-
-    private fun updateGiftWrapSubscription(
-        account: Account,
-        relays: Set<NormalizedRelayUrl>,
-    ) {
-        if (relays.isEmpty()) {
-            Amethyst.instance.client.unsubscribe(subIdGiftWraps)
-            return
-        }
-
-        val pubkey = account.signer.pubKey
-        val since = TimeUtils.oneWeekAgo()
-        val filters = mutableMapOf<NormalizedRelayUrl, List<Filter>>()
-
-        relays.forEach { relay ->
-            val relayFilters =
-                filterGiftWrapsToPubkey(relay, pubkey, since).map { it.filter }
-
-            if (relayFilters.isNotEmpty()) {
-                filters[relay] = relayFilters
-            }
-        }
-
-        if (filters.isNotEmpty()) {
-            Amethyst.instance.client.subscribe(subIdGiftWraps, filters)
-            Log.d(TAG) { "Subscribed to gift wraps on ${filters.size} DM relays" }
-        }
     }
 
     private fun updateNotification(connectedRelays: Int) {

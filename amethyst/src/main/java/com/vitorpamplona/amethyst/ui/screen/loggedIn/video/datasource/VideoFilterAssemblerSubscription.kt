@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.lifecycle.viewModelScope
-import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.KeyDataSourceSubscription
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
@@ -46,5 +46,5 @@ fun VideoFilterAssemblerSubscription(
             VideoQueryState(accountViewModel.account, accountViewModel.feedStates, accountViewModel.viewModelScope)
         }
 
-    KeyDataSourceSubscription(state, filterAssembler)
+    LifecycleAwareKeyDataSourceSubscription(state, filterAssembler)
 }
