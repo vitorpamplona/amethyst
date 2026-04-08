@@ -51,11 +51,14 @@ import com.vitorpamplona.quartz.nip64Chess.PGNParser
  *
  * @param pgnContent PGN format string
  * @param modifier Modifier for the viewer
+ * @param playerContent Optional composable to render player names with avatar + display name.
+ *   When provided, PGN player names (which may be hex pubkeys) are rendered using this composable.
  */
 @Composable
 fun ChessGameViewer(
     pgnContent: String,
     modifier: Modifier = Modifier,
+    playerContent: (@Composable (String) -> Unit)? = null,
 ) {
     val gameResult =
         remember(pgnContent) {
@@ -64,7 +67,7 @@ fun ChessGameViewer(
 
     gameResult.fold(
         onSuccess = { game ->
-            ChessGameDisplay(game, modifier)
+            ChessGameDisplay(game, modifier, playerContent)
         },
         onFailure = { error ->
             ChessGameError(
@@ -83,6 +86,7 @@ fun ChessGameViewer(
 private fun ChessGameDisplay(
     game: com.vitorpamplona.quartz.nip64Chess.ChessGame,
     modifier: Modifier = Modifier,
+    playerContent: (@Composable (String) -> Unit)? = null,
 ) {
     var currentMoveIndex by remember { mutableStateOf(0) }
 
@@ -96,7 +100,7 @@ private fun ChessGameDisplay(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             // Game metadata header
-            PGNMetadata(game = game)
+            PGNMetadata(game = game, playerContent = playerContent)
 
             // Chess board
             ChessBoard(

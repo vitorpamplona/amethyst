@@ -37,6 +37,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -46,10 +47,15 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.chess.ChessChallenge
 import com.vitorpamplona.amethyst.commons.chess.ChessGameViewer
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
+import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
+import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.ChessViewModelFactory
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.ChessViewModelNew
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -79,7 +85,22 @@ fun RenderChessGame(
     val event = (note.event as? ChessGameEvent) ?: return
 
     SensitivityWarning(note = note, accountViewModel = accountViewModel) {
-        ChessGameViewer(pgnContent = event.pgn())
+        ChessGameViewer(
+            pgnContent = event.pgn(),
+            playerContent = { playerHex ->
+                LoadUser(playerHex, accountViewModel) { user ->
+                    if (user != null) {
+                        UserChip(user = user, accountViewModel = accountViewModel, nav = nav)
+                    } else {
+                        Text(
+                            text = playerHex.take(8) + "...",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium,
+                        )
+                    }
+                }
+            },
+        )
     }
 }
 
@@ -120,20 +141,6 @@ fun RenderLiveChessChallenge(
             else -> MaterialTheme.colorScheme.outline // Gray for sent
         }
 
-    val icon =
-        when {
-            isOpenChallenge -> "🔓"
-            isIncomingChallenge -> "💌"
-            else -> "⏳"
-        }
-
-    val title =
-        when {
-            isOpenChallenge -> "Open Challenge"
-            isIncomingChallenge -> "Challenge from ${note.author?.toBestDisplayName()}"
-            else -> "Challenge sent to ${event.opponentPubkey()?.take(8)}"
-        }
-
     Card(
         modifier =
             Modifier
@@ -152,12 +159,49 @@ fun RenderLiveChessChallenge(
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    text = "$icon $title",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                )
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    when {
+                        isOpenChallenge -> {
+                            Text(
+                                text = "🔓 Open Challenge",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
+
+                        isIncomingChallenge -> {
+                            Text(
+                                text = "💌 Challenge from",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                            )
+                            note.author?.let { author ->
+                                UserChip(user = author, accountViewModel = accountViewModel, nav = nav)
+                            }
+                        }
+
+                        else -> {
+                            Text(
+                                text = "⏳ Challenge sent to",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                            )
+                            event.opponentPubkey()?.let { opponentHex ->
+                                LoadUser(opponentHex, accountViewModel) { user ->
+                                    if (user != null) {
+                                        UserChip(user = user, accountViewModel = accountViewModel, nav = nav)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
 
                 Text(
                     text =
@@ -249,6 +293,31 @@ fun RenderLiveChessGameEnd(
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                     )
+
+                    // Players row
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        note.author?.let { author ->
+                            UserChip(user = author, accountViewModel = accountViewModel, nav = nav)
+                        }
+
+                        Text(
+                            text = "vs",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        )
+
+                        event.opponentPubkey()?.let { opponentHex ->
+                            LoadUser(opponentHex, accountViewModel) { user ->
+                                if (user != null) {
+                                    UserChip(user = user, accountViewModel = accountViewModel, nav = nav)
+                                }
+                            }
+                        }
+                    }
+
                     Text(
                         text = "Result: ${event.result()}",
                         style = MaterialTheme.typography.bodyMedium,
@@ -265,8 +334,49 @@ fun RenderLiveChessGameEnd(
 
             // Show PGN if available
             event.pgn().takeIf { it.isNotBlank() }?.let { pgn ->
-                ChessGameViewer(pgnContent = pgn)
+                ChessGameViewer(
+                    pgnContent = pgn,
+                    playerContent = { playerHex ->
+                        LoadUser(playerHex, accountViewModel) { user ->
+                            if (user != null) {
+                                UserChip(user = user, accountViewModel = accountViewModel, nav = nav)
+                            } else {
+                                Text(
+                                    text = playerHex.take(8) + "...",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Medium,
+                                )
+                            }
+                        }
+                    },
+                )
             }
         }
+    }
+}
+
+/**
+ * Compact user display with small picture and name, shown inline.
+ */
+@Composable
+private fun UserChip(
+    user: User,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        ClickableUserPicture(
+            baseUser = user,
+            size = 24.dp,
+            accountViewModel = accountViewModel,
+            onClick = { nav.nav(routeFor(it)) },
+        )
+        UsernameDisplay(
+            baseUser = user,
+            accountViewModel = accountViewModel,
+        )
     }
 }
