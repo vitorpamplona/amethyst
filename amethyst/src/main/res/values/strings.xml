@@ -2202,7 +2202,7 @@
 
     <string name="ai_writing_help">AI Writing Help</string>
     <string name="ai_writing_setting_title">Propose AI text improvements</string>
-    <string name="ai_writing_setting_description">Show AI writing help options when composing posts (on-device, requires supported hardware)</string>
+    <string name="ai_writing_setting_description">Show writing recommendations (on-device)</string>
     <string name="ai_writing_use_this">Use This</string>
     <string name="ai_writing_dismiss">Dismiss</string>
     <string name="ai_tone_correct">Correct</string>
