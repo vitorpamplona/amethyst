@@ -21,7 +21,9 @@
 package com.vitorpamplona.amethyst.service.ai
 
 import android.content.Context
+import com.google.android.gms.tasks.Tasks
 import com.google.mlkit.genai.common.FeatureStatus
+import com.google.mlkit.genai.proofreading.Proofreader
 import com.google.mlkit.genai.proofreading.ProofreaderOptions
 import com.google.mlkit.genai.proofreading.Proofreading
 import com.google.mlkit.genai.proofreading.ProofreadingRequest
@@ -29,31 +31,44 @@ import com.google.mlkit.genai.rewriting.Rewriter
 import com.google.mlkit.genai.rewriting.RewriterOptions
 import com.google.mlkit.genai.rewriting.Rewriting
 import com.google.mlkit.genai.rewriting.RewritingRequest
+import com.vitorpamplona.amethyst.service.lang.LanguageTranslatorService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 class MLKitWritingAssistant(
     private val context: Context,
 ) : WritingAssistant {
-    private var rewriters = mutableMapOf<Int, Rewriter>()
-    private var proofreader =
-        Proofreading.getClient(
-            ProofreaderOptions
-                .builder(context)
-                .setInputType(ProofreaderOptions.InputType.KEYBOARD)
-                .setLanguage(ProofreaderOptions.Language.ENGLISH)
-                .build(),
-        )
+    private var rewriters = mutableMapOf<Long, Rewriter>()
+    private var proofreaders = mutableMapOf<Int, Proofreader>()
+
+    private fun rewriterCacheKey(
+        @RewriterOptions.OutputType outputType: Int,
+        @RewriterOptions.Language language: Int,
+    ): Long = (outputType.toLong() shl 32) or language.toLong()
 
     private fun getRewriter(
         @RewriterOptions.OutputType outputType: Int,
+        @RewriterOptions.Language language: Int,
     ): Rewriter =
-        rewriters.getOrPut(outputType) {
+        rewriters.getOrPut(rewriterCacheKey(outputType, language)) {
             Rewriting.getClient(
                 RewriterOptions
                     .builder(context)
                     .setOutputType(outputType)
-                    .setLanguage(RewriterOptions.Language.ENGLISH)
+                    .setLanguage(language)
+                    .build(),
+            )
+        }
+
+    private fun getProofreader(
+        @ProofreaderOptions.Language language: Int,
+    ): Proofreader =
+        proofreaders.getOrPut(language) {
+            Proofreading.getClient(
+                ProofreaderOptions
+                    .builder(context)
+                    .setInputType(ProofreaderOptions.InputType.KEYBOARD)
+                    .setLanguage(language)
                     .build(),
             )
         }
@@ -61,19 +76,12 @@ class MLKitWritingAssistant(
     override suspend fun checkAvailability(): WritingAssistantStatus =
         withContext(Dispatchers.IO) {
             try {
-                val status = getRewriter(RewriterOptions.OutputType.REPHRASE).checkFeatureStatus().get()
+                val rewriter = getRewriter(RewriterOptions.OutputType.REPHRASE, RewriterOptions.Language.ENGLISH)
+                val status = rewriter.checkFeatureStatus().get()
                 when (status) {
-                    FeatureStatus.AVAILABLE -> {
-                        WritingAssistantStatus.Available
-                    }
-
-                    FeatureStatus.DOWNLOADING -> {
-                        WritingAssistantStatus.Downloading
-                    }
-
-                    else -> {
-                        WritingAssistantStatus.Unavailable
-                    }
+                    FeatureStatus.AVAILABLE -> WritingAssistantStatus.Available
+                    FeatureStatus.DOWNLOADING -> WritingAssistantStatus.Downloading
+                    else -> WritingAssistantStatus.Unavailable
                 }
             } catch (e: Exception) {
                 WritingAssistantStatus.Unavailable
@@ -84,43 +92,18 @@ class MLKitWritingAssistant(
         text: String,
         tone: WritingTone,
     ): WritingResult {
+        val language = detectLanguage(text)
         val transformedText =
             when (tone) {
-                WritingTone.CORRECT -> {
-                    proofread(text)
-                }
-
-                WritingTone.REPHRASE -> {
-                    rewrite(text, RewriterOptions.OutputType.REPHRASE)
-                }
-
-                WritingTone.SHORTER -> {
-                    rewrite(text, RewriterOptions.OutputType.SHORTEN)
-                }
-
-                WritingTone.ELABORATE -> {
-                    rewrite(text, RewriterOptions.OutputType.ELABORATE)
-                }
-
-                WritingTone.FRIENDLY -> {
-                    rewrite(text, RewriterOptions.OutputType.FRIENDLY)
-                }
-
-                WritingTone.PROFESSIONAL -> {
-                    rewrite(text, RewriterOptions.OutputType.PROFESSIONAL)
-                }
-
-                WritingTone.EMOJIFY -> {
-                    rewrite(text, RewriterOptions.OutputType.EMOJIFY)
-                }
-
-                WritingTone.MORE_DIRECT -> {
-                    rewrite(text, RewriterOptions.OutputType.PROFESSIONAL)
-                }
-
-                WritingTone.PUNCHY -> {
-                    rewrite(text, RewriterOptions.OutputType.SHORTEN)
-                }
+                WritingTone.CORRECT -> proofread(text, language)
+                WritingTone.REPHRASE -> rewrite(text, RewriterOptions.OutputType.REPHRASE, language)
+                WritingTone.SHORTER -> rewrite(text, RewriterOptions.OutputType.SHORTEN, language)
+                WritingTone.ELABORATE -> rewrite(text, RewriterOptions.OutputType.ELABORATE, language)
+                WritingTone.FRIENDLY -> rewrite(text, RewriterOptions.OutputType.FRIENDLY, language)
+                WritingTone.PROFESSIONAL -> rewrite(text, RewriterOptions.OutputType.PROFESSIONAL, language)
+                WritingTone.EMOJIFY -> rewrite(text, RewriterOptions.OutputType.EMOJIFY, language)
+                WritingTone.MORE_DIRECT -> rewrite(text, RewriterOptions.OutputType.PROFESSIONAL, language)
+                WritingTone.PUNCHY -> rewrite(text, RewriterOptions.OutputType.SHORTEN, language)
             }
 
         return WritingResult(
@@ -130,19 +113,34 @@ class MLKitWritingAssistant(
         )
     }
 
+    private suspend fun detectLanguage(text: String): Int =
+        withContext(Dispatchers.IO) {
+            try {
+                val langTag = Tasks.await(LanguageTranslatorService.identifyLanguage(text))
+                mapLanguageTag(langTag)
+            } catch (e: Exception) {
+                RewriterOptions.Language.ENGLISH
+            }
+        }
+
     private suspend fun rewrite(
         text: String,
         @RewriterOptions.OutputType outputType: Int,
+        @RewriterOptions.Language language: Int,
     ): String =
         withContext(Dispatchers.IO) {
-            val rewriter = getRewriter(outputType)
+            val rewriter = getRewriter(outputType, language)
             val request = RewritingRequest.builder(text).build()
             val result = rewriter.runInference(request).get()
             result.results.firstOrNull()?.text ?: text
         }
 
-    private suspend fun proofread(text: String): String =
+    private suspend fun proofread(
+        text: String,
+        @ProofreaderOptions.Language language: Int,
+    ): String =
         withContext(Dispatchers.IO) {
+            val proofreader = getProofreader(language)
             val request = ProofreadingRequest.builder(text).build()
             val result = proofreader.runInference(request).get()
             result.results.firstOrNull()?.text ?: text
@@ -151,6 +149,21 @@ class MLKitWritingAssistant(
     override fun close() {
         rewriters.values.forEach { it.close() }
         rewriters.clear()
-        proofreader.close()
+        proofreaders.values.forEach { it.close() }
+        proofreaders.clear()
+    }
+
+    companion object {
+        fun mapLanguageTag(tag: String?): Int =
+            when (tag?.lowercase()?.take(2)) {
+                "en" -> RewriterOptions.Language.ENGLISH
+                "ja" -> RewriterOptions.Language.JAPANESE
+                "ko" -> RewriterOptions.Language.KOREAN
+                "de" -> RewriterOptions.Language.GERMAN
+                "fr" -> RewriterOptions.Language.FRENCH
+                "it" -> RewriterOptions.Language.ITALIAN
+                "es" -> RewriterOptions.Language.SPANISH
+                else -> RewriterOptions.Language.ENGLISH
+            }
     }
 }
