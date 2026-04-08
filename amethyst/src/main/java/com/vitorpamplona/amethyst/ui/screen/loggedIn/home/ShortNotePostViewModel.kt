@@ -304,9 +304,8 @@ open class ShortNotePostViewModel :
     // Anonymous Reply
     var wantsAnonymousPost by mutableStateOf(false)
 
-    // AI Writing Help
-    // TODO: Remove useMockAi before shipping. Set to true to test UI without Gemini Nano.
-    private val useMockAi = true
+    // AI Writing Help for testing
+    private val useMockAi = false
 
     var aiResults by mutableStateOf<Map<WritingTone, WritingResult>>(emptyMap())
     var aiSelectedResult by mutableStateOf<WritingResult?>(null)
