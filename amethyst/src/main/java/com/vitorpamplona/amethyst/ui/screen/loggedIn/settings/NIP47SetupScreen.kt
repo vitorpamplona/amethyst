@@ -23,40 +23,42 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.AccountBalanceWallet
+import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.actions.paymentTargets.PaymentTargetAddField
+import com.vitorpamplona.amethyst.ui.actions.paymentTargets.PaymentTargetsViewModel
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
 import com.vitorpamplona.amethyst.ui.note.UpdateZapAmountContent
 import com.vitorpamplona.amethyst.ui.note.UpdateZapAmountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.SettingsCategory
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.WalletViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.SettingsCategorySpacingModifier
+import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.experimental.nipA3.PaymentTarget
 
 @Composable
 fun NIP47SetupScreen(
@@ -70,12 +72,16 @@ fun NIP47SetupScreen(
     val walletViewModel: WalletViewModel = viewModel()
     walletViewModel.init(accountViewModel)
 
+    val paymentTargetsViewModel: PaymentTargetsViewModel = viewModel()
+    paymentTargetsViewModel.init(accountViewModel)
+
     LaunchedEffect(accountViewModel, postViewModel) {
         postViewModel.load()
         walletViewModel.loadLnAddress()
+        paymentTargetsViewModel.load()
     }
 
-    NIP47SetupScreen(postViewModel, walletViewModel, accountViewModel, nav, nip47)
+    NIP47SetupScreen(postViewModel, walletViewModel, paymentTargetsViewModel, accountViewModel, nav, nip47)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -83,6 +89,7 @@ fun NIP47SetupScreen(
 fun NIP47SetupScreen(
     postViewModel: UpdateZapAmountViewModel,
     walletViewModel: WalletViewModel,
+    paymentTargetsViewModel: PaymentTargetsViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
     nip47: String?,
@@ -94,10 +101,13 @@ fun NIP47SetupScreen(
                 isActive = postViewModel::hasChanged,
                 onCancel = {
                     postViewModel.cancel()
+                    paymentTargetsViewModel.refresh()
                     nav.popBack()
                 },
                 onPost = {
                     postViewModel.sendPost()
+                    walletViewModel.saveLnAddress()
+                    paymentTargetsViewModel.savePaymentTargets()
                     nav.popBack()
                 },
             )
@@ -108,6 +118,7 @@ fun NIP47SetupScreen(
                 postViewModel,
                 onClose = {
                     postViewModel.cancel()
+                    paymentTargetsViewModel.refresh()
                     nav.popBack()
                 },
                 nip47,
@@ -116,7 +127,7 @@ fun NIP47SetupScreen(
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                 LightningAddressSetupSection(walletViewModel)
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                PaymentTargetsSetupRow(nav)
+                PaymentTargetsInlineSection(paymentTargetsViewModel)
             }
         }
     }
@@ -126,66 +137,86 @@ fun NIP47SetupScreen(
 private fun LightningAddressSetupSection(walletViewModel: WalletViewModel) {
     val lnAddress by walletViewModel.lnAddress.collectAsState()
 
-    Column(
-        modifier = Modifier.padding(horizontal = 0.dp, vertical = 4.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
             text = stringRes(R.string.lightning_address),
             color = MaterialTheme.colorScheme.primary,
             style = MaterialTheme.typography.titleSmall,
+            modifier = SettingsCategorySpacingModifier,
         )
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            OutlinedTextField(
-                value = lnAddress,
-                onValueChange = { walletViewModel.updateLnAddress(it) },
-                modifier = Modifier.weight(1f),
-                placeholder = {
-                    Text(
-                        text = "me@mylightningnode.com",
-                        color = MaterialTheme.colorScheme.placeholderText,
-                    )
-                },
-                singleLine = true,
-            )
-            TextButton(onClick = { walletViewModel.saveLnAddress() }) {
-                Text(text = stringRes(R.string.save))
-            }
-        }
+        OutlinedTextField(
+            value = lnAddress,
+            onValueChange = { walletViewModel.updateLnAddress(it) },
+            modifier = Modifier.fillMaxWidth(),
+            placeholder = {
+                Text(
+                    text = "me@mylightningnode.com",
+                    color = MaterialTheme.colorScheme.placeholderText,
+                )
+            },
+            singleLine = true,
+        )
     }
 }
 
 @Composable
-private fun PaymentTargetsSetupRow(nav: INav) {
+private fun PaymentTargetsInlineSection(viewModel: PaymentTargetsViewModel) {
+    val targets by viewModel.paymentTargets.collectAsStateWithLifecycle()
+
+    SettingsCategory(
+        R.string.payment_targets,
+        R.string.payment_targets_section_explainer,
+        SettingsCategorySpacingModifier,
+    )
+
+    if (targets.isEmpty()) {
+        Text(
+            text = stringRes(id = R.string.no_payment_targets_message),
+            modifier = Modifier.padding(vertical = 8.dp),
+            color = MaterialTheme.colorScheme.grayText,
+            style = MaterialTheme.typography.bodyMedium,
+        )
+    } else {
+        Column {
+            targets.forEach { target ->
+                PaymentTargetInlineEntry(target = target, onDelete = { viewModel.removeTarget(target) })
+            }
+        }
+    }
+
+    PaymentTargetAddField { type, authority ->
+        viewModel.addTarget(type, authority)
+    }
+}
+
+@Composable
+private fun PaymentTargetInlineEntry(
+    target: PaymentTarget,
+    onDelete: () -> Unit,
+) {
     Row(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(vertical = 8.dp),
+                .padding(vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                imageVector = Icons.Outlined.AccountBalanceWallet,
-                contentDescription = null,
-                modifier = Modifier.size(20.dp),
-                tint = MaterialTheme.colorScheme.primary,
-            )
-            Spacer(modifier = Modifier.width(8.dp))
+        Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = stringRes(R.string.payment_targets),
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.primary,
+                text = target.type.replaceFirstChar(Char::titlecase),
+                style = MaterialTheme.typography.bodyLarge,
+            )
+            Text(
+                text = target.authority,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.grayText,
             )
         }
-        TextButton(onClick = { nav.nav(Route.EditPaymentTargets) }) {
-            Text(
-                text = stringRes(R.string.manage),
-                fontWeight = FontWeight.SemiBold,
+        IconButton(onClick = onDelete) {
+            Icon(
+                imageVector = Icons.Rounded.Delete,
+                contentDescription = stringRes(id = R.string.delete_payment_target),
             )
         }
     }
