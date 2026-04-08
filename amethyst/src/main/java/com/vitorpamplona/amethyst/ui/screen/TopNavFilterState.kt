@@ -146,7 +146,6 @@ class TopNavFilterState(
                 FeedDefinition(
                     TopFilter.Hashtag(it),
                     HashtagName(it),
-                    route = Route.Hashtag(it),
                 )
             }
 

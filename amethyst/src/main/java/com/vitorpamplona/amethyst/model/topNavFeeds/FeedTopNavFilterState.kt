@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.allUserFollows.Kind3UserFoll
 import com.vitorpamplona.amethyst.model.topNavFeeds.aroundMe.AroundMeFeedFlow
 import com.vitorpamplona.amethyst.model.topNavFeeds.chess.ChessFeedFlow
 import com.vitorpamplona.amethyst.model.topNavFeeds.global.GlobalFeedFlow
+import com.vitorpamplona.amethyst.model.topNavFeeds.hashtag.HashtagFeedFlow
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.NoteFeedFlow
 import com.vitorpamplona.amethyst.model.topNavFeeds.relay.RelayFeedFlow
 import com.vitorpamplona.amethyst.model.topNavFeeds.unknown.UnknownFeedFlow
@@ -135,7 +136,7 @@ class FeedTopNavFilterState(
             }
 
             is TopFilter.Hashtag -> {
-                UnknownFeedFlow(listName)
+                HashtagFeedFlow(listName.tag, followsRelays, proxyRelays)
             }
 
             is TopFilter.Relay -> {
