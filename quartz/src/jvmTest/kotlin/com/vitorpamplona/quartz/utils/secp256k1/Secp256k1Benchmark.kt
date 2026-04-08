@@ -306,6 +306,63 @@ class Secp256k1Benchmark {
             println(r)
         }
         println("=".repeat(90))
+
+        // ==================== Batch verification benchmark ====================
+        // Same pubkey, n events — the typical Nostr pattern (feed from one author)
+        val batchPub = kotlinXOnlyPub
+        for (batchSize in intArrayOf(4, 8, 16, 32)) {
+            val sigs = mutableListOf<ByteArray>()
+            val msgs = mutableListOf<ByteArray>()
+            for (i in 0 until batchSize) {
+                val m = ByteArray(32) { (i * 7 + it).toByte() }
+                sigs.add(
+                    com.vitorpamplona.quartz.utils.secp256k1.Secp256k1
+                        .signSchnorr(m, privKey, auxRand),
+                )
+                msgs.add(m)
+            }
+            // Warmup both paths
+            repeat(500) {
+                for (j in 0 until batchSize) {
+                    com.vitorpamplona.quartz.utils.secp256k1.Secp256k1
+                        .verifySchnorr(sigs[j], msgs[j], batchPub)
+                }
+            }
+            repeat(500) {
+                com.vitorpamplona.quartz.utils.secp256k1.Secp256k1
+                    .verifySchnorrBatch(batchPub, sigs, msgs)
+            }
+            // Time individual
+            val iters = 1000
+            val indivStart = System.nanoTime()
+            repeat(iters) {
+                for (j in 0 until batchSize) {
+                    com.vitorpamplona.quartz.utils.secp256k1.Secp256k1
+                        .verifySchnorr(sigs[j], msgs[j], batchPub)
+                }
+            }
+            val indivNs = System.nanoTime() - indivStart
+            val indivPerEvent = iters.toLong() * batchSize * 1_000_000_000L / indivNs
+            // Time batch
+            val batchStart = System.nanoTime()
+            repeat(iters) {
+                com.vitorpamplona.quartz.utils.secp256k1.Secp256k1
+                    .verifySchnorrBatch(batchPub, sigs, msgs)
+            }
+            val batchNs = System.nanoTime() - batchStart
+            val batchPerEvent = iters.toLong() * batchSize * 1_000_000_000L / batchNs
+            val speedup = indivNs.toDouble() / batchNs.toDouble()
+            println(
+                String.format(
+                    "  batch(%2d): individual %,7d ev/s  batch %,7d ev/s  speedup %.1fx",
+                    batchSize,
+                    indivPerEvent,
+                    batchPerEvent,
+                    speedup,
+                ),
+            )
+        }
+        println("=".repeat(90))
         println()
     }
 
