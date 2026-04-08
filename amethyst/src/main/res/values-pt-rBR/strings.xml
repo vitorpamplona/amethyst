@@ -1935,4 +1935,7 @@
     <string name="relay_members_removed">%1$d membros removidos do relay</string>
     <string name="relay_join_request">Solicitação de entrada no relay</string>
     <string name="relay_leave_request">Solicitação de saída do relay</string>
+    <string name="danger_zone">Zona de Perigo</string>
+    <string name="kind_wake">Despertar</string>
+    <string name="relay_reorder">Reordenar relay</string>
 </resources>

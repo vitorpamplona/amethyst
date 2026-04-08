@@ -73,7 +73,8 @@ class MarmotGroupEventsEoseManager(
                 metadata
                     ?.relays
                     ?.mapNotNull {
-                        com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer.normalizeOrNull(it)
+                        com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+                            .normalizeOrNull(it)
                     }?.toSet()
             val relaysForGroup = if (!groupRelays.isNullOrEmpty()) groupRelays else fallbackRelays
             for (relay in relaysForGroup) {

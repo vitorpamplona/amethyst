@@ -1934,4 +1934,7 @@
     <string name="relay_members_removed">%1$d medlemmar borttagna från relä</string>
     <string name="relay_join_request">Begäran om att gå med i relä</string>
     <string name="relay_leave_request">Begäran om att lämna relä</string>
+    <string name="danger_zone">Riskzon</string>
+    <string name="kind_wake">Väckning</string>
+    <string name="relay_reorder">Ordna om relä</string>
 </resources>

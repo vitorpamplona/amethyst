@@ -1940,4 +1940,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="relay_members_removed">%1$d Mitglieder aus Relay entfernt</string>
     <string name="relay_join_request">Relay-Beitrittsanfrage</string>
     <string name="relay_leave_request">Relay-Austrittsanfrage</string>
+    <string name="danger_zone">Gefahrenzone</string>
+    <string name="kind_wake">Aufwachen</string>
+    <string name="relay_reorder">Relay neu anordnen</string>
 </resources>

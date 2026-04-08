@@ -1935,4 +1935,7 @@
     <string name="relay_members_removed">%1$d členů odebráno z relé</string>
     <string name="relay_join_request">Žádost o připojení k relé</string>
     <string name="relay_leave_request">Žádost o opuštění relé</string>
+    <string name="danger_zone">Nebezpečná zóna</string>
+    <string name="kind_wake">Probuzení</string>
+    <string name="relay_reorder">Přeřadit relé</string>
 </resources>
