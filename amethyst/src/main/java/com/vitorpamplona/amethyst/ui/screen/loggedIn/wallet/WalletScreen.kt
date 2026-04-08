@@ -30,22 +30,28 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -64,6 +70,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import java.text.NumberFormat
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -73,9 +80,13 @@ fun WalletScreen(
     nav: INav,
 ) {
     val walletViewModel: WalletViewModel = viewModel()
-    walletViewModel.init(accountViewModel.account)
+    walletViewModel.init(accountViewModel)
 
     val hasWallet by walletViewModel.hasWalletSetup.collectAsState()
+
+    LaunchedEffect(accountViewModel) {
+        walletViewModel.loadLnAddress()
+    }
 
     Scaffold(
         topBar = {
@@ -92,30 +103,36 @@ fun WalletScreen(
             )
         },
     ) { padding ->
-        if (!hasWallet) {
-            NoWalletSetup(
-                modifier = Modifier.padding(padding),
-                nav = nav,
-            )
-        } else {
-            WalletHomeContent(
-                walletViewModel = walletViewModel,
-                modifier = Modifier.padding(padding),
-                nav = nav,
-            )
+        Column(
+            modifier =
+                Modifier
+                    .padding(padding)
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState()),
+        ) {
+            if (!hasWallet) {
+                NoWalletSetup(nav = nav)
+            } else {
+                WalletHomeContent(
+                    walletViewModel = walletViewModel,
+                    nav = nav,
+                )
+            }
+
+            HorizontalDivider()
+            LightningAddressSection(walletViewModel = walletViewModel)
+            HorizontalDivider()
+            PaymentTargetsRow(nav = nav)
         }
     }
 }
 
 @Composable
-private fun NoWalletSetup(
-    modifier: Modifier,
-    nav: INav,
-) {
+private fun NoWalletSetup(nav: INav) {
     Column(
         modifier =
-            modifier
-                .fillMaxSize()
+            Modifier
+                .fillMaxWidth()
                 .padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
@@ -142,7 +159,6 @@ private fun NoWalletSetup(
 @Composable
 private fun WalletHomeContent(
     walletViewModel: WalletViewModel,
-    modifier: Modifier,
     nav: INav,
 ) {
     val balance by walletViewModel.balanceSats.collectAsState()
@@ -157,8 +173,8 @@ private fun WalletHomeContent(
 
     Column(
         modifier =
-            modifier
-                .fillMaxSize()
+            Modifier
+                .fillMaxWidth()
                 .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -206,7 +222,7 @@ private fun WalletHomeContent(
             )
         }
 
-        Spacer(modifier = Modifier.weight(1f))
+        Spacer(modifier = Modifier.height(32.dp))
 
         // Action buttons
         Row(
@@ -274,5 +290,70 @@ private fun WalletHomeContent(
         }
 
         Spacer(modifier = Modifier.height(24.dp))
+    }
+}
+
+@Composable
+private fun LightningAddressSection(walletViewModel: WalletViewModel) {
+    val lnAddress by walletViewModel.lnAddress.collectAsState()
+
+    Column(
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            text = stringRes(R.string.lightning_address),
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            OutlinedTextField(
+                value = lnAddress,
+                onValueChange = { walletViewModel.updateLnAddress(it) },
+                modifier = Modifier.weight(1f),
+                placeholder = {
+                    Text(
+                        text = "me@mylightningnode.com",
+                        color = MaterialTheme.colorScheme.placeholderText,
+                    )
+                },
+                singleLine = true,
+            )
+            TextButton(onClick = { walletViewModel.saveLnAddress() }) {
+                Text(text = stringRes(R.string.save))
+            }
+        }
+    }
+}
+
+@Composable
+private fun PaymentTargetsRow(nav: INav) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = Icons.Outlined.AccountBalanceWallet,
+                contentDescription = null,
+                modifier = Modifier.size(24.dp),
+                tint = MaterialTheme.colorScheme.onBackground,
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+            Text(
+                text = stringRes(R.string.payment_targets),
+                style = MaterialTheme.typography.bodyLarge,
+            )
+        }
+        TextButton(onClick = { nav.nav(Route.EditPaymentTargets) }) {
+            Text(text = stringRes(R.string.manage))
+        }
     }
 }
