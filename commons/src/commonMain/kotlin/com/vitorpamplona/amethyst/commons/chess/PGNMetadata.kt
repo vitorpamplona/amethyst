@@ -39,11 +39,15 @@ import com.vitorpamplona.quartz.nip64Chess.ChessGame
  *
  * @param game The chess game with metadata to display
  * @param modifier Modifier for the metadata display
+ * @param playerContent Optional composable to render player names (e.g. with avatar + display name).
+ *   Receives the raw player name string from PGN (which may be a hex pubkey in Nostr context).
+ *   When null, falls back to plain text display.
  */
 @Composable
 fun PGNMetadata(
     game: ChessGame,
     modifier: Modifier = Modifier,
+    playerContent: (@Composable (String) -> Unit)? = null,
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -76,12 +80,16 @@ fun PGNMetadata(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 game.white?.let { white ->
-                    Text(
-                        text = white,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
+                    if (playerContent != null) {
+                        playerContent(white)
+                    } else {
+                        Text(
+                            text = white,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
                 }
 
                 Text(
@@ -91,12 +99,16 @@ fun PGNMetadata(
                 )
 
                 game.black?.let { black ->
-                    Text(
-                        text = black,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
+                    if (playerContent != null) {
+                        playerContent(black)
+                    } else {
+                        Text(
+                            text = black,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
                 }
             }
         }
