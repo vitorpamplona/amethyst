@@ -154,7 +154,6 @@ class TopNavFilterState(
                 FeedDefinition(
                     TopFilter.Geohash(it),
                     GeoHashName(it),
-                    route = Route.Geohash(it),
                 )
             }
 
