@@ -1395,6 +1395,12 @@
     <string name="wallet_add_connection">Add NWC Connection</string>
     <string name="wallet_paste_uri">Paste nostr+walletconnect:// URI</string>
     <string name="wallet_save">Save</string>
+    <string name="wallet_rename">Rename</string>
+    <string name="wallet_rename_title">Rename Wallet</string>
+    <string name="wallet_edit">Edit</string>
+    <string name="wallet_invalid_uri">Invalid NWC connection URI</string>
+    <string name="wallet_move_up">Move Up</string>
+    <string name="wallet_move_down">Move Down</string>
     <string name="route_security_filters">Security Filters</string>
     <string name="route_import_follows">Import Follows</string>
 

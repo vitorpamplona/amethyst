@@ -66,6 +66,8 @@ sealed class Route {
         val walletId: String,
     ) : Route()
 
+    @Serializable object WalletAdd : Route()
+
     @Serializable object Search : Route()
 
     @Serializable object SecurityFilters : Route()

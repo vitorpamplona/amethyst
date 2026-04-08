@@ -33,13 +33,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -51,6 +54,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -100,7 +104,7 @@ fun WalletScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { nav.nav(Route.Nip47NWCSetup()) }) {
+                    IconButton(onClick = { nav.nav(Route.WalletAdd) }) {
                         Icon(
                             imageVector = Icons.Filled.Add,
                             contentDescription = stringRes(R.string.wallet_add),
@@ -151,7 +155,7 @@ private fun NoWalletSetup(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(modifier = Modifier.height(24.dp))
-        Button(onClick = { nav.nav(Route.Nip47NWCSetup()) }) {
+        Button(onClick = { nav.nav(Route.WalletAdd) }) {
             Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(8.dp))
             Text(stringRes(R.string.wallet_add_connection))
@@ -190,15 +194,26 @@ private fun MultiWalletHomeContent(
             )
         }
 
-        items(walletInfoList, key = { it.walletId }) { walletInfo ->
+        itemsIndexed(walletInfoList, key = { _, info -> info.walletId }) { index, walletInfo ->
             WalletCard(
                 walletInfo = walletInfo,
+                index = index,
+                totalCount = walletInfoList.size,
                 onSelect = {
                     walletViewModel.selectWallet(walletInfo.walletId)
                     nav.nav(Route.WalletDetail(walletInfo.walletId))
                 },
                 onSetDefault = {
                     walletViewModel.setDefaultWallet(walletInfo.walletId)
+                },
+                onRename = { newName ->
+                    walletViewModel.renameWallet(walletInfo.walletId, newName)
+                },
+                onMoveUp = {
+                    walletViewModel.moveWallet(index, index - 1)
+                },
+                onMoveDown = {
+                    walletViewModel.moveWallet(index, index + 1)
                 },
                 onRemove = {
                     walletViewModel.removeWallet(walletInfo.walletId)
@@ -209,7 +224,7 @@ private fun MultiWalletHomeContent(
         item {
             Spacer(modifier = Modifier.height(8.dp))
             OutlinedButton(
-                onClick = { nav.nav(Route.Nip47NWCSetup()) },
+                onClick = { nav.nav(Route.WalletAdd) },
                 modifier =
                     Modifier
                         .fillMaxWidth()
@@ -228,11 +243,17 @@ private fun MultiWalletHomeContent(
 @Composable
 private fun WalletCard(
     walletInfo: WalletInfo,
+    index: Int,
+    totalCount: Int,
     onSelect: () -> Unit,
     onSetDefault: () -> Unit,
+    onRename: (String) -> Unit,
+    onMoveUp: () -> Unit,
+    onMoveDown: () -> Unit,
     onRemove: () -> Unit,
 ) {
     var showRemoveDialog by remember { mutableStateOf(false) }
+    var showRenameDialog by remember { mutableStateOf(false) }
 
     if (showRemoveDialog) {
         AlertDialog(
@@ -251,6 +272,17 @@ private fun WalletCard(
                 TextButton(onClick = { showRemoveDialog = false }) {
                     Text(stringRes(R.string.cancel))
                 }
+            },
+        )
+    }
+
+    if (showRenameDialog) {
+        RenameWalletDialog(
+            currentName = walletInfo.name,
+            onDismiss = { showRenameDialog = false },
+            onConfirm = { newName ->
+                showRenameDialog = false
+                onRename(newName)
             },
         )
     }
@@ -311,6 +343,34 @@ private fun WalletCard(
                     }
                 }
 
+                // Reorder buttons
+                if (totalCount > 1) {
+                    Column {
+                        IconButton(
+                            onClick = onMoveUp,
+                            enabled = index > 0,
+                            modifier = Modifier.size(28.dp),
+                        ) {
+                            Icon(
+                                Icons.Filled.KeyboardArrowUp,
+                                contentDescription = stringRes(R.string.wallet_move_up),
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
+                        IconButton(
+                            onClick = onMoveDown,
+                            enabled = index < totalCount - 1,
+                            modifier = Modifier.size(28.dp),
+                        ) {
+                            Icon(
+                                Icons.Filled.KeyboardArrowDown,
+                                contentDescription = stringRes(R.string.wallet_move_down),
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
+                    }
+                }
+
                 // Balance
                 if (walletInfo.isLoading && walletInfo.balanceSats == null) {
                     CircularProgressIndicator(modifier = Modifier.size(24.dp))
@@ -350,6 +410,7 @@ private fun WalletCard(
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 if (!walletInfo.isDefault) {
                     OutlinedButton(
@@ -361,6 +422,16 @@ private fun WalletCard(
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(stringRes(R.string.wallet_set_default), style = MaterialTheme.typography.bodySmall)
                     }
+                }
+
+                OutlinedButton(
+                    onClick = { showRenameDialog = true },
+                    modifier = Modifier.height(36.dp),
+                    shape = RoundedCornerShape(8.dp),
+                ) {
+                    Icon(Icons.Filled.Edit, contentDescription = null, modifier = Modifier.size(14.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(stringRes(R.string.wallet_rename), style = MaterialTheme.typography.bodySmall)
                 }
 
                 Spacer(modifier = Modifier.weight(1f))
@@ -379,4 +450,40 @@ private fun WalletCard(
             }
         }
     }
+}
+
+@Composable
+private fun RenameWalletDialog(
+    currentName: String,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit,
+) {
+    var name by remember { mutableStateOf(currentName) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringRes(R.string.wallet_rename_title)) },
+        text = {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text(stringRes(R.string.wallet_name)) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onConfirm(name.trim()) },
+                enabled = name.isNotBlank(),
+            ) {
+                Text(stringRes(R.string.wallet_save))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringRes(R.string.cancel))
+            }
+        },
+    )
 }

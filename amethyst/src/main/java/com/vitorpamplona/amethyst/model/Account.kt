@@ -622,7 +622,7 @@ class Account(
         onResponse: (Response?) -> Unit,
     ) {
         val (event, relay) = nip47SignerState.sendNwcRequestToWallet(walletUri, request, onResponse)
-        client.send(event, setOf(relay))
+        client.publish(event, setOf(relay))
     }
 
     suspend fun sendZapPaymentRequestFor(

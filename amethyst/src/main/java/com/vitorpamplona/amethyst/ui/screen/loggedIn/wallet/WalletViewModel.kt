@@ -241,6 +241,43 @@ class WalletViewModel : ViewModel() {
         refreshWalletList()
     }
 
+    fun addWallet(
+        name: String,
+        uri: Nip47WalletConnect.Nip47URINorm,
+    ): Boolean {
+        val acc = account ?: return false
+        val entry =
+            NwcWalletEntryNorm(
+                id =
+                    java.util.UUID
+                        .randomUUID()
+                        .toString(),
+                name = name.ifBlank { "Wallet" },
+                uri = uri,
+            )
+        acc.settings.addNwcWallet(entry)
+        refreshWalletList()
+        return true
+    }
+
+    fun renameWallet(
+        walletId: String,
+        newName: String,
+    ) {
+        val acc = account ?: return
+        acc.settings.renameNwcWallet(walletId, newName)
+        refreshWalletList()
+    }
+
+    fun moveWallet(
+        fromIndex: Int,
+        toIndex: Int,
+    ) {
+        val acc = account ?: return
+        acc.settings.moveNwcWallet(fromIndex, toIndex)
+        refreshWalletList()
+    }
+
     fun selectWallet(walletId: String) {
         _selectedWalletId.value = walletId
         _balanceSats.value = walletInfoMap.value[walletId]?.balanceSats
