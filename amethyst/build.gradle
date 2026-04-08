@@ -338,6 +338,11 @@ dependencies {
     // Google services model the translate text
     playImplementation libs.google.mlkit.translate
 
+    // On-device AI writing assistance (Gemini Nano via AICore)
+    playImplementation libs.google.mlkit.genai.proofreading
+    playImplementation libs.google.mlkit.genai.prompt
+    playImplementation libs.google.mlkit.genai.rewriting
+
     // PushNotifications
     playImplementation platform(libs.firebase.bom)
     playImplementation libs.firebase.messaging

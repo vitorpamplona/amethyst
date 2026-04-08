@@ -2199,4 +2199,17 @@
     <string name="relay_members_removed">%1$d members removed from relay</string>
     <string name="relay_join_request">Relay join request</string>
     <string name="relay_leave_request">Relay leave request</string>
+
+    <string name="ai_writing_help">AI Writing Help</string>
+    <string name="ai_writing_use_this">Use This</string>
+    <string name="ai_writing_dismiss">Dismiss</string>
+    <string name="ai_tone_correct">Correct</string>
+    <string name="ai_tone_rephrase">Rephrase</string>
+    <string name="ai_tone_shorter">Shorter</string>
+    <string name="ai_tone_elaborate">Elaborate</string>
+    <string name="ai_tone_friendly">Friendly</string>
+    <string name="ai_tone_professional">Professional</string>
+    <string name="ai_tone_more_direct">More Direct</string>
+    <string name="ai_tone_punchy">Punchy</string>
+    <string name="ai_tone_emojify">+ Emoji</string>
 </resources>

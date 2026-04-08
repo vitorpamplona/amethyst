@@ -44,6 +44,11 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.ai.WritingAssistant
+import com.vitorpamplona.amethyst.service.ai.WritingAssistantFactory
+import com.vitorpamplona.amethyst.service.ai.WritingAssistantStatus
+import com.vitorpamplona.amethyst.service.ai.WritingResult
+import com.vitorpamplona.amethyst.service.ai.WritingTone
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
@@ -290,6 +295,53 @@ open class ShortNotePostViewModel :
 
     // Anonymous Reply
     var wantsAnonymousPost by mutableStateOf(false)
+
+    // AI Writing Help
+    var wantsAiHelp by mutableStateOf(false)
+    var aiResult by mutableStateOf<WritingResult?>(null)
+    var aiStatus by mutableStateOf<WritingAssistantStatus>(WritingAssistantStatus.Unavailable)
+    var isAiProcessing by mutableStateOf(false)
+    private var writingAssistant: WritingAssistant? = null
+
+    fun initWritingAssistant(context: android.content.Context) {
+        if (writingAssistant == null) {
+            writingAssistant = WritingAssistantFactory.create(context)
+            viewModelScope.launch(Dispatchers.IO) {
+                aiStatus = writingAssistant?.checkAvailability() ?: WritingAssistantStatus.Unavailable
+            }
+        }
+    }
+
+    fun requestAiTransform(tone: WritingTone) {
+        val text = message.text.toString()
+        if (text.isBlank() || isAiProcessing) return
+
+        isAiProcessing = true
+        aiResult = null
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val result = writingAssistant?.transform(text, tone)
+                aiResult = result
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                aiResult = null
+            } finally {
+                isAiProcessing = false
+            }
+        }
+    }
+
+    fun applyAiResult() {
+        aiResult?.let {
+            message.setTextAndPlaceCursorAtEnd(it.transformedText)
+            aiResult = null
+            draftTag.newVersion()
+        }
+    }
+
+    fun dismissAiResult() {
+        aiResult = null
+    }
 
     fun lnAddress(): String? = account.userProfile().lnAddress()
 
@@ -1372,6 +1424,8 @@ open class ShortNotePostViewModel :
 
     override fun onCleared() {
         super.onCleared()
+        writingAssistant?.close()
+        writingAssistant = null
         Log.d("Init") { "OnCleared: ${this.javaClass.simpleName}" }
     }
 
