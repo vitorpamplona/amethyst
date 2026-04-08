@@ -56,6 +56,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.components.util.getText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -159,7 +160,7 @@ fun AddWalletScreen(
                         scope.launch {
                             val clipText = clipboardManager.getText()
                             if (clipText != null) {
-                                nwcUri = clipText.toString()
+                                nwcUri = clipText
                                 error = null
                             }
                         }
