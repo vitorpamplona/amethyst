@@ -346,6 +346,24 @@ internal object ECPoint {
         val batchZInv = LongArray(4)
         val batchZInv2 = LongArray(4)
         val batchZInv3 = LongArray(4)
+
+        // Pre-allocated scratch for Glv.splitScalar (avoids ~26 LongArray allocs per call)
+        val splitWide = LongArray(8) // mulShift384 and ScalarN.mulTo scratch
+        val splitT1 = LongArray(4) // temporary for mul results
+        val splitT2 = LongArray(4) // temporary for mul results
+        val splitK1 = LongArray(4) // output k1
+        val splitK2 = LongArray(4) // output k2
+
+        // Pre-allocated scratch for verifySchnorr (avoids per-call allocations)
+        val verifyPx = LongArray(4)
+        val verifyPy = LongArray(4)
+        val verifyR = LongArray(4)
+        val verifyS = LongArray(4)
+        val verifyE = LongArray(4)
+        val verifyRx = LongArray(4)
+        val verifyRy = LongArray(4)
+        val verifyPPoint = MutablePoint()
+        val verifyResult = MutablePoint()
     }
 
     private val scratch = ScratchLocal { PointScratch() }
@@ -563,8 +581,8 @@ internal object ECPoint {
         val wnd = 5
         val tableSize = 1 shl (wnd - 2) // 8 entries
 
-        // Split scalar via GLV: scalar = k₁ + k₂·λ
-        val split = Glv.splitScalar(scalar)
+        // Split scalar via GLV: scalar = k₁ + k₂·λ (allocation-free)
+        val split = Glv.splitScalarInto(s.splitK1, s.splitK2, scalar, s.splitWide, s.splitT1, s.splitT2)
         Glv.wnafInto(s.wnaf1, s.wnafTmp, split.k1, wnd, 129)
         Glv.wnafInto(s.wnaf2, s.wnafTmp, split.k2, wnd, 129)
         val wnaf1 = s.wnaf1
@@ -701,13 +719,14 @@ internal object ECPoint {
         val wP = 5 // Window for P-side (table built per-call, keep small)
         val pTableSize = 1 shl (wP - 2) // 8 entries for P
 
-        // Split scalars via GLV decomposition
-        val sSplit = Glv.splitScalar(s)
-        val eSplit = Glv.splitScalar(e)
-
-        // Build wNAF: G-side uses wider window (cached table), P-side uses w=5
+        // Split scalars via GLV decomposition (allocation-free).
+        // sSplit writes into splitK1/K2, then wNAF encodes them immediately
+        // before eSplit overwrites the same scratch buffers.
+        val sSplit = Glv.splitScalarInto(sc.splitK1, sc.splitK2, s, sc.splitWide, sc.splitT1, sc.splitT2)
         Glv.wnafInto(sc.wnaf1, sc.wnafTmp, sSplit.k1, WINDOW_G, 129)
         Glv.wnafInto(sc.wnaf2, sc.wnafTmp, sSplit.k2, WINDOW_G, 129)
+        // Now safe to reuse splitK1/K2 for the e scalar
+        val eSplit = Glv.splitScalarInto(sc.splitK1, sc.splitK2, e, sc.splitWide, sc.splitT1, sc.splitT2)
         Glv.wnafInto(sc.wnaf3, sc.wnafTmp, eSplit.k1, wP, 129)
         Glv.wnafInto(sc.wnaf4, sc.wnafTmp, eSplit.k2, wP, 129)
         val wnafS1 = sc.wnaf1

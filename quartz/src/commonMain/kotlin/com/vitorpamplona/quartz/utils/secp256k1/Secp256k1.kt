@@ -99,6 +99,58 @@ object Secp256k1 {
         h + h
     }
 
+    // ==================== Pubkey decompression cache ====================
+    //
+    // liftX (square root on secp256k1) costs ~280 field ops per call. In Nostr,
+    // the same pubkeys are verified repeatedly (every event from the same author).
+    // This cache maps x-only pubkey bytes → decompressed (x, y) coordinates,
+    // saving the sqrt for repeated pubkeys (~13% of verify cost per cache hit).
+    //
+    // Simple fixed-size direct-mapped cache (no LRU overhead). Size must be power of 2.
+    // 256 entries × (32 + 32 + 32) bytes = ~24KB. Cache collisions just evict silently.
+    private const val PUBKEY_CACHE_SIZE = 256 // power of 2
+    private const val PUBKEY_CACHE_MASK = PUBKEY_CACHE_SIZE - 1
+
+    private class CachedPubkey(
+        val keyBytes: ByteArray, // 32-byte x-only pubkey (for equality check)
+        val px: LongArray, // decompressed x (4 limbs)
+        val py: LongArray, // decompressed y (4 limbs)
+    )
+
+    private val pubkeyCache = arrayOfNulls<CachedPubkey>(PUBKEY_CACHE_SIZE)
+
+    /**
+     * liftX with caching. Returns true and fills outX/outY if the pubkey is valid.
+     * On cache hit, copies the cached coordinates (2 array copies, ~trivial).
+     * On cache miss, computes sqrt and stores the result.
+     */
+    private fun liftXCached(
+        outX: LongArray,
+        outY: LongArray,
+        pub: ByteArray,
+    ): Boolean {
+        // Hash the pubkey bytes to a cache slot (use first 4 bytes as index)
+        val slot =
+            (
+                (pub[0].toInt() and 0xFF) or
+                    ((pub[1].toInt() and 0xFF) shl 8)
+            ) and PUBKEY_CACHE_MASK
+
+        val cached = pubkeyCache[slot]
+        if (cached != null && cached.keyBytes.contentEquals(pub)) {
+            // Cache hit — copy pre-computed coordinates
+            cached.px.copyInto(outX)
+            cached.py.copyInto(outY)
+            return true
+        }
+
+        // Cache miss — compute sqrt and store
+        if (!ECPoint.liftX(outX, outY, U256.fromBytes(pub))) return false
+
+        pubkeyCache[slot] = CachedPubkey(pub.copyOf(), outX.copyOf(), outY.copyOf())
+        return true
+    }
+
     // ==================== Key operations ====================
 
     /** Create a 65-byte uncompressed public key (04 || x || y) from a 32-byte secret key. */
@@ -338,13 +390,18 @@ object Secp256k1 {
     ): Boolean {
         if (signature.size != 64 || pub.size != 32) return false
 
-        val px = LongArray(4)
-        val py = LongArray(4)
-        if (!ECPoint.liftX(px, py, U256.fromBytes(pub))) return false
+        // Use thread-local scratch to avoid per-verify allocations.
+        // Saves ~10 LongArray(4) + 2 MutablePoint = ~14 object allocations per call.
+        val sc = ECPoint.getScratch()
+        val px = sc.verifyPx
+        val py = sc.verifyPy
+        if (!liftXCached(px, py, pub)) return false
 
-        val r = U256.fromBytes(signature, 0)
+        val r = sc.verifyR
+        U256.fromBytesInto(r, signature, 0)
         if (U256.cmp(r, FieldP.P) >= 0) return false
-        val s = U256.fromBytes(signature, 32)
+        val s = sc.verifyS
+        U256.fromBytesInto(s, signature, 32)
         if (U256.cmp(s, ScalarN.N) >= 0) return false
 
         // Build challenge hash input in a single array: prefix(64) + r(32) + pub(32) + data(N)
@@ -354,18 +411,20 @@ object Secp256k1 {
         pub.copyInto(hashInput, 96)
         data.copyInto(hashInput, 128)
         val eHash = sha256(hashInput)
-        val e = ScalarN.reduce(U256.fromBytes(eHash))
+        val e = sc.verifyE
+        U256.fromBytesInto(e, eHash, 0)
+        if (U256.cmp(e, ScalarN.N) >= 0) U256.subTo(e, e, ScalarN.N) // inline reduce
 
         // R = s·G + (-e)·P via Shamir's trick
-        val negE = ScalarN.neg(e)
-        val pPoint = MutablePoint()
+        ScalarN.negTo(e, e) // negate in-place
+        val pPoint = sc.verifyPPoint
         pPoint.setAffine(px, py)
-        val result = MutablePoint()
-        ECPoint.mulDoubleG(result, s, pPoint, negE)
+        val result = sc.verifyResult
+        ECPoint.mulDoubleG(result, s, pPoint, e)
 
         if (result.isInfinity()) return false
-        val rx = LongArray(4)
-        val ry = LongArray(4)
+        val rx = sc.verifyRx
+        val ry = sc.verifyRy
         if (!ECPoint.toAffine(result, rx, ry)) return false
         if (!ECPoint.hasEvenY(ry)) return false
         return U256.cmp(rx, r) == 0

@@ -477,9 +477,19 @@ internal object U256 {
         offset: Int,
     ): LongArray {
         val r = LongArray(4)
+        fromBytesInto(r, bytes, offset)
+        return r
+    }
+
+    /** Decode big-endian 32 bytes into a pre-allocated LongArray(4). */
+    fun fromBytesInto(
+        out: LongArray,
+        bytes: ByteArray,
+        offset: Int,
+    ) {
         for (i in 0 until 4) {
             val o = offset + 24 - i * 8
-            r[i] = ((bytes[o].toLong() and 0xFF) shl 56) or
+            out[i] = ((bytes[o].toLong() and 0xFF) shl 56) or
                 ((bytes[o + 1].toLong() and 0xFF) shl 48) or
                 ((bytes[o + 2].toLong() and 0xFF) shl 40) or
                 ((bytes[o + 3].toLong() and 0xFF) shl 32) or
@@ -488,7 +498,6 @@ internal object U256 {
                 ((bytes[o + 6].toLong() and 0xFF) shl 8) or
                 (bytes[o + 7].toLong() and 0xFF)
         }
-        return r
     }
 
     fun toBytes(a: LongArray): ByteArray {
