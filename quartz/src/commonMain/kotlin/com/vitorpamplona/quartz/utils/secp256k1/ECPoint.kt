@@ -105,7 +105,9 @@ internal object ECPoint {
     //
     // 256 entries × 16 AffinePoints × 64 bytes = ~256KB total cache.
 
-    private const val P_TABLE_CACHE_SIZE = 256
+    // 1024 entries to cover ~1000 followed pubkeys with minimal collisions.
+    // Memory: 1024 × 16 AffinePoints × 64 bytes = ~1MB. Acceptable for mobile.
+    private const val P_TABLE_CACHE_SIZE = 1024
     private const val P_TABLE_CACHE_MASK = P_TABLE_CACHE_SIZE - 1
 
     private class CachedPTable(

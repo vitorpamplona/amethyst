@@ -85,8 +85,9 @@ object Secp256k1 {
     // saving the sqrt for repeated pubkeys (~13% of verify cost per cache hit).
     //
     // Simple fixed-size direct-mapped cache (no LRU overhead). Size must be power of 2.
-    // 256 entries × (32 + 32 + 32) bytes = ~24KB. Cache collisions just evict silently.
-    private const val PUBKEY_CACHE_SIZE = 256 // power of 2
+    // 1024 entries covers most follow lists (~1000 users) with few collisions.
+    // Memory: 1024 × ~96 bytes = ~96KB.
+    private const val PUBKEY_CACHE_SIZE = 1024 // power of 2
     private const val PUBKEY_CACHE_MASK = PUBKEY_CACHE_SIZE - 1
 
     private class CachedPubkey(
