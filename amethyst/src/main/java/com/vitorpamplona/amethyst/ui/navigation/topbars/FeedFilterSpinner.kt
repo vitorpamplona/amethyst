@@ -122,7 +122,7 @@ fun FeedFilterSpinner(
     var selected by
         remember(placeholderCode, options) {
             mutableStateOf(
-                options.firstOrNull { it.code == placeholderCode },
+                options.firstOrNull { it.code.code == placeholderCode.code },
             )
         }
 
