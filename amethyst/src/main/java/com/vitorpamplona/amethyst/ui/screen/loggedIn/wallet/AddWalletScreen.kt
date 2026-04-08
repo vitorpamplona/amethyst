@@ -21,18 +21,24 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.ContentPaste
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -41,16 +47,26 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboard
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.SimpleQrCodeScanner
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.Size24Modifier
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -64,6 +80,11 @@ fun AddWalletScreen(
     var walletName by remember { mutableStateOf("") }
     var nwcUri by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
+    var qrScanning by remember { mutableStateOf(false) }
+
+    val uri = LocalUriHandler.current
+    val clipboardManager = LocalClipboard.current
+    val scope = rememberCoroutineScope()
 
     Scaffold(
         topBar = {
@@ -97,6 +118,81 @@ fun AddWalletScreen(
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Connect action buttons: Connect Wallet app, Paste, QR scan
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                OutlinedButton(
+                    modifier = Modifier.weight(1f),
+                    shape = ButtonBorder,
+                    onClick = {
+                        try {
+                            uri.openUri(
+                                "nostrnwc://connect?appname=Amethyst&appicon=https%3A%2F%2Fraw.githubusercontent.com%2Fvitorpamplona%2Famethyst%2Frefs%2Fheads%2Fmain%2Ficon.png&callback=amethyst%2Bwalletconnect%3A%2F%2Fdlnwc",
+                            )
+                        } catch (_: IllegalArgumentException) {
+                            accountViewModel.toastManager.toast(
+                                R.string.couldnt_find_nwc_wallets,
+                                R.string.couldnt_find_nwc_wallets_description,
+                            )
+                        }
+                    },
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Add,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(text = stringRes(R.string.wallet_connect_connect_app))
+                }
+
+                Spacer(DoubleHorzSpacer)
+
+                // Paste from clipboard
+                IconButton(
+                    onClick = {
+                        scope.launch {
+                            val clipText = clipboardManager.getText()
+                            if (clipText != null) {
+                                nwcUri = clipText.toString()
+                                error = null
+                            }
+                        }
+                    },
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.ContentPaste,
+                        contentDescription = stringRes(id = R.string.paste_from_clipboard),
+                        modifier = Size24Modifier,
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                }
+
+                // QR code scanner
+                IconButton(onClick = { qrScanning = true }) {
+                    Icon(
+                        painter = painterRes(R.drawable.ic_qrcode, 3),
+                        contentDescription = stringRes(id = R.string.accessibility_scan_qr_code),
+                        modifier = Modifier.size(24.dp),
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                }
+            }
+
+            if (qrScanning) {
+                SimpleQrCodeScanner {
+                    qrScanning = false
+                    if (!it.isNullOrEmpty()) {
+                        nwcUri = it
+                        error = null
+                    }
+                }
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
