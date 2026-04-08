@@ -44,6 +44,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.ai.MockWritingAssistant
 import com.vitorpamplona.amethyst.service.ai.WritingAssistant
 import com.vitorpamplona.amethyst.service.ai.WritingAssistantFactory
 import com.vitorpamplona.amethyst.service.ai.WritingAssistantStatus
@@ -297,6 +298,9 @@ open class ShortNotePostViewModel :
     var wantsAnonymousPost by mutableStateOf(false)
 
     // AI Writing Help
+    // TODO: Remove useMockAi before shipping. Set to true to test UI without Gemini Nano.
+    private val useMockAi = true
+
     var wantsAiHelp by mutableStateOf(false)
     var aiResult by mutableStateOf<WritingResult?>(null)
     var aiStatus by mutableStateOf<WritingAssistantStatus>(WritingAssistantStatus.Unavailable)
@@ -305,7 +309,12 @@ open class ShortNotePostViewModel :
 
     fun initWritingAssistant(context: android.content.Context) {
         if (writingAssistant == null) {
-            writingAssistant = WritingAssistantFactory.create(context)
+            writingAssistant =
+                if (useMockAi) {
+                    MockWritingAssistant()
+                } else {
+                    WritingAssistantFactory.create(context)
+                }
             viewModelScope.launch(Dispatchers.IO) {
                 aiStatus = writingAssistant?.checkAvailability() ?: WritingAssistantStatus.Unavailable
             }
