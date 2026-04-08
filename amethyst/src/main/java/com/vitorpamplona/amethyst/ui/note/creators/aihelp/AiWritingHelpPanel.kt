@@ -139,8 +139,7 @@ private fun ToneChipRow(
         modifier =
             Modifier
                 .horizontalScroll(scrollState)
-                .fillMaxWidth()
-                .padding(vertical = 4.dp),
+                .fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         WritingTone.entries.forEach { tone ->
