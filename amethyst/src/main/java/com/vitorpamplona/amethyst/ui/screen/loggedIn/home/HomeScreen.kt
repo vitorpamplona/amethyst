@@ -80,6 +80,7 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.NewGeoPostButton
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.NewHashtagPostButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.HomeFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.live.RenderEphemeralBubble
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.live.RenderLiveActivityBubble
@@ -240,7 +241,7 @@ fun HomeScreenFloatingButton(
         accountViewModel.account.settings.defaultHomeFollowList
             .collectAsStateWithLifecycle()
 
-    when (list.value) {
+    when (val filter = list.value) {
         TopFilter.AroundMe -> {
             val location by Amethyst.instance.locationManager.geohashStateFlow
                 .collectAsStateWithLifecycle()
@@ -256,8 +257,12 @@ fun HomeScreenFloatingButton(
             }
         }
 
-        TopFilter.Chess -> {
-            NewChessGameButton(accountViewModel, nav)
+        is TopFilter.Geohash -> {
+            NewGeoPostButton(filter.tag, accountViewModel, nav)
+        }
+
+        is TopFilter.Hashtag -> {
+            NewHashtagPostButton(filter.tag, accountViewModel, nav)
         }
 
         else -> {
