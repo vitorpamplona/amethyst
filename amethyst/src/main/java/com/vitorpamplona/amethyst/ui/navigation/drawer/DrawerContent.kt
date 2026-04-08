@@ -62,7 +62,6 @@ import androidx.compose.material.icons.outlined.Photo
 import androidx.compose.material.icons.outlined.PlayCircle
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.SmartDisplay
-import androidx.compose.material.icons.outlined.Sync
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -626,22 +625,6 @@ fun ListContent(
                 route = Route.Chess,
             )
         }
-
-        NavigationRow(
-            title = R.string.event_sync_title,
-            icon = Icons.Outlined.Sync,
-            tint = MaterialTheme.colorScheme.onBackground,
-            nav = nav,
-            route = Route.EventSync,
-        )
-
-        NavigationRow(
-            title = R.string.route_import_follows,
-            icon = Icons.Outlined.GroupAdd,
-            tint = MaterialTheme.colorScheme.onBackground,
-            nav = nav,
-            route = Route.ImportFollowsSelectUser,
-        )
 
         IconRowRelays(
             accountViewModel = accountViewModel,

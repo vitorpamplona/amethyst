@@ -34,11 +34,13 @@ import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.CloudUpload
 import androidx.compose.material.icons.outlined.DeleteForever
 import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.GroupAdd
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Key
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.Sync
 import androidx.compose.material.icons.outlined.ThumbUp
 import androidx.compose.material.icons.outlined.Translate
 import androidx.compose.material3.HorizontalDivider
@@ -97,6 +99,20 @@ fun AllSettingsScreen(
                 iconPainterRef = 4,
                 tint = tint,
                 onClick = { nav.nav(Route.EditRelays) },
+            )
+            HorizontalDivider()
+            SettingsNavigationRow(
+                title = R.string.event_sync_title,
+                icon = Icons.Outlined.Sync,
+                tint = tint,
+                onClick = { nav.nav(Route.EventSync) },
+            )
+            HorizontalDivider()
+            SettingsNavigationRow(
+                title = R.string.route_import_follows,
+                icon = Icons.Outlined.GroupAdd,
+                tint = tint,
+                onClick = { nav.nav(Route.ImportFollowsSelectUser) },
             )
             HorizontalDivider()
             SettingsNavigationRow(
