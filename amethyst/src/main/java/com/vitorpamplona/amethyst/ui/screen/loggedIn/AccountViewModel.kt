@@ -1494,6 +1494,31 @@ class AccountViewModel(
         memberPubKey: String,
     ): String = account.fetchKeyPackageAndAddMember(nostrGroupId, memberPubKey)
 
+    suspend fun removeMarmotGroupMember(
+        nostrGroupId: String,
+        targetLeafIndex: Int,
+    ) {
+        val relays = marmotGroupRelays(nostrGroupId)
+        account.removeMarmotGroupMember(nostrGroupId, targetLeafIndex, relays)
+    }
+
+    suspend fun updateMarmotGroupMetadata(
+        nostrGroupId: String,
+        name: String,
+        description: String,
+    ) {
+        val currentMetadata =
+            account.marmotManager?.groupMetadata(nostrGroupId)
+                ?: throw IllegalStateException("Group metadata not found")
+        val updatedMetadata =
+            currentMetadata.copy(
+                name = name,
+                description = description,
+            )
+        val relays = marmotGroupRelays(nostrGroupId)
+        account.updateMarmotGroupMetadata(nostrGroupId, updatedMetadata, relays)
+    }
+
     override fun onCleared() {
         Log.d("AccountViewModel", "onCleared")
         callController?.cleanup()

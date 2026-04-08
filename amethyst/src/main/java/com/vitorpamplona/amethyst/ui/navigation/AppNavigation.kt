@@ -73,9 +73,11 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.membershipMa
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.old.OldBookmarkListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.AddMemberScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.CreateGroupScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.EditGroupInfoScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.MarmotGroupChatScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.MarmotGroupInfoScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.MarmotGroupListScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.RemoveMemberScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.ChatroomByAuthorScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.ChatroomScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.NewGroupDMScreen
@@ -293,6 +295,8 @@ fun BuildNavigation(
 
         composableFromBottom<Route.CreateMarmotGroup> { CreateGroupScreen(accountViewModel, nav) }
         composableFromBottomArgs<Route.MarmotGroupAddMember> { AddMemberScreen(it.nostrGroupId, accountViewModel, nav) }
+        composableFromBottomArgs<Route.MarmotGroupRemoveMember> { RemoveMemberScreen(it.nostrGroupId, accountViewModel, nav) }
+        composableFromBottomArgs<Route.MarmotGroupEditInfo> { EditGroupInfoScreen(it.nostrGroupId, accountViewModel, nav) }
 
         composableFromEndArgs<Route.PublicChatChannel> {
             PublicChatChannelScreen(it.id, it.draftId, it.replyTo, accountViewModel, nav)
