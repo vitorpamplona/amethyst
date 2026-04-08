@@ -65,8 +65,8 @@ class AllFollowsByOutboxTopNavFilter(
                 (communities != null && noteEvent.isTaggedAddressableNotes(communities))
         } else if (noteEvent is CommentEvent) {
             // ignore follows and checks only the root scope
-            (authors != null && noteEvent.pubKey in authors) ||
-                (hashtags != null && noteEvent.isTaggedHashes(hashtags)) ||
+            // (authors != null && noteEvent.pubKey in authors) ||
+            (hashtags != null && noteEvent.isTaggedHashes(hashtags)) ||
                 (hashtagScopes != null && noteEvent.isTaggedScopes(hashtagScopes)) ||
                 (geotags != null && noteEvent.isTaggedGeoHashes(geotags)) ||
                 (geotagScopes != null && noteEvent.isTaggedScopes(geotagScopes)) ||
