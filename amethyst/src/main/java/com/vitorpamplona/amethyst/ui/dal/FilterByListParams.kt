@@ -47,36 +47,44 @@ class FilterByListParams(
 
     fun hasExcessiveHashtags(noteEvent: Event) = hiddenLists.maxHashtagLimit > 0 && noteEvent.countHashtags() > hiddenLists.maxHashtagLimit
 
-    fun isEventInList(noteEvent: Event): Boolean {
-        if (followLists == null) return false
-
-        return followLists.match(noteEvent)
-    }
-
     fun isAuthorInFollows(author: HexKey): Boolean {
         if (followLists == null) return false
 
         return followLists.matchAuthor(author)
     }
 
-    fun isAuthorInFollows(address: Address): Boolean {
+    fun isGlobal() = followLists is GlobalTopNavFilter
+
+    private fun applyTopFilter(
+        comingFrom: List<NormalizedRelayUrl>,
+        noteEvent: Event,
+    ): Boolean {
         if (followLists == null) return false
 
-        return followLists.matchAuthor(address.pubKeyHex)
+        return when (followLists) {
+            is GlobalTopNavFilter -> true
+            is RelayTopNavFilter -> comingFrom.contains(followLists.relayUrl)
+            else -> followLists.match(noteEvent)
+        }
     }
 
-    fun isGlobal(comingFrom: List<NormalizedRelayUrl>) =
-        followLists is GlobalTopNavFilter &&
-            comingFrom.any { followLists.outboxRelays.value.contains(it) }
+    private fun applyTopFilter(
+        comingFrom: List<NormalizedRelayUrl>,
+        address: Address,
+    ): Boolean {
+        if (followLists == null) return false
 
-    fun isFromRelay(comingFrom: List<NormalizedRelayUrl>) =
-        followLists is RelayTopNavFilter &&
-            comingFrom.contains(followLists.relayUrl)
+        return when (followLists) {
+            is GlobalTopNavFilter -> true
+            is RelayTopNavFilter -> comingFrom.contains(followLists.relayUrl)
+            else -> followLists.matchAuthor(address.pubKeyHex)
+        }
+    }
 
     fun match(
         noteEvent: Event,
         comingFrom: List<NormalizedRelayUrl>,
-    ) = ((isGlobal(comingFrom)) || isFromRelay(comingFrom) || isEventInList(noteEvent)) &&
+    ) = (applyTopFilter(comingFrom, noteEvent)) &&
         (isHiddenList || isNotHidden(noteEvent.pubKey)) &&
         isNotInTheFuture(noteEvent) &&
         !hasExcessiveHashtags(noteEvent)
@@ -85,7 +93,7 @@ class FilterByListParams(
         address: Address?,
         comingFrom: List<NormalizedRelayUrl>,
     ) = address != null &&
-        (isGlobal(comingFrom) || isFromRelay(comingFrom) || isAuthorInFollows(address)) &&
+        (applyTopFilter(comingFrom, address)) &&
         (isHiddenList || isNotHidden(address.pubKeyHex))
 
     companion object {
