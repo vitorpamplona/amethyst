@@ -1678,6 +1678,7 @@
     <string name="kind_shorts">Filmiki</string>
     <string name="kind_voice_msg">Wiadomość głosowa</string>
     <string name="kind_voice_reply">Odpowiedź głosowa</string>
+    <string name="kind_wake">Wybudź</string>
     <string name="kind_web_bookmark">Zakładka</string>
     <string name="kind_wiki">Wiki</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">Stwórz świetny kanał, obserwując te same osoby, które obserwuje zaufana osoba.</string>
