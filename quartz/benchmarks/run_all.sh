@@ -90,10 +90,7 @@ case "$OS_NAME" in
         KN_TARGET="linuxX64Test"
         ;;
     Darwin)
-        case "$ARCH" in
-            arm64) KN_TARGET="macosArm64Test" ;;
-            *)     KN_TARGET="macosX64Test" ;;
-        esac
+        KN_TARGET="macosArm64Test"
         ;;
 esac
 

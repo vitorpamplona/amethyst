@@ -87,7 +87,6 @@ kotlin {
 
     linuxX64()
 
-    macosX64()
     macosArm64()
 
     // This makes sure that the resource file directory is visible for iOS tests.
@@ -309,14 +308,6 @@ kotlin {
             create("macosTest") {
                 dependsOn(appleTest)
             }
-
-        val macosX64Main by getting {
-            dependsOn(macosMain)
-        }
-
-        val macosX64Test by getting {
-            dependsOn(macosTest)
-        }
 
         val macosArm64Main by getting {
             dependsOn(macosMain)
