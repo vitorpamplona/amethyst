@@ -391,20 +391,35 @@ object Secp256k1 {
         pub.copyInto(hashInput, 96)
         data.copyInto(hashInput, 128)
         val eHash = sha256(hashInput)
-        // Reuse entryPx for e (liftX result already copied into pPoint below)
-        val e = sc.zInv // safe: zInv not used until toAffine after mulDoubleG
+        // Reuse zInv for e (safe: zInv not used until toAffine, which we skip here)
+        val e = sc.zInv
         U256.fromBytesInto(e, eHash, 0)
         if (U256.cmp(e, ScalarN.N) >= 0) U256.subTo(e, e, ScalarN.N) // inline reduce
 
-        // R = s·G + (-e)·P via Shamir's trick
+        // Q = s·G + (-e)·P via Shamir's trick
         ScalarN.negTo(e, e) // negate in-place
         sc.entryPoint.setAffine(sc.entryPx, sc.entryPy) // copies px/py, so entryPx is free
         ECPoint.mulDoubleG(sc.entryResult, s, sc.entryPoint, e)
 
         if (sc.entryResult.isInfinity()) return false
-        if (!ECPoint.toAffine(sc.entryResult, sc.entryPx, sc.entryPy, sc)) return false
-        if (!KeyCodec.hasEvenY(sc.entryPy)) return false
-        return U256.cmp(sc.entryPx, r) == 0
+
+        // Check x-coordinate in Jacobian FIRST (2 field ops, no inversion).
+        // This is what C libsecp256k1 does: X/Z² == r → X == r·Z².
+        // For invalid signatures (~any non-matching x), this saves the expensive
+        // toAffine inversion (~270 field ops). For valid signatures (Nostr's
+        // common case), we still need toAffine for the y-parity check.
+        val w = sc.w
+        FieldP.sqr(sc.zInv2, sc.entryResult.z, w) // Z²
+        FieldP.mul(sc.zInv3, r, sc.zInv2, w) // r·Z²
+        if (U256.cmp(sc.entryResult.x, sc.zInv3) != 0) return false // x mismatch → reject fast
+
+        // x matches — now check y-parity (requires inversion)
+        FieldP.inv(sc.zInv, sc.entryResult.z)
+        // We already have Z² from above; compute Z^(-2) = inv(Z)², Z^(-3) = Z^(-2) · Z^(-1)
+        FieldP.sqr(sc.zInv2, sc.zInv)
+        FieldP.mul(sc.zInv3, sc.zInv2, sc.zInv)
+        FieldP.mul(sc.entryPy, sc.entryResult.y, sc.zInv3)
+        return KeyCodec.hasEvenY(sc.entryPy)
     }
 
     // ==================== Tweak operations ====================
