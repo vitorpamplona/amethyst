@@ -489,8 +489,9 @@ class LongFormPostViewModel :
         context: Context,
         useH265: Boolean,
         stripMetadata: Boolean = true,
+        convertGifToMp4: Boolean = false,
     ) = try {
-        uploadUnsafe(alt, contentWarningReason, mediaQuality, server, onError, context, useH265, stripMetadata)
+        uploadUnsafe(alt, contentWarningReason, mediaQuality, server, onError, context, useH265, stripMetadata, convertGifToMp4)
     } catch (_: SignerExceptions.ReadOnlyException) {
         onError(
             stringRes(context, R.string.read_only_user),
@@ -507,6 +508,7 @@ class LongFormPostViewModel :
         context: Context,
         useH265: Boolean,
         stripMetadata: Boolean = true,
+        convertGifToMp4: Boolean = false,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             val myMultiOrchestrator = multiOrchestrator ?: return@launch
@@ -524,6 +526,7 @@ class LongFormPostViewModel :
                     useH265,
                     stripMetadata,
                     onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
+                    convertGifToMp4 = convertGifToMp4,
                 )
 
             if (results.allGood) {

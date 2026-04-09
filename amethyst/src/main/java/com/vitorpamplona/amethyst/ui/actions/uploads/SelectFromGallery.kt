@@ -54,6 +54,8 @@ class SelectedMedia(
 ) {
     fun isImage() = mimeType?.startsWith("image")
 
+    fun isGif() = mimeType?.equals("image/gif", ignoreCase = true) == true
+
     fun isVideo() = mimeType?.startsWith("video")
 
     fun isAudio() = mimeType?.startsWith("audio")

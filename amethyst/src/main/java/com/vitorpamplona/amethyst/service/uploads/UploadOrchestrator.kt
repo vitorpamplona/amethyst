@@ -287,9 +287,10 @@ class UploadOrchestrator {
         compressionQuality: CompressorQuality,
         context: Context,
         useH265: Boolean = false,
-    ) = if (compressionQuality != CompressorQuality.UNCOMPRESSED) {
+        convertGifToMp4: Boolean = false,
+    ) = if (compressionQuality != CompressorQuality.UNCOMPRESSED || convertGifToMp4) {
         updateState(0.02, UploadingState.Compressing)
-        MediaCompressor().compress(uri, mimeType, compressionQuality, context.applicationContext, useH265)
+        MediaCompressor().compress(uri, mimeType, compressionQuality, context.applicationContext, useH265, convertGifToMp4)
     } else {
         MediaCompressorResult(uri, mimeType, null)
     }
@@ -358,8 +359,9 @@ class UploadOrchestrator {
         useH265: Boolean = false,
         stripMetadata: Boolean = true,
         onStrippingFailed: suspend () -> Boolean = { true },
+        convertGifToMp4: Boolean = false,
     ): UploadingFinalState {
-        val compressed = compressIfNeeded(uri, mimeType, compressionQuality, context, useH265)
+        val compressed = compressIfNeeded(uri, mimeType, compressionQuality, context, useH265, convertGifToMp4)
 
         val finalUri =
             stripAfterCompression(uri, compressed, mimeType, compressionQuality, stripMetadata, onStrippingFailed, context)
@@ -393,8 +395,9 @@ class UploadOrchestrator {
         useH265: Boolean = false,
         stripMetadata: Boolean = true,
         onStrippingFailed: suspend () -> Boolean = { true },
+        convertGifToMp4: Boolean = false,
     ): UploadingFinalState {
-        val compressed = compressIfNeeded(uri, mimeType, compressionQuality, context, useH265)
+        val compressed = compressIfNeeded(uri, mimeType, compressionQuality, context, useH265, convertGifToMp4)
 
         val finalUri =
             stripAfterCompression(uri, compressed, mimeType, compressionQuality, stripMetadata, onStrippingFailed, context)
