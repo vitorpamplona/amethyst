@@ -1143,6 +1143,7 @@
     <string name="media_compression_quality_uncompressed">Tömörítetlen</string>
     <string name="video_codec_h265_label">H.265/HEVC-kodek használata</string>
     <string name="video_codec_h265_description">Jobb minőség kisebb fájlméret mellett, de nem minden eszköz támogatja a H.265 lejátszást.</string>
+    <string name="convert_gif_to_mp4_label">GIF átalakítása MP4 formátumra</string>
     <string name="strip_metadata_label">Privát metaadatok törlése</string>
     <string name="strip_metadata_description">Kísérletek a támogatott médiafájlokból a privát metaadatok eltávolítására a feltöltés előtt</string>
     <string name="metadata_strip_failed_title">A metaadatok nem távolíthatók el</string>
@@ -1188,6 +1189,12 @@
     <string name="wallet_filter_all">Összes</string>
     <string name="wallet_filter_zaps">Zap-ek</string>
     <string name="wallet_filter_non_zaps">Nem-zap-ek</string>
+    <string name="wallet_add">Pénztárca hozzáadása</string>
+    <string name="wallet_default">Alapértelmezett</string>
+    <string name="wallet_set_default">Beállítás alapértelmezettként</string>
+    <string name="wallet_remove">Eltávolítás</string>
+    <string name="wallet_remove_confirm">Eltávolítja ezt a pénztárcát?</string>
+    <string name="wallet_name">Pénztárca neve</string>
     <string name="route_security_filters">Biztonsági szűrők</string>
     <string name="route_import_follows">Követettek importálása</string>
     <string name="new_post">Új bejegyzés</string>
