@@ -75,7 +75,7 @@ class PublicChatListState(
                 emit(publicChatListWithBackup(noteState.note))
             }.onStart {
                 emit(publicChatListWithBackup(publicChatListNote))
-            }.flowOn(Dispatchers.IO)
+            }.flowOn(Dispatchers.Default)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -89,7 +89,7 @@ class PublicChatListState(
                 it.mapTo(mutableSetOf()) { it.eventId }
             }.onStart {
                 emit(flow.value.mapTo(mutableSetOf()) { it.eventId })
-            }.flowOn(Dispatchers.IO)
+            }.flowOn(Dispatchers.Default)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -131,12 +131,12 @@ class PublicChatListState(
         settings.channelList()?.let { event ->
             Log.d("AccountRegisterObservers") { "Loading saved channel list ${event.toJson()}" }
             @OptIn(DelicateCoroutinesApi::class)
-            scope.launch(Dispatchers.IO) {
+            scope.launch(Dispatchers.Default) {
                 cache.justConsumeMyOwnEvent(event)
             }
         }
 
-        scope.launch(Dispatchers.IO) {
+        scope.launch(Dispatchers.Default) {
             Log.d("AccountRegisterObservers", "Channel List Collector Start")
             getChannelListFlow().collect {
                 Log.d("AccountRegisterObservers") { "Channel List for ${signer.pubKey}" }

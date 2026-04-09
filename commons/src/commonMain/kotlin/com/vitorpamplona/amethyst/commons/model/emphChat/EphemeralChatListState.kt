@@ -73,7 +73,7 @@ class EphemeralChatListState(
                 emit(ephemeralChatListWithBackup(noteState.note))
             }.onStart {
                 emit(ephemeralChatListWithBackup(ephemeralChatListNote))
-            }.flowOn(Dispatchers.IO)
+            }.flowOn(Dispatchers.Default)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -116,12 +116,12 @@ class EphemeralChatListState(
         settings.ephemeralChatList()?.let { event ->
             Log.d("AccountRegisterObservers", "Loading saved ephemeral chat list")
             @OptIn(DelicateCoroutinesApi::class)
-            scope.launch(Dispatchers.IO) {
+            scope.launch(Dispatchers.Default) {
                 cache.justConsumeMyOwnEvent(event)
             }
         }
 
-        scope.launch(Dispatchers.IO) {
+        scope.launch(Dispatchers.Default) {
             Log.d("AccountRegisterObservers", "EphemeralChatList Collector Start")
             getEphemeralChatListFlow().collect { noteState ->
                 Log.d("AccountRegisterObservers") { "EphemeralChatList List for ${signer.pubKey}" }

@@ -38,9 +38,6 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.collections.immutable.toPersistentList
-import java.net.MalformedURLException
-import java.net.URI
-import java.net.URISyntaxException
 import kotlin.coroutines.cancellation.CancellationException
 
 class RichTextParser {
@@ -421,19 +418,12 @@ class RichTextParser {
             return videoExtensions.any { removedParamsFromUrl.endsWith(it) }
         }
 
+        private val URL_PATTERN = Regex("^https?://[^\\s/$.?#].[^\\s]*$", RegexOption.IGNORE_CASE)
+
         fun isValidURL(url: String?): Boolean =
             try {
-                if (url != null) {
-                    URI(url).toURL()
-                    true
-                } else {
-                    false
-                }
-            } catch (e: MalformedURLException) {
-                false
-            } catch (e: URISyntaxException) {
-                false
-            } catch (e: IllegalArgumentException) {
+                url != null && URL_PATTERN.matches(url)
+            } catch (e: Exception) {
                 false
             }
 

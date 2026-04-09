@@ -25,8 +25,6 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import java.util.SortedSet
-import java.util.concurrent.ConcurrentSkipListSet
 
 /**
  * Creates a list of events (regular and addressable)
@@ -35,11 +33,11 @@ import java.util.concurrent.ConcurrentSkipListSet
  */
 class EventListMatchingFilter<T : Event>(
     private val filter: Filter,
-    private val atOnce: (filter: Filter) -> SortedSet<Note>,
+    private val atOnce: (filter: Filter) -> Set<Note>,
     private val update: (List<T>) -> Unit,
 ) : Observable {
     // Keeping this here blocks it from being cleared from memory
-    var currentResults: ConcurrentSkipListSet<Note> = ConcurrentSkipListSet(CreatedAtIdHexComparator)
+    var currentResults: MutableList<Note> = mutableListOf()
 
     @Suppress("UNCHECKED_CAST")
     override fun new(
@@ -55,10 +53,13 @@ class EventListMatchingFilter<T : Event>(
         }
 
         if (filter.match(event)) {
-            currentResults.add(note)
-            val limit = filter.limit
-            if (limit != null && currentResults.size > limit) {
-                currentResults.remove(currentResults.last())
+            if (!currentResults.contains(note)) {
+                currentResults.add(note)
+                currentResults.sortWith(CreatedAtIdHexComparator)
+                val limit = filter.limit
+                if (limit != null && currentResults.size > limit) {
+                    currentResults.removeAt(currentResults.size - 1)
+                }
             }
 
             update(currentResults.mapNotNull { it.event as? T })
@@ -74,7 +75,7 @@ class EventListMatchingFilter<T : Event>(
 
     @Suppress("UNCHECKED_CAST")
     fun init() {
-        currentResults = ConcurrentSkipListSet(atOnce(filter))
+        currentResults = atOnce(filter).sortedWith(CreatedAtIdHexComparator).toMutableList()
         update(currentResults.mapNotNull { it.event as? T })
     }
 }

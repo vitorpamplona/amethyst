@@ -23,7 +23,34 @@ package com.vitorpamplona.amethyst.commons.util
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 
-fun String.isUTF16Char(pos: Int): Boolean = Character.charCount(this.codePointAt(pos)) == 2
+/** Returns the Unicode code point at the given char index, handling surrogate pairs. */
+private fun String.codePointAtIndex(index: Int): Int {
+    val high = this[index]
+    if (high.isHighSurrogate() && index + 1 < length) {
+        val low = this[index + 1]
+        if (low.isLowSurrogate()) {
+            return 0x10000 + ((high.code - 0xD800) shl 10) + (low.code - 0xDC00)
+        }
+    }
+    return high.code
+}
+
+/** Returns the number of UTF-16 chars needed to represent the given code point. */
+private fun codePointCharCount(codePoint: Int): Int = if (codePoint >= 0x10000) 2 else 1
+
+/** Advances the char index by one code point. */
+private fun String.offsetByCodePoints(
+    index: Int,
+    offset: Int,
+): Int {
+    var pos = index
+    repeat(offset) {
+        pos += codePointCharCount(codePointAtIndex(pos))
+    }
+    return pos
+}
+
+fun String.isUTF16Char(pos: Int): Boolean = codePointCharCount(this.codePointAtIndex(pos)) == 2
 
 fun String.firstFullCharOld(): String {
     return when (this.length) {
@@ -64,7 +91,7 @@ fun String.firstFullChar(): String {
     var i = 0
 
     while (i < this.length) {
-        codePoint = codePointAt(i)
+        codePoint = codePointAtIndex(i)
 
         // Skips if it starts with the join char 0x200D
         if (codePoint == 0x200D && previousCharLength == 0) {
@@ -78,7 +105,7 @@ fun String.firstFullChar(): String {
             } else {
                 // stops when two chars are not joined together
                 if (previousCharLength > 0 && !isInJoin) {
-                    if (Character.charCount(codePoint) == 1 || hasHadSecondChance) {
+                    if (codePointCharCount(codePoint) == 1 || hasHadSecondChance) {
                         break
                     } else {
                         hasHadSecondChance = true

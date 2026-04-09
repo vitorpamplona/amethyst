@@ -68,7 +68,7 @@ class Kind3FollowListState(
 
     val flow =
         innerFlow
-            .flowOn(Dispatchers.IO)
+            .flowOn(Dispatchers.Default)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -83,7 +83,7 @@ class Kind3FollowListState(
                 kind3Follows.authors.mapNotNull {
                     runCatching { cache.getOrCreateUser(it) }.getOrNull()
                 }
-            }.flowOn(Dispatchers.IO)
+            }.flowOn(Dispatchers.Default)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -164,11 +164,11 @@ class Kind3FollowListState(
             Log.d("AccountRegisterObservers") { "Loading saved ${it.tags.size} contacts" }
 
             @OptIn(DelicateCoroutinesApi::class)
-            scope.launch(Dispatchers.IO) { cache.justConsumeMyOwnEvent(it) }
+            scope.launch(Dispatchers.Default) { cache.justConsumeMyOwnEvent(it) }
         }
 
         // saves contact list for the next time.
-        scope.launch(Dispatchers.IO) {
+        scope.launch(Dispatchers.Default) {
             Log.d("AccountRegisterObservers", "Kind 3 Collector Start")
             getFollowListFlow().collect {
                 Log.d("AccountRegisterObservers") { "Updating Kind 3 ${signer.pubKey}" }

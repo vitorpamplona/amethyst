@@ -20,15 +20,17 @@
  */
 package com.vitorpamplona.amethyst.commons.search
 
+import com.vitorpamplona.amethyst.commons.threading.platformSynchronized
+
 class EventDeduplicator {
     private val lock = Any()
     private val seenIds = mutableSetOf<String>()
 
-    fun tryAdd(id: String): Boolean = synchronized(lock) { seenIds.add(id) }
+    fun tryAdd(id: String): Boolean = platformSynchronized(lock) { seenIds.add(id) }
 
-    fun contains(id: String): Boolean = synchronized(lock) { id in seenIds }
+    fun contains(id: String): Boolean = platformSynchronized(lock) { id in seenIds }
 
-    fun clear() = synchronized(lock) { seenIds.clear() }
+    fun clear() = platformSynchronized(lock) { seenIds.clear() }
 
-    val size: Int get() = synchronized(lock) { seenIds.size }
+    val size: Int get() = platformSynchronized(lock) { seenIds.size }
 }

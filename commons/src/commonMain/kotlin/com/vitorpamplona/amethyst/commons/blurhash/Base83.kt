@@ -37,7 +37,7 @@ object Base83 {
     ): String {
         val buffer = CharArray(length)
         encode(value, length, buffer, 0)
-        return String(buffer)
+        return buffer.concatToString()
     }
 
     fun encode(

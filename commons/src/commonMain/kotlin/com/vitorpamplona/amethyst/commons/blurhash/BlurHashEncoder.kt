@@ -27,6 +27,7 @@ import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
+import kotlin.math.roundToLong
 import kotlin.math.withSign
 
 class BlurHashEncoder {
@@ -42,7 +43,7 @@ class BlurHashEncoder {
         val quantR = floor(max(0.0, min(18.0, floor(signPow(value[0] / maximumValue, 0.5) * 9 + 9.5))))
         val quantG = floor(max(0.0, min(18.0, floor(signPow(value[1] / maximumValue, 0.5) * 9 + 9.5))))
         val quantB = floor(max(0.0, min(18.0, floor(signPow(value[2] / maximumValue, 0.5) * 9 + 9.5))))
-        return Math.round(quantR * 19 * 19 + quantG * 19 + quantB)
+        return (quantR * 19 * 19 + quantG * 19 + quantB).roundToLong()
     }
 
     private fun encodeDC(value: DoubleArray): Long {
@@ -126,7 +127,7 @@ class BlurHashEncoder {
             val actualMaximumValue = max(factors, 1, factors.size)
             val quantisedMaximumValue = floor(max(0.0, min(82.0, floor(actualMaximumValue * 166 - 0.5))))
             maximumValue = (quantisedMaximumValue + 1) / 166
-            encode(Math.round(quantisedMaximumValue), 1, hash, 1)
+            encode(quantisedMaximumValue.roundToLong(), 1, hash, 1)
         } else {
             maximumValue = 1.0
             encode(0, 1, hash, 1)
@@ -138,6 +139,6 @@ class BlurHashEncoder {
         for (i in 1 until factors.size) {
             encode(encodeAC(factors[i], maximumValue), 2, hash, 6 + 2 * (i - 1))
         }
-        return String(hash)
+        return hash.concatToString()
     }
 }

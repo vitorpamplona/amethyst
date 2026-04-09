@@ -104,7 +104,7 @@ class UserCardsCache : UserDependencies {
             }
         }.map {
             (it?.note?.event as? ContactCardEvent)?.rank()
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers.Default)
 
     private val formatter = PlatformNumberFormatter()
 
@@ -138,5 +138,5 @@ class UserCardsCache : UserDependencies {
             } else {
                 "--"
             }
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers.Default)
 }

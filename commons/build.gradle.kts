@@ -1,4 +1,3 @@
-
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -43,6 +42,16 @@ kotlin {
         }
     }
 
+    listOf(
+        iosArm64(),
+        iosSimulatorArm64(),
+    ).forEach { iosTarget ->
+        iosTarget.binaries.framework {
+            baseName = "CommonsIos"
+            isStatic = true
+        }
+    }
+
     sourceSets {
         commonMain {
             dependencies {
@@ -56,13 +65,15 @@ kotlin {
                 implementation(libs.jetbrains.compose.material.icons.extended)
                 implementation(libs.jetbrains.compose.ui.tooling.preview)
 
-                // Lifecycle ViewModel (KMP since 2.8.0)
-                implementation(libs.androidx.lifecycle.viewmodel.compose)
+                // Lifecycle ViewModel (KMP since 2.8.0) — base only, no compose
+                implementation(libs.androidx.lifecycle.viewmodel)
                 implementation(libs.androidx.lifecycle.runtime.compose)
 
-                // Image loading (Coil 3 - KMP)
+                // Image loading (Coil 3 - KMP) — compose only, network backend per platform
                 implementation(libs.coil.compose)
-                implementation(libs.coil.okhttp)
+
+                // Coroutines
+                implementation(libs.kotlinx.coroutines.core)
 
                 // LruCache (KMP-ready)
                 implementation(libs.androidx.collection)
@@ -72,11 +83,6 @@ kotlin {
 
                 // Compose Multiplatform Resources
                 implementation(libs.jetbrains.compose.components.resources)
-
-                // Markdown rendering (richtext-commonmark)
-                implementation(libs.markdown.commonmark)
-                implementation(libs.markdown.ui)
-                implementation(libs.markdown.ui.material3)
             }
         }
 
@@ -92,6 +98,16 @@ kotlin {
             create("jvmAndroid") {
                 dependsOn(commonMain.get())
                 dependencies {
+                    // Coil OkHttp network backend (JVM/Android only)
+                    implementation(libs.coil.okhttp)
+
+                    // Lifecycle ViewModel Compose (JVM/Android only)
+                    implementation(libs.androidx.lifecycle.viewmodel.compose)
+
+                    // Markdown rendering (richtext-commonmark) — JVM/Android only
+                    implementation(libs.markdown.commonmark)
+                    implementation(libs.markdown.ui)
+                    implementation(libs.markdown.ui.material3)
                 }
             }
 
@@ -117,6 +133,23 @@ kotlin {
                 implementation(libs.androidx.security.crypto.ktx)
                 implementation(libs.androidx.datastore.preferences)
             }
+        }
+
+        val iosMain =
+            create("iosMain") {
+                dependsOn(commonMain.get())
+                dependencies {
+                    // Coil Ktor network backend for iOS
+                    implementation(libs.coil.ktor)
+                }
+            }
+
+        getByName("iosArm64Main") {
+            dependsOn(iosMain)
+        }
+
+        getByName("iosSimulatorArm64Main") {
+            dependsOn(iosMain)
         }
 
         getByName("androidHostTest") {
