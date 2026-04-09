@@ -41,6 +41,14 @@ actual object Secp256k1Instance {
         privKey: ByteArray,
     ): ByteArray = secp256k1.signSchnorr(data, privKey, null)
 
+    // Native C lib always derives pubkey internally — ignore the cached pubkey.
+    actual fun signSchnorrWithXOnlyPubKey(
+        data: ByteArray,
+        privKey: ByteArray,
+        xOnlyPubKey: ByteArray,
+        nonce: ByteArray?,
+    ): ByteArray = secp256k1.signSchnorr(data, privKey, nonce)
+
     actual fun verifySchnorr(
         signature: ByteArray,
         hash: ByteArray,

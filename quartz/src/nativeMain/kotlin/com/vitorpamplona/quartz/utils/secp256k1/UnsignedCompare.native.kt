@@ -18,44 +18,17 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.utils
+package com.vitorpamplona.quartz.utils.secp256k1
 
-expect object Secp256k1Instance {
-    fun compressedPubKeyFor(privKey: ByteArray): ByteArray
-
-    fun isPrivateKeyValid(il: ByteArray): Boolean
-
-    fun signSchnorr(
-        data: ByteArray,
-        privKey: ByteArray,
-        nonce: ByteArray? = RandomInstance.bytes(32),
-    ): ByteArray
-
-    fun signSchnorr(
-        data: ByteArray,
-        privKey: ByteArray,
-    ): ByteArray
-
-    fun signSchnorrWithXOnlyPubKey(
-        data: ByteArray,
-        privKey: ByteArray,
-        xOnlyPubKey: ByteArray,
-        nonce: ByteArray? = RandomInstance.bytes(32),
-    ): ByteArray
-
-    fun verifySchnorr(
-        signature: ByteArray,
-        hash: ByteArray,
-        pubKey: ByteArray,
-    ): Boolean
-
-    fun privateKeyAdd(
-        first: ByteArray,
-        second: ByteArray,
-    ): ByteArray
-
-    fun pubKeyTweakMulCompact(
-        pubKey: ByteArray,
-        privateKey: ByteArray,
-    ): ByteArray
-}
+/**
+ * Native: XOR-with-MIN_VALUE trick for unsigned comparison.
+ *
+ * No JVM intrinsics available on Kotlin/Native. The XOR trick compiles
+ * to efficient unsigned compare via Kotlin/Native's LLVM backend.
+ * See UnsignedCompare.android.kt for detailed rationale on why this
+ * approach is preferred over toULong().
+ */
+internal actual fun uLt(
+    a: Long,
+    b: Long,
+): Boolean = (a xor Long.MIN_VALUE) < (b xor Long.MIN_VALUE)

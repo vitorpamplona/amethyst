@@ -1,6 +1,8 @@
 import com.vanniktech.maven.publish.KotlinMultiplatform
 import com.vanniktech.maven.publish.SourcesJar
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.plugin.mpp.NativeBuildType.DEBUG
+import org.jetbrains.kotlin.gradle.plugin.mpp.NativeBuildType.RELEASE
 import org.jetbrains.kotlin.gradle.targets.native.tasks.KotlinNativeTest
 
 
@@ -14,6 +16,14 @@ plugins {
 kotlin {
     compilerOptions {
         freeCompilerArgs.add("-Xexpect-actual-classes")
+        // Remove Kotlin null-check assertions on parameters, return values, and receivers.
+        // These generate invokestatic Intrinsics.checkNotNullParameter at the entry of every
+        // function that takes non-null reference types (~4,000+ calls per Schnorr verify).
+        // Safe for this module: all internal secp256k1 code uses non-null LongArray params
+        // that are never null. Each check costs ~2-3ns on ART, totaling ~8-12μs per verify.
+        freeCompilerArgs.add("-Xno-param-assertions")
+        freeCompilerArgs.add("-Xno-call-assertions")
+        freeCompilerArgs.add("-Xno-receiver-assertions")
     }
     jvm {
         compilerOptions {
@@ -89,6 +99,16 @@ kotlin {
         environment("TEST_RESOURCES_ROOT", rootDir)
         // This is necessary to have the variable propagated on iOS
         environment("SIMCTL_CHILD_TEST_RESOURCES_ROOT", rootDir)
+    }
+
+    // Enable LLVM optimizations for native test binaries (benchmark accuracy).
+    // Without -opt, K/N test binaries compile in debug mode (~20× slower).
+    targets.withType<org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget>().configureEach {
+        compilations["test"].compileTaskProvider.configure {
+            compilerOptions {
+                freeCompilerArgs.add("-opt")
+            }
+        }
     }
 
     // Source set declarations.

@@ -26,13 +26,19 @@ import fr.acinq.secp256k1.Secp256k1 as NativeSecp256k1
 
 /**
  * Benchmark comparing the pure-Kotlin secp256k1 implementation against
- * the native ACINQ/secp256k1-kmp JNI bindings.
+ * the native ACINQ/secp256k1-kmp JNI bindings on JVM (HotSpot C2).
  *
- * Each benchmark runs warmup iterations, then measures the timed iterations.
- * Results are printed as ops/sec and relative speed.
+ * Each benchmark runs warmup iterations to trigger JIT compilation, then
+ * measures timed iterations. Results are printed as ops/sec and relative speed.
+ *
+ * NOTE: verifySchnorr and signSchnorr use the same pubkey repeatedly, so they
+ * benefit from the pubkey decompression cache and P-table cache. This is realistic
+ * for Nostr (feed from one author) but not representative of first-time verification.
+ *
+ * Run with: ./gradlew :quartz:jvmTest --tests "*.Secp256k1Benchmark"
  */
 class Secp256k1Benchmark {
-    // Test data
+    // Test data (same across all 3 platform benchmarks for comparability)
     private val privKey = hexToBytes("67E56582298859DDAE725F972992A07C6C4FB9F62A8FFF58CE3CA926A1063530")
     private val msg32 = hexToBytes("243F6A8885A308D313198A2E03707344A4093822299F31D0082EFA98EC4E6C89")
     private val auxRand = hexToBytes("0000000000000000000000000000000000000000000000000000000000000001")
@@ -55,11 +61,7 @@ class Secp256k1Benchmark {
 
     // ECDH test data
     private val privKey2 = hexToBytes("3982F19BEF1615BCCFBB05E321C10E1D4CBA3DF0E841C2E41EEB6016347653C3")
-    private val pubKey2Uncompressed =
-        hexToBytes(
-            "040A629506E1B65CD9D2E0BA9C75DF9C4FED0DB16DC9625ED14397F0AFC836FAE5" +
-                "95DC53F8B0EFE61E703075BD9B143BAC75EC0E19F82A2208CAEB32BE53414C40",
-        )
+    private val pub2xOnly = hexToBytes("c2f9d9948dc8c7c38321e4b85c8558872eafa0641cd269db76848a6073e69133")
     private val h02 = byteArrayOf(0x02)
 
     // ============================================================
@@ -78,7 +80,7 @@ class Secp256k1Benchmark {
 
         override fun toString(): String =
             String.format(
-                "%-25s  Native: %,8d ops/s  Kotlin: %,8d ops/s  Ratio: %.1fx slower",
+                "%-25s  Native: %,8d ops/s  Kotlin: %,8d ops/s  Ratio: %.1fx",
                 name,
                 nativeOpsPerSec,
                 kotlinOpsPerSec,
@@ -130,7 +132,23 @@ class Secp256k1Benchmark {
 
         val results = mutableListOf<BenchResult>()
 
-        // --- verifySchnorr ---
+        // --- verifySchnorrFast (Nostr: x-check only, no y-parity inversion) ---
+        results +=
+            bench(
+                name = "verifySchnorrFast",
+                warmup = 2000,
+                iterations = 5000,
+                nativeOp = { native.verifySchnorr(nativeSig, msg32, nativeXOnlyPub) },
+                kotlinOp = {
+                    com.vitorpamplona.quartz.utils.secp256k1.Secp256k1.verifySchnorrFast(
+                        kotlinSig,
+                        msg32,
+                        kotlinXOnlyPub,
+                    )
+                },
+            )
+
+        // --- verifySchnorr (strict BIP-340 with y-parity check) ---
         results +=
             bench(
                 name = "verifySchnorr",
@@ -146,7 +164,7 @@ class Secp256k1Benchmark {
                 },
             )
 
-        // --- signSchnorr (derives pubkey from seckey each time) ---
+        // --- signSchnorr (derives pubkey from seckey each time — both sides do the same work) ---
         results +=
             bench(
                 name = "signSchnorr",
@@ -162,7 +180,11 @@ class Secp256k1Benchmark {
                 },
             )
 
-        // --- signSchnorrWithPubKey (pre-computed pubkey, no self-verify — matches C) ---
+        // --- signSchnorr (cached pk) ---
+        // NOTE: The C library's signSchnorr always derives the pubkey internally.
+        // Our signSchnorrWithPubKey skips that derivation. This is NOT an apples-to-apples
+        // comparison — it shows what's possible when the caller caches the compressed pubkey.
+        // The native baseline here is the same signSchnorr (with pubkey derivation).
         results +=
             bench(
                 name = "signSchnorr (cached pk)",
@@ -176,79 +198,6 @@ class Secp256k1Benchmark {
                         nativePubKey,
                         auxRand,
                     )
-                },
-            )
-
-        // --- pubkeyCreate ---
-        results +=
-            bench(
-                name = "pubkeyCreate",
-                warmup = 1000,
-                iterations = 5000,
-                nativeOp = { native.pubkeyCreate(privKey) },
-                kotlinOp = {
-                    com.vitorpamplona.quartz.utils.secp256k1.Secp256k1
-                        .pubkeyCreate(privKey)
-                },
-            )
-
-        // --- pubKeyCompress ---
-        val uncompressedNative = native.pubkeyCreate(privKey)
-        val uncompressedKotlin =
-            com.vitorpamplona.quartz.utils.secp256k1.Secp256k1
-                .pubkeyCreate(privKey)
-        results +=
-            bench(
-                name = "pubKeyCompress",
-                warmup = 2000,
-                iterations = 50000,
-                nativeOp = { native.pubKeyCompress(uncompressedNative) },
-                kotlinOp = {
-                    com.vitorpamplona.quartz.utils.secp256k1.Secp256k1
-                        .pubKeyCompress(uncompressedKotlin)
-                },
-            )
-
-        // --- pubKeyTweakMul (ECDH) ---
-        results +=
-            bench(
-                name = "pubKeyTweakMul (ECDH)",
-                warmup = 1000,
-                iterations = 3000,
-                nativeOp = { native.pubKeyTweakMul(pubKey2Uncompressed.copyOf(), privKey) },
-                kotlinOp = {
-                    com.vitorpamplona.quartz.utils.secp256k1.Secp256k1.pubKeyTweakMul(
-                        pubKey2Uncompressed,
-                        privKey,
-                    )
-                },
-            )
-
-        // --- privKeyTweakAdd ---
-        results +=
-            bench(
-                name = "privKeyTweakAdd",
-                warmup = 1000,
-                iterations = 50000,
-                nativeOp = { native.privKeyTweakAdd(privKey.copyOf(), privKey2) },
-                kotlinOp = {
-                    com.vitorpamplona.quartz.utils.secp256k1.Secp256k1.privKeyTweakAdd(
-                        privKey,
-                        privKey2,
-                    )
-                },
-            )
-
-        // --- secKeyVerify ---
-        results +=
-            bench(
-                name = "secKeyVerify",
-                warmup = 5000,
-                iterations = 200000,
-                nativeOp = { native.secKeyVerify(privKey) },
-                kotlinOp = {
-                    com.vitorpamplona.quartz.utils.secp256k1.Secp256k1
-                        .secKeyVerify(privKey)
                 },
             )
 
@@ -267,24 +216,38 @@ class Secp256k1Benchmark {
                 },
             )
 
-        // --- pubKeyTweakMulCompact (old pattern via pubKeyTweakMul) ---
-        val pub2xOnly = hexToBytes("c2f9d9948dc8c7c38321e4b85c8558872eafa0641cd269db76848a6073e69133")
+        // --- secKeyVerify ---
         results +=
             bench(
-                name = "tweakMulCompact (old)",
-                warmup = 1000,
-                iterations = 3000,
-                nativeOp = { native.pubKeyTweakMul(h02 + pub2xOnly, privKey).copyOfRange(1, 33) },
+                name = "secKeyVerify",
+                warmup = 5000,
+                iterations = 200000,
+                nativeOp = { native.secKeyVerify(privKey) },
                 kotlinOp = {
                     com.vitorpamplona.quartz.utils.secp256k1.Secp256k1
-                        .pubKeyTweakMul(
-                            h02 + pub2xOnly,
-                            privKey,
-                        ).copyOfRange(1, 33)
+                        .secKeyVerify(privKey)
                 },
             )
 
-        // --- ecdhXOnly (actual Nostr ECDH path) ---
+        // --- privKeyTweakAdd ---
+        // NOTE: The ACINQ wrapper mutates its first argument, requiring .copyOf() on
+        // the native side. This adds one allocation to the native measurement.
+        results +=
+            bench(
+                name = "privKeyTweakAdd",
+                warmup = 1000,
+                iterations = 50000,
+                nativeOp = { native.privKeyTweakAdd(privKey.copyOf(), privKey2) },
+                kotlinOp = {
+                    com.vitorpamplona.quartz.utils.secp256k1.Secp256k1.privKeyTweakAdd(
+                        privKey,
+                        privKey2,
+                    )
+                },
+            )
+
+        // --- ecdhXOnly (Nostr NIP-04/NIP-44 ECDH path) ---
+        // Native has no ecdhXOnly — compare against pubKeyTweakMul + extract x.
         results +=
             bench(
                 name = "ecdhXOnly (Nostr)",
@@ -300,7 +263,7 @@ class Secp256k1Benchmark {
         // Print results
         println()
         println("=".repeat(90))
-        println("secp256k1 Benchmark: Native (ACINQ/JNI) vs Pure Kotlin")
+        println("secp256k1 Benchmark: Native (ACINQ/JNI) vs Pure Kotlin on JVM (HotSpot C2)")
         println("=".repeat(90))
         for (r in results) {
             println(r)
@@ -308,7 +271,9 @@ class Secp256k1Benchmark {
         println("=".repeat(90))
 
         // ==================== Batch verification benchmark ====================
-        // Same pubkey, n events — the typical Nostr pattern (feed from one author)
+        // Same pubkey, n events — the typical Nostr pattern (feed from one author).
+        // Batch verify uses scalar+point summation: one mulDoubleG for the whole batch
+        // instead of n individual mulDoubleG calls.
         val batchPub = kotlinXOnlyPub
         for (batchSize in intArrayOf(4, 8, 16, 32)) {
             val sigs = mutableListOf<ByteArray>()

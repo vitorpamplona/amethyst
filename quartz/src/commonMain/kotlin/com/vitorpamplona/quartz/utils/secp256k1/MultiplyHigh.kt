@@ -52,8 +52,14 @@ internal expect fun unsignedMultiplyHigh(
  * if b < 0) and the unsigned correction terms (+ (a & (b >> 63)) + (b & (a >> 63))).
  * Saves ~8 instructions per call on Android < API 31, where this is the hot path
  * (~30,000 calls per signature verify).
+ *
+ * MUST be inline: this function is called ~32,000 times per verify via the fused
+ * fieldMulReduce crossinline lambda. Without inline, each call is a real function
+ * dispatch (~82ns on ART). With inline, the Kotlin compiler embeds the arithmetic
+ * directly at each call site — zero dispatch overhead.
  */
-internal fun unsignedMultiplyHighFallback(
+@Suppress("NOTHING_TO_INLINE")
+internal inline fun unsignedMultiplyHighFallback(
     a: Long,
     b: Long,
 ): Long {

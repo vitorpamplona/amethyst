@@ -48,11 +48,39 @@ object Secp256k1InstanceOurs {
         nonce: ByteArray? = RandomInstance.bytes(32),
     ): ByteArray = Secp256k1.signSchnorrWithPubKey(data, privKey, compressedPubKey, nonce)
 
+    /** Fast signing with pre-computed x-only public key — zero-copy, zero-allocation. */
+    fun signSchnorrWithXOnlyPubKey(
+        data: ByteArray,
+        privKey: ByteArray,
+        xOnlyPubKey: ByteArray,
+        nonce: ByteArray? = RandomInstance.bytes(32),
+    ): ByteArray = Secp256k1.signSchnorrWithXOnlyPubKey(data, privKey, xOnlyPubKey, nonce)
+
     fun verifySchnorr(
         signature: ByteArray,
         hash: ByteArray,
         pubKey: ByteArray,
     ): Boolean = Secp256k1.verifySchnorr(signature, hash, pubKey)
+
+    /**
+     * Fast Nostr verify — skips BIP-340 y-parity inversion (~15% faster).
+     * Safe for Nostr event verification. See Secp256k1.verifySchnorrFast KDoc.
+     */
+    fun verifySchnorrFast(
+        signature: ByteArray,
+        hash: ByteArray,
+        pubKey: ByteArray,
+    ): Boolean = Secp256k1.verifySchnorrFast(signature, hash, pubKey)
+
+    /**
+     * Batch-verify multiple signatures from the same pubkey.
+     * Uses scalar+point summation — one mulDoubleG for the whole batch.
+     */
+    fun verifySchnorrBatch(
+        pubKey: ByteArray,
+        signatures: List<ByteArray>,
+        messages: List<ByteArray>,
+    ): Boolean = Secp256k1.verifySchnorrBatch(pubKey, signatures, messages)
 
     fun privateKeyAdd(
         first: ByteArray,
