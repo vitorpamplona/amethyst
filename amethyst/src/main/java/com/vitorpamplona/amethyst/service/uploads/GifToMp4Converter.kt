@@ -39,6 +39,7 @@ import android.opengl.EGLSurface
 import android.opengl.GLES20
 import android.opengl.GLUtils
 import android.view.Surface
+import androidx.annotation.VisibleForTesting
 import androidx.core.net.toUri
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
@@ -466,7 +467,8 @@ object GifToMp4Converter {
      * GIF delay values are in centiseconds (1/100s). Per browser convention,
      * delays of 0 or 1 centisecond are treated as 100ms (10fps).
      */
-    private fun parseGifFrameDelays(bytes: ByteArray): List<Int> {
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    internal fun parseGifFrameDelays(bytes: ByteArray): List<Int> {
         if (bytes.size < 13) return emptyList()
 
         val delays = mutableListOf<Int>()
