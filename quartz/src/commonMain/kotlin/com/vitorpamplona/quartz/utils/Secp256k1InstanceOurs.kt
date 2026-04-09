@@ -48,6 +48,14 @@ object Secp256k1InstanceOurs {
         nonce: ByteArray? = RandomInstance.bytes(32),
     ): ByteArray = Secp256k1.signSchnorrWithPubKey(data, privKey, compressedPubKey, nonce)
 
+    /** Fast signing with pre-computed x-only public key — zero-copy, zero-allocation. */
+    fun signSchnorrWithXOnlyPubKey(
+        data: ByteArray,
+        privKey: ByteArray,
+        xOnlyPubKey: ByteArray,
+        nonce: ByteArray? = RandomInstance.bytes(32),
+    ): ByteArray = Secp256k1.signSchnorrWithXOnlyPubKey(data, privKey, xOnlyPubKey, nonce)
+
     fun verifySchnorr(
         signature: ByteArray,
         hash: ByteArray,

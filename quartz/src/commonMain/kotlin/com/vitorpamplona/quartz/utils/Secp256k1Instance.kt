@@ -36,6 +36,13 @@ expect object Secp256k1Instance {
         privKey: ByteArray,
     ): ByteArray
 
+    fun signSchnorrWithXOnlyPubKey(
+        data: ByteArray,
+        privKey: ByteArray,
+        xOnlyPubKey: ByteArray,
+        nonce: ByteArray? = RandomInstance.bytes(32),
+    ): ByteArray
+
     fun verifySchnorr(
         signature: ByteArray,
         hash: ByteArray,

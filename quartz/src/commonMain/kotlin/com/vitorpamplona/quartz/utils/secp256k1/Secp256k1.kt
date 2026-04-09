@@ -283,6 +283,28 @@ object Secp256k1 {
     }
 
     /**
+     * Fast signing with a pre-computed x-only public key (32 bytes).
+     *
+     * BIP-340 public keys always have even y, so the y-parity is known (even = true).
+     * This avoids both the expensive G multiplication to derive the pubkey AND the
+     * 33→32 byte array copy that signSchnorrWithPubKey does internally.
+     *
+     * Use when the caller already has the 32-byte x-only pubkey (e.g., from KeyPair.pubKey).
+     */
+    fun signSchnorrWithXOnlyPubKey(
+        data: ByteArray,
+        seckey: ByteArray,
+        xOnlyPub: ByteArray,
+        auxrand: ByteArray?,
+    ): ByteArray {
+        require(seckey.size == 32 && xOnlyPub.size == 32)
+        val d0 = U256.fromBytes(seckey)
+        require(ScalarN.isValid(d0))
+        // BIP-340: x-only pubkeys always have even y
+        return signSchnorrInternal(data, d0, xOnlyPub, true, auxrand)
+    }
+
+    /**
      * Internal signing implementation shared by both public overloads.
      * Performs: nonce derivation → R = k·G → challenge → s = k + e·d.
      * Does NOT re-derive the public key or self-verify (matching the C library).

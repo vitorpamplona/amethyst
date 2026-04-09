@@ -34,6 +34,18 @@ object Nip01Crypto {
         nonce: ByteArray? = RandomInstance.bytes(32),
     ): ByteArray = Secp256k1Instance.signSchnorr(data, privKey, nonce)
 
+    /**
+     * Fast sign with pre-computed x-only pubkey (32 bytes).
+     * Skips the expensive G multiplication to derive the pubkey (~20μs on Android).
+     * Use when the caller already has the pubkey (e.g., from KeyPair.pubKey).
+     */
+    fun signWithPubKey(
+        data: ByteArray,
+        privKey: ByteArray,
+        xOnlyPubKey: ByteArray,
+        nonce: ByteArray? = RandomInstance.bytes(32),
+    ): ByteArray = Secp256k1Instance.signSchnorrWithXOnlyPubKey(data, privKey, xOnlyPubKey, nonce)
+
     fun verify(
         signature: ByteArray,
         hash: ByteArray,

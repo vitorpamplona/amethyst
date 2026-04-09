@@ -41,6 +41,13 @@ actual object Secp256k1Instance {
         privKey: ByteArray,
     ): ByteArray = secp256k1Ref.signSchnorr(data, privKey, null)
 
+    actual fun signSchnorrWithXOnlyPubKey(
+        data: ByteArray,
+        privKey: ByteArray,
+        xOnlyPubKey: ByteArray,
+        nonce: ByteArray?,
+    ): ByteArray = secp256k1Ref.signSchnorr(data, privKey, nonce)
+
     actual fun verifySchnorr(
         signature: ByteArray,
         hash: ByteArray,
