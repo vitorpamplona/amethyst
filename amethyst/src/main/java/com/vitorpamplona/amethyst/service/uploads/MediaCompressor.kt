@@ -51,21 +51,12 @@ class MediaCompressor {
     ): MediaCompressorResult {
         checkNotInMainThread()
 
-        // Convert GIF to MP4 if requested (before quality check, since this is a format conversion)
+        // Convert GIF to MP4 if requested. The GIF converter already produces a well-compressed
+        // H.264 MP4 so no additional video compression step is needed.
         if (convertGifToMp4 && contentType?.contains("gif", ignoreCase = true) == true) {
             Log.d("MediaCompressor") { "Converting GIF to MP4" }
             val converted = GifToMp4Converter.convert(uri, applicationContext)
             if (converted != null) {
-                // Optionally compress the resulting video
-                if (mediaQuality != CompressorQuality.UNCOMPRESSED) {
-                    return VideoCompressionHelper.compressVideo(
-                        converted.uri,
-                        converted.contentType,
-                        applicationContext,
-                        mediaQuality,
-                        useH265,
-                    )
-                }
                 return converted
             }
             Log.w("MediaCompressor") { "GIF to MP4 conversion failed, uploading as original GIF" }
