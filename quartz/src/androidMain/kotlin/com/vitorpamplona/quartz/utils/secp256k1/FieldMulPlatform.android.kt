@@ -21,34 +21,42 @@
 package com.vitorpamplona.quartz.utils.secp256k1
 
 /**
- * Android field multiply/square — uses pure-Kotlin fallback for multiply-high.
+ * Android field multiply/square — dispatches to the best available intrinsic.
  *
- * WHY NOT use Math.unsignedMultiplyHigh (API 35+) or Math.multiplyHigh (API 31+)?
- *   Because D8/R8 desugaring generates a synthetic backport wrapper
- *   (ExternalSyntheticBackport0.m) for ANY Math.xxx call when minSdk < the API
- *   that introduced it (minSdk=26 < 31/35). This backport wrapper:
- *     - Adds 139ns per call (traced on Pixel 8 with Android 16)
- *     - Is called 24,875 times per Schnorr verify
- *     - Costs 3.45ms total = 17.5% of verify time
- *   The pure-Kotlin fallback (4 Long multiplies + shifts) avoids the backport
- *   entirely and is FASTER than the backported intrinsic path.
+ * Three implementations, selected once at class load:
+ *   - API 35+ (Android 15): Math.unsignedMultiplyHigh via MethodHandle → UMULH on ARM64
+ *   - API 31+ (Android 12): Math.multiplyHigh via MethodHandle + unsigned correction → SMULH
+ *   - Below:  pure-Kotlin fallback (4 Long multiplies + shifts)
  *
- * WHY NOT use API-level dispatch (fieldMulApi35/Api31/Fallback)?
- *   Profiling showed the D8 backport overhead dominates. The UMULH/SMULH
- *   intrinsic behind the backport is ~1ns, but the backport wrapper adds ~138ns.
- *   The pure fallback at ~10-20ns is much faster than 1+138=139ns.
+ * WHY MethodHandle instead of direct Math.xxx calls?
+ *   D8 desugaring replaces ALL direct references to Math.unsignedMultiplyHigh and
+ *   Math.multiplyHigh with synthetic backport wrappers (ExternalSyntheticBackport0.m)
+ *   when minSdk < the API that introduced them. These backports are pure-Java fallbacks
+ *   that never reach the hardware intrinsic — even on devices running API 35+.
+ *   MethodHandle.invokeExact uses DEX invoke-polymorphic which D8 cannot desugar,
+ *   so ART resolves directly to the real Math method and intrinsifies it.
  *
- * ALSO: uLt calls accounted for 20.7% of verify time (49,924 calls × 82ns each)
- *   because it's an expect/actual function (can't be inline). The inline XOR
- *   comparison in the crossinline lambda eliminates all those function calls.
+ * The API level check happens ONCE here, not per-multiply-high call. Each fused
+ * fieldMulReduceWith inlines the intrinsic lambda at every call site (~16 per mul),
+ * producing tight bytecode with zero per-call dispatch overhead.
  */
+
+private val HAS_UNSIGNED_MULTIPLY_HIGH = android.os.Build.VERSION.SDK_INT >= 35
+private val HAS_MULTIPLY_HIGH = android.os.Build.VERSION.SDK_INT >= 31
+
 internal actual fun fieldMulReduce(
     out: LongArray,
     a: LongArray,
     b: LongArray,
     w: LongArray,
 ) {
-    fieldMulReduceWith(out, a, b, w) { x, y -> unsignedMultiplyHighFallback(x, y) }
+    if (HAS_UNSIGNED_MULTIPLY_HIGH) {
+        FieldMulApi35.fieldMulReduce(out, a, b, w)
+    } else if (HAS_MULTIPLY_HIGH) {
+        FieldMulApi31.fieldMulReduce(out, a, b, w)
+    } else {
+        fieldMulReduceWith(out, a, b, w) { x, y -> unsignedMultiplyHighFallback(x, y) }
+    }
 }
 
 internal actual fun fieldSqrReduce(
@@ -56,5 +64,11 @@ internal actual fun fieldSqrReduce(
     a: LongArray,
     w: LongArray,
 ) {
-    fieldSqrReduceWith(out, a, w) { x, y -> unsignedMultiplyHighFallback(x, y) }
+    if (HAS_UNSIGNED_MULTIPLY_HIGH) {
+        FieldMulApi35.fieldSqrReduce(out, a, w)
+    } else if (HAS_MULTIPLY_HIGH) {
+        FieldMulApi31.fieldSqrReduce(out, a, w)
+    } else {
+        fieldSqrReduceWith(out, a, w) { x, y -> unsignedMultiplyHighFallback(x, y) }
+    }
 }
