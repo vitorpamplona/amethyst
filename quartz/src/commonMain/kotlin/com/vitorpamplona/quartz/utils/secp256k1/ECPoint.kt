@@ -154,7 +154,7 @@ internal object ECPoint {
         // Step 1: compute prefix products of Z coordinates
         // prods[i] = z[0] * z[1] * ... * z[i]
         val prods = Array(n) { LongArray(4) }
-        jac[0].z.copyInto(prods[0])
+        jac[0].z.copyInto(prods[0], 0, 0, 4)
         for (i in 1 until n) {
             FieldP.mul(prods[i], prods[i - 1], jac[i].z)
         }
@@ -483,8 +483,8 @@ internal object ECPoint {
         val pLamOddJac = s.pLamOddJac
         for (i in 0 until tableSize) {
             FieldP.mul(pLamOddJac[i].x, pOddJac[i].x, Glv.BETA, s.w)
-            pOddJac[i].y.copyInto(pLamOddJac[i].y)
-            pOddJac[i].z.copyInto(pLamOddJac[i].z)
+            pOddJac[i].y.copyInto(pLamOddJac[i].y, 0, 0, 4)
+            pOddJac[i].z.copyInto(pLamOddJac[i].z, 0, 0, 4)
         }
 
         // Effective-affine: batch-convert with shared Z inversion
@@ -598,8 +598,8 @@ internal object ECPoint {
         s: LongArray,
         p: MutablePoint,
         e: LongArray,
+        sc: PointScratch = scratch.get(),
     ) {
-        val sc = scratch.get()
         val wP = 5 // Window for P-side (table built per-call, keep small)
         val pTableSize = 1 shl (wP - 2) // 8 entries for P
 
@@ -641,8 +641,8 @@ internal object ECPoint {
             val pLamOddJac = sc.pLamOddJac
             for (i in 0 until pTableSize) {
                 FieldP.mul(pLamOddJac[i].x, pOddJac[i].x, Glv.BETA, sc.w)
-                pOddJac[i].y.copyInto(pLamOddJac[i].y)
-                pOddJac[i].z.copyInto(pLamOddJac[i].z)
+                pOddJac[i].y.copyInto(pLamOddJac[i].y, 0, 0, 4)
+                pOddJac[i].z.copyInto(pLamOddJac[i].z, 0, 0, 4)
             }
             // Batch-convert to affine (into scratch arrays)
             batchToAffinePair(pOddJac, pLamOddJac, sc.pOddAff, sc.pLamOddAff, sc)
@@ -872,7 +872,7 @@ internal object ECPoint {
 
         // Build prefix products of Z (shared between a and b)
         val cumZ = s.cumZ
-        a[0].z.copyInto(cumZ[0])
+        a[0].z.copyInto(cumZ[0], 0, 0, 4)
         for (i in 1 until n) {
             FieldP.mul(cumZ[i], cumZ[i - 1], a[i].z, w)
         }

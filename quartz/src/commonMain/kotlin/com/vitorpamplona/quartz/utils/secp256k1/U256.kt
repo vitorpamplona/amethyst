@@ -602,6 +602,6 @@ internal object U256 {
         out: LongArray,
         a: LongArray,
     ) {
-        a.copyInto(out)
+        a.copyInto(out, 0, 0, 4)
     }
 }

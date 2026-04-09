@@ -506,7 +506,7 @@ object Secp256k1 {
         // Q = s·G + (-e)·P via Shamir's trick
         ScalarN.negTo(e, e) // negate in-place
         sc.entryPoint.setAffine(sc.entryPx, sc.entryPy) // copies px/py, so entryPx is free
-        ECPoint.mulDoubleG(sc.entryResult, s, sc.entryPoint, e)
+        ECPoint.mulDoubleG(sc.entryResult, s, sc.entryPoint, e, sc)
 
         if (sc.entryResult.isInfinity()) return false
 
