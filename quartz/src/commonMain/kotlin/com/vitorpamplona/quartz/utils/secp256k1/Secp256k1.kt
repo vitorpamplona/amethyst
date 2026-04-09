@@ -519,9 +519,18 @@ object Secp256k1 {
         tweak: ByteArray,
     ): ByteArray {
         require(seckey.size == 32 && tweak.size == 32)
-        val result = ScalarN.add(U256.fromBytes(seckey), U256.fromBytes(tweak))
-        require(!U256.isZero(result) && U256.cmp(result, ScalarN.N) < 0)
-        return U256.toBytes(result)
+        // Use thread-local scratch to avoid 2 intermediate LongArray(4) allocations.
+        // Old path: fromBytes (alloc) + fromBytes (alloc) + add (alloc) + toBytes (alloc) = 4 allocs
+        // New path: fromBytesInto (scratch) + fromBytesInto (scratch) + addTo (scratch) + toBytes = 1 alloc
+        val sc = ECPoint.getScratch()
+        val a = sc.entryTmp
+        val b = sc.entryTmp2
+        val r = sc.scalarTmp1
+        U256.fromBytesInto(a, seckey, 0)
+        U256.fromBytesInto(b, tweak, 0)
+        ScalarN.addTo(r, a, b)
+        require(!U256.isZero(r) && U256.cmp(r, ScalarN.N) < 0)
+        return U256.toBytes(r)
     }
 
     /** Multiply a public key by a scalar. Used for ECDH shared secret derivation. */
