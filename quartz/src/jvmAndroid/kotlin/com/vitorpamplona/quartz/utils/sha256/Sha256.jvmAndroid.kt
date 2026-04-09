@@ -37,6 +37,17 @@ val threadLocalDigest =
 
 actual fun sha256(data: ByteArray): ByteArray = threadLocalDigest.get().digest(data)
 
+actual fun sha256Into(
+    out: ByteArray,
+    data: ByteArray,
+    len: Int,
+): ByteArray {
+    val md = threadLocalDigest.get()
+    md.update(data, 0, len)
+    md.digest(out, 0, 32)
+    return out
+}
+
 /**
  * Calculate SHA256 hash while counting bytes read from the stream.
  * Returns both the hash and the number of bytes processed.

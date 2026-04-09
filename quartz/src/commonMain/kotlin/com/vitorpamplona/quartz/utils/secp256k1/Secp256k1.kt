@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.utils.secp256k1
 
 import com.vitorpamplona.quartz.utils.sha256.sha256
+import com.vitorpamplona.quartz.utils.sha256.sha256Into
 
 /**
  * Pure Kotlin implementation of secp256k1 elliptic curve operations for Nostr.
@@ -241,6 +242,7 @@ object Secp256k1 {
         auxrand: ByteArray?,
     ): ByteArray {
         require(seckey.size == 32)
+        // Allocate d0 separately — signSchnorrInternal uses all scalar scratch buffers.
         val d0 = U256.fromBytes(seckey)
         require(ScalarN.isValid(d0))
 
@@ -249,6 +251,8 @@ object Secp256k1 {
         ECPoint.mulG(sc.entryResult, d0)
         check(ECPoint.toAffine(sc.entryResult, sc.entryPx, sc.entryPy, sc))
 
+        // Allocate xOnlyPub — signSchnorrInternal reuses bytesTmp1/2 internally.
+        // This 32-byte allocation is negligible next to the mulG cost (~100μs).
         val xOnlyPub = U256.toBytes(sc.entryPx)
         return signSchnorrInternal(data, d0, xOnlyPub, KeyCodec.hasEvenY(sc.entryPy), auxrand)
     }
@@ -317,34 +321,46 @@ object Secp256k1 {
         auxrand: ByteArray?,
     ): ByteArray {
         val sc = ECPoint.getScratch()
-        val tmp = sc.entryTmp
 
         val d =
             if (pubKeyHasEvenY) {
                 d0
             } else {
-                ScalarN.negTo(tmp, d0)
-                tmp
+                ScalarN.negTo(sc.entryTmp, d0)
+                sc.entryTmp
             }
-        val dBytes = U256.toBytes(d)
+        // Serialize d into scratch byte buffer (avoids U256.toBytes allocation)
+        val dBytes = sc.bytesTmp1
+        U256.toBytesInto(d, dBytes, 0)
 
         val tBytes: ByteArray
         if (auxrand != null) {
             require(auxrand.size == 32)
-            val auxHash = sha256(AUX_PREFIX + auxrand)
-            U256.xorTo(sc.entryTmp2, U256.fromBytes(dBytes), U256.fromBytes(auxHash))
-            tBytes = U256.toBytes(sc.entryTmp2)
+            // Build AUX_PREFIX + auxrand in scratch hashBuf (avoids concatenation alloc)
+            AUX_PREFIX.copyInto(sc.hashBuf, 0)
+            auxrand.copyInto(sc.hashBuf, 64)
+            sha256Into(sc.bytesTmp2, sc.hashBuf, 96)
+            // XOR d with auxHash — reuse limb scratch
+            U256.fromBytesInto(sc.scalarTmp1, dBytes, 0)
+            U256.fromBytesInto(sc.scalarTmp2, sc.bytesTmp2, 0)
+            U256.xorTo(sc.scalarTmp3, sc.scalarTmp1, sc.scalarTmp2)
+            tBytes = sc.bytesTmp2 // reuse bytesTmp2 for tBytes
+            U256.toBytesInto(sc.scalarTmp3, tBytes, 0)
         } else {
             tBytes = dBytes
         }
 
-        val nonceInput = ByteArray(64 + 32 + 32 + data.size)
+        // Build nonce input. Reuse hashBuf if it fits.
+        val nonceLen = 64 + 32 + 32 + data.size
+        val nonceInput = if (nonceLen <= sc.hashBuf.size) sc.hashBuf else ByteArray(nonceLen)
         NONCE_PREFIX.copyInto(nonceInput, 0)
-        tBytes.copyInto(nonceInput, 64)
+        tBytes.copyInto(nonceInput, 64, 0, 32)
         pBytes.copyInto(nonceInput, 96)
         data.copyInto(nonceInput, 128)
-        val rand = sha256(nonceInput)
-        val k0 = ScalarN.reduce(U256.fromBytes(rand))
+        sha256Into(sc.bytesTmp2, nonceInput, nonceLen) // rand → bytesTmp2
+        U256.fromBytesInto(sc.scalarTmp1, sc.bytesTmp2, 0)
+        ScalarN.reduceTo(sc.scalarTmp1, sc.scalarTmp1)
+        val k0 = sc.scalarTmp1
         require(!U256.isZero(k0))
 
         // R = k0·G
@@ -353,22 +369,35 @@ object Secp256k1 {
         val ry = sc.entryPy
         check(ECPoint.toAffine(sc.entryResult, rx, ry, sc))
 
-        val k = if (KeyCodec.hasEvenY(ry)) k0 else ScalarN.neg(k0)
+        val k =
+            if (KeyCodec.hasEvenY(ry)) {
+                k0
+            } else {
+                ScalarN.negTo(sc.scalarTmp2, k0)
+                sc.scalarTmp2
+            }
 
-        // Challenge: e = H(R || P || msg)
-        val chalInput = ByteArray(64 + 32 + 32 + data.size)
+        // Challenge: e = H(R || P || msg) — reuse hashBuf
+        val chalLen = 64 + 32 + 32 + data.size
+        val chalInput = if (chalLen <= sc.hashBuf.size) sc.hashBuf else ByteArray(chalLen)
         CHALLENGE_PREFIX.copyInto(chalInput, 0)
         U256.toBytesInto(rx, chalInput, 64)
         pBytes.copyInto(chalInput, 96)
         data.copyInto(chalInput, 128)
-        val eHash = sha256(chalInput)
-        val e = ScalarN.reduce(U256.fromBytes(eHash))
+        sha256Into(sc.bytesTmp1, chalInput, chalLen) // eHash → bytesTmp1
+        U256.fromBytesInto(sc.scalarTmp3, sc.bytesTmp1, 0)
+        ScalarN.reduceTo(sc.scalarTmp3, sc.scalarTmp3)
+        val e = sc.scalarTmp3
 
         // s = k + e·d mod n
-        val sScalar = ScalarN.add(k, ScalarN.mul(e, d))
+        // Note: d may alias sc.entryTmp (when !pubKeyHasEvenY), so use splitK1 for mulTo output.
+        ScalarN.mulTo(sc.splitK1, e, d, sc.splitWide) // e·d → splitK1
+        ScalarN.addTo(sc.entryTmp2, k, sc.splitK1) // k + e·d → entryTmp2
+
+        // Build output signature (the only required allocation)
         val sig = ByteArray(64)
         U256.toBytesInto(rx, sig, 0)
-        U256.toBytesInto(sScalar, sig, 32)
+        U256.toBytesInto(sc.entryTmp2, sig, 32)
         return sig
     }
 
@@ -406,13 +435,15 @@ object Secp256k1 {
         U256.fromBytesInto(s, signature, 32)
         if (U256.cmp(s, ScalarN.N) >= 0) return false
 
-        // Build challenge hash input in a single array: prefix(64) + r(32) + pub(32) + data(N)
-        val hashInput = ByteArray(64 + 32 + 32 + data.size)
+        // Build challenge hash input. Reuse scratch byte buffer if message fits,
+        // otherwise allocate (rare for Nostr: event IDs are 32 bytes → total 160).
+        val hashLen = 64 + 32 + 32 + data.size
+        val hashInput = if (hashLen <= sc.hashBuf.size) sc.hashBuf else ByteArray(hashLen)
         CHALLENGE_PREFIX.copyInto(hashInput, 0)
         signature.copyInto(hashInput, 64, 0, 32) // r bytes from signature
         pub.copyInto(hashInput, 96)
         data.copyInto(hashInput, 128)
-        val eHash = sha256(hashInput)
+        val eHash = sha256Into(sc.bytesTmp1, hashInput, hashLen)
         // Reuse zInv for e (safe: zInv not used until toAffine, which we skip here)
         val e = sc.zInv
         U256.fromBytesInto(e, eHash, 0)

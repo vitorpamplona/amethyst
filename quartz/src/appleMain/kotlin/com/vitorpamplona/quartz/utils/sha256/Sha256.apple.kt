@@ -43,3 +43,21 @@ actual fun sha256(data: ByteArray): ByteArray {
 
     return digest.toByteArray()
 }
+
+@OptIn(ExperimentalForeignApi::class)
+actual fun sha256Into(
+    out: ByteArray,
+    data: ByteArray,
+    len: Int,
+): ByteArray {
+    data.usePinned { inputPinned ->
+        out.asUByteArray().usePinned { digestPinned ->
+            CC_SHA256(
+                inputPinned.addressOf(0),
+                len.convert(),
+                digestPinned.addressOf(0),
+            )
+        }
+    }
+    return out
+}

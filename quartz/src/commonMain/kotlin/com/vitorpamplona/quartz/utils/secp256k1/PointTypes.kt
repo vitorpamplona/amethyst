@@ -171,4 +171,22 @@ internal class PointScratch {
     @JvmField val entryTmp = LongArray(4)
 
     @JvmField val entryTmp2 = LongArray(4)
+
+    // Pre-allocated byte buffers for sign/verify (eliminates ByteArray allocations).
+    // hashBuf: reusable buffer for BIP-340 tagged hash inputs (prefix(64) + fields).
+    // The max size is 64 + 32 + 32 + msgLen. For 32-byte messages (event IDs), that's 160.
+    // For larger messages, signSchnorrInternal must still allocate.
+    @JvmField val hashBuf = ByteArray(256)
+
+    // 32-byte scratch for serialized field elements / scalars (avoids U256.toBytes allocs)
+    @JvmField val bytesTmp1 = ByteArray(32)
+
+    @JvmField val bytesTmp2 = ByteArray(32)
+
+    // Scratch LongArray(4) for intermediate scalar results (avoids ScalarN alloc)
+    @JvmField val scalarTmp1 = LongArray(4)
+
+    @JvmField val scalarTmp2 = LongArray(4)
+
+    @JvmField val scalarTmp3 = LongArray(4)
 }

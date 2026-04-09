@@ -63,6 +63,18 @@ internal object ScalarN {
             a
         }
 
+    /** Allocation-free reduce: out = a mod n. Safe for out === a. */
+    fun reduceTo(
+        out: LongArray,
+        a: LongArray,
+    ) {
+        if (U256.cmp(a, N) >= 0) {
+            U256.subTo(out, a, N)
+        } else if (out !== a) {
+            U256.copyInto(out, a)
+        }
+    }
+
     fun add(
         a: LongArray,
         b: LongArray,

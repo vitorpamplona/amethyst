@@ -28,3 +28,15 @@ actual fun sha256(data: ByteArray): ByteArray {
     val hasher = provider.get(SHA256).hasher()
     return hasher.hashBlocking(data)
 }
+
+actual fun sha256Into(
+    out: ByteArray,
+    data: ByteArray,
+    len: Int,
+): ByteArray {
+    // Linux cryptography provider doesn't support writing into existing buffer.
+    // Fall back to allocating and copying.
+    val hash = sha256(if (len == data.size) data else data.copyOfRange(0, len))
+    hash.copyInto(out)
+    return out
+}
