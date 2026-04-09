@@ -72,6 +72,16 @@ object Secp256k1InstanceOurs {
         pubKey: ByteArray,
     ): Boolean = Secp256k1.verifySchnorrFast(signature, hash, pubKey)
 
+    /**
+     * Batch-verify multiple signatures from the same pubkey.
+     * Uses scalar+point summation — one mulDoubleG for the whole batch.
+     */
+    fun verifySchnorrBatch(
+        pubKey: ByteArray,
+        signatures: List<ByteArray>,
+        messages: List<ByteArray>,
+    ): Boolean = Secp256k1.verifySchnorrBatch(pubKey, signatures, messages)
+
     fun privateKeyAdd(
         first: ByteArray,
         second: ByteArray,

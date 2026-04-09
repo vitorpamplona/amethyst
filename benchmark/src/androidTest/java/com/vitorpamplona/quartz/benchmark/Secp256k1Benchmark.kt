@@ -164,4 +164,38 @@ class Secp256k1Benchmark {
             assertNotNull(Secp256k1InstanceOurs.pubKeyTweakMulCompact(pubKey2XOnly, privKey))
         }
     }
+
+    // ==================== Batch verification (Pure Kotlin) ====================
+    // Same pubkey, n events — the typical Nostr pattern (feed from one author).
+    // Each iteration verifies the entire batch. Compare per-event cost:
+    //   ns/op ÷ batchSize = per-event cost
+    // JVM benchmark showed 4-7× speedup over individual verify.
+
+    private fun buildBatch(size: Int): Pair<List<ByteArray>, List<ByteArray>> {
+        val sigs = mutableListOf<ByteArray>()
+        val msgs = mutableListOf<ByteArray>()
+        for (i in 0 until size) {
+            val m = ByteArray(32) { (i * 7 + it).toByte() }
+            sigs.add(Secp256k1InstanceOurs.signSchnorr(m, privKey, auxRand))
+            msgs.add(m)
+        }
+        return Pair(sigs, msgs)
+    }
+
+    private val batch8 = buildBatch(8)
+    private val batch16 = buildBatch(16)
+
+    @Test
+    fun verifyBatch8Ours() {
+        benchmarkRule.measureRepeated {
+            assertTrue(Secp256k1InstanceOurs.verifySchnorrBatch(xOnlyPub, batch8.first, batch8.second))
+        }
+    }
+
+    @Test
+    fun verifyBatch16Ours() {
+        benchmarkRule.measureRepeated {
+            assertTrue(Secp256k1InstanceOurs.verifySchnorrBatch(xOnlyPub, batch16.first, batch16.second))
+        }
+    }
 }
