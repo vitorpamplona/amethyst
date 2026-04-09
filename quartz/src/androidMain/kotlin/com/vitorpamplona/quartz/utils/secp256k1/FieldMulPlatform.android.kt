@@ -21,61 +21,28 @@
 package com.vitorpamplona.quartz.utils.secp256k1
 
 /**
- * Android field multiply/square with API-level-gated intrinsics.
+ * Android field multiply/square — uses pure-Kotlin fallback for multiply-high.
  *
- * ARCHITECTURE: dispatch → per-API private function → inline-expanded hot loop
+ * WHY NOT use Math.unsignedMultiplyHigh (API 35+) or Math.multiplyHigh (API 31+)?
+ *   Because D8/R8 desugaring generates a synthetic backport wrapper
+ *   (ExternalSyntheticBackport0.m) for ANY Math.xxx call when minSdk < the API
+ *   that introduced it (minSdk=26 < 31/35). This backport wrapper:
+ *     - Adds 139ns per call (traced on Pixel 8 with Android 16)
+ *     - Is called 24,875 times per Schnorr verify
+ *     - Costs 3.45ms total = 17.5% of verify time
+ *   The pure-Kotlin fallback (4 Long multiplies + shifts) avoids the backport
+ *   entirely and is FASTER than the backported intrinsic path.
  *
- * Each API level gets its OWN private function (fieldMulApi35, fieldMulApi31,
- * fieldMulFallback) with the fieldMulReduceWith inline expansion. This is critical
- * because ART's JIT optimizes methods individually:
+ * WHY NOT use API-level dispatch (fieldMulApi35/Api31/Fallback)?
+ *   Profiling showed the D8 backport overhead dominates. The UMULH/SMULH
+ *   intrinsic behind the backport is ~1ns, but the backport wrapper adds ~138ns.
+ *   The pure fallback at ~10-20ns is much faster than 1+138=139ns.
  *
- * WHY separate private functions per API level?
- *   Tested: putting all 3 branches in a single fieldMulReduce with inline expansion
- *   created ~600 DEX instructions (3 copies × ~200 each). ART's register allocator
- *   produced suboptimal code — verify REGRESSED by ~4% vs baseline. With separate
- *   functions, each is ~200 DEX instructions, well within ART's optimization sweet spot.
- *   Verify improved by 16% instead.
- *
- * WHY the API-level split at all?
- *   - API 35+ (Android 15): Math.unsignedMultiplyHigh → UMULH (1 ARM64 instruction)
- *   - API 31-34 (Android 12-14): Math.multiplyHigh → SMULH + 3 correction insns
- *   - API <31 (Android <12): pure-Kotlin fallback (4 multiplies + shifts)
- *   The dispatch function (fieldMulReduce) checks API once, not per multiply-high call.
- *   ART profiles and devirtualizes — on any given device, only one path is hot.
- *
- * WHY NOT use the unsignedMultiplyHigh expect/actual wrapper directly?
- *   The wrapper checks API level on EVERY call (16-20× per field multiply). Even though
- *   ART should constant-fold the check, the wrapper's 3-branch body may exceed ART's
- *   inline-candidate threshold, leaving ~10,000 un-inlined function calls per verify.
- *   The fused approach eliminates the wrapper entirely.
+ * ALSO: uLt calls accounted for 20.7% of verify time (49,924 calls × 82ns each)
+ *   because it's an expect/actual function (can't be inline). The inline XOR
+ *   comparison in the crossinline lambda eliminates all those function calls.
  */
-
-private val API = android.os.Build.VERSION.SDK_INT
-
-// ==================== Multiply: separate methods per API level ====================
-
-@Suppress("NewApi")
-private fun fieldMulApi35(
-    out: LongArray,
-    a: LongArray,
-    b: LongArray,
-    w: LongArray,
-) {
-    fieldMulReduceWith(out, a, b, w) { x, y -> Math.unsignedMultiplyHigh(x, y) }
-}
-
-private fun fieldMulApi31(
-    out: LongArray,
-    a: LongArray,
-    b: LongArray,
-    w: LongArray,
-) {
-    fieldMulReduceWith(out, a, b, w) { x, y ->
-        Math.multiplyHigh(x, y) + (x and (y shr 63)) + (y and (x shr 63))
-    }
-}
-
-private fun fieldMulFallback(
+internal actual fun fieldMulReduce(
     out: LongArray,
     a: LongArray,
     b: LongArray,
@@ -84,62 +51,10 @@ private fun fieldMulFallback(
     fieldMulReduceWith(out, a, b, w) { x, y -> unsignedMultiplyHighFallback(x, y) }
 }
 
-@Suppress("NewApi")
-internal actual fun fieldMulReduce(
-    out: LongArray,
-    a: LongArray,
-    b: LongArray,
-    w: LongArray,
-) {
-    if (API >= 35) {
-        fieldMulApi35(out, a, b, w)
-    } else if (API >= 31) {
-        fieldMulApi31(out, a, b, w)
-    } else {
-        fieldMulFallback(out, a, b, w)
-    }
-}
-
-// ==================== Square: separate methods per API level ====================
-
-@Suppress("NewApi")
-private fun fieldSqrApi35(
-    out: LongArray,
-    a: LongArray,
-    w: LongArray,
-) {
-    fieldSqrReduceWith(out, a, w) { x, y -> Math.unsignedMultiplyHigh(x, y) }
-}
-
-private fun fieldSqrApi31(
-    out: LongArray,
-    a: LongArray,
-    w: LongArray,
-) {
-    fieldSqrReduceWith(out, a, w) { x, y ->
-        Math.multiplyHigh(x, y) + (x and (y shr 63)) + (y and (x shr 63))
-    }
-}
-
-private fun fieldSqrFallback(
-    out: LongArray,
-    a: LongArray,
-    w: LongArray,
-) {
-    fieldSqrReduceWith(out, a, w) { x, y -> unsignedMultiplyHighFallback(x, y) }
-}
-
-@Suppress("NewApi")
 internal actual fun fieldSqrReduce(
     out: LongArray,
     a: LongArray,
     w: LongArray,
 ) {
-    if (API >= 35) {
-        fieldSqrApi35(out, a, w)
-    } else if (API >= 31) {
-        fieldSqrApi31(out, a, w)
-    } else {
-        fieldSqrFallback(out, a, w)
-    }
+    fieldSqrReduceWith(out, a, w) { x, y -> unsignedMultiplyHighFallback(x, y) }
 }
