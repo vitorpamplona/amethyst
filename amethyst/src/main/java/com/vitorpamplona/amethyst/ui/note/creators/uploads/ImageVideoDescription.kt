@@ -252,9 +252,8 @@ fun ImageVideoDescription(
                 )
             }
 
-            // Hide privacy toggle when video compression is selected (compression already strips metadata)
-            val isVideoWithCompression =
-                uris.first().media.isVideo() == true && mediaQualitySlider != 3
+            // Hide privacy toggle when any selected video will be compressed (compression already strips metadata)
+            val isVideoWithCompression = uris.hasVideo() && mediaQualitySlider != 3
 
             if (!isVideoWithCompression) {
                 SettingSwitchItem(

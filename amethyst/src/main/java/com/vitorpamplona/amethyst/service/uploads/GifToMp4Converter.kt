@@ -41,6 +41,7 @@ import android.opengl.GLUtils
 import android.view.Surface
 import androidx.core.net.toUri
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -57,15 +58,29 @@ object GifToMp4Converter {
     private const val DEFAULT_FRAME_DELAY_MS = 100
     private const val US_PER_MS = 1000L
     private const val NS_PER_US = 1000L
+    private const val MAX_GIF_SIZE_BYTES = 20 * 1024 * 1024
+    private const val DRAIN_EOS_MAX_ITERATIONS = 500
 
     // Fullscreen quad: 4 vertices x (2 position + 2 texcoord) floats
     // Texcoord Y is flipped because bitmap origin is top-left, GL is bottom-left
     private val QUAD_COORDS =
         floatArrayOf(
-            -1f, -1f, 0f, 1f,
-            1f, -1f, 1f, 1f,
-            -1f, 1f, 0f, 0f,
-            1f, 1f, 1f, 0f,
+            -1f,
+            -1f,
+            0f,
+            1f,
+            1f,
+            -1f,
+            1f,
+            1f,
+            -1f,
+            1f,
+            0f,
+            0f,
+            1f,
+            1f,
+            1f,
+            0f,
         )
 
     private const val VERTEX_SHADER =
@@ -92,23 +107,37 @@ object GifToMp4Converter {
         withContext(Dispatchers.IO) {
             try {
                 convertInternal(uri, context)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Log.e(LOG_TAG, "GIF to MP4 conversion failed", e)
                 null
             }
         }
 
-    @Suppress("deprecation")
+    @Suppress("deprecation") // android.graphics.Movie is deprecated but still the simplest GIF decoder available
     private fun convertInternal(
         uri: Uri,
         context: Context,
     ): MediaCompressorResult? {
         val gifBytes =
-            context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
-                ?: run {
-                    Log.w(LOG_TAG) { "Failed to read GIF bytes" }
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                val buffer = ByteArray(MAX_GIF_SIZE_BYTES + 1)
+                var total = 0
+                while (total <= MAX_GIF_SIZE_BYTES) {
+                    val read = input.read(buffer, total, buffer.size - total)
+                    if (read == -1) break
+                    total += read
+                }
+                if (total > MAX_GIF_SIZE_BYTES) {
+                    Log.w(LOG_TAG) { "GIF exceeds max size of $MAX_GIF_SIZE_BYTES bytes" }
                     return null
                 }
+                buffer.copyOf(total)
+            } ?: run {
+                Log.w(LOG_TAG) { "Failed to read GIF bytes" }
+                return null
+            }
 
         val movie =
             Movie.decodeByteArray(gifBytes, 0, gifBytes.size)
@@ -228,18 +257,38 @@ object GifToMp4Converter {
             if (outputFile.exists()) outputFile.delete()
             return null
         } finally {
-            try { egl?.release() } catch (_: Exception) { }
-            try { codec?.stop() } catch (_: Exception) { }
-            try { codec?.release() } catch (_: Exception) { }
-            try { codecSurface?.release() } catch (_: Exception) { }
-            try { muxer?.stop() } catch (_: Exception) { }
-            try { muxer?.release() } catch (_: Exception) { }
+            try {
+                egl?.release()
+            } catch (_: Exception) {
+            }
+            try {
+                codec?.stop()
+            } catch (_: Exception) {
+            }
+            try {
+                codec?.release()
+            } catch (_: Exception) {
+            }
+            try {
+                codecSurface?.release()
+            } catch (_: Exception) {
+            }
+            try {
+                muxer?.stop()
+            } catch (_: Exception) {
+            }
+            try {
+                muxer?.release()
+            } catch (_: Exception) {
+            }
         }
     }
 
     // region EGL
 
-    private class EglHelper(surface: Surface) {
+    private class EglHelper(
+        surface: Surface,
+    ) {
         val display: EGLDisplay
         val context: EGLContext
         val eglSurface: EGLSurface
@@ -253,12 +302,18 @@ object GifToMp4Converter {
 
             val configAttribs =
                 intArrayOf(
-                    EGL14.EGL_RED_SIZE, 8,
-                    EGL14.EGL_GREEN_SIZE, 8,
-                    EGL14.EGL_BLUE_SIZE, 8,
-                    EGL14.EGL_ALPHA_SIZE, 8,
-                    EGL14.EGL_RENDERABLE_TYPE, EGL14.EGL_OPENGL_ES2_BIT,
-                    EGL14.EGL_SURFACE_TYPE, EGL14.EGL_WINDOW_BIT,
+                    EGL14.EGL_RED_SIZE,
+                    8,
+                    EGL14.EGL_GREEN_SIZE,
+                    8,
+                    EGL14.EGL_BLUE_SIZE,
+                    8,
+                    EGL14.EGL_ALPHA_SIZE,
+                    8,
+                    EGL14.EGL_RENDERABLE_TYPE,
+                    EGL14.EGL_OPENGL_ES2_BIT,
+                    EGL14.EGL_SURFACE_TYPE,
+                    EGL14.EGL_WINDOW_BIT,
                     EGL14.EGL_NONE,
                 )
             val configs = arrayOfNulls<EGLConfig>(1)
@@ -266,13 +321,15 @@ object GifToMp4Converter {
             check(EGL14.eglChooseConfig(display, configAttribs, 0, configs, 0, 1, numConfigs, 0)) {
                 "eglChooseConfig failed"
             }
+            check(numConfigs[0] > 0) { "eglChooseConfig returned no matching configs" }
+            val config = requireNotNull(configs[0]) { "eglChooseConfig returned null config" }
 
             val contextAttribs = intArrayOf(EGL14.EGL_CONTEXT_CLIENT_VERSION, 2, EGL14.EGL_NONE)
-            context = EGL14.eglCreateContext(display, configs[0]!!, EGL14.EGL_NO_CONTEXT, contextAttribs, 0)
+            context = EGL14.eglCreateContext(display, config, EGL14.EGL_NO_CONTEXT, contextAttribs, 0)
             check(context != EGL14.EGL_NO_CONTEXT) { "eglCreateContext failed" }
 
             val surfaceAttribs = intArrayOf(EGL14.EGL_NONE)
-            eglSurface = EGL14.eglCreateWindowSurface(display, configs[0]!!, surface, surfaceAttribs, 0)
+            eglSurface = EGL14.eglCreateWindowSurface(display, config, surface, surfaceAttribs, 0)
             check(eglSurface != EGL14.EGL_NO_SURFACE) { "eglCreateWindowSurface failed" }
         }
 
@@ -304,9 +361,17 @@ object GifToMp4Converter {
         val vs = compileShader(GLES20.GL_VERTEX_SHADER, VERTEX_SHADER)
         val fs = compileShader(GLES20.GL_FRAGMENT_SHADER, FRAGMENT_SHADER)
         val program = GLES20.glCreateProgram()
+        check(program != 0) { "glCreateProgram failed" }
         GLES20.glAttachShader(program, vs)
         GLES20.glAttachShader(program, fs)
         GLES20.glLinkProgram(program)
+        val linkStatus = IntArray(1)
+        GLES20.glGetProgramiv(program, GLES20.GL_LINK_STATUS, linkStatus, 0)
+        if (linkStatus[0] != GLES20.GL_TRUE) {
+            val info = GLES20.glGetProgramInfoLog(program)
+            GLES20.glDeleteProgram(program)
+            throw RuntimeException("glLinkProgram failed: $info")
+        }
         GLES20.glDeleteShader(vs)
         GLES20.glDeleteShader(fs)
         return program
@@ -317,8 +382,16 @@ object GifToMp4Converter {
         source: String,
     ): Int {
         val shader = GLES20.glCreateShader(type)
+        check(shader != 0) { "glCreateShader failed for type $type" }
         GLES20.glShaderSource(shader, source)
         GLES20.glCompileShader(shader)
+        val compileStatus = IntArray(1)
+        GLES20.glGetShaderiv(shader, GLES20.GL_COMPILE_STATUS, compileStatus, 0)
+        if (compileStatus[0] != GLES20.GL_TRUE) {
+            val info = GLES20.glGetShaderInfoLog(shader)
+            GLES20.glDeleteShader(shader)
+            throw RuntimeException("glCompileShader failed for type $type: $info")
+        }
         return shader
     }
 
@@ -429,18 +502,28 @@ object GifToMp4Converter {
                         pos = skipSubBlocks(bytes, pos)
                     }
                 }
+
                 0x2C -> {
+                    // Image Descriptor: 1 (separator, current pos) + 8 (L/T/W/H) + 1 (packed) = 10 bytes
+                    if (pos + 10 > bytes.size) break
+                    val imgPacked = bytes[pos + 9].toInt() and 0xFF
                     pos += 10
-                    if (pos > bytes.size) break
-                    val imgPacked = bytes[pos - 1].toInt() and 0xFF
                     if (imgPacked and 0x80 != 0) {
                         pos += 3 * (1 shl ((imgPacked and 0x07) + 1))
+                        if (pos >= bytes.size) break
                     }
                     pos++
+                    if (pos >= bytes.size) break
                     pos = skipSubBlocks(bytes, pos)
                 }
-                0x3B -> break
-                else -> pos++
+
+                0x3B -> {
+                    break
+                }
+
+                else -> {
+                    pos++
+                }
             }
         }
 
@@ -456,7 +539,7 @@ object GifToMp4Converter {
             val blockSize = bytes[pos].toInt() and 0xFF
             pos++
             if (blockSize == 0) break
-            pos += blockSize
+            pos = minOf(pos + blockSize, bytes.size)
         }
         return pos
     }
@@ -475,6 +558,7 @@ object GifToMp4Converter {
     ): Pair<Int, Boolean> {
         var currentTrackIndex = trackIndex
         var currentMuxerStarted = muxerStarted
+        var eosDrainIterations = 0
 
         while (true) {
             val outputIndex = codec.dequeueOutputBuffer(bufferInfo, TIMEOUT_US)
@@ -482,6 +566,9 @@ object GifToMp4Converter {
             when {
                 outputIndex == MediaCodec.INFO_TRY_AGAIN_LATER -> {
                     if (!endOfStream) return Pair(currentTrackIndex, currentMuxerStarted)
+                    if (++eosDrainIterations >= DRAIN_EOS_MAX_ITERATIONS) {
+                        throw RuntimeException("Encoder failed to drain after EOS within ${DRAIN_EOS_MAX_ITERATIONS} iterations")
+                    }
                 }
 
                 outputIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED -> {
