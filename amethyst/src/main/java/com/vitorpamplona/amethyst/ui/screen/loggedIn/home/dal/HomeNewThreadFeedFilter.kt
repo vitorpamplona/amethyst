@@ -43,7 +43,6 @@ import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
-import com.vitorpamplona.quartz.nip64Chess.challenge.offer.LiveChessGameChallengeEvent
 import com.vitorpamplona.quartz.nip64Chess.end.LiveChessGameEndEvent
 import com.vitorpamplona.quartz.nip64Chess.game.ChessGameEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
@@ -62,7 +61,6 @@ class HomeNewThreadFeedFilter(
                 WikiNoteEvent.KIND,
                 ClassifiedsEvent.KIND,
                 LongTextNoteEvent.KIND,
-                LiveChessGameChallengeEvent.KIND,
                 LiveChessGameEndEvent.KIND,
                 AttestationEvent.KIND,
             )
@@ -130,7 +128,6 @@ class HomeNewThreadFeedFilter(
                 noteEvent is VoiceEvent ||
                 noteEvent is AudioHeaderEvent ||
                 noteEvent is ChessGameEvent ||
-                noteEvent is LiveChessGameChallengeEvent ||
                 noteEvent is LiveChessGameEndEvent ||
                 noteEvent is AttestationEvent ||
                 noteEvent is AttestationRequestEvent ||
