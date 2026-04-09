@@ -16,6 +16,14 @@ plugins {
 kotlin {
     compilerOptions {
         freeCompilerArgs.add("-Xexpect-actual-classes")
+        // Remove Kotlin null-check assertions on parameters, return values, and receivers.
+        // These generate invokestatic Intrinsics.checkNotNullParameter at the entry of every
+        // function that takes non-null reference types (~4,000+ calls per Schnorr verify).
+        // Safe for this module: all internal secp256k1 code uses non-null LongArray params
+        // that are never null. Each check costs ~2-3ns on ART, totaling ~8-12μs per verify.
+        freeCompilerArgs.add("-Xno-param-assertions")
+        freeCompilerArgs.add("-Xno-call-assertions")
+        freeCompilerArgs.add("-Xno-receiver-assertions")
     }
     jvm {
         compilerOptions {
