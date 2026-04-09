@@ -127,9 +127,10 @@ object Secp256k1 {
     /** Create a 65-byte uncompressed public key (04 || x || y) from a 32-byte secret key. */
     fun pubkeyCreate(seckey: ByteArray): ByteArray {
         require(seckey.size == 32)
-        val scalar = U256.fromBytes(seckey)
-        require(ScalarN.isValid(scalar))
         val sc = ECPoint.getScratch()
+        val scalar = sc.scalarTmp1
+        U256.fromBytesInto(scalar, seckey, 0)
+        require(ScalarN.isValid(scalar))
         ECPoint.mulG(sc.entryResult, scalar)
         check(ECPoint.toAffine(sc.entryResult, sc.entryPx, sc.entryPy, sc))
         return KeyCodec.serializeUncompressed(sc.entryPx, sc.entryPy)
@@ -233,11 +234,10 @@ object Secp256k1 {
         auxrand: ByteArray?,
     ): ByteArray {
         require(seckey.size == 32)
-        // Allocate d0 separately — signSchnorrInternal uses all scalar scratch buffers.
+        // d0 must survive through mulG (which destroys splitK*) and signSchnorrInternal
+        // (which uses scalarTmp*). The allocation is negligible vs mulG cost (~100μs).
         val d0 = U256.fromBytes(seckey)
         require(ScalarN.isValid(d0))
-
-        // Derive public key (one G multiplication + one inversion)
         val sc = ECPoint.getScratch()
         ECPoint.mulG(sc.entryResult, d0)
         check(ECPoint.toAffine(sc.entryResult, sc.entryPx, sc.entryPy, sc))
@@ -270,7 +270,10 @@ object Secp256k1 {
         auxrand: ByteArray?,
     ): ByteArray {
         require(seckey.size == 32 && compressedPub.size == 33)
-        val d0 = U256.fromBytes(seckey)
+        // Use zInv for d0 — not used by signSchnorrInternal.
+        val sc = ECPoint.getScratch()
+        val d0 = sc.zInv
+        U256.fromBytesInto(d0, seckey, 0)
         require(ScalarN.isValid(d0))
         val hasEvenY = compressedPub[0] == 0x02.toByte()
         val xOnlyPub = compressedPub.copyOfRange(1, 33)
@@ -293,7 +296,10 @@ object Secp256k1 {
         auxrand: ByteArray?,
     ): ByteArray {
         require(seckey.size == 32 && xOnlyPub.size == 32)
-        val d0 = U256.fromBytes(seckey)
+        // Use zInv for d0 — not used by signSchnorrInternal.
+        val sc = ECPoint.getScratch()
+        val d0 = sc.zInv
+        U256.fromBytesInto(d0, seckey, 0)
         require(ScalarN.isValid(d0))
         // BIP-340: x-only pubkeys always have even y
         return signSchnorrInternal(data, d0, xOnlyPub, true, auxrand)
@@ -541,7 +547,8 @@ object Secp256k1 {
         require(tweak.size == 32)
         val sc = ECPoint.getScratch()
         check(KeyCodec.parsePublicKey(pubkey, sc.entryPx, sc.entryPy))
-        val scalar = U256.fromBytes(tweak)
+        val scalar = sc.scalarTmp1
+        U256.fromBytesInto(scalar, tweak, 0)
         require(ScalarN.isValid(scalar))
 
         sc.entryPoint.setAffine(sc.entryPx, sc.entryPy)
@@ -576,7 +583,8 @@ object Secp256k1 {
         val sc = ECPoint.getScratch()
         U256.fromBytesInto(sc.entryTmp, xOnlyPub, 0)
         require(U256.cmp(sc.entryTmp, FieldP.P) < 0)
-        val k = U256.fromBytes(scalar)
+        val k = sc.scalarTmp1
+        U256.fromBytesInto(k, scalar, 0)
         require(ScalarN.isValid(k))
 
         // Compute y = sqrt(x³ + 7). We need SOME valid y for EC point operations,
