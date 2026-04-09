@@ -25,7 +25,7 @@ import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.utils.Secp256k1Instance
-import com.vitorpamplona.quartz.utils.Secp256k1InstanceOurs
+import com.vitorpamplona.quartz.utils.Secp256k1InstanceKotlin
 import junit.framework.TestCase.assertNotNull
 import junit.framework.TestCase.assertTrue
 import org.junit.Rule
@@ -70,13 +70,15 @@ class Secp256k1Benchmark {
     // Batch verification data
     private val batch8 = buildBatch(8)
     private val batch16 = buildBatch(16)
+    private val batch32 = buildBatch(32)
+    private val batch200 = buildBatch(200)
 
     private fun buildBatch(size: Int): Pair<List<ByteArray>, List<ByteArray>> {
         val sigs = mutableListOf<ByteArray>()
         val msgs = mutableListOf<ByteArray>()
         for (i in 0 until size) {
             val m = ByteArray(32) { (i * 7 + it).toByte() }
-            sigs.add(Secp256k1InstanceOurs.signSchnorr(m, privKey, auxRand))
+            sigs.add(Secp256k1InstanceKotlin.signSchnorr(m, privKey, auxRand))
             msgs.add(m)
         }
         return Pair(sigs, msgs)
@@ -99,7 +101,7 @@ class Secp256k1Benchmark {
     }
 
     @Test
-    fun compressedPubKeyFor() {
+    fun xPubKeyFor() {
         benchmarkRule.measureRepeated {
             assertNotNull(Secp256k1Instance.compressedPubKeyFor(privKey))
         }
@@ -113,14 +115,14 @@ class Secp256k1Benchmark {
     }
 
     @Test
-    fun privateKeyAdd() {
+    fun privateKeyTweakAdd() {
         benchmarkRule.measureRepeated {
             assertNotNull(Secp256k1Instance.privateKeyAdd(privKey, privKey2))
         }
     }
 
     @Test
-    fun ecdhXOnly() {
+    fun pubKeyTweakMul() {
         benchmarkRule.measureRepeated {
             assertNotNull(Secp256k1Instance.pubKeyTweakMulCompact(pubKey2XOnly, privKey))
         }
@@ -129,58 +131,58 @@ class Secp256k1Benchmark {
     // ==================== Pure Kotlin ====================
 
     @Test
-    fun verifySchnorrOurs() {
+    fun verifySchnorrKotlin() {
         benchmarkRule.measureRepeated {
-            assertTrue(Secp256k1InstanceOurs.verifySchnorr(signature, msg32, xOnlyPub))
+            assertTrue(Secp256k1InstanceKotlin.verifySchnorr(signature, msg32, xOnlyPub))
         }
     }
 
     @Test
-    fun verifySchnorrFastOurs() {
+    fun verifySchnorrXPubkeyKotlin() {
         benchmarkRule.measureRepeated {
-            assertTrue(Secp256k1InstanceOurs.verifySchnorrFast(signature, msg32, xOnlyPub))
+            assertTrue(Secp256k1InstanceKotlin.verifySchnorrFast(signature, msg32, xOnlyPub))
         }
     }
 
     @Test
-    fun signSchnorrOurs() {
+    fun signSchnorrKotlin() {
         benchmarkRule.measureRepeated {
-            assertNotNull(Secp256k1InstanceOurs.signSchnorr(msg32, privKey, auxRand))
+            assertNotNull(Secp256k1InstanceKotlin.signSchnorr(msg32, privKey, auxRand))
         }
     }
 
     @Test
-    fun signSchnorrCachedPkOurs() {
+    fun signSchnorrXPubkeyKotlin() {
         benchmarkRule.measureRepeated {
-            assertNotNull(Secp256k1InstanceOurs.signSchnorrWithXOnlyPubKey(msg32, privKey, xOnlyPub, auxRand))
+            assertNotNull(Secp256k1InstanceKotlin.signSchnorrWithXOnlyPubKey(msg32, privKey, xOnlyPub, auxRand))
         }
     }
 
     @Test
-    fun compressedPubKeyForOurs() {
+    fun xPubKeyForKotlin() {
         benchmarkRule.measureRepeated {
-            assertNotNull(Secp256k1InstanceOurs.compressedPubKeyFor(privKey))
+            assertNotNull(Secp256k1InstanceKotlin.compressedPubKeyFor(privKey))
         }
     }
 
     @Test
-    fun secKeyVerifyOurs() {
+    fun secKeyVerifyKotlin() {
         benchmarkRule.measureRepeated {
-            assertTrue(Secp256k1InstanceOurs.isPrivateKeyValid(privKey))
+            assertTrue(Secp256k1InstanceKotlin.isPrivateKeyValid(privKey))
         }
     }
 
     @Test
-    fun privateKeyAddOurs() {
+    fun privateKeyTweakAddKotlin() {
         benchmarkRule.measureRepeated {
-            assertNotNull(Secp256k1InstanceOurs.privateKeyAdd(privKey, privKey2))
+            assertNotNull(Secp256k1InstanceKotlin.privateKeyAdd(privKey, privKey2))
         }
     }
 
     @Test
-    fun ecdhXOnlyOurs() {
+    fun pubKeyTweakMulKotlin() {
         benchmarkRule.measureRepeated {
-            assertNotNull(Secp256k1InstanceOurs.pubKeyTweakMulCompact(pubKey2XOnly, privKey))
+            assertNotNull(Secp256k1InstanceKotlin.pubKeyTweakMulCompact(pubKey2XOnly, privKey))
         }
     }
 
@@ -189,16 +191,30 @@ class Secp256k1Benchmark {
     // Per-event cost = ns/op ÷ batchSize.
 
     @Test
-    fun verifyBatch8Ours() {
+    fun verifyBatch8Kotlin() {
         benchmarkRule.measureRepeated {
-            assertTrue(Secp256k1InstanceOurs.verifySchnorrBatch(xOnlyPub, batch8.first, batch8.second))
+            assertTrue(Secp256k1InstanceKotlin.verifySchnorrBatch(xOnlyPub, batch8.first, batch8.second))
         }
     }
 
     @Test
-    fun verifyBatch16Ours() {
+    fun verifyBatch16Kotlin() {
         benchmarkRule.measureRepeated {
-            assertTrue(Secp256k1InstanceOurs.verifySchnorrBatch(xOnlyPub, batch16.first, batch16.second))
+            assertTrue(Secp256k1InstanceKotlin.verifySchnorrBatch(xOnlyPub, batch16.first, batch16.second))
+        }
+    }
+
+    @Test
+    fun verifyBatch32Kotlin() {
+        benchmarkRule.measureRepeated {
+            assertTrue(Secp256k1InstanceKotlin.verifySchnorrBatch(xOnlyPub, batch32.first, batch32.second))
+        }
+    }
+
+    @Test
+    fun verifyBatch200Kotlin() {
+        benchmarkRule.measureRepeated {
+            assertTrue(Secp256k1InstanceKotlin.verifySchnorrBatch(xOnlyPub, batch200.first, batch200.second))
         }
     }
 }

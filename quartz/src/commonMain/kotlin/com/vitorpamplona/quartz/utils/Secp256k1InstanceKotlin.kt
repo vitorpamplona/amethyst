@@ -22,7 +22,7 @@ package com.vitorpamplona.quartz.utils
 
 import com.vitorpamplona.quartz.utils.secp256k1.Secp256k1
 
-object Secp256k1InstanceOurs {
+object Secp256k1InstanceKotlin {
     private val h02 = Hex.decode("02")
 
     fun compressedPubKeyFor(privKey: ByteArray) = Secp256k1.pubKeyCompress(Secp256k1.pubkeyCreate(privKey))

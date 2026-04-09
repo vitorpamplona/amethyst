@@ -79,13 +79,23 @@ class Secp256k1Benchmark {
         val ratio get() = kotlinNanos.toDouble() / nativeNanos.toDouble()
 
         override fun toString(): String =
-            String.format(
-                "%-25s  Native: %,8d ops/s  Kotlin: %,8d ops/s  Ratio: %.1fx",
-                name,
-                nativeOpsPerSec,
-                kotlinOpsPerSec,
-                ratio,
-            )
+            if (ratio > 1) {
+                String.format(
+                    "%-25s  %,10d ops/s   %,10d ops/s   %.1fx slower",
+                    name,
+                    nativeOpsPerSec,
+                    kotlinOpsPerSec,
+                    ratio,
+                )
+            } else {
+                String.format(
+                    "%-25s  %,10d ops/s   %,10d ops/s   %.1fx faster",
+                    name,
+                    nativeOpsPerSec,
+                    kotlinOpsPerSec,
+                    ratio,
+                )
+            }
     }
 
     private inline fun bench(
@@ -135,7 +145,7 @@ class Secp256k1Benchmark {
         // --- verifySchnorrFast (Nostr: x-check only, no y-parity inversion) ---
         results +=
             bench(
-                name = "verifySchnorrFast",
+                name = "verifySchnorr (XPubKey)",
                 warmup = 2000,
                 iterations = 5000,
                 nativeOp = { native.verifySchnorr(nativeSig, msg32, nativeXOnlyPub) },
@@ -164,6 +174,27 @@ class Secp256k1Benchmark {
                 },
             )
 
+        // --- signSchnorr (cached pk) ---
+        // NOTE: The C library's signSchnorr always derives the pubkey internally.
+        // Our signSchnorrWithPubKey skips that derivation. This is NOT an apples-to-apples
+        // comparison — it shows what's possible when the caller caches the compressed pubkey.
+        // The native baseline here is the same signSchnorr (with pubkey derivation).
+        results +=
+            bench(
+                name = "signSchnorr (XPubKey)",
+                warmup = 1000,
+                iterations = 5000,
+                nativeOp = { native.signSchnorr(msg32, privKey, auxRand) },
+                kotlinOp = {
+                    com.vitorpamplona.quartz.utils.secp256k1.Secp256k1.signSchnorrWithPubKey(
+                        msg32,
+                        privKey,
+                        nativePubKey,
+                        auxRand,
+                    )
+                },
+            )
+
         // --- signSchnorr (derives pubkey from seckey each time — both sides do the same work) ---
         results +=
             bench(
@@ -180,31 +211,10 @@ class Secp256k1Benchmark {
                 },
             )
 
-        // --- signSchnorr (cached pk) ---
-        // NOTE: The C library's signSchnorr always derives the pubkey internally.
-        // Our signSchnorrWithPubKey skips that derivation. This is NOT an apples-to-apples
-        // comparison — it shows what's possible when the caller caches the compressed pubkey.
-        // The native baseline here is the same signSchnorr (with pubkey derivation).
-        results +=
-            bench(
-                name = "signSchnorr (cached pk)",
-                warmup = 1000,
-                iterations = 5000,
-                nativeOp = { native.signSchnorr(msg32, privKey, auxRand) },
-                kotlinOp = {
-                    com.vitorpamplona.quartz.utils.secp256k1.Secp256k1.signSchnorrWithPubKey(
-                        msg32,
-                        privKey,
-                        nativePubKey,
-                        auxRand,
-                    )
-                },
-            )
-
         // --- compressedPubKeyFor (create + compress combined) ---
         results +=
             bench(
-                name = "compressedPubKeyFor",
+                name = "xPubKeyFor (Login)",
                 warmup = 1000,
                 iterations = 5000,
                 nativeOp = { native.pubKeyCompress(native.pubkeyCreate(privKey)) },
@@ -219,7 +229,7 @@ class Secp256k1Benchmark {
         // --- secKeyVerify ---
         results +=
             bench(
-                name = "secKeyVerify",
+                name = "secKeyVerify (NIP-06)",
                 warmup = 5000,
                 iterations = 200000,
                 nativeOp = { native.secKeyVerify(privKey) },
@@ -234,7 +244,7 @@ class Secp256k1Benchmark {
         // the native side. This adds one allocation to the native measurement.
         results +=
             bench(
-                name = "privKeyTweakAdd",
+                name = "privKeyTweakAdd (NIP-06)",
                 warmup = 1000,
                 iterations = 50000,
                 nativeOp = { native.privKeyTweakAdd(privKey.copyOf(), privKey2) },
@@ -250,7 +260,7 @@ class Secp256k1Benchmark {
         // Native has no ecdhXOnly — compare against pubKeyTweakMul + extract x.
         results +=
             bench(
-                name = "ecdhXOnly (Nostr)",
+                name = "pubKeyTweakMul (NIP-44)",
                 warmup = 1000,
                 iterations = 3000,
                 nativeOp = { native.pubKeyTweakMul(h02 + pub2xOnly, privKey).copyOfRange(1, 33) },
@@ -262,20 +272,24 @@ class Secp256k1Benchmark {
 
         // Print results
         println()
-        println("=".repeat(90))
-        println("secp256k1 Benchmark: Native (ACINQ/JNI) vs Pure Kotlin on JVM (HotSpot C2)")
-        println("=".repeat(90))
+        println("=".repeat(76))
+        println("secp256k1 Benchmark: C (ACINQ/JNI) vs Kotlin (JVM21/HotSpot C2)")
+        println("=".repeat(76))
+        println("Method                          JVM->JNI->C        Pure Kotlin   Ratio")
+        println("-".repeat(76))
         for (r in results) {
             println(r)
         }
-        println("=".repeat(90))
+        println("=".repeat(76))
+        println("Verify      Batched Kotlin      JVM->JNI->C        Pure Kotlin   Ratio")
+        println("-".repeat(76))
 
         // ==================== Batch verification benchmark ====================
         // Same pubkey, n events — the typical Nostr pattern (feed from one author).
         // Batch verify uses scalar+point summation: one mulDoubleG for the whole batch
         // instead of n individual mulDoubleG calls.
         val batchPub = kotlinXOnlyPub
-        for (batchSize in intArrayOf(4, 8, 16, 32)) {
+        for (batchSize in intArrayOf(4, 8, 16, 32, 200)) {
             val sigs = mutableListOf<ByteArray>()
             val msgs = mutableListOf<ByteArray>()
             for (i in 0 until batchSize) {
@@ -297,17 +311,29 @@ class Secp256k1Benchmark {
                 com.vitorpamplona.quartz.utils.secp256k1.Secp256k1
                     .verifySchnorrBatch(batchPub, sigs, msgs)
             }
-            // Time individual
+            // Time individual native
             val iters = 1000
-            val indivStart = System.nanoTime()
+
+            val indivNativeStart = System.nanoTime()
             repeat(iters) {
                 for (j in 0 until batchSize) {
                     com.vitorpamplona.quartz.utils.secp256k1.Secp256k1
                         .verifySchnorr(sigs[j], msgs[j], batchPub)
                 }
             }
-            val indivNs = System.nanoTime() - indivStart
-            val indivPerEvent = iters.toLong() * batchSize * 1_000_000_000L / indivNs
+            val indivNativeNs = System.nanoTime() - indivNativeStart
+            val indivNativePerEvent = iters.toLong() * batchSize * 1_000_000_000L / indivNativeNs
+
+            val indivKotlinStart = System.nanoTime()
+            repeat(iters) {
+                for (j in 0 until batchSize) {
+                    com.vitorpamplona.quartz.utils.secp256k1.Secp256k1
+                        .verifySchnorr(sigs[j], msgs[j], batchPub)
+                }
+            }
+            val indivKotlinNs = System.nanoTime() - indivKotlinStart
+            val indivKotlinPerEvent = iters.toLong() * batchSize * 1_000_000_000L / indivKotlinNs
+
             // Time batch
             val batchStart = System.nanoTime()
             repeat(iters) {
@@ -316,18 +342,19 @@ class Secp256k1Benchmark {
             }
             val batchNs = System.nanoTime() - batchStart
             val batchPerEvent = iters.toLong() * batchSize * 1_000_000_000L / batchNs
-            val speedup = indivNs.toDouble() / batchNs.toDouble()
+            val speedup = indivNativeNs.toDouble() / batchNs.toDouble()
             println(
                 String.format(
-                    "  batch(%2d): individual %,7d ev/s  batch %,7d ev/s  speedup %.1fx",
+                    "%3d evts   %,10d ev/s    %,8d ev/s      %,8d ev/s   %.1fx faster",
                     batchSize,
-                    indivPerEvent,
                     batchPerEvent,
+                    indivNativePerEvent,
+                    indivKotlinPerEvent,
                     speedup,
                 ),
             )
         }
-        println("=".repeat(90))
+        println("=".repeat(76))
         println()
     }
 

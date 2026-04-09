@@ -51,7 +51,6 @@ if [ -z "$SO_PATH" ]; then
 fi
 
 WORK=$(mktemp -d)
-trap "rm -rf $WORK" EXIT
 
 (cd "$WORK" && jar xf "$SO_PATH") 2>/dev/null || true
 SO_FILE=$(find "$WORK" -name "$SO_NAME" -path "$SO_PATH_PATTERN" 2>/dev/null | head -1)
