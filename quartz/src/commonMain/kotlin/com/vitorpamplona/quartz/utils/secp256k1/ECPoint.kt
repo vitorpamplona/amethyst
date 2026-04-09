@@ -68,6 +68,14 @@ internal object ECPoint {
     /** Curve constant b = 7 in y² = x³ + 7. */
     private val B = longArrayOf(7L, 0L, 0L, 0L)
 
+    // Thread-local scratch — declared before precomputed tables because
+    // buildGOddTable() and buildCombTable() use doublePoint/addPoints which
+    // call scratch.get(). Must be initialized before those table fields.
+    private val scratch = ScratchLocal { PointScratch() }
+
+    /** Get thread-local scratch. Call once at the top-level entry point. */
+    internal fun getScratch(): PointScratch = scratch.get()
+
     /**
      * wNAF window width for the G-side of scalar multiplication (mulDoubleG/verify).
      * Width w uses a table of 2^(w-2) odd multiples. Larger windows mean fewer
@@ -84,14 +92,14 @@ internal object ECPoint {
 
     /**
      * Precomputed G odd-multiples for wNAF: gOddTable[i] = (2i+1)·G as affine, for i in 0..G_TABLE_SIZE-1.
-     * Used by mulG and mulDoubleG. Lazily initialized on first use.
+     * Used by mulG and mulDoubleG. Eagerly initialized to avoid SynchronizedLazyImpl
+     * dispatch on every verify call (~200 instructions of lock-check overhead per access).
      */
-    private val gOddTable: Array<AffinePoint> by lazy { buildGOddTable() }
+    private val gOddTable: Array<AffinePoint> = buildGOddTable()
 
     /** Precomputed λ(G) odd-multiples for GLV: gLamTable[i] = λ((2i+1)·G) as affine. */
-    private val gLamTable: Array<AffinePoint> by lazy {
+    private val gLamTable: Array<AffinePoint> =
         Array(G_TABLE_SIZE) { AffinePoint(FieldP.mul(gOddTable[it].x, Glv.BETA), gOddTable[it].y.copyOf()) }
-    }
 
     // ==================== P-side wNAF table cache ====================
     //
@@ -203,7 +211,7 @@ internal object ECPoint {
     private const val COMB_SPACING = 4
     private const val COMB_POINTS = 1 shl COMB_TEETH // 64
 
-    private val combTable: Array<AffinePoint> by lazy { buildCombTable() }
+    private val combTable: Array<AffinePoint> = buildCombTable()
 
     private fun buildCombTable(): Array<AffinePoint> {
         // Tooth base points: toothG[i] = 2^(i * SPACING) * G
@@ -246,13 +254,6 @@ internal object ECPoint {
             }
         }
     }
-
-    // ==================== Thread-local scratch ====================
-
-    private val scratch = ScratchLocal { PointScratch() }
-
-    /** Get thread-local scratch. Call once at the top-level entry point. */
-    internal fun getScratch(): PointScratch = scratch.get()
 
     // ==================== Point Doubling (3M + 4S) ====================
 
