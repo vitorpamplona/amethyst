@@ -11,16 +11,41 @@ set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 BENCH_DIR="$ROOT/quartz/benchmarks"
-SO_NAME="libsecp256k1-jni.so"
+
+# ============================================================================
+# Platform detection
+# ============================================================================
+OS_NAME="$(uname -s)"
+ARCH="$(uname -m)"
+
+case "$OS_NAME" in
+    Linux)
+        SO_NAME="libsecp256k1-jni.so"
+        JAR_PLATFORM="linux"
+        case "$ARCH" in
+            aarch64|arm64) SO_PATH_PATTERN="*linux-aarch64*" ;;
+            *)             SO_PATH_PATTERN="*linux-x86_64*" ;;
+        esac
+        ;;
+    Darwin)
+        SO_NAME="libsecp256k1-jni.dylib"
+        JAR_PLATFORM="darwin"
+        SO_PATH_PATTERN="*darwin*"
+        ;;
+    *)
+        echo "Unsupported OS: $OS_NAME"
+        exit 1
+        ;;
+esac
 
 # ============================================================================
 # 1. C native benchmark
 # ============================================================================
 echo "=== Building C native benchmark ==="
 
-SO_PATH=$(find "$HOME/.gradle" -path "*/secp256k1-kmp-jni-jvm-linux*" -name "*.jar" 2>/dev/null | head -1)
+SO_PATH=$(find "$HOME/.gradle" -path "*/secp256k1-kmp-jni-jvm-${JAR_PLATFORM}*" -name "*.jar" 2>/dev/null | head -1)
 if [ -z "$SO_PATH" ]; then
-    echo "ACINQ secp256k1-kmp-jni-jvm-linux JAR not found in Gradle cache."
+    echo "ACINQ secp256k1-kmp-jni-jvm-${JAR_PLATFORM} JAR not found in Gradle cache."
     echo "Run './gradlew :quartz:jvmTest --tests *.Secp256k1Test' first to download it."
     exit 1
 fi
@@ -29,9 +54,9 @@ WORK=$(mktemp -d)
 trap "rm -rf $WORK" EXIT
 
 (cd "$WORK" && jar xf "$SO_PATH") 2>/dev/null || true
-SO_FILE=$(find "$WORK" -name "$SO_NAME" -path "*linux-x86_64*" 2>/dev/null | head -1)
+SO_FILE=$(find "$WORK" -name "$SO_NAME" -path "$SO_PATH_PATTERN" 2>/dev/null | head -1)
 if [ -z "$SO_FILE" ]; then
-    echo "Could not find $SO_NAME for linux-x86_64 in JAR."
+    echo "Could not find $SO_NAME for $OS_NAME-$ARCH in JAR."
     exit 1
 fi
 cp "$SO_FILE" "$WORK/"
@@ -52,19 +77,23 @@ echo "$C_OUT"
 echo ""
 
 # ============================================================================
-# 2. Kotlin/Native benchmark
+# 2. Kotlin/Native benchmark (Linux only — only linuxX64 target exists)
 # ============================================================================
-echo "=== Running Kotlin/Native benchmark ==="
-"$ROOT/gradlew" -p "$ROOT" :quartz:linuxX64Test --tests "*.Secp256k1NativeBenchmark" \
-    2>/dev/null || true
-
-KN_XML="$ROOT/quartz/build/test-results/linuxX64Test/TEST-linuxX64Test.com.vitorpamplona.quartz.utils.secp256k1.Secp256k1NativeBenchmark.xml"
 KN_OUT=""
-if [ -f "$KN_XML" ]; then
-    KN_OUT=$(sed -n '/<!\[CDATA\[/,/\]\]>/p' "$KN_XML" | grep -v 'CDATA\|]]>')
-    echo "$KN_OUT"
+if [ "$OS_NAME" = "Linux" ]; then
+    echo "=== Running Kotlin/Native benchmark ==="
+    "$ROOT/gradlew" -p "$ROOT" :quartz:linuxX64Test --tests "*.Secp256k1NativeBenchmark" \
+        2>/dev/null || true
+
+    KN_XML="$ROOT/quartz/build/test-results/linuxX64Test/TEST-linuxX64Test.com.vitorpamplona.quartz.utils.secp256k1.Secp256k1NativeBenchmark.xml"
+    if [ -f "$KN_XML" ]; then
+        KN_OUT=$(sed -n '/<!\[CDATA\[/,/\]\]>/p' "$KN_XML" | grep -v 'CDATA\|]]>')
+        echo "$KN_OUT"
+    else
+        echo "K/Native benchmark XML not found."
+    fi
 else
-    echo "K/Native benchmark XML not found."
+    echo "=== Skipping Kotlin/Native benchmark (only linuxX64 target available) ==="
 fi
 echo ""
 
