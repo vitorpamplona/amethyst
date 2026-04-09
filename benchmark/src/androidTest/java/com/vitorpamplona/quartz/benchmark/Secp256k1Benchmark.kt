@@ -36,8 +36,19 @@ import org.junit.runner.RunWith
  * Android microbenchmark for all secp256k1 operations used by Nostr.
  *
  * Uses AndroidX Benchmark (Jetpack Microbenchmark) for accurate, warmed-up
- * measurements on real Android hardware/emulator. Results appear in Android
- * Studio's benchmark output with ns/op, allocations, and percentiles.
+ * measurements on real Android hardware. Results appear in Android Studio's
+ * benchmark output with ns/op, allocations, and percentiles.
+ *
+ * Tests are structured as matched pairs: "Foo" uses the native C library (ACINQ/JNI),
+ * "FooOurs" uses the pure-Kotlin implementation. This allows direct comparison of
+ * each operation between native and Kotlin on the same device.
+ *
+ * NOTE: verifySchnorr uses the same pubkey repeatedly, so it benefits from the
+ * pubkey decompression cache and P-table cache. This is realistic for Nostr
+ * (feed from one author) but not representative of first-time verification.
+ *
+ * Test data is the same across all 3 platform benchmarks (JVM, Android, K/Native)
+ * for cross-platform comparability.
  *
  * Run with: ./gradlew :benchmark:connectedAndroidTest
  */
@@ -45,7 +56,7 @@ import org.junit.runner.RunWith
 class Secp256k1Benchmark {
     @get:Rule val benchmarkRule = BenchmarkRule()
 
-    // Test data
+    // Test data (same across all 3 platform benchmarks for comparability)
     private val privKey = "67E56582298859DDAE725F972992A07C6C4FB9F62A8FFF58CE3CA926A1063530".hexToByteArray()
     private val msg32 = "243F6A8885A308D313198A2E03707344A4093822299F31D0082EFA98EC4E6C89".hexToByteArray()
     private val auxRand = "0000000000000000000000000000000000000000000000000000000000000001".hexToByteArray()
@@ -54,19 +65,12 @@ class Secp256k1Benchmark {
     private val compressedPubKey = Secp256k1Instance.compressedPubKeyFor(privKey)
     private val xOnlyPub = compressedPubKey.copyOfRange(1, 33)
     private val signature = Secp256k1Instance.signSchnorr(msg32, privKey, auxRand)
-    private val uncompressedPubKey by lazy {
-        val seckey2 = "3982F19BEF1615BCCFBB05E321C10E1D4CBA3DF0E841C2E41EEB6016347653C3".hexToByteArray()
-        val compressed = Secp256k1Instance.compressedPubKeyFor(seckey2)
-        // We need an uncompressed key for pubKeyCompress benchmark
-        // Use the x-coordinate and compute full key
-        compressed // will be compressed for the benchmark
-    }
 
     // ECDH test data
     private val privKey2 = "3982F19BEF1615BCCFBB05E321C10E1D4CBA3DF0E841C2E41EEB6016347653C3".hexToByteArray()
     private val pubKey2XOnly = Secp256k1Instance.compressedPubKeyFor(privKey2).copyOfRange(1, 33)
 
-    // ==================== Core Nostr operations ====================
+    // ==================== Core Nostr operations (Native C via ACINQ/JNI) ====================
 
     @Test
     fun verifySchnorr() {
@@ -89,20 +93,10 @@ class Secp256k1Benchmark {
         }
     }
 
-    // ==================== Key operations ====================
-
     @Test
     fun secKeyVerify() {
         benchmarkRule.measureRepeated {
             assertTrue(Secp256k1Instance.isPrivateKeyValid(privKey))
-        }
-    }
-
-    @Test
-    fun pubKeyCompress() {
-        // Compress an already-compressed key (fast path)
-        benchmarkRule.measureRepeated {
-            assertNotNull(Secp256k1Instance.compressedPubKeyFor(privKey))
         }
     }
 
@@ -113,14 +107,14 @@ class Secp256k1Benchmark {
         }
     }
 
-    // ==================== ECDH (NIP-04, NIP-44) ====================
-
     @Test
     fun pubKeyTweakMulCompact() {
         benchmarkRule.measureRepeated {
             assertNotNull(Secp256k1Instance.pubKeyTweakMulCompact(pubKey2XOnly, privKey))
         }
     }
+
+    // ==================== Core Nostr operations (Pure Kotlin) ====================
 
     @Test
     fun verifySchnorrOurs() {
@@ -143,20 +137,10 @@ class Secp256k1Benchmark {
         }
     }
 
-    // ==================== Key operations ====================
-
     @Test
     fun secKeyVerifyOurs() {
         benchmarkRule.measureRepeated {
             assertTrue(Secp256k1InstanceOurs.isPrivateKeyValid(privKey))
-        }
-    }
-
-    @Test
-    fun pubKeyCompressOurs() {
-        // Compress an already-compressed key (fast path)
-        benchmarkRule.measureRepeated {
-            assertNotNull(Secp256k1InstanceOurs.compressedPubKeyFor(privKey))
         }
     }
 
@@ -166,8 +150,6 @@ class Secp256k1Benchmark {
             assertNotNull(Secp256k1InstanceOurs.privateKeyAdd(privKey, privKey2))
         }
     }
-
-    // ==================== ECDH (NIP-04, NIP-44) ====================
 
     @Test
     fun pubKeyTweakMulCompactOurs() {
