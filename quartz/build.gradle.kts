@@ -1,6 +1,8 @@
 import com.vanniktech.maven.publish.KotlinMultiplatform
 import com.vanniktech.maven.publish.SourcesJar
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.plugin.mpp.NativeBuildType.DEBUG
+import org.jetbrains.kotlin.gradle.plugin.mpp.NativeBuildType.RELEASE
 import org.jetbrains.kotlin.gradle.targets.native.tasks.KotlinNativeTest
 
 
@@ -89,6 +91,16 @@ kotlin {
         environment("TEST_RESOURCES_ROOT", rootDir)
         // This is necessary to have the variable propagated on iOS
         environment("SIMCTL_CHILD_TEST_RESOURCES_ROOT", rootDir)
+    }
+
+    // Enable LLVM optimizations for native test binaries (benchmark accuracy).
+    // Without -opt, K/N test binaries compile in debug mode (~20× slower).
+    targets.withType<org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget>().configureEach {
+        compilations["test"].compileTaskProvider.configure {
+            compilerOptions {
+                freeCompilerArgs.add("-opt")
+            }
+        }
     }
 
     // Source set declarations.
