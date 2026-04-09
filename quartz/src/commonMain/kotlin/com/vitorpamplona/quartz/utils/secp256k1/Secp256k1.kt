@@ -65,18 +65,9 @@ object Secp256k1 {
     // The tag prefixes SHA256(tag) || SHA256(tag) are constant per tag string.
     // We precompute them once to save 2 SHA256 calls per sign/verify operation.
 
-    private val CHALLENGE_PREFIX: ByteArray by lazy {
-        val h = sha256("BIP0340/challenge".encodeToByteArray())
-        h + h
-    }
-    private val AUX_PREFIX: ByteArray by lazy {
-        val h = sha256("BIP0340/aux".encodeToByteArray())
-        h + h
-    }
-    private val NONCE_PREFIX: ByteArray by lazy {
-        val h = sha256("BIP0340/nonce".encodeToByteArray())
-        h + h
-    }
+    private val CHALLENGE_PREFIX: ByteArray = sha256("BIP0340/challenge".encodeToByteArray()).let { it + it }
+    private val AUX_PREFIX: ByteArray = sha256("BIP0340/aux".encodeToByteArray()).let { it + it }
+    private val NONCE_PREFIX: ByteArray = sha256("BIP0340/nonce".encodeToByteArray()).let { it + it }
 
     // ==================== Pubkey decompression cache ====================
     //
@@ -119,8 +110,8 @@ object Secp256k1 {
         val cached = pubkeyCache[slot]
         if (cached != null && cached.keyBytes.contentEquals(pub)) {
             // Cache hit — copy pre-computed coordinates
-            cached.px.copyInto(outX)
-            cached.py.copyInto(outY)
+            cached.px.copyInto(outX, 0, 0, 4)
+            cached.py.copyInto(outY, 0, 0, 4)
             return true
         }
 
@@ -136,10 +127,11 @@ object Secp256k1 {
     /** Create a 65-byte uncompressed public key (04 || x || y) from a 32-byte secret key. */
     fun pubkeyCreate(seckey: ByteArray): ByteArray {
         require(seckey.size == 32)
-        val scalar = U256.fromBytes(seckey)
-        require(ScalarN.isValid(scalar))
         val sc = ECPoint.getScratch()
-        ECPoint.mulG(sc.entryResult, scalar)
+        val scalar = sc.scalarTmp1
+        U256.fromBytesInto(scalar, seckey, 0)
+        require(ScalarN.isValid(scalar))
+        ECPoint.mulG(sc.entryResult, scalar, sc)
         check(ECPoint.toAffine(sc.entryResult, sc.entryPx, sc.entryPy, sc))
         return KeyCodec.serializeUncompressed(sc.entryPx, sc.entryPy)
     }
@@ -242,13 +234,12 @@ object Secp256k1 {
         auxrand: ByteArray?,
     ): ByteArray {
         require(seckey.size == 32)
-        // Allocate d0 separately — signSchnorrInternal uses all scalar scratch buffers.
+        // d0 must survive through mulG (which destroys splitK*) and signSchnorrInternal
+        // (which uses scalarTmp*). The allocation is negligible vs mulG cost (~100μs).
         val d0 = U256.fromBytes(seckey)
         require(ScalarN.isValid(d0))
-
-        // Derive public key (one G multiplication + one inversion)
         val sc = ECPoint.getScratch()
-        ECPoint.mulG(sc.entryResult, d0)
+        ECPoint.mulG(sc.entryResult, d0, sc)
         check(ECPoint.toAffine(sc.entryResult, sc.entryPx, sc.entryPy, sc))
 
         // Allocate xOnlyPub — signSchnorrInternal reuses bytesTmp1/2 internally.
@@ -279,7 +270,10 @@ object Secp256k1 {
         auxrand: ByteArray?,
     ): ByteArray {
         require(seckey.size == 32 && compressedPub.size == 33)
-        val d0 = U256.fromBytes(seckey)
+        // Use zInv for d0 — not used by signSchnorrInternal.
+        val sc = ECPoint.getScratch()
+        val d0 = sc.zInv
+        U256.fromBytesInto(d0, seckey, 0)
         require(ScalarN.isValid(d0))
         val hasEvenY = compressedPub[0] == 0x02.toByte()
         val xOnlyPub = compressedPub.copyOfRange(1, 33)
@@ -302,7 +296,10 @@ object Secp256k1 {
         auxrand: ByteArray?,
     ): ByteArray {
         require(seckey.size == 32 && xOnlyPub.size == 32)
-        val d0 = U256.fromBytes(seckey)
+        // Use zInv for d0 — not used by signSchnorrInternal.
+        val sc = ECPoint.getScratch()
+        val d0 = sc.zInv
+        U256.fromBytesInto(d0, seckey, 0)
         require(ScalarN.isValid(d0))
         // BIP-340: x-only pubkeys always have even y
         return signSchnorrInternal(data, d0, xOnlyPub, true, auxrand)
@@ -337,8 +334,8 @@ object Secp256k1 {
         if (auxrand != null) {
             require(auxrand.size == 32)
             // Build AUX_PREFIX + auxrand in scratch hashBuf (avoids concatenation alloc)
-            AUX_PREFIX.copyInto(sc.hashBuf, 0)
-            auxrand.copyInto(sc.hashBuf, 64)
+            AUX_PREFIX.copyInto(sc.hashBuf, 0, 0, 64)
+            auxrand.copyInto(sc.hashBuf, 64, 0, 32)
             sha256Into(sc.bytesTmp2, sc.hashBuf, 96)
             // XOR d with auxHash — reuse limb scratch
             U256.fromBytesInto(sc.scalarTmp1, dBytes, 0)
@@ -353,10 +350,10 @@ object Secp256k1 {
         // Build nonce input. Reuse hashBuf if it fits.
         val nonceLen = 64 + 32 + 32 + data.size
         val nonceInput = if (nonceLen <= sc.hashBuf.size) sc.hashBuf else ByteArray(nonceLen)
-        NONCE_PREFIX.copyInto(nonceInput, 0)
+        NONCE_PREFIX.copyInto(nonceInput, 0, 0, 64)
         tBytes.copyInto(nonceInput, 64, 0, 32)
-        pBytes.copyInto(nonceInput, 96)
-        data.copyInto(nonceInput, 128)
+        pBytes.copyInto(nonceInput, 96, 0, 32)
+        data.copyInto(nonceInput, 128, 0, data.size)
         sha256Into(sc.bytesTmp2, nonceInput, nonceLen) // rand → bytesTmp2
         U256.fromBytesInto(sc.scalarTmp1, sc.bytesTmp2, 0)
         ScalarN.reduceTo(sc.scalarTmp1, sc.scalarTmp1)
@@ -364,7 +361,7 @@ object Secp256k1 {
         require(!U256.isZero(k0))
 
         // R = k0·G
-        ECPoint.mulG(sc.entryResult, k0)
+        ECPoint.mulG(sc.entryResult, k0, sc)
         val rx = sc.entryPx
         val ry = sc.entryPy
         check(ECPoint.toAffine(sc.entryResult, rx, ry, sc))
@@ -380,10 +377,10 @@ object Secp256k1 {
         // Challenge: e = H(R || P || msg) — reuse hashBuf
         val chalLen = 64 + 32 + 32 + data.size
         val chalInput = if (chalLen <= sc.hashBuf.size) sc.hashBuf else ByteArray(chalLen)
-        CHALLENGE_PREFIX.copyInto(chalInput, 0)
+        CHALLENGE_PREFIX.copyInto(chalInput, 0, 0, 64)
         U256.toBytesInto(rx, chalInput, 64)
-        pBytes.copyInto(chalInput, 96)
-        data.copyInto(chalInput, 128)
+        pBytes.copyInto(chalInput, 96, 0, 32)
+        data.copyInto(chalInput, 128, 0, data.size)
         sha256Into(sc.bytesTmp1, chalInput, chalLen) // eHash → bytesTmp1
         U256.fromBytesInto(sc.scalarTmp3, sc.bytesTmp1, 0)
         ScalarN.reduceTo(sc.scalarTmp3, sc.scalarTmp3)
@@ -422,45 +419,8 @@ object Secp256k1 {
         pub: ByteArray,
     ): Boolean {
         if (signature.size != 64 || pub.size != 32) return false
-
-        // Use thread-local scratch to avoid per-verify allocations.
-        // Saves ~10 LongArray(4) + 2 MutablePoint = ~14 object allocations per call.
         val sc = ECPoint.getScratch()
-        if (!liftXCached(sc.entryPx, sc.entryPy, pub)) return false
-
-        val r = sc.entryTmp
-        U256.fromBytesInto(r, signature, 0)
-        if (U256.cmp(r, FieldP.P) >= 0) return false
-        val s = sc.entryTmp2
-        U256.fromBytesInto(s, signature, 32)
-        if (U256.cmp(s, ScalarN.N) >= 0) return false
-
-        // Build challenge hash input. Reuse scratch byte buffer if message fits,
-        // otherwise allocate (rare for Nostr: event IDs are 32 bytes → total 160).
-        val hashLen = 64 + 32 + 32 + data.size
-        val hashInput = if (hashLen <= sc.hashBuf.size) sc.hashBuf else ByteArray(hashLen)
-        CHALLENGE_PREFIX.copyInto(hashInput, 0)
-        signature.copyInto(hashInput, 64, 0, 32) // r bytes from signature
-        pub.copyInto(hashInput, 96)
-        data.copyInto(hashInput, 128)
-        val eHash = sha256Into(sc.bytesTmp1, hashInput, hashLen)
-        // Reuse zInv for e (safe: zInv not used until toAffine, which we skip here)
-        val e = sc.zInv
-        U256.fromBytesInto(e, eHash, 0)
-        if (U256.cmp(e, ScalarN.N) >= 0) U256.subTo(e, e, ScalarN.N) // inline reduce
-
-        // Q = s·G + (-e)·P via Shamir's trick
-        ScalarN.negTo(e, e) // negate in-place
-        sc.entryPoint.setAffine(sc.entryPx, sc.entryPy) // copies px/py, so entryPx is free
-        ECPoint.mulDoubleG(sc.entryResult, s, sc.entryPoint, e)
-
-        if (sc.entryResult.isInfinity()) return false
-
-        // Check x-coordinate in Jacobian FIRST (2 field ops, no inversion): X/Z² == r → X == r·Z².
-        val w = sc.w
-        FieldP.sqr(sc.zInv2, sc.entryResult.z, w) // Z²
-        FieldP.mul(sc.zInv3, r, sc.zInv2, w) // r·Z²
-        if (U256.cmp(sc.entryResult.x, sc.zInv3) != 0) return false // x mismatch → reject fast
+        if (!verifySchnorrCore(signature, data, pub, sc)) return false
 
         // x matches — check y-parity (requires inversion, ~270 field ops)
         FieldP.inv(sc.zInv, sc.entryResult.z)
@@ -497,8 +457,29 @@ object Secp256k1 {
         pub: ByteArray,
     ): Boolean {
         if (signature.size != 64 || pub.size != 32) return false
-
         val sc = ECPoint.getScratch()
+        return verifySchnorrCore(signature, data, pub, sc)
+    }
+
+    /**
+     * Shared core of Schnorr verification: validates inputs, computes
+     * Q = s·G + (-e)·P via Shamir's trick, and checks that Q.x matches
+     * the signature's r value in Jacobian coordinates (no inversion).
+     *
+     * Leaves the Jacobian result point in [sc].entryResult for callers
+     * that need additional checks (e.g., y-parity in [verifySchnorr]).
+     *
+     * By extracting this into a single method, the JIT compiles one hot path
+     * for the expensive mulDoubleG instead of two near-identical method bodies.
+     * All copyInto calls use explicit parameters to avoid the Kotlin
+     * copyInto$default bridge (bitmask + 3 branches + arraylength per call).
+     */
+    private fun verifySchnorrCore(
+        signature: ByteArray,
+        data: ByteArray,
+        pub: ByteArray,
+        sc: PointScratch,
+    ): Boolean {
         if (!liftXCached(sc.entryPx, sc.entryPy, pub)) return false
 
         val r = sc.entryTmp
@@ -508,30 +489,31 @@ object Secp256k1 {
         U256.fromBytesInto(s, signature, 32)
         if (U256.cmp(s, ScalarN.N) >= 0) return false
 
-        // Build challenge hash
+        // Build challenge hash input. Reuse scratch byte buffer if message fits,
+        // otherwise allocate (rare for Nostr: event IDs are 32 bytes → total 160).
         val hashLen = 64 + 32 + 32 + data.size
         val hashInput = if (hashLen <= sc.hashBuf.size) sc.hashBuf else ByteArray(hashLen)
-        CHALLENGE_PREFIX.copyInto(hashInput, 0)
+        CHALLENGE_PREFIX.copyInto(hashInput, 0, 0, 64)
         signature.copyInto(hashInput, 64, 0, 32)
-        pub.copyInto(hashInput, 96)
-        data.copyInto(hashInput, 128)
+        pub.copyInto(hashInput, 96, 0, 32)
+        data.copyInto(hashInput, 128, 0, data.size)
         val eHash = sha256Into(sc.bytesTmp1, hashInput, hashLen)
+        // Reuse zInv for e (safe: zInv not used until toAffine, which we skip here)
         val e = sc.zInv
         U256.fromBytesInto(e, eHash, 0)
-        if (U256.cmp(e, ScalarN.N) >= 0) U256.subTo(e, e, ScalarN.N)
+        if (U256.cmp(e, ScalarN.N) >= 0) U256.subTo(e, e, ScalarN.N) // inline reduce
 
-        // Q = s·G + (-e)·P
-        ScalarN.negTo(e, e)
-        sc.entryPoint.setAffine(sc.entryPx, sc.entryPy)
-        ECPoint.mulDoubleG(sc.entryResult, s, sc.entryPoint, e)
+        // Q = s·G + (-e)·P via Shamir's trick
+        ScalarN.negTo(e, e) // negate in-place
+        sc.entryPoint.setAffine(sc.entryPx, sc.entryPy) // copies px/py, so entryPx is free
+        ECPoint.mulDoubleG(sc.entryResult, s, sc.entryPoint, e, sc)
 
         if (sc.entryResult.isInfinity()) return false
 
-        // Jacobian x-check only — no inversion, no y-parity check.
-        // Saves ~270 field ops (~14% of verify).
+        // Jacobian x-check: X == r·Z² (2 field ops, no inversion)
         val w = sc.w
-        FieldP.sqr(sc.zInv2, sc.entryResult.z, w)
-        FieldP.mul(sc.zInv3, r, sc.zInv2, w)
+        FieldP.sqr(sc.zInv2, sc.entryResult.z, w) // Z²
+        FieldP.mul(sc.zInv3, r, sc.zInv2, w) // r·Z²
         return U256.cmp(sc.entryResult.x, sc.zInv3) == 0
     }
 
@@ -543,9 +525,18 @@ object Secp256k1 {
         tweak: ByteArray,
     ): ByteArray {
         require(seckey.size == 32 && tweak.size == 32)
-        val result = ScalarN.add(U256.fromBytes(seckey), U256.fromBytes(tweak))
-        require(!U256.isZero(result) && U256.cmp(result, ScalarN.N) < 0)
-        return U256.toBytes(result)
+        // Use thread-local scratch to avoid 2 intermediate LongArray(4) allocations.
+        // Old path: fromBytes (alloc) + fromBytes (alloc) + add (alloc) + toBytes (alloc) = 4 allocs
+        // New path: fromBytesInto (scratch) + fromBytesInto (scratch) + addTo (scratch) + toBytes = 1 alloc
+        val sc = ECPoint.getScratch()
+        val a = sc.entryTmp
+        val b = sc.entryTmp2
+        val r = sc.scalarTmp1
+        U256.fromBytesInto(a, seckey, 0)
+        U256.fromBytesInto(b, tweak, 0)
+        ScalarN.addTo(r, a, b)
+        require(!U256.isZero(r) && U256.cmp(r, ScalarN.N) < 0)
+        return U256.toBytes(r)
     }
 
     /** Multiply a public key by a scalar. Used for ECDH shared secret derivation. */
@@ -556,11 +547,12 @@ object Secp256k1 {
         require(tweak.size == 32)
         val sc = ECPoint.getScratch()
         check(KeyCodec.parsePublicKey(pubkey, sc.entryPx, sc.entryPy))
-        val scalar = U256.fromBytes(tweak)
+        val scalar = sc.scalarTmp1
+        U256.fromBytesInto(scalar, tweak, 0)
         require(ScalarN.isValid(scalar))
 
         sc.entryPoint.setAffine(sc.entryPx, sc.entryPy)
-        ECPoint.mul(sc.entryResult, sc.entryPoint, scalar)
+        ECPoint.mul(sc.entryResult, sc.entryPoint, scalar, sc)
         check(ECPoint.toAffine(sc.entryResult, sc.entryPx, sc.entryPy, sc))
 
         return if (pubkey.size == 33) {
@@ -591,7 +583,8 @@ object Secp256k1 {
         val sc = ECPoint.getScratch()
         U256.fromBytesInto(sc.entryTmp, xOnlyPub, 0)
         require(U256.cmp(sc.entryTmp, FieldP.P) < 0)
-        val k = U256.fromBytes(scalar)
+        val k = sc.scalarTmp1
+        U256.fromBytesInto(k, scalar, 0)
         require(ScalarN.isValid(k))
 
         // Compute y = sqrt(x³ + 7). We need SOME valid y for EC point operations,
@@ -601,7 +594,7 @@ object Secp256k1 {
         }
 
         sc.entryPoint.setAffine(sc.entryPx, sc.entryPy)
-        ECPoint.mul(sc.entryResult, sc.entryPoint, k)
+        ECPoint.mul(sc.entryResult, sc.entryPoint, k, sc)
         check(ECPoint.toAffineX(sc.entryResult, sc.entryPx, sc))
         return U256.toBytes(sc.entryPx)
     }
@@ -696,10 +689,10 @@ object Secp256k1 {
             // Compute challenge eᵢ = H(rᵢ || pub || msgᵢ) using scratch buffers
             val hashLen = 64 + 32 + 32 + msg.size
             val hashInput = if (hashLen <= sc.hashBuf.size) sc.hashBuf else ByteArray(hashLen)
-            CHALLENGE_PREFIX.copyInto(hashInput, 0)
+            CHALLENGE_PREFIX.copyInto(hashInput, 0, 0, 64)
             sig.copyInto(hashInput, 64, 0, 32)
-            pub.copyInto(hashInput, 96)
-            msg.copyInto(hashInput, 128)
+            pub.copyInto(hashInput, 96, 0, 32)
+            msg.copyInto(hashInput, 128, 0, msg.size)
             sha256Into(sc.bytesTmp1, hashInput, hashLen)
             U256.fromBytesInto(e, sc.bytesTmp1, 0)
             ScalarN.reduceTo(e, e)

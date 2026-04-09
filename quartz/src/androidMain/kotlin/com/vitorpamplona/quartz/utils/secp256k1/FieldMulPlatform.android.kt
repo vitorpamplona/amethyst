@@ -21,26 +21,26 @@
 package com.vitorpamplona.quartz.utils.secp256k1
 
 /**
- * Android field multiply/square — uses pure-Kotlin fallback for multiply-high.
+ * Uses the pure-Kotlin fused fallback for all API levels.
  *
- * WHY NOT use Math.unsignedMultiplyHigh (API 35+) or Math.multiplyHigh (API 31+)?
- *   Because D8/R8 desugaring generates a synthetic backport wrapper
- *   (ExternalSyntheticBackport0.m) for ANY Math.xxx call when minSdk < the API
- *   that introduced it (minSdk=26 < 31/35). This backport wrapper:
- *     - Adds 139ns per call (traced on Pixel 8 with Android 16)
- *     - Is called 24,875 times per Schnorr verify
- *     - Costs 3.45ms total = 17.5% of verify time
- *   The pure-Kotlin fallback (4 Long multiplies + shifts) avoids the backport
- *   entirely and is FASTER than the backported intrinsic path.
+ * THREE approaches to reach hardware UMULH were tested and all failed:
  *
- * WHY NOT use API-level dispatch (fieldMulApi35/Api31/Fallback)?
- *   Profiling showed the D8 backport overhead dominates. The UMULH/SMULH
- *   intrinsic behind the backport is ~1ns, but the backport wrapper adds ~138ns.
- *   The pure fallback at ~10-20ns is much faster than 1+138=139ns.
+ * 1. Direct Math.unsignedMultiplyHigh: D8 replaces with pure-Java backport
+ *    when app minSdk=26 < 35, even inside libraries with minSdk=35.
  *
- * ALSO: uLt calls accounted for 20.7% of verify time (49,924 calls × 82ns each)
- *   because it's an expect/actual function (can't be inline). The inline XOR
- *   comparison in the crossinline lambda eliminates all those function calls.
+ * 2. MethodHandle.invokeExact (crypto-intrinsics Java module): Bytecode correct
+ *    (invoke-polymorphic JJ→J, zero boxing), but ART can't inline through
+ *    invoke-polymorphic. 25ns/call × 12K calls = 2.2x regression.
+ *
+ * 3. Full fieldMulReduce in Java with minSdk=35 module: D8 desugaring runs
+ *    at APP level with app's minSdk=26, not library's minSdk=35. All
+ *    Math.unsignedMultiplyHigh calls still get backported. Plus Java's
+ *    Long.compareUnsigned (282ns/call) is slower than Kotlin's inlined XOR trick.
+ *
+ * The Kotlin inline+crossinline pattern produces the best ART code:
+ * - unsignedMultiplyHighFallback is inlined at each call site (zero dispatch)
+ * - uLtInline uses XOR+compare (zero method call, ~0ns overhead)
+ * - The fused function stays within ART's inlining budget
  */
 internal actual fun fieldMulReduce(
     out: LongArray,

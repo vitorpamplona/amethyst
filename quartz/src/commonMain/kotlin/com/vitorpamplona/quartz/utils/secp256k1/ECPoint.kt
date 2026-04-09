@@ -68,6 +68,14 @@ internal object ECPoint {
     /** Curve constant b = 7 in y² = x³ + 7. */
     private val B = longArrayOf(7L, 0L, 0L, 0L)
 
+    // Thread-local scratch — declared before precomputed tables because
+    // buildGOddTable() and buildCombTable() use doublePoint/addPoints which
+    // call scratch.get(). Must be initialized before those table fields.
+    private val scratch = ScratchLocal { PointScratch() }
+
+    /** Get thread-local scratch. Call once at the top-level entry point. */
+    internal fun getScratch(): PointScratch = scratch.get()
+
     /**
      * wNAF window width for the G-side of scalar multiplication (mulDoubleG/verify).
      * Width w uses a table of 2^(w-2) odd multiples. Larger windows mean fewer
@@ -84,14 +92,14 @@ internal object ECPoint {
 
     /**
      * Precomputed G odd-multiples for wNAF: gOddTable[i] = (2i+1)·G as affine, for i in 0..G_TABLE_SIZE-1.
-     * Used by mulG and mulDoubleG. Lazily initialized on first use.
+     * Used by mulG and mulDoubleG. Eagerly initialized to avoid SynchronizedLazyImpl
+     * dispatch on every verify call (~200 instructions of lock-check overhead per access).
      */
-    private val gOddTable: Array<AffinePoint> by lazy { buildGOddTable() }
+    private val gOddTable: Array<AffinePoint> = buildGOddTable()
 
     /** Precomputed λ(G) odd-multiples for GLV: gLamTable[i] = λ((2i+1)·G) as affine. */
-    private val gLamTable: Array<AffinePoint> by lazy {
+    private val gLamTable: Array<AffinePoint> =
         Array(G_TABLE_SIZE) { AffinePoint(FieldP.mul(gOddTable[it].x, Glv.BETA), gOddTable[it].y.copyOf()) }
-    }
 
     // ==================== P-side wNAF table cache ====================
     //
@@ -146,7 +154,7 @@ internal object ECPoint {
         // Step 1: compute prefix products of Z coordinates
         // prods[i] = z[0] * z[1] * ... * z[i]
         val prods = Array(n) { LongArray(4) }
-        jac[0].z.copyInto(prods[0])
+        jac[0].z.copyInto(prods[0], 0, 0, 4)
         for (i in 1 until n) {
             FieldP.mul(prods[i], prods[i - 1], jac[i].z)
         }
@@ -203,7 +211,7 @@ internal object ECPoint {
     private const val COMB_SPACING = 4
     private const val COMB_POINTS = 1 shl COMB_TEETH // 64
 
-    private val combTable: Array<AffinePoint> by lazy { buildCombTable() }
+    private val combTable: Array<AffinePoint> = buildCombTable()
 
     private fun buildCombTable(): Array<AffinePoint> {
         // Tooth base points: toothG[i] = 2^(i * SPACING) * G
@@ -246,13 +254,6 @@ internal object ECPoint {
             }
         }
     }
-
-    // ==================== Thread-local scratch ====================
-
-    private val scratch = ScratchLocal { PointScratch() }
-
-    /** Get thread-local scratch. Call once at the top-level entry point. */
-    internal fun getScratch(): PointScratch = scratch.get()
 
     // ==================== Point Doubling (3M + 4S) ====================
 
@@ -454,13 +455,12 @@ internal object ECPoint {
         out: MutablePoint,
         p: MutablePoint,
         scalar: LongArray,
+        s: PointScratch = scratch.get(),
     ) {
         if (U256.isZero(scalar) || p.isInfinity()) {
             out.setInfinity()
             return
         }
-
-        val s = scratch.get()
         val wnd = 5
         val tableSize = 1 shl (wnd - 2) // 8 entries
 
@@ -482,8 +482,8 @@ internal object ECPoint {
         val pLamOddJac = s.pLamOddJac
         for (i in 0 until tableSize) {
             FieldP.mul(pLamOddJac[i].x, pOddJac[i].x, Glv.BETA, s.w)
-            pOddJac[i].y.copyInto(pLamOddJac[i].y)
-            pOddJac[i].z.copyInto(pLamOddJac[i].z)
+            pOddJac[i].y.copyInto(pLamOddJac[i].y, 0, 0, 4)
+            pOddJac[i].z.copyInto(pLamOddJac[i].z, 0, 0, 4)
         }
 
         // Effective-affine: batch-convert with shared Z inversion
@@ -537,13 +537,12 @@ internal object ECPoint {
     fun mulG(
         out: MutablePoint,
         scalar: LongArray,
+        s: PointScratch = scratch.get(),
     ) {
         if (U256.isZero(scalar)) {
             out.setInfinity()
             return
         }
-
-        val s = scratch.get()
         val table = combTable
 
         // Ping-pong: alternate between out and s.mixTmp to avoid copyFrom after
@@ -597,8 +596,8 @@ internal object ECPoint {
         s: LongArray,
         p: MutablePoint,
         e: LongArray,
+        sc: PointScratch = scratch.get(),
     ) {
-        val sc = scratch.get()
         val wP = 5 // Window for P-side (table built per-call, keep small)
         val pTableSize = 1 shl (wP - 2) // 8 entries for P
 
@@ -640,8 +639,8 @@ internal object ECPoint {
             val pLamOddJac = sc.pLamOddJac
             for (i in 0 until pTableSize) {
                 FieldP.mul(pLamOddJac[i].x, pOddJac[i].x, Glv.BETA, sc.w)
-                pOddJac[i].y.copyInto(pLamOddJac[i].y)
-                pOddJac[i].z.copyInto(pLamOddJac[i].z)
+                pOddJac[i].y.copyInto(pLamOddJac[i].y, 0, 0, 4)
+                pOddJac[i].z.copyInto(pLamOddJac[i].z, 0, 0, 4)
             }
             // Batch-convert to affine (into scratch arrays)
             batchToAffinePair(pOddJac, pLamOddJac, sc.pOddAff, sc.pLamOddAff, sc)
@@ -871,7 +870,7 @@ internal object ECPoint {
 
         // Build prefix products of Z (shared between a and b)
         val cumZ = s.cumZ
-        a[0].z.copyInto(cumZ[0])
+        a[0].z.copyInto(cumZ[0], 0, 0, 4)
         for (i in 1 until n) {
             FieldP.mul(cumZ[i], cumZ[i - 1], a[i].z, w)
         }

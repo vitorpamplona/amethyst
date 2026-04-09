@@ -106,7 +106,7 @@ internal object U256 {
     ): Int {
         for (i in 3 downTo 0) {
             if (a[i] != b[i]) {
-                return if (uLt(a[i], b[i])) -1 else 1
+                return if (uLtInline(a[i], b[i])) -1 else 1
             }
         }
         return 0
@@ -125,31 +125,31 @@ internal object U256 {
 
         // Limb 0 (no carry input)
         s1 = a[0] + b[0]
-        c1 = if (uLt(s1, a[0])) 1L else 0L
+        c1 = if (uLtInline(s1, a[0])) 1L else 0L
         out[0] = s1
         var carry = c1
 
         // Limb 1
         s1 = a[1] + b[1]
-        c1 = if (uLt(s1, a[1])) 1L else 0L
+        c1 = if (uLtInline(s1, a[1])) 1L else 0L
         s2 = s1 + carry
-        c2 = if (uLt(s2, s1)) 1L else 0L
+        c2 = if (uLtInline(s2, s1)) 1L else 0L
         out[1] = s2
         carry = c1 + c2
 
         // Limb 2
         s1 = a[2] + b[2]
-        c1 = if (uLt(s1, a[2])) 1L else 0L
+        c1 = if (uLtInline(s1, a[2])) 1L else 0L
         s2 = s1 + carry
-        c2 = if (uLt(s2, s1)) 1L else 0L
+        c2 = if (uLtInline(s2, s1)) 1L else 0L
         out[2] = s2
         carry = c1 + c2
 
         // Limb 3
         s1 = a[3] + b[3]
-        c1 = if (uLt(s1, a[3])) 1L else 0L
+        c1 = if (uLtInline(s1, a[3])) 1L else 0L
         s2 = s1 + carry
-        c2 = if (uLt(s2, s1)) 1L else 0L
+        c2 = if (uLtInline(s2, s1)) 1L else 0L
         out[3] = s2
         carry = c1 + c2
 
@@ -169,31 +169,31 @@ internal object U256 {
 
         // Limb 0 (no borrow input)
         d1 = a[0] - b[0]
-        c1 = if (uLt(a[0], b[0])) 1L else 0L
+        c1 = if (uLtInline(a[0], b[0])) 1L else 0L
         out[0] = d1
         var borrow = c1
 
         // Limb 1
         d1 = a[1] - b[1]
-        c1 = if (uLt(a[1], b[1])) 1L else 0L
+        c1 = if (uLtInline(a[1], b[1])) 1L else 0L
         d2 = d1 - borrow
-        c2 = if (uLt(d1, borrow)) 1L else 0L
+        c2 = if (uLtInline(d1, borrow)) 1L else 0L
         out[1] = d2
         borrow = c1 + c2
 
         // Limb 2
         d1 = a[2] - b[2]
-        c1 = if (uLt(a[2], b[2])) 1L else 0L
+        c1 = if (uLtInline(a[2], b[2])) 1L else 0L
         d2 = d1 - borrow
-        c2 = if (uLt(d1, borrow)) 1L else 0L
+        c2 = if (uLtInline(d1, borrow)) 1L else 0L
         out[2] = d2
         borrow = c1 + c2
 
         // Limb 3
         d1 = a[3] - b[3]
-        c1 = if (uLt(a[3], b[3])) 1L else 0L
+        c1 = if (uLtInline(a[3], b[3])) 1L else 0L
         d2 = d1 - borrow
-        c2 = if (uLt(d1, borrow)) 1L else 0L
+        c2 = if (uLtInline(d1, borrow)) 1L else 0L
         out[3] = d2
         borrow = c1 + c2
 
@@ -235,19 +235,19 @@ internal object U256 {
 
         lo = a0 * b1
         s = lo + carry
-        c1 = if (uLt(s, lo)) 1L else 0L
+        c1 = if (uLtInline(s, lo)) 1L else 0L
         out[1] = s
         carry = unsignedMultiplyHigh(a0, b1) + c1
 
         lo = a0 * b2
         s = lo + carry
-        c1 = if (uLt(s, lo)) 1L else 0L
+        c1 = if (uLtInline(s, lo)) 1L else 0L
         out[2] = s
         carry = unsignedMultiplyHigh(a0, b2) + c1
 
         lo = a0 * b3
         s = lo + carry
-        c1 = if (uLt(s, lo)) 1L else 0L
+        c1 = if (uLtInline(s, lo)) 1L else 0L
         out[3] = s
         out[4] = unsignedMultiplyHigh(a0, b3) + c1
 
@@ -256,7 +256,7 @@ internal object U256 {
         hi = unsignedMultiplyHigh(a1, b0)
         prev = out[1]
         s = prev + lo
-        c1 = if (uLt(s, prev)) 1L else 0L
+        c1 = if (uLtInline(s, prev)) 1L else 0L
         out[1] = s
         carry = hi + c1
 
@@ -264,9 +264,9 @@ internal object U256 {
         hi = unsignedMultiplyHigh(a1, b1)
         prev = out[2]
         s = prev + lo
-        c1 = if (uLt(s, prev)) 1L else 0L
+        c1 = if (uLtInline(s, prev)) 1L else 0L
         s += carry
-        c2 = if (uLt(s, carry)) 1L else 0L
+        c2 = if (uLtInline(s, carry)) 1L else 0L
         out[2] = s
         carry = hi + c1 + c2
 
@@ -274,9 +274,9 @@ internal object U256 {
         hi = unsignedMultiplyHigh(a1, b2)
         prev = out[3]
         s = prev + lo
-        c1 = if (uLt(s, prev)) 1L else 0L
+        c1 = if (uLtInline(s, prev)) 1L else 0L
         s += carry
-        c2 = if (uLt(s, carry)) 1L else 0L
+        c2 = if (uLtInline(s, carry)) 1L else 0L
         out[3] = s
         carry = hi + c1 + c2
 
@@ -284,9 +284,9 @@ internal object U256 {
         hi = unsignedMultiplyHigh(a1, b3)
         prev = out[4]
         s = prev + lo
-        c1 = if (uLt(s, prev)) 1L else 0L
+        c1 = if (uLtInline(s, prev)) 1L else 0L
         s += carry
-        c2 = if (uLt(s, carry)) 1L else 0L
+        c2 = if (uLtInline(s, carry)) 1L else 0L
         out[4] = s
         out[5] = hi + c1 + c2
 
@@ -295,7 +295,7 @@ internal object U256 {
         hi = unsignedMultiplyHigh(a2, b0)
         prev = out[2]
         s = prev + lo
-        c1 = if (uLt(s, prev)) 1L else 0L
+        c1 = if (uLtInline(s, prev)) 1L else 0L
         out[2] = s
         carry = hi + c1
 
@@ -303,9 +303,9 @@ internal object U256 {
         hi = unsignedMultiplyHigh(a2, b1)
         prev = out[3]
         s = prev + lo
-        c1 = if (uLt(s, prev)) 1L else 0L
+        c1 = if (uLtInline(s, prev)) 1L else 0L
         s += carry
-        c2 = if (uLt(s, carry)) 1L else 0L
+        c2 = if (uLtInline(s, carry)) 1L else 0L
         out[3] = s
         carry = hi + c1 + c2
 
@@ -313,9 +313,9 @@ internal object U256 {
         hi = unsignedMultiplyHigh(a2, b2)
         prev = out[4]
         s = prev + lo
-        c1 = if (uLt(s, prev)) 1L else 0L
+        c1 = if (uLtInline(s, prev)) 1L else 0L
         s += carry
-        c2 = if (uLt(s, carry)) 1L else 0L
+        c2 = if (uLtInline(s, carry)) 1L else 0L
         out[4] = s
         carry = hi + c1 + c2
 
@@ -323,9 +323,9 @@ internal object U256 {
         hi = unsignedMultiplyHigh(a2, b3)
         prev = out[5]
         s = prev + lo
-        c1 = if (uLt(s, prev)) 1L else 0L
+        c1 = if (uLtInline(s, prev)) 1L else 0L
         s += carry
-        c2 = if (uLt(s, carry)) 1L else 0L
+        c2 = if (uLtInline(s, carry)) 1L else 0L
         out[5] = s
         out[6] = hi + c1 + c2
 
@@ -334,7 +334,7 @@ internal object U256 {
         hi = unsignedMultiplyHigh(a3, b0)
         prev = out[3]
         s = prev + lo
-        c1 = if (uLt(s, prev)) 1L else 0L
+        c1 = if (uLtInline(s, prev)) 1L else 0L
         out[3] = s
         carry = hi + c1
 
@@ -342,9 +342,9 @@ internal object U256 {
         hi = unsignedMultiplyHigh(a3, b1)
         prev = out[4]
         s = prev + lo
-        c1 = if (uLt(s, prev)) 1L else 0L
+        c1 = if (uLtInline(s, prev)) 1L else 0L
         s += carry
-        c2 = if (uLt(s, carry)) 1L else 0L
+        c2 = if (uLtInline(s, carry)) 1L else 0L
         out[4] = s
         carry = hi + c1 + c2
 
@@ -352,9 +352,9 @@ internal object U256 {
         hi = unsignedMultiplyHigh(a3, b2)
         prev = out[5]
         s = prev + lo
-        c1 = if (uLt(s, prev)) 1L else 0L
+        c1 = if (uLtInline(s, prev)) 1L else 0L
         s += carry
-        c2 = if (uLt(s, carry)) 1L else 0L
+        c2 = if (uLtInline(s, carry)) 1L else 0L
         out[5] = s
         carry = hi + c1 + c2
 
@@ -362,9 +362,9 @@ internal object U256 {
         hi = unsignedMultiplyHigh(a3, b3)
         prev = out[6]
         s = prev + lo
-        c1 = if (uLt(s, prev)) 1L else 0L
+        c1 = if (uLtInline(s, prev)) 1L else 0L
         s += carry
-        c2 = if (uLt(s, carry)) 1L else 0L
+        c2 = if (uLtInline(s, carry)) 1L else 0L
         out[6] = s
         out[7] = hi + c1 + c2
     }
@@ -401,13 +401,13 @@ internal object U256 {
 
         lo = a0 * a2
         s = lo + carry
-        c1 = if (uLt(s, lo)) 1L else 0L
+        c1 = if (uLtInline(s, lo)) 1L else 0L
         out[2] = s
         carry = unsignedMultiplyHigh(a0, a2) + c1
 
         lo = a0 * a3
         s = lo + carry
-        c1 = if (uLt(s, lo)) 1L else 0L
+        c1 = if (uLtInline(s, lo)) 1L else 0L
         out[3] = s
         out[4] = unsignedMultiplyHigh(a0, a3) + c1
 
@@ -416,7 +416,7 @@ internal object U256 {
         hi = unsignedMultiplyHigh(a1, a2)
         prev = out[3]
         s = prev + lo
-        c1 = if (uLt(s, prev)) 1L else 0L
+        c1 = if (uLtInline(s, prev)) 1L else 0L
         out[3] = s
         carry = hi + c1
 
@@ -424,9 +424,9 @@ internal object U256 {
         hi = unsignedMultiplyHigh(a1, a3)
         prev = out[4]
         s = prev + lo
-        c1 = if (uLt(s, prev)) 1L else 0L
+        c1 = if (uLtInline(s, prev)) 1L else 0L
         s += carry
-        c2 = if (uLt(s, carry)) 1L else 0L
+        c2 = if (uLtInline(s, carry)) 1L else 0L
         out[4] = s
         out[5] = hi + c1 + c2
 
@@ -435,7 +435,7 @@ internal object U256 {
         hi = unsignedMultiplyHigh(a2, a3)
         prev = out[5]
         s = prev + lo
-        c1 = if (uLt(s, prev)) 1L else 0L
+        c1 = if (uLtInline(s, prev)) 1L else 0L
         out[5] = s
         out[6] = hi + c1
 
@@ -467,7 +467,7 @@ internal object U256 {
         hi = unsignedMultiplyHigh(a0, a0)
         out[0] = lo // out[0] was 0
         s = out[1] + hi
-        c1 = if (uLt(s, out[1])) 1L else 0L
+        c1 = if (uLtInline(s, out[1])) 1L else 0L
         out[1] = s
         var dCarry = c1
 
@@ -475,14 +475,14 @@ internal object U256 {
         lo = a1 * a1
         hi = unsignedMultiplyHigh(a1, a1)
         s = out[2] + lo
-        c1 = if (uLt(s, out[2])) 1L else 0L
+        c1 = if (uLtInline(s, out[2])) 1L else 0L
         s += dCarry
-        c2 = if (uLt(s, dCarry)) 1L else 0L
+        c2 = if (uLtInline(s, dCarry)) 1L else 0L
         out[2] = s
         prev = out[3] + hi
-        val c3a = if (uLt(prev, out[3])) 1L else 0L
+        val c3a = if (uLtInline(prev, out[3])) 1L else 0L
         prev += c1 + c2
-        val c4a = if (uLt(prev, c1 + c2)) 1L else 0L
+        val c4a = if (uLtInline(prev, c1 + c2)) 1L else 0L
         out[3] = prev
         dCarry = c3a + c4a
 
@@ -490,14 +490,14 @@ internal object U256 {
         lo = a2 * a2
         hi = unsignedMultiplyHigh(a2, a2)
         s = out[4] + lo
-        c1 = if (uLt(s, out[4])) 1L else 0L
+        c1 = if (uLtInline(s, out[4])) 1L else 0L
         s += dCarry
-        c2 = if (uLt(s, dCarry)) 1L else 0L
+        c2 = if (uLtInline(s, dCarry)) 1L else 0L
         out[4] = s
         prev = out[5] + hi
-        val c3b = if (uLt(prev, out[5])) 1L else 0L
+        val c3b = if (uLtInline(prev, out[5])) 1L else 0L
         prev += c1 + c2
-        val c4b = if (uLt(prev, c1 + c2)) 1L else 0L
+        val c4b = if (uLtInline(prev, c1 + c2)) 1L else 0L
         out[5] = prev
         dCarry = c3b + c4b
 
@@ -505,12 +505,12 @@ internal object U256 {
         lo = a3 * a3
         hi = unsignedMultiplyHigh(a3, a3)
         s = out[6] + lo
-        c1 = if (uLt(s, out[6])) 1L else 0L
+        c1 = if (uLtInline(s, out[6])) 1L else 0L
         s += dCarry
-        c2 = if (uLt(s, dCarry)) 1L else 0L
+        c2 = if (uLtInline(s, dCarry)) 1L else 0L
         out[6] = s
         prev = out[7] + hi
-        val c3c = if (uLt(prev, out[7])) 1L else 0L
+        val c3c = if (uLtInline(prev, out[7])) 1L else 0L
         prev += c1 + c2
         out[7] = prev
     }
@@ -602,6 +602,6 @@ internal object U256 {
         out: LongArray,
         a: LongArray,
     ) {
-        a.copyInto(out)
+        a.copyInto(out, 0, 0, 4)
     }
 }

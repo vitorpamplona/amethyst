@@ -46,7 +46,7 @@ internal class MutablePoint(
     @JvmField val y: LongArray = LongArray(4),
     @JvmField val z: LongArray = LongArray(4),
 ) {
-    fun isInfinity(): Boolean = U256.isZero(z)
+    fun isInfinity(): Boolean = (z[0] or z[1] or z[2] or z[3]) == 0L
 
     fun setInfinity() {
         for (i in 0 until 4) {
@@ -58,17 +58,17 @@ internal class MutablePoint(
     }
 
     fun copyFrom(other: MutablePoint) {
-        other.x.copyInto(x)
-        other.y.copyInto(y)
-        other.z.copyInto(z)
+        other.x.copyInto(x, 0, 0, 4)
+        other.y.copyInto(y, 0, 0, 4)
+        other.z.copyInto(z, 0, 0, 4)
     }
 
     fun setAffine(
         ax: LongArray,
         ay: LongArray,
     ) {
-        ax.copyInto(x)
-        ay.copyInto(y)
+        ax.copyInto(x, 0, 0, 4)
+        ay.copyInto(y, 0, 0, 4)
         z[0] = 1L
         for (i in 1 until 4) z[i] = 0L
     }

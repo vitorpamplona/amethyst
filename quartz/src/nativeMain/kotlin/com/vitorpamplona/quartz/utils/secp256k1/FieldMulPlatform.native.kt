@@ -30,7 +30,7 @@ internal actual fun fieldMulReduce(
     b: LongArray,
     w: LongArray,
 ) {
-    fieldMulReduceWith(out, a, b, w) { x, y -> unsignedMultiplyHighFallback(x, y) }
+    fieldMulReduceFused(out, a, b, w)
 }
 
 internal actual fun fieldSqrReduce(
@@ -38,5 +38,5 @@ internal actual fun fieldSqrReduce(
     a: LongArray,
     w: LongArray,
 ) {
-    fieldSqrReduceWith(out, a, w) { x, y -> unsignedMultiplyHighFallback(x, y) }
+    fieldSqrReduceFused(out, a, w)
 }
