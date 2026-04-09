@@ -455,13 +455,12 @@ internal object ECPoint {
         out: MutablePoint,
         p: MutablePoint,
         scalar: LongArray,
+        s: PointScratch = scratch.get(),
     ) {
         if (U256.isZero(scalar) || p.isInfinity()) {
             out.setInfinity()
             return
         }
-
-        val s = scratch.get()
         val wnd = 5
         val tableSize = 1 shl (wnd - 2) // 8 entries
 
@@ -538,13 +537,12 @@ internal object ECPoint {
     fun mulG(
         out: MutablePoint,
         scalar: LongArray,
+        s: PointScratch = scratch.get(),
     ) {
         if (U256.isZero(scalar)) {
             out.setInfinity()
             return
         }
-
-        val s = scratch.get()
         val table = combTable
 
         // Ping-pong: alternate between out and s.mixTmp to avoid copyFrom after

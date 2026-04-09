@@ -131,7 +131,7 @@ object Secp256k1 {
         val scalar = sc.scalarTmp1
         U256.fromBytesInto(scalar, seckey, 0)
         require(ScalarN.isValid(scalar))
-        ECPoint.mulG(sc.entryResult, scalar)
+        ECPoint.mulG(sc.entryResult, scalar, sc)
         check(ECPoint.toAffine(sc.entryResult, sc.entryPx, sc.entryPy, sc))
         return KeyCodec.serializeUncompressed(sc.entryPx, sc.entryPy)
     }
@@ -239,7 +239,7 @@ object Secp256k1 {
         val d0 = U256.fromBytes(seckey)
         require(ScalarN.isValid(d0))
         val sc = ECPoint.getScratch()
-        ECPoint.mulG(sc.entryResult, d0)
+        ECPoint.mulG(sc.entryResult, d0, sc)
         check(ECPoint.toAffine(sc.entryResult, sc.entryPx, sc.entryPy, sc))
 
         // Allocate xOnlyPub — signSchnorrInternal reuses bytesTmp1/2 internally.
@@ -361,7 +361,7 @@ object Secp256k1 {
         require(!U256.isZero(k0))
 
         // R = k0·G
-        ECPoint.mulG(sc.entryResult, k0)
+        ECPoint.mulG(sc.entryResult, k0, sc)
         val rx = sc.entryPx
         val ry = sc.entryPy
         check(ECPoint.toAffine(sc.entryResult, rx, ry, sc))
@@ -552,7 +552,7 @@ object Secp256k1 {
         require(ScalarN.isValid(scalar))
 
         sc.entryPoint.setAffine(sc.entryPx, sc.entryPy)
-        ECPoint.mul(sc.entryResult, sc.entryPoint, scalar)
+        ECPoint.mul(sc.entryResult, sc.entryPoint, scalar, sc)
         check(ECPoint.toAffine(sc.entryResult, sc.entryPx, sc.entryPy, sc))
 
         return if (pubkey.size == 33) {
@@ -594,7 +594,7 @@ object Secp256k1 {
         }
 
         sc.entryPoint.setAffine(sc.entryPx, sc.entryPy)
-        ECPoint.mul(sc.entryResult, sc.entryPoint, k)
+        ECPoint.mul(sc.entryResult, sc.entryPoint, k, sc)
         check(ECPoint.toAffineX(sc.entryResult, sc.entryPx, sc))
         return U256.toBytes(sc.entryPx)
     }
