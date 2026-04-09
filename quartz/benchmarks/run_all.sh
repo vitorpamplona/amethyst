@@ -60,6 +60,14 @@ if [ -z "$SO_FILE" ]; then
 fi
 cp "$SO_FILE" "$WORK/"
 
+# On macOS the dylib's LC_ID_DYLIB (install name) is a relative path like
+# "build/darwin/libsecp256k1-jni.dylib".  dyld resolves it literally, ignoring
+# -rpath, so the binary fails at launch.  Rewrite the install name to use
+# @rpath so the -Wl,-rpath we pass to gcc actually works.
+if [ "$OS_NAME" = "Darwin" ]; then
+    install_name_tool -id "@rpath/$SO_NAME" "$WORK/$SO_NAME" 2>/dev/null || true
+fi
+
 if ! gcc -O2 -o "$WORK/bench" "$BENCH_DIR/secp256k1_native_bench.c" \
     -L"$WORK" -lsecp256k1-jni -Wl,-rpath,"$WORK" 2>&1; then
     echo "gcc compilation failed"
