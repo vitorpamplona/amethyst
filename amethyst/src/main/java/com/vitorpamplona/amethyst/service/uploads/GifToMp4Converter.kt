@@ -105,7 +105,13 @@ object GifToMp4Converter {
         uri: Uri,
         context: Context,
     ): MediaCompressorResult? =
-        withContext(Dispatchers.IO) {
+        // Dispatchers.Default: the bulk of this work is CPU/GPU bound
+        // (Movie decode, GL rendering, MediaCodec encode). Running on IO
+        // would occupy a thread from the large IO pool for several seconds
+        // with no kernel wait, risking starvation of real IO coroutines.
+        // The brief file read at the start and muxer writes are acceptable
+        // on Default — they're short relative to the encoding loop.
+        withContext(Dispatchers.Default) {
             try {
                 convertInternal(uri, context)
             } catch (e: CancellationException) {
