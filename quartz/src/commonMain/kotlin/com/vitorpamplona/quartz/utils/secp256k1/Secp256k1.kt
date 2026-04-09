@@ -672,36 +672,43 @@ object Secp256k1 {
         rSum.setInfinity()
         val rTmp = sc.entryResult // reuse as temp for addMixed
 
+        // Pre-allocated scratch for the per-signature loop (eliminates ~7 allocs per sig)
+        val r = sc.scalarTmp1 // reuse for r parsing
+        val s = sc.scalarTmp2 // reuse for s parsing
+        val e = sc.scalarTmp3 // reuse for e scalar
+        val rx = sc.entryTmp // reuse for liftX output x
+        val ry = sc.entryTmp2 // reuse for liftX output y
+
         for (i in 0 until n) {
             val sig = signatures[i]
             val msg = messages[i]
             if (sig.size != 64) return false
 
-            // Parse r, s from signature
-            val r = U256.fromBytes(sig, 0)
+            // Parse r, s from signature into scratch
+            U256.fromBytesInto(r, sig, 0)
             if (U256.cmp(r, FieldP.P) >= 0) return false
-            val s = U256.fromBytes(sig, 32)
+            U256.fromBytesInto(s, sig, 32)
             if (U256.cmp(s, ScalarN.N) >= 0) return false
 
             // Accumulate s: sSum += sᵢ mod n
             ScalarN.addTo(sSum, sSum, s)
 
-            // Compute challenge eᵢ = H(rᵢ || pub || msgᵢ)
-            val hashInput = ByteArray(64 + 32 + 32 + msg.size)
+            // Compute challenge eᵢ = H(rᵢ || pub || msgᵢ) using scratch buffers
+            val hashLen = 64 + 32 + 32 + msg.size
+            val hashInput = if (hashLen <= sc.hashBuf.size) sc.hashBuf else ByteArray(hashLen)
             CHALLENGE_PREFIX.copyInto(hashInput, 0)
             sig.copyInto(hashInput, 64, 0, 32)
             pub.copyInto(hashInput, 96)
             msg.copyInto(hashInput, 128)
-            val eHash = sha256(hashInput)
-            val e = ScalarN.reduce(U256.fromBytes(eHash))
+            sha256Into(sc.bytesTmp1, hashInput, hashLen)
+            U256.fromBytesInto(e, sc.bytesTmp1, 0)
+            ScalarN.reduceTo(e, e)
 
             // Accumulate e: eSum += eᵢ mod n
             ScalarN.addTo(eSum, eSum, e)
 
             // Decompress Rᵢ = liftX(rᵢ) and accumulate into rSum
-            val rx = LongArray(4)
-            val ry = LongArray(4)
-            if (!KeyCodec.liftX(rx, ry, r)) return false
+            if (!KeyCodec.liftX(rx, ry, r, sc.zInv)) return false
 
             // rSum += Rᵢ (mixed addition: Rᵢ is affine)
             if (rSum.isInfinity()) {
@@ -716,6 +723,7 @@ object Secp256k1 {
         ScalarN.negTo(eSum, eSum)
         val pPoint = sc.entryPoint
         pPoint.setAffine(px, py)
+        // mulDoubleG uses sc.mixTmp internally (ping-pong), so output must be separate.
         val q = MutablePoint()
         ECPoint.mulDoubleG(q, sSum, pPoint, eSum)
 
@@ -724,9 +732,8 @@ object Secp256k1 {
         FieldP.neg(rSum.y, rSum.y)
 
         // Add Q + (-R_sum) and check if result is infinity
-        val result = MutablePoint()
-        ECPoint.addPoints(result, q, rSum, sc)
+        ECPoint.addPoints(sc.entryResult, q, rSum, sc)
 
-        return result.isInfinity()
+        return sc.entryResult.isInfinity()
     }
 }
