@@ -21,9 +21,21 @@
 package com.vitorpamplona.quartz.utils.secp256k1
 
 /**
- * JVM fused field multiply/square using Math.unsignedMultiplyHigh (Java 18+).
- * HotSpot C2 already inlines unsignedMultiplyHigh well, but the fused path
- * still helps by eliminating the mulWide → reduceWide call boundary.
+ * JVM field multiply/square — delegates to the original unfused path.
+ *
+ * WHY NOT use the fused fieldMulReduceWith (like Android)?
+ *   The fused inline+crossinline approach was designed for ART's limited inlining.
+ *   On HotSpot C2, it produces a 2351-bytecode method (with 180 wasted bytecodes
+ *   from lambda parameter shuffling) that exceeds FreqInlineSize (325), preventing
+ *   HotSpot from inlining fieldMulReduce into FieldP.mul.
+ *
+ *   The unfused path (mulWide + reduceWide) produces smaller methods (~320 bytecodes
+ *   each) that HotSpot inlines individually and optimizes across boundaries. HotSpot's
+ *   8+ level inlining depth handles the full chain:
+ *     FieldP.mul → fieldMulReduce → U256.mulWide → unsignedMultiplyHigh → Math.unsignedMultiplyHigh
+ *   Each Math.unsignedMultiplyHigh is a C2 intrinsic → single MULQ on x86-64.
+ *
+ *   Benchmark confirmed: unfused path is equal or faster on HotSpot JVM 21.
  */
 internal actual fun fieldMulReduce(
     out: LongArray,
@@ -31,7 +43,8 @@ internal actual fun fieldMulReduce(
     b: LongArray,
     w: LongArray,
 ) {
-    fieldMulReduceWith(out, a, b, w) { x, y -> Math.unsignedMultiplyHigh(x, y) }
+    U256.mulWide(w, a, b)
+    FieldP.reduceWide(out, w)
 }
 
 internal actual fun fieldSqrReduce(
@@ -39,5 +52,6 @@ internal actual fun fieldSqrReduce(
     a: LongArray,
     w: LongArray,
 ) {
-    fieldSqrReduceWith(out, a, w) { x, y -> Math.unsignedMultiplyHigh(x, y) }
+    U256.sqrWide(w, a)
+    FieldP.reduceWide(out, w)
 }
