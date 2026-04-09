@@ -1,18 +1,11 @@
-/*
- * Standalone C benchmark for libsecp256k1 — no JVM, no JNI, no ART.
- * Links against the ACINQ secp256k1-kmp-jni .so to benchmark raw C performance.
- * Uses the same test vectors as the Kotlin benchmarks for direct comparison.
- *
- * Build:
- *   # Extract the native .so from the ACINQ JAR:
- *   jar xf ~/.gradle/caches/modules-2/files-2.1/fr.acinq.secp256k1/\
- *     secp256k1-kmp-jni-jvm-linux/0.23.0/*/secp256k1-kmp-jni-jvm-linux-0.23.0.jar
- *   cp fr/acinq/secp256k1/jni/native/linux-x86_64/libsecp256k1-jni.so .
- *
- *   # Compile and run:
- *   gcc -O2 -o bench secp256k1_native_bench.c -L. -lsecp256k1-jni -Wl,-rpath,.
- *   ./bench
- */
+// Standalone C benchmark for libsecp256k1 -- no JVM, no JNI, no ART.
+// Links against the ACINQ secp256k1-kmp-jni .so to benchmark raw C performance.
+// Uses the same test vectors as the Kotlin benchmarks for direct comparison.
+//
+// Build:
+//   Extract the native .so from the ACINQ JAR, then:
+//   gcc -O2 -o bench secp256k1_native_bench.c -L. -lsecp256k1-jni -Wl,-rpath,.
+//   ./bench
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
