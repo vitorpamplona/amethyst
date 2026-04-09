@@ -124,6 +124,13 @@ class Secp256k1Benchmark {
     }
 
     @Test
+    fun verifySchnorrFastOurs() {
+        benchmarkRule.measureRepeated {
+            assertTrue(Secp256k1InstanceOurs.verifySchnorrFast(signature, msg32, xOnlyPub))
+        }
+    }
+
+    @Test
     fun signSchnorrOurs() {
         benchmarkRule.measureRepeated {
             assertNotNull(Secp256k1InstanceOurs.signSchnorr(msg32, privKey, auxRand))

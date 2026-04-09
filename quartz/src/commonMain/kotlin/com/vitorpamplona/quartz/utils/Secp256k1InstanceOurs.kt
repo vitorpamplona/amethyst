@@ -62,6 +62,16 @@ object Secp256k1InstanceOurs {
         pubKey: ByteArray,
     ): Boolean = Secp256k1.verifySchnorr(signature, hash, pubKey)
 
+    /**
+     * Fast Nostr verify — skips BIP-340 y-parity inversion (~15% faster).
+     * Safe for Nostr event verification. See Secp256k1.verifySchnorrFast KDoc.
+     */
+    fun verifySchnorrFast(
+        signature: ByteArray,
+        hash: ByteArray,
+        pubKey: ByteArray,
+    ): Boolean = Secp256k1.verifySchnorrFast(signature, hash, pubKey)
+
     fun privateKeyAdd(
         first: ByteArray,
         second: ByteArray,
