@@ -1332,6 +1332,8 @@
     <string name="media_compression_quality_uncompressed">Uncompressed</string>
     <string name="video_codec_h265_label">Use H.265/HEVC Codec</string>
     <string name="video_codec_h265_description">Better quality at smaller file sizes but not all devices support H.265 playback.</string>
+    <string name="convert_gif_to_mp4_label">Convert GIF to MP4</string>
+    <string name="convert_gif_to_mp4_description">Converts animated GIF to MP4 video for smaller file size and better playback compatibility.</string>
     <string name="strip_metadata_label">Remove private metadata</string>
     <string name="strip_metadata_description">Attempts to strip private metadata from supported media files before uploading</string>
 

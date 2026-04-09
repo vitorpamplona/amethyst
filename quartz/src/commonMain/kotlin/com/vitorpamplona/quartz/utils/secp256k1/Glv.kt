@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.quartz.utils.secp256k1
 
+import kotlin.jvm.JvmField
+
 // =====================================================================================
 // GLV ENDOMORPHISM AND WNAF ENCODING FOR secp256k1
 // =====================================================================================
@@ -39,6 +41,7 @@ package com.vitorpamplona.quartz.utils.secp256k1
 
 internal object Glv {
     /** β: cube root of unity mod p. φ(x,y) = (β·x, y). */
+    @JvmField
     val BETA =
         longArrayOf(
             -4523465429756870162L,
@@ -50,10 +53,10 @@ internal object Glv {
     // ==================== GLV Scalar Decomposition ====================
 
     class Split(
-        val k1: LongArray,
-        val k2: LongArray,
-        val negK1: Boolean,
-        val negK2: Boolean,
+        @JvmField val k1: LongArray,
+        @JvmField val k2: LongArray,
+        @JvmField val negK1: Boolean,
+        @JvmField val negK2: Boolean,
     )
 
     fun splitScalar(k: LongArray): Split {
@@ -224,7 +227,7 @@ internal object Glv {
         for (i in limb until s.size) {
             val old = s[i]
             s[i] = old + if (i == limb) addVal else 1L
-            if (s[i].toULong() >= old.toULong() || (i == limb && addVal == 0L)) break
+            if (!uLt(s[i], old) || (i == limb && addVal == 0L)) break
             // overflowed — carry to next limb
         }
     }

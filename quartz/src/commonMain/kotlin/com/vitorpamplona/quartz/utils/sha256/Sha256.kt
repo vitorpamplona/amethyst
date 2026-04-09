@@ -21,3 +21,14 @@
 package com.vitorpamplona.quartz.utils.sha256
 
 expect fun sha256(data: ByteArray): ByteArray
+
+/**
+ * Allocation-free SHA-256: hash `data[0..len)` and write the 32-byte digest into `out`.
+ * Returns `out` for convenience. `out` must be at least 32 bytes.
+ * `data` may be longer than `len` (only the first `len` bytes are hashed).
+ */
+expect fun sha256Into(
+    out: ByteArray,
+    data: ByteArray,
+    len: Int = data.size,
+): ByteArray

@@ -677,29 +677,80 @@ internal object ECPoint {
         cur.setInfinity()
         val negY = sc.mixNegY
 
+        // Inner loop: double + conditionally add from 4 wNAF streams.
+        //
+        // The wNAF zero-check is INLINED here rather than delegated to
+        // addWnafMixedPP. ~70% of digits are zero, so this avoids ~364
+        // function calls per verify. Each function call on ART has ~5-8ns
+        // overhead (parameter null checks, frame setup), saving ~2-3μs total.
+        val negK1s = sSplit.negK1
+        val negK2s = sSplit.negK2
+        val negK1e = eSplit.negK1
+        val negK2e = eSplit.negK2
+
         for (i in bits - 1 downTo 0) {
             doublePoint(alt, cur, sc)
             var t = cur
             cur = alt
             alt = t
-            // Streams 1-2: G-side (affine tables, mixed addition)
-            if (addWnafMixedPP(cur, alt, negY, wnafS1, i, gOdd, sSplit.negK1, sc)) {
+
+            var d: Int
+
+            // Stream 1: s₁ (G-side)
+            d = wnafS1[i]
+            if (d != 0) {
+                val idx = (if (d > 0) d else -d) / 2
+                if ((d < 0) xor negK1s) {
+                    FieldP.neg(negY, gOdd[idx].y)
+                    addMixed(alt, cur, gOdd[idx].x, negY, sc)
+                } else {
+                    addMixed(alt, cur, gOdd[idx].x, gOdd[idx].y, sc)
+                }
                 t = cur
                 cur = alt
                 alt = t
             }
-            if (addWnafMixedPP(cur, alt, negY, wnafS2, i, gLam, sSplit.negK2, sc)) {
+
+            // Stream 2: s₂ (λ(G)-side)
+            d = wnafS2[i]
+            if (d != 0) {
+                val idx = (if (d > 0) d else -d) / 2
+                if ((d < 0) xor negK2s) {
+                    FieldP.neg(negY, gLam[idx].y)
+                    addMixed(alt, cur, gLam[idx].x, negY, sc)
+                } else {
+                    addMixed(alt, cur, gLam[idx].x, gLam[idx].y, sc)
+                }
                 t = cur
                 cur = alt
                 alt = t
             }
-            // Streams 3-4: P-side (affine tables via effective-affine, mixed addition)
-            if (addWnafMixedPP(cur, alt, negY, wnafE1, i, pOdd, eSplit.negK1, sc)) {
+
+            // Stream 3: e₁ (P-side)
+            d = wnafE1[i]
+            if (d != 0) {
+                val idx = (if (d > 0) d else -d) / 2
+                if ((d < 0) xor negK1e) {
+                    FieldP.neg(negY, pOdd[idx].y)
+                    addMixed(alt, cur, pOdd[idx].x, negY, sc)
+                } else {
+                    addMixed(alt, cur, pOdd[idx].x, pOdd[idx].y, sc)
+                }
                 t = cur
                 cur = alt
                 alt = t
             }
-            if (addWnafMixedPP(cur, alt, negY, wnafE2, i, pLamOdd, eSplit.negK2, sc)) {
+
+            // Stream 4: e₂ (λ(P)-side)
+            d = wnafE2[i]
+            if (d != 0) {
+                val idx = (if (d > 0) d else -d) / 2
+                if ((d < 0) xor negK2e) {
+                    FieldP.neg(negY, pLamOdd[idx].y)
+                    addMixed(alt, cur, pLamOdd[idx].x, negY, sc)
+                } else {
+                    addMixed(alt, cur, pLamOdd[idx].x, pLamOdd[idx].y, sc)
+                }
                 t = cur
                 cur = alt
                 alt = t

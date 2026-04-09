@@ -18,44 +18,21 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.utils
+package com.vitorpamplona.quartz.utils.secp256k1
 
-expect object Secp256k1Instance {
-    fun compressedPubKeyFor(privKey: ByteArray): ByteArray
-
-    fun isPrivateKeyValid(il: ByteArray): Boolean
-
-    fun signSchnorr(
-        data: ByteArray,
-        privKey: ByteArray,
-        nonce: ByteArray? = RandomInstance.bytes(32),
-    ): ByteArray
-
-    fun signSchnorr(
-        data: ByteArray,
-        privKey: ByteArray,
-    ): ByteArray
-
-    fun signSchnorrWithXOnlyPubKey(
-        data: ByteArray,
-        privKey: ByteArray,
-        xOnlyPubKey: ByteArray,
-        nonce: ByteArray? = RandomInstance.bytes(32),
-    ): ByteArray
-
-    fun verifySchnorr(
-        signature: ByteArray,
-        hash: ByteArray,
-        pubKey: ByteArray,
-    ): Boolean
-
-    fun privateKeyAdd(
-        first: ByteArray,
-        second: ByteArray,
-    ): ByteArray
-
-    fun pubKeyTweakMulCompact(
-        pubKey: ByteArray,
-        privateKey: ByteArray,
-    ): ByteArray
-}
+/**
+ * JVM: Long.compareUnsigned is a HotSpot C2 JIT intrinsic.
+ *
+ * DO NOT replace with the XOR trick `(a xor MIN_VALUE) < (b xor MIN_VALUE)`.
+ * HotSpot recognizes Long.compareUnsigned and compiles it to a single unsigned
+ * CMP + SETB instruction pair. The XOR trick generates 2 extra XOR instructions
+ * that HotSpot does NOT optimize away, causing a ~30% regression on verify
+ * (1.6× → 2.1× vs native, measured on JDK 21 x86-64).
+ *
+ * This is the opposite of Android/ART where the XOR trick is faster because
+ * it avoids ULong.constructor-impl overhead. See UnsignedCompare.android.kt.
+ */
+internal actual fun uLt(
+    a: Long,
+    b: Long,
+): Boolean = java.lang.Long.compareUnsigned(a, b) < 0

@@ -18,44 +18,25 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.utils
+package com.vitorpamplona.quartz.utils.secp256k1
 
-expect object Secp256k1Instance {
-    fun compressedPubKeyFor(privKey: ByteArray): ByteArray
+/**
+ * Native (iOS/macOS) fused field multiply/square using pure-Kotlin fallback.
+ * Kotlin/Native compiles ahead-of-time, so inline + direct call is optimal.
+ */
+internal actual fun fieldMulReduce(
+    out: LongArray,
+    a: LongArray,
+    b: LongArray,
+    w: LongArray,
+) {
+    fieldMulReduceWith(out, a, b, w) { x, y -> unsignedMultiplyHighFallback(x, y) }
+}
 
-    fun isPrivateKeyValid(il: ByteArray): Boolean
-
-    fun signSchnorr(
-        data: ByteArray,
-        privKey: ByteArray,
-        nonce: ByteArray? = RandomInstance.bytes(32),
-    ): ByteArray
-
-    fun signSchnorr(
-        data: ByteArray,
-        privKey: ByteArray,
-    ): ByteArray
-
-    fun signSchnorrWithXOnlyPubKey(
-        data: ByteArray,
-        privKey: ByteArray,
-        xOnlyPubKey: ByteArray,
-        nonce: ByteArray? = RandomInstance.bytes(32),
-    ): ByteArray
-
-    fun verifySchnorr(
-        signature: ByteArray,
-        hash: ByteArray,
-        pubKey: ByteArray,
-    ): Boolean
-
-    fun privateKeyAdd(
-        first: ByteArray,
-        second: ByteArray,
-    ): ByteArray
-
-    fun pubKeyTweakMulCompact(
-        pubKey: ByteArray,
-        privateKey: ByteArray,
-    ): ByteArray
+internal actual fun fieldSqrReduce(
+    out: LongArray,
+    a: LongArray,
+    w: LongArray,
+) {
+    fieldSqrReduceWith(out, a, w) { x, y -> unsignedMultiplyHighFallback(x, y) }
 }
