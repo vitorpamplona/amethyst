@@ -46,7 +46,7 @@ internal class MutablePoint(
     @JvmField val y: LongArray = LongArray(4),
     @JvmField val z: LongArray = LongArray(4),
 ) {
-    fun isInfinity(): Boolean = U256.isZero(z)
+    fun isInfinity(): Boolean = (z[0] or z[1] or z[2] or z[3]) == 0L
 
     fun setInfinity() {
         for (i in 0 until 4) {
