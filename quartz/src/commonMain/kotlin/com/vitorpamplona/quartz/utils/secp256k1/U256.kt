@@ -75,6 +75,25 @@ internal expect fun uLt(
 ): Boolean
 
 /**
+ * Inline unsigned less-than for use inside hot-path functions.
+ *
+ * The expect/actual `uLt` function can't be `inline` (KMP limitation), so every
+ * call from commonMain is a real function dispatch (~82-91ns on ART). This adds up
+ * to ~1ms per verify from U256.addTo/subTo and FieldP.add/sub/half alone.
+ *
+ * This inline version uses the XOR-with-MIN_VALUE trick directly. The Kotlin compiler
+ * inlines it at every call site — zero dispatch overhead. On JVM, this is slightly
+ * slower than Long.compareUnsigned (HotSpot intrinsic), but the JVM's unfused path
+ * calls `uLt` (the expect/actual) which uses Long.compareUnsigned. Only the
+ * commonMain hot-path code (U256, FieldP, ScalarN) uses this inline version.
+ */
+@Suppress("NOTHING_TO_INLINE")
+internal inline fun uLtInline(
+    a: Long,
+    b: Long,
+): Boolean = (a xor Long.MIN_VALUE) < (b xor Long.MIN_VALUE)
+
+/**
  * Raw 256-bit unsigned integer arithmetic using 4×64-bit limbs.
  */
 internal object U256 {

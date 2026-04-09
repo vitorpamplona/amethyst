@@ -87,19 +87,8 @@ internal expect fun fieldSqrReduce(
 // access private members of other objects).
 private const val FIELD_P0 = -4294968273L // 0xFFFFFFFEFFFFFC2F
 
-// Inline unsigned less-than for use inside inline functions. The expect/actual `uLt`
-// function can't be `inline`, so calling it from an inline function generates a real
-// function call at every expansion site (~54 calls per fieldMulReduceWith × 752 calls
-// per verify = ~40,000 function calls). This private inline version uses the XOR trick
-// directly, producing zero function calls in the expanded bytecode.
-//
-// On JVM, this is slightly slower than Long.compareUnsigned (HotSpot intrinsic), but
-// these inline functions are only used on Android (JVM uses the unfused path).
-@Suppress("NOTHING_TO_INLINE")
-private inline fun uLtInline(
-    a: Long,
-    b: Long,
-): Boolean = (a xor Long.MIN_VALUE) < (b xor Long.MIN_VALUE)
+// uLtInline is defined in U256.kt (package-wide, internal inline).
+// It replaces all uLt() calls in hot-path code to avoid function dispatch.
 
 /**
  * Fused 4×4 schoolbook multiplication + mod-p reduction.
