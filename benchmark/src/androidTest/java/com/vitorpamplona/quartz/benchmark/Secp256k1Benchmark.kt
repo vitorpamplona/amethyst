@@ -35,20 +35,17 @@ import org.junit.runner.RunWith
 /**
  * Android microbenchmark for all secp256k1 operations used by Nostr.
  *
- * Uses AndroidX Benchmark (Jetpack Microbenchmark) for accurate, warmed-up
- * measurements on real Android hardware. Results appear in Android Studio's
- * benchmark output with ns/op, allocations, and percentiles.
+ * Measures the same operations as the JVM benchmark (Secp256k1Benchmark.kt) and the
+ * K/Native benchmark (Secp256k1NativeBenchmark.kt) for cross-platform comparability.
  *
  * Tests are structured as matched pairs: "Foo" uses the native C library (ACINQ/JNI),
- * "FooOurs" uses the pure-Kotlin implementation. This allows direct comparison of
- * each operation between native and Kotlin on the same device.
+ * "FooOurs" uses the pure-Kotlin implementation.
  *
  * NOTE: verifySchnorr uses the same pubkey repeatedly, so it benefits from the
  * pubkey decompression cache and P-table cache. This is realistic for Nostr
  * (feed from one author) but not representative of first-time verification.
  *
- * Test data is the same across all 3 platform benchmarks (JVM, Android, K/Native)
- * for cross-platform comparability.
+ * Test data is the same across all 3 platform benchmarks for cross-platform comparability.
  *
  * Run with: ./gradlew :benchmark:connectedAndroidTest
  */
@@ -70,7 +67,22 @@ class Secp256k1Benchmark {
     private val privKey2 = "3982F19BEF1615BCCFBB05E321C10E1D4CBA3DF0E841C2E41EEB6016347653C3".hexToByteArray()
     private val pubKey2XOnly = Secp256k1Instance.compressedPubKeyFor(privKey2).copyOfRange(1, 33)
 
-    // ==================== Core Nostr operations (Native C via ACINQ/JNI) ====================
+    // Batch verification data
+    private val batch8 = buildBatch(8)
+    private val batch16 = buildBatch(16)
+
+    private fun buildBatch(size: Int): Pair<List<ByteArray>, List<ByteArray>> {
+        val sigs = mutableListOf<ByteArray>()
+        val msgs = mutableListOf<ByteArray>()
+        for (i in 0 until size) {
+            val m = ByteArray(32) { (i * 7 + it).toByte() }
+            sigs.add(Secp256k1InstanceOurs.signSchnorr(m, privKey, auxRand))
+            msgs.add(m)
+        }
+        return Pair(sigs, msgs)
+    }
+
+    // ==================== Native C (ACINQ/JNI) ====================
 
     @Test
     fun verifySchnorr() {
@@ -108,13 +120,13 @@ class Secp256k1Benchmark {
     }
 
     @Test
-    fun pubKeyTweakMulCompact() {
+    fun ecdhXOnly() {
         benchmarkRule.measureRepeated {
             assertNotNull(Secp256k1Instance.pubKeyTweakMulCompact(pubKey2XOnly, privKey))
         }
     }
 
-    // ==================== Core Nostr operations (Pure Kotlin) ====================
+    // ==================== Pure Kotlin ====================
 
     @Test
     fun verifySchnorrOurs() {
@@ -134,6 +146,13 @@ class Secp256k1Benchmark {
     fun signSchnorrOurs() {
         benchmarkRule.measureRepeated {
             assertNotNull(Secp256k1InstanceOurs.signSchnorr(msg32, privKey, auxRand))
+        }
+    }
+
+    @Test
+    fun signSchnorrCachedPkOurs() {
+        benchmarkRule.measureRepeated {
+            assertNotNull(Secp256k1InstanceOurs.signSchnorrWithXOnlyPubKey(msg32, privKey, xOnlyPub, auxRand))
         }
     }
 
@@ -159,31 +178,15 @@ class Secp256k1Benchmark {
     }
 
     @Test
-    fun pubKeyTweakMulCompactOurs() {
+    fun ecdhXOnlyOurs() {
         benchmarkRule.measureRepeated {
             assertNotNull(Secp256k1InstanceOurs.pubKeyTweakMulCompact(pubKey2XOnly, privKey))
         }
     }
 
     // ==================== Batch verification (Pure Kotlin) ====================
-    // Same pubkey, n events — the typical Nostr pattern (feed from one author).
-    // Each iteration verifies the entire batch. Compare per-event cost:
-    //   ns/op ÷ batchSize = per-event cost
-    // JVM benchmark showed 4-7× speedup over individual verify.
-
-    private fun buildBatch(size: Int): Pair<List<ByteArray>, List<ByteArray>> {
-        val sigs = mutableListOf<ByteArray>()
-        val msgs = mutableListOf<ByteArray>()
-        for (i in 0 until size) {
-            val m = ByteArray(32) { (i * 7 + it).toByte() }
-            sigs.add(Secp256k1InstanceOurs.signSchnorr(m, privKey, auxRand))
-            msgs.add(m)
-        }
-        return Pair(sigs, msgs)
-    }
-
-    private val batch8 = buildBatch(8)
-    private val batch16 = buildBatch(16)
+    // Same pubkey, n events — typical Nostr pattern (feed from one author).
+    // Per-event cost = ns/op ÷ batchSize.
 
     @Test
     fun verifyBatch8Ours() {

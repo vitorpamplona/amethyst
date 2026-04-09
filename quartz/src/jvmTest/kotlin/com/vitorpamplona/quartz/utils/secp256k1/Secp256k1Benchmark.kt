@@ -201,36 +201,6 @@ class Secp256k1Benchmark {
                 },
             )
 
-        // --- pubkeyCreate ---
-        results +=
-            bench(
-                name = "pubkeyCreate",
-                warmup = 1000,
-                iterations = 5000,
-                nativeOp = { native.pubkeyCreate(privKey) },
-                kotlinOp = {
-                    com.vitorpamplona.quartz.utils.secp256k1.Secp256k1
-                        .pubkeyCreate(privKey)
-                },
-            )
-
-        // --- pubKeyCompress ---
-        val uncompressedNative = native.pubkeyCreate(privKey)
-        val uncompressedKotlin =
-            com.vitorpamplona.quartz.utils.secp256k1.Secp256k1
-                .pubkeyCreate(privKey)
-        results +=
-            bench(
-                name = "pubKeyCompress",
-                warmup = 2000,
-                iterations = 50000,
-                nativeOp = { native.pubKeyCompress(uncompressedNative) },
-                kotlinOp = {
-                    com.vitorpamplona.quartz.utils.secp256k1.Secp256k1
-                        .pubKeyCompress(uncompressedKotlin)
-                },
-            )
-
         // --- compressedPubKeyFor (create + compress combined) ---
         results +=
             bench(

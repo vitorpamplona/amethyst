@@ -125,6 +125,12 @@ class Secp256k1NativeBenchmark {
                 Secp256k1.verifySchnorr(sig, msg32, xOnlyPub)
             }
 
+        // --- verifySchnorrFast (Nostr: x-check only, no y-parity inversion) ---
+        results +=
+            bench("verifySchnorrFast", 2000, 5000) {
+                Secp256k1.verifySchnorrFast(sig, msg32, xOnlyPub)
+            }
+
         // --- signSchnorr (derives pubkey each time) ---
         results +=
             bench("signSchnorr", 1000, 3000) {
