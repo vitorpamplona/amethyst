@@ -456,23 +456,83 @@ object Secp256k1 {
 
         if (sc.entryResult.isInfinity()) return false
 
-        // Check x-coordinate in Jacobian FIRST (2 field ops, no inversion).
-        // This is what C libsecp256k1 does: X/Z² == r → X == r·Z².
-        // For invalid signatures (~any non-matching x), this saves the expensive
-        // toAffine inversion (~270 field ops). For valid signatures (Nostr's
-        // common case), we still need toAffine for the y-parity check.
+        // Check x-coordinate in Jacobian FIRST (2 field ops, no inversion): X/Z² == r → X == r·Z².
         val w = sc.w
         FieldP.sqr(sc.zInv2, sc.entryResult.z, w) // Z²
         FieldP.mul(sc.zInv3, r, sc.zInv2, w) // r·Z²
         if (U256.cmp(sc.entryResult.x, sc.zInv3) != 0) return false // x mismatch → reject fast
 
-        // x matches — now check y-parity (requires inversion)
+        // x matches — check y-parity (requires inversion, ~270 field ops)
         FieldP.inv(sc.zInv, sc.entryResult.z)
-        // We already have Z² from above; compute Z^(-2) = inv(Z)², Z^(-3) = Z^(-2) · Z^(-1)
         FieldP.sqr(sc.zInv2, sc.zInv)
         FieldP.mul(sc.zInv3, sc.zInv2, sc.zInv)
         FieldP.mul(sc.entryPy, sc.entryResult.y, sc.zInv3)
         return KeyCodec.hasEvenY(sc.entryPy)
+    }
+
+    /**
+     * Fast Nostr event signature verification — skips the BIP-340 y-parity check.
+     *
+     * BIP-340 requires R.y to be even. The full [verifySchnorr] enforces this with a
+     * field inversion (~270 field ops, ~14% of verify cost). This variant skips that
+     * check, verifying only that R.x matches the signature's r value.
+     *
+     * WHY THIS IS SAFE FOR NOSTR:
+     * For a given x-coordinate on secp256k1, there are exactly two curve points:
+     * (x, y_even) and (x, y_odd). A signature that produces the correct x but wrong
+     * y-parity would require solving the discrete log problem — computationally
+     * equivalent to forging the signature entirely. The y-parity check is
+     * defense-in-depth, not a distinct security boundary.
+     *
+     * DO NOT use this for Bitcoin transaction validation or any financial protocol
+     * where strict BIP-340 compliance is required.
+     *
+     * @param signature 64-byte signature (R.x || s)
+     * @param data Message bytes (any length)
+     * @param pub 32-byte x-only public key
+     */
+    fun verifySchnorrFast(
+        signature: ByteArray,
+        data: ByteArray,
+        pub: ByteArray,
+    ): Boolean {
+        if (signature.size != 64 || pub.size != 32) return false
+
+        val sc = ECPoint.getScratch()
+        if (!liftXCached(sc.entryPx, sc.entryPy, pub)) return false
+
+        val r = sc.entryTmp
+        U256.fromBytesInto(r, signature, 0)
+        if (U256.cmp(r, FieldP.P) >= 0) return false
+        val s = sc.entryTmp2
+        U256.fromBytesInto(s, signature, 32)
+        if (U256.cmp(s, ScalarN.N) >= 0) return false
+
+        // Build challenge hash
+        val hashLen = 64 + 32 + 32 + data.size
+        val hashInput = if (hashLen <= sc.hashBuf.size) sc.hashBuf else ByteArray(hashLen)
+        CHALLENGE_PREFIX.copyInto(hashInput, 0)
+        signature.copyInto(hashInput, 64, 0, 32)
+        pub.copyInto(hashInput, 96)
+        data.copyInto(hashInput, 128)
+        val eHash = sha256Into(sc.bytesTmp1, hashInput, hashLen)
+        val e = sc.zInv
+        U256.fromBytesInto(e, eHash, 0)
+        if (U256.cmp(e, ScalarN.N) >= 0) U256.subTo(e, e, ScalarN.N)
+
+        // Q = s·G + (-e)·P
+        ScalarN.negTo(e, e)
+        sc.entryPoint.setAffine(sc.entryPx, sc.entryPy)
+        ECPoint.mulDoubleG(sc.entryResult, s, sc.entryPoint, e)
+
+        if (sc.entryResult.isInfinity()) return false
+
+        // Jacobian x-check only — no inversion, no y-parity check.
+        // Saves ~270 field ops (~14% of verify).
+        val w = sc.w
+        FieldP.sqr(sc.zInv2, sc.entryResult.z, w)
+        FieldP.mul(sc.zInv3, r, sc.zInv2, w)
+        return U256.cmp(sc.entryResult.x, sc.zInv3) == 0
     }
 
     // ==================== Tweak operations ====================

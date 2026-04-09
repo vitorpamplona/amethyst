@@ -132,7 +132,23 @@ class Secp256k1Benchmark {
 
         val results = mutableListOf<BenchResult>()
 
-        // --- verifySchnorr (same pubkey = cache-warm, typical Nostr pattern) ---
+        // --- verifySchnorrFast (Nostr: x-check only, no y-parity inversion) ---
+        results +=
+            bench(
+                name = "verifySchnorrFast",
+                warmup = 2000,
+                iterations = 5000,
+                nativeOp = { native.verifySchnorr(nativeSig, msg32, nativeXOnlyPub) },
+                kotlinOp = {
+                    com.vitorpamplona.quartz.utils.secp256k1.Secp256k1.verifySchnorrFast(
+                        kotlinSig,
+                        msg32,
+                        kotlinXOnlyPub,
+                    )
+                },
+            )
+
+        // --- verifySchnorr (strict BIP-340 with y-parity check) ---
         results +=
             bench(
                 name = "verifySchnorr",
