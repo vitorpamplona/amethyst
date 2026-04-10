@@ -341,6 +341,13 @@ fun SettingsScreen(
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             Spacer(Modifier.height(16.dp))
 
+            // ── Appearance Section ──
+            AppearanceSettingsSection()
+
+            Spacer(Modifier.height(16.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            Spacer(Modifier.height(16.dp))
+
             // ── Relay Management ──
             RelaySection(relayStatuses = relayStatuses, relayManager = relayManager)
 

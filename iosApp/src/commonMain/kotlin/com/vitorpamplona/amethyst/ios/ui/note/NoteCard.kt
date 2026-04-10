@@ -51,6 +51,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
+import com.vitorpamplona.amethyst.ios.translation.TranslateButton
 import com.vitorpamplona.amethyst.ios.ui.NoteDisplayData
 import com.vitorpamplona.amethyst.ios.ui.media.RichNoteContent
 import com.vitorpamplona.amethyst.ios.util.toTimeAgo
@@ -152,6 +153,9 @@ fun NoteCard(
             // Content (rich: inline images, video thumbnails, URL previews)
             if (note.content.isNotBlank()) {
                 RichNoteContent(content = note.content)
+
+                // Translation button for foreign-language notes
+                TranslateButton(noteContent = note.content)
             }
 
             Spacer(Modifier.height(8.dp))

@@ -57,7 +57,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -88,6 +87,9 @@ import com.vitorpamplona.amethyst.ios.feeds.IosThreadFilter
 import com.vitorpamplona.amethyst.ios.feeds.IosTrendingFeedFilter
 import com.vitorpamplona.amethyst.ios.model.IosIAccount
 import com.vitorpamplona.amethyst.ios.network.IosRelayConnectionManager
+import com.vitorpamplona.amethyst.ios.settings.AmethystTheme
+import com.vitorpamplona.amethyst.ios.settings.AppSettings
+import com.vitorpamplona.amethyst.ios.settings.NoteDensity
 import com.vitorpamplona.amethyst.ios.subscriptions.FilterBuilders
 import com.vitorpamplona.amethyst.ios.subscriptions.IosSubscriptionsCoordinator
 import com.vitorpamplona.amethyst.ios.subscriptions.SubscriptionConfig
@@ -137,6 +139,16 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import platform.UIKit.UIPasteboard
+
+/** Feed item spacing based on current note density preference. */
+@Composable
+private fun feedItemSpacing(): androidx.compose.ui.unit.Dp {
+    val density by AppSettings.noteDensity.collectAsState()
+    return when (density) {
+        NoteDensity.COMPACT -> 4.dp
+        NoteDensity.COMFORTABLE -> 8.dp
+    }
+}
 
 enum class Tab(
     val icon: ImageVector,
@@ -202,9 +214,7 @@ fun App() {
         accountManager.tryRestoreSession()
     }
 
-    MaterialTheme(
-        colorScheme = darkColorScheme(),
-    ) {
+    AmethystTheme {
         Surface(
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background,
@@ -1341,7 +1351,7 @@ private fun IosFeedContent(
             is FeedState.Loaded -> {
                 val loadedState by state.feed.collectAsState()
                 LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(feedItemSpacing()),
                     modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp),
                 ) {
                     items(loadedState.list, key = { it.idHex }) { note ->
@@ -1560,7 +1570,7 @@ private fun IosProfileContent(
             is FeedState.Loaded -> {
                 val loadedState by state.feed.collectAsState()
                 LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(feedItemSpacing()),
                     modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp),
                 ) {
                     items(loadedState.list, key = { it.idHex }) { note ->
@@ -1665,7 +1675,7 @@ private fun IosThreadContent(
             is FeedState.Loaded -> {
                 val loadedState by state.feed.collectAsState()
                 LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(feedItemSpacing()),
                     modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp),
                 ) {
                     items(loadedState.list, key = { it.idHex }) { note ->
