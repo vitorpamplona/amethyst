@@ -87,7 +87,7 @@ kotlin {
 
     linuxX64()
 
-    macosArm64()
+    // macosArm64() — blocked until negentropy-kmp publishes a macosArm64 artifact
 
     // This makes sure that the resource file directory is visible for iOS tests.
     val rootDir = "${rootProject.rootDir.path}/quartz/src/commonTest/resources"
@@ -299,23 +299,8 @@ kotlin {
             dependsOn(iosTest.get())
         }
 
-        val macosMain =
-            create("macosMain") {
-                dependsOn(appleMain)
-            }
-
-        val macosTest =
-            create("macosTest") {
-                dependsOn(appleTest)
-            }
-
-        val macosArm64Main by getting {
-            dependsOn(macosMain)
-        }
-
-        val macosArm64Test by getting {
-            dependsOn(macosTest)
-        }
+        // macosMain/macosTest source sets exist but are not wired until
+        // negentropy-kmp publishes a macosArm64 artifact.
 
         val linuxMain =
             create("linuxMain") {
