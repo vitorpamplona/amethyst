@@ -101,7 +101,6 @@ fun PipConnectedCallUI(
     val remoteVideoTracks by (callController?.remoteVideoTracks ?: emptyTracksFlow).collectAsState()
     val activePeerVideos by (callController?.activePeerVideos ?: emptySetFlow).collectAsState()
     val defaultFalse = remember { kotlinx.coroutines.flow.MutableStateFlow(false) }
-    val isRemoteVideoActive by (callController?.isRemoteVideoActive ?: defaultFalse).collectAsState()
     val isVideoEnabled by (callController?.isVideoEnabled ?: defaultFalse).collectAsState()
     val hasActiveVideo =
         state.callType == com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType.VIDEO ||
@@ -142,7 +141,17 @@ fun PipConnectedCallUI(
                     )
                 }
             }
-        } else if (!isRemoteVideoActive) {
+            // Show timer overlay on top of video
+            Text(
+                text = formatDuration(elapsed),
+                color = Color.White.copy(alpha = 0.7f),
+                fontSize = 10.sp,
+                modifier =
+                    Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 4.dp),
+            )
+        } else {
             Column(
                 modifier = Modifier.fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -161,15 +170,5 @@ fun PipConnectedCallUI(
                 )
             }
         }
-
-        Text(
-            text = formatDuration(elapsed),
-            color = Color.White.copy(alpha = 0.7f),
-            fontSize = 10.sp,
-            modifier =
-                Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(top = 4.dp),
-        )
     }
 }

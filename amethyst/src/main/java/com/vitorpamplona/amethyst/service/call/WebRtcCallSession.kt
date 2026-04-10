@@ -53,6 +53,7 @@ class WebRtcCallSession(
     private val onDisconnected: () -> Unit,
     private val onError: (String) -> Unit = {},
     private val onRenegotiationNeeded: () -> Unit = {},
+    private val onIceRestartOffer: (SessionDescription) -> Unit = {},
 ) {
     private var peerConnection: PeerConnection? = null
     private var iceRestartAttempted = false
@@ -177,6 +178,13 @@ class WebRtcCallSession(
         return sender
     }
 
+    /**
+     * Removes the sender for the given track from this PeerConnection.
+     * This signals to the remote peer that the track has been removed
+     * (e.g. camera turned off) rather than just sending a black frame.
+     */
+    fun removeTrack(sender: RtpSender): Boolean = peerConnection?.removeTrack(sender) ?: false
+
     fun createOffer(onSdpCreated: (SessionDescription) -> Unit) {
         val constraints =
             MediaConstraints().apply {
@@ -279,9 +287,9 @@ class WebRtcCallSession(
             object : SdpObserver {
                 override fun onCreateSuccess(sdp: SessionDescription?) {
                     sdp?.let {
-                        Log.d(TAG) { "ICE restart offer created, setting local description" }
+                        Log.d(TAG) { "ICE restart offer created, setting local description and sending to peer" }
                         peerConnection?.setLocalDescription(loggingSdpObserver("setLocalDescription(ICE_RESTART)"), it)
-                        onRenegotiationNeeded()
+                        onIceRestartOffer(it)
                     }
                 }
 
@@ -297,6 +305,15 @@ class WebRtcCallSession(
             },
             constraints,
         )
+    }
+
+    /**
+     * Triggers an ICE restart proactively (e.g. on network change).
+     * Resets the attempt counter so the restart is always tried.
+     */
+    fun triggerIceRestart() {
+        iceRestartAttempted = false
+        restartIce()
     }
 
     fun getSignalingState(): PeerConnection.SignalingState? = peerConnection?.signalingState()

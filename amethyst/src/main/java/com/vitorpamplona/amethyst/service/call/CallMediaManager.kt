@@ -67,12 +67,16 @@ class CallMediaManager(
 
     private var cameraCapturer: CameraVideoCapturer? = null
     private var surfaceTextureHelper: SurfaceTextureHelper? = null
+    private var usingFrontCamera: Boolean = true
 
     private val _localVideoTrackFlow = MutableStateFlow<VideoTrack?>(null)
     val localVideoTrackFlow: StateFlow<VideoTrack?> = _localVideoTrackFlow.asStateFlow()
 
     private val _isVideoEnabled = MutableStateFlow(false)
     val isVideoEnabled: StateFlow<Boolean> = _isVideoEnabled.asStateFlow()
+
+    private val _isFrontCamera = MutableStateFlow(true)
+    val isFrontCamera: StateFlow<Boolean> = _isFrontCamera.asStateFlow()
 
     fun initialize(callType: CallType) {
         if (peerConnectionFactory != null) return
@@ -147,8 +151,13 @@ class CallMediaManager(
         val egl = sharedEglBase ?: return
 
         val enumerator = Camera2Enumerator(context)
-        val frontCamera = enumerator.deviceNames.firstOrNull { enumerator.isFrontFacing(it) }
-        val camera = frontCamera ?: enumerator.deviceNames.firstOrNull() ?: return
+        val preferred =
+            if (usingFrontCamera) {
+                enumerator.deviceNames.firstOrNull { enumerator.isFrontFacing(it) }
+            } else {
+                enumerator.deviceNames.firstOrNull { enumerator.isBackFacing(it) }
+            }
+        val camera = preferred ?: enumerator.deviceNames.firstOrNull() ?: return
 
         val helper = SurfaceTextureHelper.create("CaptureThread", egl.eglBaseContext)
         surfaceTextureHelper = helper
@@ -157,6 +166,23 @@ class CallMediaManager(
                 it.initialize(helper, context, source.capturerObserver)
                 it.startCapture(captureWidth, captureHeight, captureFps)
             }
+    }
+
+    fun switchCamera() {
+        val capturer = cameraCapturer ?: return
+        capturer.switchCamera(
+            object : CameraVideoCapturer.CameraSwitchHandler {
+                override fun onCameraSwitchDone(isFront: Boolean) {
+                    usingFrontCamera = isFront
+                    _isFrontCamera.value = isFront
+                    Log.d(TAG) { "Camera switched: front=$isFront" }
+                }
+
+                override fun onCameraSwitchError(error: String?) {
+                    Log.e(TAG, "Camera switch failed: $error")
+                }
+            },
+        )
     }
 
     fun stopCamera() {

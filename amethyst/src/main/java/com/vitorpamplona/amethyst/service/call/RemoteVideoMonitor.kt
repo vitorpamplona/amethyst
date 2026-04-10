@@ -116,6 +116,7 @@ class RemoteVideoMonitor(
 
     fun dispose() {
         stopPrimaryMonitor()
+        stopGroupMonitor()
         for (peerPubKey in perPeerFrameSinks.keys.toList()) {
             stopPeerMonitor(peerPubKey)
         }
@@ -143,12 +144,15 @@ class RemoteVideoMonitor(
     private fun stopPrimaryMonitor() {
         remoteVideoMonitorJob?.cancel()
         remoteVideoMonitorJob = null
-        groupVideoMonitorJob?.cancel()
-        groupVideoMonitorJob = null
         try {
             _remoteVideoTrack.value?.removeSink(remoteFrameSink)
         } catch (_: Exception) {
         }
+    }
+
+    private fun stopGroupMonitor() {
+        groupVideoMonitorJob?.cancel()
+        groupVideoMonitorJob = null
     }
 
     private fun startPeerMonitor(

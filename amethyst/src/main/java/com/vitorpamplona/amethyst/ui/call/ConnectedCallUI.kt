@@ -41,6 +41,8 @@ import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.BluetoothAudio
 import androidx.compose.material.icons.filled.CallEnd
+import androidx.compose.material.icons.filled.CameraFront
+import androidx.compose.material.icons.filled.CameraRear
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MicOff
 import androidx.compose.material.icons.filled.PersonAdd
@@ -108,6 +110,7 @@ fun ConnectedCallUI(
     val defaultTrue = remember { kotlinx.coroutines.flow.MutableStateFlow(true) }
     val isAudioMuted by (callController?.isAudioMuted ?: defaultFalse).collectAsState()
     val isVideoEnabled by (callController?.isVideoEnabled ?: defaultTrue).collectAsState()
+    val isFrontCamera by (callController?.isFrontCamera ?: defaultTrue).collectAsState()
     val currentAudioRoute by (callController?.audioRoute ?: remember { kotlinx.coroutines.flow.MutableStateFlow(AudioRoute.EARPIECE) }).collectAsState()
     val hasActiveVideo =
         state.callType == com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType.VIDEO ||
@@ -160,7 +163,7 @@ fun ConnectedCallUI(
                                 .align(Alignment.TopEnd)
                                 .windowInsetsPadding(WindowInsets.statusBars)
                                 .padding(16.dp),
-                        mirror = true,
+                        mirror = isFrontCamera,
                     )
                 }
             }
@@ -226,9 +229,11 @@ fun ConnectedCallUI(
         CallControls(
             isAudioMuted = isAudioMuted,
             isVideoEnabled = isVideoEnabled,
+            isFrontCamera = isFrontCamera,
             currentAudioRoute = currentAudioRoute,
             onToggleMute = onToggleMute,
             onToggleVideo = onToggleVideo,
+            onSwitchCamera = { callController?.switchCamera() },
             onCycleAudioRoute = onCycleAudioRoute,
             onAddParticipant = { showAddParticipant = true },
             onHangup = onHangup,
@@ -245,9 +250,11 @@ fun ConnectedCallUI(
 private fun CallControls(
     isAudioMuted: Boolean,
     isVideoEnabled: Boolean,
+    isFrontCamera: Boolean,
     currentAudioRoute: AudioRoute,
     onToggleMute: () -> Unit,
     onToggleVideo: () -> Unit,
+    onSwitchCamera: () -> Unit,
     onCycleAudioRoute: () -> Unit,
     onAddParticipant: () -> Unit,
     onHangup: () -> Unit,
@@ -276,6 +283,21 @@ private fun CallControls(
                     tint = if (!isVideoEnabled) Color.Red else Color.White,
                     modifier = Modifier.size(28.dp),
                 )
+            }
+            if (isVideoEnabled) {
+                IconButton(onClick = onSwitchCamera, modifier = Modifier.size(56.dp)) {
+                    Icon(
+                        imageVector =
+                            if (isFrontCamera) {
+                                Icons.Default.CameraRear
+                            } else {
+                                Icons.Default.CameraFront
+                            },
+                        contentDescription = stringRes(R.string.call_switch_camera),
+                        tint = Color.White,
+                        modifier = Modifier.size(28.dp),
+                    )
+                }
             }
             IconButton(onClick = onCycleAudioRoute, modifier = Modifier.size(56.dp)) {
                 Icon(

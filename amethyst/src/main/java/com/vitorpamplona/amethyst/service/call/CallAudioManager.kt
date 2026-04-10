@@ -97,8 +97,13 @@ class CallAudioManager(
         }
 
     fun startRinging() {
-        startRingtone()
-        startVibration()
+        val ringerMode = audioManager.ringerMode
+        if (ringerMode != AudioManager.RINGER_MODE_SILENT) {
+            if (ringerMode == AudioManager.RINGER_MODE_NORMAL) {
+                startRingtone()
+            }
+            startVibration()
+        }
     }
 
     fun stopRinging() {

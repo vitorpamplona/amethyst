@@ -50,17 +50,25 @@ object IceServerConfig {
                 .createIceServer(),
         )
 
+    /**
+     * Builds the ICE server list.  If the user has configured custom TURN
+     * servers they replace the built-in OpenRelay defaults so that
+     * credentials can be rotated without an app update.  STUN servers
+     * are always included.
+     */
     fun buildIceServers(userTurnServers: List<CallTurnServer> = emptyList()): List<PeerConnection.IceServer> {
-        val servers = (defaultStunServers + defaultTurnServers).toMutableList()
-        userTurnServers.forEach { turn ->
-            servers.add(
-                PeerConnection.IceServer
-                    .builder(turn.url)
-                    .setUsername(turn.username)
-                    .setPassword(turn.credential)
-                    .createIceServer(),
-            )
-        }
-        return servers
+        val turnServers =
+            if (userTurnServers.isNotEmpty()) {
+                userTurnServers.map { turn ->
+                    PeerConnection.IceServer
+                        .builder(turn.url)
+                        .setUsername(turn.username)
+                        .setPassword(turn.credential)
+                        .createIceServer()
+                }
+            } else {
+                defaultTurnServers
+            }
+        return defaultStunServers + turnServers
     }
 }
