@@ -220,35 +220,35 @@ class Secp256k1NativeBenchmark {
         // out of the loop (dead code elimination risk with constant inputs).
         val a = U256.fromBytes(hexToBytes("79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798"))
         val b = U256.fromBytes(hexToBytes("483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8"))
-        val out = Fe4()
-        val w = Wide8()
+        val out = LongArray(4)
+        val w = LongArray(8)
 
         val results = mutableListOf<BenchResult>()
 
         // --- FieldP.mul (the hottest operation) ---
         // Uses `out` as both output and next input to create a data dependency chain.
-        out.copyFrom(a)
+        a.copyInto(out)
         results +=
             bench("FieldP.mul", 5000, 100000) {
                 FieldP.mul(out, out, b, w)
             }
 
         // --- FieldP.sqr ---
-        out.copyFrom(a)
+        a.copyInto(out)
         results +=
             bench("FieldP.sqr", 5000, 100000) {
                 FieldP.sqr(out, out, w)
             }
 
         // --- FieldP.add ---
-        out.copyFrom(a)
+        a.copyInto(out)
         results +=
             bench("FieldP.add", 5000, 500000) {
                 FieldP.add(out, out, b)
             }
 
         // --- FieldP.sub ---
-        out.copyFrom(a)
+        a.copyInto(out)
         results +=
             bench("FieldP.sub", 5000, 500000) {
                 FieldP.sub(out, out, b)
@@ -264,20 +264,20 @@ class Secp256k1NativeBenchmark {
         var hiSink = 0L
         results +=
             bench("unsignedMultiplyHigh", 10000, 1000000) {
-                hiSink = unsignedMultiplyHigh(a[0] xor hiSink, b[0])
+                hiSink = unsignedMultiplyHigh(a.l0 xor hiSink, b.l0)
             }
 
         // --- uLt (with varying input to prevent hoisting) ---
         var ltSink = 0L
         results +=
             bench("uLt", 10000, 1000000) {
-                ltSink = if (uLt(a[0] xor ltSink, b[0])) 1L else 0L
+                ltSink = if (uLt(a.l0 xor ltSink, b.l0)) 1L else 0L
             }
 
         printResults("secp256k1 Field Micro-Benchmarks: Kotlin/Native (LLVM AOT) on linuxX64", results)
 
         // Use sinks to prevent dead code elimination of the entire benchmark
-        assertTrue(hiSink != Long.MIN_VALUE || ltSink != Long.MIN_VALUE || out.l0 != Long.MIN_VALUE)
+        assertTrue(hiSink != Long.MIN_VALUE || ltSink != Long.MIN_VALUE || out[0] != Long.MIN_VALUE)
     }
 
     private fun hexToBytes(hex: String): ByteArray {
