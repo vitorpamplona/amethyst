@@ -77,7 +77,6 @@ import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
 import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
 import com.vitorpamplona.amethyst.commons.ui.feed.FeedHeader
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
-import com.vitorpamplona.amethyst.commons.ui.screens.MessagesPlaceholder
 import com.vitorpamplona.amethyst.commons.ui.screens.NotificationsPlaceholder
 import com.vitorpamplona.amethyst.commons.ui.screens.SearchPlaceholder
 import com.vitorpamplona.amethyst.ios.account.AccountManager
@@ -87,6 +86,7 @@ import com.vitorpamplona.amethyst.ios.feeds.IosFollowingFeedFilter
 import com.vitorpamplona.amethyst.ios.feeds.IosGlobalFeedFilter
 import com.vitorpamplona.amethyst.ios.feeds.IosProfileFeedFilter
 import com.vitorpamplona.amethyst.ios.feeds.IosThreadFilter
+import com.vitorpamplona.amethyst.ios.model.IosIAccount
 import com.vitorpamplona.amethyst.ios.network.IosRelayConnectionManager
 import com.vitorpamplona.amethyst.ios.subscriptions.FilterBuilders
 import com.vitorpamplona.amethyst.ios.subscriptions.IosSubscriptionsCoordinator
@@ -96,14 +96,27 @@ import com.vitorpamplona.amethyst.ios.subscriptions.rememberSubscription
 import com.vitorpamplona.amethyst.ios.ui.ComposeNoteScreen
 import com.vitorpamplona.amethyst.ios.ui.LoginScreen
 import com.vitorpamplona.amethyst.ios.ui.SettingsScreen
+import com.vitorpamplona.amethyst.ios.ui.chats.IosChatScreen
+import com.vitorpamplona.amethyst.ios.ui.chats.IosChatroomListState
+import com.vitorpamplona.amethyst.ios.ui.chats.IosConversationListScreen
 import com.vitorpamplona.amethyst.ios.ui.note.NoteCard
 import com.vitorpamplona.amethyst.ios.ui.toNoteDisplayData
 import com.vitorpamplona.amethyst.ios.viewmodels.IosFeedViewModel
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
+import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
+import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
+import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 enum class Tab(
@@ -140,6 +153,10 @@ sealed class Screen {
 
     data class ComposeNote(
         val replyToNoteId: String? = null,
+    ) : Screen()
+
+    data class Chat(
+        val roomKey: ChatroomKey,
     ) : Screen()
 }
 
@@ -189,6 +206,15 @@ private fun MainScreen(
     val relayManager = remember { IosRelayConnectionManager() }
     val localCache = remember { IosLocalCache() }
     val coordinator = remember { IosSubscriptionsCoordinator(CoroutineScope(Dispatchers.Default), localCache) }
+    val appScope = rememberCoroutineScope()
+    val iosAccount =
+        remember(account) {
+            IosIAccount(account, localCache, relayManager, appScope)
+        }
+    val chatroomListState =
+        remember(iosAccount) {
+            IosChatroomListState(iosAccount, localCache, relayManager, appScope)
+        }
 
     var currentScreen by remember { mutableStateOf<Screen>(Screen.Feed) }
     var selectedTab by remember { mutableStateOf(Tab.FEED) }
@@ -243,6 +269,139 @@ private fun MainScreen(
     LaunchedEffect(Unit) {
         relayManager.addDefaultRelays()
         relayManager.connect()
+    }
+
+    // Subscribe to DMs once relays are connected
+    LaunchedEffect(account) {
+        relayManager.connectedRelays.first { it.isNotEmpty() }
+        val relays = relayManager.connectedRelays.value
+
+        // NIP-04 DMs TO the user
+        relayManager.subscribe(
+            "dm-inbox",
+            listOf(FilterBuilders.nip04DmsToUser(account.pubKeyHex, limit = 200)),
+            relays,
+            object : SubscriptionListener {
+                override fun onEvent(
+                    event: com.vitorpamplona.quartz.nip01Core.core.Event,
+                    isLive: Boolean,
+                    relay: NormalizedRelayUrl,
+                    forFilters: List<Filter>?,
+                ) {
+                    if (event is PrivateDmEvent) {
+                        val note = localCache.getOrCreateNote(event.id)
+                        val author = localCache.getOrCreateUser(event.pubKey)
+                        if (note.event == null) {
+                            note.loadEvent(event, author, emptyList())
+                            note.addRelay(relay)
+                        }
+                        iosAccount.chatroomList.addMessage(
+                            event.chatroomKey(iosAccount.pubKey),
+                            note,
+                        )
+                    }
+                    coordinator.consumeEvent(event, relay)
+                }
+            },
+        )
+
+        // NIP-04 DMs FROM the user
+        relayManager.subscribe(
+            "dm-outbox",
+            listOf(FilterBuilders.nip04DmsFromUser(account.pubKeyHex, limit = 200)),
+            relays,
+            object : SubscriptionListener {
+                override fun onEvent(
+                    event: com.vitorpamplona.quartz.nip01Core.core.Event,
+                    isLive: Boolean,
+                    relay: NormalizedRelayUrl,
+                    forFilters: List<Filter>?,
+                ) {
+                    if (event is PrivateDmEvent) {
+                        val note = localCache.getOrCreateNote(event.id)
+                        val author = localCache.getOrCreateUser(event.pubKey)
+                        if (note.event == null) {
+                            note.loadEvent(event, author, emptyList())
+                            note.addRelay(relay)
+                        }
+                        iosAccount.chatroomList.addMessage(
+                            event.chatroomKey(iosAccount.pubKey),
+                            note,
+                        )
+                    }
+                    coordinator.consumeEvent(event, relay)
+                }
+            },
+        )
+
+        // NIP-17 gift-wrapped DMs
+        relayManager.subscribe(
+            "dm-giftwrap",
+            listOf(
+                Filter(
+                    kinds = listOf(GiftWrapEvent.KIND),
+                    tags = mapOf("p" to listOf(account.pubKeyHex)),
+                ),
+            ),
+            relays,
+            object : SubscriptionListener {
+                override fun onEvent(
+                    event: com.vitorpamplona.quartz.nip01Core.core.Event,
+                    isLive: Boolean,
+                    relay: NormalizedRelayUrl,
+                    forFilters: List<Filter>?,
+                ) {
+                    if (event is GiftWrapEvent) {
+                        appScope.launch {
+                            val seal =
+                                event.unwrapOrNull(iosAccount.signer)
+                                    as? SealedRumorEvent ?: return@launch
+                            val innerEvent =
+                                seal.unsealOrNull(iosAccount.signer) ?: return@launch
+                            when (innerEvent) {
+                                is ChatMessageEvent -> {
+                                    val innerNote =
+                                        localCache.getOrCreateNote(innerEvent.id)
+                                    val innerAuthor =
+                                        localCache.getOrCreateUser(innerEvent.pubKey)
+                                    if (innerNote.event == null) {
+                                        innerNote.loadEvent(
+                                            innerEvent,
+                                            innerAuthor,
+                                            emptyList(),
+                                        )
+                                    }
+                                    iosAccount.chatroomList.addMessage(
+                                        innerEvent.chatroomKey(iosAccount.pubKey),
+                                        innerNote,
+                                    )
+                                }
+
+                                is ChatMessageEncryptedFileHeaderEvent -> {
+                                    val innerNote =
+                                        localCache.getOrCreateNote(innerEvent.id)
+                                    val innerAuthor =
+                                        localCache.getOrCreateUser(innerEvent.pubKey)
+                                    if (innerNote.event == null) {
+                                        innerNote.loadEvent(
+                                            innerEvent,
+                                            innerAuthor,
+                                            emptyList(),
+                                        )
+                                    }
+                                    iosAccount.chatroomList.addMessage(
+                                        innerEvent.chatroomKey(iosAccount.pubKey),
+                                        innerNote,
+                                    )
+                                }
+
+                                else -> {}
+                            }
+                        }
+                    }
+                }
+            },
+        )
     }
 
     val showBottomBar =
@@ -349,7 +508,22 @@ private fun MainScreen(
                 }
 
                 is Screen.Messages -> {
-                    MessagesPlaceholder(modifier = Modifier.padding(16.dp))
+                    IosConversationListScreen(
+                        state = chatroomListState,
+                        onConversationSelected = { roomKey ->
+                            navigateTo(Screen.Chat(roomKey))
+                        },
+                    )
+                }
+
+                is Screen.Chat -> {
+                    IosChatScreen(
+                        roomKey = screen.roomKey,
+                        account = iosAccount,
+                        cacheProvider = localCache,
+                        onBack = { goBack() },
+                        onNavigateToProfile = { navigateTo(Screen.Profile(it)) },
+                    )
                 }
 
                 is Screen.MyProfile -> {
