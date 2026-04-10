@@ -70,13 +70,20 @@ class AccountManager {
     val savedAccounts: StateFlow<List<SavedAccountInfo>> = _savedAccounts.asStateFlow()
 
     private val keyStorage = SecureKeyStorage.create(null)
-    private val scope = CoroutineScope(Dispatchers.IO)
+    private val scope =
+        CoroutineScope(
+            Dispatchers.IO + kotlinx.coroutines.SupervisorJob() +
+                kotlinx.coroutines.CoroutineExceptionHandler { _, t ->
+                    platform.Foundation.NSLog("AccountManager coroutine error: " + (t.message ?: "unknown"))
+                },
+        )
 
     /**
      * Try to restore the last logged-in account from Keychain.
      */
     fun tryRestoreSession() {
         scope.launch {
+            @Suppress("TooGenericExceptionCaught")
             try {
                 val lastNpub = keyStorage.getPrivateKey(LAST_NPUB_KEY) ?: return@launch
                 val privKeyHex = keyStorage.getPrivateKey(lastNpub)
@@ -111,6 +118,7 @@ class AccountManager {
 
                 refreshSavedAccounts()
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 // Failed to restore — stay logged out
                 println("AccountManager: Failed to restore session: ${e.message}")
                 refreshSavedAccounts()
@@ -130,12 +138,14 @@ class AccountManager {
         // Persist to Keychain
         if (keyPair.privKey != null) {
             scope.launch {
+                @Suppress("TooGenericExceptionCaught")
                 try {
                     keyStorage.savePrivateKey(npub, keyPair.privKey!!.toHexKey())
                     keyStorage.savePrivateKey(LAST_NPUB_KEY, npub)
                     addToSavedAccountsList(npub)
                     refreshSavedAccounts()
                 } catch (e: Exception) {
+                    if (e is kotlinx.coroutines.CancellationException) throw e
                     println("AccountManager: Failed to save to Keychain: ${e.message}")
                 }
             }
@@ -183,23 +193,27 @@ class AccountManager {
             // Persist to Keychain (only if we have a private key)
             if (!isReadOnly && keyPair.privKey != null) {
                 scope.launch {
+                    @Suppress("TooGenericExceptionCaught")
                     try {
                         keyStorage.savePrivateKey(npub, keyPair.privKey!!.toHexKey())
                         keyStorage.savePrivateKey(LAST_NPUB_KEY, npub)
                         addToSavedAccountsList(npub)
                         refreshSavedAccounts()
                     } catch (e: Exception) {
+                        if (e is kotlinx.coroutines.CancellationException) throw e
                         println("AccountManager: Failed to save to Keychain: ${e.message}")
                     }
                 }
             } else if (isReadOnly) {
                 // Save read-only accounts to the list too (no privkey stored)
                 scope.launch {
+                    @Suppress("TooGenericExceptionCaught")
                     try {
                         keyStorage.savePrivateKey(LAST_NPUB_KEY, npub)
                         addToSavedAccountsList(npub)
                         refreshSavedAccounts()
                     } catch (e: Exception) {
+                        if (e is kotlinx.coroutines.CancellationException) throw e
                         println("AccountManager: Failed to save to Keychain: ${e.message}")
                     }
                 }
@@ -221,6 +235,7 @@ class AccountManager {
     fun switchToAccount(npub: String): Result<Unit> =
         runCatching {
             scope.launch {
+                @Suppress("TooGenericExceptionCaught")
                 try {
                     val privKeyHex = keyStorage.getPrivateKey(npub)
                     val isReadOnly = privKeyHex == null
@@ -248,6 +263,7 @@ class AccountManager {
 
                     refreshSavedAccounts()
                 } catch (e: Exception) {
+                    if (e is kotlinx.coroutines.CancellationException) throw e
                     println("AccountManager: Failed to switch account: ${e.message}")
                 }
             }
@@ -261,6 +277,7 @@ class AccountManager {
         val isActive = currentState is AccountState.LoggedIn && currentState.npub == npub
 
         scope.launch {
+            @Suppress("TooGenericExceptionCaught")
             try {
                 // Delete private key
                 keyStorage.deletePrivateKey(npub)
@@ -301,6 +318,7 @@ class AccountManager {
 
                 refreshSavedAccounts()
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 println("AccountManager: Failed to remove account: ${e.message}")
             }
         }
@@ -310,6 +328,7 @@ class AccountManager {
         val currentState = _accountState.value
         if (currentState is AccountState.LoggedIn) {
             scope.launch {
+                @Suppress("TooGenericExceptionCaught")
                 try {
                     keyStorage.deletePrivateKey(currentState.npub)
                     removeFromSavedAccountsList(currentState.npub)
@@ -345,6 +364,7 @@ class AccountManager {
 
                     refreshSavedAccounts()
                 } catch (e: Exception) {
+                    if (e is kotlinx.coroutines.CancellationException) throw e
                     println("AccountManager: Failed to clear Keychain: ${e.message}")
                 }
             }
@@ -393,6 +413,7 @@ class AccountManager {
                         val bytes = npub.bechToBytes()
                         KeyPair(pubKey = bytes).pubKey.toHexKey()
                     } catch (e: Exception) {
+                        if (e is kotlinx.coroutines.CancellationException) throw e
                         npub
                     }
 

@@ -85,8 +85,13 @@ fun CommunityListScreen(
 
     // Force refresh periodically as events arrive
     androidx.compose.runtime.LaunchedEffect(connectedRelays) {
-        kotlinx.coroutines.delay(2000)
-        communityRefreshKey++
+        try {
+            kotlinx.coroutines.delay(2000)
+            communityRefreshKey++
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            platform.Foundation.NSLog("LaunchedEffect error (community refresh): " + (e.message ?: "unknown"))
+        }
     }
 
     val communities =

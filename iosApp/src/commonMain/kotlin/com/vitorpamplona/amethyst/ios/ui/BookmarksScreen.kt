@@ -119,21 +119,26 @@ fun BookmarksScreen(
 
     // Seed from cache
     LaunchedEffect(account.pubKeyHex) {
-        val address = BookmarkListEvent.createBookmarkAddress(account.pubKeyHex)
-        val cachedNote = localCache.getOrCreateAddressableNote(address)
-        val cachedEvent = cachedNote.event as? BookmarkListEvent
-        if (cachedEvent != null) {
-            bookmarkList = cachedEvent
-            publicBookmarkIds =
-                cachedEvent
-                    .publicBookmarks()
-                    .filterIsInstance<EventBookmark>()
-                    .map { it.eventId }
-            publicBookmarkIds.forEach { id ->
-                val note = localCache.getNoteIfExists(id)
-                val event = note?.event
-                if (event != null) publicEventState.addItem(event)
+        try {
+            val address = BookmarkListEvent.createBookmarkAddress(account.pubKeyHex)
+            val cachedNote = localCache.getOrCreateAddressableNote(address)
+            val cachedEvent = cachedNote.event as? BookmarkListEvent
+            if (cachedEvent != null) {
+                bookmarkList = cachedEvent
+                publicBookmarkIds =
+                    cachedEvent
+                        .publicBookmarks()
+                        .filterIsInstance<EventBookmark>()
+                        .map { it.eventId }
+                publicBookmarkIds.forEach { id ->
+                    val note = localCache.getNoteIfExists(id)
+                    val event = note?.event
+                    if (event != null) publicEventState.addItem(event)
+                }
             }
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            platform.Foundation.NSLog("LaunchedEffect error (bookmark seed): " + (e.message ?: "unknown"))
         }
     }
 
@@ -176,20 +181,26 @@ fun BookmarksScreen(
 
     // Decrypt private bookmarks
     LaunchedEffect(bookmarkList) {
-        bookmarkList?.let { list ->
-            scope.launch {
-                try {
-                    val privateBookmarks = list.privateBookmarks(account.signer)
-                    val privIds =
-                        privateBookmarks
-                            ?.filterIsInstance<EventBookmark>()
-                            ?.map { it.eventId }
-                            ?: emptyList()
-                    privateBookmarkIds = privIds
-                } catch (_: Exception) {
-                    privateBookmarkIds = emptyList()
+        try {
+            bookmarkList?.let { list ->
+                scope.launch {
+                    try {
+                        val privateBookmarks = list.privateBookmarks(account.signer)
+                        val privIds =
+                            privateBookmarks
+                                ?.filterIsInstance<EventBookmark>()
+                                ?.map { it.eventId }
+                                ?: emptyList()
+                        privateBookmarkIds = privIds
+                    } catch (e: Exception) {
+                        if (e is kotlinx.coroutines.CancellationException) throw e
+                        privateBookmarkIds = emptyList()
+                    }
                 }
             }
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            platform.Foundation.NSLog("LaunchedEffect error (bookmark decrypt): " + (e.message ?: "unknown"))
         }
     }
 

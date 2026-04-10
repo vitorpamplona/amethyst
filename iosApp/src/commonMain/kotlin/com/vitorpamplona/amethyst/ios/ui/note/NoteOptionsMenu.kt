@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ios.ui.note
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Share
@@ -57,6 +58,7 @@ fun NoteOptionsMenu(
     onShare: ((String) -> Unit)? = null,
     onMuteUser: ((String) -> Unit)? = null,
     onReport: ((String, String) -> Unit)? = null, // (noteId, authorPubKeyHex)
+    onDelete: ((String) -> Unit)? = null, // noteId — only shown when non-null (i.e. user owns the note)
 ) {
     var expanded by remember { mutableStateOf(false) }
 
@@ -159,6 +161,29 @@ fun NoteOptionsMenu(
                 leadingIcon = {
                     Icon(
                         Icons.Default.VolumeOff,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(18.dp),
+                    )
+                },
+            )
+        }
+
+        onDelete?.let { callback ->
+            DropdownMenuItem(
+                text = {
+                    Text(
+                        "Delete",
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                },
+                onClick = {
+                    callback(note.id)
+                    expanded = false
+                },
+                leadingIcon = {
+                    Icon(
+                        Icons.Default.Delete,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.error,
                         modifier = Modifier.size(18.dp),

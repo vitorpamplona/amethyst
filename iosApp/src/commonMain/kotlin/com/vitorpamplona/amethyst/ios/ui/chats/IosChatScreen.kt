@@ -254,20 +254,25 @@ private fun IosMessageList(
             var decryptedContent by remember(note.idHex) { mutableStateOf<String?>(null) }
 
             LaunchedEffect(note.idHex, event) {
-                decryptedContent =
-                    when (event) {
-                        is PrivateDmEvent -> {
-                            try {
-                                event.decryptContent(account.signer)
-                            } catch (_: Exception) {
-                                event.content
+                try {
+                    decryptedContent =
+                        when (event) {
+                            is PrivateDmEvent -> {
+                                try {
+                                    event.decryptContent(account.signer)
+                                } catch (_: Exception) {
+                                    event.content
+                                }
+                            }
+
+                            else -> {
+                                event?.content
                             }
                         }
-
-                        else -> {
-                            event?.content
-                        }
-                    }
+                } catch (e: Exception) {
+                    if (e is kotlinx.coroutines.CancellationException) throw e
+                    platform.Foundation.NSLog("LaunchedEffect error (decrypt): " + (e.message ?: "unknown"))
+                }
             }
 
             ChatMessageCompose(

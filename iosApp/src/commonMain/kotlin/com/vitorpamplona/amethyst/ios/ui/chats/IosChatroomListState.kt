@@ -81,7 +81,12 @@ class IosChatroomListState(
     init {
         scope.launch(Dispatchers.IO) {
             while (isActive) {
-                refreshRooms()
+                try {
+                    refreshRooms()
+                } catch (e: Exception) {
+                    if (e is kotlinx.coroutines.CancellationException) throw e
+                    platform.Foundation.NSLog("IosChatroomListState refresh error: " + (e.message ?: "unknown"))
+                }
                 delay(2000)
             }
         }
@@ -138,8 +143,13 @@ class IosChatroomListState(
         )
 
         scope.launch {
-            delay(15_000)
-            relayManager.unsubscribe(subId)
+            try {
+                delay(15_000)
+                relayManager.unsubscribe(subId)
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                platform.Foundation.NSLog("IosChatroomListState unsub error: " + (e.message ?: "unknown"))
+            }
         }
     }
 

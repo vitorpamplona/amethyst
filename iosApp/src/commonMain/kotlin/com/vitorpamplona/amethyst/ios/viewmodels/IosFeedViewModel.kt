@@ -42,7 +42,12 @@ class IosFeedViewModel(
 ) : FeedViewModel(filter, cacheProvider) {
     init {
         viewModelScope.launch(Dispatchers.Default) {
-            feedState.refreshSuspended()
+            try {
+                feedState.refreshSuspended()
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                platform.Foundation.NSLog("IosFeedViewModel refresh error: " + (e.message ?: "unknown"))
+            }
         }
     }
 

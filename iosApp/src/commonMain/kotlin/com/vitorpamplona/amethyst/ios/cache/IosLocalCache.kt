@@ -395,6 +395,19 @@ class IosLocalCache : ICacheProvider {
             else -> false
         }
 
+    /**
+     * Marks a note as deleted in the local cache.
+     * Returns the Note if it existed, null otherwise.
+     */
+    fun markAsDeleted(noteId: HexKey): Note? {
+        val note =
+            platformSynchronized(lock) {
+                deletedEvents.add(noteId)
+                notes[noteId]
+            }
+        return note
+    }
+
     override fun justConsumeMyOwnEvent(event: Event): Boolean = false
 
     override fun getEventStream(): ICacheEventStream = eventStream

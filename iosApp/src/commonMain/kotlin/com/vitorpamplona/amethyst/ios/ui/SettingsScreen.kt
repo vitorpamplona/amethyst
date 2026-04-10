@@ -537,8 +537,12 @@ private fun AccountKeyRow(
 
     if (copied) {
         androidx.compose.runtime.LaunchedEffect(Unit) {
-            kotlinx.coroutines.delay(2000)
-            copied = false
+            try {
+                kotlinx.coroutines.delay(2000)
+                copied = false
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+            }
         }
     }
 }
@@ -620,7 +624,14 @@ private fun RelaySection(
 
         TextButton(
             onClick = {
-                GlobalScope.launch { relayManager.reconnectAll() }
+                GlobalScope.launch {
+                    try {
+                        relayManager.reconnectAll()
+                    } catch (e: Exception) {
+                        if (e is kotlinx.coroutines.CancellationException) throw e
+                        platform.Foundation.NSLog("Reconnect error: " + (e.message ?: "unknown"))
+                    }
+                }
             },
         ) {
             Text("Reconnect All")
@@ -1239,8 +1250,12 @@ private fun KeyBackupSection(keyPair: KeyPair) {
 
     if (nsecCopied) {
         androidx.compose.runtime.LaunchedEffect(Unit) {
-            kotlinx.coroutines.delay(3000)
-            nsecCopied = false
+            try {
+                kotlinx.coroutines.delay(3000)
+                nsecCopied = false
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+            }
         }
     }
 

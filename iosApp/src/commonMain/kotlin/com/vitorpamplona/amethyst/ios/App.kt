@@ -42,6 +42,7 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
@@ -55,6 +56,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -80,6 +82,7 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.ios.account.AccountManager
 import com.vitorpamplona.amethyst.ios.account.AccountState
 import com.vitorpamplona.amethyst.ios.cache.IosLocalCache
+import com.vitorpamplona.amethyst.ios.drafts.DraftManager
 import com.vitorpamplona.amethyst.ios.feeds.IosCalendarEventsFeedFilter
 import com.vitorpamplona.amethyst.ios.feeds.IosFollowedHashtagsFeedFilter
 import com.vitorpamplona.amethyst.ios.feeds.IosFollowingFeedFilter
@@ -154,6 +157,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
@@ -317,6 +321,10 @@ private fun MainScreen(
 ) {
     val relayManager = remember { IosRelayConnectionManager() }
     val localCache = remember { IosLocalCache() }
+    val draftManager =
+        remember(account.signer) {
+            DraftManager(account.signer, relayManager)
+        }
     val coordinator =
         remember {
             IosSubscriptionsCoordinator(
@@ -390,17 +398,22 @@ private fun MainScreen(
 
     // Load bookmark list from cache on start
     LaunchedEffect(account.pubKeyHex) {
-        val address = BookmarkListEvent.createBookmarkAddress(account.pubKeyHex)
-        val cachedNote = localCache.getOrCreateAddressableNote(address)
-        val cachedEvent = cachedNote.event as? BookmarkListEvent
-        if (cachedEvent != null) {
-            bookmarkListState = cachedEvent
-            bookmarkedNoteIds =
-                cachedEvent
-                    .publicBookmarks()
-                    .filterIsInstance<EventBookmark>()
-                    .map { it.eventId }
-                    .toSet()
+        try {
+            val address = BookmarkListEvent.createBookmarkAddress(account.pubKeyHex)
+            val cachedNote = localCache.getOrCreateAddressableNote(address)
+            val cachedEvent = cachedNote.event as? BookmarkListEvent
+            if (cachedEvent != null) {
+                bookmarkListState = cachedEvent
+                bookmarkedNoteIds =
+                    cachedEvent
+                        .publicBookmarks()
+                        .filterIsInstance<EventBookmark>()
+                        .map { it.eventId }
+                        .toSet()
+            }
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            platform.Foundation.NSLog("LaunchedEffect error (bookmarks): " + (e.message ?: "unknown"))
         }
     }
 
@@ -476,17 +489,22 @@ private fun MainScreen(
 
     // Load mute list from cache on start
     LaunchedEffect(account.pubKeyHex) {
-        val address = MuteListEvent.createAddress(account.pubKeyHex)
-        val cachedNote = localCache.getOrCreateAddressableNote(address)
-        val cachedEvent = cachedNote.event as? MuteListEvent
-        if (cachedEvent != null) {
-            muteListState = cachedEvent
-            mutedUserPubKeys =
-                cachedEvent
-                    .publicMutes()
-                    .filterIsInstance<UserTag>()
-                    .map { it.pubKey }
-                    .toSet()
+        try {
+            val address = MuteListEvent.createAddress(account.pubKeyHex)
+            val cachedNote = localCache.getOrCreateAddressableNote(address)
+            val cachedEvent = cachedNote.event as? MuteListEvent
+            if (cachedEvent != null) {
+                muteListState = cachedEvent
+                mutedUserPubKeys =
+                    cachedEvent
+                        .publicMutes()
+                        .filterIsInstance<UserTag>()
+                        .map { it.pubKey }
+                        .toSet()
+            }
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            platform.Foundation.NSLog("LaunchedEffect error (mute list): " + (e.message ?: "unknown"))
         }
     }
 
@@ -548,12 +566,17 @@ private fun MainScreen(
 
     // Load hashtag list from cache on start
     LaunchedEffect(account.pubKeyHex) {
-        val address = HashtagListEvent.createAddress(account.pubKeyHex)
-        val cachedNote = localCache.getOrCreateAddressableNote(address)
-        val cachedEvent = cachedNote.event as? HashtagListEvent
-        if (cachedEvent != null) {
-            hashtagListState = cachedEvent
-            followedHashtags = cachedEvent.publicHashtags().toSet()
+        try {
+            val address = HashtagListEvent.createAddress(account.pubKeyHex)
+            val cachedNote = localCache.getOrCreateAddressableNote(address)
+            val cachedEvent = cachedNote.event as? HashtagListEvent
+            if (cachedEvent != null) {
+                hashtagListState = cachedEvent
+                followedHashtags = cachedEvent.publicHashtags().toSet()
+            }
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            platform.Foundation.NSLog("LaunchedEffect error (hashtags): " + (e.message ?: "unknown"))
         }
     }
 
@@ -617,12 +640,17 @@ private fun MainScreen(
 
     // Load community list from cache on start
     LaunchedEffect(account.pubKeyHex) {
-        val address = CommunityListEvent.createAddress(account.pubKeyHex)
-        val cachedNote = localCache.getOrCreateAddressableNote(address)
-        val cachedEvent = cachedNote.event as? CommunityListEvent
-        if (cachedEvent != null) {
-            communityListState = cachedEvent
-            joinedCommunityIds = cachedEvent.publicCommunityIds().toSet()
+        try {
+            val address = CommunityListEvent.createAddress(account.pubKeyHex)
+            val cachedNote = localCache.getOrCreateAddressableNote(address)
+            val cachedEvent = cachedNote.event as? CommunityListEvent
+            if (cachedEvent != null) {
+                communityListState = cachedEvent
+                joinedCommunityIds = cachedEvent.publicCommunityIds().toSet()
+            }
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            platform.Foundation.NSLog("LaunchedEffect error (communities): " + (e.message ?: "unknown"))
         }
     }
 
@@ -717,6 +745,45 @@ private fun MainScreen(
         }
     }
 
+    // ── Delete note state (NIP-09) ──
+    var showDeleteConfirmDialog by remember { mutableStateOf(false) }
+    var deleteTargetNoteId by remember { mutableStateOf<String?>(null) }
+
+    val onDeleteNote: (String) -> Unit = { noteId ->
+        deleteTargetNoteId = noteId
+        showDeleteConfirmDialog = true
+    }
+
+    val onConfirmDelete: () -> Unit = {
+        if (!account.isReadOnly) {
+            val noteId = deleteTargetNoteId
+            if (noteId != null) {
+                scope.launch {
+                    try {
+                        val note = localCache.getNoteIfExists(noteId)
+                        val event = note?.event
+                        if (event != null) {
+                            val template = DeletionEvent.build(listOf(event))
+                            val signed = account.signer.sign(template)
+                            relayManager.broadcastToAll(signed)
+                            localCache.markAsDeleted(noteId)
+                            snackbarHostState.showSnackbar("🗑️ Note deleted")
+                        } else {
+                            snackbarHostState.showSnackbar("Note not found in cache")
+                        }
+                    } catch (e: Exception) {
+                        if (e is kotlinx.coroutines.CancellationException) throw e
+                        platform.Foundation.NSLog("Delete error: " + (e.message ?: "unknown"))
+                        snackbarHostState.showSnackbar("Failed to delete note")
+                    } finally {
+                        showDeleteConfirmDialog = false
+                        deleteTargetNoteId = null
+                    }
+                }
+            }
+        }
+    }
+
     // ── Clipboard helpers ──
     val onCopyNoteId: (String) -> Unit = { noteId ->
         UIPasteboard.generalPasteboard.string = noteId
@@ -781,158 +848,177 @@ private fun MainScreen(
     }
 
     LaunchedEffect(Unit) {
-        relayManager.addDefaultRelays()
-        relayManager.connect()
+        try {
+            relayManager.addDefaultRelays()
+            // Small delay to let the UI compose before relay sync starts.
+            // Prevents ConcurrentModificationException in LargeCache.forEach
+            // when syncFilters runs while subscriptions are being set up.
+            kotlinx.coroutines.delay(500)
+            relayManager.connect()
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            platform.Foundation.NSLog("LaunchedEffect error (relay connect): " + (e.message ?: "unknown"))
+        }
     }
 
     // Subscribe to DMs once relays are connected
     LaunchedEffect(account) {
-        relayManager.connectedRelays.first { it.isNotEmpty() }
-        val relays = relayManager.connectedRelays.value
+        try {
+            relayManager.connectedRelays.first { it.isNotEmpty() }
+            val relays = relayManager.connectedRelays.value
 
-        // NIP-04 DMs TO the user
-        relayManager.subscribe(
-            "dm-inbox",
-            listOf(FilterBuilders.nip04DmsToUser(account.pubKeyHex, limit = 200)),
-            relays,
-            object : SubscriptionListener {
-                override fun onEvent(
-                    event: com.vitorpamplona.quartz.nip01Core.core.Event,
-                    isLive: Boolean,
-                    relay: NormalizedRelayUrl,
-                    forFilters: List<Filter>?,
-                ) {
-                    if (event is PrivateDmEvent) {
-                        val note = localCache.getOrCreateNote(event.id)
-                        val author = localCache.getOrCreateUser(event.pubKey)
-                        if (note.event == null) {
-                            note.loadEvent(event, author, emptyList())
-                            note.addRelay(relay)
+            // NIP-04 DMs TO the user
+            relayManager.subscribe(
+                "dm-inbox",
+                listOf(FilterBuilders.nip04DmsToUser(account.pubKeyHex, limit = 200)),
+                relays,
+                object : SubscriptionListener {
+                    override fun onEvent(
+                        event: com.vitorpamplona.quartz.nip01Core.core.Event,
+                        isLive: Boolean,
+                        relay: NormalizedRelayUrl,
+                        forFilters: List<Filter>?,
+                    ) {
+                        if (event is PrivateDmEvent) {
+                            val note = localCache.getOrCreateNote(event.id)
+                            val author = localCache.getOrCreateUser(event.pubKey)
+                            if (note.event == null) {
+                                note.loadEvent(event, author, emptyList())
+                                note.addRelay(relay)
+                            }
+                            iosAccount.chatroomList.addMessage(
+                                event.chatroomKey(iosAccount.pubKey),
+                                note,
+                            )
                         }
-                        iosAccount.chatroomList.addMessage(
-                            event.chatroomKey(iosAccount.pubKey),
-                            note,
-                        )
+                        coordinator.consumeEvent(event, relay)
                     }
-                    coordinator.consumeEvent(event, relay)
-                }
-            },
-        )
+                },
+            )
 
-        // NIP-04 DMs FROM the user
-        relayManager.subscribe(
-            "dm-outbox",
-            listOf(FilterBuilders.nip04DmsFromUser(account.pubKeyHex, limit = 200)),
-            relays,
-            object : SubscriptionListener {
-                override fun onEvent(
-                    event: com.vitorpamplona.quartz.nip01Core.core.Event,
-                    isLive: Boolean,
-                    relay: NormalizedRelayUrl,
-                    forFilters: List<Filter>?,
-                ) {
-                    if (event is PrivateDmEvent) {
-                        val note = localCache.getOrCreateNote(event.id)
-                        val author = localCache.getOrCreateUser(event.pubKey)
-                        if (note.event == null) {
-                            note.loadEvent(event, author, emptyList())
-                            note.addRelay(relay)
+            // NIP-04 DMs FROM the user
+            relayManager.subscribe(
+                "dm-outbox",
+                listOf(FilterBuilders.nip04DmsFromUser(account.pubKeyHex, limit = 200)),
+                relays,
+                object : SubscriptionListener {
+                    override fun onEvent(
+                        event: com.vitorpamplona.quartz.nip01Core.core.Event,
+                        isLive: Boolean,
+                        relay: NormalizedRelayUrl,
+                        forFilters: List<Filter>?,
+                    ) {
+                        if (event is PrivateDmEvent) {
+                            val note = localCache.getOrCreateNote(event.id)
+                            val author = localCache.getOrCreateUser(event.pubKey)
+                            if (note.event == null) {
+                                note.loadEvent(event, author, emptyList())
+                                note.addRelay(relay)
+                            }
+                            iosAccount.chatroomList.addMessage(
+                                event.chatroomKey(iosAccount.pubKey),
+                                note,
+                            )
                         }
-                        iosAccount.chatroomList.addMessage(
-                            event.chatroomKey(iosAccount.pubKey),
-                            note,
-                        )
+                        coordinator.consumeEvent(event, relay)
                     }
-                    coordinator.consumeEvent(event, relay)
-                }
-            },
-        )
+                },
+            )
 
-        // NIP-17 gift-wrapped DMs
-        relayManager.subscribe(
-            "dm-giftwrap",
-            listOf(
-                Filter(
-                    kinds = listOf(GiftWrapEvent.KIND),
-                    tags = mapOf("p" to listOf(account.pubKeyHex)),
+            // NIP-17 gift-wrapped DMs
+            relayManager.subscribe(
+                "dm-giftwrap",
+                listOf(
+                    Filter(
+                        kinds = listOf(GiftWrapEvent.KIND),
+                        tags = mapOf("p" to listOf(account.pubKeyHex)),
+                    ),
                 ),
-            ),
-            relays,
-            object : SubscriptionListener {
-                override fun onEvent(
-                    event: com.vitorpamplona.quartz.nip01Core.core.Event,
-                    isLive: Boolean,
-                    relay: NormalizedRelayUrl,
-                    forFilters: List<Filter>?,
-                ) {
-                    if (event is GiftWrapEvent) {
-                        appScope.launch {
-                            val seal =
-                                event.unwrapOrNull(iosAccount.signer)
-                                    as? SealedRumorEvent ?: return@launch
-                            val innerEvent =
-                                seal.unsealOrNull(iosAccount.signer) ?: return@launch
-                            when (innerEvent) {
-                                is ChatMessageEvent -> {
-                                    val innerNote =
-                                        localCache.getOrCreateNote(innerEvent.id)
-                                    val innerAuthor =
-                                        localCache.getOrCreateUser(innerEvent.pubKey)
-                                    if (innerNote.event == null) {
-                                        innerNote.loadEvent(
-                                            innerEvent,
-                                            innerAuthor,
-                                            emptyList(),
-                                        )
-                                    }
-                                    iosAccount.chatroomList.addMessage(
-                                        innerEvent.chatroomKey(iosAccount.pubKey),
-                                        innerNote,
-                                    )
-                                }
+                relays,
+                object : SubscriptionListener {
+                    override fun onEvent(
+                        event: com.vitorpamplona.quartz.nip01Core.core.Event,
+                        isLive: Boolean,
+                        relay: NormalizedRelayUrl,
+                        forFilters: List<Filter>?,
+                    ) {
+                        if (event is GiftWrapEvent) {
+                            appScope.launch {
+                                try {
+                                    val seal =
+                                        event.unwrapOrNull(iosAccount.signer)
+                                            as? SealedRumorEvent ?: return@launch
+                                    val innerEvent =
+                                        seal.unsealOrNull(iosAccount.signer) ?: return@launch
+                                    when (innerEvent) {
+                                        is ChatMessageEvent -> {
+                                            val innerNote =
+                                                localCache.getOrCreateNote(innerEvent.id)
+                                            val innerAuthor =
+                                                localCache.getOrCreateUser(innerEvent.pubKey)
+                                            if (innerNote.event == null) {
+                                                innerNote.loadEvent(
+                                                    innerEvent,
+                                                    innerAuthor,
+                                                    emptyList(),
+                                                )
+                                            }
+                                            iosAccount.chatroomList.addMessage(
+                                                innerEvent.chatroomKey(iosAccount.pubKey),
+                                                innerNote,
+                                            )
+                                        }
 
-                                is ChatMessageEncryptedFileHeaderEvent -> {
-                                    val innerNote =
-                                        localCache.getOrCreateNote(innerEvent.id)
-                                    val innerAuthor =
-                                        localCache.getOrCreateUser(innerEvent.pubKey)
-                                    if (innerNote.event == null) {
-                                        innerNote.loadEvent(
-                                            innerEvent,
-                                            innerAuthor,
-                                            emptyList(),
-                                        )
-                                    }
-                                    iosAccount.chatroomList.addMessage(
-                                        innerEvent.chatroomKey(iosAccount.pubKey),
-                                        innerNote,
-                                    )
-                                }
+                                        is ChatMessageEncryptedFileHeaderEvent -> {
+                                            val innerNote =
+                                                localCache.getOrCreateNote(innerEvent.id)
+                                            val innerAuthor =
+                                                localCache.getOrCreateUser(innerEvent.pubKey)
+                                            if (innerNote.event == null) {
+                                                innerNote.loadEvent(
+                                                    innerEvent,
+                                                    innerAuthor,
+                                                    emptyList(),
+                                                )
+                                            }
+                                            iosAccount.chatroomList.addMessage(
+                                                innerEvent.chatroomKey(iosAccount.pubKey),
+                                                innerNote,
+                                            )
+                                        }
 
-                                else -> {}
+                                        else -> {}
+                                    }
+                                } catch (e: Exception) {
+                                    if (e is kotlinx.coroutines.CancellationException) throw e
+                                    platform.Foundation.NSLog("GiftWrap processing error: " + (e.message ?: "unknown"))
+                                }
                             }
                         }
                     }
-                }
-            },
-        )
+                },
+            )
 
-        // Notifications: reactions, reposts, mentions, zaps targeting the user
-        relayManager.subscribe(
-            "notifications",
-            listOf(FilterBuilders.notificationsForUser(account.pubKeyHex, limit = 300)),
-            relays,
-            object : SubscriptionListener {
-                override fun onEvent(
-                    event: com.vitorpamplona.quartz.nip01Core.core.Event,
-                    isLive: Boolean,
-                    relay: NormalizedRelayUrl,
-                    forFilters: List<Filter>?,
-                ) {
-                    coordinator.consumeEvent(event, relay)
-                }
-            },
-        )
+            // Notifications: reactions, reposts, mentions, zaps targeting the user
+            relayManager.subscribe(
+                "notifications",
+                listOf(FilterBuilders.notificationsForUser(account.pubKeyHex, limit = 300)),
+                relays,
+                object : SubscriptionListener {
+                    override fun onEvent(
+                        event: com.vitorpamplona.quartz.nip01Core.core.Event,
+                        isLive: Boolean,
+                        relay: NormalizedRelayUrl,
+                        forFilters: List<Filter>?,
+                    ) {
+                        coordinator.consumeEvent(event, relay)
+                    }
+                },
+            )
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            platform.Foundation.NSLog("LaunchedEffect error (DM subscriptions): " + (e.message ?: "unknown"))
+        }
     }
 
     val showBottomBar =
@@ -952,6 +1038,36 @@ private fun MainScreen(
                 reportTargetPubKey = null
             },
             onReport = onSubmitReport,
+        )
+    }
+
+    // ── Delete Confirmation Dialog (NIP-09) ──
+    if (showDeleteConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showDeleteConfirmDialog = false
+                deleteTargetNoteId = null
+            },
+            title = { Text("Delete Note?") },
+            text = {
+                Text(
+                    "This will broadcast a deletion request to relays. " +
+                        "Relays may or may not honour it.",
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = onConfirmDelete) {
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showDeleteConfirmDialog = false
+                    deleteTargetNoteId = null
+                }) {
+                    Text("Cancel")
+                }
+            },
         )
     }
 
@@ -1110,6 +1226,7 @@ private fun MainScreen(
                         onCopyAuthorNpub = onCopyAuthorNpub,
                         onMuteUser = onMuteUser,
                         onReport = onReportNote,
+                        onDelete = if (account.isReadOnly) null else onDeleteNote,
                         mutedUserPubKeys = mutedUserPubKeys,
                     )
                 }
@@ -1185,6 +1302,7 @@ private fun MainScreen(
                         onCopyAuthorNpub = onCopyAuthorNpub,
                         onMuteUser = onMuteUser,
                         onReport = onReportNote,
+                        onDelete = if (account.isReadOnly) null else onDeleteNote,
                     )
                 }
 
@@ -1315,6 +1433,7 @@ private fun MainScreen(
                             onCopyAuthorNpub = onCopyAuthorNpub,
                             onMuteUser = onMuteUser,
                             onReport = onReportNote,
+                            onDelete = if (account.isReadOnly) null else onDeleteNote,
                         )
                     }
                 }
@@ -1339,6 +1458,7 @@ private fun MainScreen(
                         onCopyAuthorNpub = onCopyAuthorNpub,
                         onMuteUser = onMuteUser,
                         onReport = onReportNote,
+                        onDelete = if (account.isReadOnly) null else onDeleteNote,
                     )
                 }
 
@@ -1347,6 +1467,7 @@ private fun MainScreen(
                         account = account,
                         relayManager = relayManager,
                         localCache = localCache,
+                        draftManager = draftManager,
                         replyToNoteId = screen.replyToNoteId,
                         initialDraft = composeDraft,
                         onDraftChanged = { composeDraft = it },
@@ -1423,6 +1544,7 @@ private fun MainScreen(
                         account = account,
                         relayManager = relayManager,
                         localCache = localCache,
+                        draftManager = draftManager,
                         replyToNoteId = null,
                         initialDraft = composeDraft,
                         onDraftChanged = { composeDraft = it },
@@ -1521,6 +1643,7 @@ private fun IosFeedContent(
     onCopyAuthorNpub: ((String) -> Unit)? = null,
     onMuteUser: ((String) -> Unit)? = null,
     onReport: ((String, String) -> Unit)? = null,
+    onDelete: ((String) -> Unit)? = null,
     mutedUserPubKeys: Set<String> = emptySet(),
 ) {
     val relayStatuses by relayManager.relayStatuses.collectAsState()
@@ -1914,6 +2037,7 @@ private fun IosFeedContent(
                                     onCopyAuthorNpub = onCopyAuthorNpub,
                                     onMuteUser = onMuteUser,
                                     onReport = onReport,
+                                    onDelete = onDelete,
                                 )
                                 if (labelData != null) {
                                     LabelRow(
@@ -1956,6 +2080,7 @@ private fun IosProfileContent(
     onCopyAuthorNpub: ((String) -> Unit)? = null,
     onMuteUser: ((String) -> Unit)? = null,
     onReport: ((String, String) -> Unit)? = null,
+    onDelete: ((String) -> Unit)? = null,
 ) {
     val relayStatuses by relayManager.relayStatuses.collectAsState()
     val allRelayUrls = remember(relayStatuses) { relayStatuses.keys }
@@ -2247,6 +2372,7 @@ private fun IosProfileContent(
                             onCopyAuthorNpub = onCopyAuthorNpub,
                             onMuteUser = onMuteUser,
                             onReport = onReport,
+                            onDelete = onDelete,
                         )
                     }
                 }
@@ -2278,6 +2404,7 @@ private fun IosThreadContent(
     onCopyAuthorNpub: ((String) -> Unit)? = null,
     onMuteUser: ((String) -> Unit)? = null,
     onReport: ((String, String) -> Unit)? = null,
+    onDelete: ((String) -> Unit)? = null,
 ) {
     val relayStatuses by relayManager.relayStatuses.collectAsState()
     val allRelayUrls = remember(relayStatuses) { relayStatuses.keys }
@@ -2353,6 +2480,7 @@ private fun IosThreadContent(
                             onCopyAuthorNpub = onCopyAuthorNpub,
                             onMuteUser = onMuteUser,
                             onReport = onReport,
+                            onDelete = onDelete,
                         )
                     }
                 }

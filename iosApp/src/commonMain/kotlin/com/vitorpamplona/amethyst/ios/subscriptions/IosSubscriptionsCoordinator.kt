@@ -59,6 +59,7 @@ class IosSubscriptionsCoordinator(
                     localCache.emitNewNotes(setOf(note))
                 }
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 println("Coordinator: failed to consume kind=${event.kind} id=${event.id}: ${e.message}")
             }
         }

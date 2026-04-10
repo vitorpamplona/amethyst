@@ -262,6 +262,7 @@ fun EditProfileScreen(
                             relayManager.broadcastToAll(signedEvent)
                             onSaved()
                         } catch (e: Exception) {
+                            if (e is kotlinx.coroutines.CancellationException) throw e
                             errorMessage = "Failed to save: ${e.message}"
                         } finally {
                             isSaving = false

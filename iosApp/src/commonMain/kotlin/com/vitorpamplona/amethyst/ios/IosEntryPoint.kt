@@ -28,6 +28,20 @@ import androidx.compose.ui.window.ComposeUIViewController
  * (UIViewController return types get filtered out).
  * Swift casts the result to UIViewController.
  */
+@OptIn(kotlin.experimental.ExperimentalNativeApi::class)
 class IosEntryPoint {
+    init {
+        // Kotlin/Native calls abort() for unhandled exceptions by default.
+        // Install a global hook that logs instead of crashing.
+        kotlin.native.setUnhandledExceptionHook { throwable ->
+            platform.Foundation.NSLog(
+                "UNHANDLED EXCEPTION: " +
+                    throwable::class.simpleName.orEmpty() +
+                    ": " +
+                    (throwable.message ?: "no message"),
+            )
+        }
+    }
+
     fun createViewController(): Any = ComposeUIViewController { App() }
 }

@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ios.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -59,6 +60,8 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -74,6 +77,8 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.ios.account.AccountState
 import com.vitorpamplona.amethyst.ios.cache.IosLocalCache
+import com.vitorpamplona.amethyst.ios.drafts.DraftDisplayData
+import com.vitorpamplona.amethyst.ios.drafts.DraftManager
 import com.vitorpamplona.amethyst.ios.network.IosRelayConnectionManager
 import com.vitorpamplona.amethyst.ios.service.upload.DEFAULT_BLOSSOM_SERVER
 import com.vitorpamplona.amethyst.ios.service.upload.IosUploadOrchestrator
@@ -89,8 +94,10 @@ import com.vitorpamplona.quartz.nip01Core.tags.references.references
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
 import com.vitorpamplona.quartz.nip10Notes.content.findURLs
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -115,8 +122,10 @@ fun ComposeNoteScreen(
     account: AccountState.LoggedIn,
     relayManager: IosRelayConnectionManager,
     localCache: IosLocalCache,
+    draftManager: DraftManager? = null,
     replyToNoteId: String? = null,
     initialDraft: String = "",
+    initialDraftTag: String? = null,
     onDraftChanged: (String) -> Unit = {},
     onBack: () -> Unit,
     onPublished: () -> Unit,
@@ -126,6 +135,28 @@ fun ComposeNoteScreen(
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+
+    // Draft management
+    val currentDraftTag = remember { initialDraftTag ?: draftManager?.newDraftTag() }
+    var showDraftsList by remember { mutableStateOf(false) }
+    val savedDrafts = draftManager?.drafts?.collectAsState()?.value ?: emptyList()
+
+    // Auto-save draft periodically when text changes
+    LaunchedEffect(noteText) {
+        try {
+            if (draftManager != null && currentDraftTag != null && noteText.isNotBlank()) {
+                delay(3000L) // debounce 3 seconds
+                draftManager.saveDraft(
+                    content = noteText,
+                    dTag = currentDraftTag,
+                    replyToNoteId = replyToNoteId,
+                )
+            }
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            platform.Foundation.NSLog("Draft auto-save error: " + (e.message ?: "unknown"))
+        }
+    }
 
     // Media upload state
     var uploadState by remember { mutableStateOf(UploadState.IDLE) }
@@ -203,6 +234,7 @@ fun ComposeNoteScreen(
                 }
                 uploadState = UploadState.IDLE
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 uploadState = UploadState.ERROR
                 snackbarHostState.showSnackbar("Upload failed: ${e.message}")
                 uploadState = UploadState.IDLE
@@ -244,9 +276,20 @@ fun ComposeNoteScreen(
                 relayManager.broadcastToAll(signedEvent as Event)
                 localCache.consume(signedEvent, null)
 
+                // Delete the draft after successful publish
+                if (draftManager != null && currentDraftTag != null) {
+                    try {
+                        draftManager.deleteDraft(currentDraftTag)
+                    } catch (e: Exception) {
+                        if (e is CancellationException) throw e
+                        platform.Foundation.NSLog("Draft delete error: " + (e.message ?: "unknown"))
+                    }
+                }
+
                 publishState = PublishState.SUCCESS
                 onPublished()
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 publishState = PublishState.ERROR
                 errorMessage = e.message ?: "Failed to publish note"
                 snackbarHostState.showSnackbar(errorMessage ?: "Unknown error")
@@ -302,6 +345,15 @@ fun ComposeNoteScreen(
                             strokeWidth = 2.dp,
                         )
                     } else {
+                        // Drafts button
+                        if (draftManager != null && savedDrafts.isNotEmpty()) {
+                            TextButton(
+                                onClick = { showDraftsList = !showDraftsList },
+                                modifier = Modifier.padding(end = 4.dp),
+                            ) {
+                                Text("📄 ${savedDrafts.size}")
+                            }
+                        }
                         Button(
                             onClick = { publishNote() },
                             enabled = canPost,
@@ -347,6 +399,40 @@ fun ComposeNoteScreen(
                         maxLines = 4,
                     )
                 }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            }
+
+            // Drafts list panel
+            if (showDraftsList && savedDrafts.isNotEmpty()) {
+                DraftsListPanel(
+                    drafts = savedDrafts,
+                    onResume = { draft ->
+                        scope.launch {
+                            try {
+                                val content = draftManager?.getDraftContent(draft.dTag)
+                                if (content != null) {
+                                    noteText = content
+                                    onDraftChanged(content)
+                                }
+                                showDraftsList = false
+                            } catch (e: Exception) {
+                                if (e is CancellationException) throw e
+                                platform.Foundation.NSLog("Resume draft error: " + (e.message ?: "unknown"))
+                            }
+                        }
+                    },
+                    onDelete = { draft ->
+                        scope.launch {
+                            try {
+                                draftManager?.deleteDraft(draft.dTag)
+                            } catch (e: Exception) {
+                                if (e is CancellationException) throw e
+                                platform.Foundation.NSLog("Delete draft error: " + (e.message ?: "unknown"))
+                            }
+                        }
+                    },
+                    onDismiss = { showDraftsList = false },
+                )
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             }
 
@@ -644,4 +730,77 @@ private fun AttachMenuDialog(
             }
         },
     )
+}
+
+@Composable
+private fun DraftsListPanel(
+    drafts: List<DraftDisplayData>,
+    onResume: (DraftDisplayData) -> Unit,
+    onDelete: (DraftDisplayData) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    Column(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                "Saved Drafts",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+            )
+            TextButton(onClick = onDismiss) {
+                Text("Close")
+            }
+        }
+
+        Spacer(Modifier.height(4.dp))
+
+        drafts.forEach { draft ->
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable { onResume(draft) }
+                        .padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text(
+                        draft.content.take(80) + if (draft.content.length > 80) "..." else "",
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 2,
+                    )
+                    Text(
+                        "Draft",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+
+                IconButton(
+                    onClick = { onDelete(draft) },
+                    modifier = Modifier.size(32.dp),
+                ) {
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = "Delete draft",
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.error,
+                    )
+                }
+            }
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+        }
+    }
 }
