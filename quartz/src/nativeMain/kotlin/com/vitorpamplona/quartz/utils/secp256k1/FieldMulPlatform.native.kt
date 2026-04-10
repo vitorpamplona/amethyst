@@ -21,8 +21,24 @@
 package com.vitorpamplona.quartz.utils.secp256k1
 
 /**
- * Native (iOS/macOS) fused field multiply/square using pure-Kotlin fallback.
- * Kotlin/Native compiles ahead-of-time, so inline + direct call is optimal.
+ * Native fused field multiply/square using pure-Kotlin fallback.
+ *
+ * Uses fieldMulReduceFused which computes both lo and hi from shared 32-bit
+ * sub-products (4 IMUL per 128-bit product instead of 5). This is the optimal
+ * approach for Kotlin/Native because:
+ *
+ * 1. K/N has no way to emit the hardware MUL instruction (64×64→128) from
+ *    Kotlin code. Long * Long only gives the lower 64 bits (IMUL).
+ *
+ * 2. C interop was benchmarked and adds ~15ns per call through the K/N bridge
+ *    layer. With 20 multiply-high calls per field multiply, the bridge overhead
+ *    (~300ns) far exceeds the savings from hardware MUL (~150ns saved).
+ *
+ * 3. The fused mulFull approach (FieldMulFused.kt) computes both lo and hi
+ *    from 4 shared sub-products, saving 1 IMUL per product vs separate
+ *    lo (IMUL) + hi (4 IMUL fallback) = 5 IMUL.
+ *
+ * Measured: 44 ns/op on linuxX64 (pure Kotlin fused) vs 331 ns/op (C interop).
  */
 internal actual fun fieldMulReduce(
     out: Fe4,

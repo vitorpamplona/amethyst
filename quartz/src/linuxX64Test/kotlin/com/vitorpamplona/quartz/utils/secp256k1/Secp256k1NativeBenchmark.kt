@@ -220,35 +220,35 @@ class Secp256k1NativeBenchmark {
         // out of the loop (dead code elimination risk with constant inputs).
         val a = U256.fromBytes(hexToBytes("79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798"))
         val b = U256.fromBytes(hexToBytes("483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8"))
-        val out = LongArray(4)
-        val w = LongArray(8)
+        val out = Fe4()
+        val w = Wide8()
 
         val results = mutableListOf<BenchResult>()
 
         // --- FieldP.mul (the hottest operation) ---
         // Uses `out` as both output and next input to create a data dependency chain.
-        a.copyInto(out)
+        out.copyFrom(a)
         results +=
             bench("FieldP.mul", 5000, 100000) {
                 FieldP.mul(out, out, b, w)
             }
 
         // --- FieldP.sqr ---
-        a.copyInto(out)
+        out.copyFrom(a)
         results +=
             bench("FieldP.sqr", 5000, 100000) {
                 FieldP.sqr(out, out, w)
             }
 
         // --- FieldP.add ---
-        a.copyInto(out)
+        out.copyFrom(a)
         results +=
             bench("FieldP.add", 5000, 500000) {
                 FieldP.add(out, out, b)
             }
 
         // --- FieldP.sub ---
-        a.copyInto(out)
+        out.copyFrom(a)
         results +=
             bench("FieldP.sub", 5000, 500000) {
                 FieldP.sub(out, out, b)
@@ -277,7 +277,7 @@ class Secp256k1NativeBenchmark {
         printResults("secp256k1 Field Micro-Benchmarks: Kotlin/Native (LLVM AOT) on linuxX64", results)
 
         // Use sinks to prevent dead code elimination of the entire benchmark
-        assertTrue(hiSink != Long.MIN_VALUE || ltSink != Long.MIN_VALUE || out[0] != Long.MIN_VALUE)
+        assertTrue(hiSink != Long.MIN_VALUE || ltSink != Long.MIN_VALUE || out.l0 != Long.MIN_VALUE)
     }
 
     private fun hexToBytes(hex: String): ByteArray {
