@@ -1865,7 +1865,7 @@ class Account(
      * Check if a KeyPackage has been published, either locally generated
      * in this session or found in the local cache from a previous session.
      */
-    fun hasPublishedKeyPackage(): Boolean {
+    suspend fun hasPublishedKeyPackage(): Boolean {
         // Check in-memory bundles first (current session)
         val manager = marmotManager
         if (manager != null && manager.hasActiveKeyPackages()) return true

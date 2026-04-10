@@ -106,15 +106,17 @@ class KeyPackageRotationManager {
      * Get the active bundle for a d-tag slot.
      * Used when processing a Welcome that references one of our KeyPackages.
      */
-    fun getBundle(dTagSlot: String): KeyPackageBundle? = activeBundles[dTagSlot]
+    suspend fun getBundle(dTagSlot: String): KeyPackageBundle? = mutex.withLock { activeBundles[dTagSlot] }
 
     /**
      * Find the bundle whose KeyPackage reference matches the given ref.
      * Used when we receive a Welcome and need to find the matching bundle.
      */
-    fun findBundleByRef(keyPackageRef: ByteArray): KeyPackageBundle? =
-        activeBundles.values.find { bundle ->
-            bundle.keyPackage.reference().contentEquals(keyPackageRef)
+    suspend fun findBundleByRef(keyPackageRef: ByteArray): KeyPackageBundle? =
+        mutex.withLock {
+            activeBundles.values.find { bundle ->
+                bundle.keyPackage.reference().contentEquals(keyPackageRef)
+            }
         }
 
     /**
@@ -146,7 +148,7 @@ class KeyPackageRotationManager {
     /**
      * Get the d-tag slots that need rotation (KeyPackage was consumed).
      */
-    fun pendingRotationSlots(): Set<String> = pendingRotations.toSet()
+    suspend fun pendingRotationSlots(): Set<String> = mutex.withLock { pendingRotations.toSet() }
 
     /**
      * Clear a slot from the pending rotation set after a new KeyPackage
@@ -160,13 +162,13 @@ class KeyPackageRotationManager {
     /**
      * Check if any slots need rotation.
      */
-    fun needsRotation(): Boolean = pendingRotations.isNotEmpty()
+    suspend fun needsRotation(): Boolean = mutex.withLock { pendingRotations.isNotEmpty() }
 
     /**
      * Check if there are any active (non-consumed) KeyPackage bundles.
      * Returns true if at least one slot has been generated and not yet consumed.
      */
-    fun hasActiveKeyPackages(): Boolean = activeBundles.isNotEmpty()
+    suspend fun hasActiveKeyPackages(): Boolean = mutex.withLock { activeBundles.isNotEmpty() }
 
     /**
      * Rotate a consumed slot: generate a new KeyPackage for the same d-tag.

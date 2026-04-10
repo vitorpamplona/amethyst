@@ -257,7 +257,7 @@ class MlsGroupManager(
         nostrGroupId: HexKey,
         commitBytes: ByteArray,
         senderLeafIndex: Int,
-        confirmationTag: ByteArray? = null,
+        confirmationTag: ByteArray,
     ) = mutex.withLock {
         val group = requireGroup(nostrGroupId)
 
@@ -272,19 +272,24 @@ class MlsGroupManager(
 
     /**
      * Encrypt an application message.
+     * Synchronized to prevent nonce reuse from concurrent encryption.
      */
-    fun encrypt(
+    suspend fun encrypt(
         nostrGroupId: HexKey,
         plaintext: ByteArray,
-    ): ByteArray = requireGroup(nostrGroupId).encrypt(plaintext)
+    ): ByteArray =
+        mutex.withLock {
+            requireGroup(nostrGroupId).encrypt(plaintext)
+        }
 
     /**
      * Decrypt an application message.
      *
      * Tries the current epoch first, then falls back to retained epoch
      * secrets for late-arriving messages from previous epochs.
+     * Synchronized to prevent concurrent state corruption.
      */
-    fun decrypt(
+    suspend fun decrypt(
         nostrGroupId: HexKey,
         messageBytes: ByteArray,
     ): DecryptedMessage {
@@ -308,7 +313,7 @@ class MlsGroupManager(
     /**
      * Decrypt with null return on failure.
      */
-    fun decryptOrNull(
+    suspend fun decryptOrNull(
         nostrGroupId: HexKey,
         messageBytes: ByteArray,
     ): DecryptedMessage? =
@@ -510,35 +515,59 @@ class MlsGroupManager(
                     .decodeTls(TlsReader(mlsMsg.payload))
             if (privMsg.epoch != retained.epoch) return null
 
-            // Decrypt sender data
+            // Derive sender data key/nonce using ciphertext sample (RFC 9420 §6.3.1)
+            val ciphertextSample =
+                privMsg.ciphertext.copyOfRange(0, minOf(privMsg.ciphertext.size, MlsCryptoProvider.AEAD_KEY_LENGTH))
             val senderDataKey =
                 MlsCryptoProvider.expandWithLabel(
                     retained.senderDataSecret,
                     "key",
-                    ByteArray(0),
+                    ciphertextSample,
                     MlsCryptoProvider.AEAD_KEY_LENGTH,
                 )
             val senderDataNonce =
                 MlsCryptoProvider.expandWithLabel(
                     retained.senderDataSecret,
                     "nonce",
-                    ByteArray(0),
+                    ciphertextSample,
                     MlsCryptoProvider.AEAD_NONCE_LENGTH,
                 )
+
+            // Build SenderDataAAD
+            val senderDataAad = TlsWriter()
+            senderDataAad.putOpaqueVarInt(privMsg.groupId)
+            senderDataAad.putUint64(privMsg.epoch)
+            senderDataAad.putUint8(privMsg.contentType.value)
+
             val senderDataPlain =
                 MlsCryptoProvider.aeadDecrypt(
                     senderDataKey,
                     senderDataNonce,
-                    ByteArray(0),
+                    senderDataAad.toByteArray(),
                     privMsg.encryptedSenderData,
                 )
             val senderReader = TlsReader(senderDataPlain)
             val senderLeafIndex = senderReader.readUint32().toInt()
             val generation = senderReader.readUint32().toInt()
+            val reuseGuard = senderReader.readBytes(REUSE_GUARD_LENGTH)
 
             val kng = secretTree.applicationKeyNonceForGeneration(senderLeafIndex, generation)
+
+            // Apply reuse_guard XOR to nonce
+            val guardedNonce = kng.nonce.copyOf()
+            for (i in 0 until REUSE_GUARD_LENGTH) {
+                guardedNonce[i] = (guardedNonce[i].toInt() xor reuseGuard[i].toInt()).toByte()
+            }
+
+            // Build PrivateContentAAD
+            val contentAad = TlsWriter()
+            contentAad.putOpaqueVarInt(privMsg.groupId)
+            contentAad.putUint64(privMsg.epoch)
+            contentAad.putUint8(privMsg.contentType.value)
+            contentAad.putOpaqueVarInt(privMsg.authenticatedData)
+
             val plaintext =
-                MlsCryptoProvider.aeadDecrypt(kng.key, kng.nonce, ByteArray(0), privMsg.ciphertext)
+                MlsCryptoProvider.aeadDecrypt(kng.key, guardedNonce, contentAad.toByteArray(), privMsg.ciphertext)
 
             DecryptedMessage(
                 senderLeafIndex = senderLeafIndex,
@@ -556,5 +585,8 @@ class MlsGroupManager(
          * MLS forward secrecy guarantees mean we want to limit this window.
          */
         const val EPOCH_RETENTION_WINDOW = 2
+
+        /** Size of reuse_guard in PrivateMessage (RFC 9420 §6.3.1) */
+        private const val REUSE_GUARD_LENGTH = 4
     }
 }
