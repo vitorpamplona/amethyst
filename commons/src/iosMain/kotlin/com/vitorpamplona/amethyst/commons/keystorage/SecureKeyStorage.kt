@@ -25,15 +25,29 @@ import kotlinx.cinterop.alloc
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.ptr
 import kotlinx.cinterop.value
-import platform.CoreFoundation.*
+import platform.CoreFoundation.CFDictionaryRef
+import platform.CoreFoundation.CFTypeRefVar
 import platform.Foundation.CFBridgingRelease
-import platform.Foundation.CFBridgingRetain
 import platform.Foundation.NSData
 import platform.Foundation.NSString
 import platform.Foundation.NSUTF8StringEncoding
 import platform.Foundation.create
 import platform.Foundation.dataUsingEncoding
-import platform.Security.*
+import platform.Security.SecItemAdd
+import platform.Security.SecItemCopyMatching
+import platform.Security.SecItemDelete
+import platform.Security.errSecItemNotFound
+import platform.Security.errSecSuccess
+import platform.Security.kSecAttrAccessible
+import platform.Security.kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+import platform.Security.kSecAttrAccount
+import platform.Security.kSecAttrService
+import platform.Security.kSecClass
+import platform.Security.kSecClassGenericPassword
+import platform.Security.kSecMatchLimit
+import platform.Security.kSecMatchLimitOne
+import platform.Security.kSecReturnData
+import platform.Security.kSecValueData
 
 /**
  * iOS implementation of SecureKeyStorage using the iOS Keychain.
@@ -53,16 +67,18 @@ actual class SecureKeyStorage private actual constructor() {
         // Delete existing key first
         deletePrivateKey(npub)
 
-        val data = (privKeyHex as NSString).dataUsingEncoding(NSUTF8StringEncoding)
-            ?: throw SecureStorageException("Failed to encode private key")
+        val data =
+            (privKeyHex as NSString).dataUsingEncoding(NSUTF8StringEncoding)
+                ?: throw SecureStorageException("Failed to encode private key")
 
-        val query = mapOf<Any?, Any?>(
-            kSecClass to kSecClassGenericPassword,
-            kSecAttrService to SERVICE_NAME,
-            kSecAttrAccount to npub,
-            kSecValueData to data,
-            kSecAttrAccessible to kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
-        )
+        val query =
+            mapOf<Any?, Any?>(
+                kSecClass to kSecClassGenericPassword,
+                kSecAttrService to SERVICE_NAME,
+                kSecAttrAccount to npub,
+                kSecValueData to data,
+                kSecAttrAccessible to kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
+            )
 
         @Suppress("UNCHECKED_CAST")
         val status = SecItemAdd(query as CFDictionaryRef, null)
@@ -75,13 +91,14 @@ actual class SecureKeyStorage private actual constructor() {
         memScoped {
             val result = alloc<CFTypeRefVar>()
 
-            val query = mapOf<Any?, Any?>(
-                kSecClass to kSecClassGenericPassword,
-                kSecAttrService to SERVICE_NAME,
-                kSecAttrAccount to npub,
-                kSecReturnData to true,
-                kSecMatchLimit to kSecMatchLimitOne,
-            )
+            val query =
+                mapOf<Any?, Any?>(
+                    kSecClass to kSecClassGenericPassword,
+                    kSecAttrService to SERVICE_NAME,
+                    kSecAttrAccount to npub,
+                    kSecReturnData to true,
+                    kSecMatchLimit to kSecMatchLimitOne,
+                )
 
             @Suppress("UNCHECKED_CAST")
             val status = SecItemCopyMatching(query as CFDictionaryRef, result.ptr)
@@ -97,11 +114,12 @@ actual class SecureKeyStorage private actual constructor() {
     }
 
     actual suspend fun deletePrivateKey(npub: String): Boolean {
-        val query = mapOf<Any?, Any?>(
-            kSecClass to kSecClassGenericPassword,
-            kSecAttrService to SERVICE_NAME,
-            kSecAttrAccount to npub,
-        )
+        val query =
+            mapOf<Any?, Any?>(
+                kSecClass to kSecClassGenericPassword,
+                kSecAttrService to SERVICE_NAME,
+                kSecAttrAccount to npub,
+            )
 
         @Suppress("UNCHECKED_CAST")
         val status = SecItemDelete(query as CFDictionaryRef)

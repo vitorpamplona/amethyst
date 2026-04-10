@@ -25,7 +25,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isLocalHost
 import kotlinx.coroutines.flow.MutableStateFlow
 
-
 @Stable
 data class RelayInfo(
     var lastEvent: Long,

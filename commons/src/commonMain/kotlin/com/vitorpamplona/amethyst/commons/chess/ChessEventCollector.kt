@@ -30,7 +30,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-
 /**
  * Collects and aggregates Jester chess events for a game from any source.
  *
@@ -153,7 +152,8 @@ class ChessEventCollector(
         if (!event.isMoveEvent()) return false
         if (event.startEventId() != startEventId) return false
 
-        if (!moves.containsKey(event.id)) { moves[event.id] = event
+        if (!moves.containsKey(event.id)) {
+            moves[event.id] = event
             processedEventIds.add(event.id)
             incrementEventCount()
             Log.d("chessdebug") { "[Collector] MOVE event added: id=${event.id.take(8)}, pubkey=${event.pubKey.take(8)}, move=${event.move()}, historySize=${event.history().size}, fen=${event.fen()?.take(30)}, result=${event.result()}, totalMoves=${moves.size}" }

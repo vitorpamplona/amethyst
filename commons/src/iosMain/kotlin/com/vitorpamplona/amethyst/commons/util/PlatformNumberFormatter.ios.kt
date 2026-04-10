@@ -25,9 +25,10 @@ import platform.Foundation.NSNumberFormatter
 import platform.Foundation.NSNumberFormatterDecimalStyle
 
 actual class PlatformNumberFormatter {
-    private val formatter = NSNumberFormatter().apply {
-        numberStyle = NSNumberFormatterDecimalStyle
-    }
+    private val formatter =
+        NSNumberFormatter().apply {
+            numberStyle = NSNumberFormatterDecimalStyle
+        }
 
     actual fun format(value: Long): String = formatter.stringFromNumber(NSNumber(longLong = value)) ?: value.toString()
 }

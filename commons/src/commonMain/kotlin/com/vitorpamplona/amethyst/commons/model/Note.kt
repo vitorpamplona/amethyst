@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.commons.model
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.utils.BigDecimal
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.nip88Polls.PollResponsesCache
 import com.vitorpamplona.amethyst.commons.threading.checkNotInMainThread
@@ -62,6 +61,7 @@ import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
+import com.vitorpamplona.quartz.utils.BigDecimal
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.anyAsync
 import com.vitorpamplona.quartz.utils.containsAny
@@ -72,7 +72,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
-
 
 interface NotesGatherer {
     fun removeNote(note: Note)
@@ -391,7 +390,6 @@ open class Note(
         }
     }
 
-    
     private fun innerAddZap(
         zapRequest: Note,
         zap: Note?,
@@ -417,7 +415,6 @@ open class Note(
         }
     }
 
-    
     private fun innerAddZapPayment(
         zapPaymentRequest: Note,
         zapPayment: Note?,
@@ -471,7 +468,6 @@ open class Note(
         }
     }
 
-    
     fun addRelaySync(relay: NormalizedRelayUrl) {
         if (relay !in relays) {
             relays = relays + relay
@@ -898,7 +894,6 @@ open class Note(
 
     var flowSet: NoteFlowSet? = null
 
-    
     fun createOrDestroyFlowSync(create: Boolean) {
         if (create) {
             if (flowSet == null) {

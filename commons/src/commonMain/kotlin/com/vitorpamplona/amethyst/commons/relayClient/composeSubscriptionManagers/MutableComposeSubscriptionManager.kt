@@ -27,7 +27,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
-
 /**
  *  This allows composables to directly register their queries
  *  to relays. There may be multiple duplications in these

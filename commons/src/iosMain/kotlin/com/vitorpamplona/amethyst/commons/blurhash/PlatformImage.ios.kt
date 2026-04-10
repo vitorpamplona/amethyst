@@ -21,10 +21,6 @@
 package com.vitorpamplona.amethyst.commons.blurhash
 
 import kotlinx.cinterop.ExperimentalForeignApi
-import kotlinx.cinterop.addressOf
-import kotlinx.cinterop.usePinned
-import platform.CoreGraphics.*
-import platform.posix.memcpy
 
 /**
  * iOS implementation of PlatformImage backed by an IntArray of ARGB pixels.

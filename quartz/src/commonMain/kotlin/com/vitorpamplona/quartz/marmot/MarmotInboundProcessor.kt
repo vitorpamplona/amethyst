@@ -20,8 +20,6 @@
  */
 package com.vitorpamplona.quartz.marmot
 
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRotationManager
 import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.CommitOrdering
@@ -37,6 +35,8 @@ import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupManager
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
@@ -158,9 +158,10 @@ class MarmotInboundProcessor(
     suspend fun processGroupEvent(groupEvent: GroupEvent): GroupEventResult {
         // Deduplicate already-processed events (thread-safe)
         val eventId = groupEvent.id
-        val isDuplicate = processedIdsMutex.withLock {
-            eventId in processedEventIds
-        }
+        val isDuplicate =
+            processedIdsMutex.withLock {
+                eventId in processedEventIds
+            }
         if (isDuplicate) {
             val gId = groupEvent.groupId()
             return GroupEventResult.Duplicate(gId ?: "")

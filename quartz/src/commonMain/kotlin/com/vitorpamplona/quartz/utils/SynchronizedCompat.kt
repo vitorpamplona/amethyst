@@ -26,4 +26,7 @@ package com.vitorpamplona.quartz.utils
  * On Native: uses a simple lock-free approach (K/N new memory model
  * allows shared mutable state; single-threaded coroutines provide safety).
  */
-expect inline fun <R> kmpSynchronized(lock: Any, block: () -> R): R
+expect inline fun <R> kmpSynchronized(
+    lock: Any,
+    block: () -> R,
+): R

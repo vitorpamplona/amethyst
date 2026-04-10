@@ -69,7 +69,8 @@ class HtmlParser {
             }
 
             // if sniffing was failed, detect charset from content
-            val charset = HtmlCharsetParser.detectCharset(bodyBytes)
+            val charsetName = HtmlCharsetParser.detectCharset(bodyBytes)
+            val charset = Charset.forName(charsetName)
             val content = bodyBytes.toString(charset)
             return@withContext MetaTagsParser.parse(content)
         }

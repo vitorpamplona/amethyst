@@ -26,8 +26,6 @@ import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 
-
-
 /**
  * Creates a list of events (regular and addressable)
  * that is updated every time a new event that matches

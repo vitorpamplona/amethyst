@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.commons.richtext
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 
-
 @Immutable
 abstract class BaseMediaContent(
     val description: String? = null,
@@ -111,7 +110,6 @@ abstract class MediaPreloadedContent(
     val id: String? = null,
 ) : BaseMediaContent(description, dim, blurhash) {
     fun localFileExists() = localFile != null
-
 }
 
 @Immutable

@@ -28,7 +28,6 @@ import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 
-
 @Stable
 abstract class Channel : NotesGatherer {
     companion object {
@@ -65,17 +64,18 @@ abstract class Channel : NotesGatherer {
 
     open fun relays(): Set<NormalizedRelayUrl> =
         relays.keys
-            .sortedWith(Comparator { o1, o2 ->
-                val o1Count = relays[o1]?.number ?: 0
-                val o2Count = relays[o2]?.number ?: 0
-                o2Count.compareTo(o1Count) // descending
-            }).toSet()
+            .sortedWith(
+                Comparator { o1, o2 ->
+                    val o1Count = relays[o1]?.number ?: 0
+                    val o2Count = relays[o2]?.number ?: 0
+                    o2Count.compareTo(o1Count) // descending
+                },
+            ).toSet()
 
     fun updateChannelInfo() {
         flowSet?.metadata?.invalidateData()
     }
 
-    
     fun addRelaySync(briefInfo: NormalizedRelayUrl) {
         if (briefInfo !in relays) {
             relays = relays + Pair(briefInfo, Counter(1))
@@ -165,7 +165,6 @@ abstract class Channel : NotesGatherer {
 
     var flowSet: ChannelFlowSet? = null
 
-    
     fun createOrDestroyFlowSync(create: Boolean) {
         if (create) {
             if (flowSet == null) {

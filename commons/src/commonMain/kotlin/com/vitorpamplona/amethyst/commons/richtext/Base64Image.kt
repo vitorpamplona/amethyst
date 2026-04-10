@@ -32,8 +32,9 @@ object Base64Image {
     fun parse(content: String): ByteArray {
         val matcher = pattern.find(content)
         if (matcher != null) {
-            val base64String = matcher.groups[2]?.value
-                ?: throw Exception("Unable to extract base64 data from $content")
+            val base64String =
+                matcher.groups[2]?.value
+                    ?: throw Exception("Unable to extract base64 data from $content")
             return Base64.decode(base64String)
         }
 

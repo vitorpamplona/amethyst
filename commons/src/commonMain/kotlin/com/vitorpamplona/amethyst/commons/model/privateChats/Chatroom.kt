@@ -34,7 +34,6 @@ import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 
-
 @Stable
 class Chatroom : NotesGatherer {
     var activeSenders: Set<User> = setOf()
@@ -58,7 +57,6 @@ class Chatroom : NotesGatherer {
         removeMessageSync(note)
     }
 
-    
     fun addMessageSync(msg: Note): Boolean {
         if (msg !in messages) {
             messages = messages + msg
@@ -89,7 +87,6 @@ class Chatroom : NotesGatherer {
         return false
     }
 
-    
     fun removeMessageSync(msg: Note): Boolean {
         if (msg in messages) {
             messages = messages - msg

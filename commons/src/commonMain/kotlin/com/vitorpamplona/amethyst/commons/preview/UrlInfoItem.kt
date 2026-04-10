@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.commons.preview
 
 import androidx.compose.runtime.Immutable
 
-
 @Immutable
 class UrlInfoItem(
     val url: String = "",

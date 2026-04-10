@@ -188,7 +188,7 @@ fun ZoomableContentView(
         }
 
         is MediaLocalVideo -> {
-            content.localFile?.let {
+            (content.localFile as? java.io.File)?.let {
                 Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                     VideoView(
                         videoUri = it.toUri().toString(),
@@ -735,7 +735,7 @@ fun ShareMediaAction(
     } else if (content is MediaPreloadedContent) {
         ShareMediaAction(
             popupExpanded = popupExpanded,
-            videoUri = content.localFile?.toUri().toString(),
+            videoUri = (content.localFile as? java.io.File)?.toUri().toString(),
             postNostrUri = content.uri,
             blurhash = content.blurhash,
             dim = content.dim,
@@ -855,7 +855,7 @@ fun ShareMediaAction(
                         }
 
                         is MediaLocalVideo -> {
-                            content.localFile?.let { localFile ->
+                            (content.localFile as? java.io.File)?.let { localFile ->
                                 M3ActionRow(icon = Icons.Outlined.Share, text = stringRes(R.string.share_video)) {
                                     accountViewModel.viewModelScope.launch { shareLocalVideoFile(context, localFile, mimeType) }
                                     onDismiss()

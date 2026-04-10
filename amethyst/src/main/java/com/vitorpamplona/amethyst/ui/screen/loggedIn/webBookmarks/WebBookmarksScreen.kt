@@ -295,7 +295,12 @@ private fun WebBookmarkCard(
                 )
 
                 Text(
-                    text = previewInfo?.verifiedUrl?.host ?: event.url(),
+                    text =
+                        previewInfo?.verifiedUrl?.let {
+                            android.net.Uri
+                                .parse(it)
+                                .host
+                        } ?: event.url(),
                     style = MaterialTheme.typography.bodySmall,
                     color = Color.Gray,
                     maxLines = 1,

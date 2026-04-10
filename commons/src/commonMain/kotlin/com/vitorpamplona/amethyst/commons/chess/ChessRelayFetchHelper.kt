@@ -29,7 +29,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.withTimeoutOrNull
 
-
 /**
  * Progress callback for relay fetch operations
  */
@@ -96,7 +95,8 @@ class ChessRelayFetchHelper(
                     forFilters: List<Filter>?,
                 ) {
                     events[event.id] = event
-                    val count = (relayEventCounts[relay] ?: 0) + 1; relayEventCounts[relay] = count
+                    val count = (relayEventCounts[relay] ?: 0) + 1
+                    relayEventCounts[relay] = count
                     onProgress?.invoke(RelayFetchProgress(relay, RelayFetchStatus.RECEIVING, count))
                 }
 

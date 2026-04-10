@@ -79,7 +79,9 @@ open class EOSECache<K : Any>(
         }
     }
 
-    fun size(): Int = com.vitorpamplona.quartz.utils.kmpSynchronized(lock) { cache.size }
+    fun size(): Int =
+        com.vitorpamplona.quartz.utils
+            .kmpSynchronized(lock) { cache.size }
 }
 
 /**

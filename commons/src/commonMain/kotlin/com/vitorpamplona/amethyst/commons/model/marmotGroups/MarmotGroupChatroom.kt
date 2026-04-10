@@ -30,7 +30,6 @@ import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 
-
 /**
  * Represents a Marmot MLS group chat room.
  * Tracks decrypted inner messages for a single group.
@@ -63,7 +62,6 @@ class MarmotGroupChatroom(
         removeMessageSync(note)
     }
 
-    
     fun addMessageSync(msg: Note): Boolean {
         if (msg !in messages) {
             messages = messages + msg
@@ -81,7 +79,6 @@ class MarmotGroupChatroom(
         return false
     }
 
-    
     fun removeMessageSync(msg: Note): Boolean {
         if (msg in messages) {
             messages = messages - msg

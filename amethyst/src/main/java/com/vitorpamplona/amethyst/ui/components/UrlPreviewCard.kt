@@ -101,7 +101,12 @@ fun UrlPreviewCard(
         )
 
         Text(
-            text = previewInfo.verifiedUrl?.host ?: previewInfo.url,
+            text =
+                previewInfo.verifiedUrl?.let {
+                    android.net.Uri
+                        .parse(it)
+                        .host
+                } ?: previewInfo.url,
             style = MaterialTheme.typography.bodySmall,
             modifier = MaxWidthWithHorzPadding,
             color = Color.Gray,

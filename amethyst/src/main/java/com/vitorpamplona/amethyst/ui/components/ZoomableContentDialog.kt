@@ -350,7 +350,7 @@ private suspend fun saveMediaToGallery(
             },
         )
     } else if (content is MediaPreloadedContent) {
-        content.localFile?.let {
+        (content.localFile as? java.io.File)?.let {
             MediaSaverToDisk.save(
                 it,
                 content.mimeType,
@@ -470,7 +470,7 @@ private fun RenderImageOrVideo(
                         Modifier.fillMaxWidth()
                     }
 
-                content.localFile?.let {
+                (content.localFile as? java.io.File)?.let {
                     val ratio = content.dim?.aspectRatio() ?: MediaAspectRatioCache.get(it.toUri().toString())
 
                     val modifier =

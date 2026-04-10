@@ -23,8 +23,8 @@ package com.vitorpamplona.amethyst.commons.model
 import platform.Foundation.NSDate
 import platform.Foundation.NSDateFormatter
 import platform.Foundation.NSTimeZone
-import platform.Foundation.systemTimeZone
 import platform.Foundation.dateWithTimeIntervalSince1970
+import platform.Foundation.systemTimeZone
 
 actual fun formattedDateTime(timestamp: Long): String {
     val formatter = NSDateFormatter()

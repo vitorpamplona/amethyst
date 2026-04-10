@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManage
 
 import androidx.compose.runtime.Stable
 
-
 /**
  *  This allows composables to directly register their queries
  *  to relays. There may be multiple duplications in these
