@@ -88,7 +88,8 @@ actual class LargeCache<K, V> : ICacheOperations<K, V> {
     actual override fun size(): Int = withMap { it.size }
 
     actual override fun forEach(consumer: ICacheBiConsumer<K, V>) {
-        withMap { map -> map.forEach { consumer.accept(it.key, it.value) } }
+        // Snapshot entries to avoid ConcurrentModificationException
+        withMap { map -> map.entries.toList() }.forEach { consumer.accept(it.key, it.value) }
     }
 
     actual override fun filter(consumer: CacheCollectors.BiFilter<K, V>): List<V> = withMap { map -> map.filter { consumer.filter(it.key, it.value) }.values.toList() }

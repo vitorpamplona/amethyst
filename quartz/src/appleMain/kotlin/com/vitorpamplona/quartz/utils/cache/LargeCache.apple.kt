@@ -85,7 +85,10 @@ actual class LargeCache<K, V> : ICacheOperations<K, V> {
     actual override fun size(): Int = concurrentMap.size
 
     actual override fun forEach(consumer: ICacheBiConsumer<K, V>) {
-        concurrentMap.forEach { consumer.accept(it.key, it.value) }
+        // Take a snapshot of entries to avoid ConcurrentModificationException
+        // when the map is modified during iteration (e.g., NostrClient.syncFilters
+        // iterating while subscriptions are added from another coroutine).
+        concurrentMap.entries.toList().forEach { consumer.accept(it.key, it.value) }
     }
 
     actual override fun filter(consumer: CacheCollectors.BiFilter<K, V>): List<V> =
