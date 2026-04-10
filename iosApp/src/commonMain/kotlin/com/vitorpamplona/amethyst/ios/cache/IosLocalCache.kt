@@ -68,6 +68,11 @@ class IosLocalCache : ICacheProvider {
     private val _latestContactList = MutableStateFlow<ContactListEvent?>(null)
     val latestContactList: StateFlow<ContactListEvent?> = _latestContactList.asStateFlow()
 
+    /** Stores the latest MetadataEvent per pubkey for use in profile editing. */
+    private val latestMetadataEvents = HashMap<HexKey, MetadataEvent>()
+
+    fun getLatestMetadataEvent(pubKeyHex: HexKey): MetadataEvent? = platformSynchronized(lock) { latestMetadataEvents[pubKeyHex] }
+
     // ----- User operations -----
 
     override fun getUserIfExists(pubkey: HexKey): User? = platformSynchronized(lock) { users[pubkey] }
@@ -120,6 +125,9 @@ class IosLocalCache : ICacheProvider {
             val newUserMetadata = event.contactMetaData()
             if (newUserMetadata != null) {
                 user.updateUserInfo(newUserMetadata, event)
+                platformSynchronized(lock) {
+                    latestMetadataEvents[event.pubKey] = event
+                }
             }
         }
     }

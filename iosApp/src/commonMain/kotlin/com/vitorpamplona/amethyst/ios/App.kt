@@ -93,6 +93,7 @@ import com.vitorpamplona.amethyst.ios.subscriptions.generateSubId
 import com.vitorpamplona.amethyst.ios.subscriptions.rememberSubscription
 import com.vitorpamplona.amethyst.ios.ui.AccountSwitcherScreen
 import com.vitorpamplona.amethyst.ios.ui.ComposeNoteScreen
+import com.vitorpamplona.amethyst.ios.ui.EditProfileScreen
 import com.vitorpamplona.amethyst.ios.ui.LoginScreen
 import com.vitorpamplona.amethyst.ios.ui.SettingsScreen
 import com.vitorpamplona.amethyst.ios.ui.chats.IosChatScreen
@@ -164,6 +165,8 @@ sealed class Screen {
     data object AccountSwitcher : Screen()
 
     data object AddAccount : Screen()
+
+    data object EditProfile : Screen()
 }
 
 enum class FeedMode { GLOBAL, FOLLOWING }
@@ -619,11 +622,27 @@ private fun MainScreen(
                         onNavigateToProfile = { navigateTo(Screen.Profile(it)) },
                         onNavigateToThread = { navigateTo(Screen.Thread(it)) },
                         onNavigateToSettings = { navigateTo(Screen.Settings) },
+                        onEditProfile =
+                            if (!account.isReadOnly) {
+                                { navigateTo(Screen.EditProfile) }
+                            } else {
+                                null
+                            },
                         onFollow = onFollowUser,
                         onUnfollow = onUnfollowUser,
                         onBoost = onBoostNote,
                         onLike = onLikeNote,
                         onZap = onZapNote,
+                    )
+                }
+
+                is Screen.EditProfile -> {
+                    EditProfileScreen(
+                        account = account,
+                        localCache = localCache,
+                        relayManager = relayManager,
+                        onBack = { goBack() },
+                        onSaved = { goBack() },
                     )
                 }
 
@@ -635,6 +654,12 @@ private fun MainScreen(
                         onBack = { goBack() },
                         onLogout = onLogout,
                         onAccountSwitcher = { navigateTo(Screen.AccountSwitcher) },
+                        onEditProfile =
+                            if (!account.isReadOnly) {
+                                { navigateTo(Screen.EditProfile) }
+                            } else {
+                                null
+                            },
                     )
                 }
 
@@ -904,6 +929,7 @@ private fun IosProfileContent(
     onNavigateToProfile: (String) -> Unit,
     onNavigateToThread: (String) -> Unit,
     onNavigateToSettings: (() -> Unit)? = null,
+    onEditProfile: (() -> Unit)? = null,
     onFollow: ((String) -> Unit)? = null,
     onUnfollow: ((String) -> Unit)? = null,
     onBoost: ((String) -> Unit)? = null,
@@ -1004,9 +1030,22 @@ private fun IosProfileContent(
             if (isOwnProfile && onNavigateToSettings != null) {
                 Spacer(Modifier.height(12.dp))
                 Row(
-                    horizontalArrangement = Arrangement.Center,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp, androidx.compose.ui.Alignment.CenterHorizontally),
                     modifier = Modifier.fillMaxWidth(),
                 ) {
+                    if (onEditProfile != null) {
+                        androidx.compose.material3.OutlinedButton(
+                            onClick = onEditProfile,
+                        ) {
+                            Icon(
+                                Icons.Default.Edit,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                            )
+                            Spacer(Modifier.width(4.dp))
+                            Text("Edit Profile")
+                        }
+                    }
                     androidx.compose.material3.OutlinedButton(
                         onClick = onNavigateToSettings,
                     ) {

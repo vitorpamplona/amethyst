@@ -105,6 +105,7 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onLogout: () -> Unit,
     onAccountSwitcher: (() -> Unit)? = null,
+    onEditProfile: (() -> Unit)? = null,
 ) {
     val relayStatuses by relayManager.relayStatuses.collectAsState()
 
@@ -131,6 +132,43 @@ fun SettingsScreen(
         ) {
             // ── Account Section ──
             SectionHeader(icon = Icons.Default.Person, title = "Account")
+
+            // Edit Profile button
+            if (onEditProfile != null) {
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .background(
+                                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+                                shape = RoundedCornerShape(12.dp),
+                            ).clickable(onClick = onEditProfile)
+                            .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        Icons.Default.Person,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp),
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            "Edit Profile",
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Text(
+                            "Update your display name, bio, and avatar",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+            }
 
             // Account Switcher button
             if (onAccountSwitcher != null) {
