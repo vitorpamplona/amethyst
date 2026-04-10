@@ -47,6 +47,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Wifi
@@ -103,6 +104,7 @@ fun SettingsScreen(
     relayManager: IosRelayConnectionManager,
     onBack: () -> Unit,
     onLogout: () -> Unit,
+    onAccountSwitcher: (() -> Unit)? = null,
 ) {
     val relayStatuses by relayManager.relayStatuses.collectAsState()
 
@@ -129,6 +131,43 @@ fun SettingsScreen(
         ) {
             // ── Account Section ──
             SectionHeader(icon = Icons.Default.Person, title = "Account")
+
+            // Account Switcher button
+            if (onAccountSwitcher != null) {
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .background(
+                                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+                                shape = RoundedCornerShape(12.dp),
+                            ).clickable(onClick = onAccountSwitcher)
+                            .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        Icons.Default.People,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp),
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            "Switch Account",
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Text(
+                            "Manage multiple accounts",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+            }
 
             AccountKeyRow(label = "Public Key (npub)", value = npub)
 

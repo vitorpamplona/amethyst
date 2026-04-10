@@ -48,11 +48,26 @@ sealed class AccountState {
     ) : AccountState()
 }
 
+/**
+ * Metadata for a saved account, used for display in the account switcher.
+ */
+data class SavedAccountInfo(
+    val npub: String,
+    val pubKeyHex: String,
+    val isReadOnly: Boolean,
+    val isActive: Boolean,
+)
+
 private const val LAST_NPUB_KEY = "__last_npub__"
+private const val SAVED_ACCOUNTS_KEY = "__saved_accounts__"
+private const val ACCOUNT_SEPARATOR = ","
 
 class AccountManager {
     private val _accountState = MutableStateFlow<AccountState>(AccountState.LoggedOut)
     val accountState: StateFlow<AccountState> = _accountState.asStateFlow()
+
+    private val _savedAccounts = MutableStateFlow<List<SavedAccountInfo>>(emptyList())
+    val savedAccounts: StateFlow<List<SavedAccountInfo>> = _savedAccounts.asStateFlow()
 
     private val keyStorage = SecureKeyStorage.create(null)
     private val scope = CoroutineScope(Dispatchers.IO)
@@ -64,22 +79,41 @@ class AccountManager {
         scope.launch {
             try {
                 val lastNpub = keyStorage.getPrivateKey(LAST_NPUB_KEY) ?: return@launch
-                val privKeyHex = keyStorage.getPrivateKey(lastNpub) ?: return@launch
+                val privKeyHex = keyStorage.getPrivateKey(lastNpub)
 
-                val keyPair = KeyPair(privKey = privKeyHex.hexToByteArray())
-                val signer = NostrSignerInternal(keyPair)
+                if (privKeyHex != null) {
+                    val keyPair = KeyPair(privKey = privKeyHex.hexToByteArray())
+                    val signer = NostrSignerInternal(keyPair)
 
-                _accountState.value =
-                    AccountState.LoggedIn(
-                        keyPair = keyPair,
-                        signer = signer,
-                        npub = keyPair.pubKey.toNpub(),
-                        pubKeyHex = keyPair.pubKey.toHexKey(),
-                        isReadOnly = false,
-                    )
+                    _accountState.value =
+                        AccountState.LoggedIn(
+                            keyPair = keyPair,
+                            signer = signer,
+                            npub = keyPair.pubKey.toNpub(),
+                            pubKeyHex = keyPair.pubKey.toHexKey(),
+                            isReadOnly = false,
+                        )
+                } else {
+                    // Might be a read-only account — check if npub is in saved list
+                    val pubKeyBytes = lastNpub.bechToBytes()
+                    val keyPair = KeyPair(pubKey = pubKeyBytes)
+                    val signer = NostrSignerInternal(keyPair)
+
+                    _accountState.value =
+                        AccountState.LoggedIn(
+                            keyPair = keyPair,
+                            signer = signer,
+                            npub = lastNpub,
+                            pubKeyHex = keyPair.pubKey.toHexKey(),
+                            isReadOnly = true,
+                        )
+                }
+
+                refreshSavedAccounts()
             } catch (e: Exception) {
                 // Failed to restore — stay logged out
                 println("AccountManager: Failed to restore session: ${e.message}")
+                refreshSavedAccounts()
             }
         }
     }
@@ -99,6 +133,8 @@ class AccountManager {
                 try {
                     keyStorage.savePrivateKey(npub, keyPair.privKey!!.toHexKey())
                     keyStorage.savePrivateKey(LAST_NPUB_KEY, npub)
+                    addToSavedAccountsList(npub)
+                    refreshSavedAccounts()
                 } catch (e: Exception) {
                     println("AccountManager: Failed to save to Keychain: ${e.message}")
                 }
@@ -150,6 +186,19 @@ class AccountManager {
                     try {
                         keyStorage.savePrivateKey(npub, keyPair.privKey!!.toHexKey())
                         keyStorage.savePrivateKey(LAST_NPUB_KEY, npub)
+                        addToSavedAccountsList(npub)
+                        refreshSavedAccounts()
+                    } catch (e: Exception) {
+                        println("AccountManager: Failed to save to Keychain: ${e.message}")
+                    }
+                }
+            } else if (isReadOnly) {
+                // Save read-only accounts to the list too (no privkey stored)
+                scope.launch {
+                    try {
+                        keyStorage.savePrivateKey(LAST_NPUB_KEY, npub)
+                        addToSavedAccountsList(npub)
+                        refreshSavedAccounts()
                     } catch (e: Exception) {
                         println("AccountManager: Failed to save to Keychain: ${e.message}")
                     }
@@ -166,18 +215,195 @@ class AccountManager {
                 )
         }
 
+    /**
+     * Switch to an existing saved account by npub.
+     */
+    fun switchToAccount(npub: String): Result<Unit> =
+        runCatching {
+            scope.launch {
+                try {
+                    val privKeyHex = keyStorage.getPrivateKey(npub)
+                    val isReadOnly = privKeyHex == null
+
+                    val keyPair =
+                        if (!isReadOnly) {
+                            KeyPair(privKey = privKeyHex!!.hexToByteArray())
+                        } else {
+                            KeyPair(pubKey = npub.bechToBytes())
+                        }
+
+                    val signer = NostrSignerInternal(keyPair)
+                    val pubKeyHex = keyPair.pubKey.toHexKey()
+
+                    keyStorage.savePrivateKey(LAST_NPUB_KEY, npub)
+
+                    _accountState.value =
+                        AccountState.LoggedIn(
+                            keyPair = keyPair,
+                            signer = signer,
+                            npub = npub,
+                            pubKeyHex = pubKeyHex,
+                            isReadOnly = isReadOnly,
+                        )
+
+                    refreshSavedAccounts()
+                } catch (e: Exception) {
+                    println("AccountManager: Failed to switch account: ${e.message}")
+                }
+            }
+        }
+
+    /**
+     * Remove a saved account from Keychain. If it's the active account, log out.
+     */
+    fun removeAccount(npub: String) {
+        val currentState = _accountState.value
+        val isActive = currentState is AccountState.LoggedIn && currentState.npub == npub
+
+        scope.launch {
+            try {
+                // Delete private key
+                keyStorage.deletePrivateKey(npub)
+
+                // Remove from saved accounts list
+                removeFromSavedAccountsList(npub)
+
+                if (isActive) {
+                    // Try to switch to another saved account
+                    val remaining = loadSavedAccountNpubs()
+                    if (remaining.isNotEmpty()) {
+                        val nextNpub = remaining.first()
+                        keyStorage.savePrivateKey(LAST_NPUB_KEY, nextNpub)
+
+                        val privKeyHex = keyStorage.getPrivateKey(nextNpub)
+                        val nextIsReadOnly = privKeyHex == null
+                        val nextKeyPair =
+                            if (!nextIsReadOnly) {
+                                KeyPair(privKey = privKeyHex!!.hexToByteArray())
+                            } else {
+                                KeyPair(pubKey = nextNpub.bechToBytes())
+                            }
+                        val nextSigner = NostrSignerInternal(nextKeyPair)
+
+                        _accountState.value =
+                            AccountState.LoggedIn(
+                                keyPair = nextKeyPair,
+                                signer = nextSigner,
+                                npub = nextNpub,
+                                pubKeyHex = nextKeyPair.pubKey.toHexKey(),
+                                isReadOnly = nextIsReadOnly,
+                            )
+                    } else {
+                        keyStorage.deletePrivateKey(LAST_NPUB_KEY)
+                        _accountState.value = AccountState.LoggedOut
+                    }
+                }
+
+                refreshSavedAccounts()
+            } catch (e: Exception) {
+                println("AccountManager: Failed to remove account: ${e.message}")
+            }
+        }
+    }
+
     fun logout() {
         val currentState = _accountState.value
         if (currentState is AccountState.LoggedIn) {
             scope.launch {
                 try {
                     keyStorage.deletePrivateKey(currentState.npub)
-                    keyStorage.deletePrivateKey(LAST_NPUB_KEY)
+                    removeFromSavedAccountsList(currentState.npub)
+
+                    // Try to switch to another saved account
+                    val remaining = loadSavedAccountNpubs()
+                    if (remaining.isNotEmpty()) {
+                        val nextNpub = remaining.first()
+                        keyStorage.savePrivateKey(LAST_NPUB_KEY, nextNpub)
+
+                        val privKeyHex = keyStorage.getPrivateKey(nextNpub)
+                        val nextIsReadOnly = privKeyHex == null
+                        val nextKeyPair =
+                            if (!nextIsReadOnly) {
+                                KeyPair(privKey = privKeyHex!!.hexToByteArray())
+                            } else {
+                                KeyPair(pubKey = nextNpub.bechToBytes())
+                            }
+                        val nextSigner = NostrSignerInternal(nextKeyPair)
+
+                        _accountState.value =
+                            AccountState.LoggedIn(
+                                keyPair = nextKeyPair,
+                                signer = nextSigner,
+                                npub = nextNpub,
+                                pubKeyHex = nextKeyPair.pubKey.toHexKey(),
+                                isReadOnly = nextIsReadOnly,
+                            )
+                    } else {
+                        keyStorage.deletePrivateKey(LAST_NPUB_KEY)
+                        _accountState.value = AccountState.LoggedOut
+                    }
+
+                    refreshSavedAccounts()
                 } catch (e: Exception) {
                     println("AccountManager: Failed to clear Keychain: ${e.message}")
                 }
             }
         }
-        _accountState.value = AccountState.LoggedOut
+    }
+
+    // ── Internal helpers for multi-account list ──
+
+    private suspend fun loadSavedAccountNpubs(): List<String> {
+        val raw = keyStorage.getPrivateKey(SAVED_ACCOUNTS_KEY) ?: return emptyList()
+        return raw.split(ACCOUNT_SEPARATOR).filter { it.isNotBlank() }
+    }
+
+    private suspend fun saveSavedAccountNpubs(npubs: List<String>) {
+        if (npubs.isEmpty()) {
+            keyStorage.deletePrivateKey(SAVED_ACCOUNTS_KEY)
+        } else {
+            keyStorage.savePrivateKey(SAVED_ACCOUNTS_KEY, npubs.joinToString(ACCOUNT_SEPARATOR))
+        }
+    }
+
+    private suspend fun addToSavedAccountsList(npub: String) {
+        val current = loadSavedAccountNpubs().toMutableList()
+        if (npub !in current) {
+            current.add(npub)
+            saveSavedAccountNpubs(current)
+        }
+    }
+
+    private suspend fun removeFromSavedAccountsList(npub: String) {
+        val current = loadSavedAccountNpubs().toMutableList()
+        if (current.remove(npub)) {
+            saveSavedAccountNpubs(current)
+        }
+    }
+
+    private suspend fun refreshSavedAccounts() {
+        val npubs = loadSavedAccountNpubs()
+        val activeNpub = (accountState.value as? AccountState.LoggedIn)?.npub
+
+        val accounts =
+            npubs.map { npub ->
+                val hasPrivKey = keyStorage.hasPrivateKey(npub)
+                val pubKeyHex =
+                    try {
+                        val bytes = npub.bechToBytes()
+                        KeyPair(pubKey = bytes).pubKey.toHexKey()
+                    } catch (e: Exception) {
+                        npub
+                    }
+
+                SavedAccountInfo(
+                    npub = npub,
+                    pubKeyHex = pubKeyHex,
+                    isReadOnly = !hasPrivKey,
+                    isActive = npub == activeNpub,
+                )
+            }
+
+        _savedAccounts.value = accounts
     }
 }

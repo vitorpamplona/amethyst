@@ -91,6 +91,7 @@ import com.vitorpamplona.amethyst.ios.subscriptions.IosSubscriptionsCoordinator
 import com.vitorpamplona.amethyst.ios.subscriptions.SubscriptionConfig
 import com.vitorpamplona.amethyst.ios.subscriptions.generateSubId
 import com.vitorpamplona.amethyst.ios.subscriptions.rememberSubscription
+import com.vitorpamplona.amethyst.ios.ui.AccountSwitcherScreen
 import com.vitorpamplona.amethyst.ios.ui.ComposeNoteScreen
 import com.vitorpamplona.amethyst.ios.ui.LoginScreen
 import com.vitorpamplona.amethyst.ios.ui.SettingsScreen
@@ -159,6 +160,10 @@ sealed class Screen {
     data class Chat(
         val roomKey: ChatroomKey,
     ) : Screen()
+
+    data object AccountSwitcher : Screen()
+
+    data object AddAccount : Screen()
 }
 
 enum class FeedMode { GLOBAL, FOLLOWING }
@@ -190,6 +195,7 @@ fun App() {
                 is AccountState.LoggedIn -> {
                     MainScreen(
                         account = state,
+                        accountManager = accountManager,
                         onLogout = { accountManager.logout() },
                     )
                 }
@@ -202,6 +208,7 @@ fun App() {
 @Composable
 private fun MainScreen(
     account: AccountState.LoggedIn,
+    accountManager: AccountManager,
     onLogout: () -> Unit,
 ) {
     val relayManager = remember { IosRelayConnectionManager() }
@@ -627,6 +634,34 @@ private fun MainScreen(
                         relayManager = relayManager,
                         onBack = { goBack() },
                         onLogout = onLogout,
+                        onAccountSwitcher = { navigateTo(Screen.AccountSwitcher) },
+                    )
+                }
+
+                is Screen.AccountSwitcher -> {
+                    AccountSwitcherScreen(
+                        accountManager = accountManager,
+                        localCache = localCache,
+                        onBack = { goBack() },
+                        onAddAccount = { navigateTo(Screen.AddAccount) },
+                    )
+                }
+
+                is Screen.AddAccount -> {
+                    LoginScreen(
+                        onLogin = { key ->
+                            val result = accountManager.login(key)
+                            if (result.isSuccess) {
+                                // Pop back to account switcher
+                                goBack()
+                            }
+                            result
+                        },
+                        onCreateAccount = {
+                            val created = accountManager.createAccount()
+                            goBack()
+                            created
+                        },
                     )
                 }
 
