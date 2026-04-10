@@ -65,6 +65,9 @@ class IosLocalCache : ICacheProvider {
     private val _followedUsers = MutableStateFlow<Set<HexKey>>(emptySet())
     val followedUsers: StateFlow<Set<HexKey>> = _followedUsers.asStateFlow()
 
+    private val _latestContactList = MutableStateFlow<ContactListEvent?>(null)
+    val latestContactList: StateFlow<ContactListEvent?> = _latestContactList.asStateFlow()
+
     // ----- User operations -----
 
     override fun getUserIfExists(pubkey: HexKey): User? = platformSynchronized(lock) { users[pubkey] }
@@ -294,6 +297,7 @@ class IosLocalCache : ICacheProvider {
         if (event.createdAt <= lastContactListCreatedAt) return false
         lastContactListCreatedAt = event.createdAt
         _followedUsers.value = event.verifiedFollowKeySet()
+        _latestContactList.value = event
         return true
     }
 
@@ -350,6 +354,7 @@ class IosLocalCache : ICacheProvider {
             deletedEvents.clear()
         }
         _followedUsers.value = emptySet()
+        _latestContactList.value = null
     }
 }
 

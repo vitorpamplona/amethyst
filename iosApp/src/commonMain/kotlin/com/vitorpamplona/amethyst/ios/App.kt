@@ -106,6 +106,7 @@ import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
@@ -218,6 +219,7 @@ private fun MainScreen(
 
     var currentScreen by remember { mutableStateOf<Screen>(Screen.Feed) }
     var selectedTab by remember { mutableStateOf(Tab.FEED) }
+    var composeDraft by remember { mutableStateOf("") }
     val navStack = remember { mutableListOf<Screen>() }
 
     fun navigateTo(screen: Screen) {
@@ -263,6 +265,47 @@ private fun MainScreen(
     val onZapNote: (String) -> Unit = { _ ->
         scope.launch {
             snackbarHostState.showSnackbar("\u26A1 Zaps coming soon!")
+        }
+    }
+
+    val onFollowUser: (String) -> Unit = { targetPubKeyHex ->
+        if (!account.isReadOnly) {
+            scope.launch {
+                val current = localCache.latestContactList.value
+                val newContactList =
+                    if (current != null) {
+                        ContactListEvent.followUser(current, targetPubKeyHex, account.signer)
+                    } else {
+                        ContactListEvent.createFromScratch(
+                            followUsers =
+                                listOf(
+                                    com.vitorpamplona.quartz.nip02FollowList.tags
+                                        .ContactTag(targetPubKeyHex, null, null),
+                                ),
+                            relayUse = null,
+                            signer = account.signer,
+                        )
+                    }
+                // Optimistic local update
+                localCache.consume(newContactList, null)
+                relayManager.broadcastToAll(newContactList)
+                snackbarHostState.showSnackbar("\u2705 Followed!")
+            }
+        }
+    }
+
+    val onUnfollowUser: (String) -> Unit = { targetPubKeyHex ->
+        if (!account.isReadOnly) {
+            scope.launch {
+                val current = localCache.latestContactList.value
+                if (current != null) {
+                    val newContactList =
+                        ContactListEvent.unfollowUser(current, targetPubKeyHex, account.signer)
+                    localCache.consume(newContactList, null)
+                    relayManager.broadcastToAll(newContactList)
+                    snackbarHostState.showSnackbar("Unfollowed")
+                }
+            }
         }
     }
 
@@ -551,12 +594,16 @@ private fun MainScreen(
                 is Screen.MyProfile -> {
                     IosProfileContent(
                         pubKeyHex = account.pubKeyHex,
+                        loggedInPubKeyHex = account.pubKeyHex,
+                        isReadOnly = account.isReadOnly,
                         relayManager = relayManager,
                         localCache = localCache,
                         coordinator = coordinator,
                         onNavigateToProfile = { navigateTo(Screen.Profile(it)) },
                         onNavigateToThread = { navigateTo(Screen.Thread(it)) },
                         onNavigateToSettings = { navigateTo(Screen.Settings) },
+                        onFollow = onFollowUser,
+                        onUnfollow = onUnfollowUser,
                         onBoost = onBoostNote,
                         onLike = onLikeNote,
                         onZap = onZapNote,
@@ -588,11 +635,15 @@ private fun MainScreen(
                         )
                         IosProfileContent(
                             pubKeyHex = screen.pubKeyHex,
+                            loggedInPubKeyHex = account.pubKeyHex,
+                            isReadOnly = account.isReadOnly,
                             relayManager = relayManager,
                             localCache = localCache,
                             coordinator = coordinator,
                             onNavigateToProfile = { navigateTo(Screen.Profile(it)) },
                             onNavigateToThread = { navigateTo(Screen.Thread(it)) },
+                            onFollow = onFollowUser,
+                            onUnfollow = onUnfollowUser,
                             onBoost = onBoostNote,
                             onLike = onLikeNote,
                             onZap = onZapNote,
@@ -622,8 +673,13 @@ private fun MainScreen(
                         relayManager = relayManager,
                         localCache = localCache,
                         replyToNoteId = screen.replyToNoteId,
+                        initialDraft = composeDraft,
+                        onDraftChanged = { composeDraft = it },
                         onBack = { goBack() },
-                        onPublished = { goBack() },
+                        onPublished = {
+                            composeDraft = ""
+                            goBack()
+                        },
                     )
                 }
             }
@@ -795,12 +851,16 @@ private fun IosFeedContent(
 @Composable
 private fun IosProfileContent(
     pubKeyHex: String,
+    loggedInPubKeyHex: String = "",
+    isReadOnly: Boolean = true,
     relayManager: IosRelayConnectionManager,
     localCache: IosLocalCache,
     coordinator: IosSubscriptionsCoordinator,
     onNavigateToProfile: (String) -> Unit,
     onNavigateToThread: (String) -> Unit,
     onNavigateToSettings: (() -> Unit)? = null,
+    onFollow: ((String) -> Unit)? = null,
+    onUnfollow: ((String) -> Unit)? = null,
     onBoost: ((String) -> Unit)? = null,
     onLike: ((String) -> Unit)? = null,
     onZap: ((String) -> Unit)? = null,
@@ -892,7 +952,11 @@ private fun IosProfileContent(
                 )
             }
 
-            if (onNavigateToSettings != null) {
+            val isOwnProfile = pubKeyHex == loggedInPubKeyHex
+            val followedUsers by localCache.followedUsers.collectAsState()
+            val isFollowing = remember(followedUsers, pubKeyHex) { pubKeyHex in followedUsers }
+
+            if (isOwnProfile && onNavigateToSettings != null) {
                 Spacer(Modifier.height(12.dp))
                 Row(
                     horizontalArrangement = Arrangement.Center,
@@ -908,6 +972,26 @@ private fun IosProfileContent(
                         )
                         Spacer(Modifier.width(4.dp))
                         Text("Settings")
+                    }
+                }
+            } else if (!isOwnProfile && !isReadOnly) {
+                Spacer(Modifier.height(12.dp))
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    if (isFollowing) {
+                        androidx.compose.material3.OutlinedButton(
+                            onClick = { onUnfollow?.invoke(pubKeyHex) },
+                        ) {
+                            Text("Unfollow")
+                        }
+                    } else {
+                        androidx.compose.material3.Button(
+                            onClick = { onFollow?.invoke(pubKeyHex) },
+                        ) {
+                            Text("Follow")
+                        }
                     }
                 }
             }

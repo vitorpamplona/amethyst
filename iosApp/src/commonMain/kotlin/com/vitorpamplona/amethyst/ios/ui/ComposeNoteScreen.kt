@@ -92,10 +92,12 @@ fun ComposeNoteScreen(
     relayManager: IosRelayConnectionManager,
     localCache: IosLocalCache,
     replyToNoteId: String? = null,
+    initialDraft: String = "",
+    onDraftChanged: (String) -> Unit = {},
     onBack: () -> Unit,
     onPublished: () -> Unit,
 ) {
-    var noteText by remember { mutableStateOf("") }
+    var noteText by remember { mutableStateOf(initialDraft) }
     var publishState by remember { mutableStateOf(PublishState.IDLE) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
@@ -236,7 +238,10 @@ fun ComposeNoteScreen(
             // Compose text field
             TextField(
                 value = noteText,
-                onValueChange = { noteText = it },
+                onValueChange = {
+                    noteText = it
+                    onDraftChanged(it)
+                },
                 placeholder = {
                     Text(
                         if (replyToNoteId != null) "Write your reply..." else "What's on your mind?",
