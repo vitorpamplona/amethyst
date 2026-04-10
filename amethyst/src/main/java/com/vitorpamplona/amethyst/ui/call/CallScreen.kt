@@ -195,11 +195,14 @@ fun CallScreen(
                 Snackbar(
                     modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp),
                     action = {
-                        Text(
-                            stringRes(R.string.call_dismiss),
-                            modifier = Modifier.padding(8.dp),
-                            color = MaterialTheme.colorScheme.inversePrimary,
-                        )
+                        androidx.compose.material3.TextButton(
+                            onClick = { callController?.clearError() },
+                        ) {
+                            Text(
+                                stringRes(R.string.call_dismiss),
+                                color = MaterialTheme.colorScheme.inversePrimary,
+                            )
+                        }
                     },
                 ) {
                     Text(error)

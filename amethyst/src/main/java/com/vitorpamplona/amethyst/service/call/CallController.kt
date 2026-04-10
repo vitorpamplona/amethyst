@@ -22,6 +22,10 @@ package com.vitorpamplona.amethyst.service.call
 
 import android.content.Context
 import android.content.Intent
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import com.vitorpamplona.amethyst.commons.call.AnswerRouteAction
 import com.vitorpamplona.amethyst.commons.call.CallManager
 import com.vitorpamplona.amethyst.commons.call.CallState
@@ -87,11 +91,31 @@ class CallController(
     private val _isAudioMuted = MutableStateFlow(false)
     val isAudioMuted: StateFlow<Boolean> = _isAudioMuted.asStateFlow()
     val isVideoEnabled: StateFlow<Boolean> = mediaManager.isVideoEnabled
+    val isFrontCamera: StateFlow<Boolean> = mediaManager.isFrontCamera
     val audioRoute: StateFlow<AudioRoute> = audioManager.audioRoute
     val isBluetoothAvailable: StateFlow<Boolean> = audioManager.isBluetoothAvailable
 
     private var videoPausedByProximity = false
     private var foregroundServiceStarted = false
+    private val videoSenders = mutableMapOf<HexKey, org.webrtc.RtpSender>()
+
+    private val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+    private var networkCallbackRegistered = false
+    private val networkCallback =
+        object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) {
+                Log.d(TAG) { "Network available — triggering ICE restart on all peers" }
+                restartIceOnAllPeers()
+            }
+
+            override fun onCapabilitiesChanged(
+                network: Network,
+                capabilities: NetworkCapabilities,
+            ) {
+                Log.d(TAG) { "Network capabilities changed — triggering ICE restart on all peers" }
+                restartIceOnAllPeers()
+            }
+        }
 
     // ---- Initialization ----
 
@@ -120,6 +144,7 @@ class CallController(
                         audioManager.acquireProximityWakeLock()
                         NotificationUtils.cancelCallNotification(context)
                         updateForegroundServiceNotification()
+                        registerNetworkCallback()
                     }
 
                     is CallState.Connected -> {
@@ -129,6 +154,7 @@ class CallController(
                         audioManager.acquireProximityWakeLock()
                         NotificationUtils.cancelCallNotification(context)
                         updateForegroundServiceNotification()
+                        registerNetworkCallback()
                     }
 
                     is CallState.Ended -> {
@@ -376,6 +402,40 @@ class CallController(
         }
     }
 
+    // ---- Network change handling ----
+
+    private fun restartIceOnAllPeers() {
+        val state = callManager.state.value
+        if (state !is CallState.Connected && state !is CallState.Connecting) return
+        peerSessionMgr.allSessionKeys().forEach { key ->
+            webRtcSession(key)?.triggerIceRestart()
+        }
+    }
+
+    private fun registerNetworkCallback() {
+        if (networkCallbackRegistered) return
+        try {
+            val request =
+                NetworkRequest
+                    .Builder()
+                    .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                    .build()
+            connectivityManager.registerNetworkCallback(request, networkCallback)
+            networkCallbackRegistered = true
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to register network callback", e)
+        }
+    }
+
+    private fun unregisterNetworkCallback() {
+        if (!networkCallbackRegistered) return
+        try {
+            connectivityManager.unregisterNetworkCallback(networkCallback)
+        } catch (_: Exception) {
+        }
+        networkCallbackRegistered = false
+    }
+
     // ---- UI toggle controls ----
 
     fun toggleAudioMute() {
@@ -389,17 +449,35 @@ class CallController(
         if (enabling) {
             if (mediaManager.localVideoTrack == null) {
                 mediaManager.createVideoResources()
-                peerSessionMgr.allSessionKeys().forEach { key ->
-                    webRtcSession(key)?.let { session ->
-                        mediaManager.localVideoTrack?.let { track -> session.addTrack(track, settingsProvider().callMaxBitrateBps) }
-                    }
-                }
             } else {
                 mediaManager.enableVideo()
             }
+            // Add video track to all peer connections
+            peerSessionMgr.allSessionKeys().forEach { key ->
+                if (videoSenders[key] == null) {
+                    webRtcSession(key)?.let { session ->
+                        mediaManager.localVideoTrack?.let { track ->
+                            val sender = session.addTrack(track, settingsProvider().callMaxBitrateBps)
+                            if (sender != null) {
+                                videoSenders[key] = sender
+                            }
+                        }
+                    }
+                }
+            }
         } else {
+            // Remove video track senders so remote peers see track removal
+            peerSessionMgr.allSessionKeys().forEach { key ->
+                videoSenders.remove(key)?.let { sender ->
+                    webRtcSession(key)?.removeTrack(sender)
+                }
+            }
             mediaManager.disableVideo()
         }
+    }
+
+    fun switchCamera() {
+        mediaManager.switchCamera()
     }
 
     fun cycleAudioRoute() {
@@ -454,6 +532,9 @@ class CallController(
                 onDisconnected = { scope.launch { onPeerDisconnected(peerPubKey) } },
                 onError = { error -> _errorMessage.value = error },
                 onRenegotiationNeeded = { performRenegotiation(peerPubKey) },
+                onIceRestartOffer = { sdp ->
+                    scope.launch { callManager.sendRenegotiation(sdp.description, peerPubKey) }
+                },
             )
         try {
             session.createPeerConnection()
@@ -462,7 +543,12 @@ class CallController(
             throw e
         }
         mediaManager.localAudioTrack?.let { session.addTrack(it) }
-        mediaManager.localVideoTrack?.let { session.addTrack(it, settingsProvider().callMaxBitrateBps) }
+        mediaManager.localVideoTrack?.let { track ->
+            val sender = session.addTrack(track, settingsProvider().callMaxBitrateBps)
+            if (sender != null) {
+                videoSenders[peerPubKey] = sender
+            }
+        }
         return session
     }
 
@@ -496,6 +582,7 @@ class CallController(
     // ---- Cleanup ----
 
     fun cleanup() {
+        unregisterNetworkCallback()
         try {
             audioManager.release()
         } catch (e: Exception) {
@@ -522,6 +609,7 @@ class CallController(
 
         _isAudioMuted.value = false
         videoPausedByProximity = false
+        videoSenders.clear()
     }
 
     // ---- Foreground service ----

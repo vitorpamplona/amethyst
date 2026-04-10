@@ -199,7 +199,9 @@ class CallManager(
     ) {
         Log.d("CallManager") { "initiateCall: callId=$callId, callee=${calleePubKey.take(8)}, type=$callType, sdpLength=${sdpOffer.length}" }
         val result = factory.createCallOffer(sdpOffer, calleePubKey, callId, callType, signer)
-        _state.value = CallState.Offering(callId, setOf(calleePubKey), callType)
+        stateMutex.withLock {
+            _state.value = CallState.Offering(callId, setOf(calleePubKey), callType)
+        }
         publishEvent(result.wrap)
         startTimeout(callId)
         Log.d("CallManager") { "initiateCall: offer published, timeout started" }
@@ -207,7 +209,7 @@ class CallManager(
 
     // ---- Incoming call handling ----
 
-    fun onIncomingCallEvent(event: CallOfferEvent) {
+    private fun onIncomingCallEvent(event: CallOfferEvent) {
         val callerPubKey = event.pubKey
         val callId = event.callId() ?: return
         val callType = event.callType() ?: CallType.VOICE
@@ -309,7 +311,7 @@ class CallManager(
         result.wraps.forEach { publishEvent(it) }
     }
 
-    fun onCallAnswered(event: CallAnswerEvent) {
+    private fun onCallAnswered(event: CallAnswerEvent) {
         val current = _state.value
         val callId = event.callId()
         val answeringPeer = event.pubKey
@@ -394,7 +396,7 @@ class CallManager(
         }
     }
 
-    fun onCallRejected(event: CallRejectEvent) {
+    private fun onCallRejected(event: CallRejectEvent) {
         val current = _state.value
         val callId = event.callId()
         val rejectingPeer = event.pubKey
@@ -451,11 +453,11 @@ class CallManager(
         }
     }
 
-    fun onIceCandidate(event: CallIceCandidateEvent) {
+    private fun onIceCandidate(event: CallIceCandidateEvent) {
         onIceCandidateReceived?.invoke(event)
     }
 
-    fun onRenegotiate(event: CallRenegotiateEvent) {
+    private fun onRenegotiate(event: CallRenegotiateEvent) {
         val current = _state.value
         val callId = event.callId()
         val currentCallId =
@@ -575,7 +577,7 @@ class CallManager(
         result.wraps.forEach { publishEvent(it) }
     }
 
-    fun onPeerHangup(event: CallHangupEvent) {
+    private fun onPeerHangup(event: CallHangupEvent) {
         val current = _state.value
         val callId = event.callId() ?: return
         val leavingPeer = event.pubKey

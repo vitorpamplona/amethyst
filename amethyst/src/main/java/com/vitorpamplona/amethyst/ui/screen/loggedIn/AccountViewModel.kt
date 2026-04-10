@@ -1523,6 +1523,8 @@ class AccountViewModel(
     override fun onCleared() {
         Log.d("AccountViewModel", "onCleared")
         callController?.cleanup()
+        com.vitorpamplona.amethyst.service.call.CallSessionBridge
+            .clear()
         feedStates.destroy()
         super.onCleared()
     }
