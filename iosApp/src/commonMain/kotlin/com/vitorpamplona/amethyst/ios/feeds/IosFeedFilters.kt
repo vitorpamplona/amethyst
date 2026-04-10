@@ -33,7 +33,10 @@ import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.StatusTag
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.isForCommunity
 
 private fun isFeedNote(event: com.vitorpamplona.quartz.nip01Core.core.Event?): Boolean =
     event is TextNoteEvent ||
@@ -320,4 +323,67 @@ class IosTrendingFeedFilter(
     }
 
     override fun limit(): Int = 200
+}
+
+/**
+ * Community posts feed: text notes tagged with a specific community address (NIP-72).
+ */
+class IosCommunityPostsFeedFilter(
+    private val communityAddressId: String,
+    private val cache: IosLocalCache,
+) : AdditiveFeedFilter<Note>() {
+    override fun feedKey(): String = "community-posts-$communityAddressId"
+
+    override fun feed(): List<Note> =
+        cache
+            .allNotes()
+            .filter { isCommunityPost(it) }
+            .sortedWith(DefaultFeedOrder)
+            .take(limit())
+
+    override fun applyFilter(newItems: Set<Note>): Set<Note> = newItems.filterTo(HashSet()) { isCommunityPost(it) }
+
+    override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder)
+
+    override fun limit(): Int = 500
+
+    private fun isCommunityPost(note: Note): Boolean {
+        val event = note.event ?: return false
+        return event is TextNoteEvent && event.isForCommunity(communityAddressId)
+    }
+}
+
+/**
+ * Live activities feed: kind 30311 events, sorted by status (live first) then createdAt.
+ */
+class IosLiveActivitiesFeedFilter(
+    private val cache: IosLocalCache,
+) : AdditiveFeedFilter<Note>() {
+    override fun feedKey(): String = "live-activities"
+
+    override fun feed(): List<Note> =
+        cache
+            .allNotes()
+            .filter { it.event is LiveActivitiesEvent }
+            .sortedWith(liveFirstOrder)
+            .take(limit())
+
+    override fun applyFilter(newItems: Set<Note>): Set<Note> = newItems.filterTo(HashSet()) { it.event is LiveActivitiesEvent }
+
+    override fun sort(items: Set<Note>): List<Note> = items.sortedWith(liveFirstOrder)
+
+    override fun limit(): Int = 200
+
+    companion object {
+        /** Sort live streams first, then planned, then ended; within each group by createdAt desc. */
+        private val liveFirstOrder =
+            compareBy<Note> {
+                when ((it.event as? LiveActivitiesEvent)?.status()) {
+                    StatusTag.STATUS.LIVE -> 0
+                    StatusTag.STATUS.PLANNED -> 1
+                    StatusTag.STATUS.ENDED -> 2
+                    null -> 3
+                }
+            }.thenByDescending { it.createdAt() ?: 0L }
+    }
 }

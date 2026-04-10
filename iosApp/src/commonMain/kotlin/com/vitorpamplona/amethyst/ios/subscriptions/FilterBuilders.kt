@@ -154,6 +154,62 @@ object FilterBuilders {
     fun userStatus(pubKeyHex: String): Filter = Filter(kinds = listOf(30315), authors = listOf(pubKeyHex), limit = 2)
 
     fun userStatusMultiple(pubKeys: List<String>): Filter = Filter(kinds = listOf(30315), authors = pubKeys)
+
+    // ── NIP-72 Communities ──
+
+    /**
+     * Discover community definitions (kind 34550).
+     */
+    fun communityDefinitions(limit: Int? = null): Filter = Filter(kinds = listOf(34550), limit = limit)
+
+    /**
+     * Community definitions by specific authors.
+     */
+    fun communityDefinitionsByAuthors(
+        authors: List<String>,
+        limit: Int? = null,
+    ): Filter = Filter(kinds = listOf(34550), authors = authors, limit = limit)
+
+    /**
+     * Approved posts in a community (kind 4550 tagged with the community address).
+     */
+    fun communityApprovedPosts(
+        communityAddressId: String,
+        limit: Int? = null,
+    ): Filter = Filter(kinds = listOf(4550), tags = mapOf("a" to listOf(communityAddressId)), limit = limit)
+
+    /**
+     * Text notes that tag a specific community (posted to community).
+     */
+    fun postsTaggingCommunity(
+        communityAddressId: String,
+        limit: Int? = null,
+    ): Filter = Filter(kinds = listOf(1), tags = mapOf("a" to listOf(communityAddressId)), limit = limit)
+
+    /**
+     * User's community list (NIP-72 kind 10004).
+     */
+    fun communityList(pubKeyHex: String): Filter = Filter(kinds = listOf(10004), authors = listOf(pubKeyHex), limit = 1)
+
+    // ── NIP-53 Live Activities ──
+
+    /**
+     * Discover live activities (kind 30311).
+     */
+    fun liveActivities(limit: Int? = null): Filter = Filter(kinds = listOf(30311), limit = limit)
+
+    /**
+     * Live activities that are currently live.
+     */
+    fun liveActivitiesLive(limit: Int? = null): Filter = Filter(kinds = listOf(30311), tags = mapOf("status" to listOf("live")), limit = limit)
+
+    /**
+     * Live activities by specific authors.
+     */
+    fun liveActivitiesByAuthors(
+        authors: List<String>,
+        limit: Int? = null,
+    ): Filter = Filter(kinds = listOf(30311), authors = authors, limit = limit)
 }
 
 /**

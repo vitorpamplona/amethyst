@@ -107,6 +107,11 @@ import com.vitorpamplona.amethyst.ios.ui.SettingsScreen
 import com.vitorpamplona.amethyst.ios.ui.chats.IosChatScreen
 import com.vitorpamplona.amethyst.ios.ui.chats.IosChatroomListState
 import com.vitorpamplona.amethyst.ios.ui.chats.IosConversationListScreen
+import com.vitorpamplona.amethyst.ios.ui.communities.CommunityDetailScreen
+import com.vitorpamplona.amethyst.ios.ui.communities.CommunityListScreen
+import com.vitorpamplona.amethyst.ios.ui.liveactivities.LiveActivityCard
+import com.vitorpamplona.amethyst.ios.ui.liveactivities.LiveActivityDetailScreen
+import com.vitorpamplona.amethyst.ios.ui.liveactivities.toLiveActivityDisplayData
 import com.vitorpamplona.amethyst.ios.ui.note.ArticleCard
 import com.vitorpamplona.amethyst.ios.ui.note.ArticleDetailScreen
 import com.vitorpamplona.amethyst.ios.ui.note.NoteCard
@@ -137,10 +142,13 @@ import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.EventBookmark
 import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.UserTag
+import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.follow.tags.CommunityTag
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -212,9 +220,23 @@ sealed class Screen {
     data class Article(
         val noteId: String,
     ) : Screen()
+
+    data object Communities : Screen()
+
+    data class CommunityDetail(
+        val communityAddressId: String,
+    ) : Screen()
+
+    data class CommunityPost(
+        val communityAddressId: String,
+    ) : Screen()
+
+    data class LiveActivity(
+        val noteId: String,
+    ) : Screen()
 }
 
-enum class FeedMode { GLOBAL, FOLLOWING, HASHTAGS, TRENDING }
+enum class FeedMode { GLOBAL, FOLLOWING, HASHTAGS, TRENDING, LIVE }
 
 @Composable
 fun App() {
@@ -519,6 +541,71 @@ private fun MainScreen(
                     snackbarHostState.showSnackbar("#$hashtag unfollowed")
                 } catch (e: Exception) {
                     snackbarHostState.showSnackbar("Failed to unfollow hashtag")
+                }
+            }
+        }
+    }
+
+    // ── Community join state (NIP-72 kind 10004) ──
+    var communityListState by remember { mutableStateOf<CommunityListEvent?>(null) }
+    var joinedCommunityIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+
+    // Load community list from cache on start
+    LaunchedEffect(account.pubKeyHex) {
+        val address = CommunityListEvent.createAddress(account.pubKeyHex)
+        val cachedNote = localCache.getOrCreateAddressableNote(address)
+        val cachedEvent = cachedNote.event as? CommunityListEvent
+        if (cachedEvent != null) {
+            communityListState = cachedEvent
+            joinedCommunityIds = cachedEvent.publicCommunityIds().toSet()
+        }
+    }
+
+    val onJoinCommunity: (String) -> Unit = { communityAddressId ->
+        if (!account.isReadOnly) {
+            scope.launch {
+                try {
+                    val tag =
+                        CommunityTag(
+                            com.vitorpamplona.quartz.nip01Core.core.Address
+                                .parse(communityAddressId) ?: return@launch,
+                        )
+                    val newList =
+                        if (communityListState != null) {
+                            CommunityListEvent.add(communityListState!!, tag, isPrivate = false, signer = account.signer)
+                        } else {
+                            CommunityListEvent.create(tag, isPrivate = false, signer = account.signer)
+                        }
+                    communityListState = newList
+                    joinedCommunityIds = newList.publicCommunityIds().toSet()
+                    localCache.consume(newList, null)
+                    relayManager.broadcastToAll(newList)
+                    snackbarHostState.showSnackbar("Joined community!")
+                } catch (e: Exception) {
+                    snackbarHostState.showSnackbar("Failed to join community")
+                }
+            }
+        }
+    }
+
+    val onLeaveCommunity: (String) -> Unit = { communityAddressId ->
+        if (!account.isReadOnly) {
+            scope.launch {
+                try {
+                    val existing = communityListState ?: return@launch
+                    val tag =
+                        CommunityTag(
+                            com.vitorpamplona.quartz.nip01Core.core.Address
+                                .parse(communityAddressId) ?: return@launch,
+                        )
+                    val newList = CommunityListEvent.remove(existing, tag, signer = account.signer)
+                    communityListState = newList
+                    joinedCommunityIds = newList.publicCommunityIds().toSet()
+                    localCache.consume(newList, null)
+                    relayManager.broadcastToAll(newList)
+                    snackbarHostState.showSnackbar("Left community")
+                } catch (e: Exception) {
+                    snackbarHostState.showSnackbar("Failed to leave community")
                 }
             }
         }
@@ -886,6 +973,8 @@ private fun MainScreen(
                         onNavigateToProfile = { navigateTo(Screen.Profile(it)) },
                         onNavigateToThread = { navigateTo(Screen.Thread(it)) },
                         onNavigateToArticle = { navigateTo(Screen.Article(it)) },
+                        onNavigateToCommunities = { navigateTo(Screen.Communities) },
+                        onNavigateToLiveActivity = { navigateTo(Screen.LiveActivity(it)) },
                         onBoost = onBoostNote,
                         onLike = onLikeNote,
                         onZap = onZapNote,
@@ -1001,6 +1090,7 @@ private fun MainScreen(
                         onBookmarks = { navigateTo(Screen.Bookmarks) },
                         onMuteList = { navigateTo(Screen.MuteList) },
                         onHashtagFollow = { navigateTo(Screen.HashtagFollow) },
+                        onCommunities = { navigateTo(Screen.Communities) },
                     )
                 }
 
@@ -1170,6 +1260,82 @@ private fun MainScreen(
                         }
                     }
                 }
+
+                is Screen.Communities -> {
+                    CommunityListScreen(
+                        relayManager = relayManager,
+                        localCache = localCache,
+                        coordinator = coordinator,
+                        joinedCommunityIds = joinedCommunityIds,
+                        onNavigateToCommunity = { navigateTo(Screen.CommunityDetail(it)) },
+                        onBack = { goBack() },
+                    )
+                }
+
+                is Screen.CommunityDetail -> {
+                    CommunityDetailScreen(
+                        communityAddressId = screen.communityAddressId,
+                        relayManager = relayManager,
+                        localCache = localCache,
+                        coordinator = coordinator,
+                        isJoined = screen.communityAddressId in joinedCommunityIds,
+                        isReadOnly = account.isReadOnly,
+                        onJoin = { onJoinCommunity(screen.communityAddressId) },
+                        onLeave = { onLeaveCommunity(screen.communityAddressId) },
+                        onPostToCommunity = { navigateTo(Screen.CommunityPost(screen.communityAddressId)) },
+                        onNavigateToProfile = { navigateTo(Screen.Profile(it)) },
+                        onNavigateToThread = { navigateTo(Screen.Thread(it)) },
+                        onBack = { goBack() },
+                        onBoost = onBoostNote,
+                        onLike = onLikeNote,
+                        onZap = onZapNote,
+                    )
+                }
+
+                is Screen.CommunityPost -> {
+                    ComposeNoteScreen(
+                        account = account,
+                        relayManager = relayManager,
+                        localCache = localCache,
+                        replyToNoteId = null,
+                        initialDraft = composeDraft,
+                        onDraftChanged = { composeDraft = it },
+                        onBack = { goBack() },
+                        onPublished = {
+                            composeDraft = ""
+                            goBack()
+                        },
+                    )
+                }
+
+                is Screen.LiveActivity -> {
+                    val note = localCache.getNoteIfExists(screen.noteId)
+                    val activityData = note?.toLiveActivityDisplayData(localCache)
+                    if (activityData != null) {
+                        LiveActivityDetailScreen(
+                            activity = activityData,
+                            onBack = { goBack() },
+                            onHostClick = { navigateTo(Screen.Profile(it)) },
+                        )
+                    } else {
+                        Column {
+                            androidx.compose.material3.TopAppBar(
+                                title = { Text("Live Activity") },
+                                navigationIcon = {
+                                    IconButton(onClick = { goBack() }) {
+                                        Icon(
+                                            imageVector = Icons.Default.ArrowBack,
+                                            contentDescription = "Back",
+                                        )
+                                    }
+                                },
+                            )
+                            com.vitorpamplona.amethyst.commons.ui.components.EmptyState(
+                                title = "Live activity not found",
+                            )
+                        }
+                    }
+                }
             }
         }
     }
@@ -1187,6 +1353,8 @@ private fun IosFeedContent(
     onNavigateToProfile: (String) -> Unit,
     onNavigateToThread: (String) -> Unit,
     onNavigateToArticle: ((String) -> Unit)? = null,
+    onNavigateToCommunities: (() -> Unit)? = null,
+    onNavigateToLiveActivity: ((String) -> Unit)? = null,
     onBoost: ((String) -> Unit)? = null,
     onLike: ((String) -> Unit)? = null,
     onZap: ((String) -> Unit)? = null,
@@ -1270,6 +1438,15 @@ private fun IosFeedContent(
                     onEvent = { event, _, relay, _ -> coordinator.consumeEvent(event, relay) },
                 )
             }
+
+            FeedMode.LIVE -> {
+                SubscriptionConfig(
+                    subId = generateSubId("live-activities"),
+                    filters = listOf(FilterBuilders.liveActivities(limit = 100)),
+                    relays = allRelayUrls,
+                    onEvent = { event, _, relay, _ -> coordinator.consumeEvent(event, relay) },
+                )
+            }
         }
     }
 
@@ -1278,10 +1455,26 @@ private fun IosFeedContent(
         remember(feedMode, followedHashtags) {
             val filter =
                 when (feedMode) {
-                    FeedMode.GLOBAL -> IosGlobalFeedFilter(localCache)
-                    FeedMode.FOLLOWING -> IosFollowingFeedFilter(localCache) { localCache.followedUsers.value }
-                    FeedMode.HASHTAGS -> IosFollowedHashtagsFeedFilter(localCache) { followedHashtags }
-                    FeedMode.TRENDING -> IosTrendingFeedFilter(localCache)
+                    FeedMode.GLOBAL -> {
+                        IosGlobalFeedFilter(localCache)
+                    }
+
+                    FeedMode.FOLLOWING -> {
+                        IosFollowingFeedFilter(localCache) { localCache.followedUsers.value }
+                    }
+
+                    FeedMode.HASHTAGS -> {
+                        IosFollowedHashtagsFeedFilter(localCache) { followedHashtags }
+                    }
+
+                    FeedMode.TRENDING -> {
+                        IosTrendingFeedFilter(localCache)
+                    }
+
+                    FeedMode.LIVE -> {
+                        com.vitorpamplona.amethyst.ios.feeds
+                            .IosLiveActivitiesFeedFilter(localCache)
+                    }
                 }
             IosFeedViewModel(filter, localCache)
         }
@@ -1344,6 +1537,7 @@ private fun IosFeedContent(
                     FeedMode.FOLLOWING -> "Following"
                     FeedMode.HASHTAGS -> "Hashtags"
                     FeedMode.TRENDING -> "Trending"
+                    FeedMode.LIVE -> "Live"
                 },
             connectedRelayCount = connectedRelays.size,
             onRefresh = { relayManager.connect() },
@@ -1367,6 +1561,7 @@ private fun IosFeedContent(
                                 FeedMode.FOLLOWING -> "Following"
                                 FeedMode.HASHTAGS -> "#Tags"
                                 FeedMode.TRENDING -> "🔥 Trending"
+                                FeedMode.LIVE -> "🔴 Live"
                             },
                             style = MaterialTheme.typography.labelMedium,
                         )
@@ -1391,6 +1586,7 @@ private fun IosFeedContent(
                             FeedMode.FOLLOWING -> "No notes from followed users"
                             FeedMode.HASHTAGS -> if (followedHashtags.isEmpty()) "No followed hashtags" else "No notes with your hashtags yet"
                             FeedMode.TRENDING -> "No trending notes yet"
+                            FeedMode.LIVE -> "No live activities found"
                             else -> "No notes found"
                         },
                     description =
@@ -1421,7 +1617,16 @@ private fun IosFeedContent(
                         val event = note.event ?: return@items
                         if (event.pubKey in mutedUserPubKeys) return@items
 
-                        if (event is LongTextNoteEvent) {
+                        if (event is LiveActivitiesEvent) {
+                            val activityData = note.toLiveActivityDisplayData(localCache)
+                            if (activityData != null) {
+                                LiveActivityCard(
+                                    activity = activityData,
+                                    onClick = { onNavigateToLiveActivity?.invoke(event.id) },
+                                    onHostClick = onNavigateToProfile,
+                                )
+                            }
+                        } else if (event is LongTextNoteEvent) {
                             val articleData = note.toArticleDisplayData(localCache)
                             if (articleData != null) {
                                 ArticleCard(
