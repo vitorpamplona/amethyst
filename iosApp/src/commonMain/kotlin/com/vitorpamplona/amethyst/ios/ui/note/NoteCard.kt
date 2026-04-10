@@ -50,10 +50,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
+import com.vitorpamplona.amethyst.ios.cache.IosLocalCache
 import com.vitorpamplona.amethyst.ios.translation.TranslateButton
 import com.vitorpamplona.amethyst.ios.ui.NoteDisplayData
 import com.vitorpamplona.amethyst.ios.ui.media.RichNoteContent
+import com.vitorpamplona.amethyst.ios.ui.reactions.ReactionCountsRow
+import com.vitorpamplona.amethyst.ios.ui.reactions.ReactionDisplay
 import com.vitorpamplona.amethyst.ios.util.toTimeAgo
 
 /**
@@ -71,6 +75,9 @@ fun NoteCard(
     onZap: ((String) -> Unit)? = null,
     onBookmark: ((String) -> Unit)? = null,
     isBookmarked: Boolean = false,
+    user: User? = null,
+    localCache: IosLocalCache? = null,
+    reactions: List<ReactionDisplay> = emptyList(),
     onCopyNoteId: ((String) -> Unit)? = null,
     onCopyNoteText: ((String) -> Unit)? = null,
     onCopyAuthorNpub: ((String) -> Unit)? = null,
@@ -117,12 +124,15 @@ fun NoteCard(
 
                     Spacer(Modifier.width(8.dp))
 
-                    Text(
-                        text = note.pubKeyDisplay.take(20) + if (note.pubKeyDisplay.length > 20) "..." else "",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        maxLines = 1,
-                    )
+                    Column {
+                        Text(
+                            text = note.pubKeyDisplay.take(20) + if (note.pubKeyDisplay.length > 20) "..." else "",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            maxLines = 1,
+                        )
+                        // TODO: NIP-05 verification badge (needs async HTTP)
+                    }
                 }
 
                 Row(
@@ -159,6 +169,12 @@ fun NoteCard(
             }
 
             Spacer(Modifier.height(8.dp))
+
+            // Custom emoji reaction counts
+            if (reactions.isNotEmpty()) {
+                ReactionCountsRow(reactions = reactions)
+                Spacer(Modifier.height(4.dp))
+            }
 
             HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
 

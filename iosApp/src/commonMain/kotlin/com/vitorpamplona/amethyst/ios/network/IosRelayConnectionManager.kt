@@ -218,6 +218,21 @@ class IosRelayConnectionManager : RelayConnectionListener {
         publish(event, connected)
     }
 
+    /**
+     * Send an event to a specific relay (e.g. for NWC communication).
+     * If the relay is not currently connected, attempts to add and connect to it.
+     */
+    fun sendToRelay(
+        relay: NormalizedRelayUrl,
+        event: Event,
+    ) {
+        if (relay !in connectedRelays.value) {
+            addRelay(relay.url)
+            connect()
+        }
+        publish(event, setOf(relay))
+    }
+
     /** Returns only the relays that have write enabled. */
     fun writeRelays(): Set<NormalizedRelayUrl> =
         _relayStatuses.value.entries

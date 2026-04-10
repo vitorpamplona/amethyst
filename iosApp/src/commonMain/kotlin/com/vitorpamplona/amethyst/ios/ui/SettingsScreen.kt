@@ -87,6 +87,7 @@ import com.vitorpamplona.amethyst.ios.network.DefaultRelays
 import com.vitorpamplona.amethyst.ios.network.IosRelayConnectionManager
 import com.vitorpamplona.amethyst.ios.network.RelayConnectionState
 import com.vitorpamplona.amethyst.ios.network.RelayStatus
+import com.vitorpamplona.amethyst.ios.nwc.NwcSettingsSection
 import com.vitorpamplona.amethyst.ios.ui.qr.QrCodeDisplay
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
@@ -386,6 +387,13 @@ fun SettingsScreen(
 
                 KeyBackupSection(keyPair = keyPair)
             }
+
+            Spacer(Modifier.height(16.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            Spacer(Modifier.height(16.dp))
+
+            // ── Wallet Connect (NWC) Section ──
+            NwcSettingsSection()
 
             Spacer(Modifier.height(16.dp))
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)

@@ -90,6 +90,9 @@ import com.vitorpamplona.amethyst.ios.feeds.IosThreadFilter
 import com.vitorpamplona.amethyst.ios.feeds.IosTrendingFeedFilter
 import com.vitorpamplona.amethyst.ios.model.IosIAccount
 import com.vitorpamplona.amethyst.ios.network.IosRelayConnectionManager
+import com.vitorpamplona.amethyst.ios.nwc.NwcSettings
+import com.vitorpamplona.amethyst.ios.nwc.ZapAmountDialog
+import com.vitorpamplona.amethyst.ios.nwc.ZapController
 import com.vitorpamplona.amethyst.ios.settings.AmethystTheme
 import com.vitorpamplona.amethyst.ios.settings.AppSettings
 import com.vitorpamplona.amethyst.ios.settings.NoteDensity
@@ -136,6 +139,7 @@ import com.vitorpamplona.amethyst.ios.ui.note.UserStatusDot
 import com.vitorpamplona.amethyst.ios.ui.notifications.IosNotificationScreen
 import com.vitorpamplona.amethyst.ios.ui.polls.PollCard
 import com.vitorpamplona.amethyst.ios.ui.polls.toPollDisplayData
+import com.vitorpamplona.amethyst.ios.ui.reactions.EmojiReactionPickerDialog
 import com.vitorpamplona.amethyst.ios.ui.search.IosSearchScreen
 import com.vitorpamplona.amethyst.ios.ui.toArticleDisplayData
 import com.vitorpamplona.amethyst.ios.ui.toNoteDisplayData
@@ -431,10 +435,27 @@ private fun MainScreen(
         }
     }
 
-    val onZapNote: (String) -> Unit = { _ ->
-        scope.launch {
-            snackbarHostState.showSnackbar("\u26A1 Zaps coming soon!")
+    // ── Zap state ──
+    var showZapDialog by remember { mutableStateOf<String?>(null) }
+    var zapSending by remember { mutableStateOf(false) }
+    var zapError by remember { mutableStateOf<String?>(null) }
+
+    val onZapNote: (String) -> Unit = { noteId ->
+        if (!NwcSettings.isConfigured()) {
+            scope.launch {
+                snackbarHostState.showSnackbar("⚡ Set up Wallet Connect in Settings to send zaps")
+            }
+        } else {
+            showZapDialog = noteId
+            zapError = null
         }
+    }
+
+    // ── Custom emoji reaction state ──
+    var showEmojiPicker by remember { mutableStateOf<String?>(null) }
+
+    val onLikeNoteLongPress: (String) -> Unit = { noteId ->
+        showEmojiPicker = noteId
     }
 
     // ── Mute state ──
@@ -919,6 +940,65 @@ private fun MainScreen(
                 reportTargetPubKey = null
             },
             onReport = onSubmitReport,
+        )
+    }
+
+    // ── Zap Amount Dialog (NIP-47 NWC) ──
+    showZapDialog?.let { noteId ->
+        ZapAmountDialog(
+            noteId = noteId,
+            isSending = zapSending,
+            errorMessage = zapError,
+            onDismiss = {
+                showZapDialog = null
+                zapSending = false
+                zapError = null
+            },
+            onZap = { id, amountSats ->
+                zapSending = true
+                zapError = null
+                scope.launch {
+                    val controller = ZapController(account.signer, relayManager, localCache)
+                    val result = controller.zap(id, amountSats)
+                    result.fold(
+                        onSuccess = { msg ->
+                            showZapDialog = null
+                            zapSending = false
+                            snackbarHostState.showSnackbar("⚡ $msg")
+                        },
+                        onFailure = { err ->
+                            zapSending = false
+                            zapError = err.message ?: "Zap failed"
+                        },
+                    )
+                }
+            },
+        )
+    }
+
+    // ── Custom Emoji Reaction Picker (NIP-30) ──
+    showEmojiPicker?.let { noteId ->
+        EmojiReactionPickerDialog(
+            customEmojis = emptyList(), // TODO: load from followed emoji packs
+            onSelect = { content, customEmoji ->
+                showEmojiPicker = null
+                scope.launch {
+                    val note = localCache.getNoteIfExists(noteId)
+                    val event = note?.event
+                    if (event != null) {
+                        val template =
+                            if (customEmoji != null) {
+                                ReactionEvent.build(customEmoji, EventHintBundle(event, null, null))
+                            } else {
+                                ReactionEvent.build(content, EventHintBundle(event, null, null))
+                            }
+                        val signed = account.signer.sign(template)
+                        relayManager.broadcastToAll(signed)
+                        snackbarHostState.showSnackbar("❤️ Reacted!")
+                    }
+                }
+            },
+            onDismiss = { showEmojiPicker = null },
         )
     }
 
