@@ -25,7 +25,7 @@ import kotlin.math.PI
 import kotlin.math.cos
 
 object CosineCache {
-    // cache Math.cos() calculations to improve performance.
+    // cache kotlin.math.cos() calculations to improve performance.
     // The number of calculations can be huge for many bitmaps: width * height * numCompX * numCompY *
     // 2 * nBitmaps
     // the cache is enabled by default, it is recommended to disable it only when just a few images

@@ -19,6 +19,9 @@ kotlin {
         }
     }
 
+    iosArm64()
+    iosSimulatorArm64()
+
     android {
         namespace = "com.vitorpamplona.amethyst.commons"
         compileSdk =
@@ -56,13 +59,8 @@ kotlin {
                 implementation(libs.jetbrains.compose.material.icons.extended)
                 implementation(libs.jetbrains.compose.ui.tooling.preview)
 
-                // Lifecycle ViewModel (KMP since 2.8.0)
-                implementation(libs.androidx.lifecycle.viewmodel.compose)
-                implementation(libs.androidx.lifecycle.runtime.compose)
-
                 // Image loading (Coil 3 - KMP)
                 implementation(libs.coil.compose)
-                implementation(libs.coil.okhttp)
 
                 // LruCache (KMP-ready)
                 implementation(libs.androidx.collection)
@@ -73,10 +71,7 @@ kotlin {
                 // Compose Multiplatform Resources
                 implementation(libs.jetbrains.compose.components.resources)
 
-                // Markdown rendering (richtext-commonmark)
-                implementation(libs.markdown.commonmark)
-                implementation(libs.markdown.ui)
-                implementation(libs.markdown.ui.material3)
+                // Markdown rendering — JitPack libs are JVM-only, moved to jvmAndroid
             }
         }
 
@@ -92,6 +87,17 @@ kotlin {
             create("jvmAndroid") {
                 dependsOn(commonMain.get())
                 dependencies {
+                    // Lifecycle ViewModel (Android/JVM only via Google artifact)
+                    implementation(libs.androidx.lifecycle.viewmodel.compose)
+                    implementation(libs.androidx.lifecycle.runtime.compose)
+
+                    // Image loading via OkHttp (JVM-only)
+                    implementation(libs.coil.okhttp)
+
+                    // Markdown rendering (richtext-commonmark) — JitPack, JVM-only
+                    implementation(libs.markdown.commonmark)
+                    implementation(libs.markdown.ui)
+                    implementation(libs.markdown.ui.material3)
                 }
             }
 
@@ -134,6 +140,19 @@ kotlin {
                 implementation(libs.androidx.espresso.core)
             }
         }
+
+        // iOS source sets
+        val iosMain = create("iosMain") {
+            dependsOn(commonMain.get())
+            dependencies {
+                // Image loading via Ktor for iOS
+                implementation("io.coil-kt.coil3:coil-network-ktor3:${libs.versions.coil.get()}")
+                implementation("io.ktor:ktor-client-darwin:3.1.3")
+            }
+        }
+
+        val iosArm64Main by getting { dependsOn(iosMain) }
+        val iosSimulatorArm64Main by getting { dependsOn(iosMain) }
     }
 }
 

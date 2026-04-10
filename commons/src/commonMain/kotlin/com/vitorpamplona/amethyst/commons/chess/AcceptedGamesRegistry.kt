@@ -32,25 +32,25 @@ object AcceptedGamesRegistry {
     private val lock = Any()
 
     fun markAsAccepted(gameId: String) {
-        synchronized(lock) {
+        com.vitorpamplona.quartz.utils.kmpSynchronized(lock) {
             acceptedGameIds.add(gameId)
         }
     }
 
     fun wasAccepted(gameId: String): Boolean =
-        synchronized(lock) {
+        com.vitorpamplona.quartz.utils.kmpSynchronized(lock) {
             acceptedGameIds.contains(gameId)
         }
 
     fun clear() {
-        synchronized(lock) {
+        com.vitorpamplona.quartz.utils.kmpSynchronized(lock) {
             acceptedGameIds.clear()
         }
     }
 
     /** Remove old entries - call periodically to prevent memory leak */
     fun clearOldEntries(keepGameIds: Set<String>) {
-        synchronized(lock) {
+        com.vitorpamplona.quartz.utils.kmpSynchronized(lock) {
             acceptedGameIds.retainAll(keepGameIds)
         }
     }

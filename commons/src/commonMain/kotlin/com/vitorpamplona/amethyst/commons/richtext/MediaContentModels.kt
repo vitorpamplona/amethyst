@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.commons.richtext
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
-import java.io.File
+
 
 @Immutable
 abstract class BaseMediaContent(
@@ -101,7 +101,7 @@ class EncryptedMediaUrlVideo(
 
 @Immutable
 abstract class MediaPreloadedContent(
-    val localFile: File?,
+    val localFile: Any?,
     description: String? = null,
     val mimeType: String? = null,
     val isVerified: Boolean? = null,
@@ -110,12 +110,13 @@ abstract class MediaPreloadedContent(
     val uri: String,
     val id: String? = null,
 ) : BaseMediaContent(description, dim, blurhash) {
-    fun localFileExists() = localFile != null && localFile.exists()
+    fun localFileExists() = localFile != null
+
 }
 
 @Immutable
 class MediaLocalImage(
-    localFile: File?,
+    localFile: Any?,
     mimeType: String? = null,
     description: String? = null,
     dim: DimensionTag? = null,
@@ -126,7 +127,7 @@ class MediaLocalImage(
 
 @Immutable
 class MediaLocalVideo(
-    localFile: File?,
+    localFile: Any?,
     mimeType: String? = null,
     description: String? = null,
     dim: DimensionTag? = null,

@@ -29,7 +29,7 @@ import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import java.util.concurrent.ConcurrentHashMap
+
 
 /**
  * Collects and aggregates Jester chess events for a game from any source.
@@ -68,10 +68,10 @@ class ChessEventCollector(
     val startEvent: StateFlow<JesterEvent?> = _startEvent.asStateFlow()
 
     // Move events (deduplicated by event ID)
-    private val moves = ConcurrentHashMap<String, JesterEvent>()
+    private val moves = HashMap<String, JesterEvent>()
 
     // Track all processed event IDs for fast deduplication
-    private val processedEventIds = ConcurrentHashMap.newKeySet<String>()
+    private val processedEventIds = mutableSetOf<String>()
 
     // Flow that emits when any event is added (for reactive updates)
     private val _eventCount = MutableStateFlow(0)
@@ -153,7 +153,7 @@ class ChessEventCollector(
         if (!event.isMoveEvent()) return false
         if (event.startEventId() != startEventId) return false
 
-        if (moves.putIfAbsent(event.id, event) == null) {
+        if (!moves.containsKey(event.id)) { moves[event.id] = event
             processedEventIds.add(event.id)
             incrementEventCount()
             Log.d("chessdebug") { "[Collector] MOVE event added: id=${event.id.take(8)}, pubkey=${event.pubKey.take(8)}, move=${event.move()}, historySize=${event.history().size}, fen=${event.fen()?.take(30)}, result=${event.result()}, totalMoves=${moves.size}" }
@@ -218,7 +218,7 @@ class ChessEventCollector(
  * such as in a chess lobby or when spectating multiple games.
  */
 class ChessEventCollectorManager {
-    private val collectors = ConcurrentHashMap<String, ChessEventCollector>()
+    private val collectors = HashMap<String, ChessEventCollector>()
 
     /**
      * Get or create a collector for a game.

@@ -20,19 +20,21 @@
  */
 package com.vitorpamplona.amethyst.commons.richtext
 
-import java.util.Base64
+import kotlin.io.encoding.Base64
+import kotlin.io.encoding.ExperimentalEncodingApi
 
 object Base64Image {
     val pattern = Patterns.BASE64_IMAGE
 
     fun isBase64(content: String): Boolean = Patterns.BASE64_IMAGE.matches(content)
 
+    @OptIn(ExperimentalEncodingApi::class)
     fun parse(content: String): ByteArray {
         val matcher = pattern.find(content)
         if (matcher != null) {
             val base64String = matcher.groups[2]?.value
-            val byteArray = Base64.getDecoder().decode(base64String)
-            return byteArray
+                ?: throw Exception("Unable to extract base64 data from $content")
+            return Base64.decode(base64String)
         }
 
         throw Exception("Unable to convert base64 to image $content")

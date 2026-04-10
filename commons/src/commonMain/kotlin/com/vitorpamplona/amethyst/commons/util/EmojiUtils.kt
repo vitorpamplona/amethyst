@@ -23,7 +23,13 @@ package com.vitorpamplona.amethyst.commons.util
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 
-fun String.isUTF16Char(pos: Int): Boolean = Character.charCount(this.codePointAt(pos)) == 2
+/** Advances from char index [index] by one code point. */
+private fun String.offsetByOneCodePoint(index: Int): Int {
+    val cp = codePointAt(index)
+    return index + charCountForCodePoint(cp)
+}
+
+fun String.isUTF16Char(pos: Int): Boolean = charCountForCodePoint(codePointAt(pos)) == 2
 
 fun String.firstFullCharOld(): String {
     return when (this.length) {
@@ -58,7 +64,7 @@ fun String.firstFullChar(): String {
     var hasHadSecondChance = false
     var start = 0
     var previousCharLength = 0
-    var next: Int
+    var next: Int = 0
     var codePoint: Int
 
     var i = 0
@@ -68,7 +74,7 @@ fun String.firstFullChar(): String {
 
         // Skips if it starts with the join char 0x200D
         if (codePoint == 0x200D && previousCharLength == 0) {
-            next = offsetByCodePoints(i, 1)
+            next = offsetByOneCodePoint(i)
             start = next
         } else {
             // If join, searches for the next char
@@ -78,7 +84,7 @@ fun String.firstFullChar(): String {
             } else {
                 // stops when two chars are not joined together
                 if (previousCharLength > 0 && !isInJoin) {
-                    if (Character.charCount(codePoint) == 1 || hasHadSecondChance) {
+                    if (charCountForCodePoint(codePoint) == 1 || hasHadSecondChance) {
                         break
                     } else {
                         hasHadSecondChance = true
@@ -91,7 +97,7 @@ fun String.firstFullChar(): String {
             }
 
             // next char to evaluate
-            next = offsetByCodePoints(i, 1)
+            next = offsetByOneCodePoint(i)
             previousCharLength += (next - i)
         }
 

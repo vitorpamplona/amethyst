@@ -20,6 +20,10 @@
  */
 package com.vitorpamplona.amethyst.commons.emojicoder
 
+import com.vitorpamplona.amethyst.commons.util.charCountForCodePoint
+import com.vitorpamplona.amethyst.commons.util.codePointAt
+import com.vitorpamplona.amethyst.commons.util.codePointToChars
+
 object EmojiCoder {
     // Variation selectors block https://unicode.org/charts/nameslist/n_FE00.html
     // VS1..=VS16
@@ -35,8 +39,8 @@ object EmojiCoder {
         Array<CharArray>(256) {
             // converts to UTF-16. Always char[2] back
             when (it) {
-                in 0..15 -> Character.toChars(VARIATION_SELECTOR_START + it)
-                in 16..255 -> Character.toChars(VARIATION_SELECTOR_SUPPLEMENT_START + it - 16)
+                in 0..15 -> codePointToChars(VARIATION_SELECTOR_START + it)
+                in 16..255 -> codePointToChars(VARIATION_SELECTOR_SUPPLEMENT_START + it - 16)
                 else -> throw RuntimeException("This should never happen")
             }
         }
@@ -70,7 +74,7 @@ object EmojiCoder {
         emoji: String,
         text: String,
     ): String {
-        val input = text.toByteArray(Charsets.UTF_8)
+        val input = text.encodeToByteArray()
         val out = CharArray(input.size * 2)
         var outIdx = 0
         for (i in 0 until input.size) {
@@ -78,7 +82,7 @@ object EmojiCoder {
             out[outIdx++] = chars[0]
             out[outIdx++] = chars[1]
         }
-        return emoji + String(out)
+        return emoji + out.concatToString().substring(0, outIdx)
     }
 
     fun decode(text: String): String {
@@ -92,16 +96,16 @@ object EmojiCoder {
             if (byte == null && decoded.isNotEmpty()) {
                 break
             } else if (byte == null) {
-                i += Character.charCount(codePoint) // Advance index by correct number of chars
+                i += charCountForCodePoint(codePoint) // Advance index by correct number of chars
                 continue
             }
 
             decoded.add(byte)
-            i += Character.charCount(codePoint) // Advance index by correct number of chars
+            i += charCountForCodePoint(codePoint) // Advance index by correct number of chars
         }
 
         val decodedArray = ByteArray(decoded.size) { decoded[it].toByte() }
-        return String(decodedArray, Charsets.UTF_8)
+        return decodedArray.decodeToString()
     }
 
     fun cropToFirstMessage(text: String): String {
@@ -115,12 +119,12 @@ object EmojiCoder {
             if (byte == null && decoded.isNotEmpty()) {
                 break
             } else if (byte == null) {
-                i += Character.charCount(codePoint) // Advance index by correct number of chars
+                i += charCountForCodePoint(codePoint) // Advance index by correct number of chars
                 continue
             }
 
             decoded.add(byte)
-            i += Character.charCount(codePoint) // Advance index by correct number of chars
+            i += charCountForCodePoint(codePoint) // Advance index by correct number of chars
         }
 
         return text.substring(0, i)

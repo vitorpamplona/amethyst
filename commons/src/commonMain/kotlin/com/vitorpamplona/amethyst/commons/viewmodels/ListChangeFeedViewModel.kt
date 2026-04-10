@@ -48,10 +48,10 @@ abstract class ListChangeFeedViewModel(
     init {
         Log.d("Init") { "Starting new Model: ${this::class.simpleName}" }
         // Trigger initial load so empty rooms show Empty instead of Loading
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers.Default) {
             feedState.invalidateData(ignoreIfDoing = false)
         }
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers.Default) {
             localFilter.changesFlow().collect {
                 Log.d("Init") { "Collecting changes to: ${this@ListChangeFeedViewModel::class.simpleName}" }
                 when (it) {

@@ -27,7 +27,7 @@ import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import java.lang.ref.WeakReference
+
 
 @Stable
 abstract class Channel : NotesGatherer {
@@ -41,13 +41,13 @@ abstract class Channel : NotesGatherer {
 
     private var relays = mapOf<NormalizedRelayUrl, Counter>()
 
-    private var changesFlow: WeakReference<MutableSharedFlow<ListChange<Note>>> = WeakReference(null)
+    private var changesFlow: MutableSharedFlow<ListChange<Note>>? = null
 
     fun changesFlow(): MutableSharedFlow<ListChange<Note>> {
-        val current = changesFlow.get()
+        val current = changesFlow
         if (current != null) return current
         val new = MutableSharedFlow<ListChange<Note>>(0, 10, BufferOverflow.DROP_OLDEST)
-        changesFlow = WeakReference(new)
+        changesFlow = new
         return new
     }
 
@@ -65,17 +65,17 @@ abstract class Channel : NotesGatherer {
 
     open fun relays(): Set<NormalizedRelayUrl> =
         relays.keys
-            .toSortedSet { o1, o2 ->
+            .sortedWith(Comparator { o1, o2 ->
                 val o1Count = relays[o1]?.number ?: 0
                 val o2Count = relays[o2]?.number ?: 0
                 o2Count.compareTo(o1Count) // descending
-            }
+            }).toSet()
 
     fun updateChannelInfo() {
         flowSet?.metadata?.invalidateData()
     }
 
-    @Synchronized
+    
     fun addRelaySync(briefInfo: NormalizedRelayUrl) {
         if (briefInfo !in relays) {
             relays = relays + Pair(briefInfo, Counter(1))
@@ -107,7 +107,7 @@ abstract class Channel : NotesGatherer {
                 addRelay(relay)
             }
 
-            changesFlow.get()?.tryEmit(ListChange.Addition(note))
+            changesFlow?.tryEmit(ListChange.Addition(note))
 
             flowSet?.notes?.invalidateData()
         }
@@ -122,7 +122,7 @@ abstract class Channel : NotesGatherer {
                 lastNote = notes.values().sortedWith(DefaultFeedOrder).firstOrNull()
             }
 
-            changesFlow.get()?.tryEmit(ListChange.Deletion(note))
+            changesFlow?.tryEmit(ListChange.Deletion(note))
 
             flowSet?.notes?.invalidateData()
         }
@@ -140,7 +140,7 @@ abstract class Channel : NotesGatherer {
 
         toBeRemoved.forEach { notes.remove(it.idHex) }
 
-        changesFlow.get()?.tryEmit(ListChange.SetDeletion(toBeRemoved.toSet()))
+        changesFlow?.tryEmit(ListChange.SetDeletion(toBeRemoved.toSet()))
 
         flowSet?.notes?.invalidateData()
 
@@ -156,7 +156,7 @@ abstract class Channel : NotesGatherer {
 
         hidden.forEach { notes.remove(it.idHex) }
 
-        changesFlow.get()?.tryEmit(ListChange.SetDeletion(hidden))
+        changesFlow?.tryEmit(ListChange.SetDeletion(hidden))
 
         flowSet?.notes?.invalidateData()
 
@@ -165,7 +165,7 @@ abstract class Channel : NotesGatherer {
 
     var flowSet: ChannelFlowSet? = null
 
-    @Synchronized
+    
     fun createOrDestroyFlowSync(create: Boolean) {
         if (create) {
             if (flowSet == null) {

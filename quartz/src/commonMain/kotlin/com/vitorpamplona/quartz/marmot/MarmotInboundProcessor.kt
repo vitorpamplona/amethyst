@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.quartz.marmot
 
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRotationManager
 import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.CommitOrdering
@@ -126,7 +128,7 @@ class MarmotInboundProcessor(
     private val keyPackageRotationManager: KeyPackageRotationManager,
 ) {
     private val commitTracker = CommitOrdering.EpochCommitTracker()
-    private val processedIdsLock = Any()
+    private val processedIdsMutex = kotlinx.coroutines.sync.Mutex()
     private val processedEventIds = LinkedHashSet<String>()
 
     companion object {
@@ -156,11 +158,12 @@ class MarmotInboundProcessor(
     suspend fun processGroupEvent(groupEvent: GroupEvent): GroupEventResult {
         // Deduplicate already-processed events (thread-safe)
         val eventId = groupEvent.id
-        synchronized(processedIdsLock) {
-            if (eventId in processedEventIds) {
-                val gId = groupEvent.groupId()
-                return GroupEventResult.Duplicate(gId ?: "")
-            }
+        val isDuplicate = processedIdsMutex.withLock {
+            eventId in processedEventIds
+        }
+        if (isDuplicate) {
+            val gId = groupEvent.groupId()
+            return GroupEventResult.Duplicate(gId ?: "")
         }
 
         val groupId =
@@ -189,7 +192,7 @@ class MarmotInboundProcessor(
             }
 
         // Track ALL processed events for deduplication (including errors to prevent replay DoS)
-        synchronized(processedIdsLock) {
+        processedIdsMutex.withLock {
             processedEventIds.add(eventId)
             // Trim the set if it exceeds the max size
             if (processedEventIds.size > MAX_PROCESSED_IDS) {

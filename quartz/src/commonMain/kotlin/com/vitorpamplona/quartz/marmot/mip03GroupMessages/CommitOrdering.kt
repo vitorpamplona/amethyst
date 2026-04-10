@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.quartz.marmot.mip03GroupMessages
 
+import com.vitorpamplona.quartz.utils.kmpSynchronized
+
 /**
  * Deterministic commit conflict resolution for MLS over Nostr (MIP-03).
  *
@@ -101,7 +103,7 @@ object CommitOrdering {
             groupId: String,
             epoch: Long,
             commit: GroupEvent,
-        ) = synchronized(lock) {
+        ) = kmpSynchronized(lock) {
             val key = GroupEpochKey(groupId, epoch)
             pendingByGroupEpoch.getOrPut(key) { mutableListOf() }.add(commit)
 
@@ -124,7 +126,7 @@ object CommitOrdering {
             groupId: String,
             epoch: Long,
         ): List<GroupEvent> =
-            synchronized(lock) {
+            kmpSynchronized(lock) {
                 pendingByGroupEpoch[GroupEpochKey(groupId, epoch)]?.toList() ?: emptyList()
             }
 
@@ -139,7 +141,7 @@ object CommitOrdering {
             groupId: String,
             epoch: Long,
         ): GroupEvent? =
-            synchronized(lock) {
+            kmpSynchronized(lock) {
                 selectWinner(pendingByGroupEpoch[GroupEpochKey(groupId, epoch)] ?: emptyList())
             }
 
@@ -149,7 +151,7 @@ object CommitOrdering {
         fun clearEpoch(
             groupId: String,
             epoch: Long,
-        ) = synchronized(lock) {
+        ) = kmpSynchronized(lock) {
             pendingByGroupEpoch.remove(GroupEpochKey(groupId, epoch))
         }
 
@@ -157,7 +159,7 @@ object CommitOrdering {
          * Returns all (group, epoch) keys that have pending commits.
          */
         fun pendingGroupEpochs(): Set<GroupEpochKey> =
-            synchronized(lock) {
+            kmpSynchronized(lock) {
                 pendingByGroupEpoch.keys.toSet()
             }
 
@@ -165,7 +167,7 @@ object CommitOrdering {
          * Clears all pending state.
          */
         fun clear() =
-            synchronized(lock) {
+            kmpSynchronized(lock) {
                 pendingByGroupEpoch.clear()
             }
     }

@@ -25,8 +25,8 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import java.util.SortedSet
-import java.util.concurrent.ConcurrentSkipListSet
+
+
 
 /**
  * Creates a list of notes (regular and addressable)
@@ -36,10 +36,10 @@ import java.util.concurrent.ConcurrentSkipListSet
  */
 class NoteListMatchingFilter(
     private val filter: Filter,
-    private val atOnce: (filter: Filter) -> SortedSet<Note>,
+    private val atOnce: (filter: Filter) -> Set<Note>,
     private val update: (List<Note>) -> Unit,
 ) : Observable {
-    var currentResults: ConcurrentSkipListSet<Note> = ConcurrentSkipListSet(CreatedAtIdHexComparator)
+    var currentResults: MutableSet<Note> = mutableListOf<Note>().also { it.sortWith(CreatedAtIdHexComparator) }.toMutableSet()
 
     override fun new(
         event: Event,
@@ -66,7 +66,7 @@ class NoteListMatchingFilter(
     }
 
     fun init() {
-        currentResults = ConcurrentSkipListSet(atOnce(filter))
+        currentResults = atOnce(filter).sortedWith(CreatedAtIdHexComparator).toMutableSet()
         update(currentResults.toList())
     }
 }

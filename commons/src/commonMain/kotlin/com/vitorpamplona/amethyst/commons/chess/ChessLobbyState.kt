@@ -29,7 +29,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import java.util.concurrent.atomic.AtomicLong
+import kotlinx.coroutines.sync.Mutex
+
 
 /**
  * Challenge expiry: 24 hours
@@ -247,7 +248,8 @@ class ChessLobbyState(
 
     // State version counter - increments on every game state update
     // UI can observe this to force recomposition when internal state changes
-    private val stateVersionCounter = AtomicLong(0)
+    
+    private var stateVersionCounter = 0L
     private val _stateVersion = MutableStateFlow(0L)
     val stateVersion: StateFlow<Long> = _stateVersion.asStateFlow()
 
@@ -384,11 +386,11 @@ class ChessLobbyState(
         if (inActiveGames) {
             _activeGames.update { it + (gameId to stateToUse) }
             // Increment version to force UI recomposition even if map equals() returns true
-            val newVersion = stateVersionCounter.incrementAndGet()
+            val newVersion = ++stateVersionCounter
             _stateVersion.value = newVersion
         } else if (inSpectatingGames) {
             _spectatingGames.update { it + (gameId to stateToUse) }
-            val newVersion = stateVersionCounter.incrementAndGet()
+            val newVersion = ++stateVersionCounter
             _stateVersion.value = newVersion
         }
     }

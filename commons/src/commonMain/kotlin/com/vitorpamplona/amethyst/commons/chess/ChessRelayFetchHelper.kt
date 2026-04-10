@@ -28,7 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.withTimeoutOrNull
-import java.util.concurrent.ConcurrentHashMap
+
 
 /**
  * Progress callback for relay fetch operations
@@ -74,10 +74,10 @@ class ChessRelayFetchHelper(
     ): List<Event> {
         if (filters.isEmpty()) return emptyList()
 
-        val events = ConcurrentHashMap<String, Event>()
+        val events = HashMap<String, Event>()
         val relayCount = filters.keys.size
-        val eoseReceived = ConcurrentHashMap.newKeySet<NormalizedRelayUrl>()
-        val relayEventCounts = ConcurrentHashMap<NormalizedRelayUrl, Int>()
+        val eoseReceived = mutableSetOf<NormalizedRelayUrl>()
+        val relayEventCounts = HashMap<NormalizedRelayUrl, Int>()
         val allEose = CompletableDeferred<Unit>()
         val subId = newSubId()
 
@@ -96,7 +96,7 @@ class ChessRelayFetchHelper(
                     forFilters: List<Filter>?,
                 ) {
                     events[event.id] = event
-                    val count = relayEventCounts.compute(relay) { _, v -> (v ?: 0) + 1 } ?: 1
+                    val count = (relayEventCounts[relay] ?: 0) + 1; relayEventCounts[relay] = count
                     onProgress?.invoke(RelayFetchProgress(relay, RelayFetchStatus.RECEIVING, count))
                 }
 

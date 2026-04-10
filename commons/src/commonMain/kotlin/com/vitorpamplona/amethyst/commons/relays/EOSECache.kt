@@ -40,7 +40,7 @@ open class EOSECache<K : Any>(
         relayUrl: NormalizedRelayUrl,
         time: Long,
     ) {
-        synchronized(lock) {
+        com.vitorpamplona.quartz.utils.kmpSynchronized(lock) {
             val relayList = cache[key]
             if (relayList == null) {
                 // Evict oldest if at capacity
@@ -57,7 +57,7 @@ open class EOSECache<K : Any>(
     }
 
     fun since(key: K): SincePerRelayMap? =
-        synchronized(lock) {
+        com.vitorpamplona.quartz.utils.kmpSynchronized(lock) {
             cache[key]?.relayList?.toMutableMap()
         }
 
@@ -68,18 +68,18 @@ open class EOSECache<K : Any>(
     ) = addOrUpdate(key, relayUrl, time)
 
     fun remove(key: K) {
-        synchronized(lock) {
+        com.vitorpamplona.quartz.utils.kmpSynchronized(lock) {
             cache.remove(key)
         }
     }
 
     fun clear() {
-        synchronized(lock) {
+        com.vitorpamplona.quartz.utils.kmpSynchronized(lock) {
             cache.clear()
         }
     }
 
-    fun size(): Int = synchronized(lock) { cache.size }
+    fun size(): Int = com.vitorpamplona.quartz.utils.kmpSynchronized(lock) { cache.size }
 }
 
 /**
@@ -99,7 +99,7 @@ open class EOSETwoLevelCache<K1 : Any, K2 : Any>(
         relayUrl: NormalizedRelayUrl,
         time: Long,
     ) {
-        synchronized(lock) {
+        com.vitorpamplona.quartz.utils.kmpSynchronized(lock) {
             val innerCache = cache[outerKey]
             if (innerCache == null) {
                 // Evict oldest if at capacity
@@ -119,7 +119,7 @@ open class EOSETwoLevelCache<K1 : Any, K2 : Any>(
         outerKey: K1,
         innerKey: K2,
     ): SincePerRelayMap? =
-        synchronized(lock) {
+        com.vitorpamplona.quartz.utils.kmpSynchronized(lock) {
             cache[outerKey]?.since(innerKey)
         }
 
@@ -131,13 +131,13 @@ open class EOSETwoLevelCache<K1 : Any, K2 : Any>(
     ) = addOrUpdate(outerKey, innerKey, relayUrl, time)
 
     fun removeOuter(key: K1) {
-        synchronized(lock) {
+        com.vitorpamplona.quartz.utils.kmpSynchronized(lock) {
             cache.remove(key)
         }
     }
 
     fun clear() {
-        synchronized(lock) {
+        com.vitorpamplona.quartz.utils.kmpSynchronized(lock) {
             cache.clear()
         }
     }
