@@ -28,8 +28,11 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
  */
 object FilterBuilders {
     private val FEED_KINDS = listOf(1, 6, 16)
+    private val FEED_KINDS_WITH_ARTICLES = listOf(1, 6, 16, 30023)
 
     fun textNotesGlobal(limit: Int? = null): Filter = Filter(kinds = FEED_KINDS, limit = limit)
+
+    fun textNotesWithArticlesGlobal(limit: Int? = null): Filter = Filter(kinds = FEED_KINDS_WITH_ARTICLES, limit = limit)
 
     fun textNotesFromAuthors(
         authors: List<String>,
@@ -134,6 +137,23 @@ object FilterBuilders {
      * Fetch the user's NIP-51 hashtag list (kind 10015).
      */
     fun hashtagList(pubKeyHex: String): Filter = Filter(kinds = listOf(10015), authors = listOf(pubKeyHex), limit = 1)
+
+    /**
+     * Long-form articles (NIP-23, kind 30023).
+     */
+    fun longFormArticles(limit: Int? = null): Filter = Filter(kinds = listOf(30023), limit = limit)
+
+    fun longFormArticlesByAuthors(
+        authors: List<String>,
+        limit: Int? = null,
+    ): Filter = Filter(kinds = listOf(30023), authors = authors, limit = limit)
+
+    /**
+     * User status (NIP-38, kind 30315).
+     */
+    fun userStatus(pubKeyHex: String): Filter = Filter(kinds = listOf(30315), authors = listOf(pubKeyHex), limit = 2)
+
+    fun userStatusMultiple(pubKeys: List<String>): Filter = Filter(kinds = listOf(30315), authors = pubKeys)
 }
 
 /**

@@ -232,7 +232,7 @@ fun NoteCard(
                         },
                 )
 
-                // Zap
+                // Zap (with amount display)
                 NoteActionButton(
                     icon = {
                         Text(
@@ -240,7 +240,8 @@ fun NoteCard(
                             fontSize = 16.sp,
                         )
                     },
-                    count = 0,
+                    count = note.zapCount,
+                    label = if (note.zapAmount.signum() > 0) formatZapAmount(note.zapAmount) else null,
                     onClick =
                         if (onZap != null) {
                             { onZap(note.id) }
@@ -281,6 +282,7 @@ fun NoteCard(
 private fun NoteActionButton(
     icon: @Composable () -> Unit,
     count: Int,
+    label: String? = null,
     onClick: (() -> Unit)?,
 ) {
     Row(
@@ -293,7 +295,15 @@ private fun NoteActionButton(
         ) {
             icon()
         }
-        if (count > 0) {
+        if (label != null) {
+            Spacer(Modifier.width(2.dp))
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        } else if (count > 0) {
             Spacer(Modifier.width(2.dp))
             Text(
                 text = count.toString(),
@@ -301,6 +311,30 @@ private fun NoteActionButton(
                 fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+    }
+}
+
+/**
+ * Formats a zap amount in sats for display (e.g. 1000 -> "1k", 1500000 -> "1.5M").
+ */
+private fun formatZapAmount(amount: com.vitorpamplona.quartz.utils.BigDecimal): String {
+    val sats = amount.toString().substringBefore(".").toLongOrNull() ?: 0L
+    return when {
+        sats >= 1_000_000 -> {
+            val whole = sats / 1_000_000
+            val frac = (sats % 1_000_000) / 100_000
+            if (frac == 0L) "${whole}M" else "$whole.${frac}M"
+        }
+
+        sats >= 1_000 -> {
+            val whole = sats / 1_000
+            val frac = (sats % 1_000) / 100
+            if (frac == 0L) "${whole}k" else "$whole.${frac}k"
+        }
+
+        else -> {
+            sats.toString()
         }
     }
 }

@@ -66,6 +66,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontFamily
@@ -106,10 +107,15 @@ import com.vitorpamplona.amethyst.ios.ui.SettingsScreen
 import com.vitorpamplona.amethyst.ios.ui.chats.IosChatScreen
 import com.vitorpamplona.amethyst.ios.ui.chats.IosChatroomListState
 import com.vitorpamplona.amethyst.ios.ui.chats.IosConversationListScreen
+import com.vitorpamplona.amethyst.ios.ui.note.ArticleCard
+import com.vitorpamplona.amethyst.ios.ui.note.ArticleDetailScreen
 import com.vitorpamplona.amethyst.ios.ui.note.NoteCard
 import com.vitorpamplona.amethyst.ios.ui.note.ReportDialog
+import com.vitorpamplona.amethyst.ios.ui.note.UserStatusBadge
+import com.vitorpamplona.amethyst.ios.ui.note.UserStatusDot
 import com.vitorpamplona.amethyst.ios.ui.notifications.IosNotificationScreen
 import com.vitorpamplona.amethyst.ios.ui.search.IosSearchScreen
+import com.vitorpamplona.amethyst.ios.ui.toArticleDisplayData
 import com.vitorpamplona.amethyst.ios.ui.toNoteDisplayData
 import com.vitorpamplona.amethyst.ios.viewmodels.IosFeedViewModel
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArrayOrNull
@@ -124,6 +130,7 @@ import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEven
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
+import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.EventBookmark
@@ -201,6 +208,10 @@ sealed class Screen {
     data object MuteList : Screen()
 
     data object HashtagFollow : Screen()
+
+    data class Article(
+        val noteId: String,
+    ) : Screen()
 }
 
 enum class FeedMode { GLOBAL, FOLLOWING, HASHTAGS, TRENDING }
@@ -874,6 +885,7 @@ private fun MainScreen(
                         followedHashtags = followedHashtags,
                         onNavigateToProfile = { navigateTo(Screen.Profile(it)) },
                         onNavigateToThread = { navigateTo(Screen.Thread(it)) },
+                        onNavigateToArticle = { navigateTo(Screen.Article(it)) },
                         onBoost = onBoostNote,
                         onLike = onLikeNote,
                         onZap = onZapNote,
@@ -1129,6 +1141,35 @@ private fun MainScreen(
                         },
                     )
                 }
+
+                is Screen.Article -> {
+                    val note = localCache.getNoteIfExists(screen.noteId)
+                    val articleData = note?.toArticleDisplayData(localCache)
+                    if (articleData != null) {
+                        ArticleDetailScreen(
+                            article = articleData,
+                            onBack = { goBack() },
+                            onAuthorClick = { navigateTo(Screen.Profile(it)) },
+                        )
+                    } else {
+                        Column {
+                            androidx.compose.material3.TopAppBar(
+                                title = { Text("Article") },
+                                navigationIcon = {
+                                    IconButton(onClick = { goBack() }) {
+                                        Icon(
+                                            imageVector = Icons.Default.ArrowBack,
+                                            contentDescription = "Back",
+                                        )
+                                    }
+                                },
+                            )
+                            com.vitorpamplona.amethyst.commons.ui.components.EmptyState(
+                                title = "Article not found",
+                            )
+                        }
+                    }
+                }
             }
         }
     }
@@ -1145,6 +1186,7 @@ private fun IosFeedContent(
     followedHashtags: Set<String> = emptySet(),
     onNavigateToProfile: (String) -> Unit,
     onNavigateToThread: (String) -> Unit,
+    onNavigateToArticle: ((String) -> Unit)? = null,
     onBoost: ((String) -> Unit)? = null,
     onLike: ((String) -> Unit)? = null,
     onZap: ((String) -> Unit)? = null,
@@ -1185,7 +1227,7 @@ private fun IosFeedContent(
             FeedMode.GLOBAL -> {
                 SubscriptionConfig(
                     subId = generateSubId("global-feed"),
-                    filters = listOf(FilterBuilders.textNotesGlobal(limit = 200)),
+                    filters = listOf(FilterBuilders.textNotesWithArticlesGlobal(limit = 200)),
                     relays = allRelayUrls,
                     onEvent = { event, _, relay, _ -> coordinator.consumeEvent(event, relay) },
                 )
@@ -1268,6 +1310,27 @@ private fun IosFeedContent(
         SubscriptionConfig(
             subId = generateSubId("fetch-metadata"),
             filters = listOf(FilterBuilders.userMetadataMultiple(missingPubkeys)),
+            relays = allRelayUrls,
+            onEvent = { event, _, relay, _ -> coordinator.consumeEvent(event, relay) },
+        )
+    }
+
+    // Fetch zaps for visible notes to display zap amounts
+    val visibleNoteIds =
+        remember(feedState) {
+            if (feedState !is FeedState.Loaded) return@remember emptyList<String>()
+            viewModel.feedState
+                .visibleNotes()
+                .filter { it.zaps.isEmpty() }
+                .map { it.idHex }
+                .take(30)
+        }
+
+    rememberSubscription(allRelayUrls, visibleNoteIds, relayManager = relayManager) {
+        if (allRelayUrls.isEmpty() || visibleNoteIds.isEmpty()) return@rememberSubscription null
+        SubscriptionConfig(
+            subId = generateSubId("fetch-zaps"),
+            filters = listOf(FilterBuilders.zapsForEvents(visibleNoteIds, limit = 100)),
             relays = allRelayUrls,
             onEvent = { event, _, relay, _ -> coordinator.consumeEvent(event, relay) },
         )
@@ -1357,21 +1420,33 @@ private fun IosFeedContent(
                     items(loadedState.list, key = { it.idHex }) { note ->
                         val event = note.event ?: return@items
                         if (event.pubKey in mutedUserPubKeys) return@items
-                        NoteCard(
-                            note = note.toNoteDisplayData(localCache),
-                            onClick = { onNavigateToThread(event.id) },
-                            onAuthorClick = onNavigateToProfile,
-                            onBoost = onBoost,
-                            onLike = onLike,
-                            onZap = onZap,
-                            onBookmark = onBookmark,
-                            isBookmarked = event.id in bookmarkedNoteIds,
-                            onCopyNoteId = onCopyNoteId,
-                            onCopyNoteText = onCopyNoteText,
-                            onCopyAuthorNpub = onCopyAuthorNpub,
-                            onMuteUser = onMuteUser,
-                            onReport = onReport,
-                        )
+
+                        if (event is LongTextNoteEvent) {
+                            val articleData = note.toArticleDisplayData(localCache)
+                            if (articleData != null) {
+                                ArticleCard(
+                                    article = articleData,
+                                    onClick = { onNavigateToArticle?.invoke(event.id) },
+                                    onAuthorClick = onNavigateToProfile,
+                                )
+                            }
+                        } else {
+                            NoteCard(
+                                note = note.toNoteDisplayData(localCache),
+                                onClick = { onNavigateToThread(event.id) },
+                                onAuthorClick = onNavigateToProfile,
+                                onBoost = onBoost,
+                                onLike = onLike,
+                                onZap = onZap,
+                                onBookmark = onBookmark,
+                                isBookmarked = event.id in bookmarkedNoteIds,
+                                onCopyNoteId = onCopyNoteId,
+                                onCopyNoteText = onCopyNoteText,
+                                onCopyAuthorNpub = onCopyAuthorNpub,
+                                onMuteUser = onMuteUser,
+                                onReport = onReport,
+                            )
+                        }
                     }
                 }
             }
@@ -1451,6 +1526,19 @@ private fun IosProfileContent(
             ?.info
             ?.about
     val npubShort = pubKeyHex.take(12) + "..." + pubKeyHex.takeLast(8)
+    val userStatusText = localCache.getUserStatusText(pubKeyHex)
+    val userStatusType = localCache.getUserStatusType(pubKeyHex)
+
+    // Subscribe to user status (NIP-38)
+    rememberSubscription(allRelayUrls, pubKeyHex, relayManager = relayManager) {
+        if (allRelayUrls.isEmpty()) return@rememberSubscription null
+        SubscriptionConfig(
+            subId = generateSubId("user-status"),
+            filters = listOf(FilterBuilders.userStatus(pubKeyHex)),
+            relays = allRelayUrls,
+            onEvent = { event, _, relay, _ -> coordinator.consumeEvent(event, relay) },
+        )
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         // Enhanced profile header
@@ -1458,12 +1546,20 @@ private fun IosProfileContent(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
             horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
         ) {
-            UserAvatar(
-                userHex = pubKeyHex,
-                pictureUrl = user?.profilePicture(),
-                size = 80.dp,
-                contentDescription = "Profile",
-            )
+            // Avatar with status dot overlay
+            Box {
+                UserAvatar(
+                    userHex = pubKeyHex,
+                    pictureUrl = user?.profilePicture(),
+                    size = 80.dp,
+                    contentDescription = "Profile",
+                )
+                UserStatusDot(
+                    hasStatus = userStatusText != null,
+                    isMusic = userStatusType == "music",
+                    modifier = Modifier.align(Alignment.BottomEnd),
+                )
+            }
 
             Spacer(Modifier.height(12.dp))
 
@@ -1490,6 +1586,15 @@ private fun IosProfileContent(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 3,
+                )
+            }
+
+            // User status badge (NIP-38)
+            if (userStatusText != null) {
+                Spacer(Modifier.height(6.dp))
+                UserStatusBadge(
+                    statusText = userStatusText,
+                    statusType = userStatusType,
                 )
             }
 

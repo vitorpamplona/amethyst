@@ -38,7 +38,9 @@ import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
+import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.utils.DualCase
@@ -67,6 +69,23 @@ class IosLocalCache : ICacheProvider {
 
     private val _latestContactList = MutableStateFlow<ContactListEvent?>(null)
     val latestContactList: StateFlow<ContactListEvent?> = _latestContactList.asStateFlow()
+
+    /** User statuses (NIP-38, kind 30315): pubkey -> latest StatusEvent */
+    private val userStatuses = HashMap<HexKey, StatusEvent>()
+
+    fun getUserStatus(pubKeyHex: HexKey): StatusEvent? = platformSynchronized(lock) { userStatuses[pubKeyHex] }
+
+    fun getUserStatusText(pubKeyHex: HexKey): String? {
+        val status = getUserStatus(pubKeyHex) ?: return null
+        return status.content.ifBlank { null }
+    }
+
+    fun getUserStatusType(pubKeyHex: HexKey): String {
+        val status = getUserStatus(pubKeyHex) ?: return StatusEvent.GENERAL
+        return status.dTag().ifBlank { StatusEvent.GENERAL }
+    }
+
+    fun getUserStatusUrl(pubKeyHex: HexKey): String? = getUserStatus(pubKeyHex)?.firstTaggedUrl()
 
     /** Stores the latest MetadataEvent per pubkey for use in profile editing. */
     private val latestMetadataEvents = HashMap<HexKey, MetadataEvent>()
@@ -174,6 +193,14 @@ class IosLocalCache : ICacheProvider {
 
             is CommentEvent -> {
                 consumeComment(event, relay)
+            }
+
+            is LongTextNoteEvent -> {
+                consumeLongTextNote(event, relay)
+            }
+
+            is StatusEvent -> {
+                consumeStatus(event)
             }
 
             else -> {
@@ -306,6 +333,37 @@ class IosLocalCache : ICacheProvider {
         lastContactListCreatedAt = event.createdAt
         _followedUsers.value = event.verifiedFollowKeySet()
         _latestContactList.value = event
+        return true
+    }
+
+    private fun consumeLongTextNote(
+        event: LongTextNoteEvent,
+        relay: NormalizedRelayUrl?,
+    ): Boolean {
+        val address = event.address()
+        val addressableNote = getOrCreateAddressableNote(address)
+        val existing = addressableNote.event
+        if (existing != null && existing.createdAt >= event.createdAt) return false
+
+        val author = getOrCreateUser(event.pubKey)
+        addressableNote.loadEvent(event, author, emptyList())
+        relay?.let { addressableNote.addRelay(it) }
+
+        // Also store as a regular note so it appears in feeds
+        val note = getOrCreateNote(event.id)
+        if (note.event == null) {
+            note.loadEvent(event, author, emptyList())
+            relay?.let { note.addRelay(it) }
+        }
+        return true
+    }
+
+    private fun consumeStatus(event: StatusEvent): Boolean {
+        val existing = platformSynchronized(lock) { userStatuses[event.pubKey] }
+        if (existing != null && existing.createdAt >= event.createdAt) return false
+        platformSynchronized(lock) {
+            userStatuses[event.pubKey] = event
+        }
         return true
     }
 

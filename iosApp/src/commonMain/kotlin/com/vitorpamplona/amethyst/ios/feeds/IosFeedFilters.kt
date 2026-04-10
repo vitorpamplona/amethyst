@@ -31,13 +31,15 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 
 private fun isFeedNote(event: com.vitorpamplona.quartz.nip01Core.core.Event?): Boolean =
     event is TextNoteEvent ||
         event is RepostEvent ||
-        event is GenericRepostEvent
+        event is GenericRepostEvent ||
+        event is LongTextNoteEvent
 
 /**
  * Global feed: kind 1 text notes + kind 6/16 reposts, sorted by createdAt desc.
