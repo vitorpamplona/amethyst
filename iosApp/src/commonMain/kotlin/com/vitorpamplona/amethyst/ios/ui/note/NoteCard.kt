@@ -86,6 +86,7 @@ fun NoteCard(
     onMuteUser: ((String) -> Unit)? = null,
     onReport: ((String, String) -> Unit)? = null,
     onDelete: ((String) -> Unit)? = null,
+    onEdit: ((String) -> Unit)? = null,
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -163,6 +164,7 @@ fun NoteCard(
                         onMuteUser = onMuteUser,
                         onReport = onReport,
                         onDelete = onDelete,
+                        onEdit = onEdit,
                     )
                 }
             }

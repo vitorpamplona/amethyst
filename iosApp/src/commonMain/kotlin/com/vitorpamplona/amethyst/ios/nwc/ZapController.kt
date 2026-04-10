@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ios.nwc
 
 import com.vitorpamplona.amethyst.ios.cache.IosLocalCache
+import com.vitorpamplona.amethyst.ios.network.IosHttpClient
 import com.vitorpamplona.amethyst.ios.network.IosRelayConnectionManager
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
@@ -168,16 +169,8 @@ class ZapController(
             }
 
         /**
-         * Synchronous HTTP GET using NSURLConnection (simple, blocking).
-         * For production, this should be replaced with async networking.
+         * Async HTTP GET using NSURLSession via IosHttpClient.
          */
-        suspend fun httpGet(url: String): String {
-            // TODO: Implement async HTTP GET for iOS
-            // NSURLSession.dataTaskWithRequest:completionHandler: needs
-            // proper K/N interop wiring
-            throw UnsupportedOperationException(
-                "HTTP GET not yet implemented on iOS — zaps require LNURL HTTP",
-            )
-        }
+        suspend fun httpGet(url: String): String = IosHttpClient.get(url)
     }
 }

@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Share
@@ -59,6 +60,7 @@ fun NoteOptionsMenu(
     onMuteUser: ((String) -> Unit)? = null,
     onReport: ((String, String) -> Unit)? = null, // (noteId, authorPubKeyHex)
     onDelete: ((String) -> Unit)? = null, // noteId — only shown when non-null (i.e. user owns the note)
+    onEdit: ((String) -> Unit)? = null, // noteId — edit note content (kind 1010)
 ) {
     var expanded by remember { mutableStateOf(false) }
 
@@ -122,6 +124,23 @@ fun NoteOptionsMenu(
                 leadingIcon = {
                     Icon(
                         Icons.Default.ContentCopy,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                },
+            )
+        }
+
+        onEdit?.let { callback ->
+            DropdownMenuItem(
+                text = { Text("Edit note") },
+                onClick = {
+                    callback(note.id)
+                    expanded = false
+                },
+                leadingIcon = {
+                    Icon(
+                        Icons.Default.Edit,
                         contentDescription = null,
                         modifier = Modifier.size(18.dp),
                     )

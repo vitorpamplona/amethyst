@@ -136,6 +136,7 @@ import com.vitorpamplona.amethyst.ios.ui.marketplace.ClassifiedDetailScreen
 import com.vitorpamplona.amethyst.ios.ui.marketplace.toClassifiedDisplayData
 import com.vitorpamplona.amethyst.ios.ui.note.ArticleCard
 import com.vitorpamplona.amethyst.ios.ui.note.ArticleDetailScreen
+import com.vitorpamplona.amethyst.ios.ui.note.EditNoteScreen
 import com.vitorpamplona.amethyst.ios.ui.note.NoteCard
 import com.vitorpamplona.amethyst.ios.ui.note.ReportDialog
 import com.vitorpamplona.amethyst.ios.ui.note.UserStatusBadge
@@ -275,6 +276,10 @@ sealed class Screen {
     ) : Screen()
 
     data class ClassifiedDetail(
+        val noteId: String,
+    ) : Screen()
+
+    data class EditNote(
         val noteId: String,
     ) : Screen()
 }
@@ -788,6 +793,10 @@ private fun MainScreen(
     }
 
     // ── Clipboard helpers ──
+    val onEditNote: (String) -> Unit = { noteId ->
+        navigateTo(Screen.EditNote(noteId))
+    }
+
     val onCopyNoteId: (String) -> Unit = { noteId ->
         UIPasteboard.generalPasteboard.string = noteId
         scope.launch { snackbarHostState.showSnackbar("Note ID copied") }
@@ -1560,6 +1569,16 @@ private fun MainScreen(
                     )
                 }
 
+                is Screen.EditNote -> {
+                    EditNoteScreen(
+                        noteId = screen.noteId,
+                        account = account,
+                        localCache = localCache,
+                        relayManager = relayManager,
+                        onBack = { goBack() },
+                    )
+                }
+
                 is Screen.PeopleLists -> {
                     ListsManagementScreen(
                         account = account,
@@ -1659,6 +1678,7 @@ private fun IosFeedContent(
     onMuteUser: ((String) -> Unit)? = null,
     onReport: ((String, String) -> Unit)? = null,
     onDelete: ((String) -> Unit)? = null,
+    onEdit: ((String) -> Unit)? = null,
     mutedUserPubKeys: Set<String> = emptySet(),
 ) {
     val relayStatuses by relayManager.relayStatuses.collectAsState()
@@ -2054,6 +2074,7 @@ private fun IosFeedContent(
                                     onMuteUser = onMuteUser,
                                     onReport = onReport,
                                     onDelete = onDelete,
+                                    onEdit = onEdit,
                                 )
                                 if (labelData != null) {
                                     LabelRow(
@@ -2097,6 +2118,7 @@ private fun IosProfileContent(
     onMuteUser: ((String) -> Unit)? = null,
     onReport: ((String, String) -> Unit)? = null,
     onDelete: ((String) -> Unit)? = null,
+    onEdit: ((String) -> Unit)? = null,
 ) {
     val relayStatuses by relayManager.relayStatuses.collectAsState()
     val allRelayUrls = remember(relayStatuses) { relayStatuses.keys }
@@ -2390,6 +2412,7 @@ private fun IosProfileContent(
                             onMuteUser = onMuteUser,
                             onReport = onReport,
                             onDelete = onDelete,
+                            onEdit = onEdit,
                         )
                     }
                 }
@@ -2422,6 +2445,7 @@ private fun IosThreadContent(
     onMuteUser: ((String) -> Unit)? = null,
     onReport: ((String, String) -> Unit)? = null,
     onDelete: ((String) -> Unit)? = null,
+    onEdit: ((String) -> Unit)? = null,
 ) {
     val relayStatuses by relayManager.relayStatuses.collectAsState()
     val allRelayUrls = remember(relayStatuses) { relayStatuses.keys }
@@ -2499,6 +2523,7 @@ private fun IosThreadContent(
                             onMuteUser = onMuteUser,
                             onReport = onReport,
                             onDelete = onDelete,
+                            onEdit = onEdit,
                         )
                     }
                 }
