@@ -46,8 +46,10 @@ class CallForegroundService : Service() {
         const val NOTIFICATION_ID = 9001
         const val ACTION_START = "com.vitorpamplona.amethyst.CALL_START"
         const val ACTION_STOP = "com.vitorpamplona.amethyst.CALL_STOP"
+        const val ACTION_UPDATE = "com.vitorpamplona.amethyst.CALL_UPDATE"
         const val EXTRA_PEER_NAME = "peer_name"
         const val EXTRA_IS_VIDEO = "is_video"
+        const val EXTRA_STATUS_TEXT = "status_text"
         private const val HANGUP_REQUEST_CODE = 0x70001
     }
 
@@ -67,7 +69,8 @@ class CallForegroundService : Service() {
             ACTION_START -> {
                 val peerName = intent.getStringExtra(EXTRA_PEER_NAME) ?: "Unknown"
                 val isVideo = intent.getBooleanExtra(EXTRA_IS_VIDEO, false)
-                val notification = buildNotification(peerName)
+                val statusText = intent.getStringExtra(EXTRA_STATUS_TEXT)
+                val notification = buildNotification(peerName, statusText)
                 val hasAudioPermission =
                     ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) ==
                         PackageManager.PERMISSION_GRANTED
@@ -100,6 +103,14 @@ class CallForegroundService : Service() {
                 }
             }
 
+            ACTION_UPDATE -> {
+                val peerName = intent.getStringExtra(EXTRA_PEER_NAME) ?: "Unknown"
+                val statusText = intent.getStringExtra(EXTRA_STATUS_TEXT)
+                val notification = buildNotification(peerName, statusText)
+                val notificationManager = getSystemService(NotificationManager::class.java)
+                notificationManager.notify(NOTIFICATION_ID, notification)
+            }
+
             ACTION_STOP -> {
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
@@ -121,7 +132,10 @@ class CallForegroundService : Service() {
         notificationManager.createNotificationChannel(channel)
     }
 
-    private fun buildNotification(peerName: String): Notification {
+    private fun buildNotification(
+        peerName: String,
+        statusText: String? = null,
+    ): Notification {
         val openCallIntent =
             PendingIntent.getActivity(
                 this,
@@ -142,10 +156,12 @@ class CallForegroundService : Service() {
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
             )
 
+        val contentText = statusText ?: getString(R.string.call_with, peerName)
+
         return NotificationCompat
             .Builder(this, CHANNEL_ID)
             .setContentTitle(getString(R.string.app_name))
-            .setContentText(getString(R.string.call_with, peerName))
+            .setContentText(contentText)
             .setSmallIcon(R.drawable.amethyst)
             .setOngoing(true)
             .setContentIntent(openCallIntent)
