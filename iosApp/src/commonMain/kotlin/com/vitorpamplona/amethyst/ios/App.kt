@@ -92,6 +92,7 @@ import com.vitorpamplona.amethyst.ios.subscriptions.SubscriptionConfig
 import com.vitorpamplona.amethyst.ios.subscriptions.generateSubId
 import com.vitorpamplona.amethyst.ios.subscriptions.rememberSubscription
 import com.vitorpamplona.amethyst.ios.ui.AccountSwitcherScreen
+import com.vitorpamplona.amethyst.ios.ui.BookmarksScreen
 import com.vitorpamplona.amethyst.ios.ui.ComposeNoteScreen
 import com.vitorpamplona.amethyst.ios.ui.EditProfileScreen
 import com.vitorpamplona.amethyst.ios.ui.LoginScreen
@@ -115,6 +116,8 @@ import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEven
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.EventBookmark
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import kotlinx.coroutines.CoroutineScope
@@ -167,6 +170,8 @@ sealed class Screen {
     data object AddAccount : Screen()
 
     data object EditProfile : Screen()
+
+    data object Bookmarks : Screen()
 }
 
 enum class FeedMode { GLOBAL, FOLLOWING }
@@ -268,6 +273,68 @@ private fun MainScreen(
                 val signed = account.signer.sign(template)
                 relayManager.broadcastToAll(signed)
                 snackbarHostState.showSnackbar("\uD83D\uDD01 Reposted!")
+            }
+        }
+    }
+
+    var bookmarkListState by remember { mutableStateOf<BookmarkListEvent?>(null) }
+    var bookmarkedNoteIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+
+    // Load bookmark list from cache on start
+    LaunchedEffect(account.pubKeyHex) {
+        val address = BookmarkListEvent.createBookmarkAddress(account.pubKeyHex)
+        val cachedNote = localCache.getOrCreateAddressableNote(address)
+        val cachedEvent = cachedNote.event as? BookmarkListEvent
+        if (cachedEvent != null) {
+            bookmarkListState = cachedEvent
+            bookmarkedNoteIds =
+                cachedEvent
+                    .publicBookmarks()
+                    .filterIsInstance<EventBookmark>()
+                    .map { it.eventId }
+                    .toSet()
+        }
+    }
+
+    val onBookmarkNote: (String) -> Unit = { noteId ->
+        if (!account.isReadOnly) {
+            scope.launch {
+                try {
+                    val isCurrentlyBookmarked = noteId in bookmarkedNoteIds
+                    val bookmark = EventBookmark(noteId)
+                    val newList =
+                        if (isCurrentlyBookmarked) {
+                            val existing = bookmarkListState
+                            if (existing != null) {
+                                BookmarkListEvent.remove(existing, bookmark, isPrivate = false, signer = account.signer)
+                            } else {
+                                return@launch
+                            }
+                        } else {
+                            val existing = bookmarkListState
+                            if (existing != null) {
+                                BookmarkListEvent.add(existing, bookmark, isPrivate = false, signer = account.signer)
+                            } else {
+                                BookmarkListEvent.create(bookmark, isPrivate = false, signer = account.signer)
+                            }
+                        }
+                    bookmarkListState = newList
+                    bookmarkedNoteIds =
+                        newList
+                            .publicBookmarks()
+                            .filterIsInstance<EventBookmark>()
+                            .map { it.eventId }
+                            .toSet()
+                    localCache.consume(newList, null)
+                    relayManager.broadcastToAll(newList)
+                    if (isCurrentlyBookmarked) {
+                        snackbarHostState.showSnackbar("Bookmark removed")
+                    } else {
+                        snackbarHostState.showSnackbar("\uD83D\uDD16 Bookmarked!")
+                    }
+                } catch (e: Exception) {
+                    snackbarHostState.showSnackbar("Failed to update bookmark")
+                }
             }
         }
     }
@@ -566,6 +633,8 @@ private fun MainScreen(
                         onBoost = onBoostNote,
                         onLike = onLikeNote,
                         onZap = onZapNote,
+                        onBookmark = onBookmarkNote,
+                        bookmarkedNoteIds = bookmarkedNoteIds,
                     )
                 }
 
@@ -633,6 +702,8 @@ private fun MainScreen(
                         onBoost = onBoostNote,
                         onLike = onLikeNote,
                         onZap = onZapNote,
+                        onBookmark = onBookmarkNote,
+                        bookmarkedNoteIds = bookmarkedNoteIds,
                     )
                 }
 
@@ -660,6 +731,23 @@ private fun MainScreen(
                             } else {
                                 null
                             },
+                        onBookmarks = { navigateTo(Screen.Bookmarks) },
+                    )
+                }
+
+                is Screen.Bookmarks -> {
+                    BookmarksScreen(
+                        account = account,
+                        relayManager = relayManager,
+                        localCache = localCache,
+                        coordinator = coordinator,
+                        onBack = { goBack() },
+                        onNavigateToProfile = { pubKey -> navigateTo(Screen.Profile(pubKey)) },
+                        onNavigateToThread = { noteId -> navigateTo(Screen.Thread(noteId)) },
+                        onBoost = onBoostNote,
+                        onLike = onLikeNote,
+                        onZap = onZapNote,
+                        onBookmark = onBookmarkNote,
                     )
                 }
 
@@ -717,6 +805,8 @@ private fun MainScreen(
                             onBoost = onBoostNote,
                             onLike = onLikeNote,
                             onZap = onZapNote,
+                            onBookmark = onBookmarkNote,
+                            bookmarkedNoteIds = bookmarkedNoteIds,
                         )
                     }
                 }
@@ -734,6 +824,8 @@ private fun MainScreen(
                         onBoost = onBoostNote,
                         onLike = onLikeNote,
                         onZap = onZapNote,
+                        onBookmark = onBookmarkNote,
+                        bookmarkedNoteIds = bookmarkedNoteIds,
                     )
                 }
 
@@ -770,6 +862,8 @@ private fun IosFeedContent(
     onBoost: ((String) -> Unit)? = null,
     onLike: ((String) -> Unit)? = null,
     onZap: ((String) -> Unit)? = null,
+    onBookmark: ((String) -> Unit)? = null,
+    bookmarkedNoteIds: Set<String> = emptySet(),
 ) {
     val relayStatuses by relayManager.relayStatuses.collectAsState()
     val connectedRelays by relayManager.connectedRelays.collectAsState()
@@ -908,6 +1002,8 @@ private fun IosFeedContent(
                             onBoost = onBoost,
                             onLike = onLike,
                             onZap = onZap,
+                            onBookmark = onBookmark,
+                            isBookmarked = event.id in bookmarkedNoteIds,
                         )
                     }
                 }
@@ -935,6 +1031,8 @@ private fun IosProfileContent(
     onBoost: ((String) -> Unit)? = null,
     onLike: ((String) -> Unit)? = null,
     onZap: ((String) -> Unit)? = null,
+    onBookmark: ((String) -> Unit)? = null,
+    bookmarkedNoteIds: Set<String> = emptySet(),
 ) {
     val relayStatuses by relayManager.relayStatuses.collectAsState()
     val allRelayUrls = remember(relayStatuses) { relayStatuses.keys }
@@ -1112,6 +1210,8 @@ private fun IosProfileContent(
                             onBoost = onBoost,
                             onLike = onLike,
                             onZap = onZap,
+                            onBookmark = onBookmark,
+                            isBookmarked = event.id in bookmarkedNoteIds,
                         )
                     }
                 }
@@ -1136,6 +1236,8 @@ private fun IosThreadContent(
     onBoost: ((String) -> Unit)? = null,
     onLike: ((String) -> Unit)? = null,
     onZap: ((String) -> Unit)? = null,
+    onBookmark: ((String) -> Unit)? = null,
+    bookmarkedNoteIds: Set<String> = emptySet(),
 ) {
     val relayStatuses by relayManager.relayStatuses.collectAsState()
     val allRelayUrls = remember(relayStatuses) { relayStatuses.keys }
@@ -1204,6 +1306,8 @@ private fun IosThreadContent(
                             onBoost = onBoost,
                             onLike = onLike,
                             onZap = onZap,
+                            onBookmark = onBookmark,
+                            isBookmarked = event.id in bookmarkedNoteIds,
                         )
                     }
                 }

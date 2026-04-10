@@ -32,6 +32,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Reply
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Repeat
@@ -66,6 +68,8 @@ fun NoteCard(
     onBoost: ((String) -> Unit)? = null,
     onLike: ((String) -> Unit)? = null,
     onZap: ((String) -> Unit)? = null,
+    onBookmark: ((String) -> Unit)? = null,
+    isBookmarked: Boolean = false,
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -215,6 +219,30 @@ fun NoteCard(
                     onClick =
                         if (onZap != null) {
                             { onZap(note.id) }
+                        } else {
+                            null
+                        },
+                )
+
+                // Bookmark
+                NoteActionButton(
+                    icon = {
+                        Icon(
+                            imageVector = if (isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                            contentDescription = "Bookmark",
+                            tint =
+                                if (isBookmarked) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                },
+                            modifier = Modifier.size(18.dp),
+                        )
+                    },
+                    count = 0,
+                    onClick =
+                        if (onBookmark != null) {
+                            { onBookmark(note.id) }
                         } else {
                             null
                         },
