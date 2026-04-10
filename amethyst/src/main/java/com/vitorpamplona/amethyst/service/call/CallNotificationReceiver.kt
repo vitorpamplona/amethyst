@@ -24,6 +24,9 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
 /**
@@ -40,7 +43,8 @@ class CallNotificationReceiver : BroadcastReceiver() {
     ) {
         val callManager = CallSessionBridge.callManager ?: return
         val pendingResult = goAsync()
-        kotlinx.coroutines.MainScope().launch {
+        val scope = CoroutineScope(SupervisorJob() + kotlinx.coroutines.Dispatchers.Main.immediate)
+        scope.launch {
             try {
                 when (intent.action) {
                     ACTION_REJECT_CALL -> {
@@ -54,6 +58,7 @@ class CallNotificationReceiver : BroadcastReceiver() {
                 }
             } finally {
                 pendingResult.finish()
+                scope.cancel()
             }
         }
     }

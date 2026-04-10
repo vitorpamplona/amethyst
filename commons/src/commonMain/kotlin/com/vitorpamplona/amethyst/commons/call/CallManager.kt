@@ -201,9 +201,9 @@ class CallManager(
         val result = factory.createCallOffer(sdpOffer, calleePubKey, callId, callType, signer)
         stateMutex.withLock {
             _state.value = CallState.Offering(callId, setOf(calleePubKey), callType)
+            startTimeout(callId)
         }
         publishEvent(result.wrap)
-        startTimeout(callId)
         Log.d("CallManager") { "initiateCall: offer published, timeout started" }
     }
 
@@ -281,9 +281,10 @@ class CallManager(
             discoveredCalleePeers.clear()
         }
 
-        val allRecipients = current.groupMembers + signer.pubKey
-        Log.d("CallManager") { "acceptCall: publishing answer to ${allRecipients.size} recipients" }
-        val result = factory.createGroupCallAnswer(sdpAnswer, allRecipients, current.callId, signer)
+        val allMembers = current.groupMembers + signer.pubKey
+        val otherMembers = allMembers - signer.pubKey
+        Log.d("CallManager") { "acceptCall: publishing answer to ${otherMembers.size} recipients" }
+        val result = factory.createGroupCallAnswer(sdpAnswer, otherMembers, current.callId, signer)
         result.wraps.forEach { publishEvent(it) }
         Log.d("CallManager") { "acceptCall: answer published, now in Connecting state" }
 
@@ -306,8 +307,8 @@ class CallManager(
             transitionToEnded(current.callId, current.peerPubKeys(), EndReason.REJECTED)
         }
 
-        val allRecipients = current.groupMembers + signer.pubKey
-        val result = factory.createGroupReject(allRecipients, current.callId, signer = signer)
+        val otherMembers = current.groupMembers - signer.pubKey
+        val result = factory.createGroupReject(otherMembers, current.callId, signer = signer)
         result.wraps.forEach { publishEvent(it) }
     }
 
