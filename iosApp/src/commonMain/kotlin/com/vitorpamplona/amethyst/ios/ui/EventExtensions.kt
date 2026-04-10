@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ios.ui
 
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.ios.cache.IosLocalCache
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArrayOrNull
@@ -35,6 +36,9 @@ data class NoteDisplayData(
     val profilePictureUrl: String? = null,
     val content: String,
     val createdAt: Long,
+    val reactionCount: Int = 0,
+    val boostCount: Int = 0,
+    val replyCount: Int = 0,
 )
 
 /**
@@ -60,5 +64,25 @@ fun Event.toNoteDisplayData(cache: IosLocalCache? = null): NoteDisplayData {
         profilePictureUrl = pictureUrl,
         content = content,
         createdAt = createdAt,
+    )
+}
+
+/**
+ * Extension to convert a commons Note to NoteDisplayData with counts.
+ */
+fun Note.toNoteDisplayData(cache: IosLocalCache? = null): NoteDisplayData {
+    val event =
+        this.event ?: return NoteDisplayData(
+            id = idHex,
+            pubKeyHex = "",
+            pubKeyDisplay = idHex.take(16) + "...",
+            content = "",
+            createdAt = 0L,
+        )
+    val base = event.toNoteDisplayData(cache)
+    return base.copy(
+        reactionCount = countReactions(),
+        boostCount = boosts.size,
+        replyCount = replies.size,
     )
 }

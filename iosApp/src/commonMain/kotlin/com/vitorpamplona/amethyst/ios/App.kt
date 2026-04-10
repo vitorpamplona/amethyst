@@ -51,6 +51,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -63,6 +65,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -96,8 +99,12 @@ import com.vitorpamplona.amethyst.ios.ui.SettingsScreen
 import com.vitorpamplona.amethyst.ios.ui.note.NoteCard
 import com.vitorpamplona.amethyst.ios.ui.toNoteDisplayData
 import com.vitorpamplona.amethyst.ios.viewmodels.IosFeedViewModel
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
+import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
+import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 enum class Tab(
     val icon: ImageVector,
@@ -198,6 +205,41 @@ private fun MainScreen(
         }
     }
 
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+
+    val onLikeNote: (String) -> Unit = { noteId ->
+        scope.launch {
+            val note = localCache.getNoteIfExists(noteId)
+            val event = note?.event
+            if (event != null) {
+                val template = ReactionEvent.like(EventHintBundle(event, null, null))
+                val signed = account.signer.sign(template)
+                relayManager.broadcastToAll(signed)
+                snackbarHostState.showSnackbar("\uD83E\uDD19 Liked!")
+            }
+        }
+    }
+
+    val onBoostNote: (String) -> Unit = { noteId ->
+        scope.launch {
+            val note = localCache.getNoteIfExists(noteId)
+            val event = note?.event
+            if (event != null) {
+                val template = RepostEvent.build(EventHintBundle(event, null, null))
+                val signed = account.signer.sign(template)
+                relayManager.broadcastToAll(signed)
+                snackbarHostState.showSnackbar("\uD83D\uDD01 Reposted!")
+            }
+        }
+    }
+
+    val onZapNote: (String) -> Unit = { _ ->
+        scope.launch {
+            snackbarHostState.showSnackbar("\u26A1 Zaps coming soon!")
+        }
+    }
+
     LaunchedEffect(Unit) {
         relayManager.addDefaultRelays()
         relayManager.connect()
@@ -212,6 +254,7 @@ private fun MainScreen(
     val showFab = currentScreen is Screen.Feed && !account.isReadOnly
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             if (showTopBar) {
                 TopAppBar(
@@ -291,6 +334,9 @@ private fun MainScreen(
                         pubKeyHex = account.pubKeyHex,
                         onNavigateToProfile = { navigateTo(Screen.Profile(it)) },
                         onNavigateToThread = { navigateTo(Screen.Thread(it)) },
+                        onBoost = onBoostNote,
+                        onLike = onLikeNote,
+                        onZap = onZapNote,
                     )
                 }
 
@@ -315,6 +361,9 @@ private fun MainScreen(
                         onNavigateToProfile = { navigateTo(Screen.Profile(it)) },
                         onNavigateToThread = { navigateTo(Screen.Thread(it)) },
                         onNavigateToSettings = { navigateTo(Screen.Settings) },
+                        onBoost = onBoostNote,
+                        onLike = onLikeNote,
+                        onZap = onZapNote,
                     )
                 }
 
@@ -348,6 +397,9 @@ private fun MainScreen(
                             coordinator = coordinator,
                             onNavigateToProfile = { navigateTo(Screen.Profile(it)) },
                             onNavigateToThread = { navigateTo(Screen.Thread(it)) },
+                            onBoost = onBoostNote,
+                            onLike = onLikeNote,
+                            onZap = onZapNote,
                         )
                     }
                 }
@@ -362,6 +414,9 @@ private fun MainScreen(
                         onNavigateToProfile = { navigateTo(Screen.Profile(it)) },
                         onNavigateToThread = { navigateTo(Screen.Thread(it)) },
                         onReply = { noteId -> navigateTo(Screen.ComposeNote(replyToNoteId = noteId)) },
+                        onBoost = onBoostNote,
+                        onLike = onLikeNote,
+                        onZap = onZapNote,
                     )
                 }
 
@@ -390,6 +445,9 @@ private fun IosFeedContent(
     pubKeyHex: String?,
     onNavigateToProfile: (String) -> Unit,
     onNavigateToThread: (String) -> Unit,
+    onBoost: ((String) -> Unit)? = null,
+    onLike: ((String) -> Unit)? = null,
+    onZap: ((String) -> Unit)? = null,
 ) {
     val relayStatuses by relayManager.relayStatuses.collectAsState()
     val connectedRelays by relayManager.connectedRelays.collectAsState()
@@ -522,9 +580,12 @@ private fun IosFeedContent(
                     items(loadedState.list, key = { it.idHex }) { note ->
                         val event = note.event ?: return@items
                         NoteCard(
-                            note = event.toNoteDisplayData(localCache),
+                            note = note.toNoteDisplayData(localCache),
                             onClick = { onNavigateToThread(event.id) },
                             onAuthorClick = onNavigateToProfile,
+                            onBoost = onBoost,
+                            onLike = onLike,
+                            onZap = onZap,
                         )
                     }
                 }
@@ -544,6 +605,9 @@ private fun IosProfileContent(
     onNavigateToProfile: (String) -> Unit,
     onNavigateToThread: (String) -> Unit,
     onNavigateToSettings: (() -> Unit)? = null,
+    onBoost: ((String) -> Unit)? = null,
+    onLike: ((String) -> Unit)? = null,
+    onZap: ((String) -> Unit)? = null,
 ) {
     val relayStatuses by relayManager.relayStatuses.collectAsState()
     val allRelayUrls = remember(relayStatuses) { relayStatuses.keys }
@@ -678,9 +742,12 @@ private fun IosProfileContent(
                     items(loadedState.list, key = { it.idHex }) { note ->
                         val event = note.event ?: return@items
                         NoteCard(
-                            note = event.toNoteDisplayData(localCache),
+                            note = note.toNoteDisplayData(localCache),
                             onClick = { onNavigateToThread(event.id) },
                             onAuthorClick = onNavigateToProfile,
+                            onBoost = onBoost,
+                            onLike = onLike,
+                            onZap = onZap,
                         )
                     }
                 }
@@ -702,6 +769,9 @@ private fun IosThreadContent(
     onNavigateToProfile: (String) -> Unit,
     onNavigateToThread: (String) -> Unit,
     onReply: ((String) -> Unit)? = null,
+    onBoost: ((String) -> Unit)? = null,
+    onLike: ((String) -> Unit)? = null,
+    onZap: ((String) -> Unit)? = null,
 ) {
     val relayStatuses by relayManager.relayStatuses.collectAsState()
     val allRelayUrls = remember(relayStatuses) { relayStatuses.keys }
@@ -763,10 +833,13 @@ private fun IosThreadContent(
                     items(loadedState.list, key = { it.idHex }) { note ->
                         val event = note.event ?: return@items
                         NoteCard(
-                            note = event.toNoteDisplayData(localCache),
+                            note = note.toNoteDisplayData(localCache),
                             onClick = { onNavigateToThread(event.id) },
                             onAuthorClick = onNavigateToProfile,
                             onReply = onReply,
+                            onBoost = onBoost,
+                            onLike = onLike,
+                            onZap = onZap,
                         )
                     }
                 }
