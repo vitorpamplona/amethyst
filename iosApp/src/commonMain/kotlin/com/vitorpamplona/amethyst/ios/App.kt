@@ -23,9 +23,14 @@ package com.vitorpamplona.amethyst.ios
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -34,13 +39,19 @@ import androidx.compose.material.icons.filled.MailOutline
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -52,6 +63,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
@@ -75,6 +88,7 @@ import com.vitorpamplona.amethyst.ios.subscriptions.SubscriptionConfig
 import com.vitorpamplona.amethyst.ios.subscriptions.generateSubId
 import com.vitorpamplona.amethyst.ios.subscriptions.rememberSubscription
 import com.vitorpamplona.amethyst.ios.ui.LoginScreen
+import com.vitorpamplona.amethyst.ios.ui.SettingsScreen
 import com.vitorpamplona.amethyst.ios.ui.note.NoteCard
 import com.vitorpamplona.amethyst.ios.ui.toNoteDisplayData
 import com.vitorpamplona.amethyst.ios.viewmodels.IosFeedViewModel
@@ -102,6 +116,8 @@ sealed class Screen {
     data object Messages : Screen()
 
     data object MyProfile : Screen()
+
+    data object Settings : Screen()
 
     data class Profile(
         val pubKeyHex: String,
@@ -149,6 +165,7 @@ fun App() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MainScreen(
     account: AccountState.LoggedIn,
@@ -183,7 +200,40 @@ private fun MainScreen(
             currentScreen is Screen.Notifications || currentScreen is Screen.Messages ||
             currentScreen is Screen.MyProfile
 
+    val showTopBar = showBottomBar
+
     Scaffold(
+        topBar = {
+            if (showTopBar) {
+                TopAppBar(
+                    title = {
+                        Text(
+                            when (selectedTab) {
+                                Tab.FEED -> "Amethyst"
+                                Tab.SEARCH -> "Search"
+                                Tab.NOTIFICATIONS -> "Notifications"
+                                Tab.MESSAGES -> "Messages"
+                                Tab.PROFILE -> "Profile"
+                            },
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    },
+                    actions = {
+                        IconButton(onClick = { navigateTo(Screen.Settings) }) {
+                            Icon(
+                                Icons.Default.Settings,
+                                contentDescription = "Settings",
+                            )
+                        }
+                    },
+                    colors =
+                        TopAppBarDefaults.topAppBarColors(
+                            containerColor = MaterialTheme.colorScheme.surface,
+                        ),
+                )
+            }
+        },
         bottomBar = {
             if (showBottomBar) {
                 NavigationBar {
@@ -224,17 +274,14 @@ private fun MainScreen(
                 }
 
                 is Screen.Search -> {
-                    // TODO: Wire commons search components when full search UI is available
                     SearchPlaceholder(modifier = Modifier.padding(16.dp))
                 }
 
                 is Screen.Notifications -> {
-                    // TODO: Wire commons notification feed when full notification UI is available
                     NotificationsPlaceholder(modifier = Modifier.padding(16.dp))
                 }
 
                 is Screen.Messages -> {
-                    // TODO: Wire commons chat components when full DM UI is available
                     MessagesPlaceholder(modifier = Modifier.padding(16.dp))
                 }
 
@@ -246,6 +293,17 @@ private fun MainScreen(
                         coordinator = coordinator,
                         onNavigateToProfile = { navigateTo(Screen.Profile(it)) },
                         onNavigateToThread = { navigateTo(Screen.Thread(it)) },
+                        onNavigateToSettings = { navigateTo(Screen.Settings) },
+                    )
+                }
+
+                is Screen.Settings -> {
+                    SettingsScreen(
+                        npub = account.npub,
+                        pubKeyHex = account.pubKeyHex,
+                        relayManager = relayManager,
+                        onBack = { goBack() },
+                        onLogout = onLogout,
                     )
                 }
 
@@ -438,6 +496,7 @@ private fun IosProfileContent(
     coordinator: IosSubscriptionsCoordinator,
     onNavigateToProfile: (String) -> Unit,
     onNavigateToThread: (String) -> Unit,
+    onNavigateToSettings: (() -> Unit)? = null,
 ) {
     val relayStatuses by relayManager.relayStatuses.collectAsState()
     val allRelayUrls = remember(relayStatuses) { relayStatuses.keys }
@@ -475,23 +534,79 @@ private fun IosProfileContent(
 
     val feedState by viewModel.feedState.feedContent.collectAsState()
     val user = localCache.getUserIfExists(pubKeyHex)
+    val displayName = user?.toBestDisplayName() ?: pubKeyHex.take(16) + "..."
+    val about =
+        user
+            ?.metadataOrNull()
+            ?.flow
+            ?.value
+            ?.info
+            ?.about
+    val npubShort = pubKeyHex.take(12) + "..." + pubKeyHex.takeLast(8)
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // Profile header using commons UserAvatar
-        Column(modifier = Modifier.padding(16.dp)) {
+        // Enhanced profile header
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
+        ) {
             UserAvatar(
                 userHex = pubKeyHex,
                 pictureUrl = user?.profilePicture(),
-                size = 64.dp,
+                size = 80.dp,
                 contentDescription = "Profile",
             )
-            val displayName = user?.toBestDisplayName() ?: pubKeyHex.take(16) + "..."
+
+            Spacer(Modifier.height(12.dp))
+
             Text(
                 displayName,
-                style = MaterialTheme.typography.titleLarge,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground,
             )
+
+            Text(
+                npubShort,
+                style =
+                    MaterialTheme.typography.bodySmall.copy(
+                        fontFamily = FontFamily.Monospace,
+                    ),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            if (!about.isNullOrBlank()) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    about,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 3,
+                )
+            }
+
+            if (onNavigateToSettings != null) {
+                Spacer(Modifier.height(12.dp))
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    androidx.compose.material3.OutlinedButton(
+                        onClick = onNavigateToSettings,
+                    ) {
+                        Icon(
+                            Icons.Default.Settings,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text("Settings")
+                    }
+                }
+            }
         }
+
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
         // Notes feed
         when (val state = feedState) {
