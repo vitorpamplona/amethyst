@@ -77,7 +77,6 @@ import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
 import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
 import com.vitorpamplona.amethyst.commons.ui.feed.FeedHeader
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
-import com.vitorpamplona.amethyst.commons.ui.screens.NotificationsPlaceholder
 import com.vitorpamplona.amethyst.commons.ui.screens.SearchPlaceholder
 import com.vitorpamplona.amethyst.ios.account.AccountManager
 import com.vitorpamplona.amethyst.ios.account.AccountState
@@ -100,6 +99,7 @@ import com.vitorpamplona.amethyst.ios.ui.chats.IosChatScreen
 import com.vitorpamplona.amethyst.ios.ui.chats.IosChatroomListState
 import com.vitorpamplona.amethyst.ios.ui.chats.IosConversationListScreen
 import com.vitorpamplona.amethyst.ios.ui.note.NoteCard
+import com.vitorpamplona.amethyst.ios.ui.notifications.IosNotificationScreen
 import com.vitorpamplona.amethyst.ios.ui.toNoteDisplayData
 import com.vitorpamplona.amethyst.ios.viewmodels.IosFeedViewModel
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
@@ -402,6 +402,23 @@ private fun MainScreen(
                 }
             },
         )
+
+        // Notifications: reactions, reposts, mentions, zaps targeting the user
+        relayManager.subscribe(
+            "notifications",
+            listOf(FilterBuilders.notificationsForUser(account.pubKeyHex, limit = 300)),
+            relays,
+            object : SubscriptionListener {
+                override fun onEvent(
+                    event: com.vitorpamplona.quartz.nip01Core.core.Event,
+                    isLive: Boolean,
+                    relay: NormalizedRelayUrl,
+                    forFilters: List<Filter>?,
+                ) {
+                    coordinator.consumeEvent(event, relay)
+                }
+            },
+        )
     }
 
     val showBottomBar =
@@ -504,7 +521,12 @@ private fun MainScreen(
                 }
 
                 is Screen.Notifications -> {
-                    NotificationsPlaceholder(modifier = Modifier.padding(16.dp))
+                    IosNotificationScreen(
+                        pubKeyHex = account.pubKeyHex,
+                        localCache = localCache,
+                        onNavigateToThread = { navigateTo(Screen.Thread(it)) },
+                        modifier = Modifier.padding(horizontal = 8.dp),
+                    )
                 }
 
                 is Screen.Messages -> {

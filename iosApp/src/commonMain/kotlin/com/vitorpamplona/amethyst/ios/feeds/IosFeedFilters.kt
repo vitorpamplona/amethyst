@@ -161,6 +161,7 @@ class IosNotificationFeedFilter(
             setOf(
                 TextNoteEvent.KIND,
                 ReactionEvent.KIND,
+                RepostEvent.KIND,
                 LnZapEvent.KIND,
             )
     }
