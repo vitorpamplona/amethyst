@@ -23,7 +23,7 @@ kotlin {
     }
 
     sourceSets {
-        val iosMain by creating {
+        commonMain {
             dependencies {
                 implementation(project(":quartz"))
                 implementation(project(":commons"))
@@ -48,8 +48,5 @@ kotlin {
                 implementation(libs.androidx.collection)
             }
         }
-
-        val iosArm64Main by getting { dependsOn(iosMain) }
-        val iosSimulatorArm64Main by getting { dependsOn(iosMain) }
     }
 }
