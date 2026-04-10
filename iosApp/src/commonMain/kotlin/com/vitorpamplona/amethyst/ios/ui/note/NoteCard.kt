@@ -53,6 +53,7 @@ import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
 import com.vitorpamplona.amethyst.ios.cache.IosLocalCache
+import com.vitorpamplona.amethyst.ios.nip05.Nip05VerificationDisplay
 import com.vitorpamplona.amethyst.ios.translation.TranslateButton
 import com.vitorpamplona.amethyst.ios.ui.NoteDisplayData
 import com.vitorpamplona.amethyst.ios.ui.media.RichNoteContent
@@ -132,7 +133,13 @@ fun NoteCard(
                             color = MaterialTheme.colorScheme.primary,
                             maxLines = 1,
                         )
-                        // TODO: NIP-05 verification badge (needs async HTTP)
+                        // NIP-05 verification badge
+                        if (localCache != null) {
+                            Nip05VerificationDisplay(
+                                pubKeyHex = note.pubKeyHex,
+                                localCache = localCache,
+                            )
+                        }
                     }
                 }
 

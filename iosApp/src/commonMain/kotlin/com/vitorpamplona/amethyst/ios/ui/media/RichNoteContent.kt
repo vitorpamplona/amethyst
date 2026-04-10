@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.ios.ui.media
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -33,6 +32,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.ios.ui.markdown.MarkdownText
 
 /**
  * Renders note content with inline images, video thumbnails, and URL preview
@@ -77,10 +77,8 @@ fun RichNoteContent(
 
             when (segment) {
                 is MediaUtils.ContentSegment.Text -> {
-                    Text(
-                        text = segment.text,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
+                    MarkdownText(
+                        content = segment.text,
                     )
                 }
 
@@ -92,9 +90,15 @@ fun RichNoteContent(
                 }
 
                 is MediaUtils.ContentSegment.VideoUrl -> {
-                    VideoThumbnail(
+                    IosVideoPlayer(
                         url = segment.url,
-                        onClick = handleUrlClick,
+                        autoPlay = false,
+                    )
+                }
+
+                is MediaUtils.ContentSegment.AudioUrl -> {
+                    IosAudioPlayer(
+                        url = segment.url,
                     )
                 }
 

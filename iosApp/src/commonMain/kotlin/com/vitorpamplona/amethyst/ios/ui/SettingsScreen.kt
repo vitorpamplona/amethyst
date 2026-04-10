@@ -119,6 +119,7 @@ fun SettingsScreen(
     onMuteList: (() -> Unit)? = null,
     onHashtagFollow: (() -> Unit)? = null,
     onCommunities: (() -> Unit)? = null,
+    onPeopleLists: (() -> Unit)? = null,
 ) {
     val relayStatuses by relayManager.relayStatuses.collectAsState()
 
@@ -249,6 +250,43 @@ fun SettingsScreen(
                         )
                         Text(
                             "Discover and join communities",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+            }
+
+            // People Lists button (NIP-51)
+            if (onPeopleLists != null) {
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .background(
+                                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+                                shape = RoundedCornerShape(12.dp),
+                            ).clickable(onClick = onPeopleLists)
+                            .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        Icons.Default.People,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp),
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            "People Lists",
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Text(
+                            "Manage your people lists (NIP-51)",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )

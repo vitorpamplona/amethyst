@@ -78,7 +78,9 @@ object MediaUtils {
 
     fun isVideoUrl(url: String): Boolean = allVideoExt.any { bareUrl(url).endsWith(".$it") }
 
-    fun isMediaUrl(url: String): Boolean = isImageUrl(url) || isVideoUrl(url)
+    fun isAudioUrl(url: String): Boolean = audioExt.any { bareUrl(url).endsWith(".$it", ignoreCase = true) }
+
+    fun isMediaUrl(url: String): Boolean = isImageUrl(url) || isVideoUrl(url) || isAudioUrl(url)
 
     /**
      * Very simple URL regex – good enough for inline detection in note text.
@@ -101,6 +103,10 @@ object MediaUtils {
         ) : ContentSegment()
 
         data class VideoUrl(
+            val url: String,
+        ) : ContentSegment()
+
+        data class AudioUrl(
             val url: String,
         ) : ContentSegment()
 
@@ -128,6 +134,7 @@ object MediaUtils {
             when {
                 isImageUrl(url) -> segments.add(ContentSegment.ImageUrl(url))
                 isVideoUrl(url) -> segments.add(ContentSegment.VideoUrl(url))
+                isAudioUrl(url) -> segments.add(ContentSegment.AudioUrl(url))
                 else -> segments.add(ContentSegment.LinkUrl(url))
             }
             lastEnd = match.range.last + 1

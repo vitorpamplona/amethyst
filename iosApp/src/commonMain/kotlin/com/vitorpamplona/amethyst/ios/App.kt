@@ -127,6 +127,7 @@ import com.vitorpamplona.amethyst.ios.ui.highlights.HighlightCard
 import com.vitorpamplona.amethyst.ios.ui.highlights.toHighlightDisplayData
 import com.vitorpamplona.amethyst.ios.ui.labels.LabelRow
 import com.vitorpamplona.amethyst.ios.ui.labels.toLabelDisplayData
+import com.vitorpamplona.amethyst.ios.ui.lists.ListsManagementScreen
 import com.vitorpamplona.amethyst.ios.ui.liveactivities.LiveActivityCard
 import com.vitorpamplona.amethyst.ios.ui.liveactivities.LiveActivityDetailScreen
 import com.vitorpamplona.amethyst.ios.ui.liveactivities.toLiveActivityDisplayData
@@ -266,6 +267,8 @@ sealed class Screen {
     data class CommunityPost(
         val communityAddressId: String,
     ) : Screen()
+
+    data object PeopleLists : Screen()
 
     data class LiveActivity(
         val noteId: String,
@@ -1335,6 +1338,7 @@ private fun MainScreen(
                         onMuteList = { navigateTo(Screen.MuteList) },
                         onHashtagFollow = { navigateTo(Screen.HashtagFollow) },
                         onCommunities = { navigateTo(Screen.Communities) },
+                        onPeopleLists = { navigateTo(Screen.PeopleLists) },
                     )
                 }
 
@@ -1553,6 +1557,17 @@ private fun MainScreen(
                             composeDraft = ""
                             goBack()
                         },
+                    )
+                }
+
+                is Screen.PeopleLists -> {
+                    ListsManagementScreen(
+                        account = account,
+                        relayManager = relayManager,
+                        localCache = localCache,
+                        coordinator = coordinator,
+                        onBack = { goBack() },
+                        onNavigateToProfile = { navigateTo(Screen.Profile(it)) },
                     )
                 }
 
@@ -2025,6 +2040,7 @@ private fun IosFeedContent(
                             Column {
                                 NoteCard(
                                     note = noteDisplayData,
+                                    localCache = localCache,
                                     onClick = { onNavigateToThread(event.id) },
                                     onAuthorClick = onNavigateToProfile,
                                     onBoost = onBoost,
@@ -2360,6 +2376,7 @@ private fun IosProfileContent(
                         val event = note.event ?: return@items
                         NoteCard(
                             note = note.toNoteDisplayData(localCache),
+                            localCache = localCache,
                             onClick = { onNavigateToThread(event.id) },
                             onAuthorClick = onNavigateToProfile,
                             onBoost = onBoost,
@@ -2467,6 +2484,7 @@ private fun IosThreadContent(
                         val event = note.event ?: return@items
                         NoteCard(
                             note = note.toNoteDisplayData(localCache),
+                            localCache = localCache,
                             onClick = { onNavigateToThread(event.id) },
                             onAuthorClick = onNavigateToProfile,
                             onReply = onReply,

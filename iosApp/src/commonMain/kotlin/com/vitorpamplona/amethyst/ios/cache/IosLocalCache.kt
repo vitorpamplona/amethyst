@@ -41,6 +41,8 @@ import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
+import com.vitorpamplona.quartz.nip51Lists.PrivateReplaceableTagArrayEvent
+import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.utils.DualCase
@@ -63,6 +65,10 @@ class IosLocalCache : ICacheProvider {
     private val lock = Any()
 
     val eventStream = IosCacheEventStream()
+
+    /** Monotonically increasing version counter; bump on every consume. */
+    private val _cacheVersion = MutableStateFlow(0L)
+    val cacheVersion: StateFlow<Long> = _cacheVersion.asStateFlow()
 
     private val _followedUsers = MutableStateFlow<Set<HexKey>>(emptySet())
     val followedUsers: StateFlow<Set<HexKey>> = _followedUsers.asStateFlow()
@@ -203,10 +209,19 @@ class IosLocalCache : ICacheProvider {
                 consumeStatus(event)
             }
 
-            else -> {
-                false
+            is PeopleListEvent -> {
+                consumeAddressableEvent(event, relay)
             }
-        }
+
+            else -> {
+                // Try to consume as a generic addressable event if it has an address
+                if (event is PrivateReplaceableTagArrayEvent) {
+                    consumeAddressableEvent(event, relay)
+                } else {
+                    false
+                }
+            }
+        }.also { if (it) _cacheVersion.value++ }
 
     private fun consumeTextNote(
         event: TextNoteEvent,
@@ -358,6 +373,37 @@ class IosLocalCache : ICacheProvider {
         return true
     }
 
+    /**
+     * Generic consume for any addressable (replaceable) event.
+     * Stores by address and also by event id.
+     */
+    private fun consumeAddressableEvent(
+        event: Event,
+        relay: NormalizedRelayUrl?,
+    ): Boolean {
+        val address =
+            try {
+                (event as? com.vitorpamplona.quartz.nip01Core.core.AddressableEvent)?.address() ?: return false
+            } catch (e: Exception) {
+                return false
+            }
+        val addressableNote = getOrCreateAddressableNote(address)
+        val existing = addressableNote.event
+        if (existing != null && existing.createdAt >= event.createdAt) return false
+
+        val author = getOrCreateUser(event.pubKey)
+        addressableNote.loadEvent(event, author, emptyList())
+        relay?.let { addressableNote.addRelay(it) }
+
+        // Also store as regular note
+        val note = getOrCreateNote(event.id)
+        if (note.event == null) {
+            note.loadEvent(event, author, emptyList())
+            relay?.let { note.addRelay(it) }
+        }
+        return true
+    }
+
     private fun consumeStatus(event: StatusEvent): Boolean {
         val existing = platformSynchronized(lock) { userStatuses[event.pubKey] }
         if (existing != null && existing.createdAt >= event.createdAt) return false
@@ -424,6 +470,18 @@ class IosLocalCache : ICacheProvider {
      * Returns all notes currently in cache. Used by feed filters.
      */
     fun allNotes(): List<Note> = platformSynchronized(lock) { notes.values.toList() }
+
+    /**
+     * Returns all addressable notes in cache matching PeopleListEvent (kind 30000)
+     * authored by the given pubkey.
+     */
+    fun findPeopleListsByAuthor(pubKeyHex: HexKey): List<AddressableNote> =
+        platformSynchronized(lock) {
+            addressableNotes.values.filter { note ->
+                val event = note.event
+                event is PeopleListEvent && event.pubKey == pubKeyHex
+            }
+        }
 
     fun clear() {
         platformSynchronized(lock) {
