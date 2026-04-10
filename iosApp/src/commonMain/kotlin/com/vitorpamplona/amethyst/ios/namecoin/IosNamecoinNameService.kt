@@ -90,10 +90,11 @@ class IosNamecoinNameService(
         // Check cache first
         val cached = cache.get(identifier)
         if (cached != null) {
-            if (cached.result != null) {
-                _resolveState.value = NamecoinResolveState.Resolved(cached.result)
+            val cachedResult = cached.result
+            if (cachedResult != null) {
+                _resolveState.value = NamecoinResolveState.Resolved(cachedResult)
             }
-            return cached.result
+            return cachedResult
         }
 
         _resolveState.value = NamecoinResolveState.Resolving
