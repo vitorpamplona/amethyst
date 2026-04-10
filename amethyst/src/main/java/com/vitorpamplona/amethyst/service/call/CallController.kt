@@ -110,6 +110,7 @@ class CallController(
 
                     is CallState.Offering -> {
                         audioManager.startRingbackTone()
+                        ensureForegroundService()
                     }
 
                     is CallState.Connecting -> {
@@ -118,6 +119,7 @@ class CallController(
                         withContext(Dispatchers.IO) { audioManager.switchToCallAudioMode() }
                         audioManager.acquireProximityWakeLock()
                         NotificationUtils.cancelCallNotification(context)
+                        updateForegroundServiceNotification()
                     }
 
                     is CallState.Connected -> {
@@ -126,6 +128,7 @@ class CallController(
                         withContext(Dispatchers.IO) { audioManager.switchToCallAudioMode() }
                         audioManager.acquireProximityWakeLock()
                         NotificationUtils.cancelCallNotification(context)
+                        updateForegroundServiceNotification()
                     }
 
                     is CallState.Ended -> {
@@ -444,10 +447,7 @@ class CallController(
                     Log.d(TAG) { "Peer ${peerPubKey.take(8)} connected!" }
                     scope.launch {
                         callManager.onPeerConnected()
-                        if (!foregroundServiceStarted) {
-                            foregroundServiceStarted = true
-                            startForegroundService()
-                        }
+                        ensureForegroundService()
                     }
                 },
                 onRemoteVideoTrack = { track -> videoMonitor.onRemoteVideoTrack(peerPubKey, track) },
@@ -526,6 +526,12 @@ class CallController(
 
     // ---- Foreground service ----
 
+    private fun ensureForegroundService() {
+        if (foregroundServiceStarted) return
+        foregroundServiceStarted = true
+        startForegroundService()
+    }
+
     private fun startForegroundService() {
         try {
             val peerName = callManager.currentPeerPubKey() ?: ""
@@ -539,6 +545,21 @@ class CallController(
             context.startForegroundService(intent)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start foreground service", e)
+        }
+    }
+
+    private fun updateForegroundServiceNotification() {
+        if (!foregroundServiceStarted) return
+        try {
+            val peerName = callManager.currentPeerPubKey() ?: ""
+            val intent =
+                Intent(context, CallForegroundService::class.java).apply {
+                    action = CallForegroundService.ACTION_UPDATE
+                    putExtra(CallForegroundService.EXTRA_PEER_NAME, peerName)
+                }
+            context.startService(intent)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to update foreground service notification", e)
         }
     }
 
