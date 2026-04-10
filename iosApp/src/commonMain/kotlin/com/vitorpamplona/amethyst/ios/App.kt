@@ -317,7 +317,13 @@ private fun MainScreen(
 ) {
     val relayManager = remember { IosRelayConnectionManager() }
     val localCache = remember { IosLocalCache() }
-    val coordinator = remember { IosSubscriptionsCoordinator(CoroutineScope(Dispatchers.Default), localCache) }
+    val coordinator =
+        remember {
+            IosSubscriptionsCoordinator(
+                CoroutineScope(Dispatchers.Default + kotlinx.coroutines.SupervisorJob()),
+                localCache,
+            )
+        }
     val appScope = rememberCoroutineScope()
     val iosAccount =
         remember(account) {
@@ -351,7 +357,7 @@ private fun MainScreen(
                 "CoroutineException: " + (throwable.message ?: "unknown") + " " + throwable::class.simpleName.orEmpty(),
             )
         }
-    val scope = rememberCoroutineScope { exceptionHandler }
+    val scope = rememberCoroutineScope { exceptionHandler + kotlinx.coroutines.SupervisorJob() }
 
     val onLikeNote: (String) -> Unit = { noteId ->
         scope.launch {
