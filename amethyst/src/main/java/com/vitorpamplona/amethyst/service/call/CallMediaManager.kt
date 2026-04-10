@@ -77,21 +77,33 @@ class CallMediaManager(
     fun initialize(callType: CallType) {
         if (peerConnectionFactory != null) return
 
-        sharedEglBase = EglBase.create()
+        var egl: EglBase? = null
+        try {
+            egl = EglBase.create()
 
-        PeerConnectionFactory.initialize(
-            PeerConnectionFactory
-                .InitializationOptions
-                .builder(context)
-                .createInitializationOptions(),
-        )
+            PeerConnectionFactory.initialize(
+                PeerConnectionFactory
+                    .InitializationOptions
+                    .builder(context)
+                    .createInitializationOptions(),
+            )
 
-        peerConnectionFactory =
-            PeerConnectionFactory
-                .builder()
-                .setVideoDecoderFactory(DefaultVideoDecoderFactory(sharedEglBase!!.eglBaseContext))
-                .setVideoEncoderFactory(DefaultVideoEncoderFactory(sharedEglBase!!.eglBaseContext, true, true))
-                .createPeerConnectionFactory()
+            peerConnectionFactory =
+                PeerConnectionFactory
+                    .builder()
+                    .setVideoDecoderFactory(DefaultVideoDecoderFactory(egl.eglBaseContext))
+                    .setVideoEncoderFactory(DefaultVideoEncoderFactory(egl.eglBaseContext, true, true))
+                    .createPeerConnectionFactory()
+
+            sharedEglBase = egl
+        } catch (e: Exception) {
+            // Clean up partially-created resources to avoid leaking EglBase
+            egl?.release()
+            peerConnectionFactory?.dispose()
+            peerConnectionFactory = null
+            sharedEglBase = null
+            throw e
+        }
 
         localAudioSource = peerConnectionFactory?.createAudioSource(MediaConstraints())
         localAudioTrack = peerConnectionFactory?.createAudioTrack("audio0", localAudioSource)
@@ -145,6 +157,7 @@ class CallMediaManager(
         localVideoTrack?.setEnabled(true)
         _isVideoEnabled.value = true
         _localVideoTrackFlow.value = localVideoTrack
+        startCamera()
     }
 
     fun disableVideo() {

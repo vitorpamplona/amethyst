@@ -24,8 +24,6 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils
-import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 
 /**
@@ -36,24 +34,32 @@ import kotlinx.coroutines.launch
  * notification trampoline restrictions.
  */
 class CallNotificationReceiver : BroadcastReceiver() {
-    @OptIn(DelicateCoroutinesApi::class)
     override fun onReceive(
         context: Context,
         intent: Intent,
     ) {
-        when (intent.action) {
-            ACTION_REJECT_CALL -> {
-                NotificationUtils.cancelCallNotification(context)
+        val callManager = CallSessionBridge.callManager ?: return
+        val pendingResult = goAsync()
+        kotlinx.coroutines.MainScope().launch {
+            try {
+                when (intent.action) {
+                    ACTION_REJECT_CALL -> {
+                        NotificationUtils.cancelCallNotification(context)
+                        callManager.rejectCall()
+                    }
 
-                val callManager = CallSessionBridge.callManager ?: return
-                GlobalScope.launch {
-                    callManager.rejectCall()
+                    ACTION_HANGUP_CALL -> {
+                        callManager.hangup()
+                    }
                 }
+            } finally {
+                pendingResult.finish()
             }
         }
     }
 
     companion object {
         const val ACTION_REJECT_CALL = "com.vitorpamplona.amethyst.REJECT_CALL"
+        const val ACTION_HANGUP_CALL = "com.vitorpamplona.amethyst.HANGUP_CALL"
     }
 }

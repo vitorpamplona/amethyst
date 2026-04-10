@@ -55,6 +55,7 @@ class WebRtcCallSession(
     private val onRenegotiationNeeded: () -> Unit = {},
 ) {
     private var peerConnection: PeerConnection? = null
+    private var iceRestartAttempted = false
 
     fun createPeerConnection() {
         val rtcConfig =
@@ -90,6 +91,7 @@ class WebRtcCallSession(
 
                             PeerConnection.IceConnectionState.CONNECTED -> {
                                 Log.d(TAG) { "ICE: CONNECTED - peer connection established!" }
+                                iceRestartAttempted = false
                                 onPeerConnected()
                             }
 
@@ -98,9 +100,15 @@ class WebRtcCallSession(
                             }
 
                             PeerConnection.IceConnectionState.FAILED -> {
-                                Log.e(TAG, "ICE: FAILED - could not establish connection")
-                                onError("Connection failed - check network")
-                                onDisconnected()
+                                if (!iceRestartAttempted) {
+                                    iceRestartAttempted = true
+                                    Log.d(TAG) { "ICE: FAILED - attempting ICE restart" }
+                                    restartIce()
+                                } else {
+                                    Log.e(TAG, "ICE: FAILED after restart - giving up")
+                                    onError("Connection failed - check network")
+                                    onDisconnected()
+                                }
                             }
 
                             PeerConnection.IceConnectionState.DISCONNECTED -> {
@@ -253,6 +261,42 @@ class WebRtcCallSession(
     fun addIceCandidate(candidate: IceCandidate) {
         val added = peerConnection?.addIceCandidate(candidate)
         Log.d(TAG) { "addIceCandidate result=$added sdpMid=${candidate.sdpMid} sdp=${candidate.sdp.take(60)}" }
+    }
+
+    /**
+     * Triggers an ICE restart by creating a new offer with iceRestart=true.
+     * This re-gathers candidates and attempts to establish connectivity
+     * without tearing down the PeerConnection.
+     */
+    private fun restartIce() {
+        val constraints =
+            MediaConstraints().apply {
+                mandatory.add(MediaConstraints.KeyValuePair("IceRestart", "true"))
+                mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveAudio", "true"))
+                mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveVideo", "true"))
+            }
+        peerConnection?.createOffer(
+            object : SdpObserver {
+                override fun onCreateSuccess(sdp: SessionDescription?) {
+                    sdp?.let {
+                        Log.d(TAG) { "ICE restart offer created, setting local description" }
+                        peerConnection?.setLocalDescription(loggingSdpObserver("setLocalDescription(ICE_RESTART)"), it)
+                        onRenegotiationNeeded()
+                    }
+                }
+
+                override fun onCreateFailure(error: String?) {
+                    Log.e(TAG, "ICE restart offer creation failed: $error")
+                    onError("Connection failed - check network")
+                    onDisconnected()
+                }
+
+                override fun onSetSuccess() {}
+
+                override fun onSetFailure(error: String?) {}
+            },
+            constraints,
+        )
     }
 
     fun getSignalingState(): PeerConnection.SignalingState? = peerConnection?.signalingState()
