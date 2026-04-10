@@ -35,6 +35,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.MailOutline
 import androidx.compose.material.icons.filled.Notifications
@@ -42,6 +43,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -88,6 +90,7 @@ import com.vitorpamplona.amethyst.ios.subscriptions.IosSubscriptionsCoordinator
 import com.vitorpamplona.amethyst.ios.subscriptions.SubscriptionConfig
 import com.vitorpamplona.amethyst.ios.subscriptions.generateSubId
 import com.vitorpamplona.amethyst.ios.subscriptions.rememberSubscription
+import com.vitorpamplona.amethyst.ios.ui.ComposeNoteScreen
 import com.vitorpamplona.amethyst.ios.ui.LoginScreen
 import com.vitorpamplona.amethyst.ios.ui.SettingsScreen
 import com.vitorpamplona.amethyst.ios.ui.note.NoteCard
@@ -126,6 +129,10 @@ sealed class Screen {
 
     data class Thread(
         val noteId: String,
+    ) : Screen()
+
+    data class ComposeNote(
+        val replyToNoteId: String? = null,
     ) : Screen()
 }
 
@@ -202,6 +209,7 @@ private fun MainScreen(
             currentScreen is Screen.MyProfile
 
     val showTopBar = showBottomBar
+    val showFab = currentScreen is Screen.Feed && !account.isReadOnly
 
     Scaffold(
         topBar = {
@@ -233,6 +241,18 @@ private fun MainScreen(
                             containerColor = MaterialTheme.colorScheme.surface,
                         ),
                 )
+            }
+        },
+        floatingActionButton = {
+            if (showFab) {
+                FloatingActionButton(
+                    onClick = { navigateTo(Screen.ComposeNote()) },
+                ) {
+                    Icon(
+                        Icons.Default.Edit,
+                        contentDescription = "Compose Note",
+                    )
+                }
             }
         },
         bottomBar = {
@@ -341,6 +361,18 @@ private fun MainScreen(
                         onBack = { goBack() },
                         onNavigateToProfile = { navigateTo(Screen.Profile(it)) },
                         onNavigateToThread = { navigateTo(Screen.Thread(it)) },
+                        onReply = { noteId -> navigateTo(Screen.ComposeNote(replyToNoteId = noteId)) },
+                    )
+                }
+
+                is Screen.ComposeNote -> {
+                    ComposeNoteScreen(
+                        account = account,
+                        relayManager = relayManager,
+                        localCache = localCache,
+                        replyToNoteId = screen.replyToNoteId,
+                        onBack = { goBack() },
+                        onPublished = { goBack() },
                     )
                 }
             }
@@ -669,6 +701,7 @@ private fun IosThreadContent(
     onBack: () -> Unit,
     onNavigateToProfile: (String) -> Unit,
     onNavigateToThread: (String) -> Unit,
+    onReply: ((String) -> Unit)? = null,
 ) {
     val relayStatuses by relayManager.relayStatuses.collectAsState()
     val allRelayUrls = remember(relayStatuses) { relayStatuses.keys }
@@ -733,6 +766,7 @@ private fun IosThreadContent(
                             note = event.toNoteDisplayData(localCache),
                             onClick = { onNavigateToThread(event.id) },
                             onAuthorClick = onNavigateToProfile,
+                            onReply = onReply,
                         )
                     }
                 }
