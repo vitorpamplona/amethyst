@@ -1,12 +1,47 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
 package com.vitorpamplona.amethyst.ios
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.commons.robohash.CachedRobohash
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 
@@ -16,22 +51,30 @@ fun AmethystApp() {
         var screen by remember { mutableStateOf<Screen>(Screen.Login) }
 
         when (val current = screen) {
-            is Screen.Login -> LoginScreen(
-                onLogin = { pubkey ->
-                    screen = Screen.Feed(pubkey)
-                },
-            )
-            is Screen.Feed -> FeedScreen(
-                pubkey = current.pubkey,
-                onLogout = { screen = Screen.Login },
-            )
+            is Screen.Login -> {
+                LoginScreen(
+                    onLogin = { pubkey ->
+                        screen = Screen.Feed(pubkey)
+                    },
+                )
+            }
+
+            is Screen.Feed -> {
+                FeedScreen(
+                    pubkey = current.pubkey,
+                    onLogout = { screen = Screen.Login },
+                )
+            }
         }
     }
 }
 
 sealed class Screen {
     data object Login : Screen()
-    data class Feed(val pubkey: String) : Screen()
+
+    data class Feed(
+        val pubkey: String,
+    ) : Screen()
 }
 
 @Composable
@@ -58,7 +101,10 @@ fun LoginScreen(onLogin: (String) -> Unit) {
 
         OutlinedTextField(
             value = nsecInput,
-            onValueChange = { nsecInput = it; errorMessage = null },
+            onValueChange = {
+                nsecInput = it
+                errorMessage = null
+            },
             label = { Text("Enter nsec or npub") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
@@ -89,7 +135,10 @@ fun LoginScreen(onLogin: (String) -> Unit) {
 }
 
 @Composable
-fun FeedScreen(pubkey: String, onLogout: () -> Unit) {
+fun FeedScreen(
+    pubkey: String,
+    onLogout: () -> Unit,
+) {
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
     ) {
@@ -127,9 +176,10 @@ fun FeedScreen(pubkey: String, onLogout: () -> Unit) {
                 )
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    text = "This is the initial iOS build using Kotlin Multiplatform. " +
-                        "The app shares business logic, Nostr protocol (quartz), and " +
-                        "UI components (commons) with the Android and Desktop apps.",
+                    text =
+                        "This is the initial iOS build using Kotlin Multiplatform. " +
+                            "The app shares business logic, Nostr protocol (quartz), and " +
+                            "UI components (commons) with the Android and Desktop apps.",
                     style = MaterialTheme.typography.bodyMedium,
                 )
             }
