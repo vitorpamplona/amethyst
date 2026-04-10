@@ -123,6 +123,7 @@ import com.vitorpamplona.amethyst.ios.ui.codesnippets.CodeSnippetCard
 import com.vitorpamplona.amethyst.ios.ui.codesnippets.toCodeSnippetDisplayData
 import com.vitorpamplona.amethyst.ios.ui.communities.CommunityDetailScreen
 import com.vitorpamplona.amethyst.ios.ui.communities.CommunityListScreen
+import com.vitorpamplona.amethyst.ios.ui.groups.RelayGroupsScreen
 import com.vitorpamplona.amethyst.ios.ui.highlights.HighlightCard
 import com.vitorpamplona.amethyst.ios.ui.highlights.toHighlightDisplayData
 import com.vitorpamplona.amethyst.ios.ui.labels.LabelRow
@@ -282,6 +283,8 @@ sealed class Screen {
     data class EditNote(
         val noteId: String,
     ) : Screen()
+
+    data object RelayGroups : Screen()
 }
 
 enum class FeedMode { GLOBAL, FOLLOWING, HASHTAGS, TRENDING, POLLS, CALENDAR, LIVE, MARKETPLACE }
@@ -1348,6 +1351,7 @@ private fun MainScreen(
                         onHashtagFollow = { navigateTo(Screen.HashtagFollow) },
                         onCommunities = { navigateTo(Screen.Communities) },
                         onPeopleLists = { navigateTo(Screen.PeopleLists) },
+                        onRelayGroups = { navigateTo(Screen.RelayGroups) },
                     )
                 }
 
@@ -1566,6 +1570,16 @@ private fun MainScreen(
                             composeDraft = ""
                             goBack()
                         },
+                    )
+                }
+
+                is Screen.RelayGroups -> {
+                    RelayGroupsScreen(
+                        account = account,
+                        relayManager = relayManager,
+                        localCache = localCache,
+                        coordinator = coordinator,
+                        onBack = { goBack() },
                     )
                 }
 
