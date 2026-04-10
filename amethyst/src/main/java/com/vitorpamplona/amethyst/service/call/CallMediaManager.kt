@@ -124,6 +124,23 @@ class CallMediaManager(
         startCamera()
     }
 
+    var captureWidth: Int = 1280
+        private set
+    var captureHeight: Int = 720
+        private set
+    var captureFps: Int = 30
+        private set
+
+    fun setCaptureResolution(
+        width: Int,
+        height: Int,
+        fps: Int,
+    ) {
+        captureWidth = width
+        captureHeight = height
+        captureFps = fps
+    }
+
     fun startCamera() {
         if (cameraCapturer != null) return
         val source = localVideoSource ?: return
@@ -138,7 +155,7 @@ class CallMediaManager(
         cameraCapturer =
             enumerator.createCapturer(camera, null)?.also {
                 it.initialize(helper, context, source.capturerObserver)
-                it.startCapture(1280, 720, 30)
+                it.startCapture(captureWidth, captureHeight, captureFps)
             }
     }
 

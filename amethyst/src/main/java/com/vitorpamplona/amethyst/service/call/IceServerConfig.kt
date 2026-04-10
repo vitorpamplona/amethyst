@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.call
 
+import com.vitorpamplona.amethyst.model.CallTurnServer
 import org.webrtc.PeerConnection
 
 object IceServerConfig {
@@ -49,7 +50,7 @@ object IceServerConfig {
                 .createIceServer(),
         )
 
-    fun buildIceServers(userTurnServers: List<TurnServerConfig> = emptyList()): List<PeerConnection.IceServer> {
+    fun buildIceServers(userTurnServers: List<CallTurnServer> = emptyList()): List<PeerConnection.IceServer> {
         val servers = (defaultStunServers + defaultTurnServers).toMutableList()
         userTurnServers.forEach { turn ->
             servers.add(
@@ -63,9 +64,3 @@ object IceServerConfig {
         return servers
     }
 }
-
-data class TurnServerConfig(
-    val url: String,
-    val username: String,
-    val credential: String,
-)
