@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.service.images
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.sha256.sha256
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
@@ -65,7 +66,10 @@ class ThumbnailDiskCache(
         return try {
             BitmapFactory.decodeFile(file.absolutePath)
         } catch (e: Exception) {
-            file.delete()
+            Log.w("ThumbnailDiskCache", "Failed to decode cached thumbnail, deleting: ${file.absolutePath}", e)
+            if (!file.delete()) {
+                Log.w("ThumbnailDiskCache") { "Failed to delete corrupt cache file: ${file.absolutePath}" }
+            }
             null
         }
     }
@@ -116,11 +120,18 @@ class ThumbnailDiskCache(
                 scaled.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, out)
             }
             scaled.recycle()
-            tempFile.renameTo(finalFile)
+            if (!tempFile.renameTo(finalFile)) {
+                Log.w("ThumbnailDiskCache") { "Failed to rename temp thumbnail to final: ${tempFile.absolutePath}" }
+                if (!tempFile.delete()) {
+                    Log.w("ThumbnailDiskCache") { "Failed to delete temp thumbnail: ${tempFile.absolutePath}" }
+                }
+                return false
+            }
 
             evictIfNeeded()
             return true
         } catch (e: Exception) {
+            Log.w("ThumbnailDiskCache", "Failed to generate thumbnail for $url", e)
             return false
         } finally {
             inFlight.remove(url)

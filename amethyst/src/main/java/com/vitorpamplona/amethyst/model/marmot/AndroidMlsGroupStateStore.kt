@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.model.marmot
 
 import com.vitorpamplona.amethyst.model.preferences.KeyStoreEncryption
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupStateStore
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -158,7 +159,9 @@ class AndroidMlsGroupStateStore(
         if (!tempFile.renameTo(target)) {
             // Fallback: if rename fails (e.g., cross-filesystem), copy and delete
             tempFile.copyTo(target, overwrite = true)
-            tempFile.delete()
+            if (!tempFile.delete()) {
+                Log.w("AndroidMlsGroupStateStore") { "Failed to delete temp file after copy fallback: ${tempFile.absolutePath}" }
+            }
         }
     }
 }
