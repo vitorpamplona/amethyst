@@ -20,7 +20,11 @@
  */
 package com.vitorpamplona.amethyst.ios.ui
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -40,8 +44,11 @@ import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -52,6 +59,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -68,10 +77,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.ios.network.DefaultRelays
 import com.vitorpamplona.amethyst.ios.network.IosRelayConnectionManager
+import com.vitorpamplona.amethyst.ios.network.RelayConnectionState
 import com.vitorpamplona.amethyst.ios.network.RelayStatus
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -133,6 +147,13 @@ fun SettingsScreen(
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             Spacer(Modifier.height(16.dp))
 
+            // ── Relay Discovery ──
+            RelayDiscoverySection(relayStatuses = relayStatuses, relayManager = relayManager)
+
+            Spacer(Modifier.height(16.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            Spacer(Modifier.height(16.dp))
+
             // ── About Section ──
             SectionHeader(icon = Icons.Default.Info, title = "About")
 
@@ -163,6 +184,8 @@ fun SettingsScreen(
     }
 }
 
+// ── Section Header ──
+
 @Composable
 private fun SectionHeader(
     icon: ImageVector,
@@ -187,6 +210,8 @@ private fun SectionHeader(
         )
     }
 }
+
+// ── Account Keys ──
 
 @Composable
 private fun AccountKeyRow(
@@ -252,6 +277,8 @@ private fun AccountKeyRow(
     }
 }
 
+// ── Relay Section (full-featured) ──
+
 @OptIn(DelicateCoroutinesApi::class)
 @Composable
 private fun RelaySection(
@@ -261,6 +288,39 @@ private fun RelaySection(
     var showAddDialog by remember { mutableStateOf(false) }
 
     SectionHeader(icon = Icons.Default.Wifi, title = "Relays")
+
+    // Connection summary
+    val connectedCount = relayStatuses.values.count { it.connectionState == RelayConnectionState.CONNECTED }
+    val connectingCount = relayStatuses.values.count { it.connectionState == RelayConnectionState.CONNECTING }
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column {
+            Text(
+                "$connectedCount of ${relayStatuses.size} connected",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (connectingCount > 0) {
+                Text(
+                    "$connectingCount connecting…",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFFFFA726),
+                )
+            }
+        }
+        IconButton(onClick = { relayManager.reconnectAll() }) {
+            Icon(
+                Icons.Default.Refresh,
+                contentDescription = "Reconnect all",
+                tint = MaterialTheme.colorScheme.primary,
+            )
+        }
+    }
+
+    Spacer(Modifier.height(8.dp))
 
     if (relayStatuses.isEmpty()) {
         Text(
@@ -272,11 +332,12 @@ private fun RelaySection(
     } else {
         relayStatuses.forEach { (url, status) ->
             RelayRow(
-                url = url.toString(),
+                url = url,
                 status = status,
-                onRemove = {
-                    relayManager.removeRelay(url)
-                },
+                onRemove = { relayManager.removeRelay(url) },
+                onToggleRead = { relayManager.setRelayRead(url, it) },
+                onToggleWrite = { relayManager.setRelayWrite(url, it) },
+                onReconnect = { relayManager.reconnectAll() },
             )
             Spacer(Modifier.height(4.dp))
         }
@@ -293,10 +354,17 @@ private fun RelaySection(
 
         TextButton(
             onClick = {
-                GlobalScope.launch { relayManager.connect() }
+                GlobalScope.launch { relayManager.reconnectAll() }
             },
         ) {
             Text("Reconnect All")
+        }
+
+        TextButton(onClick = {
+            relayManager.addDefaultRelays()
+            relayManager.connect()
+        }) {
+            Text("Reset Defaults")
         }
     }
 
@@ -312,65 +380,336 @@ private fun RelaySection(
     }
 }
 
+// ── Individual Relay Row with permissions + NIP-11 ──
+
 @Composable
 private fun RelayRow(
-    url: String,
+    url: NormalizedRelayUrl,
     status: RelayStatus,
     onRemove: () -> Unit,
+    onToggleRead: (Boolean) -> Unit,
+    onToggleWrite: (Boolean) -> Unit,
+    onReconnect: () -> Unit,
 ) {
-    Row(
+    var expanded by remember { mutableStateOf(false) }
+
+    Column(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .background(
                     color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
                     shape = RoundedCornerShape(8.dp),
-                ).padding(horizontal = 12.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
+                ).clickable { expanded = !expanded }
+                .padding(horizontal = 12.dp, vertical = 8.dp),
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                url,
-                style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
+        // Main row: URL + status + delete
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    "●",
-                    color =
-                        if (status.connected) {
-                            Color(0xFF4CAF50)
-                        } else {
-                            Color(0xFFFF5252)
-                        },
-                    style = MaterialTheme.typography.labelSmall,
+                    url.url,
+                    style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
-                Text(
-                    if (status.connected) {
-                        "Connected" + (status.pingMs?.let { " (${it}ms)" } ?: "")
-                    } else {
-                        status.error ?: "Disconnected"
-                    },
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    // Status indicator
+                    val (statusColor, statusText) =
+                        when (status.connectionState) {
+                            RelayConnectionState.CONNECTED -> {
+                                Color(0xFF4CAF50) to ("Connected" + (status.pingMs?.let { " (${it}ms)" } ?: ""))
+                            }
+
+                            RelayConnectionState.CONNECTING -> {
+                                Color(0xFFFFA726) to "Connecting…"
+                            }
+
+                            RelayConnectionState.DISCONNECTED -> {
+                                Color(0xFFFF5252) to (status.error ?: "Disconnected")
+                            }
+                        }
+                    Text("●", color = statusColor, style = MaterialTheme.typography.labelSmall)
+                    Text(
+                        statusText,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+
+                    // Read/Write badges
+                    if (status.read && status.write) {
+                        PermissionBadge("R/W")
+                    } else if (status.read) {
+                        PermissionBadge("R")
+                    } else if (status.write) {
+                        PermissionBadge("W")
+                    }
+                }
+            }
+
+            Row {
+                Icon(
+                    if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    contentDescription = "Expand",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp),
                 )
+                IconButton(onClick = onRemove, modifier = Modifier.size(32.dp)) {
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = "Remove relay",
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(16.dp),
+                    )
+                }
             }
         }
 
-        IconButton(onClick = onRemove, modifier = Modifier.size(32.dp)) {
-            Icon(
-                Icons.Default.Delete,
-                contentDescription = "Remove relay",
-                tint = MaterialTheme.colorScheme.error,
-                modifier = Modifier.size(16.dp),
-            )
+        // Expandable detail section
+        AnimatedVisibility(
+            visible = expanded,
+            enter = expandVertically(),
+            exit = shrinkVertically(),
+        ) {
+            Column(modifier = Modifier.padding(top = 8.dp)) {
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                Spacer(Modifier.height(8.dp))
+
+                // Read/Write toggles
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("Read", style = MaterialTheme.typography.bodySmall)
+                    Switch(
+                        checked = status.read,
+                        onCheckedChange = onToggleRead,
+                        modifier = Modifier.height(24.dp),
+                        colors =
+                            SwitchDefaults.colors(
+                                checkedThumbColor = MaterialTheme.colorScheme.primary,
+                            ),
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("Write", style = MaterialTheme.typography.bodySmall)
+                    Switch(
+                        checked = status.write,
+                        onCheckedChange = onToggleWrite,
+                        modifier = Modifier.height(24.dp),
+                        colors =
+                            SwitchDefaults.colors(
+                                checkedThumbColor = MaterialTheme.colorScheme.primary,
+                            ),
+                    )
+                }
+
+                Spacer(Modifier.height(4.dp))
+
+                // Reconnect button
+                TextButton(onClick = onReconnect) {
+                    Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(14.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("Reconnect", style = MaterialTheme.typography.labelSmall)
+                }
+
+                // NIP-11 info (if available)
+                status.nip11?.let { info ->
+                    Spacer(Modifier.height(4.dp))
+                    Nip11InfoCard(info)
+                }
+
+                // Compressed indicator
+                if (status.compressed) {
+                    Text(
+                        "Compression enabled",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
         }
     }
 }
+
+@Composable
+private fun PermissionBadge(label: String) {
+    Text(
+        label,
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.primary,
+        fontWeight = FontWeight.Bold,
+        modifier =
+            Modifier
+                .background(
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                    shape = RoundedCornerShape(4.dp),
+                ).padding(horizontal = 4.dp, vertical = 1.dp),
+    )
+}
+
+// ── NIP-11 Relay Information Card ──
+
+@Composable
+private fun Nip11InfoCard(info: Nip11RelayInformation) {
+    Column(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .background(
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    shape = RoundedCornerShape(6.dp),
+                ).padding(8.dp),
+    ) {
+        Text(
+            "Relay Info (NIP-11)",
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary,
+        )
+        Spacer(Modifier.height(4.dp))
+
+        info.name?.let {
+            Nip11Row("Name", it)
+        }
+        info.description?.let {
+            Nip11Row("Description", it)
+        }
+        info.software?.let { sw ->
+            val version = info.version?.let { " v$it" } ?: ""
+            Nip11Row("Software", "$sw$version")
+        }
+        info.supported_nips?.takeIf { it.isNotEmpty() }?.let {
+            Nip11Row("NIPs", it.joinToString(", "))
+        }
+        info.contact?.let {
+            Nip11Row("Contact", it)
+        }
+        info.limitation?.let { lim ->
+            lim.payment_required?.let { if (it) Nip11Row("Payment", "Required") }
+            lim.auth_required?.let { if (it) Nip11Row("Auth", "Required") }
+        }
+    }
+}
+
+@Composable
+private fun Nip11Row(
+    label: String,
+    value: String,
+) {
+    Row(modifier = Modifier.padding(vertical = 1.dp)) {
+        Text(
+            "$label: ",
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            value,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+// ── Relay Discovery Section ──
+
+@Composable
+private fun RelayDiscoverySection(
+    relayStatuses: Map<NormalizedRelayUrl, RelayStatus>,
+    relayManager: IosRelayConnectionManager,
+) {
+    var showRecommended by remember { mutableStateOf(false) }
+    val configuredUrls = relayStatuses.keys.map { it.url }.toSet()
+
+    SectionHeader(icon = Icons.Default.Add, title = "Discover Relays")
+
+    Text(
+        "Add popular relays or import from your NIP-65 relay list.",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+
+    Spacer(Modifier.height(8.dp))
+
+    // Recommended relays toggle
+    TextButton(onClick = { showRecommended = !showRecommended }) {
+        Icon(
+            if (showRecommended) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+            contentDescription = null,
+            modifier = Modifier.size(18.dp),
+        )
+        Spacer(Modifier.width(4.dp))
+        Text(if (showRecommended) "Hide Recommended" else "Show Recommended Relays")
+    }
+
+    AnimatedVisibility(
+        visible = showRecommended,
+        enter = expandVertically(),
+        exit = shrinkVertically(),
+    ) {
+        Column {
+            DefaultRelays.RECOMMENDED.forEach { relayUrl ->
+                val normalized = RelayUrlNormalizer.normalizeOrNull(relayUrl)
+                val alreadyAdded = normalized != null && configuredUrls.contains(normalized.url)
+
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 2.dp)
+                            .background(
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f),
+                                shape = RoundedCornerShape(6.dp),
+                            ).padding(horizontal = 12.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        relayUrl,
+                        style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.weight(1f),
+                    )
+                    if (alreadyAdded) {
+                        Text(
+                            "Added",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color(0xFF4CAF50),
+                        )
+                    } else {
+                        TextButton(
+                            onClick = {
+                                relayManager.addRelay(relayUrl)
+                                relayManager.connect()
+                            },
+                        ) {
+                            Text("Add", style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ── Add Relay Dialog ──
 
 @Composable
 private fun AddRelayDialog(
@@ -378,24 +717,58 @@ private fun AddRelayDialog(
     onAdd: (String) -> Unit,
 ) {
     var relayUrl by remember { mutableStateOf("wss://") }
+    var error by remember { mutableStateOf<String?>(null) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Add Relay") },
         text = {
-            OutlinedTextField(
-                value = relayUrl,
-                onValueChange = { relayUrl = it },
-                label = { Text("Relay URL") },
-                placeholder = { Text("wss://relay.example.com") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
+            Column {
+                OutlinedTextField(
+                    value = relayUrl,
+                    onValueChange = {
+                        relayUrl = it
+                        error = null
+                    },
+                    label = { Text("Relay URL") },
+                    placeholder = { Text("wss://relay.example.com") },
+                    singleLine = true,
+                    isError = error != null,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                error?.let {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        it,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            }
         },
         confirmButton = {
             TextButton(
-                onClick = { onAdd(relayUrl) },
-                enabled = relayUrl.startsWith("wss://") && relayUrl.length > 6,
+                onClick = {
+                    val trimmed = relayUrl.trim()
+                    when {
+                        !trimmed.startsWith("wss://") && !trimmed.startsWith("ws://") -> {
+                            error = "URL must start with wss:// or ws://"
+                        }
+
+                        trimmed.length <= 6 -> {
+                            error = "URL is too short"
+                        }
+
+                        RelayUrlNormalizer.normalizeOrNull(trimmed) == null -> {
+                            error = "Invalid relay URL"
+                        }
+
+                        else -> {
+                            onAdd(trimmed)
+                        }
+                    }
+                },
+                enabled = relayUrl.isNotBlank(),
             ) {
                 Text("Add")
             }
@@ -407,6 +780,8 @@ private fun AddRelayDialog(
         },
     )
 }
+
+// ── About Row ──
 
 @Composable
 private fun AboutRow(
@@ -429,6 +804,8 @@ private fun AboutRow(
         )
     }
 }
+
+// ── Logout Section ──
 
 @Composable
 private fun LogoutSection(onLogout: () -> Unit) {

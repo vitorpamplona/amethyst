@@ -31,19 +31,33 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /**
- * Represents the connection status of a Nostr relay.
+ * Connection state of a relay (more granular than just connected/disconnected).
+ */
+enum class RelayConnectionState {
+    DISCONNECTED,
+    CONNECTING,
+    CONNECTED,
+}
+
+/**
+ * Represents the connection status and permissions of a Nostr relay.
  */
 data class RelayStatus(
     val url: NormalizedRelayUrl,
     val connected: Boolean,
+    val connectionState: RelayConnectionState = if (connected) RelayConnectionState.CONNECTED else RelayConnectionState.DISCONNECTED,
     val pingMs: Int? = null,
     val compressed: Boolean = false,
     val error: String? = null,
+    val read: Boolean = true,
+    val write: Boolean = true,
+    val nip11: Nip11RelayInformation? = null,
 )
 
 /**
@@ -59,11 +73,27 @@ object DefaultRelays {
             "wss://nostr.wine",
             "wss://relay.primal.net",
         )
+
+    /** Extended list for relay discovery / recommendations. */
+    val RECOMMENDED =
+        listOf(
+            "wss://relay.damus.io",
+            "wss://relay.nostr.band",
+            "wss://nos.lol",
+            "wss://relay.snort.social",
+            "wss://nostr.wine",
+            "wss://relay.primal.net",
+            "wss://purplepag.es",
+            "wss://relay.nostr.bg",
+            "wss://nostr.mom",
+            "wss://relay.mostr.pub",
+        )
 }
 
 /**
  * iOS relay connection manager using NSURLSession websockets.
- * Mirrors the desktop RelayConnectionManager pattern.
+ * Mirrors the desktop RelayConnectionManager pattern with added
+ * per-relay permissions, NIP-11 info caching and individual reconnect.
  */
 class IosRelayConnectionManager : RelayConnectionListener {
     private val _client = NostrClient(IosWebSocket.Builder())
@@ -75,6 +105,10 @@ class IosRelayConnectionManager : RelayConnectionListener {
 
     val connectedRelays: StateFlow<Set<NormalizedRelayUrl>> = _client.connectedRelaysFlow()
     val availableRelays: StateFlow<Set<NormalizedRelayUrl>> = _client.availableRelaysFlow()
+
+    /** Cached NIP-11 information per relay URL. */
+    private val _nip11Cache = MutableStateFlow<Map<NormalizedRelayUrl, Nip11RelayInformation>>(emptyMap())
+    val nip11Cache: StateFlow<Map<NormalizedRelayUrl, Nip11RelayInformation>> = _nip11Cache.asStateFlow()
 
     init {
         _client.addConnectionListener(this)
@@ -88,9 +122,34 @@ class IosRelayConnectionManager : RelayConnectionListener {
         _client.disconnect()
     }
 
+    /**
+     * Reconnect all relays.
+     */
+    fun reconnectAll() {
+        _relayStatuses.value.keys.forEach { url ->
+            updateRelayStatus(url) { it.copy(connectionState = RelayConnectionState.CONNECTING, error = null) }
+        }
+        _client.reconnect()
+    }
+
     fun addRelay(url: String): NormalizedRelayUrl? {
         val normalized = RelayUrlNormalizer.Companion.normalizeOrNull(url) ?: return null
-        updateRelayStatus(normalized) { it.copy(connected = false, error = null) }
+        updateRelayStatus(normalized) { it.copy(connected = false, connectionState = RelayConnectionState.DISCONNECTED, error = null) }
+        return normalized
+    }
+
+    /**
+     * Add relay with explicit read/write permissions.
+     */
+    fun addRelay(
+        url: String,
+        read: Boolean,
+        write: Boolean,
+    ): NormalizedRelayUrl? {
+        val normalized = RelayUrlNormalizer.Companion.normalizeOrNull(url) ?: return null
+        updateRelayStatus(normalized) {
+            it.copy(connected = false, connectionState = RelayConnectionState.DISCONNECTED, error = null, read = read, write = write)
+        }
         return normalized
     }
 
@@ -100,6 +159,37 @@ class IosRelayConnectionManager : RelayConnectionListener {
 
     fun addDefaultRelays() {
         DefaultRelays.RELAYS.forEach { addRelay(it) }
+    }
+
+    /**
+     * Toggle read permission for a relay.
+     */
+    fun setRelayRead(
+        url: NormalizedRelayUrl,
+        read: Boolean,
+    ) {
+        updateRelayStatus(url) { it.copy(read = read) }
+    }
+
+    /**
+     * Toggle write permission for a relay.
+     */
+    fun setRelayWrite(
+        url: NormalizedRelayUrl,
+        write: Boolean,
+    ) {
+        updateRelayStatus(url) { it.copy(write = write) }
+    }
+
+    /**
+     * Store NIP-11 information for a relay.
+     */
+    fun cacheNip11(
+        url: NormalizedRelayUrl,
+        info: Nip11RelayInformation,
+    ) {
+        _nip11Cache.value = _nip11Cache.value + (url to info)
+        updateRelayStatus(url) { it.copy(nip11 = info) }
     }
 
     fun subscribe(
@@ -128,6 +218,20 @@ class IosRelayConnectionManager : RelayConnectionListener {
         publish(event, connected)
     }
 
+    /** Returns only the relays that have write enabled. */
+    fun writeRelays(): Set<NormalizedRelayUrl> =
+        _relayStatuses.value.entries
+            .filter { it.value.write && it.value.connected }
+            .map { it.key }
+            .toSet()
+
+    /** Returns only the relays that have read enabled. */
+    fun readRelays(): Set<NormalizedRelayUrl> =
+        _relayStatuses.value.entries
+            .filter { it.value.read && it.value.connected }
+            .map { it.key }
+            .toSet()
+
     private fun updateRelayStatus(
         url: NormalizedRelayUrl,
         update: (RelayStatus) -> RelayStatus,
@@ -140,7 +244,7 @@ class IosRelayConnectionManager : RelayConnectionListener {
     }
 
     override fun onConnecting(relay: IRelayClient) {
-        updateRelayStatus(relay.url) { it.copy(connected = false, error = null) }
+        updateRelayStatus(relay.url) { it.copy(connected = false, connectionState = RelayConnectionState.CONNECTING, error = null) }
     }
 
     override fun onConnected(
@@ -149,19 +253,25 @@ class IosRelayConnectionManager : RelayConnectionListener {
         compressed: Boolean,
     ) {
         updateRelayStatus(relay.url) {
-            it.copy(connected = true, pingMs = pingMillis, compressed = compressed, error = null)
+            it.copy(
+                connected = true,
+                connectionState = RelayConnectionState.CONNECTED,
+                pingMs = pingMillis,
+                compressed = compressed,
+                error = null,
+            )
         }
     }
 
     override fun onDisconnected(relay: IRelayClient) {
-        updateRelayStatus(relay.url) { it.copy(connected = false) }
+        updateRelayStatus(relay.url) { it.copy(connected = false, connectionState = RelayConnectionState.DISCONNECTED) }
     }
 
     override fun onCannotConnect(
         relay: IRelayClient,
         errorMessage: String,
     ) {
-        updateRelayStatus(relay.url) { it.copy(connected = false, error = errorMessage) }
+        updateRelayStatus(relay.url) { it.copy(connected = false, connectionState = RelayConnectionState.DISCONNECTED, error = errorMessage) }
     }
 
     override fun onIncomingMessage(
