@@ -80,9 +80,11 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.ios.account.AccountManager
 import com.vitorpamplona.amethyst.ios.account.AccountState
 import com.vitorpamplona.amethyst.ios.cache.IosLocalCache
+import com.vitorpamplona.amethyst.ios.feeds.IosCalendarEventsFeedFilter
 import com.vitorpamplona.amethyst.ios.feeds.IosFollowedHashtagsFeedFilter
 import com.vitorpamplona.amethyst.ios.feeds.IosFollowingFeedFilter
 import com.vitorpamplona.amethyst.ios.feeds.IosGlobalFeedFilter
+import com.vitorpamplona.amethyst.ios.feeds.IosPollsFeedFilter
 import com.vitorpamplona.amethyst.ios.feeds.IosProfileFeedFilter
 import com.vitorpamplona.amethyst.ios.feeds.IosThreadFilter
 import com.vitorpamplona.amethyst.ios.feeds.IosTrendingFeedFilter
@@ -104,6 +106,8 @@ import com.vitorpamplona.amethyst.ios.ui.HashtagFollowScreen
 import com.vitorpamplona.amethyst.ios.ui.LoginScreen
 import com.vitorpamplona.amethyst.ios.ui.MuteListScreen
 import com.vitorpamplona.amethyst.ios.ui.SettingsScreen
+import com.vitorpamplona.amethyst.ios.ui.calendar.CalendarEventCard
+import com.vitorpamplona.amethyst.ios.ui.calendar.toCalendarEventDisplayData
 import com.vitorpamplona.amethyst.ios.ui.chats.IosChatScreen
 import com.vitorpamplona.amethyst.ios.ui.chats.IosChatroomListState
 import com.vitorpamplona.amethyst.ios.ui.chats.IosConversationListScreen
@@ -119,10 +123,13 @@ import com.vitorpamplona.amethyst.ios.ui.note.ReportDialog
 import com.vitorpamplona.amethyst.ios.ui.note.UserStatusBadge
 import com.vitorpamplona.amethyst.ios.ui.note.UserStatusDot
 import com.vitorpamplona.amethyst.ios.ui.notifications.IosNotificationScreen
+import com.vitorpamplona.amethyst.ios.ui.polls.PollCard
+import com.vitorpamplona.amethyst.ios.ui.polls.toPollDisplayData
 import com.vitorpamplona.amethyst.ios.ui.search.IosSearchScreen
 import com.vitorpamplona.amethyst.ios.ui.toArticleDisplayData
 import com.vitorpamplona.amethyst.ios.ui.toNoteDisplayData
 import com.vitorpamplona.amethyst.ios.viewmodels.IosFeedViewModel
+import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArrayOrNull
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
@@ -142,6 +149,8 @@ import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.EventBookmark
 import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.UserTag
+import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
+import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportType
@@ -236,7 +245,7 @@ sealed class Screen {
     ) : Screen()
 }
 
-enum class FeedMode { GLOBAL, FOLLOWING, HASHTAGS, TRENDING, LIVE }
+enum class FeedMode { GLOBAL, FOLLOWING, HASHTAGS, TRENDING, POLLS, CALENDAR, LIVE }
 
 @Composable
 fun App() {
@@ -1440,6 +1449,24 @@ private fun IosFeedContent(
                 )
             }
 
+            FeedMode.POLLS -> {
+                SubscriptionConfig(
+                    subId = generateSubId("polls-feed"),
+                    filters = listOf(FilterBuilders.polls(limit = 100)),
+                    relays = allRelayUrls,
+                    onEvent = { event, _, relay, _ -> coordinator.consumeEvent(event, relay) },
+                )
+            }
+
+            FeedMode.CALENDAR -> {
+                SubscriptionConfig(
+                    subId = generateSubId("calendar-feed"),
+                    filters = listOf(FilterBuilders.calendarEvents(limit = 100)),
+                    relays = allRelayUrls,
+                    onEvent = { event, _, relay, _ -> coordinator.consumeEvent(event, relay) },
+                )
+            }
+
             FeedMode.LIVE -> {
                 SubscriptionConfig(
                     subId = generateSubId("live-activities"),
@@ -1470,6 +1497,14 @@ private fun IosFeedContent(
 
                     FeedMode.TRENDING -> {
                         IosTrendingFeedFilter(localCache)
+                    }
+
+                    FeedMode.POLLS -> {
+                        IosPollsFeedFilter(localCache)
+                    }
+
+                    FeedMode.CALENDAR -> {
+                        IosCalendarEventsFeedFilter(localCache)
                     }
 
                     FeedMode.LIVE -> {
@@ -1538,6 +1573,8 @@ private fun IosFeedContent(
                     FeedMode.FOLLOWING -> "Following"
                     FeedMode.HASHTAGS -> "Hashtags"
                     FeedMode.TRENDING -> "Trending"
+                    FeedMode.POLLS -> "Polls"
+                    FeedMode.CALENDAR -> "Calendar"
                     FeedMode.LIVE -> "Live"
                 },
             connectedRelayCount = connectedRelays.size,
@@ -1562,6 +1599,8 @@ private fun IosFeedContent(
                                 FeedMode.FOLLOWING -> "Following"
                                 FeedMode.HASHTAGS -> "#Tags"
                                 FeedMode.TRENDING -> "🔥 Trending"
+                                FeedMode.POLLS -> "🗳️ Polls"
+                                FeedMode.CALENDAR -> "📅 Calendar"
                                 FeedMode.LIVE -> "🔴 Live"
                             },
                             style = MaterialTheme.typography.labelMedium,
@@ -1587,6 +1626,8 @@ private fun IosFeedContent(
                             FeedMode.FOLLOWING -> "No notes from followed users"
                             FeedMode.HASHTAGS -> if (followedHashtags.isEmpty()) "No followed hashtags" else "No notes with your hashtags yet"
                             FeedMode.TRENDING -> "No trending notes yet"
+                            FeedMode.POLLS -> "No polls found"
+                            FeedMode.CALENDAR -> "No calendar events found"
                             FeedMode.LIVE -> "No live activities found"
                             else -> "No notes found"
                         },
@@ -1625,6 +1666,26 @@ private fun IosFeedContent(
                                     activity = activityData,
                                     onClick = { onNavigateToLiveActivity?.invoke(event.id) },
                                     onHostClick = onNavigateToProfile,
+                                )
+                            }
+                        } else if (event is ZapPollEvent) {
+                            val pollData = note.toPollDisplayData(localCache)
+                            if (pollData != null) {
+                                PollCard(
+                                    poll = pollData,
+                                    onClick = { onNavigateToThread(event.id) },
+                                    onAuthorClick = onNavigateToProfile,
+                                    onVote = null, // TODO: implement zap-based voting
+                                )
+                            }
+                        } else if (event is CalendarTimeSlotEvent || event is CalendarDateSlotEvent) {
+                            val calendarData = note.toCalendarEventDisplayData(localCache)
+                            if (calendarData != null) {
+                                CalendarEventCard(
+                                    event = calendarData,
+                                    onClick = { onNavigateToThread(event.id) },
+                                    onAuthorClick = onNavigateToProfile,
+                                    onRsvp = null, // TODO: implement RSVP
                                 )
                             }
                         } else if (event is LongTextNoteEvent) {

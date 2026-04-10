@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.commons.ui.feeds.DefaultFeedOrder
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedFilter
 import com.vitorpamplona.amethyst.ios.cache.IosLocalCache
+import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.isTaggedHash
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
@@ -33,6 +34,8 @@ import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
+import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
+import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.StatusTag
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
@@ -42,7 +45,10 @@ private fun isFeedNote(event: com.vitorpamplona.quartz.nip01Core.core.Event?): B
     event is TextNoteEvent ||
         event is RepostEvent ||
         event is GenericRepostEvent ||
-        event is LongTextNoteEvent
+        event is LongTextNoteEvent ||
+        event is ZapPollEvent ||
+        event is CalendarTimeSlotEvent ||
+        event is CalendarDateSlotEvent
 
 /**
  * Global feed: kind 1 text notes + kind 6/16 reposts, sorted by createdAt desc.
@@ -350,6 +356,74 @@ class IosCommunityPostsFeedFilter(
     private fun isCommunityPost(note: Note): Boolean {
         val event = note.event ?: return false
         return event is TextNoteEvent && event.isForCommunity(communityAddressId)
+    }
+}
+
+/**
+ * Polls feed: kind 6969 ZapPoll events, sorted by createdAt desc.
+ */
+class IosPollsFeedFilter(
+    private val cache: IosLocalCache,
+) : AdditiveFeedFilter<Note>() {
+    override fun feedKey(): String = "polls"
+
+    override fun feed(): List<Note> =
+        cache
+            .allNotes()
+            .filter { it.event is ZapPollEvent }
+            .sortedWith(DefaultFeedOrder)
+            .take(limit())
+
+    override fun applyFilter(newItems: Set<Note>): Set<Note> = newItems.filterTo(HashSet()) { it.event is ZapPollEvent }
+
+    override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder)
+
+    override fun limit(): Int = 200
+}
+
+/**
+ * Calendar events feed: kind 31922 (date-slot) + kind 31923 (time-slot) events.
+ * Sorted by start time (upcoming first), then createdAt.
+ */
+class IosCalendarEventsFeedFilter(
+    private val cache: IosLocalCache,
+) : AdditiveFeedFilter<Note>() {
+    override fun feedKey(): String = "calendar-events"
+
+    private fun isCalendarEvent(event: com.vitorpamplona.quartz.nip01Core.core.Event?): Boolean = event is CalendarTimeSlotEvent || event is CalendarDateSlotEvent
+
+    override fun feed(): List<Note> =
+        cache
+            .allNotes()
+            .filter { isCalendarEvent(it.event) }
+            .sortedWith(calendarOrder)
+            .take(limit())
+
+    override fun applyFilter(newItems: Set<Note>): Set<Note> = newItems.filterTo(HashSet()) { isCalendarEvent(it.event) }
+
+    override fun sort(items: Set<Note>): List<Note> = items.sortedWith(calendarOrder)
+
+    override fun limit(): Int = 200
+
+    companion object {
+        /** Sort by start time ascending (upcoming first), then createdAt desc for tie-breaking. */
+        private val calendarOrder =
+            compareBy<Note> {
+                when (val event = it.event) {
+                    is CalendarTimeSlotEvent -> {
+                        event.start() ?: Long.MAX_VALUE
+                    }
+
+                    is CalendarDateSlotEvent -> {
+                        // Convert date string to a sortable value; fallback to MAX_VALUE
+                        event.start()?.replace("-", "")?.toLongOrNull() ?: Long.MAX_VALUE
+                    }
+
+                    else -> {
+                        Long.MAX_VALUE
+                    }
+                }
+            }.thenByDescending { it.createdAt() ?: 0L }
     }
 }
 

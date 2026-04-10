@@ -29,10 +29,11 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 object FilterBuilders {
     private val FEED_KINDS = listOf(1, 6, 16)
     private val FEED_KINDS_WITH_ARTICLES = listOf(1, 6, 16, 30023)
+    private val FEED_KINDS_ALL = listOf(1, 6, 16, 30023, 6969, 31922, 31923)
 
     fun textNotesGlobal(limit: Int? = null): Filter = Filter(kinds = FEED_KINDS, limit = limit)
 
-    fun textNotesWithArticlesGlobal(limit: Int? = null): Filter = Filter(kinds = FEED_KINDS_WITH_ARTICLES, limit = limit)
+    fun textNotesWithArticlesGlobal(limit: Int? = null): Filter = Filter(kinds = FEED_KINDS_ALL, limit = limit)
 
     fun textNotesFromAuthors(
         authors: List<String>,
@@ -190,6 +191,44 @@ object FilterBuilders {
      * User's community list (NIP-72 kind 10004).
      */
     fun communityList(pubKeyHex: String): Filter = Filter(kinds = listOf(10004), authors = listOf(pubKeyHex), limit = 1)
+
+    // ── NIP-88 Polls (ZapPoll kind 6969) ──
+
+    /**
+     * Discover polls (kind 6969).
+     */
+    fun polls(limit: Int? = null): Filter = Filter(kinds = listOf(6969), limit = limit)
+
+    /**
+     * Polls by specific authors.
+     */
+    fun pollsByAuthors(
+        authors: List<String>,
+        limit: Int? = null,
+    ): Filter = Filter(kinds = listOf(6969), authors = authors, limit = limit)
+
+    // ── NIP-52 Calendar Events ──
+
+    /**
+     * Discover calendar events: kind 31922 (date-slot) + kind 31923 (time-slot).
+     */
+    fun calendarEvents(limit: Int? = null): Filter = Filter(kinds = listOf(31922, 31923), limit = limit)
+
+    /**
+     * Calendar events by specific authors.
+     */
+    fun calendarEventsByAuthors(
+        authors: List<String>,
+        limit: Int? = null,
+    ): Filter = Filter(kinds = listOf(31922, 31923), authors = authors, limit = limit)
+
+    /**
+     * RSVP responses for calendar events (kind 31925).
+     */
+    fun calendarRsvps(
+        calendarEventAddressIds: List<String>,
+        limit: Int? = null,
+    ): Filter = Filter(kinds = listOf(31925), tags = mapOf("a" to calendarEventAddressIds), limit = limit)
 
     // ── NIP-53 Live Activities ──
 
