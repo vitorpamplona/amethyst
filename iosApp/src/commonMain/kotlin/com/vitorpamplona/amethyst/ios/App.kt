@@ -80,10 +80,12 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.ios.account.AccountManager
 import com.vitorpamplona.amethyst.ios.account.AccountState
 import com.vitorpamplona.amethyst.ios.cache.IosLocalCache
+import com.vitorpamplona.amethyst.ios.feeds.IosFollowedHashtagsFeedFilter
 import com.vitorpamplona.amethyst.ios.feeds.IosFollowingFeedFilter
 import com.vitorpamplona.amethyst.ios.feeds.IosGlobalFeedFilter
 import com.vitorpamplona.amethyst.ios.feeds.IosProfileFeedFilter
 import com.vitorpamplona.amethyst.ios.feeds.IosThreadFilter
+import com.vitorpamplona.amethyst.ios.feeds.IosTrendingFeedFilter
 import com.vitorpamplona.amethyst.ios.model.IosIAccount
 import com.vitorpamplona.amethyst.ios.network.IosRelayConnectionManager
 import com.vitorpamplona.amethyst.ios.subscriptions.FilterBuilders
@@ -95,6 +97,7 @@ import com.vitorpamplona.amethyst.ios.ui.AccountSwitcherScreen
 import com.vitorpamplona.amethyst.ios.ui.BookmarksScreen
 import com.vitorpamplona.amethyst.ios.ui.ComposeNoteScreen
 import com.vitorpamplona.amethyst.ios.ui.EditProfileScreen
+import com.vitorpamplona.amethyst.ios.ui.HashtagFollowScreen
 import com.vitorpamplona.amethyst.ios.ui.LoginScreen
 import com.vitorpamplona.amethyst.ios.ui.MuteListScreen
 import com.vitorpamplona.amethyst.ios.ui.SettingsScreen
@@ -122,6 +125,7 @@ import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.EventBookmark
+import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.UserTag
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
@@ -183,9 +187,11 @@ sealed class Screen {
     data object Bookmarks : Screen()
 
     data object MuteList : Screen()
+
+    data object HashtagFollow : Screen()
 }
 
-enum class FeedMode { GLOBAL, FOLLOWING }
+enum class FeedMode { GLOBAL, FOLLOWING, HASHTAGS, TRENDING }
 
 @Composable
 fun App() {
@@ -423,6 +429,75 @@ private fun MainScreen(
                     snackbarHostState.showSnackbar("User unmuted")
                 } catch (e: Exception) {
                     snackbarHostState.showSnackbar("Failed to unmute user")
+                }
+            }
+        }
+    }
+
+    // ── Hashtag follow state (NIP-51 kind 10015) ──
+    var hashtagListState by remember { mutableStateOf<HashtagListEvent?>(null) }
+    var followedHashtags by remember { mutableStateOf<Set<String>>(emptySet()) }
+
+    // Load hashtag list from cache on start
+    LaunchedEffect(account.pubKeyHex) {
+        val address = HashtagListEvent.createAddress(account.pubKeyHex)
+        val cachedNote = localCache.getOrCreateAddressableNote(address)
+        val cachedEvent = cachedNote.event as? HashtagListEvent
+        if (cachedEvent != null) {
+            hashtagListState = cachedEvent
+            followedHashtags = cachedEvent.publicHashtags().toSet()
+        }
+    }
+
+    val onFollowHashtag: (String) -> Unit = { hashtag ->
+        if (!account.isReadOnly) {
+            scope.launch {
+                try {
+                    val newList =
+                        if (hashtagListState != null) {
+                            HashtagListEvent.add(
+                                earlierVersion = hashtagListState!!,
+                                hashtag = hashtag.lowercase(),
+                                isPrivate = false,
+                                signer = account.signer,
+                            )
+                        } else {
+                            HashtagListEvent.create(
+                                hashtag = hashtag.lowercase(),
+                                isPrivate = false,
+                                signer = account.signer,
+                            )
+                        }
+                    hashtagListState = newList
+                    followedHashtags = newList.publicHashtags().toSet()
+                    localCache.consume(newList, null)
+                    relayManager.broadcastToAll(newList)
+                    snackbarHostState.showSnackbar("#$hashtag followed!")
+                } catch (e: Exception) {
+                    snackbarHostState.showSnackbar("Failed to follow hashtag")
+                }
+            }
+        }
+    }
+
+    val onUnfollowHashtag: (String) -> Unit = { hashtag ->
+        if (!account.isReadOnly) {
+            scope.launch {
+                try {
+                    val existing = hashtagListState ?: return@launch
+                    val newList =
+                        HashtagListEvent.remove(
+                            earlierVersion = existing,
+                            hashtag = hashtag,
+                            signer = account.signer,
+                        )
+                    hashtagListState = newList
+                    followedHashtags = newList.publicHashtags().toSet()
+                    localCache.consume(newList, null)
+                    relayManager.broadcastToAll(newList)
+                    snackbarHostState.showSnackbar("#$hashtag unfollowed")
+                } catch (e: Exception) {
+                    snackbarHostState.showSnackbar("Failed to unfollow hashtag")
                 }
             }
         }
@@ -786,6 +861,7 @@ private fun MainScreen(
                         localCache = localCache,
                         coordinator = coordinator,
                         pubKeyHex = account.pubKeyHex,
+                        followedHashtags = followedHashtags,
                         onNavigateToProfile = { navigateTo(Screen.Profile(it)) },
                         onNavigateToThread = { navigateTo(Screen.Thread(it)) },
                         onBoost = onBoostNote,
@@ -902,6 +978,7 @@ private fun MainScreen(
                             },
                         onBookmarks = { navigateTo(Screen.Bookmarks) },
                         onMuteList = { navigateTo(Screen.MuteList) },
+                        onHashtagFollow = { navigateTo(Screen.HashtagFollow) },
                     )
                 }
 
@@ -910,6 +987,15 @@ private fun MainScreen(
                         mutedUserPubKeys = mutedUserPubKeys,
                         localCache = localCache,
                         onUnmute = onUnmuteUser,
+                        onBack = { goBack() },
+                    )
+                }
+
+                is Screen.HashtagFollow -> {
+                    HashtagFollowScreen(
+                        followedHashtags = followedHashtags,
+                        onFollow = onFollowHashtag,
+                        onUnfollow = onUnfollowHashtag,
                         onBack = { goBack() },
                     )
                 }
@@ -1046,6 +1132,7 @@ private fun IosFeedContent(
     localCache: IosLocalCache,
     coordinator: IosSubscriptionsCoordinator,
     pubKeyHex: String?,
+    followedHashtags: Set<String> = emptySet(),
     onNavigateToProfile: (String) -> Unit,
     onNavigateToThread: (String) -> Unit,
     onBoost: ((String) -> Unit)? = null,
@@ -1082,7 +1169,7 @@ private fun IosFeedContent(
     }
 
     // Subscribe to feed events
-    rememberSubscription(allRelayUrls, feedMode, followedUsers, relayManager = relayManager) {
+    rememberSubscription(allRelayUrls, feedMode, followedUsers, followedHashtags, relayManager = relayManager) {
         if (allRelayUrls.isEmpty()) return@rememberSubscription null
         when (feedMode) {
             FeedMode.GLOBAL -> {
@@ -1107,16 +1194,42 @@ private fun IosFeedContent(
                     null
                 }
             }
+
+            FeedMode.HASHTAGS -> {
+                val tags = followedHashtags.toList()
+                if (tags.isNotEmpty()) {
+                    SubscriptionConfig(
+                        subId = generateSubId("hashtag-feed"),
+                        filters = listOf(FilterBuilders.textNotesByHashtags(tags, limit = 200)),
+                        relays = allRelayUrls,
+                        onEvent = { event, _, relay, _ -> coordinator.consumeEvent(event, relay) },
+                    )
+                } else {
+                    null
+                }
+            }
+
+            FeedMode.TRENDING -> {
+                // Trending uses the global feed subscription + local ranking
+                SubscriptionConfig(
+                    subId = generateSubId("trending-feed"),
+                    filters = listOf(FilterBuilders.textNotesGlobal(limit = 500)),
+                    relays = allRelayUrls,
+                    onEvent = { event, _, relay, _ -> coordinator.consumeEvent(event, relay) },
+                )
+            }
         }
     }
 
-    // Commons FeedViewModel keyed on feedMode
+    // Commons FeedViewModel keyed on feedMode + followedHashtags
     val viewModel =
-        remember(feedMode) {
+        remember(feedMode, followedHashtags) {
             val filter =
                 when (feedMode) {
                     FeedMode.GLOBAL -> IosGlobalFeedFilter(localCache)
                     FeedMode.FOLLOWING -> IosFollowingFeedFilter(localCache) { localCache.followedUsers.value }
+                    FeedMode.HASHTAGS -> IosFollowedHashtagsFeedFilter(localCache) { followedHashtags }
+                    FeedMode.TRENDING -> IosTrendingFeedFilter(localCache)
                 }
             IosFeedViewModel(filter, localCache)
         }
@@ -1152,11 +1265,42 @@ private fun IosFeedContent(
 
     Column(modifier = Modifier.fillMaxSize()) {
         FeedHeader(
-            title = if (feedMode == FeedMode.GLOBAL) "Global Feed" else "Following",
+            title =
+                when (feedMode) {
+                    FeedMode.GLOBAL -> "Global Feed"
+                    FeedMode.FOLLOWING -> "Following"
+                    FeedMode.HASHTAGS -> "Hashtags"
+                    FeedMode.TRENDING -> "Trending"
+                },
             connectedRelayCount = connectedRelays.size,
             onRefresh = { relayManager.connect() },
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
         )
+
+        // Feed mode tabs
+        androidx.compose.material3.ScrollableTabRow(
+            selectedTabIndex = feedMode.ordinal,
+            edgePadding = 8.dp,
+            containerColor = MaterialTheme.colorScheme.surface,
+        ) {
+            FeedMode.entries.forEach { mode ->
+                androidx.compose.material3.Tab(
+                    selected = feedMode == mode,
+                    onClick = { feedMode = mode },
+                    text = {
+                        Text(
+                            when (mode) {
+                                FeedMode.GLOBAL -> "Global"
+                                FeedMode.FOLLOWING -> "Following"
+                                FeedMode.HASHTAGS -> "#Tags"
+                                FeedMode.TRENDING -> "🔥 Trending"
+                            },
+                            style = MaterialTheme.typography.labelMedium,
+                        )
+                    },
+                )
+            }
+        }
 
         when (val state = feedState) {
             is FeedState.Loading -> {
@@ -1169,7 +1313,19 @@ private fun IosFeedContent(
 
             is FeedState.Empty -> {
                 EmptyState(
-                    title = if (feedMode == FeedMode.FOLLOWING) "No notes from followed users" else "No notes found",
+                    title =
+                        when (feedMode) {
+                            FeedMode.FOLLOWING -> "No notes from followed users"
+                            FeedMode.HASHTAGS -> if (followedHashtags.isEmpty()) "No followed hashtags" else "No notes with your hashtags yet"
+                            FeedMode.TRENDING -> "No trending notes yet"
+                            else -> "No notes found"
+                        },
+                    description =
+                        if (feedMode == FeedMode.HASHTAGS && followedHashtags.isEmpty()) {
+                            "Follow hashtags in Settings to see them here"
+                        } else {
+                            null
+                        },
                     onRefresh = { relayManager.connect() },
                 )
             }

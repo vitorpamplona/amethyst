@@ -121,6 +121,19 @@ object FilterBuilders {
         eventIds: List<String>,
         limit: Int? = null,
     ): Filter = Filter(kinds = listOf(6), tags = mapOf("e" to eventIds), limit = limit)
+
+    /**
+     * Text notes tagged with specific hashtags (NIP-12 "t" tag filter).
+     */
+    fun textNotesByHashtags(
+        hashtags: List<String>,
+        limit: Int? = null,
+    ): Filter = Filter(kinds = listOf(1), tags = mapOf("t" to hashtags), limit = limit)
+
+    /**
+     * Fetch the user's NIP-51 hashtag list (kind 10015).
+     */
+    fun hashtagList(pubKeyHex: String): Filter = Filter(kinds = listOf(10015), authors = listOf(pubKeyHex), limit = 1)
 }
 
 /**

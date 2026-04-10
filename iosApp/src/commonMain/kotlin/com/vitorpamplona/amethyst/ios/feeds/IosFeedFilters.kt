@@ -252,3 +252,70 @@ class IosHashtagFeedFilter(
         return event is TextNoteEvent && event.isTaggedHash(lowerHashtag)
     }
 }
+
+/**
+ * Followed-hashtags feed: text notes tagged with any of the user's followed hashtags.
+ * Uses NIP-51 kind 10015 HashtagListEvent.
+ */
+class IosFollowedHashtagsFeedFilter(
+    private val cache: IosLocalCache,
+    private val followedHashtags: () -> Set<String>,
+) : AdditiveFeedFilter<Note>() {
+    override fun feedKey(): String = "followed-hashtags-${followedHashtags().hashCode()}"
+
+    override fun feed(): List<Note> {
+        val tags = followedHashtags()
+        if (tags.isEmpty()) return emptyList()
+        return cache
+            .allNotes()
+            .filter { isFollowedHashtagNote(it, tags) }
+            .sortedWith(DefaultFeedOrder)
+            .take(limit())
+    }
+
+    override fun applyFilter(newItems: Set<Note>): Set<Note> {
+        val tags = followedHashtags()
+        if (tags.isEmpty()) return emptySet()
+        return newItems.filterTo(HashSet()) { isFollowedHashtagNote(it, tags) }
+    }
+
+    override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder)
+
+    override fun limit(): Int = 500
+
+    private fun isFollowedHashtagNote(
+        note: Note,
+        tags: Set<String>,
+    ): Boolean {
+        val event = note.event ?: return false
+        if (event !is TextNoteEvent) return false
+        return tags.any { event.isTaggedHash(it) }
+    }
+}
+
+/**
+ * Trending feed: notes with the most engagement (reactions + reposts + replies + zaps).
+ * A simple local heuristic — ranks cached notes by interaction count.
+ */
+class IosTrendingFeedFilter(
+    private val cache: IosLocalCache,
+) : FeedFilter<Note>() {
+    override fun feedKey(): String = "trending"
+
+    override fun feed(): List<Note> {
+        val now =
+            com.vitorpamplona.quartz.utils
+                .currentTimeSeconds()
+        val oneDayAgo = now - 86400L
+
+        return cache
+            .allNotes()
+            .filter {
+                val event = it.event
+                event is TextNoteEvent && (event.createdAt) >= oneDayAgo
+            }.sortedByDescending { it.countReactions() + it.replies.size + it.boosts.size + it.zaps.size }
+            .take(limit())
+    }
+
+    override fun limit(): Int = 200
+}
