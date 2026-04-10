@@ -43,7 +43,7 @@ internal object Glv {
     /** β: cube root of unity mod p. φ(x,y) = (β·x, y). */
     @JvmField
     val BETA =
-        longArrayOf(
+        Fe4(
             -4523465429756870162L,
             -7138124642204153451L,
             7954561588662645993L,
@@ -53,13 +53,13 @@ internal object Glv {
     // ==================== GLV Scalar Decomposition ====================
 
     class Split(
-        @JvmField val k1: LongArray,
-        @JvmField val k2: LongArray,
+        @JvmField val k1: Fe4,
+        @JvmField val k2: Fe4,
         @JvmField val negK1: Boolean,
         @JvmField val negK2: Boolean,
     )
 
-    fun splitScalar(k: LongArray): Split {
+    fun splitScalar(k: Fe4): Split {
         val c1 = mulShift384(k, G1)
         val c2 = mulShift384(k, G2)
         val r2 = ScalarN.add(ScalarN.mul(c1, MINUS_B1), ScalarN.mul(c2, MINUS_B2))
@@ -79,12 +79,12 @@ internal object Glv {
      * Eliminates ~26 LongArray allocations per call (called 2× per verify = ~52 allocs saved).
      */
     fun splitScalarInto(
-        outK1: LongArray,
-        outK2: LongArray,
-        k: LongArray,
-        w: LongArray,
-        t1: LongArray,
-        t2: LongArray,
+        outK1: Fe4,
+        outK2: Fe4,
+        k: Fe4,
+        w: Wide8,
+        t1: Fe4,
+        t2: Fe4,
     ): Split {
         // c1 = mulShift384(k, G1)
         mulShift384Into(t1, k, G1, w)
@@ -110,19 +110,19 @@ internal object Glv {
 
     /** Allocation-free mulShift384. */
     private fun mulShift384Into(
-        out: LongArray,
-        k: LongArray,
-        g: LongArray,
-        w: LongArray,
+        out: Fe4,
+        k: Fe4,
+        g: Fe4,
+        w: Wide8,
     ) {
         U256.mulWide(w, k, g)
-        out[0] = w[6]
-        out[1] = w[7]
-        out[2] = 0L
-        out[3] = 0L
-        if (w[5] < 0) { // bit 63 of w[5] = bit 383 (rounding)
-            out[0]++
-            if (out[0] == 0L) out[1]++
+        out.l0 = w.l6
+        out.l1 = w.l7
+        out.l2 = 0L
+        out.l3 = 0L
+        if (w.l5 < 0) { // bit 63 of w.l5 = bit 383 (rounding)
+            out.l0++
+            if (out.l0 == 0L) out.l1++
         }
     }
 
@@ -135,13 +135,13 @@ internal object Glv {
      * The working copy is extended to handle carries past maxBits.
      */
     fun wnaf(
-        scalar: LongArray,
+        scalar: Fe4,
         w: Int,
         maxBits: Int,
     ): IntArray {
         val totalBits = maxBits + w
         val result = IntArray(totalBits)
-        val s = LongArray(maxOf((totalBits + 63) / 64, scalar.size))
+        val s = LongArray(maxOf((totalBits + 63) / 64, 4))
         wnafInto(result, s, scalar, w, maxBits)
         return result
     }
@@ -153,7 +153,7 @@ internal object Glv {
     fun wnafInto(
         result: IntArray,
         sTmp: LongArray,
-        scalar: LongArray,
+        scalar: Fe4,
         w: Int,
         maxBits: Int,
     ): Int {
@@ -161,7 +161,7 @@ internal object Glv {
         // Clear output and copy scalar into scratch
         for (i in 0 until totalBits.coerceAtMost(result.size)) result[i] = 0
         for (i in sTmp.indices) sTmp[i] = 0
-        scalar.copyInto(sTmp)
+        scalar.copyIntoArray(sTmp)
 
         var bit = 0
         var highBit = 0
@@ -186,18 +186,18 @@ internal object Glv {
 
     /** Multiply two 256-bit numbers, return result >> 384 (rounded). */
     private fun mulShift384(
-        k: LongArray,
-        g: LongArray,
-    ): LongArray {
-        val wide = LongArray(8)
+        k: Fe4,
+        g: Fe4,
+    ): Fe4 {
+        val wide = Wide8()
         U256.mulWide(wide, k, g)
-        val result = LongArray(4)
+        val result = Fe4()
         // 384 bits = 6 Long limbs. Result = wide[6..7], round at bit 383 (wide[5] bit 63)
-        result[0] = wide[6]
-        result[1] = wide[7]
-        if (wide[5] < 0) { // bit 63 of wide[5] = bit 383
-            result[0]++
-            if (result[0] == 0L) result[1]++
+        result.l0 = wide.l6
+        result.l1 = wide.l7
+        if (wide.l5 < 0) { // bit 63 of wide.l5 = bit 383
+            result.l0++
+            if (result.l0 == 0L) result.l1++
         }
         return result
     }
@@ -235,42 +235,42 @@ internal object Glv {
     // ==================== Constants (from libsecp256k1) ====================
 
     private val MINUS_LAMBDA =
-        longArrayOf(
+        Fe4(
             -2247357714951666737L,
             -6304834983940376126L,
             6546514211138018212L,
             -6008836872998760673L,
         )
     private val G1 =
-        longArrayOf(
+        Fe4(
             -1687969588364726223L,
             4443515802769476223L,
             -1698823648040391915L,
             3496713202691238861L,
         )
     private val G2 =
-        longArrayOf(
+        Fe4(
             1545214808910233457L,
             2455034284347819718L,
             8022177200260244676L,
             -1998614352016537560L,
         )
     private val MINUS_B1 =
-        longArrayOf(
+        Fe4(
             8022177200260244675L,
             -1998614352016537560L,
             0L,
             0L,
         )
     private val MINUS_B2 =
-        longArrayOf(
+        Fe4(
             -2925706260434037204L,
             -8491525256057179027L,
             -2L,
             -1L,
         )
     private val N_HALF =
-        longArrayOf(
+        Fe4(
             -2312264954237214560L,
             6725966010171805725L,
             -1L,

@@ -84,8 +84,8 @@ object Secp256k1 {
 
     private class CachedPubkey(
         val keyBytes: ByteArray, // 32-byte x-only pubkey (for equality check)
-        val px: LongArray, // decompressed x (4 limbs)
-        val py: LongArray, // decompressed y (4 limbs)
+        val px: Fe4, // decompressed x (4 limbs)
+        val py: Fe4, // decompressed y (4 limbs)
     )
 
     private val pubkeyCache = arrayOfNulls<CachedPubkey>(PUBKEY_CACHE_SIZE)
@@ -96,8 +96,8 @@ object Secp256k1 {
      * On cache miss, computes sqrt and stores the result.
      */
     private fun liftXCached(
-        outX: LongArray,
-        outY: LongArray,
+        outX: Fe4,
+        outY: Fe4,
         pub: ByteArray,
     ): Boolean {
         // Hash the pubkey bytes to a cache slot (use first 4 bytes as index)
@@ -110,8 +110,8 @@ object Secp256k1 {
         val cached = pubkeyCache[slot]
         if (cached != null && cached.keyBytes.contentEquals(pub)) {
             // Cache hit — copy pre-computed coordinates
-            cached.px.copyInto(outX, 0, 0, 4)
-            cached.py.copyInto(outY, 0, 0, 4)
+            outX.copyFrom(cached.px)
+            outY.copyFrom(cached.py)
             return true
         }
 
@@ -312,14 +312,14 @@ object Secp256k1 {
      */
     private fun signSchnorrInternal(
         data: ByteArray,
-        d0: LongArray,
+        d0: Fe4,
         pBytes: ByteArray,
         pubKeyHasEvenY: Boolean,
         auxrand: ByteArray?,
     ): ByteArray {
         val sc = ECPoint.getScratch()
 
-        val d =
+        val d: Fe4 =
             if (pubKeyHasEvenY) {
                 d0
             } else {
@@ -358,7 +358,7 @@ object Secp256k1 {
         U256.fromBytesInto(sc.scalarTmp1, sc.bytesTmp2, 0)
         ScalarN.reduceTo(sc.scalarTmp1, sc.scalarTmp1)
         val k0 = sc.scalarTmp1
-        require(!U256.isZero(k0))
+        require(!k0.isZero())
 
         // R = k0·G
         ECPoint.mulG(sc.entryResult, k0, sc)
@@ -366,7 +366,7 @@ object Secp256k1 {
         val ry = sc.entryPy
         check(ECPoint.toAffine(sc.entryResult, rx, ry, sc))
 
-        val k =
+        val k: Fe4 =
             if (KeyCodec.hasEvenY(ry)) {
                 k0
             } else {
@@ -525,7 +525,7 @@ object Secp256k1 {
         tweak: ByteArray,
     ): ByteArray {
         require(seckey.size == 32 && tweak.size == 32)
-        // Use thread-local scratch to avoid 2 intermediate LongArray(4) allocations.
+        // Use thread-local scratch to avoid 2 intermediate Fe4() allocations.
         // Old path: fromBytes (alloc) + fromBytes (alloc) + add (alloc) + toBytes (alloc) = 4 allocs
         // New path: fromBytesInto (scratch) + fromBytesInto (scratch) + addTo (scratch) + toBytes = 1 alloc
         val sc = ECPoint.getScratch()
@@ -535,7 +535,7 @@ object Secp256k1 {
         U256.fromBytesInto(a, seckey, 0)
         U256.fromBytesInto(b, tweak, 0)
         ScalarN.addTo(r, a, b)
-        require(!U256.isZero(r) && U256.cmp(r, ScalarN.N) < 0)
+        require(!r.isZero() && U256.cmp(r, ScalarN.N) < 0)
         return U256.toBytes(r)
     }
 
@@ -657,8 +657,8 @@ object Secp256k1 {
         if (!liftXCached(px, py, pub)) return false
 
         // Accumulators for the scalar sums
-        val sSum = LongArray(4) // Σ sᵢ mod n
-        val eSum = LongArray(4) // Σ eᵢ mod n
+        val sSum = Fe4() // Σ sᵢ mod n
+        val eSum = Fe4() // Σ eᵢ mod n
 
         // Accumulator for R point sum (Jacobian)
         val rSum = MutablePoint()

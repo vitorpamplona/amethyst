@@ -25,18 +25,18 @@ package com.vitorpamplona.quartz.utils.secp256k1
  * Kotlin/Native compiles ahead-of-time, so inline + direct call is optimal.
  */
 internal actual fun fieldMulReduce(
-    out: LongArray,
-    a: LongArray,
-    b: LongArray,
-    w: LongArray,
+    out: Fe4,
+    a: Fe4,
+    b: Fe4,
+    w: Wide8,
 ) {
     fieldMulReduceFused(out, a, b, w)
 }
 
 internal actual fun fieldSqrReduce(
-    out: LongArray,
-    a: LongArray,
-    w: LongArray,
+    out: Fe4,
+    a: Fe4,
+    w: Wide8,
 ) {
     fieldSqrReduceFused(out, a, w)
 }

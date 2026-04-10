@@ -43,18 +43,18 @@ package com.vitorpamplona.quartz.utils.secp256k1
  * - The fused function stays within ART's inlining budget
  */
 internal actual fun fieldMulReduce(
-    out: LongArray,
-    a: LongArray,
-    b: LongArray,
-    w: LongArray,
+    out: Fe4,
+    a: Fe4,
+    b: Fe4,
+    w: Wide8,
 ) {
     fieldMulReduceWith(out, a, b, w) { x, y -> unsignedMultiplyHighFallback(x, y) }
 }
 
 internal actual fun fieldSqrReduce(
-    out: LongArray,
-    a: LongArray,
-    w: LongArray,
+    out: Fe4,
+    a: Fe4,
+    w: Wide8,
 ) {
     fieldSqrReduceWith(out, a, w) { x, y -> unsignedMultiplyHighFallback(x, y) }
 }

@@ -24,233 +24,82 @@ import kotlin.test.Test
 import kotlin.test.assertTrue
 
 /**
- * Benchmark comparing LongArray(4) vs Fe4 (struct with 4 @JvmField Long fields)
- * for secp256k1 field element operations.
+ * Field-level micro-benchmark for the Fe4-based secp256k1 implementation.
  *
- * The hypothesis: Fe4 eliminates array bounds checks (laload/lastore → getfield/putfield),
- * which should measurably improve performance on platforms where the JIT cannot reliably
- * eliminate bounds checks for parameter arrays (Android ART, Kotlin/Native LLVM).
+ * Measures the core field operations using Fe4 struct types (no array bounds checks).
+ * Compare against the pre-migration LongArray baseline to verify the performance gain.
  *
- * On JVM HotSpot C2, the difference may be smaller because C2 can profile array sizes
- * and eliminate constant-index bounds checks. But even on HotSpot, the Fe4 approach
- * avoids the array length field load + comparison that precedes each array access.
+ * Pre-migration baseline (LongArray, HotSpot C2):
+ *   FieldP.mul:  40 ns/op
+ *   FieldP.sqr:  48 ns/op
+ *   FieldP.add:   9 ns/op
+ *   FieldP.sub:  10 ns/op
  *
  * Run with: ./gradlew :quartz:jvmTest --tests "*.Fe4Benchmark"
  */
 class Fe4Benchmark {
-    // Test vectors: secp256k1 generator point coordinates
     private val aBytes = hexToBytes("79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798")
     private val bBytes = hexToBytes("483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8")
 
-    // LongArray representations
-    private val aArr = U256.fromBytes(aBytes)
-    private val bArr = U256.fromBytes(bBytes)
-    private val outArr = LongArray(4)
-    private val wArr = LongArray(8)
-
-    // Fe4 representations (same values)
-    private val aFe4 = Fe4(aArr[0], aArr[1], aArr[2], aArr[3])
-    private val bFe4 = Fe4(bArr[0], bArr[1], bArr[2], bArr[3])
-    private val outFe4 = Fe4()
-    private val wFe8 = Wide8()
+    private val a = U256.fromBytes(aBytes)
+    private val b = U256.fromBytes(bBytes)
+    private val out = Fe4()
+    private val w = Wide8()
 
     private data class BenchResult(
         val name: String,
-        val arrayNanos: Long,
-        val fe4Nanos: Long,
+        val nanos: Long,
         val iterations: Int,
     ) {
-        val arrayNsPerOp get() = arrayNanos / iterations
-        val fe4NsPerOp get() = fe4Nanos / iterations
-        val speedup get() = arrayNanos.toDouble() / fe4Nanos.toDouble()
-
-        override fun toString(): String {
-            val pct = ((speedup - 1.0) * 100).let { if (it >= 0) "+%.1f%%".format(it) else "%.1f%%".format(it) }
-            return String.format(
-                "  %-20s  LongArray: %,8d ns/op   Fe4: %,8d ns/op   %s",
-                name,
-                arrayNsPerOp,
-                fe4NsPerOp,
-                pct,
-            )
-        }
+        val nsPerOp get() = nanos / iterations
     }
 
     private inline fun bench(
         name: String,
         warmup: Int,
         iterations: Int,
-        crossinline arrayOp: () -> Unit,
-        crossinline fe4Op: () -> Unit,
+        crossinline op: () -> Unit,
     ): BenchResult {
-        // Warmup both generously (C2 compiles at ~10K invocations)
-        repeat(warmup) { arrayOp() }
-        repeat(warmup) { fe4Op() }
-
-        // Run 3 rounds, alternating order, take best of each to reduce noise
-        var bestArr = Long.MAX_VALUE
-        var bestFe4 = Long.MAX_VALUE
+        repeat(warmup) { op() }
+        var best = Long.MAX_VALUE
         for (round in 0 until 3) {
-            if (round % 2 == 0) {
-                // LongArray first
-                val arrStart = System.nanoTime()
-                repeat(iterations) { arrayOp() }
-                bestArr = minOf(bestArr, System.nanoTime() - arrStart)
-
-                val fe4Start = System.nanoTime()
-                repeat(iterations) { fe4Op() }
-                bestFe4 = minOf(bestFe4, System.nanoTime() - fe4Start)
-            } else {
-                // Fe4 first
-                val fe4Start = System.nanoTime()
-                repeat(iterations) { fe4Op() }
-                bestFe4 = minOf(bestFe4, System.nanoTime() - fe4Start)
-
-                val arrStart = System.nanoTime()
-                repeat(iterations) { arrayOp() }
-                bestArr = minOf(bestArr, System.nanoTime() - arrStart)
-            }
+            val start = System.nanoTime()
+            repeat(iterations) { op() }
+            best = minOf(best, System.nanoTime() - start)
         }
-
-        return BenchResult(name, bestArr, bestFe4, iterations)
+        return BenchResult(name, best, iterations)
     }
 
     @Test
     fun benchmarkFieldOps() {
-        // Verify correctness first: both implementations must produce identical results
-        verifySameResults()
-
         val results = mutableListOf<BenchResult>()
 
-        // --- FieldP.mul (the hottest operation: ~1900 calls/verify) ---
-        // Use out as input to next iteration to create data dependency chain
-        aArr.copyInto(outArr)
-        aFe4.copyFrom(Fe4(aArr[0], aArr[1], aArr[2], aArr[3]))
-        outFe4.copyFrom(aFe4)
-        results +=
-            bench(
-                "FieldP.mul",
-                10000,
-                200000,
-                arrayOp = { FieldP.mul(outArr, outArr, bArr, wArr) },
-                fe4Op = { Fe4FieldP.mul(outFe4, outFe4, bFe4, wFe8) },
-            )
+        out.copyFrom(a)
+        results += bench("FieldP.mul", 10000, 200000) { FieldP.mul(out, out, b, w) }
 
-        // --- FieldP.sqr (second hottest: ~1900 calls/verify) ---
-        aArr.copyInto(outArr)
-        outFe4.copyFrom(aFe4)
-        results +=
-            bench(
-                "FieldP.sqr",
-                10000,
-                200000,
-                arrayOp = { FieldP.sqr(outArr, outArr, wArr) },
-                fe4Op = { Fe4FieldP.sqr(outFe4, outFe4, wFe8) },
-            )
+        out.copyFrom(a)
+        results += bench("FieldP.sqr", 10000, 200000) { FieldP.sqr(out, out, w) }
 
-        // --- FieldP.add (~750 calls/verify) ---
-        aArr.copyInto(outArr)
-        outFe4.copyFrom(aFe4)
-        results +=
-            bench(
-                "FieldP.add",
-                10000,
-                500000,
-                arrayOp = { FieldP.add(outArr, outArr, bArr) },
-                fe4Op = { Fe4FieldP.add(outFe4, outFe4, bFe4) },
-            )
+        out.copyFrom(a)
+        results += bench("FieldP.add", 10000, 500000) { FieldP.add(out, out, b) }
 
-        // --- FieldP.sub (~500 calls/verify) ---
-        aArr.copyInto(outArr)
-        outFe4.copyFrom(aFe4)
-        results +=
-            bench(
-                "FieldP.sub",
-                10000,
-                500000,
-                arrayOp = { FieldP.sub(outArr, outArr, bArr) },
-                fe4Op = { Fe4FieldP.sub(outFe4, outFe4, bFe4) },
-            )
+        out.copyFrom(a)
+        results += bench("FieldP.sub", 10000, 500000) { FieldP.sub(out, out, b) }
 
-        // --- U256.mulWide (raw wide multiply, no reduction) ---
-        results +=
-            bench(
-                "U256.mulWide",
-                10000,
-                200000,
-                arrayOp = { U256.mulWide(wArr, aArr, bArr) },
-                fe4Op = { Fe4U256.mulWide(wFe8, aFe4, bFe4) },
-            )
+        results += bench("U256.mulWide", 10000, 200000) { U256.mulWide(w, a, b) }
 
-        // --- U256.sqrWide (raw wide square) ---
-        results +=
-            bench(
-                "U256.sqrWide",
-                10000,
-                200000,
-                arrayOp = { U256.sqrWide(wArr, aArr) },
-                fe4Op = { Fe4U256.sqrWide(wFe8, aFe4) },
-            )
+        results += bench("U256.sqrWide", 10000, 200000) { U256.sqrWide(w, a) }
 
-        // Print results
         println()
-        println("=".repeat(80))
-        println("Fe4 vs LongArray Benchmark: JVM21/HotSpot C2")
-        println("=".repeat(80))
-        println("  Hypothesis: Fe4 (named fields) eliminates array bounds checks,")
-        println("  producing faster code especially on ART/Native where JIT is weaker.")
-        println("-".repeat(80))
+        println("=".repeat(70))
+        println("Fe4 Field Micro-Benchmarks: JVM21/HotSpot C2 (post-migration)")
+        println("=".repeat(70))
         for (r in results) {
-            println(r)
+            println("  ${r.name.padEnd(20)} ${r.nsPerOp.toString().padStart(8)} ns/op")
         }
-        println("=".repeat(80))
-        println()
-        println("  Bytecode analysis:")
-        println("    LongArray access: aload + iconst + laload (3 insns + implicit bounds check)")
-        println("    Fe4 field access: aload + getfield         (2 insns, no check)")
-        println()
-        println("  U256.class:          150 laload/lastore operations (each bounds-checked)")
-        println("  FieldP.class:        119 laload/lastore operations")
-        println("  FieldMulFusedKt:     195 laload/lastore operations")
-        println("  Total:               464 bounds checks in 3 core files")
-        println()
+        println("=".repeat(70))
 
-        // Prevent dead code elimination
-        assertTrue(outArr[0] != Long.MIN_VALUE || outFe4.l0 != Long.MIN_VALUE)
-    }
-
-    private fun verifySameResults() {
-        // Test mul
-        FieldP.mul(outArr, aArr, bArr, wArr)
-        Fe4FieldP.mul(outFe4, aFe4, bFe4, wFe8)
-        assertFe4EqualsArray("mul", outArr, outFe4)
-
-        // Test sqr
-        FieldP.sqr(outArr, aArr, wArr)
-        Fe4FieldP.sqr(outFe4, aFe4, wFe8)
-        assertFe4EqualsArray("sqr", outArr, outFe4)
-
-        // Test add
-        FieldP.add(outArr, aArr, bArr)
-        Fe4FieldP.add(outFe4, aFe4, bFe4)
-        assertFe4EqualsArray("add", outArr, outFe4)
-
-        // Test sub
-        FieldP.sub(outArr, aArr, bArr)
-        Fe4FieldP.sub(outFe4, aFe4, bFe4)
-        assertFe4EqualsArray("sub", outArr, outFe4)
-    }
-
-    private fun assertFe4EqualsArray(
-        op: String,
-        arr: LongArray,
-        fe: Fe4,
-    ) {
-        assertTrue(
-            arr[0] == fe.l0 && arr[1] == fe.l1 && arr[2] == fe.l2 && arr[3] == fe.l3,
-            "$op: LongArray[${arr[0]},${arr[1]},${arr[2]},${arr[3]}] != " +
-                "Fe4[${fe.l0},${fe.l1},${fe.l2},${fe.l3}]",
-        )
+        assertTrue(out.l0 != Long.MIN_VALUE)
     }
 
     private fun hexToBytes(hex: String): ByteArray {

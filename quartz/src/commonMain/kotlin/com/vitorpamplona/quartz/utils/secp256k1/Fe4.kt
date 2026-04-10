@@ -50,6 +50,8 @@ import kotlin.jvm.JvmField
  * Mutable 256-bit field element using 4 named Long fields in little-endian order.
  * l0 = least significant 64 bits, l3 = most significant 64 bits.
  *
+ * Used for both field elements (mod p) and scalars (mod n) — same 4×64-bit layout.
+ *
  * @JvmField eliminates virtual getter/setter generation — direct field access.
  */
 internal class Fe4(
@@ -67,11 +69,29 @@ internal class Fe4(
         l3 = other.l3
     }
 
+    fun copyOf(): Fe4 = Fe4(l0, l1, l2, l3)
+
     fun setZero() {
         l0 = 0L
         l1 = 0L
         l2 = 0L
         l3 = 0L
+    }
+
+    /** Copy this Fe4's limbs into the first 4 elements of a LongArray. */
+    fun copyIntoArray(dest: LongArray) {
+        dest[0] = l0
+        dest[1] = l1
+        dest[2] = l2
+        dest[3] = l3
+    }
+
+    /** Load from a LongArray's first 4 elements. */
+    fun loadFromArray(src: LongArray) {
+        l0 = src[0]
+        l1 = src[1]
+        l2 = src[2]
+        l3 = src[3]
     }
 }
 
