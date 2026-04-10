@@ -75,6 +75,13 @@ kotlin {
             isStatic = true
             binaryOption("bundleId", "com.vitorpamplona.quartz")
         }
+        compilations.getByName("main") {
+            cinterops {
+                val NWHelpers by creating {
+                    defFile("src/nativeInterop/cinterop/NWHelpers.def")
+                }
+            }
+        }
     }
 
     iosSimulatorArm64 {
@@ -82,6 +89,13 @@ kotlin {
             baseName = xcfName
             isStatic = true
             binaryOption("bundleId", "com.vitorpamplona.quartz")
+        }
+        compilations.getByName("main") {
+            cinterops {
+                val NWHelpers by creating {
+                    defFile("src/nativeInterop/cinterop/NWHelpers.def")
+                }
+            }
         }
     }
 

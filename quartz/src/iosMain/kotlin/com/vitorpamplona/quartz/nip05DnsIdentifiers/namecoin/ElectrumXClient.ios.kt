@@ -22,13 +22,9 @@ package com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin
 
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.sha256.sha256
-import kotlinx.cinterop.ByteVar
-import kotlinx.cinterop.CPointed
-import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.get
-import kotlinx.cinterop.reinterpret
 import kotlinx.cinterop.usePinned
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -48,24 +44,13 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import platform.Foundation.NSLog
-import platform.Network.NW_CONNECTION_DEFAULT_MESSAGE_CONTEXT
-import platform.Network.NW_PARAMETERS_DISABLE_PROTOCOL
 import platform.Network.nw_connection_cancel
 import platform.Network.nw_connection_create
-import platform.Network.nw_connection_receive
-import platform.Network.nw_connection_send
 import platform.Network.nw_connection_set_queue
 import platform.Network.nw_connection_set_state_changed_handler
 import platform.Network.nw_connection_start
 import platform.Network.nw_endpoint_create_host
-import platform.Network.nw_parameters_create_secure_tcp
-import platform.Network.nw_tls_copy_sec_protocol_options
-import platform.Security.sec_protocol_options_set_verify_block
-import platform.darwin.DISPATCH_TIME_FOREVER
 import platform.darwin.NSObject
-import platform.darwin.dispatch_data_apply
-import platform.darwin.dispatch_data_create
-import platform.darwin.dispatch_data_get_size
 import platform.darwin.dispatch_queue_create
 import platform.darwin.dispatch_semaphore_create
 import platform.darwin.dispatch_semaphore_signal
@@ -149,21 +134,12 @@ class ElectrumXClient : IElectrumXClient {
     ) {
         readBuffer.clear()
 
-        // Configure TLS to accept all certificates (self-signed ElectrumX servers)
-        val configureTls: (NSObject?) -> Unit = { protocolOptions ->
-            val secOptions = nw_tls_copy_sec_protocol_options(protocolOptions)
-            sec_protocol_options_set_verify_block(
-                secOptions,
-                { _, _, completion -> completion?.invoke(true) },
-                queue,
-            )
-        }
-
+        // Create TLS TCP parameters with cert verification disabled.
+        // Uses a C helper function because Kotlin/Native can't bridge
+        // Network.framework's nw_protocol_options_t to NSObject.
         val params =
-            nw_parameters_create_secure_tcp(
-                configureTls,
-                NW_PARAMETERS_DISABLE_PROTOCOL,
-            )
+            com.vitorpamplona.quartz.nativehelpers
+                .nw_create_tls_params_trust_all(queue)
         val endpoint = nw_endpoint_create_host(host, port.toString())
         val conn = nw_connection_create(endpoint, params)
 
@@ -189,14 +165,25 @@ class ElectrumXClient : IElectrumXClient {
                     NSLog("ElectrumXClient: connection cancelled")
                 }
 
-                else -> {}
+                else -> {
+                    NSLog("ElectrumXClient: state changed to " + state.toString())
+                }
             }
         }
 
         nw_connection_set_queue(conn, queue)
         nw_connection_start(conn)
 
-        dispatch_semaphore_wait(semaphore, DISPATCH_TIME_FOREVER)
+        // Use a 10-second timeout instead of DISPATCH_TIME_FOREVER
+        // to prevent hanging if the state handler never fires
+        val timeoutNs = 10L * 1_000_000_000L // 10 seconds in nanoseconds
+        val deadline = platform.darwin.dispatch_time(platform.darwin.DISPATCH_TIME_NOW, timeoutNs)
+        val waitResult = dispatch_semaphore_wait(semaphore, deadline)
+
+        if (waitResult != 0L) {
+            nw_connection_cancel(conn)
+            throw Exception("Connection timed out to $host:$port (semaphore timeout)")
+        }
 
         if (connectError != null) {
             nw_connection_cancel(conn)
@@ -209,33 +196,16 @@ class ElectrumXClient : IElectrumXClient {
     private fun writeLine(line: String) {
         val conn = connection ?: throw Exception("Not connected")
         val bytes = (line + "\n").encodeToByteArray()
-        val semaphore = dispatch_semaphore_create(0)
-        var sendError: String? = null
-
         bytes.usePinned { pinned ->
-            val dispatchData =
-                dispatch_data_create(
+            val result =
+                com.vitorpamplona.quartz.nativehelpers.nw_send_sync(
+                    conn,
                     pinned.addressOf(0),
                     bytes.size.toULong(),
                     queue,
-                    null,
                 )
-
-            nw_connection_send(
-                conn,
-                dispatchData,
-                NW_CONNECTION_DEFAULT_MESSAGE_CONTEXT,
-                false,
-            ) { error ->
-                if (error != null) {
-                    sendError = "Send error: $error"
-                }
-                dispatch_semaphore_signal(semaphore)
-            }
+            if (result != 0) throw Exception("nw_send_sync failed")
         }
-
-        dispatch_semaphore_wait(semaphore, DISPATCH_TIME_FOREVER)
-        if (sendError != null) throw Exception(sendError)
     }
 
     private fun readLine(): String? {
@@ -254,52 +224,30 @@ class ElectrumXClient : IElectrumXClient {
         val conn = connection ?: return null
 
         // Read from network until we get a newline
+        val buf = ByteArray(8192)
         while (true) {
-            val semaphore = dispatch_semaphore_create(0)
-            var receivedBytes: ByteArray? = null
-            var receiveComplete = false
-            var receiveError: String? = null
-
-            nw_connection_receive(conn, 1u, 65536u) { content, _, isComplete, error ->
-                if (error != null) {
-                    receiveError = "Receive error: $error"
-                } else if (content != null) {
-                    val size = dispatch_data_get_size(content).toInt()
-                    if (size > 0) {
-                        val result = ByteArray(size)
-                        var offset = 0
-                        dispatch_data_apply(content) {
-                            _,
-                            _,
-                            ptr: CPointer<out CPointed>?,
-                            regionSize: ULong,
-                            ->
-                            if (ptr != null) {
-                                val bytePtr: CPointer<ByteVar> = ptr.reinterpret()
-                                for (i in 0 until regionSize.toInt()) {
-                                    result[offset + i] = bytePtr[i]
-                                }
-                                offset += regionSize.toInt()
-                            }
-                            true
-                        }
-                        receivedBytes = result
-                    }
+            val n =
+                buf.usePinned { pinned ->
+                    com.vitorpamplona.quartz.nativehelpers.nw_recv_sync(
+                        conn,
+                        pinned.addressOf(0),
+                        buf.size.toULong(),
+                    )
                 }
-                receiveComplete = isComplete
-                dispatch_semaphore_signal(semaphore)
+
+            if (n < 0) throw Exception("nw_recv_sync failed")
+            if (n == 0) {
+                // EOF
+                if (readBuffer.isNotEmpty()) {
+                    val remaining = readBuffer.toString()
+                    readBuffer.clear()
+                    return remaining
+                }
+                return null
             }
 
-            dispatch_semaphore_wait(semaphore, DISPATCH_TIME_FOREVER)
+            readBuffer.append(buf.decodeToString(0, n))
 
-            if (receiveError != null) throw Exception(receiveError)
-
-            val bytes = receivedBytes
-            if (bytes != null) {
-                readBuffer.append(bytes.decodeToString())
-            }
-
-            // Check for complete line
             val current = readBuffer.toString()
             val idx = current.indexOf('\n')
             if (idx >= 0) {
@@ -309,16 +257,6 @@ class ElectrumXClient : IElectrumXClient {
                     readBuffer.append(current.substring(idx + 1))
                 }
                 return line
-            }
-
-            // If connection is complete and no newline, return what we have or null
-            if (receiveComplete) {
-                if (readBuffer.isNotEmpty()) {
-                    val remaining = readBuffer.toString()
-                    readBuffer.clear()
-                    return remaining
-                }
-                return null
             }
         }
     }

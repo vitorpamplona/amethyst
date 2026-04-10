@@ -1,0 +1,91 @@
+language = Objective-C
+package = com.vitorpamplona.quartz.nativehelpers
+---
+#include <Network/Network.h>
+#include <Security/SecProtocolOptions.h>
+#include <dispatch/dispatch.h>
+#include <string.h>
+#include <stdlib.h>
+
+/**
+ * Create NW parameters with TLS that accepts all certificates.
+ */
+static inline nw_parameters_t nw_create_tls_params_trust_all(dispatch_queue_t queue) {
+    nw_parameters_t params = nw_parameters_create_secure_tcp(
+        ^(nw_protocol_options_t tls_options) {
+            sec_protocol_options_t sec_options = nw_tls_copy_sec_protocol_options(tls_options);
+            sec_protocol_options_set_verify_block(sec_options,
+                ^(sec_protocol_metadata_t metadata, sec_trust_t trust, sec_protocol_verify_complete_t complete) {
+                    complete(true);
+                },
+                queue
+            );
+        },
+        NW_PARAMETERS_DEFAULT_CONFIGURATION
+    );
+    return params;
+}
+
+/**
+ * Synchronous send over nw_connection.
+ * Returns 0 on success, -1 on error.
+ */
+static inline int nw_send_sync(nw_connection_t conn, const void *data, size_t len, dispatch_queue_t queue) {
+    dispatch_data_t ddata = dispatch_data_create(data, len, queue, DISPATCH_DATA_DESTRUCTOR_DEFAULT);
+    
+    __block int result = 0;
+    dispatch_semaphore_t sem = dispatch_semaphore_create(0);
+    
+    nw_connection_send(conn, ddata, NW_CONNECTION_DEFAULT_MESSAGE_CONTEXT, false,
+        ^(nw_error_t error) {
+            if (error != NULL) {
+                result = -1;
+            }
+            dispatch_semaphore_signal(sem);
+        }
+    );
+    
+    dispatch_semaphore_wait(sem, dispatch_time(DISPATCH_TIME_NOW, 15LL * NSEC_PER_SEC));
+    return result;
+}
+
+/**
+ * Synchronous receive from nw_connection.
+ * Reads up to max_len bytes into buf.
+ * Returns number of bytes read, 0 on EOF, -1 on error.
+ */
+static inline int nw_recv_sync(nw_connection_t conn, void *buf, size_t max_len) {
+    __block int bytes_read = 0;
+    __block bool got_error = false;
+    __block bool is_complete = false;
+    dispatch_semaphore_t sem = dispatch_semaphore_create(0);
+    
+    nw_connection_receive(conn, 1, (uint32_t)max_len,
+        ^(dispatch_data_t content, nw_content_context_t context, bool complete, nw_error_t error) {
+            is_complete = complete;
+            if (error != NULL) {
+                got_error = true;
+                dispatch_semaphore_signal(sem);
+                return;
+            }
+            if (content != NULL) {
+                size_t content_len = dispatch_data_get_size(content);
+                if (content_len > max_len) content_len = max_len;
+                dispatch_data_t contig = dispatch_data_create_map(content, NULL, NULL);
+                const void *contig_buf;
+                size_t contig_len;
+                dispatch_data_create_map(contig, &contig_buf, &contig_len);
+                if (contig_len > max_len) contig_len = max_len;
+                memcpy(buf, contig_buf, contig_len);
+                bytes_read = (int)contig_len;
+            }
+            dispatch_semaphore_signal(sem);
+        }
+    );
+    
+    long wait_result = dispatch_semaphore_wait(sem, dispatch_time(DISPATCH_TIME_NOW, 15LL * NSEC_PER_SEC));
+    if (wait_result != 0) return -1; // timeout
+    if (got_error) return -1;
+    if (bytes_read == 0 && is_complete) return 0; // EOF
+    return bytes_read;
+}
