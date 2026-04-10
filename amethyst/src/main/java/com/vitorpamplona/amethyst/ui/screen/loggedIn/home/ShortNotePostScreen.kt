@@ -55,6 +55,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -124,6 +125,7 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class, FlowPreview::class)
@@ -144,6 +146,7 @@ fun ShortNotePostScreen(
 
     val context = LocalContext.current
     val activity = context.getActivity()
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         postViewModel.initWritingAssistant(context)
@@ -177,9 +180,12 @@ fun ShortNotePostScreen(
                         postViewModel.addToMessage(it)
                     }
 
-                    IntentCompat.getParcelableExtra(activity.intent, Intent.EXTRA_STREAM, Uri::class.java)?.let {
-                        val mediaType = context.contentResolver.getType(it)
-                        postViewModel.selectImage(persistentListOf(SelectedMedia(it, mediaType)))
+                    // Use the `intent` parameter (the new intent), not activity.intent (the launch intent).
+                    IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java)?.let { uri ->
+                        scope.launch(Dispatchers.IO) {
+                            val mediaType = context.contentResolver.getType(uri)
+                            postViewModel.selectImage(persistentListOf(SelectedMedia(uri, mediaType)))
+                        }
                     }
                 }
             }
