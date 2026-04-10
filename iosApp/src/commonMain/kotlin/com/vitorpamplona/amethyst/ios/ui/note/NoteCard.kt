@@ -70,6 +70,12 @@ fun NoteCard(
     onZap: ((String) -> Unit)? = null,
     onBookmark: ((String) -> Unit)? = null,
     isBookmarked: Boolean = false,
+    onCopyNoteId: ((String) -> Unit)? = null,
+    onCopyNoteText: ((String) -> Unit)? = null,
+    onCopyAuthorNpub: ((String) -> Unit)? = null,
+    onShare: ((String) -> Unit)? = null,
+    onMuteUser: ((String) -> Unit)? = null,
+    onReport: ((String, String) -> Unit)? = null,
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -118,12 +124,27 @@ fun NoteCard(
                     )
                 }
 
-                // Timestamp
-                Text(
-                    text = note.createdAt.toTimeAgo(),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    // Timestamp
+                    Text(
+                        text = note.createdAt.toTimeAgo(),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+
+                    // Options overflow menu
+                    NoteOptionsMenu(
+                        note = note,
+                        onCopyNoteId = onCopyNoteId,
+                        onCopyNoteText = onCopyNoteText,
+                        onCopyAuthorNpub = onCopyAuthorNpub,
+                        onShare = onShare,
+                        onMuteUser = onMuteUser,
+                        onReport = onReport,
+                    )
+                }
             }
 
             Spacer(Modifier.height(8.dp))

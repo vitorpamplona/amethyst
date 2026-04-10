@@ -96,15 +96,18 @@ import com.vitorpamplona.amethyst.ios.ui.BookmarksScreen
 import com.vitorpamplona.amethyst.ios.ui.ComposeNoteScreen
 import com.vitorpamplona.amethyst.ios.ui.EditProfileScreen
 import com.vitorpamplona.amethyst.ios.ui.LoginScreen
+import com.vitorpamplona.amethyst.ios.ui.MuteListScreen
 import com.vitorpamplona.amethyst.ios.ui.SettingsScreen
 import com.vitorpamplona.amethyst.ios.ui.chats.IosChatScreen
 import com.vitorpamplona.amethyst.ios.ui.chats.IosChatroomListState
 import com.vitorpamplona.amethyst.ios.ui.chats.IosConversationListScreen
 import com.vitorpamplona.amethyst.ios.ui.note.NoteCard
+import com.vitorpamplona.amethyst.ios.ui.note.ReportDialog
 import com.vitorpamplona.amethyst.ios.ui.notifications.IosNotificationScreen
 import com.vitorpamplona.amethyst.ios.ui.search.IosSearchScreen
 import com.vitorpamplona.amethyst.ios.ui.toNoteDisplayData
 import com.vitorpamplona.amethyst.ios.viewmodels.IosFeedViewModel
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArrayOrNull
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -115,15 +118,21 @@ import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
+import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.EventBookmark
+import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
+import com.vitorpamplona.quartz.nip51Lists.muteList.tags.UserTag
+import com.vitorpamplona.quartz.nip56Reports.ReportEvent
+import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import platform.UIKit.UIPasteboard
 
 enum class Tab(
     val icon: ImageVector,
@@ -172,6 +181,8 @@ sealed class Screen {
     data object EditProfile : Screen()
 
     data object Bookmarks : Screen()
+
+    data object MuteList : Screen()
 }
 
 enum class FeedMode { GLOBAL, FOLLOWING }
@@ -343,6 +354,141 @@ private fun MainScreen(
         scope.launch {
             snackbarHostState.showSnackbar("\u26A1 Zaps coming soon!")
         }
+    }
+
+    // ── Mute state ──
+    var muteListState by remember { mutableStateOf<MuteListEvent?>(null) }
+    var mutedUserPubKeys by remember { mutableStateOf<Set<String>>(emptySet()) }
+
+    // Load mute list from cache on start
+    LaunchedEffect(account.pubKeyHex) {
+        val address = MuteListEvent.createAddress(account.pubKeyHex)
+        val cachedNote = localCache.getOrCreateAddressableNote(address)
+        val cachedEvent = cachedNote.event as? MuteListEvent
+        if (cachedEvent != null) {
+            muteListState = cachedEvent
+            mutedUserPubKeys =
+                cachedEvent
+                    .publicMutes()
+                    .filterIsInstance<UserTag>()
+                    .map { it.pubKey }
+                    .toSet()
+        }
+    }
+
+    val onMuteUser: (String) -> Unit = { targetPubKeyHex ->
+        if (!account.isReadOnly) {
+            scope.launch {
+                try {
+                    val mute = UserTag(targetPubKeyHex)
+                    val newList =
+                        if (muteListState != null) {
+                            MuteListEvent.add(muteListState!!, mute, isPrivate = false, signer = account.signer)
+                        } else {
+                            MuteListEvent.create(mute, isPrivate = false, signer = account.signer)
+                        }
+                    muteListState = newList
+                    mutedUserPubKeys =
+                        newList
+                            .publicMutes()
+                            .filterIsInstance<UserTag>()
+                            .map { it.pubKey }
+                            .toSet()
+                    localCache.consume(newList, null)
+                    relayManager.broadcastToAll(newList)
+                    snackbarHostState.showSnackbar("🔇 User muted")
+                } catch (e: Exception) {
+                    snackbarHostState.showSnackbar("Failed to mute user")
+                }
+            }
+        }
+    }
+
+    val onUnmuteUser: (String) -> Unit = { targetPubKeyHex ->
+        if (!account.isReadOnly) {
+            scope.launch {
+                try {
+                    val existing = muteListState ?: return@launch
+                    val mute = UserTag(targetPubKeyHex)
+                    val newList = MuteListEvent.remove(existing, mute, signer = account.signer)
+                    muteListState = newList
+                    mutedUserPubKeys =
+                        newList
+                            .publicMutes()
+                            .filterIsInstance<UserTag>()
+                            .map { it.pubKey }
+                            .toSet()
+                    localCache.consume(newList, null)
+                    relayManager.broadcastToAll(newList)
+                    snackbarHostState.showSnackbar("User unmuted")
+                } catch (e: Exception) {
+                    snackbarHostState.showSnackbar("Failed to unmute user")
+                }
+            }
+        }
+    }
+
+    // ── Report state ──
+    var showReportDialog by remember { mutableStateOf(false) }
+    var reportTargetNoteId by remember { mutableStateOf<String?>(null) }
+    var reportTargetPubKey by remember { mutableStateOf<String?>(null) }
+
+    val onReportNote: (String, String) -> Unit = { noteId, authorPubKeyHex ->
+        reportTargetNoteId = noteId
+        reportTargetPubKey = authorPubKeyHex
+        showReportDialog = true
+    }
+
+    val onSubmitReport: (ReportType) -> Unit = { reportType ->
+        if (!account.isReadOnly) {
+            scope.launch {
+                try {
+                    val noteId = reportTargetNoteId
+                    val pubKey = reportTargetPubKey
+                    if (noteId != null && pubKey != null) {
+                        val note = localCache.getNoteIfExists(noteId)
+                        val event = note?.event
+                        val template =
+                            if (event != null) {
+                                ReportEvent.build(event, reportType)
+                            } else {
+                                ReportEvent.build(pubKey, reportType)
+                            }
+                        val signed = account.signer.sign(template)
+                        relayManager.broadcastToAll(signed)
+                        snackbarHostState.showSnackbar("🚩 Report sent")
+                    }
+                } catch (e: Exception) {
+                    snackbarHostState.showSnackbar("Failed to send report")
+                } finally {
+                    showReportDialog = false
+                    reportTargetNoteId = null
+                    reportTargetPubKey = null
+                }
+            }
+        }
+    }
+
+    // ── Clipboard helpers ──
+    val onCopyNoteId: (String) -> Unit = { noteId ->
+        UIPasteboard.generalPasteboard.string = noteId
+        scope.launch { snackbarHostState.showSnackbar("Note ID copied") }
+    }
+
+    val onCopyNoteText: (String) -> Unit = { text ->
+        UIPasteboard.generalPasteboard.string = text
+        scope.launch { snackbarHostState.showSnackbar("Note text copied") }
+    }
+
+    val onCopyAuthorNpub: (String) -> Unit = { pubKeyHex ->
+        val npub =
+            try {
+                pubKeyHex.hexToByteArrayOrNull()?.toNpub() ?: pubKeyHex
+            } catch (e: Exception) {
+                pubKeyHex
+            }
+        UIPasteboard.generalPasteboard.string = npub
+        scope.launch { snackbarHostState.showSnackbar("Author npub copied") }
     }
 
     val onFollowUser: (String) -> Unit = { targetPubKeyHex ->
@@ -549,6 +695,18 @@ private fun MainScreen(
     val showTopBar = showBottomBar
     val showFab = currentScreen is Screen.Feed && !account.isReadOnly
 
+    // Report dialog
+    if (showReportDialog) {
+        ReportDialog(
+            onDismiss = {
+                showReportDialog = false
+                reportTargetNoteId = null
+                reportTargetPubKey = null
+            },
+            onReport = onSubmitReport,
+        )
+    }
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
@@ -635,6 +793,12 @@ private fun MainScreen(
                         onZap = onZapNote,
                         onBookmark = onBookmarkNote,
                         bookmarkedNoteIds = bookmarkedNoteIds,
+                        onCopyNoteId = onCopyNoteId,
+                        onCopyNoteText = onCopyNoteText,
+                        onCopyAuthorNpub = onCopyAuthorNpub,
+                        onMuteUser = onMuteUser,
+                        onReport = onReportNote,
+                        mutedUserPubKeys = mutedUserPubKeys,
                     )
                 }
 
@@ -704,6 +868,11 @@ private fun MainScreen(
                         onZap = onZapNote,
                         onBookmark = onBookmarkNote,
                         bookmarkedNoteIds = bookmarkedNoteIds,
+                        onCopyNoteId = onCopyNoteId,
+                        onCopyNoteText = onCopyNoteText,
+                        onCopyAuthorNpub = onCopyAuthorNpub,
+                        onMuteUser = onMuteUser,
+                        onReport = onReportNote,
                     )
                 }
 
@@ -732,6 +901,16 @@ private fun MainScreen(
                                 null
                             },
                         onBookmarks = { navigateTo(Screen.Bookmarks) },
+                        onMuteList = { navigateTo(Screen.MuteList) },
+                    )
+                }
+
+                is Screen.MuteList -> {
+                    MuteListScreen(
+                        mutedUserPubKeys = mutedUserPubKeys,
+                        localCache = localCache,
+                        onUnmute = onUnmuteUser,
+                        onBack = { goBack() },
                     )
                 }
 
@@ -807,6 +986,11 @@ private fun MainScreen(
                             onZap = onZapNote,
                             onBookmark = onBookmarkNote,
                             bookmarkedNoteIds = bookmarkedNoteIds,
+                            onCopyNoteId = onCopyNoteId,
+                            onCopyNoteText = onCopyNoteText,
+                            onCopyAuthorNpub = onCopyAuthorNpub,
+                            onMuteUser = onMuteUser,
+                            onReport = onReportNote,
                         )
                     }
                 }
@@ -826,6 +1010,11 @@ private fun MainScreen(
                         onZap = onZapNote,
                         onBookmark = onBookmarkNote,
                         bookmarkedNoteIds = bookmarkedNoteIds,
+                        onCopyNoteId = onCopyNoteId,
+                        onCopyNoteText = onCopyNoteText,
+                        onCopyAuthorNpub = onCopyAuthorNpub,
+                        onMuteUser = onMuteUser,
+                        onReport = onReportNote,
                     )
                 }
 
@@ -864,6 +1053,12 @@ private fun IosFeedContent(
     onZap: ((String) -> Unit)? = null,
     onBookmark: ((String) -> Unit)? = null,
     bookmarkedNoteIds: Set<String> = emptySet(),
+    onCopyNoteId: ((String) -> Unit)? = null,
+    onCopyNoteText: ((String) -> Unit)? = null,
+    onCopyAuthorNpub: ((String) -> Unit)? = null,
+    onMuteUser: ((String) -> Unit)? = null,
+    onReport: ((String, String) -> Unit)? = null,
+    mutedUserPubKeys: Set<String> = emptySet(),
 ) {
     val relayStatuses by relayManager.relayStatuses.collectAsState()
     val connectedRelays by relayManager.connectedRelays.collectAsState()
@@ -995,6 +1190,7 @@ private fun IosFeedContent(
                 ) {
                     items(loadedState.list, key = { it.idHex }) { note ->
                         val event = note.event ?: return@items
+                        if (event.pubKey in mutedUserPubKeys) return@items
                         NoteCard(
                             note = note.toNoteDisplayData(localCache),
                             onClick = { onNavigateToThread(event.id) },
@@ -1004,6 +1200,11 @@ private fun IosFeedContent(
                             onZap = onZap,
                             onBookmark = onBookmark,
                             isBookmarked = event.id in bookmarkedNoteIds,
+                            onCopyNoteId = onCopyNoteId,
+                            onCopyNoteText = onCopyNoteText,
+                            onCopyAuthorNpub = onCopyAuthorNpub,
+                            onMuteUser = onMuteUser,
+                            onReport = onReport,
                         )
                     }
                 }
@@ -1033,6 +1234,11 @@ private fun IosProfileContent(
     onZap: ((String) -> Unit)? = null,
     onBookmark: ((String) -> Unit)? = null,
     bookmarkedNoteIds: Set<String> = emptySet(),
+    onCopyNoteId: ((String) -> Unit)? = null,
+    onCopyNoteText: ((String) -> Unit)? = null,
+    onCopyAuthorNpub: ((String) -> Unit)? = null,
+    onMuteUser: ((String) -> Unit)? = null,
+    onReport: ((String, String) -> Unit)? = null,
 ) {
     val relayStatuses by relayManager.relayStatuses.collectAsState()
     val allRelayUrls = remember(relayStatuses) { relayStatuses.keys }
@@ -1212,6 +1418,11 @@ private fun IosProfileContent(
                             onZap = onZap,
                             onBookmark = onBookmark,
                             isBookmarked = event.id in bookmarkedNoteIds,
+                            onCopyNoteId = onCopyNoteId,
+                            onCopyNoteText = onCopyNoteText,
+                            onCopyAuthorNpub = onCopyAuthorNpub,
+                            onMuteUser = onMuteUser,
+                            onReport = onReport,
                         )
                     }
                 }
@@ -1238,6 +1449,11 @@ private fun IosThreadContent(
     onZap: ((String) -> Unit)? = null,
     onBookmark: ((String) -> Unit)? = null,
     bookmarkedNoteIds: Set<String> = emptySet(),
+    onCopyNoteId: ((String) -> Unit)? = null,
+    onCopyNoteText: ((String) -> Unit)? = null,
+    onCopyAuthorNpub: ((String) -> Unit)? = null,
+    onMuteUser: ((String) -> Unit)? = null,
+    onReport: ((String, String) -> Unit)? = null,
 ) {
     val relayStatuses by relayManager.relayStatuses.collectAsState()
     val allRelayUrls = remember(relayStatuses) { relayStatuses.keys }
@@ -1308,6 +1524,11 @@ private fun IosThreadContent(
                             onZap = onZap,
                             onBookmark = onBookmark,
                             isBookmarked = event.id in bookmarkedNoteIds,
+                            onCopyNoteId = onCopyNoteId,
+                            onCopyNoteText = onCopyNoteText,
+                            onCopyAuthorNpub = onCopyAuthorNpub,
+                            onMuteUser = onMuteUser,
+                            onReport = onReport,
                         )
                     }
                 }
