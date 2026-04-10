@@ -112,6 +112,8 @@ import com.vitorpamplona.amethyst.ios.ui.HashtagFollowScreen
 import com.vitorpamplona.amethyst.ios.ui.LoginScreen
 import com.vitorpamplona.amethyst.ios.ui.MuteListScreen
 import com.vitorpamplona.amethyst.ios.ui.SettingsScreen
+import com.vitorpamplona.amethyst.ios.ui.audio.AudioTrackCard
+import com.vitorpamplona.amethyst.ios.ui.audio.toAudioTrackDisplayData
 import com.vitorpamplona.amethyst.ios.ui.badges.BadgeDisplayData
 import com.vitorpamplona.amethyst.ios.ui.badges.BadgeGallery
 import com.vitorpamplona.amethyst.ios.ui.calendar.CalendarEventCard
@@ -119,6 +121,8 @@ import com.vitorpamplona.amethyst.ios.ui.calendar.toCalendarEventDisplayData
 import com.vitorpamplona.amethyst.ios.ui.chats.IosChatScreen
 import com.vitorpamplona.amethyst.ios.ui.chats.IosChatroomListState
 import com.vitorpamplona.amethyst.ios.ui.chats.IosConversationListScreen
+import com.vitorpamplona.amethyst.ios.ui.chess.ChessGameCard
+import com.vitorpamplona.amethyst.ios.ui.chess.pgnToChessDisplayData
 import com.vitorpamplona.amethyst.ios.ui.codesnippets.CodeSnippetCard
 import com.vitorpamplona.amethyst.ios.ui.codesnippets.toCodeSnippetDisplayData
 import com.vitorpamplona.amethyst.ios.ui.communities.CommunityDetailScreen
@@ -129,6 +133,7 @@ import com.vitorpamplona.amethyst.ios.ui.highlights.toHighlightDisplayData
 import com.vitorpamplona.amethyst.ios.ui.labels.LabelRow
 import com.vitorpamplona.amethyst.ios.ui.labels.toLabelDisplayData
 import com.vitorpamplona.amethyst.ios.ui.lists.ListsManagementScreen
+import com.vitorpamplona.amethyst.ios.ui.lists.RelayListScreen
 import com.vitorpamplona.amethyst.ios.ui.liveactivities.LiveActivityCard
 import com.vitorpamplona.amethyst.ios.ui.liveactivities.LiveActivityDetailScreen
 import com.vitorpamplona.amethyst.ios.ui.liveactivities.toLiveActivityDisplayData
@@ -150,9 +155,12 @@ import com.vitorpamplona.amethyst.ios.ui.reactions.aggregateReactions
 import com.vitorpamplona.amethyst.ios.ui.search.IosSearchScreen
 import com.vitorpamplona.amethyst.ios.ui.toArticleDisplayData
 import com.vitorpamplona.amethyst.ios.ui.toNoteDisplayData
+import com.vitorpamplona.amethyst.ios.ui.torrents.TorrentCard
+import com.vitorpamplona.amethyst.ios.ui.torrents.toTorrentDisplayData
 import com.vitorpamplona.amethyst.ios.ui.wiki.WikiCard
 import com.vitorpamplona.amethyst.ios.ui.wiki.toWikiDisplayData
 import com.vitorpamplona.amethyst.ios.viewmodels.IosFeedViewModel
+import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArrayOrNull
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
@@ -169,6 +177,7 @@ import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
+import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.EventBookmark
 import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
@@ -184,6 +193,7 @@ import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
 import com.vitorpamplona.quartz.nip58Badges.profile.ProfileBadgesEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
+import com.vitorpamplona.quartz.nip64Chess.game.ChessGameEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.follow.tags.CommunityTag
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
@@ -286,6 +296,8 @@ sealed class Screen {
     ) : Screen()
 
     data object RelayGroups : Screen()
+
+    data object RelaySets : Screen()
 }
 
 enum class FeedMode { GLOBAL, FOLLOWING, HASHTAGS, TRENDING, POLLS, CALENDAR, LIVE, MARKETPLACE }
@@ -1353,6 +1365,7 @@ private fun MainScreen(
                         onCommunities = { navigateTo(Screen.Communities) },
                         onPeopleLists = { navigateTo(Screen.PeopleLists) },
                         onRelayGroups = { navigateTo(Screen.RelayGroups) },
+                        onRelaySets = { navigateTo(Screen.RelaySets) },
                     )
                 }
 
@@ -1571,6 +1584,16 @@ private fun MainScreen(
                             composeDraft = ""
                             goBack()
                         },
+                    )
+                }
+
+                is Screen.RelaySets -> {
+                    RelayListScreen(
+                        account = account,
+                        relayManager = relayManager,
+                        localCache = localCache,
+                        coordinator = coordinator,
+                        onBack = { goBack() },
                     )
                 }
 
@@ -2069,6 +2092,20 @@ private fun IosFeedContent(
                                     onAuthorClick = onNavigateToProfile,
                                 )
                             }
+                        } else if (event is ChessGameEvent) {
+                            val chessData = pgnToChessDisplayData(event.id, event.content)
+                            if (chessData != null) {
+                                ChessGameCard(data = chessData)
+                            }
+                        } else if (event is TorrentEvent) {
+                            TorrentCard(
+                                data = event.toTorrentDisplayData(),
+                                onCopyMagnet = { magnet ->
+                                    platform.UIKit.UIPasteboard.generalPasteboard.string = magnet
+                                },
+                            )
+                        } else if (event is AudioTrackEvent) {
+                            AudioTrackCard(data = event.toAudioTrackDisplayData())
                         } else {
                             val noteDisplayData = note.toNoteDisplayData(localCache)
                             val labelData = event.toLabelDisplayData()

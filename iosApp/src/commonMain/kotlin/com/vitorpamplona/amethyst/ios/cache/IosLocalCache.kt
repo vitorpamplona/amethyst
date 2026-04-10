@@ -43,6 +43,7 @@ import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
 import com.vitorpamplona.quartz.nip51Lists.PrivateReplaceableTagArrayEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
+import com.vitorpamplona.quartz.nip51Lists.relaySets.RelaySetEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.utils.DualCase
@@ -480,6 +481,18 @@ class IosLocalCache : ICacheProvider {
             addressableNotes.values.filter { note ->
                 val event = note.event
                 event is PeopleListEvent && event.pubKey == pubKeyHex
+            }
+        }
+
+    /**
+     * Returns all addressable notes matching RelaySetEvent (kind 30002)
+     * authored by the given pubkey.
+     */
+    fun findRelaySetsByAuthor(pubKeyHex: HexKey): List<AddressableNote> =
+        platformSynchronized(lock) {
+            addressableNotes.values.filter { note ->
+                val event = note.event
+                event is RelaySetEvent && event.pubKey == pubKeyHex
             }
         }
 

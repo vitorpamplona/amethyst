@@ -121,6 +121,7 @@ fun SettingsScreen(
     onCommunities: (() -> Unit)? = null,
     onPeopleLists: (() -> Unit)? = null,
     onRelayGroups: (() -> Unit)? = null,
+    onRelaySets: (() -> Unit)? = null,
 ) {
     val relayStatuses by relayManager.relayStatuses.collectAsState()
 
@@ -288,6 +289,43 @@ fun SettingsScreen(
                         )
                         Text(
                             "Browse and join NIP-29 relay groups",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+            }
+
+            // Relay Sets button (NIP-51)
+            if (onRelaySets != null) {
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .background(
+                                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+                                shape = RoundedCornerShape(12.dp),
+                            ).clickable(onClick = onRelaySets)
+                            .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        Icons.Default.Wifi,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp),
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            "Relay Sets",
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Text(
+                            "Manage relay collections (NIP-51)",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
