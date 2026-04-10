@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
 import com.vitorpamplona.amethyst.ios.ui.NoteDisplayData
+import com.vitorpamplona.amethyst.ios.ui.media.RichNoteContent
 import com.vitorpamplona.amethyst.ios.util.toTimeAgo
 
 /**
@@ -123,13 +124,9 @@ fun NoteCard(
 
             Spacer(Modifier.height(8.dp))
 
-            // Content
+            // Content (rich: inline images, video thumbnails, URL previews)
             if (note.content.isNotBlank()) {
-                Text(
-                    text = note.content,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
+                RichNoteContent(content = note.content)
             }
 
             Spacer(Modifier.height(8.dp))
