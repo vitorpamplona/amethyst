@@ -301,13 +301,13 @@ class MarmotManager(
     /**
      * Check if KeyPackage rotation is needed.
      */
-    fun needsKeyPackageRotation(): Boolean = keyPackageRotationManager.needsRotation()
+    suspend fun needsKeyPackageRotation(): Boolean = keyPackageRotationManager.needsRotation()
 
     /**
      * Check if there are active (locally generated) KeyPackages.
      * Returns true if at least one KeyPackage has been generated and not yet consumed.
      */
-    fun hasActiveKeyPackages(): Boolean = keyPackageRotationManager.hasActiveKeyPackages()
+    suspend fun hasActiveKeyPackages(): Boolean = keyPackageRotationManager.hasActiveKeyPackages()
 
     /**
      * Check if a specific group membership exists.

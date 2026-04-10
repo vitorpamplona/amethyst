@@ -82,6 +82,7 @@ object CommitOrdering {
      * to determine which commit wins for each (group, epoch).
      */
     class EpochCommitTracker {
+        private val lock = Any()
         private val pendingByGroupEpoch = mutableMapOf<GroupEpochKey, MutableList<GroupEvent>>()
 
         companion object {
@@ -100,7 +101,7 @@ object CommitOrdering {
             groupId: String,
             epoch: Long,
             commit: GroupEvent,
-        ) {
+        ) = synchronized(lock) {
             val key = GroupEpochKey(groupId, epoch)
             pendingByGroupEpoch.getOrPut(key) { mutableListOf() }.add(commit)
 
@@ -122,7 +123,10 @@ object CommitOrdering {
         fun pendingForEpoch(
             groupId: String,
             epoch: Long,
-        ): List<GroupEvent> = pendingByGroupEpoch[GroupEpochKey(groupId, epoch)] ?: emptyList()
+        ): List<GroupEvent> =
+            synchronized(lock) {
+                pendingByGroupEpoch[GroupEpochKey(groupId, epoch)]?.toList() ?: emptyList()
+            }
 
         /**
          * Resolves the winning commit for a specific group and epoch.
@@ -134,7 +138,10 @@ object CommitOrdering {
         fun resolve(
             groupId: String,
             epoch: Long,
-        ): GroupEvent? = selectWinner(pendingByGroupEpoch[GroupEpochKey(groupId, epoch)] ?: emptyList())
+        ): GroupEvent? =
+            synchronized(lock) {
+                selectWinner(pendingByGroupEpoch[GroupEpochKey(groupId, epoch)] ?: emptyList())
+            }
 
         /**
          * Clears pending commits for a (group, epoch) after it has been resolved.
@@ -142,20 +149,24 @@ object CommitOrdering {
         fun clearEpoch(
             groupId: String,
             epoch: Long,
-        ) {
+        ) = synchronized(lock) {
             pendingByGroupEpoch.remove(GroupEpochKey(groupId, epoch))
         }
 
         /**
          * Returns all (group, epoch) keys that have pending commits.
          */
-        fun pendingGroupEpochs(): Set<GroupEpochKey> = pendingByGroupEpoch.keys.toSet()
+        fun pendingGroupEpochs(): Set<GroupEpochKey> =
+            synchronized(lock) {
+                pendingByGroupEpoch.keys.toSet()
+            }
 
         /**
          * Clears all pending state.
          */
-        fun clear() {
-            pendingByGroupEpoch.clear()
-        }
+        fun clear() =
+            synchronized(lock) {
+                pendingByGroupEpoch.clear()
+            }
     }
 }

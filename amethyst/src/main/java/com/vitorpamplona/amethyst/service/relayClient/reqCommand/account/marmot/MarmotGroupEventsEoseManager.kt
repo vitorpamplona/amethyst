@@ -55,12 +55,12 @@ class MarmotGroupEventsEoseManager(
         val fallbackRelays = key.account.homeRelays.flow.value
 
         // Per-group kind:445 filters — route each to the group's own relays
-        val groupStates = manager.subscriptionManager.activeGroupIds()
+        val groupStates = manager.subscriptionManager.activeGroupIdsSnapshot()
         for (groupId in groupStates) {
             val filter =
                 manager.subscriptionManager.let { sub ->
                     // Build the filter for this specific group
-                    val groupFilters = sub.activeGroupFilters()
+                    val groupFilters = sub.activeGroupFiltersSnapshot()
                     // activeGroupFilters() returns one filter per group; match by tag content
                     groupFilters.find { f ->
                         f.tags?.any { it.value?.contains(groupId) == true } == true

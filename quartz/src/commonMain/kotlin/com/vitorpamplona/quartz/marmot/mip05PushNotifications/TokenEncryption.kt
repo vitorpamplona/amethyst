@@ -91,9 +91,11 @@ object TokenEncryption {
         val padding = RandomInstance.bytes(PADDED_PAYLOAD_SIZE - paddingStart)
         padding.copyInto(payload, paddingStart)
 
-        // Generate ephemeral keypair for ECDH
+        // Generate ephemeral keypair for ECDH (x-only 32-byte pubkey)
         val ephemeralPrivKey = RandomInstance.bytes(32)
-        val ephemeralPubKey = Secp256k1Instance.compressedPubKeyFor(ephemeralPrivKey)
+        val compressedPubKey = Secp256k1Instance.compressedPubKeyFor(ephemeralPrivKey)
+        // Extract the 32-byte x-only public key by dropping the SEC1 prefix byte
+        val ephemeralPubKey = compressedPubKey.copyOfRange(1, 33)
 
         // ECDH: shared_x = sha256(ephemeral_privkey * server_pubkey)
         val sharedPoint = Secp256k1Instance.pubKeyTweakMulCompact(serverPubKey, ephemeralPrivKey)

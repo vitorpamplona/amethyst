@@ -90,7 +90,7 @@ class MarmotOutboundProcessor(
 
         // Step 2: Outer ChaCha20-Poly1305 encryption
         val exporterKey = groupManager.exporterSecret(nostrGroupId)
-        val encryptedContent = GroupEventEncryption.encrypt(mlsCiphertext, exporterKey)
+        val encryptedContent = GroupEventEncryption.encrypt(mlsCiphertext, exporterKey, nostrGroupId)
 
         // Step 3: Build the GroupEvent template
         val template =
@@ -125,7 +125,7 @@ class MarmotOutboundProcessor(
     ): OutboundGroupEvent {
         // Outer ChaCha20-Poly1305 encryption of the MLS commit
         val exporterKey = groupManager.exporterSecret(nostrGroupId)
-        val encryptedContent = GroupEventEncryption.encrypt(commitBytes, exporterKey)
+        val encryptedContent = GroupEventEncryption.encrypt(commitBytes, exporterKey, nostrGroupId)
 
         // Build the GroupEvent template
         val template =

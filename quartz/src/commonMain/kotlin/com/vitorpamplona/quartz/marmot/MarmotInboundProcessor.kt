@@ -126,6 +126,7 @@ class MarmotInboundProcessor(
     private val keyPackageRotationManager: KeyPackageRotationManager,
 ) {
     private val commitTracker = CommitOrdering.EpochCommitTracker()
+    private val processedIdsLock = Any()
     private val processedEventIds = LinkedHashSet<String>()
 
     companion object {
@@ -153,11 +154,13 @@ class MarmotInboundProcessor(
      * @return the processing result
      */
     suspend fun processGroupEvent(groupEvent: GroupEvent): GroupEventResult {
-        // Deduplicate already-processed events
+        // Deduplicate already-processed events (thread-safe)
         val eventId = groupEvent.id
-        if (eventId in processedEventIds) {
-            val gId = groupEvent.groupId()
-            return GroupEventResult.Duplicate(gId ?: "")
+        synchronized(processedIdsLock) {
+            if (eventId in processedEventIds) {
+                val gId = groupEvent.groupId()
+                return GroupEventResult.Duplicate(gId ?: "")
+            }
         }
 
         val groupId =
@@ -185,8 +188,8 @@ class MarmotInboundProcessor(
                 GroupEventResult.Error(groupId, "Failed to process GroupEvent: ${e.message}", e)
             }
 
-        // Track successfully processed events for deduplication
-        if (result !is GroupEventResult.Error) {
+        // Track ALL processed events for deduplication (including errors to prevent replay DoS)
+        synchronized(processedIdsLock) {
             processedEventIds.add(eventId)
             // Trim the set if it exceeds the max size
             if (processedEventIds.size > MAX_PROCESSED_IDS) {
@@ -223,8 +226,19 @@ class MarmotInboundProcessor(
         nostrGroupId: HexKey,
     ): WelcomeResult =
         try {
+            // Validate the caller-provided nostrGroupId matches the Welcome event's own h tag
+            val eventGroupId = welcomeEvent.nostrGroupId()
+            if (eventGroupId != null && eventGroupId != nostrGroupId) {
+                return WelcomeResult.Error(
+                    "nostrGroupId mismatch: caller=$nostrGroupId, event=$eventGroupId",
+                )
+            }
+
             val welcomeBytes = Base64.decode(welcomeEvent.welcomeBase64())
             val keyPackageEventId = welcomeEvent.keyPackageEventId()
+            if (keyPackageEventId == null) {
+                return WelcomeResult.Error("WelcomeEvent missing KeyPackage event ID tag")
+            }
 
             // Find the KeyPackageBundle that was consumed
             val bundle =
@@ -381,14 +395,19 @@ class MarmotInboundProcessor(
 
                 WireFormat.PUBLIC_MESSAGE -> {
                     val pubMsg = PublicMessage.decodeTls(TlsReader(mlsMessage.payload))
-                    groupManager.processCommit(
-                        nostrGroupId = groupId,
-                        commitBytes = pubMsg.content,
-                        senderLeafIndex = pubMsg.sender.leafIndex,
-                        confirmationTag = pubMsg.confirmationTag,
-                    )
-                    val group = groupManager.getGroup(groupId)
-                    GroupEventResult.CommitProcessed(groupId, group?.epoch ?: 0)
+                    val tag = pubMsg.confirmationTag
+                    if (tag == null) {
+                        GroupEventResult.Error(groupId, "PublicMessage commit missing confirmation_tag")
+                    } else {
+                        groupManager.processCommit(
+                            nostrGroupId = groupId,
+                            commitBytes = pubMsg.content,
+                            senderLeafIndex = pubMsg.sender.leafIndex,
+                            confirmationTag = tag,
+                        )
+                        val group = groupManager.getGroup(groupId)
+                        GroupEventResult.CommitProcessed(groupId, group?.epoch ?: 0)
+                    }
                 }
 
                 else -> {
@@ -413,7 +432,7 @@ class MarmotInboundProcessor(
         // Try current epoch key first
         try {
             val exporterKey = groupManager.exporterSecret(groupId)
-            return GroupEventEncryption.decrypt(encryptedContent, exporterKey)
+            return GroupEventEncryption.decrypt(encryptedContent, exporterKey, groupId)
         } catch (_: Exception) {
             // Current epoch key failed — try retained epoch keys
         }
@@ -422,7 +441,7 @@ class MarmotInboundProcessor(
         val retainedKeys = groupManager.retainedExporterSecrets(groupId)
         for (retainedKey in retainedKeys) {
             try {
-                return GroupEventEncryption.decrypt(encryptedContent, retainedKey)
+                return GroupEventEncryption.decrypt(encryptedContent, retainedKey, groupId)
             } catch (_: Exception) {
                 // This retained key didn't work — try the next one
             }

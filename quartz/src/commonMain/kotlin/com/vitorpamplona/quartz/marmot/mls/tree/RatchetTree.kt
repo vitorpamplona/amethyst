@@ -101,10 +101,27 @@ class RatchetTree(
     }
 
     /**
+     * Check that the given encryption key is not already used by another leaf (RFC 9420 §7.3).
+     */
+    private fun requireUniqueEncryptionKey(
+        leafNode: LeafNode,
+        excludeLeafIndex: Int = -1,
+    ) {
+        for (i in 0 until _leafCount) {
+            if (i == excludeLeafIndex) continue
+            val existing = getLeaf(i) ?: continue
+            require(!existing.encryptionKey.contentEquals(leafNode.encryptionKey)) {
+                "Duplicate encryption key: leaf $i already uses this key"
+            }
+        }
+    }
+
+    /**
      * Add a new leaf to the tree. Returns the leaf index.
      * First tries to reuse a blank leaf slot, otherwise appends.
      */
     fun addLeaf(leafNode: LeafNode): Int {
+        requireUniqueEncryptionKey(leafNode)
         // Find first blank leaf
         for (i in 0 until _leafCount) {
             if (getLeaf(i) == null) {

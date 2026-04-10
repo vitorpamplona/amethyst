@@ -45,8 +45,8 @@ enum class ProposalType(
     EXTERNAL_INIT(6),
     GROUP_CONTEXT_EXTENSIONS(7),
 
-    // Marmot custom proposal types
-    SELF_REMOVE(0x0008),
+    // Marmot custom proposal types (private-use range 0xF000-0xFFFF)
+    SELF_REMOVE(0xF001),
     ;
 
     companion object {
