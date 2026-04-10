@@ -345,7 +345,13 @@ private fun MainScreen(
     }
 
     val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
+    val exceptionHandler =
+        kotlinx.coroutines.CoroutineExceptionHandler { _, throwable ->
+            platform.Foundation.NSLog(
+                "CoroutineException: " + (throwable.message ?: "unknown") + " " + throwable::class.simpleName.orEmpty(),
+            )
+        }
+    val scope = rememberCoroutineScope { exceptionHandler }
 
     val onLikeNote: (String) -> Unit = { noteId ->
         scope.launch {
