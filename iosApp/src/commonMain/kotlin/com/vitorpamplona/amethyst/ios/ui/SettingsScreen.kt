@@ -50,6 +50,7 @@ import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.AlertDialog
@@ -60,6 +61,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -85,6 +87,7 @@ import com.vitorpamplona.amethyst.ios.network.DefaultRelays
 import com.vitorpamplona.amethyst.ios.network.IosRelayConnectionManager
 import com.vitorpamplona.amethyst.ios.network.RelayConnectionState
 import com.vitorpamplona.amethyst.ios.network.RelayStatus
+import com.vitorpamplona.amethyst.ios.ui.qr.QrCodeDisplay
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
@@ -251,6 +254,11 @@ fun SettingsScreen(
             Spacer(Modifier.height(8.dp))
 
             AccountKeyRow(label = "Public Key (hex)", value = pubKeyHex)
+
+            Spacer(Modifier.height(12.dp))
+
+            // Share QR Code
+            ShareQrSection(npub = npub)
 
             Spacer(Modifier.height(16.dp))
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -918,6 +926,52 @@ private fun AboutRow(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurface,
         )
+    }
+}
+
+// ── Share QR Code Section ──
+
+@Composable
+private fun ShareQrSection(npub: String) {
+    var showQr by remember { mutableStateOf(false) }
+
+    OutlinedButton(
+        onClick = { showQr = !showQr },
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Icon(
+            Icons.Default.QrCodeScanner,
+            contentDescription = null,
+            modifier = Modifier.size(18.dp),
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(if (showQr) "Hide QR Code" else "Share QR Code")
+    }
+
+    AnimatedVisibility(
+        visible = showQr,
+        enter = expandVertically(),
+        exit = shrinkVertically(),
+    ) {
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            QrCodeDisplay(
+                data = npub,
+                size = 200.dp,
+                label = npub.take(20) + "..." + npub.takeLast(8),
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "Others can scan this to find you on Nostr",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 

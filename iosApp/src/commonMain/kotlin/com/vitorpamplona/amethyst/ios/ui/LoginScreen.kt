@@ -28,13 +28,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -52,6 +56,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.ios.account.AccountState
+import com.vitorpamplona.amethyst.ios.ui.qr.QrScannerSheet
 import com.vitorpamplona.quartz.nip19Bech32.toNsec
 
 @Composable
@@ -62,6 +67,20 @@ fun LoginScreen(
     var keyInput by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var newAccount by remember { mutableStateOf<AccountState.LoggedIn?>(null) }
+    var showQrScanner by remember { mutableStateOf(false) }
+
+    // Full-screen QR scanner overlay
+    if (showQrScanner) {
+        QrScannerSheet(
+            onResult = { scannedValue ->
+                keyInput = scannedValue.trim()
+                errorMessage = null
+                showQrScanner = false
+            },
+            onDismiss = { showQrScanner = false },
+        )
+        return
+    }
 
     Column(
         modifier =
@@ -172,17 +191,33 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            Button(
-                onClick = {
-                    val result = onLogin(keyInput)
-                    result.exceptionOrNull()?.let {
-                        errorMessage = it.message ?: "Invalid key"
-                    }
-                },
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                enabled = keyInput.isNotBlank(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Text("Login")
+                Button(
+                    onClick = {
+                        val result = onLogin(keyInput)
+                        result.exceptionOrNull()?.let {
+                            errorMessage = it.message ?: "Invalid key"
+                        }
+                    },
+                    modifier = Modifier.weight(1f),
+                    enabled = keyInput.isNotBlank(),
+                ) {
+                    Text("Login")
+                }
+
+                OutlinedButton(
+                    onClick = { showQrScanner = true },
+                    modifier = Modifier.size(48.dp),
+                ) {
+                    Icon(
+                        Icons.Default.QrCodeScanner,
+                        contentDescription = "Scan QR Code",
+                        modifier = Modifier.size(24.dp),
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
