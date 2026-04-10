@@ -29,7 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 object FilterBuilders {
     private val FEED_KINDS = listOf(1, 6, 16)
     private val FEED_KINDS_WITH_ARTICLES = listOf(1, 6, 16, 30023)
-    private val FEED_KINDS_ALL = listOf(1, 6, 16, 30023, 6969, 31922, 31923)
+    private val FEED_KINDS_ALL = listOf(1, 6, 16, 30023, 6969, 31922, 31923, 30402)
 
     fun textNotesGlobal(limit: Int? = null): Filter = Filter(kinds = FEED_KINDS, limit = limit)
 
@@ -249,6 +249,57 @@ object FilterBuilders {
         authors: List<String>,
         limit: Int? = null,
     ): Filter = Filter(kinds = listOf(30311), authors = authors, limit = limit)
+
+    // ── NIP-99 Classifieds ──
+
+    /**
+     * Discover classified listings (kind 30402).
+     */
+    fun classifiedListings(limit: Int? = null): Filter = Filter(kinds = listOf(30402), limit = limit)
+
+    /**
+     * Classified listings by specific authors.
+     */
+    fun classifiedListingsByAuthors(
+        authors: List<String>,
+        limit: Int? = null,
+    ): Filter = Filter(kinds = listOf(30402), authors = authors, limit = limit)
+
+    /**
+     * Search classified listings.
+     */
+    fun searchClassifiedListings(
+        searchQuery: String,
+        limit: Int = 50,
+    ): Filter = Filter(kinds = listOf(30402), search = searchQuery, limit = limit)
+
+    // ── NIP-58 Badges ──
+
+    /**
+     * Badge definitions (kind 30009) by specific issuers.
+     */
+    fun badgeDefinitions(
+        authors: List<String>,
+        limit: Int? = null,
+    ): Filter = Filter(kinds = listOf(30009), authors = authors, limit = limit)
+
+    /**
+     * Badge awards (kind 8) targeting a specific user.
+     */
+    fun badgeAwardsForUser(
+        pubKeyHex: String,
+        limit: Int? = null,
+    ): Filter = Filter(kinds = listOf(8), tags = mapOf("p" to listOf(pubKeyHex)), limit = limit)
+
+    /**
+     * Profile badges (kind 10008) for a specific user.
+     */
+    fun profileBadges(pubKeyHex: String): Filter = Filter(kinds = listOf(10008), authors = listOf(pubKeyHex), limit = 1)
+
+    /**
+     * Badge definitions (kind 30009) globally.
+     */
+    fun badgeDefinitionsGlobal(limit: Int? = null): Filter = Filter(kinds = listOf(30009), limit = limit)
 }
 
 /**

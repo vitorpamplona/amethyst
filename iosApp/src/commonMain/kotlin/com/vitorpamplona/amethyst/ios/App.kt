@@ -106,6 +106,8 @@ import com.vitorpamplona.amethyst.ios.ui.HashtagFollowScreen
 import com.vitorpamplona.amethyst.ios.ui.LoginScreen
 import com.vitorpamplona.amethyst.ios.ui.MuteListScreen
 import com.vitorpamplona.amethyst.ios.ui.SettingsScreen
+import com.vitorpamplona.amethyst.ios.ui.badges.BadgeDisplayData
+import com.vitorpamplona.amethyst.ios.ui.badges.BadgeGallery
 import com.vitorpamplona.amethyst.ios.ui.calendar.CalendarEventCard
 import com.vitorpamplona.amethyst.ios.ui.calendar.toCalendarEventDisplayData
 import com.vitorpamplona.amethyst.ios.ui.chats.IosChatScreen
@@ -116,6 +118,9 @@ import com.vitorpamplona.amethyst.ios.ui.communities.CommunityListScreen
 import com.vitorpamplona.amethyst.ios.ui.liveactivities.LiveActivityCard
 import com.vitorpamplona.amethyst.ios.ui.liveactivities.LiveActivityDetailScreen
 import com.vitorpamplona.amethyst.ios.ui.liveactivities.toLiveActivityDisplayData
+import com.vitorpamplona.amethyst.ios.ui.marketplace.ClassifiedCard
+import com.vitorpamplona.amethyst.ios.ui.marketplace.ClassifiedDetailScreen
+import com.vitorpamplona.amethyst.ios.ui.marketplace.toClassifiedDisplayData
 import com.vitorpamplona.amethyst.ios.ui.note.ArticleCard
 import com.vitorpamplona.amethyst.ios.ui.note.ArticleDetailScreen
 import com.vitorpamplona.amethyst.ios.ui.note.NoteCard
@@ -154,10 +159,13 @@ import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportType
+import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
+import com.vitorpamplona.quartz.nip58Badges.profile.ProfileBadgesEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.follow.tags.CommunityTag
+import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -243,9 +251,13 @@ sealed class Screen {
     data class LiveActivity(
         val noteId: String,
     ) : Screen()
+
+    data class ClassifiedDetail(
+        val noteId: String,
+    ) : Screen()
 }
 
-enum class FeedMode { GLOBAL, FOLLOWING, HASHTAGS, TRENDING, POLLS, CALENDAR, LIVE }
+enum class FeedMode { GLOBAL, FOLLOWING, HASHTAGS, TRENDING, POLLS, CALENDAR, LIVE, MARKETPLACE }
 
 @Composable
 fun App() {
@@ -984,6 +996,7 @@ private fun MainScreen(
                         onNavigateToArticle = { navigateTo(Screen.Article(it)) },
                         onNavigateToCommunities = { navigateTo(Screen.Communities) },
                         onNavigateToLiveActivity = { navigateTo(Screen.LiveActivity(it)) },
+                        onNavigateToClassified = { navigateTo(Screen.ClassifiedDetail(it)) },
                         onBoost = onBoostNote,
                         onLike = onLikeNote,
                         onZap = onZapNote,
@@ -1346,6 +1359,35 @@ private fun MainScreen(
                         }
                     }
                 }
+
+                is Screen.ClassifiedDetail -> {
+                    val note = localCache.getNoteIfExists(screen.noteId)
+                    val classifiedData = note?.toClassifiedDisplayData(localCache)
+                    if (classifiedData != null) {
+                        ClassifiedDetailScreen(
+                            classified = classifiedData,
+                            onBack = { goBack() },
+                            onAuthorClick = { navigateTo(Screen.Profile(it)) },
+                        )
+                    } else {
+                        Column {
+                            androidx.compose.material3.TopAppBar(
+                                title = { Text("Listing") },
+                                navigationIcon = {
+                                    IconButton(onClick = { goBack() }) {
+                                        Icon(
+                                            imageVector = Icons.Default.ArrowBack,
+                                            contentDescription = "Back",
+                                        )
+                                    }
+                                },
+                            )
+                            com.vitorpamplona.amethyst.commons.ui.components.EmptyState(
+                                title = "Listing not found",
+                            )
+                        }
+                    }
+                }
             }
         }
     }
@@ -1365,6 +1407,7 @@ private fun IosFeedContent(
     onNavigateToArticle: ((String) -> Unit)? = null,
     onNavigateToCommunities: (() -> Unit)? = null,
     onNavigateToLiveActivity: ((String) -> Unit)? = null,
+    onNavigateToClassified: ((String) -> Unit)? = null,
     onBoost: ((String) -> Unit)? = null,
     onLike: ((String) -> Unit)? = null,
     onZap: ((String) -> Unit)? = null,
@@ -1475,6 +1518,15 @@ private fun IosFeedContent(
                     onEvent = { event, _, relay, _ -> coordinator.consumeEvent(event, relay) },
                 )
             }
+
+            FeedMode.MARKETPLACE -> {
+                SubscriptionConfig(
+                    subId = generateSubId("classifieds"),
+                    filters = listOf(FilterBuilders.classifiedListings(limit = 100)),
+                    relays = allRelayUrls,
+                    onEvent = { event, _, relay, _ -> coordinator.consumeEvent(event, relay) },
+                )
+            }
         }
     }
 
@@ -1510,6 +1562,11 @@ private fun IosFeedContent(
                     FeedMode.LIVE -> {
                         com.vitorpamplona.amethyst.ios.feeds
                             .IosLiveActivitiesFeedFilter(localCache)
+                    }
+
+                    FeedMode.MARKETPLACE -> {
+                        com.vitorpamplona.amethyst.ios.feeds
+                            .IosClassifiedsFeedFilter(localCache)
                     }
                 }
             IosFeedViewModel(filter, localCache)
@@ -1576,6 +1633,7 @@ private fun IosFeedContent(
                     FeedMode.POLLS -> "Polls"
                     FeedMode.CALENDAR -> "Calendar"
                     FeedMode.LIVE -> "Live"
+                    FeedMode.MARKETPLACE -> "Marketplace"
                 },
             connectedRelayCount = connectedRelays.size,
             onRefresh = { relayManager.connect() },
@@ -1602,6 +1660,7 @@ private fun IosFeedContent(
                                 FeedMode.POLLS -> "🗳️ Polls"
                                 FeedMode.CALENDAR -> "📅 Calendar"
                                 FeedMode.LIVE -> "🔴 Live"
+                                FeedMode.MARKETPLACE -> "🛒 Market"
                             },
                             style = MaterialTheme.typography.labelMedium,
                         )
@@ -1629,6 +1688,7 @@ private fun IosFeedContent(
                             FeedMode.POLLS -> "No polls found"
                             FeedMode.CALENDAR -> "No calendar events found"
                             FeedMode.LIVE -> "No live activities found"
+                            FeedMode.MARKETPLACE -> "No listings found"
                             else -> "No notes found"
                         },
                     description =
@@ -1694,6 +1754,15 @@ private fun IosFeedContent(
                                 ArticleCard(
                                     article = articleData,
                                     onClick = { onNavigateToArticle?.invoke(event.id) },
+                                    onAuthorClick = onNavigateToProfile,
+                                )
+                            }
+                        } else if (event is ClassifiedsEvent) {
+                            val classifiedData = note.toClassifiedDisplayData(localCache)
+                            if (classifiedData != null) {
+                                ClassifiedCard(
+                                    classified = classifiedData,
+                                    onClick = { onNavigateToClassified?.invoke(event.id) },
                                     onAuthorClick = onNavigateToProfile,
                                 )
                             }
@@ -1806,6 +1875,73 @@ private fun IosProfileContent(
             onEvent = { event, _, relay, _ -> coordinator.consumeEvent(event, relay) },
         )
     }
+
+    // Subscribe to profile badges (NIP-58)
+    rememberSubscription(allRelayUrls, pubKeyHex, relayManager = relayManager) {
+        if (allRelayUrls.isEmpty()) return@rememberSubscription null
+        SubscriptionConfig(
+            subId = generateSubId("profile-badges"),
+            filters = listOf(FilterBuilders.profileBadges(pubKeyHex)),
+            relays = allRelayUrls,
+            onEvent = { event, _, relay, _ -> coordinator.consumeEvent(event, relay) },
+        )
+    }
+
+    // Resolve badge definitions from the profile badges event
+    val profileBadgesNote =
+        remember(pubKeyHex) {
+            val address = ProfileBadgesEvent.createAddress(pubKeyHex)
+            localCache.getOrCreateAddressableNote(address)
+        }
+    val profileBadgesEvent = profileBadgesNote.event as? ProfileBadgesEvent
+    val badgeDefinitionAddresses =
+        remember(profileBadgesEvent) {
+            profileBadgesEvent?.badgeAwardDefinitions() ?: emptyList()
+        }
+
+    // Subscribe to badge definitions referenced by the profile
+    rememberSubscription(allRelayUrls, badgeDefinitionAddresses, relayManager = relayManager) {
+        if (allRelayUrls.isEmpty() || badgeDefinitionAddresses.isEmpty()) return@rememberSubscription null
+        SubscriptionConfig(
+            subId = generateSubId("badge-defs"),
+            filters = listOf(FilterBuilders.badgeDefinitionsGlobal(limit = 50)),
+            relays = allRelayUrls,
+            onEvent = { event, _, relay, _ -> coordinator.consumeEvent(event, relay) },
+        )
+    }
+
+    // Build badge display data
+    val badgeDisplayList =
+        remember(profileBadgesEvent) {
+            if (profileBadgesEvent == null) return@remember emptyList<BadgeDisplayData>()
+            val badges = profileBadgesEvent.acceptedBadges()
+            badges.mapNotNull { accepted ->
+                val defATag = accepted.badgeDefinition
+                val defAddressId = defATag.toTag()
+                val defAddress =
+                    com.vitorpamplona.quartz.nip01Core.core.Address
+                        .parse(defAddressId)
+                val defEvent =
+                    if (defAddress != null) {
+                        localCache.getOrCreateAddressableNote(defAddress).event as? BadgeDefinitionEvent
+                    } else {
+                        null
+                    }
+                val issuerPubKey = defATag.pubKeyHex
+                val issuerUser = localCache.getUserIfExists(issuerPubKey)
+                BadgeDisplayData(
+                    definitionAddressId = defAddressId,
+                    awardEventId = accepted.badgeAward.eventId,
+                    name = defEvent?.name() ?: defATag.dTag,
+                    description = defEvent?.description(),
+                    imageUrl = defEvent?.image(),
+                    thumbUrl = defEvent?.thumb(),
+                    issuerPubKeyHex = issuerPubKey,
+                    issuerDisplayName = issuerUser?.toBestDisplayName() ?: issuerPubKey.take(16) + "...",
+                    issuerProfilePicture = issuerUser?.profilePicture(),
+                )
+            }
+        }
 
     Column(modifier = Modifier.fillMaxSize()) {
         // Enhanced profile header
@@ -1921,6 +2057,16 @@ private fun IosProfileContent(
                     }
                 }
             }
+        }
+
+        // Badge gallery (NIP-58)
+        if (badgeDisplayList.isNotEmpty()) {
+            Spacer(Modifier.height(12.dp))
+            BadgeGallery(
+                badges = badgeDisplayList,
+                onBadgeClick = null,
+            )
+            Spacer(Modifier.height(12.dp))
         }
 
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)

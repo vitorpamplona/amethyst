@@ -40,6 +40,7 @@ import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEven
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.StatusTag
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.isForCommunity
+import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 
 private fun isFeedNote(event: com.vitorpamplona.quartz.nip01Core.core.Event?): Boolean =
     event is TextNoteEvent ||
@@ -48,7 +49,8 @@ private fun isFeedNote(event: com.vitorpamplona.quartz.nip01Core.core.Event?): B
         event is LongTextNoteEvent ||
         event is ZapPollEvent ||
         event is CalendarTimeSlotEvent ||
-        event is CalendarDateSlotEvent
+        event is CalendarDateSlotEvent ||
+        event is ClassifiedsEvent
 
 /**
  * Global feed: kind 1 text notes + kind 6/16 reposts, sorted by createdAt desc.
@@ -460,4 +462,26 @@ class IosLiveActivitiesFeedFilter(
                 }
             }.thenByDescending { it.createdAt() ?: 0L }
     }
+}
+
+/**
+ * Classifieds / Marketplace feed: kind 30402 events (NIP-99), sorted by createdAt desc.
+ */
+class IosClassifiedsFeedFilter(
+    private val cache: IosLocalCache,
+) : AdditiveFeedFilter<Note>() {
+    override fun feedKey(): String = "classifieds"
+
+    override fun feed(): List<Note> =
+        cache
+            .allNotes()
+            .filter { it.event is ClassifiedsEvent }
+            .sortedWith(DefaultFeedOrder)
+            .take(limit())
+
+    override fun applyFilter(newItems: Set<Note>): Set<Note> = newItems.filterTo(HashSet()) { it.event is ClassifiedsEvent }
+
+    override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder)
+
+    override fun limit(): Int = 200
 }
