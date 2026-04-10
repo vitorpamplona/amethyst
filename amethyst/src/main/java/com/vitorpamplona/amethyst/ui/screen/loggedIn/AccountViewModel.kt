@@ -219,6 +219,7 @@ class AccountViewModel(
                 publishWrap = { wrap -> account.publishCallSignaling(wrap) },
                 signerProvider = { account.signer },
                 localPubKey = account.signer.pubKey,
+                settingsProvider = { account.settings },
             )
 
         // Set callbacks before exposing controller to avoid timing races

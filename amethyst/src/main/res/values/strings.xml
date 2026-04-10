@@ -813,6 +813,19 @@
     <string name="call_failed_start">Failed to start call</string>
     <string name="call_failed_accept">Failed to accept call</string>
     <string name="call_failed_session">Failed to create call session</string>
+    <string name="call_settings">Call Settings</string>
+    <string name="call_settings_video_quality">Video Quality</string>
+    <string name="call_settings_max_bitrate">Max Video Bitrate</string>
+    <string name="call_settings_turn_servers">TURN / STUN Servers</string>
+    <string name="call_settings_turn_description">Default STUN and TURN servers are always included. Add custom TURN servers for restrictive networks.</string>
+    <string name="call_settings_default_servers">Default servers (always active)</string>
+    <string name="call_settings_custom_turn">Custom TURN Servers</string>
+    <string name="call_settings_no_custom_turn">No custom TURN servers configured.</string>
+    <string name="call_settings_add_turn">Add TURN server</string>
+    <string name="call_settings_remove_turn">Remove</string>
+    <string name="call_settings_turn_url">Server URL</string>
+    <string name="call_settings_turn_username">Username</string>
+    <string name="call_settings_turn_credential">Credential</string>
 
     <string name="reply_notify">Notify: </string>
 

@@ -765,21 +765,31 @@ class CallManager(
         timeoutJob =
             scope.launch {
                 delay(CALL_TIMEOUT_MS)
-                val current = _state.value
-                val currentCallId =
-                    when (current) {
-                        is CallState.Offering -> current.callId
-                        is CallState.IncomingCall -> current.callId
-                        else -> null
-                    }
-                if (currentCallId == callId) {
-                    val peerPubKeys =
+                val peerPubKeys: Set<HexKey>
+                val wasOffering: Boolean
+                stateMutex.withLock {
+                    val current = _state.value
+                    val currentCallId =
+                        when (current) {
+                            is CallState.Offering -> current.callId
+                            is CallState.IncomingCall -> current.callId
+                            else -> null
+                        }
+                    if (currentCallId != callId) return@launch
+                    peerPubKeys =
                         when (current) {
                             is CallState.Offering -> current.peerPubKeys
                             is CallState.IncomingCall -> current.peerPubKeys()
                             else -> return@launch
                         }
+                    wasOffering = current is CallState.Offering
                     transitionToEnded(callId, peerPubKeys, EndReason.TIMEOUT)
+                }
+                // Notify peers so their phones stop ringing immediately
+                // instead of waiting for their own 60-second timeout.
+                if (wasOffering && peerPubKeys.isNotEmpty()) {
+                    val result = factory.createGroupHangup(peerPubKeys, callId, signer = signer)
+                    result.wraps.forEach { publishEvent(it) }
                 }
             }
     }

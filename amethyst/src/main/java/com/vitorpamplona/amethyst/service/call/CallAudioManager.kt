@@ -184,7 +184,10 @@ class CallAudioManager(
                 PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK,
                 "amethyst:call_proximity",
             )
-        proximityWakeLock?.acquire(10 * 60 * 1000L)
+        // No timeout — the wake lock is held for the entire call duration
+        // and released in releaseProximityWakeLock() during cleanup.
+        @Suppress("WakelockTimeout")
+        proximityWakeLock?.acquire()
         registerProximitySensor()
     }
 

@@ -36,6 +36,7 @@ import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.GroupAdd
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Key
+import androidx.compose.material.icons.outlined.Phone
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material.icons.outlined.Settings
@@ -140,6 +141,13 @@ fun AllSettingsScreen(
                 icon = Icons.Outlined.Security,
                 tint = tint,
                 onClick = { nav.nav(Route.SecurityFilters) },
+            )
+            HorizontalDivider()
+            SettingsNavigationRow(
+                title = R.string.call_settings,
+                icon = Icons.Outlined.Phone,
+                tint = tint,
+                onClick = { nav.nav(Route.CallSettings) },
             )
             HorizontalDivider()
             SettingsNavigationRow(

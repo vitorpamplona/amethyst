@@ -51,7 +51,7 @@ import org.webrtc.VideoTrack
 import java.util.UUID
 
 private const val TAG = "CallController"
-private const val VIDEO_MAX_BITRATE_BPS = 1_500_000
+private const val VIDEO_MAX_BITRATE_BPS_DEFAULT = 1_500_000
 
 class CallController(
     private val context: Context,
@@ -60,6 +60,7 @@ class CallController(
     private val publishWrap: suspend (EphemeralGiftWrapEvent) -> Unit,
     private val signerProvider: suspend () -> com.vitorpamplona.quartz.nip01Core.signers.NostrSigner,
     localPubKey: HexKey,
+    private val settingsProvider: () -> com.vitorpamplona.amethyst.model.AccountSettings,
 ) {
     private var peerSessionMgr = PeerSessionManager(localPubKey)
 
@@ -132,7 +133,9 @@ class CallController(
                     }
 
                     is CallState.Idle -> {
-                        cleanup()
+                        // No cleanup here — Ended already handled it.
+                        // Ended auto-resets to Idle after 2 seconds;
+                        // running cleanup twice is wasteful and logs errors.
                     }
                 }
             }
@@ -154,6 +157,12 @@ class CallController(
         }
     }
 
+    private fun applyCallSettings() {
+        val settings = settingsProvider()
+        val resolution = settings.callVideoResolution
+        mediaManager.setCaptureResolution(resolution.width, resolution.height, resolution.fps)
+    }
+
     // ---- Call initiation (caller side) ----
 
     fun initiateGroupCall(
@@ -165,6 +174,7 @@ class CallController(
             val callId = UUID.randomUUID().toString()
             _errorMessage.value = null
 
+            applyCallSettings()
             try {
                 withContext(Dispatchers.IO) { mediaManager.initialize(callType) }
             } catch (e: Exception) {
@@ -202,6 +212,7 @@ class CallController(
         scope.launch {
             _errorMessage.value = null
 
+            applyCallSettings()
             try {
                 withContext(Dispatchers.IO) { mediaManager.initialize(state.callType) }
             } catch (e: Exception) {
@@ -377,7 +388,7 @@ class CallController(
                 mediaManager.createVideoResources()
                 peerSessionMgr.allSessionKeys().forEach { key ->
                     webRtcSession(key)?.let { session ->
-                        mediaManager.localVideoTrack?.let { track -> session.addTrack(track, VIDEO_MAX_BITRATE_BPS) }
+                        mediaManager.localVideoTrack?.let { track -> session.addTrack(track, settingsProvider().callMaxBitrateBps) }
                     }
                 }
             } else {
@@ -395,7 +406,21 @@ class CallController(
     fun getEglBase(): EglBase? = mediaManager.sharedEglBase
 
     fun invitePeer(peerPubKey: String) {
-        scope.launch { createAndOfferToPeer(peerPubKey) }
+        scope.launch {
+            if (mediaManager.peerConnectionFactory == null) return@launch
+            val webRtcSession =
+                try {
+                    withContext(Dispatchers.IO) { createWebRtcSession(peerPubKey) }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to create PeerConnection for invite ${peerPubKey.take(8)}", e)
+                    return@launch
+                }
+            val adapter = WebRtcPeerSessionAdapter(webRtcSession)
+            peerSessionMgr.registerSession(peerPubKey, adapter)
+            webRtcSession.createOffer { sdp ->
+                scope.launch { callManager.invitePeer(peerPubKey, sdp.description) }
+            }
+        }
     }
 
     fun hangup() {
@@ -413,7 +438,7 @@ class CallController(
         val session =
             WebRtcCallSession(
                 peerConnectionFactory = factory,
-                iceServers = IceServerConfig.buildIceServers(),
+                iceServers = IceServerConfig.buildIceServers(settingsProvider().callTurnServers),
                 onIceCandidate = { candidate -> onLocalIceCandidate(peerPubKey, candidate) },
                 onPeerConnected = {
                     Log.d(TAG) { "Peer ${peerPubKey.take(8)} connected!" }
@@ -437,7 +462,7 @@ class CallController(
             throw e
         }
         mediaManager.localAudioTrack?.let { session.addTrack(it) }
-        mediaManager.localVideoTrack?.let { session.addTrack(it, VIDEO_MAX_BITRATE_BPS) }
+        mediaManager.localVideoTrack?.let { session.addTrack(it, settingsProvider().callMaxBitrateBps) }
         return session
     }
 
