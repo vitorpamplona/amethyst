@@ -88,9 +88,12 @@ import com.vitorpamplona.amethyst.ios.network.IosRelayConnectionManager
 import com.vitorpamplona.amethyst.ios.network.RelayConnectionState
 import com.vitorpamplona.amethyst.ios.network.RelayStatus
 import com.vitorpamplona.amethyst.ios.ui.qr.QrCodeDisplay
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
+import com.vitorpamplona.quartz.nip19Bech32.toNsec
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -105,6 +108,7 @@ private const val GITHUB_URL = "https://github.com/vitorpamplona/amethyst"
 fun SettingsScreen(
     npub: String,
     pubKeyHex: String,
+    keyPair: KeyPair? = null,
     relayManager: IosRelayConnectionManager,
     onBack: () -> Unit,
     onLogout: () -> Unit,
@@ -373,6 +377,15 @@ fun SettingsScreen(
 
             // Share QR Code
             ShareQrSection(npub = npub)
+
+            // ── Key Backup / Export ──
+            if (keyPair?.privKey != null) {
+                Spacer(Modifier.height(16.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                Spacer(Modifier.height(16.dp))
+
+                KeyBackupSection(keyPair = keyPair)
+            }
 
             Spacer(Modifier.height(16.dp))
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -1133,6 +1146,209 @@ private fun LogoutSection(onLogout: () -> Unit) {
             },
             dismissButton = {
                 TextButton(onClick = { showConfirmDialog = false }) {
+                    Text("Cancel")
+                }
+            },
+        )
+    }
+}
+
+// ── Key Backup / Export Section ──
+
+@Composable
+private fun KeyBackupSection(keyPair: KeyPair) {
+    val nsec = remember(keyPair) { keyPair.privKey?.toNsec() ?: "" }
+    var nsecRevealed by remember { mutableStateOf(false) }
+    var showNsecQr by remember { mutableStateOf(false) }
+    var showCopyWarning by remember { mutableStateOf(false) }
+    var nsecCopied by remember { mutableStateOf(false) }
+
+    SectionHeader(icon = Icons.Default.Info, title = "Key Backup")
+
+    Text(
+        "⚠️ Your secret key gives full access to your account. " +
+            "Never share it. Back it up in a safe place.",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.error,
+    )
+
+    Spacer(Modifier.height(12.dp))
+
+    // nsec reveal row
+    Column(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .background(
+                    color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.15f),
+                    shape = RoundedCornerShape(8.dp),
+                ).padding(12.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                "Secret Key (nsec)",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Row {
+                TextButton(onClick = { nsecRevealed = !nsecRevealed }) {
+                    Text(
+                        if (nsecRevealed) "Hide" else "Reveal",
+                        style = MaterialTheme.typography.labelSmall,
+                    )
+                }
+                IconButton(
+                    onClick = { showCopyWarning = true },
+                    modifier = Modifier.size(32.dp),
+                ) {
+                    Icon(
+                        Icons.Default.ContentCopy,
+                        contentDescription = "Copy nsec",
+                        tint =
+                            if (nsecCopied) {
+                                Color(0xFF4CAF50)
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                        modifier = Modifier.size(16.dp),
+                    )
+                }
+            }
+        }
+        Text(
+            if (nsecRevealed) nsec else "•".repeat(20),
+            style =
+                MaterialTheme.typography.bodySmall.copy(
+                    fontFamily = FontFamily.Monospace,
+                ),
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+    }
+
+    if (nsecCopied) {
+        androidx.compose.runtime.LaunchedEffect(Unit) {
+            kotlinx.coroutines.delay(3000)
+            nsecCopied = false
+        }
+    }
+
+    Spacer(Modifier.height(8.dp))
+
+    // Private key hex (hidden by default)
+    val privKeyHex = remember(keyPair) { keyPair.privKey?.toHexKey() ?: "" }
+    var hexRevealed by remember { mutableStateOf(false) }
+
+    Column(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .background(
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                    shape = RoundedCornerShape(8.dp),
+                ).padding(12.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                "Private Key (hex)",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            TextButton(onClick = { hexRevealed = !hexRevealed }) {
+                Text(
+                    if (hexRevealed) "Hide" else "Reveal",
+                    style = MaterialTheme.typography.labelSmall,
+                )
+            }
+        }
+        Text(
+            if (hexRevealed) privKeyHex else "•".repeat(20),
+            style =
+                MaterialTheme.typography.bodySmall.copy(
+                    fontFamily = FontFamily.Monospace,
+                ),
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+    }
+
+    Spacer(Modifier.height(12.dp))
+
+    // QR code for nsec backup
+    OutlinedButton(
+        onClick = { showNsecQr = !showNsecQr },
+        modifier = Modifier.fillMaxWidth(),
+        colors =
+            ButtonDefaults.outlinedButtonColors(
+                contentColor = MaterialTheme.colorScheme.error,
+            ),
+    ) {
+        Icon(
+            Icons.Default.QrCodeScanner,
+            contentDescription = null,
+            modifier = Modifier.size(18.dp),
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(if (showNsecQr) "Hide nsec QR Code" else "Show nsec QR Code (for backup)")
+    }
+
+    AnimatedVisibility(
+        visible = showNsecQr,
+        enter = expandVertically(),
+        exit = shrinkVertically(),
+    ) {
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                "⚠️ Anyone who scans this QR code gets full access to your account!",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(bottom = 8.dp),
+            )
+            QrCodeDisplay(
+                data = nsec,
+                size = 200.dp,
+                label = "Secret Key — keep private!",
+            )
+        }
+    }
+
+    // Copy warning dialog
+    if (showCopyWarning) {
+        AlertDialog(
+            onDismissRequest = { showCopyWarning = false },
+            title = { Text("⚠️ Copy Secret Key?") },
+            text = {
+                Text(
+                    "Your secret key will be copied to the clipboard. " +
+                        "Anyone with access to your clipboard can steal your identity. " +
+                        "Make sure to clear it after use.",
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        UIPasteboard.generalPasteboard.string = nsec
+                        nsecCopied = true
+                        showCopyWarning = false
+                    },
+                ) {
+                    Text("Copy", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCopyWarning = false }) {
                     Text("Cancel")
                 }
             },

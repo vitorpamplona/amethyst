@@ -1077,6 +1077,7 @@ private fun MainScreen(
                     SettingsScreen(
                         npub = account.npub,
                         pubKeyHex = account.pubKeyHex,
+                        keyPair = account.keyPair,
                         relayManager = relayManager,
                         onBack = { goBack() },
                         onLogout = onLogout,
