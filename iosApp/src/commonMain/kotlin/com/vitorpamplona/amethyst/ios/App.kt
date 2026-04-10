@@ -34,6 +34,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.MailOutline
 import androidx.compose.material.icons.filled.Notifications
@@ -308,14 +309,27 @@ private fun MainScreen(
                 }
 
                 is Screen.Profile -> {
-                    IosProfileContent(
-                        pubKeyHex = screen.pubKeyHex,
-                        relayManager = relayManager,
-                        localCache = localCache,
-                        coordinator = coordinator,
-                        onNavigateToProfile = { navigateTo(Screen.Profile(it)) },
-                        onNavigateToThread = { navigateTo(Screen.Thread(it)) },
-                    )
+                    Column {
+                        TopAppBar(
+                            title = { Text("Profile") },
+                            navigationIcon = {
+                                IconButton(onClick = { goBack() }) {
+                                    Icon(
+                                        imageVector = Icons.Default.ArrowBack,
+                                        contentDescription = "Back",
+                                    )
+                                }
+                            },
+                        )
+                        IosProfileContent(
+                            pubKeyHex = screen.pubKeyHex,
+                            relayManager = relayManager,
+                            localCache = localCache,
+                            coordinator = coordinator,
+                            onNavigateToProfile = { navigateTo(Screen.Profile(it)) },
+                            onNavigateToThread = { navigateTo(Screen.Thread(it)) },
+                        )
+                    }
                 }
 
                 is Screen.Thread -> {
@@ -324,6 +338,7 @@ private fun MainScreen(
                         relayManager = relayManager,
                         localCache = localCache,
                         coordinator = coordinator,
+                        onBack = { goBack() },
                         onNavigateToProfile = { navigateTo(Screen.Profile(it)) },
                         onNavigateToThread = { navigateTo(Screen.Thread(it)) },
                     )
@@ -644,12 +659,14 @@ private fun IosProfileContent(
 
 // ─── Thread content using commons feed filter ───
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun IosThreadContent(
     noteId: String,
     relayManager: IosRelayConnectionManager,
     localCache: IosLocalCache,
     coordinator: IosSubscriptionsCoordinator,
+    onBack: () -> Unit,
     onNavigateToProfile: (String) -> Unit,
     onNavigateToThread: (String) -> Unit,
 ) {
@@ -679,11 +696,16 @@ private fun IosThreadContent(
     val feedState by viewModel.feedState.feedContent.collectAsState()
 
     Column(modifier = Modifier.fillMaxSize()) {
-        FeedHeader(
-            title = "Thread",
-            connectedRelayCount = 0,
-            onRefresh = { },
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+        TopAppBar(
+            title = { Text("Thread") },
+            navigationIcon = {
+                IconButton(onClick = onBack) {
+                    Icon(
+                        imageVector = Icons.Default.ArrowBack,
+                        contentDescription = "Back",
+                    )
+                }
+            },
         )
 
         when (val state = feedState) {
