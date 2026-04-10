@@ -292,23 +292,24 @@ class MlsGroupManager(
     suspend fun decrypt(
         nostrGroupId: HexKey,
         messageBytes: ByteArray,
-    ): DecryptedMessage {
-        val group = requireGroup(nostrGroupId)
+    ): DecryptedMessage =
+        mutex.withLock {
+            val group = requireGroup(nostrGroupId)
 
-        // Try current epoch
-        val current = group.decryptOrNull(messageBytes)
-        if (current != null) return current
+            // Try current epoch
+            val current = group.decryptOrNull(messageBytes)
+            if (current != null) return@withLock current
 
-        // Try retained epochs
-        val retained = retainedEpochs[nostrGroupId] ?: emptyList()
-        for (epochSecrets in retained) {
-            val result = tryDecryptWithRetainedEpoch(messageBytes, epochSecrets)
-            if (result != null) return result
+            // Try retained epochs
+            val retained = retainedEpochs[nostrGroupId] ?: emptyList()
+            for (epochSecrets in retained) {
+                val result = tryDecryptWithRetainedEpoch(messageBytes, epochSecrets)
+                if (result != null) return@withLock result
+            }
+
+            // No epoch could decrypt — rethrow from current epoch for diagnostics
+            group.decrypt(messageBytes)
         }
-
-        // No epoch could decrypt — rethrow from current epoch for diagnostics
-        return group.decrypt(messageBytes)
-    }
 
     /**
      * Decrypt with null return on failure.

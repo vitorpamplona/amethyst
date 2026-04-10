@@ -356,19 +356,22 @@ class MlsGroup private constructor(
         // Check if we need an UpdatePath (required unless only SelfRemove)
         val needsPath = proposals.any { it.proposal !is Proposal.SelfRemove }
 
-        // Apply proposals to tree FIRST (RFC 9420 Section 12.4.1)
-        // The UpdatePath is computed after proposals are applied.
+        // Apply proposals to tree FIRST (RFC 9420 Section 12.4.2)
+        // Order: Updates/Removes first, then Adds (so blank slots are freed before reuse)
         val addedMembers = mutableListOf<Pair<Int, MlsKeyPackage>>()
+        val addProposals = mutableListOf<PendingProposal>()
         for (pending in proposals) {
-            val p = pending.proposal
-            if (p is Proposal.Add) {
-                // applyProposal calls tree.addLeaf() which returns the actual leaf index
-                // (may reuse a blank slot instead of appending)
-                val leafIndex = applyProposalAdd(p)
-                addedMembers.add(leafIndex to p.keyPackage)
+            if (pending.proposal is Proposal.Add) {
+                addProposals.add(pending)
             } else {
-                applyProposal(p, pending.senderLeafIndex)
+                applyProposal(pending.proposal, pending.senderLeafIndex)
             }
+        }
+        // Apply Adds after Removes/Updates
+        for (pending in addProposals) {
+            val p = pending.proposal as Proposal.Add
+            val leafIndex = applyProposalAdd(p)
+            addedMembers.add(leafIndex to p.keyPackage)
         }
 
         // Generate new path secrets on the updated tree
@@ -623,9 +626,12 @@ class MlsGroup private constructor(
         val generation = senderReader.readUint32().toInt()
         val reuseGuard = senderReader.readBytes(REUSE_GUARD_LENGTH)
 
-        // Validate sender leaf index (M12)
+        // Validate sender leaf index and membership (RFC 9420 §6.3.1)
         require(senderLeafIndex in 0 until tree.leafCount) {
             "Sender leaf index $senderLeafIndex out of range [0, ${tree.leafCount})"
+        }
+        require(tree.getLeaf(senderLeafIndex) != null) {
+            "Sender leaf is blank at index $senderLeafIndex (not a group member)"
         }
 
         // Get the key/nonce for this sender+generation
@@ -692,10 +698,13 @@ class MlsGroup private constructor(
         }
 
         // Apply proposals (resolve references from pending pool)
+        // Collect all resolved proposals for key schedule computation
+        val resolvedProposals = mutableListOf<Proposal>()
         for (proposalOrRef in commit.proposals) {
             when (proposalOrRef) {
                 is ProposalOrRef.Inline -> {
                     applyProposal(proposalOrRef.proposal, senderLeafIndex)
+                    resolvedProposals.add(proposalOrRef.proposal)
                 }
 
                 is ProposalOrRef.Reference -> {
@@ -711,6 +720,7 @@ class MlsGroup private constructor(
                         "Commit references unknown proposal (ref not found in pending proposals)"
                     }
                     applyProposal(resolved.proposal, resolved.senderLeafIndex)
+                    resolvedProposals.add(resolved.proposal)
                 }
             }
         }
@@ -794,19 +804,12 @@ class MlsGroup private constructor(
                 confirmedTranscriptHash = newConfirmedTranscriptHash,
             )
 
-        // Compute PSK secret from any PSK proposals in the commit
-        val commitPskProposals =
-            commit.proposals.mapNotNull {
-                when (it) {
-                    is ProposalOrRef.Inline -> it.proposal
-                    is ProposalOrRef.Reference -> null
-                }
-            }
-        val pskSecret = computePskSecret(commitPskProposals)
+        // Compute PSK secret from all resolved proposals (both inline and by-reference)
+        val pskSecret = computePskSecret(resolvedProposals)
 
         // Check for ExternalInit proposal — overrides init_secret (RFC 9420 Section 8.3)
         val externalInitProposal =
-            commitPskProposals.filterIsInstance<Proposal.ExternalInit>().firstOrNull()
+            resolvedProposals.filterIsInstance<Proposal.ExternalInit>().firstOrNull()
         val effectiveInitSecret =
             if (externalInitProposal != null) {
                 deriveExternalInitSecret(externalInitProposal.kemOutput)
@@ -825,11 +828,10 @@ class MlsGroup private constructor(
             "Confirmation tag verification failed"
         }
 
-        // Update interim_transcript_hash for next epoch
-        val computedTag = computeConfirmationTag(epochSecrets.confirmationKey, newConfirmedTranscriptHash)
+        // Update interim_transcript_hash for next epoch (reuse verified expectedTag)
         val interimInput = TlsWriter()
         interimInput.putBytes(newConfirmedTranscriptHash)
-        interimInput.putOpaqueVarInt(computedTag)
+        interimInput.putOpaqueVarInt(expectedTag)
         interimTranscriptHash = MlsCryptoProvider.hash(interimInput.toByteArray())
 
         pendingProposals.clear()
@@ -996,8 +998,15 @@ class MlsGroup private constructor(
         val directPath = BinaryTree.directPath(senderLeafIndex, tree.leafCount)
         if (directPath.isEmpty()) return true
 
-        val leafParentHash = updatePath.leafNode.parentHash ?: return true
-        if (leafParentHash.isEmpty()) return true
+        // COMMIT leaf nodes MUST have a non-empty parentHash (RFC 9420 §7.9.2)
+        val leafParentHash = updatePath.leafNode.parentHash
+        if (updatePath.leafNode.leafNodeSource == LeafNodeSource.COMMIT) {
+            requireNotNull(leafParentHash) { "Commit LeafNode missing parentHash" }
+            require(leafParentHash.isNotEmpty()) { "Commit LeafNode has empty parentHash" }
+        } else {
+            // Non-commit leaf nodes may not have parentHash
+            if (leafParentHash == null || leafParentHash.isEmpty()) return true
+        }
 
         // Walk up the direct path, verifying each parent_hash link
         var expectedParentHash = leafParentHash
@@ -1129,14 +1138,27 @@ class MlsGroup private constructor(
      * Apply an Add proposal and return the assigned leaf index.
      */
     private fun applyProposalAdd(proposal: Proposal.Add): Int {
-        val lifetime = proposal.keyPackage.leafNode.lifetime
+        val leafNode = proposal.keyPackage.leafNode
+
+        // Validate lifetime
+        val lifetime = leafNode.lifetime
         if (lifetime != null) {
             val now = TimeUtils.now()
             require(now >= lifetime.notBefore && now <= lifetime.notAfter) {
                 "KeyPackage lifetime expired or not yet valid"
             }
         }
-        return tree.addLeaf(proposal.keyPackage.leafNode)
+
+        // Validate capabilities (RFC 9420 §12.1.1)
+        val caps = leafNode.capabilities
+        require(1 in caps.versions) {
+            "KeyPackage does not support MLS protocol version 1"
+        }
+        require(1 in caps.ciphersuites) {
+            "KeyPackage does not support ciphersuite 0x0001"
+        }
+
+        return tree.addLeaf(leafNode)
     }
 
     private fun applyProposal(
@@ -1587,6 +1609,15 @@ class MlsGroup private constructor(
                 groupInfo.extensions.find { it.extensionType == RATCHET_TREE_EXTENSION_TYPE }
                     ?: throw IllegalArgumentException("GroupInfo missing ratchet_tree extension")
             val tree = RatchetTree.decodeTls(TlsReader(ratchetTreeExt.extensionData))
+
+            // Verify GroupInfo signature (RFC 9420 Section 12.4.3.1)
+            val signerLeaf = tree.getLeaf(groupInfo.signer)
+            requireNotNull(signerLeaf) {
+                "Signer leaf is null at index ${groupInfo.signer} — cannot verify GroupInfo signature"
+            }
+            require(groupInfo.verifySignature(signerLeaf.signatureKey)) {
+                "Invalid GroupInfo signature in externalJoin"
+            }
 
             // Extract external_pub from extensions
             val externalPubExt =
