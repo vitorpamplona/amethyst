@@ -115,7 +115,7 @@ class ElectrumXClient : IElectrumXClient {
                 } catch (e: NamecoinLookupException) {
                     throw e
                 } catch (e: Exception) {
-                    NSLog("ElectrumXClient: nameShow failed: %@", e.message ?: "unknown")
+                    NSLog("ElectrumXClient: nameShow failed: " + (e.message ?: "unknown"))
                     null
                 }
             }
@@ -174,14 +174,14 @@ class ElectrumXClient : IElectrumXClient {
             @Suppress("ktlint:standard:no-multi-spaces")
             when (state) {
                 NW_CONNECTION_STATE_READY -> {
-                    NSLog("ElectrumXClient: connected to %@:%@", host, port.toString())
+                    NSLog("ElectrumXClient: connected to " + host + ":" + port.toString())
                     dispatch_semaphore_signal(semaphore)
                 }
 
                 NW_CONNECTION_STATE_FAILED -> {
                     val msg = "Connection failed to $host:$port (error: $error)"
                     connectError = msg
-                    NSLog("ElectrumXClient: %@", msg)
+                    NSLog("ElectrumXClient: " + msg)
                     dispatch_semaphore_signal(semaphore)
                 }
 
