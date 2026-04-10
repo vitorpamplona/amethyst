@@ -20,29 +20,22 @@
  */
 package com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin
 
-import kotlinx.cinterop.COpaquePointer
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.utils.sha256.sha256
+import kotlinx.cinterop.ByteVar
+import kotlinx.cinterop.CPointed
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.ExperimentalForeignApi
-import kotlinx.cinterop.StableRef
 import kotlinx.cinterop.addressOf
-import kotlinx.cinterop.alloc
-import kotlinx.cinterop.asStableRef
-import kotlinx.cinterop.convert
 import kotlinx.cinterop.get
-import kotlinx.cinterop.memScoped
-import kotlinx.cinterop.pointed
-import kotlinx.cinterop.ptr
 import kotlinx.cinterop.reinterpret
-import kotlinx.cinterop.sizeOf
-import kotlinx.cinterop.staticCFunction
 import kotlinx.cinterop.usePinned
-import kotlinx.cinterop.value
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
@@ -54,59 +47,79 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
-import platform.Security.SSLClose
-import platform.Security.SSLConnectionType
-import platform.Security.SSLContextRef
-import platform.Security.SSLCreateContext
-import platform.Security.SSLHandshake
-import platform.Security.SSLProtocolSide
-import platform.Security.SSLRead
-import platform.Security.SSLSetConnection
-import platform.Security.SSLSetIOFuncs
-import platform.Security.SSLSetPeerDomainName
-import platform.Security.SSLSetSessionOption
-import platform.Security.SSLWrite
-import platform.Security.kSSLSessionOptionBreakOnServerAuth
-import platform.posix.AF_INET
-import platform.posix.IPPROTO_TCP
-import platform.posix.SOCK_STREAM
-import platform.posix.close
-import platform.posix.connect
-import platform.posix.errno
-import platform.posix.gethostbyname
-import platform.posix.memcpy
-import platform.posix.recv
-import platform.posix.send
-import platform.posix.sockaddr_in
-import platform.posix.socket
-import kotlin.concurrent.AtomicInt
+import platform.Foundation.NSLog
+import platform.Network.NW_CONNECTION_DEFAULT_MESSAGE_CONTEXT
+import platform.Network.NW_PARAMETERS_DISABLE_PROTOCOL
+import platform.Network.nw_connection_cancel
+import platform.Network.nw_connection_create
+import platform.Network.nw_connection_receive
+import platform.Network.nw_connection_send
+import platform.Network.nw_connection_set_queue
+import platform.Network.nw_connection_set_state_changed_handler
+import platform.Network.nw_connection_start
+import platform.Network.nw_endpoint_create_host
+import platform.Network.nw_parameters_create_secure_tcp
+import platform.Network.nw_tls_copy_sec_protocol_options
+import platform.Security.sec_protocol_options_set_verify_block
+import platform.darwin.DISPATCH_TIME_FOREVER
+import platform.darwin.NSObject
+import platform.darwin.dispatch_data_apply
+import platform.darwin.dispatch_data_create
+import platform.darwin.dispatch_data_get_size
+import platform.darwin.dispatch_queue_create
+import platform.darwin.dispatch_semaphore_create
+import platform.darwin.dispatch_semaphore_signal
+import platform.darwin.dispatch_semaphore_wait
 
 /**
- * iOS implementation of the ElectrumX client for Namecoin name resolution.
+ * iOS ElectrumX client using Apple Network.framework for TLS.
  *
- * Uses POSIX sockets for TCP with Apple SecureTransport for TLS.
- * Self-signed certificate validation is bypassed via
- * kSSLSessionOptionBreakOnServerAuth (matching the JVM version's
- * pinned trust store / trust-all approach for ElectrumX servers).
- *
- * Port of the JVM ElectrumXClient replacing:
- * - java.net.Socket → POSIX socket()
- * - javax.net.ssl.SSLSocket → Apple SecureTransport (SSLCreateContext)
- * - java.security.MessageDigest → CommonCrypto CC_SHA256
+ * Uses nw_connection with a custom TLS verify block that accepts all
+ * certificates (ElectrumX servers typically use self-signed certs).
+ * All async Network.framework calls are made synchronous via dispatch
+ * semaphores — this is safe because the caller runs on Dispatchers.IO.
  */
 @OptIn(ExperimentalForeignApi::class)
-class ElectrumXClient(
-    private val connectTimeoutMs: Long = 10_000L,
-    private val readTimeoutMs: Long = 15_000L,
-) : IElectrumXClient {
+class ElectrumXClient : IElectrumXClient {
     private val json =
         Json {
             ignoreUnknownKeys = true
             isLenient = true
         }
-    private val requestId = AtomicInt(0)
+
+    private var requestId = 0
+    private val serverMutexesMutex = Mutex()
     private val serverMutexes = mutableMapOf<String, Mutex>()
-    private val mutexLock = Mutex()
+
+    private var connection: NSObject? = null
+    private val queue = dispatch_queue_create("electrumx.nw", null)
+
+    /** Buffer for partial reads (data received but no newline yet). */
+    private val readBuffer = StringBuilder()
+
+    // ── public API ─────────────────────────────────────────────────────
+
+    suspend fun nameShow(
+        identifier: String,
+        server: ElectrumxServer = DEFAULT_ELECTRUMX_SERVERS.first(),
+    ): NameShowResult? =
+        withContext(Dispatchers.IO) {
+            val key = "${server.host}:${server.port}"
+            val mutex =
+                serverMutexesMutex.withLock {
+                    serverMutexes.getOrPut(key) { Mutex() }
+                }
+            mutex.withLock {
+                try {
+                    connectAndQuery(identifier, server)
+                } catch (e: NamecoinLookupException) {
+                    throw e
+                } catch (e: Exception) {
+                    NSLog("ElectrumXClient: nameShow failed: %@", e.message ?: "unknown")
+                    null
+                }
+            }
+        }
 
     override suspend fun nameShowWithFallback(
         identifier: String,
@@ -128,69 +141,237 @@ class ElectrumXClient(
         throw NamecoinLookupException.ServersUnreachable(lastError)
     }
 
-    private suspend fun nameShow(
-        identifier: String,
-        server: ElectrumxServer = DEFAULT_ELECTRUMX_SERVERS.first(),
-    ): NameShowResult? =
-        withContext(Dispatchers.IO) {
-            val key = "${server.host}:${server.port}"
-            val mutex =
-                mutexLock.withLock {
-                    serverMutexes.getOrPut(key) { Mutex() }
+    // ── Network.framework transport ────────────────────────────────────
+
+    private fun connect(
+        host: String,
+        port: Int,
+    ) {
+        readBuffer.clear()
+
+        // Configure TLS to accept all certificates (self-signed ElectrumX servers)
+        val configureTls: (NSObject?) -> Unit = { protocolOptions ->
+            val secOptions = nw_tls_copy_sec_protocol_options(protocolOptions)
+            sec_protocol_options_set_verify_block(
+                secOptions,
+                { _, _, completion -> completion?.invoke(true) },
+                queue,
+            )
+        }
+
+        val params =
+            nw_parameters_create_secure_tcp(
+                configureTls,
+                NW_PARAMETERS_DISABLE_PROTOCOL,
+            )
+        val endpoint = nw_endpoint_create_host(host, port.toString())
+        val conn = nw_connection_create(endpoint, params)
+
+        val semaphore = dispatch_semaphore_create(0)
+        var connectError: String? = null
+
+        nw_connection_set_state_changed_handler(conn) { state, error ->
+            @Suppress("ktlint:standard:no-multi-spaces")
+            when (state) {
+                NW_CONNECTION_STATE_READY -> {
+                    NSLog("ElectrumXClient: connected to %@:%@", host, port.toString())
+                    dispatch_semaphore_signal(semaphore)
                 }
-            mutex.withLock {
-                try {
-                    connectAndQuery(identifier, server)
-                } catch (e: NamecoinLookupException) {
-                    throw e
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                    null
+
+                NW_CONNECTION_STATE_FAILED -> {
+                    val msg = "Connection failed to $host:$port (error: $error)"
+                    connectError = msg
+                    NSLog("ElectrumXClient: %@", msg)
+                    dispatch_semaphore_signal(semaphore)
                 }
+
+                NW_CONNECTION_STATE_CANCELLED -> {
+                    NSLog("ElectrumXClient: connection cancelled")
+                }
+
+                else -> {}
             }
         }
 
-    // ── Connection & Query ─────────────────────────────────────────────
+        nw_connection_set_queue(conn, queue)
+        nw_connection_start(conn)
 
-    private suspend fun connectAndQuery(
+        dispatch_semaphore_wait(semaphore, DISPATCH_TIME_FOREVER)
+
+        if (connectError != null) {
+            nw_connection_cancel(conn)
+            throw Exception(connectError)
+        }
+
+        connection = conn
+    }
+
+    private fun writeLine(line: String) {
+        val conn = connection ?: throw Exception("Not connected")
+        val bytes = (line + "\n").encodeToByteArray()
+        val semaphore = dispatch_semaphore_create(0)
+        var sendError: String? = null
+
+        bytes.usePinned { pinned ->
+            val dispatchData =
+                dispatch_data_create(
+                    pinned.addressOf(0),
+                    bytes.size.toULong(),
+                    queue,
+                    null,
+                )
+
+            nw_connection_send(
+                conn,
+                dispatchData,
+                NW_CONNECTION_DEFAULT_MESSAGE_CONTEXT,
+                false,
+            ) { error ->
+                if (error != null) {
+                    sendError = "Send error: $error"
+                }
+                dispatch_semaphore_signal(semaphore)
+            }
+        }
+
+        dispatch_semaphore_wait(semaphore, DISPATCH_TIME_FOREVER)
+        if (sendError != null) throw Exception(sendError)
+    }
+
+    private fun readLine(): String? {
+        // Check buffer first for a complete line
+        val buffered = readBuffer.toString()
+        val newlineIdx = buffered.indexOf('\n')
+        if (newlineIdx >= 0) {
+            val line = buffered.substring(0, newlineIdx)
+            readBuffer.clear()
+            if (newlineIdx + 1 < buffered.length) {
+                readBuffer.append(buffered.substring(newlineIdx + 1))
+            }
+            return line
+        }
+
+        val conn = connection ?: return null
+
+        // Read from network until we get a newline
+        while (true) {
+            val semaphore = dispatch_semaphore_create(0)
+            var receivedBytes: ByteArray? = null
+            var receiveComplete = false
+            var receiveError: String? = null
+
+            nw_connection_receive(conn, 1u, 65536u) { content, _, isComplete, error ->
+                if (error != null) {
+                    receiveError = "Receive error: $error"
+                } else if (content != null) {
+                    val size = dispatch_data_get_size(content).toInt()
+                    if (size > 0) {
+                        val result = ByteArray(size)
+                        var offset = 0
+                        dispatch_data_apply(content) {
+                            _,
+                            _,
+                            ptr: CPointer<out CPointed>?,
+                            regionSize: ULong,
+                            ->
+                            if (ptr != null) {
+                                val bytePtr: CPointer<ByteVar> = ptr.reinterpret()
+                                for (i in 0 until regionSize.toInt()) {
+                                    result[offset + i] = bytePtr[i]
+                                }
+                                offset += regionSize.toInt()
+                            }
+                            true
+                        }
+                        receivedBytes = result
+                    }
+                }
+                receiveComplete = isComplete
+                dispatch_semaphore_signal(semaphore)
+            }
+
+            dispatch_semaphore_wait(semaphore, DISPATCH_TIME_FOREVER)
+
+            if (receiveError != null) throw Exception(receiveError)
+
+            val bytes = receivedBytes
+            if (bytes != null) {
+                readBuffer.append(bytes.decodeToString())
+            }
+
+            // Check for complete line
+            val current = readBuffer.toString()
+            val idx = current.indexOf('\n')
+            if (idx >= 0) {
+                val line = current.substring(0, idx)
+                readBuffer.clear()
+                if (idx + 1 < current.length) {
+                    readBuffer.append(current.substring(idx + 1))
+                }
+                return line
+            }
+
+            // If connection is complete and no newline, return what we have or null
+            if (receiveComplete) {
+                if (readBuffer.isNotEmpty()) {
+                    val remaining = readBuffer.toString()
+                    readBuffer.clear()
+                    return remaining
+                }
+                return null
+            }
+        }
+    }
+
+    private fun close() {
+        val conn = connection
+        if (conn != null) {
+            nw_connection_cancel(conn)
+        }
+        connection = null
+        readBuffer.clear()
+    }
+
+    // ── internals (business logic) ─────────────────────────────────────
+
+    private fun connectAndQuery(
         identifier: String,
         server: ElectrumxServer,
     ): NameShowResult? {
-        val connection =
-            withTimeoutOrNull(connectTimeoutMs) {
-                SocketConnection.connect(server.host, server.port, server.useSsl, connectTimeoutMs)
-            } ?: throw Exception("Connection timed out to ${server.host}:${server.port}")
-
+        connect(server.host, server.port)
         try {
             // 1. Negotiate protocol version
-            val versionReq = buildRpcRequest("server.version", listOf("AmethystNMC/0.1", PROTOCOL_VERSION))
-            connection.writeLine(versionReq)
-            connection.readLine() // consume version response
+            val versionReq =
+                buildRpcRequest("server.version", listOf("AmethystNMC/0.1", PROTOCOL_VERSION))
+            writeLine(versionReq)
+            readLine() // consume version response
 
             // 2. Compute the canonical name index scripthash
             val nameScript = buildNameIndexScript(identifier.encodeToByteArray())
             val scriptHash = electrumScriptHash(nameScript)
 
             // 3. Get transaction history for this name
-            val historyReq = buildRpcRequest("blockchain.scripthash.get_history", listOf(scriptHash))
-            connection.writeLine(historyReq)
-            val historyResponse = connection.readLine() ?: return null
+            val historyReq =
+                buildRpcRequest("blockchain.scripthash.get_history", listOf(scriptHash))
+            writeLine(historyReq)
+            val historyResponse = readLine() ?: return null
             val historyEntries = parseHistoryResponse(historyResponse) ?: return null
             if (historyEntries.isEmpty()) throw NamecoinLookupException.NameNotFound(identifier)
 
-            // 4. Get the latest transaction
+            // 4. Get the latest transaction (last entry = most recent update)
             val latestEntry = historyEntries.last()
             val txHash = latestEntry.first
             val height = latestEntry.second
 
             val txReq = buildRpcRequest("blockchain.transaction.get", listOf(txHash, true))
-            connection.writeLine(txReq)
-            val txResponse = connection.readLine() ?: return null
+            writeLine(txReq)
+            val txResponse = readLine() ?: return null
 
             // 5. Get current block height to check name expiry
-            val headersReq = buildRpcRequest("blockchain.headers.subscribe", emptyList<String>())
-            connection.writeLine(headersReq)
-            val headersResponse = connection.readLine()
+            val headersReq =
+                buildRpcRequest("blockchain.headers.subscribe", emptyList<String>())
+            writeLine(headersReq)
+            val headersResponse = readLine()
             val currentHeight = parseBlockHeight(headersResponse)
 
             // 6. Check if the name has expired
@@ -209,298 +390,15 @@ class ElectrumXClient(
                 result
             }
         } finally {
-            connection.close()
+            close()
         }
     }
-
-    // ── Socket + TLS connection ────────────────────────────────────────
 
     /**
-     * Line-based TCP(+TLS) connection.
+     * Build the canonical script used by ElectrumX to index Namecoin names.
      *
-     * When useSsl=true, wraps the POSIX socket with Apple SecureTransport.
-     * Self-signed certificate validation is bypassed via
-     * kSSLSessionOptionBreakOnServerAuth so that the standard ElectrumX
-     * servers (which use self-signed certs) work without a custom CA.
+     * Format: OP_NAME_UPDATE <push(name)> <push(empty)> OP_2DROP OP_DROP OP_RETURN
      */
-    private class SocketConnection private constructor(
-        private val fd: Int,
-        private val sslContext: SSLContextRef?,
-        private val fdRef: StableRef<Int>?,
-    ) {
-        private val readBuffer = StringBuilder()
-
-        fun writeLine(line: String) {
-            val data = "$line\n".encodeToByteArray()
-            if (sslContext != null) {
-                sslWrite(data)
-            } else {
-                rawWrite(data)
-            }
-        }
-
-        fun readLine(): String? {
-            val newlineIdx = readBuffer.indexOf('\n')
-            if (newlineIdx >= 0) {
-                val line = readBuffer.substring(0, newlineIdx)
-                readBuffer.deleteRange(0, newlineIdx + 1)
-                return line
-            }
-
-            val buf = ByteArray(4096)
-            while (true) {
-                val n =
-                    if (sslContext != null) {
-                        sslRead(buf)
-                    } else {
-                        rawRead(buf)
-                    }
-                if (n <= 0) {
-                    return if (readBuffer.isNotEmpty()) {
-                        val remaining = readBuffer.toString()
-                        readBuffer.clear()
-                        remaining
-                    } else {
-                        null
-                    }
-                }
-
-                readBuffer.append(buf.decodeToString(0, n))
-
-                val idx = readBuffer.indexOf('\n')
-                if (idx >= 0) {
-                    val line = readBuffer.substring(0, idx)
-                    readBuffer.deleteRange(0, idx + 1)
-                    return line
-                }
-            }
-        }
-
-        fun close() {
-            if (sslContext != null) {
-                SSLClose(sslContext)
-                platform.CoreFoundation.CFRelease(sslContext)
-            }
-            fdRef?.dispose()
-            close(fd)
-        }
-
-        // ── Raw POSIX I/O ──
-
-        private fun rawWrite(data: ByteArray) {
-            data.usePinned { pinned ->
-                var sent = 0
-                while (sent < data.size) {
-                    val n = send(fd, pinned.addressOf(sent), (data.size - sent).convert(), 0)
-                    if (n <= 0) throw Exception("Socket write failed (errno=$errno)")
-                    sent += n.toInt()
-                }
-            }
-        }
-
-        private fun rawRead(buf: ByteArray): Int =
-            buf.usePinned { pinned ->
-                val n = recv(fd, pinned.addressOf(0), buf.size.convert(), 0)
-                if (n < 0) throw Exception("Socket read failed (errno=$errno)")
-                n.toInt()
-            }
-
-        // ── SecureTransport TLS I/O ──
-
-        private fun sslWrite(data: ByteArray) {
-            data.usePinned { pinned ->
-                memScoped {
-                    val processed = alloc<platform.posix.size_tVar>()
-                    var sent = 0
-                    while (sent < data.size) {
-                        val status =
-                            SSLWrite(
-                                sslContext,
-                                pinned.addressOf(sent),
-                                (data.size - sent).convert(),
-                                processed.ptr,
-                            )
-                        if (status != 0 && status != -9803) { // errSSLWouldBlock
-                            throw Exception("SSLWrite failed (status=$status)")
-                        }
-                        sent += processed.value.toInt()
-                    }
-                }
-            }
-        }
-
-        private fun sslRead(buf: ByteArray): Int =
-            buf.usePinned { pinned ->
-                memScoped {
-                    val processed = alloc<platform.posix.size_tVar>()
-                    val status =
-                        SSLRead(
-                            sslContext,
-                            pinned.addressOf(0),
-                            buf.size.convert(),
-                            processed.ptr,
-                        )
-                    if (status != 0 && status != -9805) { // errSSLClosedGraceful
-                        if (processed.value.toInt() == 0) {
-                            throw Exception("SSLRead failed (status=$status)")
-                        }
-                    }
-                    processed.value.toInt()
-                }
-            }
-
-        companion object {
-            /**
-             * SecureTransport read callback — reads from the POSIX socket fd.
-             * The `connection` parameter is a StableRef<Int> pointing to the fd.
-             */
-            private val sslReadFunc =
-                staticCFunction {
-                    connection: COpaquePointer?,
-                    data: COpaquePointer?,
-                    dataLength: CPointer<platform.posix.size_tVar>?,
-                    ->
-                    if (connection == null || data == null || dataLength == null) {
-                        return@staticCFunction (-50).toInt() // errSecParam
-                    }
-                    val fd = connection.asStableRef<Int>().get()
-                    val requested = dataLength.pointed.value.convert<Int>()
-                    val n = recv(fd, data, requested.convert(), 0)
-                    if (n < 0) {
-                        dataLength.pointed.value = 0u.convert()
-                        return@staticCFunction (-9806).toInt() // errSSLConnectionRefused
-                    }
-                    if (n == 0L) {
-                        dataLength.pointed.value = 0u.convert()
-                        return@staticCFunction (-9805).toInt() // errSSLClosedGraceful
-                    }
-                    dataLength.pointed.value = n.convert()
-                    0 // noErr
-                }
-
-            /**
-             * SecureTransport write callback — writes to the POSIX socket fd.
-             */
-            private val sslWriteFunc =
-                staticCFunction {
-                    connection: COpaquePointer?,
-                    data: COpaquePointer?,
-                    dataLength: CPointer<platform.posix.size_tVar>?,
-                    ->
-                    if (connection == null || data == null || dataLength == null) {
-                        return@staticCFunction (-50).toInt() // errSecParam
-                    }
-                    val fd = connection.asStableRef<Int>().get()
-                    val requested = dataLength.pointed.value.convert<Int>()
-                    val n = send(fd, data, requested.convert(), 0)
-                    if (n < 0) {
-                        dataLength.pointed.value = 0u.convert()
-                        return@staticCFunction (-9806).toInt() // errSSLConnectionRefused
-                    }
-                    dataLength.pointed.value = n.convert()
-                    0 // noErr
-                }
-
-            fun connect(
-                host: String,
-                port: Int,
-                useSsl: Boolean,
-                timeoutMs: Long,
-            ): SocketConnection =
-                memScoped {
-                    // 1. Create POSIX socket and TCP connect
-                    val fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)
-                    if (fd < 0) throw Exception("socket() failed (errno=$errno)")
-
-                    try {
-                        val hostent =
-                            gethostbyname(host)
-                                ?: throw Exception("DNS resolution failed for $host")
-
-                        val addr = alloc<sockaddr_in>()
-                        addr.sin_family = AF_INET.convert()
-                        val p = port.toUShort()
-                        addr.sin_port =
-                            ((p.toInt() shr 8) or ((p.toInt() and 0xff) shl 8)).toUShort()
-
-                        val hostentVal = hostent.pointed
-                        val addrList =
-                            hostentVal.h_addr_list
-                                ?: throw Exception("No addresses found for $host")
-                        val firstAddr =
-                            addrList[0]
-                                ?: throw Exception("No addresses found for $host")
-                        memcpy(
-                            addr.sin_addr.ptr,
-                            firstAddr,
-                            sizeOf<platform.posix.in_addr>().convert(),
-                        )
-
-                        val result =
-                            connect(fd, addr.ptr.reinterpret(), sizeOf<sockaddr_in>().convert())
-                        if (result < 0) {
-                            throw Exception("connect() failed to $host:$port (errno=$errno)")
-                        }
-
-                        if (!useSsl) {
-                            return@memScoped SocketConnection(fd, null, null)
-                        }
-
-                        // 2. Wrap with SecureTransport TLS
-                        val sslCtx =
-                            SSLCreateContext(
-                                null,
-                                SSLProtocolSide.kSSLClientSide,
-                                SSLConnectionType.kSSLStreamType,
-                            )
-                                ?: throw Exception("SSLCreateContext failed")
-
-                        val fdRef = StableRef.create(fd)
-
-                        try {
-                            // Set I/O callbacks that read/write from our POSIX socket
-                            var status = SSLSetIOFuncs(sslCtx, sslReadFunc, sslWriteFunc)
-                            if (status != 0) throw Exception("SSLSetIOFuncs failed ($status)")
-
-                            // Pass the fd reference as the "connection" pointer
-                            status = SSLSetConnection(sslCtx, fdRef.asCPointer())
-                            if (status != 0) throw Exception("SSLSetConnection failed ($status)")
-
-                            // Set peer hostname (for SNI)
-                            SSLSetPeerDomainName(sslCtx, host, host.length.convert())
-
-                            // Allow self-signed certs: break on server auth so we can
-                            // accept it manually. When the handshake returns
-                            // errSSLServerAuthCompleted (-9481), we just continue.
-                            SSLSetSessionOption(sslCtx, kSSLSessionOptionBreakOnServerAuth, true)
-
-                            // 3. Perform TLS handshake
-                            status = SSLHandshake(sslCtx)
-                            // -9481 = errSSLServerAuthCompleted — expected for self-signed
-                            if (status == -9481) {
-                                // Accept the server cert and continue handshake
-                                status = SSLHandshake(sslCtx)
-                            }
-                            if (status != 0) {
-                                throw Exception("TLS handshake failed to $host:$port (status=$status)")
-                            }
-
-                            SocketConnection(fd, sslCtx, fdRef)
-                        } catch (e: Exception) {
-                            fdRef.dispose()
-                            platform.CoreFoundation.CFRelease(sslCtx)
-                            throw e
-                        }
-                    } catch (e: Exception) {
-                        close(fd)
-                        throw e
-                    }
-                }
-        }
-    }
-
-    // ── Script building & parsing (pure Kotlin, ported from JVM) ──────
-
     private fun buildNameIndexScript(nameBytes: ByteArray): ByteArray {
         val result = mutableListOf<Byte>()
         result.add(OP_NAME_UPDATE)
@@ -524,7 +422,8 @@ class ElectrumXClient(
             }
 
             else -> {
-                val lenBytes = byteArrayOf((len and 0xff).toByte(), ((len shr 8) and 0xff).toByte())
+                val lenBytes =
+                    byteArrayOf((len and 0xff).toByte(), ((len shr 8) and 0xff).toByte())
                 byteArrayOf(OP_PUSHDATA2) + lenBytes + data
             }
         }
@@ -532,32 +431,7 @@ class ElectrumXClient(
 
     private fun electrumScriptHash(script: ByteArray): String {
         val digest = sha256(script)
-        return digest.reversedArray().toHexString()
-    }
-
-    private fun sha256(data: ByteArray): ByteArray {
-        val digest = ByteArray(32)
-        data.usePinned { pinnedData ->
-            digest.usePinned { pinnedDigest ->
-                platform.CoreCrypto.CC_SHA256(
-                    pinnedData.addressOf(0),
-                    data.size.convert(),
-                    pinnedDigest.addressOf(0).reinterpret(),
-                )
-            }
-        }
-        return digest
-    }
-
-    private fun ByteArray.toHexString(): String {
-        val hexChars = "0123456789abcdef"
-        val sb = StringBuilder(size * 2)
-        for (byte in this) {
-            val v = byte.toInt() and 0xff
-            sb.append(hexChars[v shr 4])
-            sb.append(hexChars[v and 0x0f])
-        }
-        return sb.toString()
+        return digest.reversedArray().toHexKey()
     }
 
     private fun parseBlockHeight(raw: String?): Int? {
@@ -627,11 +501,17 @@ class ElectrumXClient(
 
     private fun parseNameScript(script: ByteArray): Pair<String, String>? {
         if (script.isEmpty() || script[0] != OP_NAME_UPDATE) return null
+
         var pos = 1
+
         val (nameBytes, newPos1) = readPushData(script, pos) ?: return null
         pos = newPos1
+
         val (valueBytes, _) = readPushData(script, pos) ?: return null
-        return nameBytes.decodeToString() to valueBytes.decodeToString()
+
+        val name = nameBytes.decodeToString()
+        val value = valueBytes.decodeToString()
+        return name to value
     }
 
     private fun readPushData(
@@ -639,6 +519,7 @@ class ElectrumXClient(
         pos: Int,
     ): Pair<ByteArray, Int>? {
         if (pos >= script.size) return null
+
         val opcode = script[pos].toInt() and 0xff
         return when {
             opcode == 0 -> {
@@ -680,12 +561,15 @@ class ElectrumXClient(
         val data = ByteArray(len / 2)
         for (i in 0 until len step 2) {
             data[i / 2] =
-                ((charToHexDigit(hex[i]) shl 4) + charToHexDigit(hex[i + 1])).toByte()
+                (
+                    (hexDigit(hex[i]) shl 4) +
+                        hexDigit(hex[i + 1])
+                ).toByte()
         }
         return data
     }
 
-    private fun charToHexDigit(c: Char): Int =
+    private fun hexDigit(c: Char): Int =
         when (c) {
             in '0'..'9' -> c - '0'
             in 'a'..'f' -> c - 'a' + 10
@@ -697,7 +581,7 @@ class ElectrumXClient(
         method: String,
         params: List<Any>,
     ): String {
-        val id = requestId.incrementAndGet()
+        val id = ++requestId
         val obj =
             buildJsonObject {
                 put("jsonrpc", "2.0")
@@ -706,7 +590,7 @@ class ElectrumXClient(
                 put(
                     "params",
                     json.encodeToJsonElement(
-                        kotlinx.serialization.builtins.ListSerializer(JsonElement.serializer()),
+                        ListSerializer(JsonElement.serializer()),
                         params.map {
                             when (it) {
                                 is Boolean -> JsonPrimitive(it)
@@ -730,5 +614,10 @@ class ElectrumXClient(
         private const val OP_RETURN: Byte = 0x6a
         private const val OP_PUSHDATA1: Byte = 0x4c
         private const val OP_PUSHDATA2: Byte = 0x4d
+
+        // nw_connection_state constants
+        private const val NW_CONNECTION_STATE_READY: UInt = 3u
+        private const val NW_CONNECTION_STATE_FAILED: UInt = 5u
+        private const val NW_CONNECTION_STATE_CANCELLED: UInt = 6u
     }
 }
