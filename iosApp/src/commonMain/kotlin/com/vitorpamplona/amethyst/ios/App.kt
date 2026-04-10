@@ -77,7 +77,6 @@ import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
 import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
 import com.vitorpamplona.amethyst.commons.ui.feed.FeedHeader
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
-import com.vitorpamplona.amethyst.commons.ui.screens.SearchPlaceholder
 import com.vitorpamplona.amethyst.ios.account.AccountManager
 import com.vitorpamplona.amethyst.ios.account.AccountState
 import com.vitorpamplona.amethyst.ios.cache.IosLocalCache
@@ -100,6 +99,7 @@ import com.vitorpamplona.amethyst.ios.ui.chats.IosChatroomListState
 import com.vitorpamplona.amethyst.ios.ui.chats.IosConversationListScreen
 import com.vitorpamplona.amethyst.ios.ui.note.NoteCard
 import com.vitorpamplona.amethyst.ios.ui.notifications.IosNotificationScreen
+import com.vitorpamplona.amethyst.ios.ui.search.IosSearchScreen
 import com.vitorpamplona.amethyst.ios.ui.toNoteDisplayData
 import com.vitorpamplona.amethyst.ios.viewmodels.IosFeedViewModel
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
@@ -560,7 +560,17 @@ private fun MainScreen(
                 }
 
                 is Screen.Search -> {
-                    SearchPlaceholder(modifier = Modifier.padding(16.dp))
+                    IosSearchScreen(
+                        relayManager = relayManager,
+                        localCache = localCache,
+                        coordinator = coordinator,
+                        onNavigateToProfile = { navigateTo(Screen.Profile(it)) },
+                        onNavigateToThread = { navigateTo(Screen.Thread(it)) },
+                        onBoost = onBoostNote,
+                        onLike = onLikeNote,
+                        onZap = onZapNote,
+                        modifier = Modifier.padding(horizontal = 8.dp),
+                    )
                 }
 
                 is Screen.Notifications -> {

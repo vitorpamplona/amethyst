@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.DefaultFeedOrder
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedFilter
 import com.vitorpamplona.amethyst.ios.cache.IosLocalCache
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.isTaggedHash
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
@@ -220,4 +221,34 @@ class IosSearchFeedFilter(
     override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder)
 
     override fun limit(): Int = 500
+}
+
+/**
+ * Hashtag feed: text notes tagged with a specific hashtag ("t" tag).
+ */
+class IosHashtagFeedFilter(
+    private val hashtag: String,
+    private val cache: IosLocalCache,
+) : AdditiveFeedFilter<Note>() {
+    private val lowerHashtag = hashtag.lowercase()
+
+    override fun feedKey(): String = "hashtag-$lowerHashtag"
+
+    override fun feed(): List<Note> =
+        cache
+            .allNotes()
+            .filter { isHashtagNote(it) }
+            .sortedWith(DefaultFeedOrder)
+            .take(limit())
+
+    override fun applyFilter(newItems: Set<Note>): Set<Note> = newItems.filterTo(HashSet()) { isHashtagNote(it) }
+
+    override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder)
+
+    override fun limit(): Int = 500
+
+    private fun isHashtagNote(note: Note): Boolean {
+        val event = note.event ?: return false
+        return event is TextNoteEvent && event.isTaggedHash(lowerHashtag)
+    }
 }
