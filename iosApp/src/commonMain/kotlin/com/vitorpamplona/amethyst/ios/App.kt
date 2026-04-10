@@ -146,6 +146,7 @@ import com.vitorpamplona.amethyst.ios.ui.notifications.IosNotificationScreen
 import com.vitorpamplona.amethyst.ios.ui.polls.PollCard
 import com.vitorpamplona.amethyst.ios.ui.polls.toPollDisplayData
 import com.vitorpamplona.amethyst.ios.ui.reactions.EmojiReactionPickerDialog
+import com.vitorpamplona.amethyst.ios.ui.reactions.aggregateReactions
 import com.vitorpamplona.amethyst.ios.ui.search.IosSearchScreen
 import com.vitorpamplona.amethyst.ios.ui.toArticleDisplayData
 import com.vitorpamplona.amethyst.ios.ui.toNoteDisplayData
@@ -2075,6 +2076,7 @@ private fun IosFeedContent(
                                 NoteCard(
                                     note = noteDisplayData,
                                     localCache = localCache,
+                                    reactions = aggregateReactions(note),
                                     onClick = { onNavigateToThread(event.id) },
                                     onAuthorClick = onNavigateToProfile,
                                     onBoost = onBoost,
@@ -2413,6 +2415,7 @@ private fun IosProfileContent(
                         NoteCard(
                             note = note.toNoteDisplayData(localCache),
                             localCache = localCache,
+                            reactions = aggregateReactions(note),
                             onClick = { onNavigateToThread(event.id) },
                             onAuthorClick = onNavigateToProfile,
                             onBoost = onBoost,
@@ -2523,6 +2526,7 @@ private fun IosThreadContent(
                         NoteCard(
                             note = note.toNoteDisplayData(localCache),
                             localCache = localCache,
+                            reactions = aggregateReactions(note),
                             onClick = { onNavigateToThread(event.id) },
                             onAuthorClick = onNavigateToProfile,
                             onReply = onReply,
