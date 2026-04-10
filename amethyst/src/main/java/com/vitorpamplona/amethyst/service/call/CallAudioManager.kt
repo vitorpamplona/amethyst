@@ -184,7 +184,7 @@ class CallAudioManager(
                 PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK,
                 "amethyst:call_proximity",
             )
-        proximityWakeLock?.acquire(60 * 60 * 1000L)
+        proximityWakeLock?.acquire(10 * 60 * 1000L)
         registerProximitySensor()
     }
 
@@ -320,10 +320,11 @@ class CallAudioManager(
                     }
                 }
             }
-        @Suppress("DEPRECATION")
-        context.registerReceiver(
+        ContextCompat.registerReceiver(
+            context,
             scoReceiver,
             IntentFilter(AudioManager.ACTION_SCO_AUDIO_STATE_UPDATED),
+            ContextCompat.RECEIVER_NOT_EXPORTED,
         )
     }
 

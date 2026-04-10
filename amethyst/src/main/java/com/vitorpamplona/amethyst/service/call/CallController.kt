@@ -417,14 +417,16 @@ class CallController(
                 onIceCandidate = { candidate -> onLocalIceCandidate(peerPubKey, candidate) },
                 onPeerConnected = {
                     Log.d(TAG) { "Peer ${peerPubKey.take(8)} connected!" }
-                    scope.launch { callManager.onPeerConnected() }
-                    if (!foregroundServiceStarted) {
-                        foregroundServiceStarted = true
-                        startForegroundService()
+                    scope.launch {
+                        callManager.onPeerConnected()
+                        if (!foregroundServiceStarted) {
+                            foregroundServiceStarted = true
+                            startForegroundService()
+                        }
                     }
                 },
                 onRemoteVideoTrack = { track -> videoMonitor.onRemoteVideoTrack(peerPubKey, track) },
-                onDisconnected = { onPeerDisconnected(peerPubKey) },
+                onDisconnected = { scope.launch { onPeerDisconnected(peerPubKey) } },
                 onError = { error -> _errorMessage.value = error },
                 onRenegotiationNeeded = { performRenegotiation(peerPubKey) },
             )

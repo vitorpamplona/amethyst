@@ -46,9 +46,9 @@ import com.vitorpamplona.amethyst.ui.StringResSetup
 import com.vitorpamplona.amethyst.ui.screen.ManageRelayServices
 import com.vitorpamplona.amethyst.ui.screen.ManageWebOkHttp
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
-import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class CallActivity : AppCompatActivity() {
     val isInPipMode = mutableStateOf(false)
@@ -69,14 +69,13 @@ class CallActivity : AppCompatActivity() {
 
     private val pipActionReceiver =
         object : BroadcastReceiver() {
-            @OptIn(DelicateCoroutinesApi::class)
             override fun onReceive(
                 context: Context,
                 intent: Intent,
             ) {
                 when (intent.action) {
                     ACTION_PIP_HANGUP -> {
-                        GlobalScope.launch { CallSessionBridge.callManager?.hangup() }
+                        lifecycleScope.launch { CallSessionBridge.callManager?.hangup() }
                     }
 
                     ACTION_PIP_TOGGLE_MUTE -> {
@@ -191,7 +190,6 @@ class CallActivity : AppCompatActivity() {
         }
     }
 
-    @OptIn(DelicateCoroutinesApi::class)
     override fun onStop() {
         super.onStop()
         // Only hang up if the user dismissed PiP (swiped it away).
@@ -202,29 +200,36 @@ class CallActivity : AppCompatActivity() {
         if (wasInPipMode && !isInPictureInPictureMode) {
             val state = CallSessionBridge.callManager?.state?.value
             if (state is CallState.Connected || state is CallState.Connecting || state is CallState.Offering) {
-                GlobalScope.launch { CallSessionBridge.callManager?.hangup() }
+                lifecycleScope.launch {
+                    withContext(NonCancellable) { CallSessionBridge.callManager?.hangup() }
+                }
             }
             finishAndRemoveTask()
         }
     }
 
-    @OptIn(DelicateCoroutinesApi::class)
     override fun onDestroy() {
         unregisterPipReceiver()
 
         // Safety net: if the Activity is destroyed while a call is still
         // ringing/offering, ensure the call is hung up so audio stops.
+        // Use NonCancellable so the signaling event is published even
+        // though the lifecycle scope is being cancelled.
         val manager = CallSessionBridge.callManager
         when (manager?.state?.value) {
             is CallState.IncomingCall -> {
-                GlobalScope.launch { manager.rejectCall() }
+                lifecycleScope.launch {
+                    withContext(NonCancellable) { manager.rejectCall() }
+                }
             }
 
             is CallState.Offering,
             is CallState.Connecting,
             is CallState.Connected,
             -> {
-                GlobalScope.launch { manager.hangup() }
+                lifecycleScope.launch {
+                    withContext(NonCancellable) { manager.hangup() }
+                }
             }
 
             else -> {}
