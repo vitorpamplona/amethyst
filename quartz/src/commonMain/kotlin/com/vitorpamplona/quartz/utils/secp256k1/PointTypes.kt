@@ -42,35 +42,37 @@ import kotlin.jvm.JvmField
  * is ~3-4ns faster per access on ART. On non-JVM targets, @JvmField is ignored.
  */
 internal class MutablePoint(
-    @JvmField val x: LongArray = LongArray(4),
-    @JvmField val y: LongArray = LongArray(4),
-    @JvmField val z: LongArray = LongArray(4),
+    @JvmField val x: Fe4 = Fe4(),
+    @JvmField val y: Fe4 = Fe4(),
+    @JvmField val z: Fe4 = Fe4(),
 ) {
-    fun isInfinity(): Boolean = (z[0] or z[1] or z[2] or z[3]) == 0L
+    fun isInfinity(): Boolean = z.isZero()
 
     fun setInfinity() {
-        for (i in 0 until 4) {
-            x[i] = 0L
-            z[i] = 0L
-        }
-        y[0] = 1L
-        for (i in 1 until 4) y[i] = 0L
+        x.setZero()
+        y.l0 = 1L
+        y.l1 = 0L
+        y.l2 = 0L
+        y.l3 = 0L
+        z.setZero()
     }
 
     fun copyFrom(other: MutablePoint) {
-        other.x.copyInto(x, 0, 0, 4)
-        other.y.copyInto(y, 0, 0, 4)
-        other.z.copyInto(z, 0, 0, 4)
+        x.copyFrom(other.x)
+        y.copyFrom(other.y)
+        z.copyFrom(other.z)
     }
 
     fun setAffine(
-        ax: LongArray,
-        ay: LongArray,
+        ax: Fe4,
+        ay: Fe4,
     ) {
-        ax.copyInto(x, 0, 0, 4)
-        ay.copyInto(y, 0, 0, 4)
-        z[0] = 1L
-        for (i in 1 until 4) z[i] = 0L
+        x.copyFrom(ax)
+        y.copyFrom(ay)
+        z.l0 = 1L
+        z.l1 = 0L
+        z.l2 = 0L
+        z.l3 = 0L
     }
 }
 
@@ -80,8 +82,8 @@ internal class MutablePoint(
  * @JvmField: see MutablePoint for rationale (eliminates virtual getter calls).
  */
 internal class AffinePoint(
-    @JvmField val x: LongArray = LongArray(4),
-    @JvmField val y: LongArray = LongArray(4),
+    @JvmField val x: Fe4 = Fe4(),
+    @JvmField val y: Fe4 = Fe4(),
 )
 
 /**
@@ -94,7 +96,7 @@ internal class AffinePoint(
  * degenerate case, which returns immediately after the recursive call without
  * using the temps further.
  *
- * The wide buffer (LongArray(8)) is pre-fetched once per top-level operation and
+ * The wide buffer (Wide8) is pre-fetched once per top-level operation and
  * passed through to FieldP.mul/sqr, avoiding ~500+ ThreadLocal.get() calls per
  * scalar multiplication (~20-30ns each on JVM).
  *
@@ -104,11 +106,11 @@ internal class AffinePoint(
  * @JvmField compiles these to direct field reads. On non-JVM targets, ignored.
  */
 internal class PointScratch {
-    @JvmField val t = Array(12) { LongArray(4) }
+    @JvmField val t = Array(12) { Fe4() }
 
     @JvmField val dblCopy = MutablePoint()
 
-    @JvmField val w = LongArray(8)
+    @JvmField val w = Wide8()
 
     @JvmField val wnaf1 = IntArray(145)
 
@@ -122,7 +124,7 @@ internal class PointScratch {
 
     @JvmField val mixTmp = MutablePoint()
 
-    @JvmField val mixNegY = LongArray(4)
+    @JvmField val mixNegY = Fe4()
 
     @JvmField val pOddJac = Array(8) { MutablePoint() }
 
@@ -134,43 +136,43 @@ internal class PointScratch {
 
     @JvmField val p2 = MutablePoint()
 
-    @JvmField val cumZ = Array(8) { LongArray(4) }
+    @JvmField val cumZ = Array(8) { Fe4() }
 
-    @JvmField val batchInv = LongArray(4)
+    @JvmField val batchInv = Fe4()
 
-    @JvmField val batchZInv = LongArray(4)
+    @JvmField val batchZInv = Fe4()
 
-    @JvmField val batchZInv2 = LongArray(4)
+    @JvmField val batchZInv2 = Fe4()
 
-    @JvmField val batchZInv3 = LongArray(4)
+    @JvmField val batchZInv3 = Fe4()
 
-    @JvmField val splitWide = LongArray(8)
+    @JvmField val splitWide = Wide8()
 
-    @JvmField val splitT1 = LongArray(4)
+    @JvmField val splitT1 = Fe4()
 
-    @JvmField val splitT2 = LongArray(4)
+    @JvmField val splitT2 = Fe4()
 
-    @JvmField val splitK1 = LongArray(4)
+    @JvmField val splitK1 = Fe4()
 
-    @JvmField val splitK2 = LongArray(4)
+    @JvmField val splitK2 = Fe4()
 
-    @JvmField val zInv = LongArray(4)
+    @JvmField val zInv = Fe4()
 
-    @JvmField val zInv2 = LongArray(4)
+    @JvmField val zInv2 = Fe4()
 
-    @JvmField val zInv3 = LongArray(4)
+    @JvmField val zInv3 = Fe4()
 
-    @JvmField val entryPx = LongArray(4)
+    @JvmField val entryPx = Fe4()
 
-    @JvmField val entryPy = LongArray(4)
+    @JvmField val entryPy = Fe4()
 
     @JvmField val entryPoint = MutablePoint()
 
     @JvmField val entryResult = MutablePoint()
 
-    @JvmField val entryTmp = LongArray(4)
+    @JvmField val entryTmp = Fe4()
 
-    @JvmField val entryTmp2 = LongArray(4)
+    @JvmField val entryTmp2 = Fe4()
 
     // Pre-allocated byte buffers for sign/verify (eliminates ByteArray allocations).
     // hashBuf: reusable buffer for BIP-340 tagged hash inputs (prefix(64) + fields).
@@ -183,10 +185,10 @@ internal class PointScratch {
 
     @JvmField val bytesTmp2 = ByteArray(32)
 
-    // Scratch LongArray(4) for intermediate scalar results (avoids ScalarN alloc)
-    @JvmField val scalarTmp1 = LongArray(4)
+    // Scratch Fe4 for intermediate scalar results (avoids ScalarN alloc)
+    @JvmField val scalarTmp1 = Fe4()
 
-    @JvmField val scalarTmp2 = LongArray(4)
+    @JvmField val scalarTmp2 = Fe4()
 
-    @JvmField val scalarTmp3 = LongArray(4)
+    @JvmField val scalarTmp3 = Fe4()
 }

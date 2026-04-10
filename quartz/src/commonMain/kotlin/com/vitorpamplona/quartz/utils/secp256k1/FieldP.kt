@@ -22,9 +22,9 @@ package com.vitorpamplona.quartz.utils.secp256k1
 
 /**
  * Arithmetic modulo the secp256k1 field prime: p = 2^256 - 2^32 - 977.
- * Uses LongArray(4) limbs (4×64-bit).
+ * Uses Fe4 limbs (4×64-bit).
  *
- * Hot-path mul/sqr accept a pre-fetched LongArray(8) wide buffer to avoid
+ * Hot-path mul/sqr accept a pre-fetched Wide8 wide buffer to avoid
  * ThreadLocal.get() overhead (~20-30ns per call, 500+ calls per scalar mul).
  *
  * Key difference from C libsecp256k1: no lazy reduction / magnitude tracking.
@@ -41,40 +41,40 @@ package com.vitorpamplona.quartz.utils.secp256k1
 internal object FieldP {
     // p = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F
     val P =
-        longArrayOf(
+        Fe4(
             -4294968273L, // 0xFFFFFFFEFFFFFC2F
             -1L, // 0xFFFFFFFFFFFFFFFF
             -1L, // 0xFFFFFFFFFFFFFFFF
             -1L, // 0xFFFFFFFFFFFFFFFF
         )
 
-    private val wide = ScratchLocal { LongArray(8) }
+    private val wide = ScratchLocal { Wide8() }
 
     // Pre-allocated scratch for inv/sqrt addition chains (11 field elements).
-    // Avoids 11 LongArray(4) allocations per inv/sqrt call.
-    private val chainScratch = ScratchLocal { Array(11) { LongArray(4) } }
+    // Avoids 11 Fe4 allocations per inv/sqrt call.
+    private val chainScratch = ScratchLocal { Array(11) { Fe4() } }
 
     /** Get a thread-local wide buffer. Call once at the top-level entry point, then pass through. */
-    fun getWide(): LongArray = wide.get()
+    fun getWide(): Wide8 = wide.get()
 
     // ==================== Core arithmetic ====================
 
     fun add(
-        out: LongArray,
-        a: LongArray,
-        b: LongArray,
+        out: Fe4,
+        a: Fe4,
+        b: Fe4,
     ) {
         val carry = U256.addTo(out, a, b)
         if (carry != 0) {
             // Overflow past 2^256: add 2^256 mod p = 2^32 + 977 = 0x1000003D1
-            val s1 = out[0] + 4294968273L
-            val c1 = if (uLtInline(s1, out[0])) 1L else 0L
-            out[0] = s1
+            val s1 = out.l0 + 4294968273L
+            val c1 = if (uLtInline(s1, out.l0)) 1L else 0L
+            out.l0 = s1
             if (c1 != 0L) {
-                out[1]++
-                if (out[1] == 0L) {
-                    out[2]++
-                    if (out[2] == 0L) out[3]++
+                out.l1++
+                if (out.l1 == 0L) {
+                    out.l2++
+                    if (out.l2 == 0L) out.l3++
                 }
             }
         }
@@ -87,30 +87,30 @@ internal object FieldP {
      * case needs work (subtract 1 with borrow propagation). ~500 calls/verify.
      */
     fun sub(
-        out: LongArray,
-        a: LongArray,
-        b: LongArray,
+        out: Fe4,
+        a: Fe4,
+        b: Fe4,
     ) {
         val borrow = U256.subTo(out, a, b)
         if (borrow != 0) {
             // Add P = [P0, -1, -1, -1].
-            val s0 = out[0] + P0
-            val c0 = if (uLtInline(s0, out[0])) 1L else 0L
-            out[0] = s0
+            val s0 = out.l0 + P0
+            val c0 = if (uLtInline(s0, out.l0)) 1L else 0L
+            out.l0 = s0
             // For limbs 1-3: adding P[i]=-1 with carry c:
             //   c=1 → result unchanged, carry out=1 (identity propagation)
             //   c=0 → result = out[i]-1, carry out = (out[i] != 0) ? 1 : 0
             // So if c0=1, limbs 1-3 are untouched. If c0=0, subtract 1 with borrow:
             if (c0 == 0L) {
-                if (out[1] != 0L) {
-                    out[1]--
+                if (out.l1 != 0L) {
+                    out.l1--
                 } else {
-                    out[1] = -1L // 0-1 wraps
-                    if (out[2] != 0L) {
-                        out[2]--
+                    out.l1 = -1L // 0-1 wraps
+                    if (out.l2 != 0L) {
+                        out.l2--
                     } else {
-                        out[2] = -1L
-                        out[3]--
+                        out.l2 = -1L
+                        out.l3--
                     }
                 }
             }
@@ -119,9 +119,9 @@ internal object FieldP {
 
     /** Multiply with ThreadLocal wide buffer (convenience for non-hot paths). */
     fun mul(
-        out: LongArray,
-        a: LongArray,
-        b: LongArray,
+        out: Fe4,
+        a: Fe4,
+        b: Fe4,
     ) {
         val w = wide.get()
         fieldMulReduce(out, a, b, w)
@@ -129,18 +129,18 @@ internal object FieldP {
 
     /** Multiply with caller-provided wide buffer (hot path — no ThreadLocal lookup). */
     fun mul(
-        out: LongArray,
-        a: LongArray,
-        b: LongArray,
-        w: LongArray,
+        out: Fe4,
+        a: Fe4,
+        b: Fe4,
+        w: Wide8,
     ) {
         fieldMulReduce(out, a, b, w)
     }
 
     /** Square with ThreadLocal wide buffer (convenience for non-hot paths). */
     fun sqr(
-        out: LongArray,
-        a: LongArray,
+        out: Fe4,
+        a: Fe4,
     ) {
         val w = wide.get()
         fieldSqrReduce(out, a, w)
@@ -148,9 +148,9 @@ internal object FieldP {
 
     /** Square with caller-provided wide buffer (hot path — no ThreadLocal lookup). */
     fun sqr(
-        out: LongArray,
-        a: LongArray,
-        w: LongArray,
+        out: Fe4,
+        a: Fe4,
+        w: Wide8,
     ) {
         fieldSqrReduce(out, a, w)
     }
@@ -158,28 +158,28 @@ internal object FieldP {
     /**
      * out = -a mod p = P - a. Specialized for P = [P0, -1, -1, -1]:
      * P[i]-a[i] = ~a[i] for i>=1 (bitwise NOT), with borrow from limb 0.
-     * Avoids generic U256.subTo + P array reads (~260 calls/verify).
+     * Avoids generic U256.subTo + P field reads (~260 calls/verify).
      */
     fun neg(
-        out: LongArray,
-        a: LongArray,
+        out: Fe4,
+        a: Fe4,
     ) {
-        if (U256.isZero(a)) {
-            out[0] = 0L
-            out[1] = 0L
-            out[2] = 0L
-            out[3] = 0L
+        if (a.isZero()) {
+            out.l0 = 0L
+            out.l1 = 0L
+            out.l2 = 0L
+            out.l3 = 0L
             return
         }
-        // P - a: limb 0 is P0 - a[0], limbs 1-3 are (-1) - a[i] = ~a[i]
-        out[0] = P0 - a[0]
-        val borrow = if (uLtInline(P0, a[0])) 1L else 0L
+        // P - a: limb 0 is P0 - a.l0, limbs 1-3 are (-1) - a[i] = ~a[i]
+        out.l0 = P0 - a.l0
+        val borrow = if (uLtInline(P0, a.l0)) 1L else 0L
         // ~a[i] - borrow. New borrow only if ~a[i] == 0 (i.e., a[i] == -1) and borrow == 1
-        out[1] = a[1].inv() - borrow
-        val b1 = if (a[1] == -1L && borrow != 0L) 1L else 0L
-        out[2] = a[2].inv() - b1
-        val b2 = if (a[2] == -1L && b1 != 0L) 1L else 0L
-        out[3] = a[3].inv() - b2
+        out.l1 = a.l1.inv() - borrow
+        val b1 = if (a.l1 == -1L && borrow != 0L) 1L else 0L
+        out.l2 = a.l2.inv() - b1
+        val b2 = if (a.l2 == -1L && b1 != 0L) 1L else 0L
+        out.l3 = a.l3.inv() - b2
     }
 
     /**
@@ -187,10 +187,10 @@ internal object FieldP {
      * Unrolled, with P[1..3]=-1 inlined as `mask` (since -1 & mask = mask).
      */
     fun half(
-        out: LongArray,
-        a: LongArray,
+        out: Fe4,
+        a: Fe4,
     ) {
-        val mask = -(a[0] and 1L) // all 1s if odd, all 0s if even
+        val mask = -(a.l0 and 1L) // all 1s if odd, all 0s if even
         val p0 = P0 and mask // P[0] masked; P[1..3] are -1, so P[i]&mask = mask
         var s1: Long
         var s2: Long
@@ -199,46 +199,46 @@ internal object FieldP {
 
         // Conditional add: out = a + (P & mask), unrolled
         // Limb 0
-        s1 = a[0] + p0
-        c1 = if (uLtInline(s1, a[0])) 1L else 0L
-        out[0] = s1
+        s1 = a.l0 + p0
+        c1 = if (uLtInline(s1, a.l0)) 1L else 0L
+        out.l0 = s1
         var carry = c1
         // Limb 1
-        s1 = a[1] + mask
-        c1 = if (uLtInline(s1, a[1])) 1L else 0L
+        s1 = a.l1 + mask
+        c1 = if (uLtInline(s1, a.l1)) 1L else 0L
         s2 = s1 + carry
         c2 = if (uLtInline(s2, s1)) 1L else 0L
-        out[1] = s2
+        out.l1 = s2
         carry = c1 + c2
         // Limb 2
-        s1 = a[2] + mask
-        c1 = if (uLtInline(s1, a[2])) 1L else 0L
+        s1 = a.l2 + mask
+        c1 = if (uLtInline(s1, a.l2)) 1L else 0L
         s2 = s1 + carry
         c2 = if (uLtInline(s2, s1)) 1L else 0L
-        out[2] = s2
+        out.l2 = s2
         carry = c1 + c2
         // Limb 3
-        s1 = a[3] + mask
-        c1 = if (uLtInline(s1, a[3])) 1L else 0L
+        s1 = a.l3 + mask
+        c1 = if (uLtInline(s1, a.l3)) 1L else 0L
         s2 = s1 + carry
         c2 = if (uLtInline(s2, s1)) 1L else 0L
-        out[3] = s2
+        out.l3 = s2
         carry = c1 + c2
 
         // Right-shift by 1 (unrolled)
-        out[0] = (out[0] ushr 1) or (out[1] shl 63)
-        out[1] = (out[1] ushr 1) or (out[2] shl 63)
-        out[2] = (out[2] ushr 1) or (out[3] shl 63)
-        out[3] = (out[3] ushr 1) or (carry shl 63)
+        out.l0 = (out.l0 ushr 1) or (out.l1 shl 63)
+        out.l1 = (out.l1 ushr 1) or (out.l2 shl 63)
+        out.l2 = (out.l2 ushr 1) or (out.l3 shl 63)
+        out.l3 = (out.l3 ushr 1) or (carry shl 63)
     }
 
     // ==================== Inversion and square root (optimized addition chains) ====================
 
     fun inv(
-        out: LongArray,
-        a: LongArray,
+        out: Fe4,
+        a: Fe4,
     ) {
-        require(!U256.isZero(a))
+        require(!a.isZero())
         val w = wide.get()
         val cs = chainScratch.get()
         val x2 = cs[0]
@@ -287,8 +287,8 @@ internal object FieldP {
     }
 
     fun sqrt(
-        out: LongArray,
-        a: LongArray,
+        out: Fe4,
+        a: Fe4,
     ): Boolean {
         val w = wide.get()
         val cs = chainScratch.get()
@@ -336,48 +336,48 @@ internal object FieldP {
         // Verify: check that out² == a (mod p)
         // Reuse cs[0], cs[1] as scratch since we're done with the chain
         mul(cs[0], out, out, w) // cs[0] = out²
-        U256.copyInto(cs[1], a)
+        cs[1].copyFrom(a)
         reduceSelf(cs[1]) // cs[1] = a reduced
         return U256.cmp(cs[0], cs[1]) == 0
     }
 
     private fun sqrN(
-        out: LongArray,
-        a: LongArray,
+        out: Fe4,
+        a: Fe4,
         n: Int,
-        w: LongArray,
+        w: Wide8,
     ) {
-        U256.copyInto(out, a)
+        out.copyFrom(a)
         repeat(n) { sqr(out, out, w) }
     }
 
     private fun sqrN(
-        out: LongArray,
-        a: LongArray,
+        out: Fe4,
+        a: Fe4,
         n: Int,
     ) {
-        U256.copyInto(out, a)
+        out.copyFrom(a)
         repeat(n) { sqr(out, out) }
     }
 
     // ==================== Reduction ====================
 
-    // P[0] cached as a constant to avoid array load in the hot reduceSelf path.
+    // P[0] cached as a constant to avoid field load in the hot reduceSelf path.
     private const val P0 = -4294968273L // 0xFFFFFFFEFFFFFC2F
 
-    fun reduceSelf(a: LongArray) {
+    fun reduceSelf(a: Fe4) {
         // Exploit P's structure: P = [P0, -1, -1, -1] where P[1..3] = 0xFFFFFFFFFFFFFFFF.
-        // a >= P only if a[3]==a[2]==a[1]==-1 AND a[0] >= P[0]. The first check (a[3]==-1)
+        // a >= P only if a.l3==a.l2==a.l1==-1 AND a.l0 >= P[0]. The first check (a.l3==-1)
         // fails >99.99% of the time for random field elements, making this a single branch.
-        if (a[3] == -1L && a[2] == -1L && a[1] == -1L &&
-            (a[0] xor Long.MIN_VALUE) >= (P0 xor Long.MIN_VALUE)
+        if (a.l3 == -1L && a.l2 == -1L && a.l1 == -1L &&
+            (a.l0 xor Long.MIN_VALUE) >= (P0 xor Long.MIN_VALUE)
         ) {
-            // Inline P subtraction: when a[1..3] = -1 and a[0] >= P0,
-            // a - P = [a[0] - P0, 0, 0, 0] (no borrows since P[1..3] = -1).
-            a[0] -= P0
-            a[1] = 0L
-            a[2] = 0L
-            a[3] = 0L
+            // Inline P subtraction: when a.l1..l3 = -1 and a.l0 >= P0,
+            // a - P = [a.l0 - P0, 0, 0, 0] (no borrows since P[1..3] = -1).
+            a.l0 -= P0
+            a.l1 = 0L
+            a.l2 = 0L
+            a.l3 = 0L
         }
     }
 
@@ -388,8 +388,8 @@ internal object FieldP {
      * Three stages: fold 512→~260 bits, fold carry×C, final reduceSelf.
      */
     fun reduceWide(
-        out: LongArray,
-        w: LongArray,
+        out: Fe4,
+        w: Wide8,
     ) {
         val c = 4294968273L // 2^32 + 977
         var hcLo: Long
@@ -402,77 +402,77 @@ internal object FieldP {
         // Round 1: acc = lo + hi × C (4 limbs, unrolled)
 
         // Limb 0 (no carry input)
-        hcLo = w[4] * c
-        hcHi = unsignedMultiplyHigh(w[4], c)
-        s1 = w[0] + hcLo
-        c1 = if (uLtInline(s1, w[0])) 1L else 0L
-        out[0] = s1
+        hcLo = w.l4 * c
+        hcHi = unsignedMultiplyHigh(w.l4, c)
+        s1 = w.l0 + hcLo
+        c1 = if (uLtInline(s1, w.l0)) 1L else 0L
+        out.l0 = s1
         var carry = hcHi + c1
 
         // Limb 1
-        hcLo = w[5] * c
-        hcHi = unsignedMultiplyHigh(w[5], c)
-        s1 = w[1] + hcLo
-        c1 = if (uLtInline(s1, w[1])) 1L else 0L
+        hcLo = w.l5 * c
+        hcHi = unsignedMultiplyHigh(w.l5, c)
+        s1 = w.l1 + hcLo
+        c1 = if (uLtInline(s1, w.l1)) 1L else 0L
         s2 = s1 + carry
         c2 = if (uLtInline(s2, s1)) 1L else 0L
-        out[1] = s2
+        out.l1 = s2
         carry = hcHi + c1 + c2
 
         // Limb 2
-        hcLo = w[6] * c
-        hcHi = unsignedMultiplyHigh(w[6], c)
-        s1 = w[2] + hcLo
-        c1 = if (uLtInline(s1, w[2])) 1L else 0L
+        hcLo = w.l6 * c
+        hcHi = unsignedMultiplyHigh(w.l6, c)
+        s1 = w.l2 + hcLo
+        c1 = if (uLtInline(s1, w.l2)) 1L else 0L
         s2 = s1 + carry
         c2 = if (uLtInline(s2, s1)) 1L else 0L
-        out[2] = s2
+        out.l2 = s2
         carry = hcHi + c1 + c2
 
         // Limb 3
-        hcLo = w[7] * c
-        hcHi = unsignedMultiplyHigh(w[7], c)
-        s1 = w[3] + hcLo
-        c1 = if (uLtInline(s1, w[3])) 1L else 0L
+        hcLo = w.l7 * c
+        hcHi = unsignedMultiplyHigh(w.l7, c)
+        s1 = w.l3 + hcLo
+        c1 = if (uLtInline(s1, w.l3)) 1L else 0L
         s2 = s1 + carry
         c2 = if (uLtInline(s2, s1)) 1L else 0L
-        out[3] = s2
+        out.l3 = s2
         carry = hcHi + c1 + c2
 
         // Round 2: if carry > 0, fold carry × C back in
         if (carry != 0L) {
             val ccLo = carry * c
             val ccHi = unsignedMultiplyHigh(carry, c)
-            s1 = out[0] + ccLo
-            c1 = if (uLtInline(s1, out[0])) 1L else 0L
-            out[0] = s1
+            s1 = out.l0 + ccLo
+            c1 = if (uLtInline(s1, out.l0)) 1L else 0L
+            out.l0 = s1
             // Propagate carry (unrolled, with early exit)
             var prop = ccHi + c1
             if (prop != 0L) {
-                s1 = out[1] + prop
-                prop = if (uLtInline(s1, out[1])) 1L else 0L
-                out[1] = s1
+                s1 = out.l1 + prop
+                prop = if (uLtInline(s1, out.l1)) 1L else 0L
+                out.l1 = s1
                 if (prop != 0L) {
-                    s1 = out[2] + prop
-                    prop = if (uLtInline(s1, out[2])) 1L else 0L
-                    out[2] = s1
+                    s1 = out.l2 + prop
+                    prop = if (uLtInline(s1, out.l2)) 1L else 0L
+                    out.l2 = s1
                     if (prop != 0L) {
-                        s1 = out[3] + prop
-                        prop = if (uLtInline(s1, out[3])) 1L else 0L
-                        out[3] = s1
+                        s1 = out.l3 + prop
+                        prop = if (uLtInline(s1, out.l3)) 1L else 0L
+                        out.l3 = s1
                     }
                 }
             }
             // Overflow past 256 bits: 2^256 ≡ C (mod p)
             if (prop != 0L) {
-                s1 = out[0] + c
-                c1 = if (uLtInline(s1, out[0])) 1L else 0L
-                out[0] = s1
+                s1 = out.l0 + c
+                c1 = if (uLtInline(s1, out.l0)) 1L else 0L
+                out.l0 = s1
                 if (c1 != 0L) {
-                    out[1]++
-                    if (out[1] == 0L) {
-                        out[2]++
-                        if (out[2] == 0L) out[3]++
+                    out.l1++
+                    if (out.l1 == 0L) {
+                        out.l2++
+                        if (out.l2 == 0L) out.l3++
                     }
                 }
             }
@@ -484,56 +484,56 @@ internal object FieldP {
     // ==================== Convenience wrappers ====================
 
     fun add(
-        a: LongArray,
-        b: LongArray,
-    ): LongArray {
-        val r = LongArray(4)
+        a: Fe4,
+        b: Fe4,
+    ): Fe4 {
+        val r = Fe4()
         add(r, a, b)
         return r
     }
 
     fun sub(
-        a: LongArray,
-        b: LongArray,
-    ): LongArray {
-        val r = LongArray(4)
+        a: Fe4,
+        b: Fe4,
+    ): Fe4 {
+        val r = Fe4()
         sub(r, a, b)
         return r
     }
 
     fun mul(
-        a: LongArray,
-        b: LongArray,
-    ): LongArray {
-        val r = LongArray(4)
+        a: Fe4,
+        b: Fe4,
+    ): Fe4 {
+        val r = Fe4()
         mul(r, a, b)
         return r
     }
 
-    fun sqr(a: LongArray): LongArray {
-        val r = LongArray(4)
+    fun sqr(a: Fe4): Fe4 {
+        val r = Fe4()
         sqr(r, a)
         return r
     }
 
-    fun neg(a: LongArray): LongArray {
-        val r = LongArray(4)
+    fun neg(a: Fe4): Fe4 {
+        val r = Fe4()
         neg(r, a)
         return r
     }
 
-    fun inv(a: LongArray): LongArray {
-        val r = LongArray(4)
+    fun inv(a: Fe4): Fe4 {
+        val r = Fe4()
         inv(r, a)
         return r
     }
 
-    fun sqrt(a: LongArray): LongArray? {
-        val r = LongArray(4)
+    fun sqrt(a: Fe4): Fe4? {
+        val r = Fe4()
         return if (sqrt(r, a)) r else null
     }
 
-    fun reduce(a: LongArray): LongArray {
+    fun reduce(a: Fe4): Fe4 {
         val r = a.copyOf()
         reduceSelf(r)
         return r
