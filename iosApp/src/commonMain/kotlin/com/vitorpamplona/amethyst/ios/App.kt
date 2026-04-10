@@ -43,6 +43,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -60,7 +61,6 @@ import com.vitorpamplona.amethyst.commons.ui.feed.FeedHeader
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.ui.screens.MessagesPlaceholder
 import com.vitorpamplona.amethyst.commons.ui.screens.NotificationsPlaceholder
-import com.vitorpamplona.amethyst.commons.ui.screens.SearchPlaceholder
 import com.vitorpamplona.amethyst.ios.account.AccountManager
 import com.vitorpamplona.amethyst.ios.account.AccountState
 import com.vitorpamplona.amethyst.ios.cache.IosLocalCache
@@ -68,6 +68,11 @@ import com.vitorpamplona.amethyst.ios.feeds.IosFollowingFeedFilter
 import com.vitorpamplona.amethyst.ios.feeds.IosGlobalFeedFilter
 import com.vitorpamplona.amethyst.ios.feeds.IosProfileFeedFilter
 import com.vitorpamplona.amethyst.ios.feeds.IosThreadFilter
+import com.vitorpamplona.amethyst.ios.namecoin.IosNamecoinNameService
+import com.vitorpamplona.amethyst.ios.namecoin.IosNamecoinPreferences
+import com.vitorpamplona.amethyst.ios.namecoin.LocalNamecoinPreferences
+import com.vitorpamplona.amethyst.ios.namecoin.LocalNamecoinService
+import com.vitorpamplona.amethyst.ios.namecoin.NamecoinSearchBar
 import com.vitorpamplona.amethyst.ios.network.IosRelayConnectionManager
 import com.vitorpamplona.amethyst.ios.subscriptions.FilterBuilders
 import com.vitorpamplona.amethyst.ios.subscriptions.IosSubscriptionsCoordinator
@@ -157,6 +162,8 @@ private fun MainScreen(
     val relayManager = remember { IosRelayConnectionManager() }
     val localCache = remember { IosLocalCache() }
     val coordinator = remember { IosSubscriptionsCoordinator(CoroutineScope(Dispatchers.Default), localCache) }
+    val namecoinPreferences = remember { IosNamecoinPreferences() }
+    val namecoinService = remember { IosNamecoinNameService(namecoinPreferences) }
 
     var currentScreen by remember { mutableStateOf<Screen>(Screen.Feed) }
     var selectedTab by remember { mutableStateOf(Tab.FEED) }
@@ -183,96 +190,103 @@ private fun MainScreen(
             currentScreen is Screen.Notifications || currentScreen is Screen.Messages ||
             currentScreen is Screen.MyProfile
 
-    Scaffold(
-        bottomBar = {
-            if (showBottomBar) {
-                NavigationBar {
-                    Tab.entries.forEach { tab ->
-                        NavigationBarItem(
-                            icon = { Icon(tab.icon, contentDescription = tab.label, modifier = Modifier.size(24.dp)) },
-                            label = { Text(tab.label, style = MaterialTheme.typography.labelSmall) },
-                            selected = selectedTab == tab,
-                            onClick = {
-                                selectedTab = tab
-                                navStack.clear()
-                                currentScreen =
-                                    when (tab) {
-                                        Tab.FEED -> Screen.Feed
-                                        Tab.SEARCH -> Screen.Search
-                                        Tab.NOTIFICATIONS -> Screen.Notifications
-                                        Tab.MESSAGES -> Screen.Messages
-                                        Tab.PROFILE -> Screen.MyProfile
-                                    }
-                            },
+    CompositionLocalProvider(
+        LocalNamecoinService provides namecoinService,
+        LocalNamecoinPreferences provides namecoinPreferences,
+    ) {
+        Scaffold(
+            bottomBar = {
+                if (showBottomBar) {
+                    NavigationBar {
+                        Tab.entries.forEach { tab ->
+                            NavigationBarItem(
+                                icon = { Icon(tab.icon, contentDescription = tab.label, modifier = Modifier.size(24.dp)) },
+                                label = { Text(tab.label, style = MaterialTheme.typography.labelSmall) },
+                                selected = selectedTab == tab,
+                                onClick = {
+                                    selectedTab = tab
+                                    navStack.clear()
+                                    currentScreen =
+                                        when (tab) {
+                                            Tab.FEED -> Screen.Feed
+                                            Tab.SEARCH -> Screen.Search
+                                            Tab.NOTIFICATIONS -> Screen.Notifications
+                                            Tab.MESSAGES -> Screen.Messages
+                                            Tab.PROFILE -> Screen.MyProfile
+                                        }
+                                },
+                            )
+                        }
+                    }
+                }
+            },
+        ) { paddingValues ->
+            Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+                when (val screen = currentScreen) {
+                    is Screen.Feed -> {
+                        IosFeedContent(
+                            relayManager = relayManager,
+                            localCache = localCache,
+                            coordinator = coordinator,
+                            pubKeyHex = account.pubKeyHex,
+                            onNavigateToProfile = { navigateTo(Screen.Profile(it)) },
+                            onNavigateToThread = { navigateTo(Screen.Thread(it)) },
+                        )
+                    }
+
+                    is Screen.Search -> {
+                        NamecoinSearchBar(
+                            namecoinService = namecoinService,
+                            onNavigateToProfile = { navigateTo(Screen.Profile(it)) },
+                        )
+                    }
+
+                    is Screen.Notifications -> {
+                        // TODO: Wire commons notification feed when full notification UI is available
+                        NotificationsPlaceholder(modifier = Modifier.padding(16.dp))
+                    }
+
+                    is Screen.Messages -> {
+                        // TODO: Wire commons chat components when full DM UI is available
+                        MessagesPlaceholder(modifier = Modifier.padding(16.dp))
+                    }
+
+                    is Screen.MyProfile -> {
+                        IosProfileContent(
+                            pubKeyHex = account.pubKeyHex,
+                            relayManager = relayManager,
+                            localCache = localCache,
+                            coordinator = coordinator,
+                            onNavigateToProfile = { navigateTo(Screen.Profile(it)) },
+                            onNavigateToThread = { navigateTo(Screen.Thread(it)) },
+                        )
+                    }
+
+                    is Screen.Profile -> {
+                        IosProfileContent(
+                            pubKeyHex = screen.pubKeyHex,
+                            relayManager = relayManager,
+                            localCache = localCache,
+                            coordinator = coordinator,
+                            onNavigateToProfile = { navigateTo(Screen.Profile(it)) },
+                            onNavigateToThread = { navigateTo(Screen.Thread(it)) },
+                        )
+                    }
+
+                    is Screen.Thread -> {
+                        IosThreadContent(
+                            noteId = screen.noteId,
+                            relayManager = relayManager,
+                            localCache = localCache,
+                            coordinator = coordinator,
+                            onNavigateToProfile = { navigateTo(Screen.Profile(it)) },
+                            onNavigateToThread = { navigateTo(Screen.Thread(it)) },
                         )
                     }
                 }
             }
-        },
-    ) { paddingValues ->
-        Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-            when (val screen = currentScreen) {
-                is Screen.Feed -> {
-                    IosFeedContent(
-                        relayManager = relayManager,
-                        localCache = localCache,
-                        coordinator = coordinator,
-                        pubKeyHex = account.pubKeyHex,
-                        onNavigateToProfile = { navigateTo(Screen.Profile(it)) },
-                        onNavigateToThread = { navigateTo(Screen.Thread(it)) },
-                    )
-                }
-
-                is Screen.Search -> {
-                    // TODO: Wire commons search components when full search UI is available
-                    SearchPlaceholder(modifier = Modifier.padding(16.dp))
-                }
-
-                is Screen.Notifications -> {
-                    // TODO: Wire commons notification feed when full notification UI is available
-                    NotificationsPlaceholder(modifier = Modifier.padding(16.dp))
-                }
-
-                is Screen.Messages -> {
-                    // TODO: Wire commons chat components when full DM UI is available
-                    MessagesPlaceholder(modifier = Modifier.padding(16.dp))
-                }
-
-                is Screen.MyProfile -> {
-                    IosProfileContent(
-                        pubKeyHex = account.pubKeyHex,
-                        relayManager = relayManager,
-                        localCache = localCache,
-                        coordinator = coordinator,
-                        onNavigateToProfile = { navigateTo(Screen.Profile(it)) },
-                        onNavigateToThread = { navigateTo(Screen.Thread(it)) },
-                    )
-                }
-
-                is Screen.Profile -> {
-                    IosProfileContent(
-                        pubKeyHex = screen.pubKeyHex,
-                        relayManager = relayManager,
-                        localCache = localCache,
-                        coordinator = coordinator,
-                        onNavigateToProfile = { navigateTo(Screen.Profile(it)) },
-                        onNavigateToThread = { navigateTo(Screen.Thread(it)) },
-                    )
-                }
-
-                is Screen.Thread -> {
-                    IosThreadContent(
-                        noteId = screen.noteId,
-                        relayManager = relayManager,
-                        localCache = localCache,
-                        coordinator = coordinator,
-                        onNavigateToProfile = { navigateTo(Screen.Profile(it)) },
-                        onNavigateToThread = { navigateTo(Screen.Thread(it)) },
-                    )
-                }
-            }
         }
-    }
+    } // CompositionLocalProvider
 }
 
 // ─── Feed content using commons FeedContentState + FeedViewModel ───
