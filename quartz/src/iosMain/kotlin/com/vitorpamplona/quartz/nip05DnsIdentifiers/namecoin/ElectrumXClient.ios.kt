@@ -20,9 +20,13 @@
  */
 package com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin
 
+import kotlinx.cinterop.COpaquePointer
+import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.StableRef
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.alloc
+import kotlinx.cinterop.asStableRef
 import kotlinx.cinterop.convert
 import kotlinx.cinterop.get
 import kotlinx.cinterop.memScoped
@@ -30,6 +34,7 @@ import kotlinx.cinterop.pointed
 import kotlinx.cinterop.ptr
 import kotlinx.cinterop.reinterpret
 import kotlinx.cinterop.sizeOf
+import kotlinx.cinterop.staticCFunction
 import kotlinx.cinterop.usePinned
 import kotlinx.cinterop.value
 import kotlinx.coroutines.Dispatchers
@@ -49,6 +54,19 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
+import platform.Security.SSLClose
+import platform.Security.SSLConnectionType
+import platform.Security.SSLContextRef
+import platform.Security.SSLCreateContext
+import platform.Security.SSLHandshake
+import platform.Security.SSLProtocolSide
+import platform.Security.SSLRead
+import platform.Security.SSLSetConnection
+import platform.Security.SSLSetIOFuncs
+import platform.Security.SSLSetPeerDomainName
+import platform.Security.SSLSetSessionOption
+import platform.Security.SSLWrite
+import platform.Security.kSSLSessionOptionBreakOnServerAuth
 import platform.posix.AF_INET
 import platform.posix.IPPROTO_TCP
 import platform.posix.SOCK_STREAM
@@ -66,15 +84,14 @@ import kotlin.concurrent.AtomicInt
 /**
  * iOS implementation of the ElectrumX client for Namecoin name resolution.
  *
- * Uses POSIX sockets for TCP connections. TLS is not yet implemented
- * on the iOS side — connections default to plaintext for now.
- * This matches the core ElectrumX protocol (JSON-RPC over TCP).
- *
- * For production use with TLS-only servers, a future version should
- * integrate Apple's SecureTransport or Network.framework.
+ * Uses POSIX sockets for TCP with Apple SecureTransport for TLS.
+ * Self-signed certificate validation is bypassed via
+ * kSSLSessionOptionBreakOnServerAuth (matching the JVM version's
+ * pinned trust store / trust-all approach for ElectrumX servers).
  *
  * Port of the JVM ElectrumXClient replacing:
  * - java.net.Socket → POSIX socket()
+ * - javax.net.ssl.SSLSocket → Apple SecureTransport (SSLCreateContext)
  * - java.security.MessageDigest → CommonCrypto CC_SHA256
  */
 @OptIn(ExperimentalForeignApi::class)
@@ -141,7 +158,7 @@ class ElectrumXClient(
     ): NameShowResult? {
         val connection =
             withTimeoutOrNull(connectTimeoutMs) {
-                PosixSocketConnection.connect(server.host, server.port, connectTimeoutMs)
+                SocketConnection.connect(server.host, server.port, server.useSsl, connectTimeoutMs)
             } ?: throw Exception("Connection timed out to ${server.host}:${server.port}")
 
         try {
@@ -196,29 +213,29 @@ class ElectrumXClient(
         }
     }
 
-    // ── POSIX socket connection ────────────────────────────────────────
+    // ── Socket + TLS connection ────────────────────────────────────────
 
     /**
-     * Line-based TCP connection using POSIX sockets.
+     * Line-based TCP(+TLS) connection.
      *
-     * Note: TLS is not yet implemented on iOS. The default ElectrumX
-     * servers require TLS — this will need SecureTransport integration
-     * for production use with TLS-only servers.
+     * When useSsl=true, wraps the POSIX socket with Apple SecureTransport.
+     * Self-signed certificate validation is bypassed via
+     * kSSLSessionOptionBreakOnServerAuth so that the standard ElectrumX
+     * servers (which use self-signed certs) work without a custom CA.
      */
-    private class PosixSocketConnection(
+    private class SocketConnection private constructor(
         private val fd: Int,
+        private val sslContext: SSLContextRef?,
+        private val fdRef: StableRef<Int>?,
     ) {
         private val readBuffer = StringBuilder()
 
         fun writeLine(line: String) {
             val data = "$line\n".encodeToByteArray()
-            data.usePinned { pinned ->
-                var sent = 0
-                while (sent < data.size) {
-                    val n = send(fd, pinned.addressOf(sent), (data.size - sent).convert(), 0)
-                    if (n <= 0) throw Exception("Socket write failed (errno=$errno)")
-                    sent += n.toInt()
-                }
+            if (sslContext != null) {
+                sslWrite(data)
+            } else {
+                rawWrite(data)
             }
         }
 
@@ -233,8 +250,10 @@ class ElectrumXClient(
             val buf = ByteArray(4096)
             while (true) {
                 val n =
-                    buf.usePinned { pinned ->
-                        recv(fd, pinned.addressOf(0), buf.size.convert(), 0)
+                    if (sslContext != null) {
+                        sslRead(buf)
+                    } else {
+                        rawRead(buf)
                     }
                 if (n <= 0) {
                     return if (readBuffer.isNotEmpty()) {
@@ -246,7 +265,7 @@ class ElectrumXClient(
                     }
                 }
 
-                readBuffer.append(buf.decodeToString(0, n.toInt()))
+                readBuffer.append(buf.decodeToString(0, n))
 
                 val idx = readBuffer.indexOf('\n')
                 if (idx >= 0) {
@@ -258,32 +277,152 @@ class ElectrumXClient(
         }
 
         fun close() {
+            if (sslContext != null) {
+                SSLClose(sslContext)
+                platform.CoreFoundation.CFRelease(sslContext)
+            }
+            fdRef?.dispose()
             close(fd)
         }
 
+        // ── Raw POSIX I/O ──
+
+        private fun rawWrite(data: ByteArray) {
+            data.usePinned { pinned ->
+                var sent = 0
+                while (sent < data.size) {
+                    val n = send(fd, pinned.addressOf(sent), (data.size - sent).convert(), 0)
+                    if (n <= 0) throw Exception("Socket write failed (errno=$errno)")
+                    sent += n.toInt()
+                }
+            }
+        }
+
+        private fun rawRead(buf: ByteArray): Int =
+            buf.usePinned { pinned ->
+                val n = recv(fd, pinned.addressOf(0), buf.size.convert(), 0)
+                if (n < 0) throw Exception("Socket read failed (errno=$errno)")
+                n.toInt()
+            }
+
+        // ── SecureTransport TLS I/O ──
+
+        private fun sslWrite(data: ByteArray) {
+            data.usePinned { pinned ->
+                memScoped {
+                    val processed = alloc<platform.posix.size_tVar>()
+                    var sent = 0
+                    while (sent < data.size) {
+                        val status =
+                            SSLWrite(
+                                sslContext,
+                                pinned.addressOf(sent),
+                                (data.size - sent).convert(),
+                                processed.ptr,
+                            )
+                        if (status != 0 && status != -9803) { // errSSLWouldBlock
+                            throw Exception("SSLWrite failed (status=$status)")
+                        }
+                        sent += processed.value.toInt()
+                    }
+                }
+            }
+        }
+
+        private fun sslRead(buf: ByteArray): Int =
+            buf.usePinned { pinned ->
+                memScoped {
+                    val processed = alloc<platform.posix.size_tVar>()
+                    val status =
+                        SSLRead(
+                            sslContext,
+                            pinned.addressOf(0),
+                            buf.size.convert(),
+                            processed.ptr,
+                        )
+                    if (status != 0 && status != -9805) { // errSSLClosedGraceful
+                        if (processed.value.toInt() == 0) {
+                            throw Exception("SSLRead failed (status=$status)")
+                        }
+                    }
+                    processed.value.toInt()
+                }
+            }
+
         companion object {
+            /**
+             * SecureTransport read callback — reads from the POSIX socket fd.
+             * The `connection` parameter is a StableRef<Int> pointing to the fd.
+             */
+            private val sslReadFunc =
+                staticCFunction {
+                    connection: COpaquePointer?,
+                    data: COpaquePointer?,
+                    dataLength: CPointer<platform.posix.size_tVar>?,
+                    ->
+                    if (connection == null || data == null || dataLength == null) {
+                        return@staticCFunction (-50).toInt() // errSecParam
+                    }
+                    val fd = connection.asStableRef<Int>().get()
+                    val requested = dataLength.pointed.value.convert<Int>()
+                    val n = recv(fd, data, requested.convert(), 0)
+                    if (n < 0) {
+                        dataLength.pointed.value = 0u.convert()
+                        return@staticCFunction (-9806).toInt() // errSSLConnectionRefused
+                    }
+                    if (n == 0L) {
+                        dataLength.pointed.value = 0u.convert()
+                        return@staticCFunction (-9805).toInt() // errSSLClosedGraceful
+                    }
+                    dataLength.pointed.value = n.convert()
+                    0 // noErr
+                }
+
+            /**
+             * SecureTransport write callback — writes to the POSIX socket fd.
+             */
+            private val sslWriteFunc =
+                staticCFunction {
+                    connection: COpaquePointer?,
+                    data: COpaquePointer?,
+                    dataLength: CPointer<platform.posix.size_tVar>?,
+                    ->
+                    if (connection == null || data == null || dataLength == null) {
+                        return@staticCFunction (-50).toInt() // errSecParam
+                    }
+                    val fd = connection.asStableRef<Int>().get()
+                    val requested = dataLength.pointed.value.convert<Int>()
+                    val n = send(fd, data, requested.convert(), 0)
+                    if (n < 0) {
+                        dataLength.pointed.value = 0u.convert()
+                        return@staticCFunction (-9806).toInt() // errSSLConnectionRefused
+                    }
+                    dataLength.pointed.value = n.convert()
+                    0 // noErr
+                }
+
             fun connect(
                 host: String,
                 port: Int,
+                useSsl: Boolean,
                 timeoutMs: Long,
-            ): PosixSocketConnection =
+            ): SocketConnection =
                 memScoped {
+                    // 1. Create POSIX socket and TCP connect
                     val fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)
                     if (fd < 0) throw Exception("socket() failed (errno=$errno)")
 
                     try {
-                        // Resolve hostname
                         val hostent =
                             gethostbyname(host)
                                 ?: throw Exception("DNS resolution failed for $host")
 
                         val addr = alloc<sockaddr_in>()
                         addr.sin_family = AF_INET.convert()
-                        // htons: convert port to network byte order (big-endian)
                         val p = port.toUShort()
-                        addr.sin_port = ((p.toInt() shr 8) or ((p.toInt() and 0xff) shl 8)).toUShort()
+                        addr.sin_port =
+                            ((p.toInt() shr 8) or ((p.toInt() and 0xff) shl 8)).toUShort()
 
-                        // Copy the resolved address
                         val hostentVal = hostent.pointed
                         val addrList =
                             hostentVal.h_addr_list
@@ -291,15 +430,67 @@ class ElectrumXClient(
                         val firstAddr =
                             addrList[0]
                                 ?: throw Exception("No addresses found for $host")
-                        memcpy(addr.sin_addr.ptr, firstAddr, sizeOf<platform.posix.in_addr>().convert())
+                        memcpy(
+                            addr.sin_addr.ptr,
+                            firstAddr,
+                            sizeOf<platform.posix.in_addr>().convert(),
+                        )
 
-                        // Connect (blocking for simplicity)
-                        val result = connect(fd, addr.ptr.reinterpret(), sizeOf<sockaddr_in>().convert())
+                        val result =
+                            connect(fd, addr.ptr.reinterpret(), sizeOf<sockaddr_in>().convert())
                         if (result < 0) {
                             throw Exception("connect() failed to $host:$port (errno=$errno)")
                         }
 
-                        PosixSocketConnection(fd)
+                        if (!useSsl) {
+                            return@memScoped SocketConnection(fd, null, null)
+                        }
+
+                        // 2. Wrap with SecureTransport TLS
+                        val sslCtx =
+                            SSLCreateContext(
+                                null,
+                                SSLProtocolSide.kSSLClientSide,
+                                SSLConnectionType.kSSLStreamType,
+                            )
+                                ?: throw Exception("SSLCreateContext failed")
+
+                        val fdRef = StableRef.create(fd)
+
+                        try {
+                            // Set I/O callbacks that read/write from our POSIX socket
+                            var status = SSLSetIOFuncs(sslCtx, sslReadFunc, sslWriteFunc)
+                            if (status != 0) throw Exception("SSLSetIOFuncs failed ($status)")
+
+                            // Pass the fd reference as the "connection" pointer
+                            status = SSLSetConnection(sslCtx, fdRef.asCPointer())
+                            if (status != 0) throw Exception("SSLSetConnection failed ($status)")
+
+                            // Set peer hostname (for SNI)
+                            SSLSetPeerDomainName(sslCtx, host, host.length.convert())
+
+                            // Allow self-signed certs: break on server auth so we can
+                            // accept it manually. When the handshake returns
+                            // errSSLServerAuthCompleted (-9481), we just continue.
+                            SSLSetSessionOption(sslCtx, kSSLSessionOptionBreakOnServerAuth, true)
+
+                            // 3. Perform TLS handshake
+                            status = SSLHandshake(sslCtx)
+                            // -9481 = errSSLServerAuthCompleted — expected for self-signed
+                            if (status == -9481) {
+                                // Accept the server cert and continue handshake
+                                status = SSLHandshake(sslCtx)
+                            }
+                            if (status != 0) {
+                                throw Exception("TLS handshake failed to $host:$port (status=$status)")
+                            }
+
+                            SocketConnection(fd, sslCtx, fdRef)
+                        } catch (e: Exception) {
+                            fdRef.dispose()
+                            platform.CoreFoundation.CFRelease(sslCtx)
+                            throw e
+                        }
                     } catch (e: Exception) {
                         close(fd)
                         throw e
