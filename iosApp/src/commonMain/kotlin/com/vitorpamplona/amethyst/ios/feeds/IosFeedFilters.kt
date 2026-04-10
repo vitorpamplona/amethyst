@@ -38,9 +38,12 @@ import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.StatusTag
+import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.isForCommunity
+import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
+import com.vitorpamplona.quartz.nipC0CodeSnippets.CodeSnippetEvent
 
 private fun isFeedNote(event: com.vitorpamplona.quartz.nip01Core.core.Event?): Boolean =
     event is TextNoteEvent ||
@@ -50,7 +53,10 @@ private fun isFeedNote(event: com.vitorpamplona.quartz.nip01Core.core.Event?): B
         event is ZapPollEvent ||
         event is CalendarTimeSlotEvent ||
         event is CalendarDateSlotEvent ||
-        event is ClassifiedsEvent
+        event is ClassifiedsEvent ||
+        event is WikiNoteEvent ||
+        event is CodeSnippetEvent ||
+        event is HighlightEvent
 
 /**
  * Global feed: kind 1 text notes + kind 6/16 reposts, sorted by createdAt desc.

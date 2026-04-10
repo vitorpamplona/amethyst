@@ -29,7 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 object FilterBuilders {
     private val FEED_KINDS = listOf(1, 6, 16)
     private val FEED_KINDS_WITH_ARTICLES = listOf(1, 6, 16, 30023)
-    private val FEED_KINDS_ALL = listOf(1, 6, 16, 30023, 6969, 31922, 31923, 30402)
+    private val FEED_KINDS_ALL = listOf(1, 6, 16, 30023, 6969, 31922, 31923, 30402, 30818, 1337, 9802)
 
     fun textNotesGlobal(limit: Int? = null): Filter = Filter(kinds = FEED_KINDS, limit = limit)
 
@@ -300,6 +300,57 @@ object FilterBuilders {
      * Badge definitions (kind 30009) globally.
      */
     fun badgeDefinitionsGlobal(limit: Int? = null): Filter = Filter(kinds = listOf(30009), limit = limit)
+
+    // ── NIP-54 Wiki Articles ──
+
+    /**
+     * Wiki articles (kind 30818).
+     */
+    fun wikiArticles(limit: Int? = null): Filter = Filter(kinds = listOf(30818), limit = limit)
+
+    fun wikiArticlesByAuthors(
+        authors: List<String>,
+        limit: Int? = null,
+    ): Filter = Filter(kinds = listOf(30818), authors = authors, limit = limit)
+
+    // ── NIP-C0 Code Snippets ──
+
+    /**
+     * Code snippets (kind 1337).
+     */
+    fun codeSnippets(limit: Int? = null): Filter = Filter(kinds = listOf(1337), limit = limit)
+
+    fun codeSnippetsByAuthors(
+        authors: List<String>,
+        limit: Int? = null,
+    ): Filter = Filter(kinds = listOf(1337), authors = authors, limit = limit)
+
+    // ── NIP-84 Highlights ──
+
+    /**
+     * Highlights (kind 9802).
+     */
+    fun highlights(limit: Int? = null): Filter = Filter(kinds = listOf(9802), limit = limit)
+
+    fun highlightsByAuthors(
+        authors: List<String>,
+        limit: Int? = null,
+    ): Filter = Filter(kinds = listOf(9802), authors = authors, limit = limit)
+
+    // ── NIP-32 Labels ──
+
+    /**
+     * Label events (kind 1985).
+     */
+    fun labelEvents(limit: Int? = null): Filter = Filter(kinds = listOf(1985), limit = limit)
+
+    /**
+     * Labels targeting specific events.
+     */
+    fun labelsForEvents(
+        eventIds: List<String>,
+        limit: Int? = null,
+    ): Filter = Filter(kinds = listOf(1985), tags = mapOf("e" to eventIds), limit = limit)
 }
 
 /**

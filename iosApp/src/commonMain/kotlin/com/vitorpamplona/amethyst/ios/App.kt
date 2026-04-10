@@ -113,8 +113,14 @@ import com.vitorpamplona.amethyst.ios.ui.calendar.toCalendarEventDisplayData
 import com.vitorpamplona.amethyst.ios.ui.chats.IosChatScreen
 import com.vitorpamplona.amethyst.ios.ui.chats.IosChatroomListState
 import com.vitorpamplona.amethyst.ios.ui.chats.IosConversationListScreen
+import com.vitorpamplona.amethyst.ios.ui.codesnippets.CodeSnippetCard
+import com.vitorpamplona.amethyst.ios.ui.codesnippets.toCodeSnippetDisplayData
 import com.vitorpamplona.amethyst.ios.ui.communities.CommunityDetailScreen
 import com.vitorpamplona.amethyst.ios.ui.communities.CommunityListScreen
+import com.vitorpamplona.amethyst.ios.ui.highlights.HighlightCard
+import com.vitorpamplona.amethyst.ios.ui.highlights.toHighlightDisplayData
+import com.vitorpamplona.amethyst.ios.ui.labels.LabelRow
+import com.vitorpamplona.amethyst.ios.ui.labels.toLabelDisplayData
 import com.vitorpamplona.amethyst.ios.ui.liveactivities.LiveActivityCard
 import com.vitorpamplona.amethyst.ios.ui.liveactivities.LiveActivityDetailScreen
 import com.vitorpamplona.amethyst.ios.ui.liveactivities.toLiveActivityDisplayData
@@ -133,6 +139,8 @@ import com.vitorpamplona.amethyst.ios.ui.polls.toPollDisplayData
 import com.vitorpamplona.amethyst.ios.ui.search.IosSearchScreen
 import com.vitorpamplona.amethyst.ios.ui.toArticleDisplayData
 import com.vitorpamplona.amethyst.ios.ui.toNoteDisplayData
+import com.vitorpamplona.amethyst.ios.ui.wiki.WikiCard
+import com.vitorpamplona.amethyst.ios.ui.wiki.toWikiDisplayData
 import com.vitorpamplona.amethyst.ios.viewmodels.IosFeedViewModel
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArrayOrNull
@@ -157,6 +165,7 @@ import com.vitorpamplona.quartz.nip51Lists.muteList.tags.UserTag
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
@@ -165,7 +174,9 @@ import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.follow.tags.CommunityTag
+import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
+import com.vitorpamplona.quartz.nipC0CodeSnippets.CodeSnippetEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -1766,22 +1777,59 @@ private fun IosFeedContent(
                                     onAuthorClick = onNavigateToProfile,
                                 )
                             }
+                        } else if (event is WikiNoteEvent) {
+                            val wikiData = note.toWikiDisplayData(localCache)
+                            if (wikiData != null) {
+                                WikiCard(
+                                    wiki = wikiData,
+                                    onClick = { onNavigateToThread(event.id) },
+                                    onAuthorClick = onNavigateToProfile,
+                                )
+                            }
+                        } else if (event is CodeSnippetEvent) {
+                            val snippetData = note.toCodeSnippetDisplayData(localCache)
+                            if (snippetData != null) {
+                                CodeSnippetCard(
+                                    snippet = snippetData,
+                                    onClick = { onNavigateToThread(event.id) },
+                                    onAuthorClick = onNavigateToProfile,
+                                )
+                            }
+                        } else if (event is HighlightEvent) {
+                            val highlightData = note.toHighlightDisplayData(localCache)
+                            if (highlightData != null) {
+                                HighlightCard(
+                                    highlight = highlightData,
+                                    onClick = { onNavigateToThread(event.id) },
+                                    onAuthorClick = onNavigateToProfile,
+                                )
+                            }
                         } else {
-                            NoteCard(
-                                note = note.toNoteDisplayData(localCache),
-                                onClick = { onNavigateToThread(event.id) },
-                                onAuthorClick = onNavigateToProfile,
-                                onBoost = onBoost,
-                                onLike = onLike,
-                                onZap = onZap,
-                                onBookmark = onBookmark,
-                                isBookmarked = event.id in bookmarkedNoteIds,
-                                onCopyNoteId = onCopyNoteId,
-                                onCopyNoteText = onCopyNoteText,
-                                onCopyAuthorNpub = onCopyAuthorNpub,
-                                onMuteUser = onMuteUser,
-                                onReport = onReport,
-                            )
+                            val noteDisplayData = note.toNoteDisplayData(localCache)
+                            val labelData = event.toLabelDisplayData()
+                            Column {
+                                NoteCard(
+                                    note = noteDisplayData,
+                                    onClick = { onNavigateToThread(event.id) },
+                                    onAuthorClick = onNavigateToProfile,
+                                    onBoost = onBoost,
+                                    onLike = onLike,
+                                    onZap = onZap,
+                                    onBookmark = onBookmark,
+                                    isBookmarked = event.id in bookmarkedNoteIds,
+                                    onCopyNoteId = onCopyNoteId,
+                                    onCopyNoteText = onCopyNoteText,
+                                    onCopyAuthorNpub = onCopyAuthorNpub,
+                                    onMuteUser = onMuteUser,
+                                    onReport = onReport,
+                                )
+                                if (labelData != null) {
+                                    LabelRow(
+                                        labels = labelData,
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                                    )
+                                }
+                            }
                         }
                     }
                 }
