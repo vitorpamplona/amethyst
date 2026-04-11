@@ -21,8 +21,8 @@
 package com.vitorpamplona.amethyst.commons.richtext
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.amethyst.commons.platform.PlatformFile
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
-import java.io.File
 
 @Immutable
 abstract class BaseMediaContent(
@@ -101,7 +101,7 @@ class EncryptedMediaUrlVideo(
 
 @Immutable
 abstract class MediaPreloadedContent(
-    val localFile: File?,
+    val localFile: PlatformFile?,
     description: String? = null,
     val mimeType: String? = null,
     val isVerified: Boolean? = null,
@@ -115,7 +115,7 @@ abstract class MediaPreloadedContent(
 
 @Immutable
 class MediaLocalImage(
-    localFile: File?,
+    localFile: PlatformFile?,
     mimeType: String? = null,
     description: String? = null,
     dim: DimensionTag? = null,
@@ -126,7 +126,7 @@ class MediaLocalImage(
 
 @Immutable
 class MediaLocalVideo(
-    localFile: File?,
+    localFile: PlatformFile?,
     mimeType: String? = null,
     description: String? = null,
     dim: DimensionTag? = null,

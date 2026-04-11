@@ -26,6 +26,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.layout.ContentScale
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.platform.toPlatformFile
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaLocalImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaLocalVideo
@@ -83,7 +84,7 @@ private fun ObserverAndRenderNIP95(
             val newContent =
                 if (mimeType?.startsWith("image") == true) {
                     MediaLocalImage(
-                        localFile = localDir,
+                        localFile = localDir.toPlatformFile(),
                         mimeType = mimeType,
                         description = description,
                         dim = dimensions,
@@ -93,7 +94,7 @@ private fun ObserverAndRenderNIP95(
                     )
                 } else {
                     MediaLocalVideo(
-                        localFile = localDir,
+                        localFile = localDir.toPlatformFile(),
                         mimeType = mimeType,
                         description = description,
                         dim = dimensions,

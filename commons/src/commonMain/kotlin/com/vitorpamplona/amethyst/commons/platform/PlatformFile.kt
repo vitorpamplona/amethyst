@@ -18,28 +18,12 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.preview
+package com.vitorpamplona.amethyst.commons.platform
 
-import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.commons.platform.parseUrl
-
-@Immutable
-class UrlInfoItem(
-    val url: String = "",
-    val title: String = "",
-    val description: String = "",
-    val image: String = "",
-    val mimeType: String,
+expect class PlatformFile(
+    path: String,
 ) {
-    val verifiedUrl = parseUrl(url)
-    val imageUrlFullPath =
-        if (image.startsWith("/")) {
-            verifiedUrl?.resolve(image) ?: image
-        } else {
-            image
-        }
+    val path: String
 
-    fun fetchComplete(): Boolean = url.isNotEmpty() && image.isNotEmpty()
-
-    fun allFetchComplete(): Boolean = title.isNotEmpty() && description.isNotEmpty() && image.isNotEmpty()
+    fun exists(): Boolean
 }

@@ -18,28 +18,29 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.preview
+package com.vitorpamplona.amethyst.commons.platform
 
-import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.commons.platform.parseUrl
+import java.net.URI
 
-@Immutable
-class UrlInfoItem(
-    val url: String = "",
-    val title: String = "",
-    val description: String = "",
-    val image: String = "",
-    val mimeType: String,
-) {
-    val verifiedUrl = parseUrl(url)
-    val imageUrlFullPath =
-        if (image.startsWith("/")) {
-            verifiedUrl?.resolve(image) ?: image
-        } else {
-            image
-        }
+actual class PlatformUrl
+    actual constructor(
+        url: String,
+    ) {
+        private val javaUrl = URI(url).toURL()
 
-    fun fetchComplete(): Boolean = url.isNotEmpty() && image.isNotEmpty()
+        actual val host: String?
+            get() = javaUrl.host
 
-    fun allFetchComplete(): Boolean = title.isNotEmpty() && description.isNotEmpty() && image.isNotEmpty()
-}
+        actual fun resolve(path: String): String? =
+            runCatching {
+                javaUrl
+                    .toURI()
+                    .resolve(path)
+                    .toURL()
+                    .toString()
+            }.getOrNull()
+
+        actual override fun toString(): String = javaUrl.toString()
+    }
+
+actual fun parseUrl(url: String): PlatformUrl? = runCatching { PlatformUrl(url) }.getOrNull()

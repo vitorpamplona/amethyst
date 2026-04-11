@@ -72,6 +72,7 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.platform.toJavaFile
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaLocalImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaLocalVideo
@@ -350,7 +351,7 @@ private suspend fun saveMediaToGallery(
             },
         )
     } else if (content is MediaPreloadedContent) {
-        content.localFile?.let {
+        content.localFile?.toJavaFile()?.let {
             MediaSaverToDisk.save(
                 it,
                 content.mimeType,
@@ -470,7 +471,7 @@ private fun RenderImageOrVideo(
                         Modifier.fillMaxWidth()
                     }
 
-                content.localFile?.let {
+                content.localFile?.toJavaFile()?.let {
                     val ratio = content.dim?.aspectRatio() ?: MediaAspectRatioCache.get(it.toUri().toString())
 
                     val modifier =
