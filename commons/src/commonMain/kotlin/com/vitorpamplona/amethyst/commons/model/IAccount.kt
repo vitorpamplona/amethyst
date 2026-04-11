@@ -20,7 +20,11 @@
  */
 package com.vitorpamplona.amethyst.commons.model
 
+import com.vitorpamplona.amethyst.commons.marmot.MarmotManager
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupList
+import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.BookmarkListState
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.OldBookmarkListState
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
@@ -34,6 +38,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import com.vitorpamplona.quartz.nip57Zaps.IPrivateZapsDecryptionCache
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.utils.DualCase
+import kotlinx.coroutines.flow.StateFlow
 
 /**
  * Interface for NIP-47 wallet connect signer state.
@@ -119,4 +124,45 @@ interface IAccount {
 
     /** Broadcast pre-created gift wraps (e.g. reactions within group DMs) */
     suspend fun sendGiftWraps(wraps: List<GiftWrapEvent>)
+
+    // --- Members added for ViewModel migration ---
+
+    /** Bookmark list state (NIP-51 kind 10003) */
+    val bookmarkState: BookmarkListState
+
+    /** Old bookmark list state (NIP-51 kind 30001 "bookmark") */
+    val oldBookmarkState: OldBookmarkListState
+
+    /** Custom emoji pack state (NIP-30) */
+    val emoji: EmojiPackState
+
+    /** Marmot MLS group manager (null when MLS unavailable) */
+    val marmotManager: MarmotManager?
+
+    /** Live hidden-users state as a flow for UI observation */
+    val liveHiddenUsers: StateFlow<LiveHiddenUsers>
+
+    /** Whether the given user is in the follow (kind 3) list */
+    fun isFollowing(user: User): Boolean
+
+    /** Whether the given hex-key user is in the follow (kind 3) list */
+    fun isFollowing(userHex: String): Boolean
+
+    /** Whether the given user appears in any follow/people list */
+    fun isKnown(user: User): Boolean
+
+    /** Whether the given hex-key user appears in any follow/people list */
+    fun isKnown(userHex: String): Boolean
+
+    /** Mark a route as read at the given timestamp. Returns true if updated. */
+    fun markAsRead(
+        route: String,
+        timestampInSecs: Long,
+    ): Boolean
+
+    /** Observe last-read timestamp for a route */
+    fun loadLastReadFlow(route: String): StateFlow<Long>
+
+    /** Delete a draft event by tag, swallowing errors */
+    suspend fun deleteDraftIgnoreErrors(draftTag: String)
 }
