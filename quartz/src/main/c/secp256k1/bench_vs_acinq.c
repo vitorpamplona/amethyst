@@ -144,12 +144,14 @@ int main(void) {
     double our_pubkey = (now_us() - t0) / N;
     printf("%-30s %10.1f   %10.1f   %8.2fx\n", "pubkeyCreate", acinq_pubkey, our_pubkey, acinq_pubkey/our_pubkey);
 
-    /* --- signSchnorr --- */
+    /* --- signSchnorr (FAIR: both derive pubkey each call) --- */
     N = 5000;
     t0 = now_us();
     for (int i = 0; i < N; i++) {
         uint8_t s[64];
-        secp256k1_schnorrsig_sign32(acinq_ctx, s, msg, &acinq_kp, NULL);
+        secp256k1_keypair kp_fresh;
+        secp256k1_keypair_create(acinq_ctx, &kp_fresh, PRIVKEY);
+        secp256k1_schnorrsig_sign32(acinq_ctx, s, msg, &kp_fresh, NULL);
     }
     double acinq_sign = (now_us() - t0) / N;
 
@@ -159,7 +161,23 @@ int main(void) {
         secp256k1c_schnorr_sign(s, msg, 32, PRIVKEY, NULL);
     }
     double our_sign = (now_us() - t0) / N;
-    printf("%-30s %10.1f   %10.1f   %8.2fx\n", "signSchnorr", acinq_sign, our_sign, acinq_sign/our_sign);
+    printf("%-30s %10.1f   %10.1f   %8.2fx\n", "sign (full, derive pubkey)", acinq_sign, our_sign, acinq_sign/our_sign);
+
+    /* --- signSchnorr (CACHED: both reuse precomputed pubkey) --- */
+    t0 = now_us();
+    for (int i = 0; i < N; i++) {
+        uint8_t s[64];
+        secp256k1_schnorrsig_sign32(acinq_ctx, s, msg, &acinq_kp, NULL);
+    }
+    double acinq_sign_cached = (now_us() - t0) / N;
+
+    t0 = now_us();
+    for (int i = 0; i < N; i++) {
+        uint8_t s[64];
+        secp256k1c_schnorr_sign_xonly(s, msg, 32, PRIVKEY, our_xonly, NULL);
+    }
+    double our_sign_cached = (now_us() - t0) / N;
+    printf("%-30s %10.1f   %10.1f   %8.2fx\n", "sign (cached pubkey)", acinq_sign_cached, our_sign_cached, acinq_sign_cached/our_sign_cached);
 
     /* --- verifySchnorr (ACINQ = always full BIP-340) --- */
     N = 5000;
