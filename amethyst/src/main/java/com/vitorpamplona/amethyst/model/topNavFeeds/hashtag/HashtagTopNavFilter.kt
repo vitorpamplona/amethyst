@@ -20,43 +20,4 @@
  */
 package com.vitorpamplona.amethyst.model.topNavFeeds.hashtag
 
-import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
-import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.tags.hashtags.isTaggedHashes
-import com.vitorpamplona.quartz.nip22Comments.CommentEvent
-import com.vitorpamplona.quartz.nip73ExternalIds.topics.HashtagId
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-
-@Immutable
-class HashtagTopNavFilter(
-    val hashtags: Set<String>,
-    val relayList: Set<NormalizedRelayUrl>,
-) : IFeedTopNavFilter {
-    val hashtagScopes: Set<String> = hashtags.mapTo(mutableSetOf()) { HashtagId.toScope(it) }
-
-    override fun matchAuthor(pubkey: HexKey): Boolean = true
-
-    override fun match(noteEvent: Event): Boolean =
-        if (noteEvent is CommentEvent) {
-            noteEvent.isTaggedHashes(hashtags) || noteEvent.isTaggedScopes(hashtagScopes)
-        } else {
-            noteEvent.isTaggedHashes(hashtags)
-        }
-
-    override fun toPerRelayFlow(cache: LocalCache): Flow<HashtagTopNavPerRelayFilterSet> =
-        MutableStateFlow(
-            HashtagTopNavPerRelayFilterSet(
-                relayList.associateWith { HashtagTopNavPerRelayFilter(hashtags) },
-            ),
-        )
-
-    override fun startValue(cache: LocalCache): HashtagTopNavPerRelayFilterSet =
-        HashtagTopNavPerRelayFilterSet(
-            relayList.associateWith { HashtagTopNavPerRelayFilter(hashtags) },
-        )
-}
+typealias HashtagTopNavFilter = com.vitorpamplona.amethyst.commons.model.topNavFeeds.hashtag.HashtagTopNavFilter

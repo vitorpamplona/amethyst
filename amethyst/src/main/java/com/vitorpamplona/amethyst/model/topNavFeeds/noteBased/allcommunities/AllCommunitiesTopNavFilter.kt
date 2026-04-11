@@ -20,43 +20,4 @@
  */
 package com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.allcommunities
 
-import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.topNavFeeds.CommunityRelayLoader
-import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
-import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.tags.aTag.isTaggedAddressableNotes
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
-
-@Immutable
-class AllCommunitiesTopNavFilter(
-    val communities: Set<String>,
-    val blockedRelays: StateFlow<Set<NormalizedRelayUrl>>,
-) : IFeedTopNavFilter {
-    override fun matchAuthor(pubkey: HexKey): Boolean = true
-
-    override fun match(noteEvent: Event): Boolean = noteEvent.isTaggedAddressableNotes(communities)
-
-    fun convert(map: Map<NormalizedRelayUrl, Set<HexKey>>) =
-        AllCommunitiesTopNavPerRelayFilterSet(
-            map.mapValues { AllCommunitiesTopNavPerRelayFilter(it.value) },
-        )
-
-    override fun toPerRelayFlow(cache: LocalCache): Flow<AllCommunitiesTopNavPerRelayFilterSet> {
-        val communitiesPerRelay = CommunityRelayLoader.toCommunitiesPerRelayFlow(communities, cache) { it }
-
-        return combine(communitiesPerRelay, blockedRelays) { communitiesPerRelay, blockedRelays ->
-            convert(communitiesPerRelay.minus(blockedRelays))
-        }
-    }
-
-    override fun startValue(cache: LocalCache): AllCommunitiesTopNavPerRelayFilterSet {
-        val communitiesPerRelay = CommunityRelayLoader.communitiesPerRelaySnapshot(communities, cache) { it }
-
-        return convert(communitiesPerRelay.minus(blockedRelays.value))
-    }
-}
+typealias AllCommunitiesTopNavFilter = com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.allcommunities.AllCommunitiesTopNavFilter

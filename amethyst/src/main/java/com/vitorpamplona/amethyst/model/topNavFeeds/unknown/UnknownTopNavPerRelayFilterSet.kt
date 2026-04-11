@@ -20,6 +20,4 @@
  */
 package com.vitorpamplona.amethyst.model.topNavFeeds.unknown
 
-import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavPerRelayFilterSet
-
-object UnknownTopNavPerRelayFilterSet : IFeedTopNavPerRelayFilterSet
+typealias UnknownTopNavPerRelayFilterSet = com.vitorpamplona.amethyst.commons.model.topNavFeeds.unknown.UnknownTopNavPerRelayFilterSet

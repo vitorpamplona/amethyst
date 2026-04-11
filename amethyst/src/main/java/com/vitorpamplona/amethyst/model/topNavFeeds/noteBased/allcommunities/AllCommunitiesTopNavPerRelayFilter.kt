@@ -20,8 +20,4 @@
  */
 package com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.allcommunities
 
-import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavPerRelayFilter
-
-class AllCommunitiesTopNavPerRelayFilter(
-    val communities: Set<String>,
-) : IFeedTopNavPerRelayFilter
+typealias AllCommunitiesTopNavPerRelayFilter = com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.allcommunities.AllCommunitiesTopNavPerRelayFilter

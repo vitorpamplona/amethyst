@@ -20,24 +20,4 @@
  */
 package com.vitorpamplona.amethyst.model.topNavFeeds.unknown
 
-import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.commons.model.TopFilter
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
-import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-
-@Immutable
-class UnknownTopNavFilter(
-    val feedName: TopFilter,
-) : IFeedTopNavFilter {
-    override fun matchAuthor(pubkey: HexKey) = false
-
-    override fun match(noteEvent: Event) = false
-
-    override fun toPerRelayFlow(cache: LocalCache): Flow<UnknownTopNavPerRelayFilterSet> = MutableStateFlow(UnknownTopNavPerRelayFilterSet)
-
-    override fun startValue(cache: LocalCache) = UnknownTopNavPerRelayFilterSet
-}
+typealias UnknownTopNavFilter = com.vitorpamplona.amethyst.commons.model.topNavFeeds.unknown.UnknownTopNavFilter

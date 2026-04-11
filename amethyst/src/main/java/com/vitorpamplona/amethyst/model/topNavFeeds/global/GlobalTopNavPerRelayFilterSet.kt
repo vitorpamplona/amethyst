@@ -20,9 +20,4 @@
  */
 package com.vitorpamplona.amethyst.model.topNavFeeds.global
 
-import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavPerRelayFilterSet
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-
-class GlobalTopNavPerRelayFilterSet(
-    val set: Map<NormalizedRelayUrl, GlobalTopNavPerRelayFilter>,
-) : IFeedTopNavPerRelayFilterSet
+typealias GlobalTopNavPerRelayFilterSet = com.vitorpamplona.amethyst.commons.model.topNavFeeds.global.GlobalTopNavPerRelayFilterSet

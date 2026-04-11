@@ -20,13 +20,4 @@
  */
 package com.vitorpamplona.amethyst.model.topNavFeeds.aroundMe
 
-import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavPerRelayFilter
-import com.vitorpamplona.quartz.nip73ExternalIds.location.GeohashId
-
-@Immutable
-class LocationTopNavPerRelayFilter(
-    val geotags: Set<String>,
-) : IFeedTopNavPerRelayFilter {
-    val geotagScopes: Set<String> = geotags.mapTo(mutableSetOf()) { GeohashId.toScope(it) }
-}
+typealias LocationTopNavPerRelayFilter = com.vitorpamplona.amethyst.commons.model.topNavFeeds.aroundMe.LocationTopNavPerRelayFilter

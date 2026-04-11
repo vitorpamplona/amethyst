@@ -20,45 +20,4 @@
  */
 package com.vitorpamplona.amethyst.model.topNavFeeds.aroundMe
 
-import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
-import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.tags.geohash.isTaggedGeoHashes
-import com.vitorpamplona.quartz.nip22Comments.CommentEvent
-import com.vitorpamplona.quartz.nip73ExternalIds.location.GeohashId
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-
-@Immutable
-class LocationTopNavFilter(
-    val geotags: Set<String>,
-    val relayList: Set<NormalizedRelayUrl>,
-) : IFeedTopNavFilter {
-    val geotagScopes: Set<String> = geotags.mapTo(mutableSetOf()) { GeohashId.toScope(it) }
-
-    override fun matchAuthor(pubkey: HexKey): Boolean = true
-
-    override fun match(noteEvent: Event): Boolean {
-        if (geotags.isEmpty()) return false
-
-        return if (noteEvent is CommentEvent) {
-            noteEvent.isTaggedGeoHashes(geotags) ||
-                noteEvent.isTaggedScopes(geotagScopes)
-        } else {
-            noteEvent.isTaggedGeoHashes(geotags)
-        }
-    }
-
-    override fun toPerRelayFlow(cache: LocalCache): Flow<LocationTopNavPerRelayFilterSet> =
-        MutableStateFlow(
-            LocationTopNavPerRelayFilterSet(relayList.associateWith { LocationTopNavPerRelayFilter(geotags) }),
-        )
-
-    override fun startValue(cache: LocalCache): LocationTopNavPerRelayFilterSet =
-        LocationTopNavPerRelayFilterSet(
-            relayList.associateWith { LocationTopNavPerRelayFilter(geotags) },
-        )
-}
+typealias LocationTopNavFilter = com.vitorpamplona.amethyst.commons.model.topNavFeeds.aroundMe.LocationTopNavFilter

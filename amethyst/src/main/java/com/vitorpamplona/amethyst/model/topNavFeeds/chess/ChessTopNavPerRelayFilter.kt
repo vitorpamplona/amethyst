@@ -20,8 +20,4 @@
  */
 package com.vitorpamplona.amethyst.model.topNavFeeds.chess
 
-import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavPerRelayFilter
-
-@Immutable
-object ChessTopNavPerRelayFilter : IFeedTopNavPerRelayFilter
+typealias ChessTopNavPerRelayFilter = com.vitorpamplona.amethyst.commons.model.topNavFeeds.chess.ChessTopNavPerRelayFilter

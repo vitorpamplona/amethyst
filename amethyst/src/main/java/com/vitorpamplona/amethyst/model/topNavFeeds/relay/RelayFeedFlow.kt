@@ -20,22 +20,4 @@
  */
 package com.vitorpamplona.amethyst.model.topNavFeeds.relay
 
-import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedFlowsType
-import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import kotlinx.coroutines.flow.FlowCollector
-import kotlinx.coroutines.flow.MutableStateFlow
-
-class RelayFeedFlow(
-    val relayUrl: NormalizedRelayUrl,
-) : IFeedFlowsType {
-    val default = RelayTopNavFilter(relayUrl)
-
-    override fun flow() = MutableStateFlow(default)
-
-    override fun startValue(): RelayTopNavFilter = default
-
-    override suspend fun startValue(collector: FlowCollector<IFeedTopNavFilter>) {
-        collector.emit(startValue())
-    }
-}
+typealias RelayFeedFlow = com.vitorpamplona.amethyst.commons.model.topNavFeeds.relay.RelayFeedFlow

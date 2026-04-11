@@ -20,9 +20,4 @@
  */
 package com.vitorpamplona.amethyst.model.topNavFeeds.hashtag
 
-import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavPerRelayFilterSet
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-
-class HashtagTopNavPerRelayFilterSet(
-    val set: Map<NormalizedRelayUrl, HashtagTopNavPerRelayFilter>,
-) : IFeedTopNavPerRelayFilterSet
+typealias HashtagTopNavPerRelayFilterSet = com.vitorpamplona.amethyst.commons.model.topNavFeeds.hashtag.HashtagTopNavPerRelayFilterSet

@@ -20,8 +20,4 @@
  */
 package com.vitorpamplona.amethyst.model.topNavFeeds.relay
 
-import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavPerRelayFilter
-
-@Immutable
-object RelayTopNavPerRelayFilter : IFeedTopNavPerRelayFilter
+typealias RelayTopNavPerRelayFilter = com.vitorpamplona.amethyst.commons.model.topNavFeeds.relay.RelayTopNavPerRelayFilter

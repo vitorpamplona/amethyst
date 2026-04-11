@@ -20,9 +20,4 @@
  */
 package com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted
 
-import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavPerRelayFilterSet
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-
-class MutedAuthorsTopNavPerRelayFilterSet(
-    val set: Map<NormalizedRelayUrl, MutedAuthorsTopNavPerRelayFilter>,
-) : IFeedTopNavPerRelayFilterSet
+typealias MutedAuthorsTopNavPerRelayFilterSet = com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet

@@ -20,25 +20,4 @@
  */
 package com.vitorpamplona.amethyst.model.topNavFeeds.global
 
-import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedFlowsType
-import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import kotlinx.coroutines.flow.FlowCollector
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-
-class GlobalFeedFlow(
-    val outboxRelays: StateFlow<Set<NormalizedRelayUrl>>,
-    val proxyRelays: StateFlow<Set<NormalizedRelayUrl>>,
-    val relayFeeds: StateFlow<Set<NormalizedRelayUrl>>,
-) : IFeedFlowsType {
-    val default = GlobalTopNavFilter(outboxRelays, proxyRelays, relayFeeds)
-
-    override fun flow() = MutableStateFlow(default)
-
-    override fun startValue(): GlobalTopNavFilter = default
-
-    override suspend fun startValue(collector: FlowCollector<IFeedTopNavFilter>) {
-        collector.emit(startValue())
-    }
-}
+typealias GlobalFeedFlow = com.vitorpamplona.amethyst.commons.model.topNavFeeds.global.GlobalFeedFlow

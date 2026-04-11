@@ -20,48 +20,4 @@
  */
 package com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author
 
-import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
-import com.vitorpamplona.amethyst.model.topNavFeeds.OutboxRelayLoader
-import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
-
-@Immutable
-class AuthorsByOutboxTopNavFilter(
-    val authors: Set<String>,
-    val blockedRelays: StateFlow<Set<NormalizedRelayUrl>>,
-) : IFeedTopNavFilter {
-    override fun matchAuthor(pubkey: HexKey) = pubkey in authors
-
-    override fun match(noteEvent: Event): Boolean =
-        if (noteEvent is LiveActivitiesEvent) {
-            noteEvent.participantsIntersect(authors)
-        } else {
-            noteEvent.pubKey in authors
-        }
-
-    fun convert(map: Map<NormalizedRelayUrl, Set<HexKey>>) =
-        AuthorsTopNavPerRelayFilterSet(
-            map.mapValues { AuthorsTopNavPerRelayFilter(it.value) },
-        )
-
-    override fun toPerRelayFlow(cache: LocalCache): Flow<AuthorsTopNavPerRelayFilterSet> {
-        val authorsPerRelay = OutboxRelayLoader().toAuthorsPerRelayFlow(authors, cache) { it }
-
-        return combine(authorsPerRelay, blockedRelays) { authors, blocked ->
-            convert(authors.minus(blocked))
-        }
-    }
-
-    override fun startValue(cache: LocalCache): AuthorsTopNavPerRelayFilterSet {
-        val authorsPerRelay = OutboxRelayLoader().authorsPerRelaySnapshot(authors, cache) { it }
-
-        return convert(authorsPerRelay.minus(blockedRelays.value))
-    }
-}
+typealias AuthorsByOutboxTopNavFilter = com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.author.AuthorsByOutboxTopNavFilter

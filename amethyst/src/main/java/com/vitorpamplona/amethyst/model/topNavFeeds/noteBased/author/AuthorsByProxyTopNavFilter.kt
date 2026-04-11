@@ -20,39 +20,4 @@
  */
 package com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author
 
-import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
-import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-
-@Immutable
-class AuthorsByProxyTopNavFilter(
-    val authors: Set<String>,
-    val proxyRelays: Set<NormalizedRelayUrl>,
-) : IFeedTopNavFilter {
-    override fun matchAuthor(pubkey: HexKey) = pubkey in authors
-
-    override fun match(noteEvent: Event): Boolean =
-        if (noteEvent is LiveActivitiesEvent) {
-            noteEvent.participantsIntersect(authors)
-        } else {
-            noteEvent.pubKey in authors
-        }
-
-    override fun toPerRelayFlow(cache: LocalCache): Flow<AuthorsTopNavPerRelayFilterSet> =
-        MutableStateFlow(
-            AuthorsTopNavPerRelayFilterSet(
-                proxyRelays.associateWith { AuthorsTopNavPerRelayFilter(authors) },
-            ),
-        )
-
-    override fun startValue(cache: LocalCache): AuthorsTopNavPerRelayFilterSet =
-        AuthorsTopNavPerRelayFilterSet(
-            proxyRelays.associateWith { AuthorsTopNavPerRelayFilter(authors) },
-        )
-}
+typealias AuthorsByProxyTopNavFilter = com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.author.AuthorsByProxyTopNavFilter

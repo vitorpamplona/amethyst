@@ -20,24 +20,4 @@
  */
 package com.vitorpamplona.amethyst.model.topNavFeeds.chess
 
-import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedFlowsType
-import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import kotlinx.coroutines.flow.FlowCollector
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-
-class ChessFeedFlow(
-    val outboxRelays: StateFlow<Set<NormalizedRelayUrl>>,
-    val proxyRelays: StateFlow<Set<NormalizedRelayUrl>>,
-) : IFeedFlowsType {
-    val default = ChessTopNavFilter(outboxRelays, proxyRelays)
-
-    override fun flow() = MutableStateFlow(default)
-
-    override fun startValue(): ChessTopNavFilter = default
-
-    override suspend fun startValue(collector: FlowCollector<IFeedTopNavFilter>) {
-        collector.emit(startValue())
-    }
-}
+typealias ChessFeedFlow = com.vitorpamplona.amethyst.commons.model.topNavFeeds.chess.ChessFeedFlow

@@ -20,10 +20,4 @@
  */
 package com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author
 
-import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavPerRelayFilter
-
-@Immutable
-class AuthorsTopNavPerRelayFilter(
-    val authors: Set<String>,
-) : IFeedTopNavPerRelayFilter
+typealias AuthorsTopNavPerRelayFilter = com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilter

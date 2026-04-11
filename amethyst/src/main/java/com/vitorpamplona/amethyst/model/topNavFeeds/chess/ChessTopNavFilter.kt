@@ -20,44 +20,4 @@
  */
 package com.vitorpamplona.amethyst.model.topNavFeeds.chess
 
-import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
-import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip64Chess.challenge.offer.LiveChessGameChallengeEvent
-import com.vitorpamplona.quartz.nip64Chess.end.LiveChessGameEndEvent
-import com.vitorpamplona.quartz.nip64Chess.game.ChessGameEvent
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
-
-@Immutable
-class ChessTopNavFilter(
-    val outboxRelays: StateFlow<Set<NormalizedRelayUrl>>,
-    val proxyRelays: StateFlow<Set<NormalizedRelayUrl>>,
-) : IFeedTopNavFilter {
-    override fun matchAuthor(pubkey: HexKey): Boolean = true
-
-    override fun match(noteEvent: Event) =
-        noteEvent is ChessGameEvent ||
-            noteEvent is LiveChessGameChallengeEvent ||
-            noteEvent is LiveChessGameEndEvent
-
-    override fun toPerRelayFlow(cache: LocalCache): Flow<ChessTopNavPerRelayFilterSet> =
-        combine(outboxRelays, proxyRelays) { outboxRelays, proxyRelays ->
-            if (proxyRelays.isNotEmpty()) {
-                ChessTopNavPerRelayFilterSet(proxyRelays.associateWith { ChessTopNavPerRelayFilter })
-            } else {
-                ChessTopNavPerRelayFilterSet(outboxRelays.associateWith { ChessTopNavPerRelayFilter })
-            }
-        }
-
-    override fun startValue(cache: LocalCache): ChessTopNavPerRelayFilterSet =
-        if (proxyRelays.value.isNotEmpty()) {
-            ChessTopNavPerRelayFilterSet(proxyRelays.value.associateWith { ChessTopNavPerRelayFilter })
-        } else {
-            ChessTopNavPerRelayFilterSet(outboxRelays.value.associateWith { ChessTopNavPerRelayFilter })
-        }
-}
+typealias ChessTopNavFilter = com.vitorpamplona.amethyst.commons.model.topNavFeeds.chess.ChessTopNavFilter

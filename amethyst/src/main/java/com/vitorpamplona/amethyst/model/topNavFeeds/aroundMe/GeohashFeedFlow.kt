@@ -20,34 +20,4 @@
  */
 package com.vitorpamplona.amethyst.model.topNavFeeds.aroundMe
 
-import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedFlowsType
-import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.FlowCollector
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
-
-class GeohashFeedFlow(
-    val geohash: String,
-    val outboxRelays: StateFlow<Set<NormalizedRelayUrl>>,
-    val proxyRelays: StateFlow<Set<NormalizedRelayUrl>>,
-) : IFeedFlowsType {
-    fun buildFilter(relays: Set<NormalizedRelayUrl>) = LocationTopNavFilter(setOf(geohash), relays)
-
-    override fun flow(): Flow<IFeedTopNavFilter> =
-        combine(outboxRelays, proxyRelays) { outbox, proxy ->
-            if (proxy.isNotEmpty()) buildFilter(proxy) else buildFilter(outbox)
-        }
-
-    override fun startValue(): LocationTopNavFilter =
-        if (proxyRelays.value.isNotEmpty()) {
-            buildFilter(proxyRelays.value)
-        } else {
-            buildFilter(outboxRelays.value)
-        }
-
-    override suspend fun startValue(collector: FlowCollector<IFeedTopNavFilter>) {
-        collector.emit(startValue())
-    }
-}
+typealias GeohashFeedFlow = com.vitorpamplona.amethyst.commons.model.topNavFeeds.aroundMe.GeohashFeedFlow

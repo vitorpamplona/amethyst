@@ -20,9 +20,4 @@
  */
 package com.vitorpamplona.amethyst.model.topNavFeeds.relay
 
-import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavPerRelayFilterSet
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-
-class RelayTopNavPerRelayFilterSet(
-    val relayUrl: NormalizedRelayUrl,
-) : IFeedTopNavPerRelayFilterSet
+typealias RelayTopNavPerRelayFilterSet = com.vitorpamplona.amethyst.commons.model.topNavFeeds.relay.RelayTopNavPerRelayFilterSet

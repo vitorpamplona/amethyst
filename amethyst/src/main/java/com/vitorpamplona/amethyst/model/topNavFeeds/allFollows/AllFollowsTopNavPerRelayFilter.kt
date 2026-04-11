@@ -20,21 +20,4 @@
  */
 package com.vitorpamplona.amethyst.model.topNavFeeds.allFollows
 
-import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavPerRelayFilter
-import com.vitorpamplona.quartz.nip73ExternalIds.location.GeohashId
-import com.vitorpamplona.quartz.nip73ExternalIds.topics.HashtagId
-
-/**
- * This is a big OR filter.
- */
-@Immutable
-class AllFollowsTopNavPerRelayFilter(
-    val authors: Set<String>? = null,
-    val hashtags: Set<String>? = null,
-    val geotags: Set<String>? = null,
-    val communities: Set<String>? = null,
-) : IFeedTopNavPerRelayFilter {
-    val geotagScopes: Set<String>? = geotags?.mapTo(mutableSetOf()) { GeohashId.toScope(it) }
-    val hashtagScopes: Set<String>? = hashtags?.mapTo(mutableSetOf()) { HashtagId.toScope(it) }
-}
+typealias AllFollowsTopNavPerRelayFilter = com.vitorpamplona.amethyst.commons.model.topNavFeeds.allFollows.AllFollowsTopNavPerRelayFilter

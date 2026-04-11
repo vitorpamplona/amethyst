@@ -20,13 +20,4 @@
  */
 package com.vitorpamplona.amethyst.model.topNavFeeds.hashtag
 
-import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavPerRelayFilter
-import com.vitorpamplona.quartz.nip73ExternalIds.topics.HashtagId
-
-@Immutable
-class HashtagTopNavPerRelayFilter(
-    val hashtags: Set<String>,
-) : IFeedTopNavPerRelayFilter {
-    val hashtagScopes: Set<String> = hashtags.mapTo(mutableSetOf()) { HashtagId.toScope(it) }
-}
+typealias HashtagTopNavPerRelayFilter = com.vitorpamplona.amethyst.commons.model.topNavFeeds.hashtag.HashtagTopNavPerRelayFilter

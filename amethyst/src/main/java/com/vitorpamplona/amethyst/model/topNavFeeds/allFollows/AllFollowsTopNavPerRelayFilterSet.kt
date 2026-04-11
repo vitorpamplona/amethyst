@@ -20,9 +20,4 @@
  */
 package com.vitorpamplona.amethyst.model.topNavFeeds.allFollows
 
-import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavPerRelayFilterSet
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-
-class AllFollowsTopNavPerRelayFilterSet(
-    val set: Map<NormalizedRelayUrl, AllFollowsTopNavPerRelayFilter>,
-) : IFeedTopNavPerRelayFilterSet
+typealias AllFollowsTopNavPerRelayFilterSet = com.vitorpamplona.amethyst.commons.model.topNavFeeds.allFollows.AllFollowsTopNavPerRelayFilterSet

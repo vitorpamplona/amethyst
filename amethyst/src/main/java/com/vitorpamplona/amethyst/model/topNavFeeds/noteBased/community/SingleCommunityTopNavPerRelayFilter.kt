@@ -20,14 +20,4 @@
  */
 package com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.community
 
-import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavPerRelayFilter
-import com.vitorpamplona.quartz.nip01Core.core.Address
-
-@Immutable
-class SingleCommunityTopNavPerRelayFilter(
-    val community: String,
-    val authors: Set<String>?,
-) : IFeedTopNavPerRelayFilter {
-    val communityAddress = Address.parse(community)
-}
+typealias SingleCommunityTopNavPerRelayFilter = com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.community.SingleCommunityTopNavPerRelayFilter

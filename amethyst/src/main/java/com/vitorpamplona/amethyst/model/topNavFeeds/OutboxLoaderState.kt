@@ -20,35 +20,4 @@
  */
 package com.vitorpamplona.amethyst.model.topNavFeeds
 
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.topNavFeeds.unknown.UnknownTopNavPerRelayFilterSet
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.emitAll
-import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.onStart
-import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.transformLatest
-
-class OutboxLoaderState(
-    topNavFilter: StateFlow<IFeedTopNavFilter>,
-    cache: LocalCache,
-    scope: CoroutineScope,
-) {
-    @OptIn(ExperimentalCoroutinesApi::class)
-    val flow: StateFlow<IFeedTopNavPerRelayFilterSet> =
-        topNavFilter
-            .transformLatest { filterSettings ->
-                emitAll(filterSettings.toPerRelayFlow(cache))
-            }.onStart {
-                emit(topNavFilter.value.startValue(cache))
-            }.flowOn(Dispatchers.IO)
-            .stateIn(
-                scope,
-                SharingStarted.Eagerly,
-                UnknownTopNavPerRelayFilterSet,
-            )
-}
+typealias OutboxLoaderState = com.vitorpamplona.amethyst.commons.model.topNavFeeds.OutboxLoaderState

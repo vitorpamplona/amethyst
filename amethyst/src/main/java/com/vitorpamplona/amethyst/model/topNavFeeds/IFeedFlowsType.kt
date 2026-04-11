@@ -20,13 +20,4 @@
  */
 package com.vitorpamplona.amethyst.model.topNavFeeds
 
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.FlowCollector
-
-interface IFeedFlowsType {
-    fun flow(): Flow<IFeedTopNavFilter>
-
-    fun startValue(): IFeedTopNavFilter
-
-    suspend fun startValue(collector: FlowCollector<IFeedTopNavFilter>)
-}
+typealias IFeedFlowsType = com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedFlowsType

@@ -20,9 +20,4 @@
  */
 package com.vitorpamplona.amethyst.model.topNavFeeds.chess
 
-import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavPerRelayFilterSet
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-
-class ChessTopNavPerRelayFilterSet(
-    val set: Map<NormalizedRelayUrl, ChessTopNavPerRelayFilter>,
-) : IFeedTopNavPerRelayFilterSet
+typealias ChessTopNavPerRelayFilterSet = com.vitorpamplona.amethyst.commons.model.topNavFeeds.chess.ChessTopNavPerRelayFilterSet

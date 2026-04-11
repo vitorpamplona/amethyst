@@ -20,9 +20,4 @@
  */
 package com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.community
 
-import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavPerRelayFilterSet
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-
-class SingleCommunityTopNavPerRelayFilterSet(
-    val set: Map<NormalizedRelayUrl, SingleCommunityTopNavPerRelayFilter>,
-) : IFeedTopNavPerRelayFilterSet
+typealias SingleCommunityTopNavPerRelayFilterSet = com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.community.SingleCommunityTopNavPerRelayFilterSet
