@@ -33,12 +33,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.recommended_apps
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun DisplayAppRecommendations(
@@ -58,7 +59,7 @@ fun DisplayAppRecommendations(
         when (state) {
             is FeedState.Loaded -> {
                 Column {
-                    Text(stringRes(id = R.string.recommended_apps))
+                    Text(stringResource(Res.string.recommended_apps))
 
                     Recommends(state, accountViewModel, nav)
                 }

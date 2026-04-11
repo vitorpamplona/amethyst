@@ -28,10 +28,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.new_chess_game
 import com.vitorpamplona.amethyst.ui.theme.Size26Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Simple floating action button for creating new chess game challenges.
@@ -47,7 +48,7 @@ fun NewChessGameButton(onClick: () -> Unit) {
     ) {
         Icon(
             imageVector = Icons.Default.Add,
-            contentDescription = stringRes(R.string.new_chess_game),
+            contentDescription = stringResource(Res.string.new_chess_game),
             modifier = Size26Modifier,
             tint = Color.White,
         )

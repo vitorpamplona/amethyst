@@ -26,9 +26,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.accessibility_send
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun ThinSendButton(
@@ -43,7 +44,7 @@ fun ThinSendButton(
     ) {
         Icon(
             imageVector = Icons.AutoMirrored.Filled.Send,
-            contentDescription = stringRes(id = R.string.accessibility_send),
+            contentDescription = stringResource(Res.string.accessibility_send),
             modifier = Size20Modifier,
         )
     }

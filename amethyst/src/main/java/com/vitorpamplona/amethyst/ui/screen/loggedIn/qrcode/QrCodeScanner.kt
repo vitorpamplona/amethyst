@@ -26,13 +26,14 @@ import androidx.compose.runtime.DisposableEffect
 import com.google.zxing.client.android.Intents
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.point_to_the_qr_code
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.uriToRoute
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun NIP19QrCodeScanner(
@@ -69,7 +70,7 @@ fun SimpleQrCodeScanner(onScan: (String?) -> Unit) {
     val scanOptions =
         ScanOptions().apply {
             setDesiredBarcodeFormats(ScanOptions.QR_CODE)
-            setPrompt(stringRes(id = R.string.point_to_the_qr_code))
+            setPrompt(stringResource(Res.string.point_to_the_qr_code))
             setBeepEnabled(false)
             setOrientationLocked(false)
             addExtra(Intents.Scan.SCAN_TYPE, Intents.Scan.MIXED_SCAN)

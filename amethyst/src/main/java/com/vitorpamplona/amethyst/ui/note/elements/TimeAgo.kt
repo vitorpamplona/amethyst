@@ -30,12 +30,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.now
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.note.timeAgoShort
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun TimeAgo(note: Note) {
@@ -60,7 +61,7 @@ fun NormalTimeAgo(
     baseNote: Note,
     modifier: Modifier,
 ) {
-    val nowStr = stringRes(id = R.string.now)
+    val nowStr = stringResource(Res.string.now)
 
     val time by
         remember(baseNote) { derivedStateOf { timeAgoShort(baseNote.createdAt() ?: 0L, nowStr) } }

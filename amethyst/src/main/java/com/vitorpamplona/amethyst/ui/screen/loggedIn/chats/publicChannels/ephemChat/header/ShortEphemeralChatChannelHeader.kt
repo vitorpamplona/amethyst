@@ -34,8 +34,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.profile_image
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserIsFollowingChannel
@@ -44,9 +45,9 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.header.actions.JoinChatButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.header.actions.LeaveChatButton
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.HeaderPictureModifier
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun ShortEphemeralChatChannelHeader(
@@ -98,7 +99,7 @@ private fun DrawRelayIcon(
     RobohashFallbackAsyncImage(
         robot = channel.roomId.toKey(),
         model = relayInfo.icon,
-        contentDescription = stringRes(R.string.profile_image),
+        contentDescription = stringResource(Res.string.profile_image),
         contentScale = ContentScale.Crop,
         modifier = HeaderPictureModifier,
         loadProfilePicture = accountViewModel.settings.showProfilePictures(),

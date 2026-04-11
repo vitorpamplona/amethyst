@@ -29,8 +29,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.ai_writing_help
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun AiWritingHelpButton(
@@ -42,7 +43,7 @@ fun AiWritingHelpButton(
     ) {
         Icon(
             imageVector = Icons.Outlined.AutoAwesome,
-            contentDescription = stringRes(R.string.ai_writing_help),
+            contentDescription = stringResource(Res.string.ai_writing_help),
             modifier = Modifier.height(22.dp),
             tint =
                 if (isActive) {

@@ -22,15 +22,16 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.relays
 
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.relays
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun RelaysTabHeader(
     baseUser: User,
     accountViewModel: AccountViewModel,
 ) {
-    Text(text = stringRes(R.string.relays))
+    Text(text = stringResource(Res.string.relays))
 }

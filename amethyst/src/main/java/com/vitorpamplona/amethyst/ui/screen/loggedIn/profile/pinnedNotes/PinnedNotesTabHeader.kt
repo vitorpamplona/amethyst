@@ -23,11 +23,12 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.pinnedNotes
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.pinned_notes
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserPinnedNotesCount
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun PinnedNotesTabHeader(
@@ -36,5 +37,5 @@ fun PinnedNotesTabHeader(
 ) {
     val count by observeUserPinnedNotesCount(baseUser, accountViewModel)
 
-    Text(text = "$count ${stringRes(R.string.pinned_notes)}")
+    Text(text = "$count ${stringResource(Res.string.pinned_notes)}")
 }

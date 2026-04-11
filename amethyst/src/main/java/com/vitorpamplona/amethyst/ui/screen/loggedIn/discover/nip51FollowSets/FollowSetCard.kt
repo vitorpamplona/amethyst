@@ -37,7 +37,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.preview_card_image_for
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteAndMap
@@ -53,7 +54,6 @@ import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageBanner
 import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageBannerBackground
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.FollowSetImageModifier
 import com.vitorpamplona.amethyst.ui.theme.RowColSpacing5dp
@@ -65,6 +65,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
+import org.jetbrains.compose.resources.stringResource
 
 @Immutable
 data class FollowSetCard(
@@ -169,10 +170,7 @@ fun RenderFollowSetThumb(
                 MyAsyncImage(
                     imageUrl = it,
                     contentDescription =
-                        stringRes(
-                            R.string.preview_card_image_for,
-                            it,
-                        ),
+                        stringResource(Res.string.preview_card_image_for, it),
                     contentScale = ContentScale.Crop,
                     mainImageModifier = FollowSetImageModifier,
                     loadedImageModifier = Modifier,

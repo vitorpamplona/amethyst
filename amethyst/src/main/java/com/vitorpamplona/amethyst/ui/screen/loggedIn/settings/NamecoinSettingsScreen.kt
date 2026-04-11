@@ -34,13 +34,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.namecoin_settings
 import com.vitorpamplona.amethyst.model.preferences.NamecoinSharedPreferences
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumXClient
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -64,7 +65,7 @@ fun NamecoinSettingsScreen(
 
     Scaffold(
         topBar = {
-            TopBarWithBackButton(stringRes(id = R.string.namecoin_settings), nav::popBack)
+            TopBarWithBackButton(stringResource(Res.string.namecoin_settings), nav::popBack)
         },
     ) {
         Column(

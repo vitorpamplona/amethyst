@@ -24,8 +24,9 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.create
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun CreateButton(
@@ -38,6 +39,6 @@ fun CreateButton(
         modifier = modifier,
         onClick = onPost,
     ) {
-        Text(text = stringRes(R.string.create))
+        Text(text = stringResource(Res.string.create))
     }
 }

@@ -42,12 +42,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.use_direct_url
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size40Modifier
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun ShowEmojiSuggestionList(
@@ -89,7 +90,7 @@ fun ShowEmojiSuggestionList(
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.OpenInFull,
-                            contentDescription = stringRes(R.string.use_direct_url),
+                            contentDescription = stringResource(Res.string.use_direct_url),
                             modifier = Modifier.size(20.dp),
                         )
                     }

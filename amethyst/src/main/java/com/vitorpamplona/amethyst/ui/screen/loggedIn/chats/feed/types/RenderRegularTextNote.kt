@@ -25,16 +25,17 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.could_not_decrypt_the_message
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.LoadDecryptedContentOrNull
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun RenderRegularTextNote(
@@ -68,7 +69,7 @@ fun RenderRegularTextNote(
             }
         } else {
             TranslatableRichTextViewer(
-                content = stringRes(id = R.string.could_not_decrypt_the_message),
+                content = stringResource(Res.string.could_not_decrypt_the_message),
                 canPreview = true,
                 quotesLeft = 0,
                 modifier = Modifier,
