@@ -119,6 +119,9 @@ void gej_double(secp256k1_gej *r, const secp256k1_gej *p) {
 
 /* Mixed addition: r = p + q where q is affine (Z=1). 8M + 3S */
 void gej_add_ge(secp256k1_gej *r, const secp256k1_gej *p, const secp256k1_ge *q) {
+    /* Handle aliasing: if r == p, copy input first */
+    secp256k1_gej tmp;
+    if (r == p) { tmp = *p; p = &tmp; }
     secp256k1_fe z12, z13, u2, s2, h, h2, i, j, rr, v, t;
 
     if (p->infinity) {
@@ -196,6 +199,10 @@ void gej_add_ge(secp256k1_gej *r, const secp256k1_gej *p, const secp256k1_ge *q)
 
 /* Full Jacobian addition: r = p + q (11M + 5S) */
 void gej_add(secp256k1_gej *r, const secp256k1_gej *p, const secp256k1_gej *q) {
+    /* Handle aliasing */
+    secp256k1_gej tp, tq;
+    if (r == p) { tp = *p; p = &tp; }
+    if (r == q) { tq = *q; q = &tq; }
     secp256k1_fe z12, z22, u1, u2, s1, s2, h, h2, i, j, rr, v, t;
 
     if (p->infinity) { *r = *q; return; }
