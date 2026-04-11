@@ -68,17 +68,30 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.add_language
+import com.vitorpamplona.amethyst.commons.resources.add_language_pair
+import com.vitorpamplona.amethyst.commons.resources.delete_preference
+import com.vitorpamplona.amethyst.commons.resources.language_preference_pair
+import com.vitorpamplona.amethyst.commons.resources.no_language_preferences
+import com.vitorpamplona.amethyst.commons.resources.quick_action_select
+import com.vitorpamplona.amethyst.commons.resources.remove_language
+import com.vitorpamplona.amethyst.commons.resources.search_languages
+import com.vitorpamplona.amethyst.commons.resources.show_first
+import com.vitorpamplona.amethyst.commons.resources.source_language
+import com.vitorpamplona.amethyst.commons.resources.target_language
+import com.vitorpamplona.amethyst.commons.resources.user_preferences
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.SpacedBy10dp
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
+import org.jetbrains.compose.resources.stringResource
 import java.util.Locale as JavaLocale
 
 @Preview(device = "spec:width=2160px,height=2340px,dpi=440")
@@ -98,7 +111,7 @@ fun UserSettingsScreen(
 ) {
     Scaffold(
         topBar = {
-            TopBarWithBackButton(stringRes(id = R.string.user_preferences), nav::popBack)
+            TopBarWithBackButton(stringResource(Res.string.user_preferences), nav::popBack)
         },
     ) {
         Column(Modifier.padding(it)) {
@@ -151,7 +164,7 @@ private fun SearchableLanguageList(
         OutlinedTextField(
             value = searchQuery,
             onValueChange = { searchQuery = it },
-            placeholder = { Text(stringRes(R.string.search_languages)) },
+            placeholder = { Text(stringResource(Res.string.search_languages)) },
             leadingIcon = {
                 Icon(
                     imageVector = Icons.Default.Search,
@@ -267,7 +280,7 @@ fun DontTranslateFromSetting(accountViewModel: AccountViewModel) {
                     trailingIcon = {
                         Icon(
                             imageVector = Icons.Default.Close,
-                            contentDescription = stringRes(R.string.remove_language, languageCode),
+                            contentDescription = stringResource(Res.string.remove_language, languageCode),
                             modifier = Modifier.size(InputChipDefaults.IconSize),
                         )
                     },
@@ -277,7 +290,7 @@ fun DontTranslateFromSetting(accountViewModel: AccountViewModel) {
             InputChip(
                 selected = false,
                 onClick = { showAddPicker = !showAddPicker },
-                label = { Text(stringRes(R.string.add_language)) },
+                label = { Text(stringResource(Res.string.add_language)) },
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Default.Add,
@@ -317,7 +330,7 @@ fun LanguagePreferencesSetting(accountViewModel: AccountViewModel) {
 
         if (languagePreferences.isEmpty() && !showAddPair) {
             Text(
-                text = stringRes(R.string.no_language_preferences),
+                text = stringResource(Res.string.no_language_preferences),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(vertical = 8.dp),
@@ -347,7 +360,7 @@ fun LanguagePreferencesSetting(accountViewModel: AccountViewModel) {
                     modifier = Modifier.size(18.dp),
                 )
                 Spacer(modifier = Modifier.width(4.dp))
-                Text(stringRes(R.string.add_language_pair))
+                Text(stringResource(Res.string.add_language_pair))
             }
         } else {
             AddLanguagePairCard(
@@ -382,7 +395,7 @@ private fun LanguagePreferenceCard(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = stringRes(R.string.language_preference_pair, sourceName, targetName),
+                    text = stringResource(Res.string.language_preference_pair, sourceName, targetName),
                     style = MaterialTheme.typography.titleSmall,
                     modifier = Modifier.weight(1f),
                 )
@@ -394,7 +407,7 @@ private fun LanguagePreferenceCard(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Delete,
-                        contentDescription = stringRes(R.string.delete_preference),
+                        contentDescription = stringResource(Res.string.delete_preference),
                         tint = MaterialTheme.colorScheme.error,
                         modifier = Modifier.size(18.dp),
                     )
@@ -417,7 +430,7 @@ private fun LanguagePreferenceCard(
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    text = stringRes(R.string.show_first, sourceName),
+                    text = stringResource(Res.string.show_first, sourceName),
                     style = MaterialTheme.typography.bodyMedium,
                 )
             }
@@ -436,7 +449,7 @@ private fun LanguagePreferenceCard(
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    text = stringRes(R.string.show_first, targetName),
+                    text = stringResource(Res.string.show_first, targetName),
                     style = MaterialTheme.typography.bodyMedium,
                 )
             }
@@ -459,7 +472,7 @@ private fun AddLanguagePairCard(
     OutlinedCard(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(12.dp)) {
             Text(
-                text = stringRes(R.string.add_language_pair),
+                text = stringResource(Res.string.add_language_pair),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Medium,
             )
@@ -482,12 +495,12 @@ private fun AddLanguagePairCard(
                 ) {
                     Column(modifier = Modifier.padding(8.dp)) {
                         Text(
-                            text = stringRes(R.string.source_language),
+                            text = stringResource(Res.string.source_language),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Text(
-                            text = selectedSource?.displayName ?: stringRes(R.string.quick_action_select),
+                            text = selectedSource?.displayName ?: stringResource(Res.string.quick_action_select),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = if (selectedSource != null) FontWeight.Medium else FontWeight.Normal,
                             color =
@@ -518,12 +531,12 @@ private fun AddLanguagePairCard(
                 ) {
                     Column(modifier = Modifier.padding(8.dp)) {
                         Text(
-                            text = stringRes(R.string.target_language),
+                            text = stringResource(Res.string.target_language),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Text(
-                            text = selectedTarget?.displayName ?: stringRes(R.string.quick_action_select),
+                            text = selectedTarget?.displayName ?: stringResource(Res.string.quick_action_select),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = if (selectedTarget != null) FontWeight.Medium else FontWeight.Normal,
                             color =
@@ -586,7 +599,7 @@ private fun AddLanguagePairCard(
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = stringRes(R.string.show_first, selectedSource.displayName),
+                        text = stringResource(Res.string.show_first, selectedSource.displayName),
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
@@ -610,7 +623,7 @@ private fun AddLanguagePairCard(
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = stringRes(R.string.show_first, selectedTarget.displayName),
+                        text = stringResource(Res.string.show_first, selectedTarget.displayName),
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }

@@ -67,6 +67,13 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.block_only
+import com.vitorpamplona.amethyst.commons.resources.blocked_users
+import com.vitorpamplona.amethyst.commons.resources.hidden_words
+import com.vitorpamplona.amethyst.commons.resources.hide_new_word_label
+import com.vitorpamplona.amethyst.commons.resources.security_filters
+import com.vitorpamplona.amethyst.commons.resources.spamming_users
 import com.vitorpamplona.amethyst.model.WarningType
 import com.vitorpamplona.amethyst.model.parseWarningType
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.observeAccountIsHiddenWord
@@ -93,6 +100,7 @@ import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun SecurityFiltersScreen(
@@ -157,7 +165,7 @@ fun SecurityFiltersScreen(
 
     Scaffold(
         topBar = {
-            TopBarWithBackButton(stringRes(id = R.string.security_filters), nav::popBack)
+            TopBarWithBackButton(stringResource(Res.string.security_filters), nav::popBack)
         },
     ) {
         Column(
@@ -183,17 +191,17 @@ fun SecurityFiltersScreen(
                 Tab(
                     selected = pagerState.currentPage == 0,
                     onClick = { coroutineScope.launch { pagerState.animateScrollToPage(0) } },
-                    text = { Text(text = stringRes(R.string.blocked_users)) },
+                    text = { Text(text = stringResource(Res.string.blocked_users)) },
                 )
                 Tab(
                     selected = pagerState.currentPage == 1,
                     onClick = { coroutineScope.launch { pagerState.animateScrollToPage(1) } },
-                    text = { Text(text = stringRes(R.string.spamming_users)) },
+                    text = { Text(text = stringResource(Res.string.spamming_users)) },
                 )
                 Tab(
                     selected = pagerState.currentPage == 2,
                     onClick = { coroutineScope.launch { pagerState.animateScrollToPage(2) } },
-                    text = { Text(text = stringRes(R.string.hidden_words)) },
+                    text = { Text(text = stringResource(Res.string.hidden_words)) },
                 )
             }
             HorizontalPager(state = pagerState) { page ->
@@ -323,14 +331,14 @@ private fun AddMuteWordTextField(accountViewModel: AccountViewModel) {
         OutlinedTextField(
             value = currentWordToAdd.value,
             onValueChange = { currentWordToAdd.value = it },
-            label = { Text(text = stringRes(R.string.hide_new_word_label)) },
+            label = { Text(text = stringResource(Res.string.hide_new_word_label)) },
             modifier =
                 Modifier
                     .fillMaxWidth()
                     .padding(10.dp),
             placeholder = {
                 Text(
-                    text = stringRes(R.string.hide_new_word_label),
+                    text = stringResource(Res.string.hide_new_word_label),
                     color = MaterialTheme.colorScheme.placeholderText,
                 )
             },
@@ -442,7 +450,7 @@ fun HideWordButton(onClick: () -> Unit) {
             ),
         contentPadding = ButtonPadding,
     ) {
-        Text(text = stringRes(R.string.block_only), color = Color.White)
+        Text(text = stringResource(Res.string.block_only), color = Color.White)
     }
 }
 

@@ -43,17 +43,23 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.about_us
+import com.vitorpamplona.amethyst.commons.resources.follow_set_copy_name_label
+import com.vitorpamplona.amethyst.commons.resources.follow_set_creation_desc_label
+import com.vitorpamplona.amethyst.commons.resources.follow_set_creation_name_label
+import com.vitorpamplona.amethyst.commons.resources.optional_picture_url
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectSingleFromGallery
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.CreatingTopBar
 import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.SettingsCategory
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.SettingsCategoryFirstModifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun BookmarkGroupMetadataScreen(
@@ -177,13 +183,13 @@ fun BookmarkGroupMetadataTopBar(
 @Composable
 private fun Description(bookmarkGroupInfoViewModel: BookmarkGroupMetadataViewModel) {
     OutlinedTextField(
-        label = { Text(text = stringRes(R.string.follow_set_creation_desc_label)) },
+        label = { Text(text = stringResource(Res.string.follow_set_creation_desc_label)) },
         modifier = Modifier.fillMaxWidth(),
         value = bookmarkGroupInfoViewModel.description.value,
         onValueChange = { bookmarkGroupInfoViewModel.description.value = it },
         placeholder = {
             Text(
-                text = stringRes(R.string.about_us),
+                text = stringResource(Res.string.about_us),
                 color = MaterialTheme.colorScheme.placeholderText,
             )
         },
@@ -202,7 +208,7 @@ private fun Picture(
     accountViewModel: AccountViewModel,
 ) {
     OutlinedTextField(
-        label = { Text(text = stringRes(R.string.optional_picture_url)) },
+        label = { Text(text = stringResource(Res.string.optional_picture_url)) },
         modifier = Modifier.fillMaxWidth(),
         value = bookmarkGroupInfoViewModel.picture.value,
         onValueChange = { bookmarkGroupInfoViewModel.picture.value = it },
@@ -228,13 +234,13 @@ private fun Picture(
 @Composable
 private fun ListName(bookmarkGroupInfoViewModel: BookmarkGroupMetadataViewModel) {
     OutlinedTextField(
-        label = { Text(text = stringRes(R.string.follow_set_creation_name_label)) },
+        label = { Text(text = stringResource(Res.string.follow_set_creation_name_label)) },
         modifier = Modifier.fillMaxWidth(),
         value = bookmarkGroupInfoViewModel.name.value,
         onValueChange = { bookmarkGroupInfoViewModel.name.value = it },
         placeholder = {
             Text(
-                text = stringRes(R.string.follow_set_copy_name_label),
+                text = stringResource(Res.string.follow_set_copy_name_label),
                 color = MaterialTheme.colorScheme.placeholderText,
             )
         },

@@ -57,12 +57,30 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.about_me
+import com.vitorpamplona.amethyst.commons.resources.avatar_url
+import com.vitorpamplona.amethyst.commons.resources.banner_url
+import com.vitorpamplona.amethyst.commons.resources.display_name
+import com.vitorpamplona.amethyst.commons.resources.github
+import com.vitorpamplona.amethyst.commons.resources.github_proof_url_template
+import com.vitorpamplona.amethyst.commons.resources.mastodon
+import com.vitorpamplona.amethyst.commons.resources.mastodon_proof_url_template
+import com.vitorpamplona.amethyst.commons.resources.my_display_name
+import com.vitorpamplona.amethyst.commons.resources.my_name
+import com.vitorpamplona.amethyst.commons.resources.nip_05
+import com.vitorpamplona.amethyst.commons.resources.pronouns
+import com.vitorpamplona.amethyst.commons.resources.social_proof
+import com.vitorpamplona.amethyst.commons.resources.twitter
+import com.vitorpamplona.amethyst.commons.resources.twitter_proof_url_template
+import com.vitorpamplona.amethyst.commons.resources.username
+import com.vitorpamplona.amethyst.commons.resources.website_url
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectSingleFromGallery
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -117,13 +135,13 @@ fun NewUserMetadataScreen(
             ) {
                 // -- Profile (always visible) --
                 OutlinedTextField(
-                    label = { Text(text = stringRes(R.string.username)) },
+                    label = { Text(text = stringResource(Res.string.username)) },
                     modifier = Modifier.fillMaxWidth(),
                     value = postViewModel.name.value,
                     onValueChange = { postViewModel.name.value = it },
                     placeholder = {
                         Text(
-                            text = stringRes(R.string.my_name),
+                            text = stringResource(Res.string.my_name),
                             color = MaterialTheme.colorScheme.placeholderText,
                         )
                     },
@@ -138,13 +156,13 @@ fun NewUserMetadataScreen(
                 Spacer(modifier = Modifier.height(10.dp))
 
                 OutlinedTextField(
-                    label = { Text(text = stringRes(R.string.display_name)) },
+                    label = { Text(text = stringResource(Res.string.display_name)) },
                     modifier = Modifier.fillMaxWidth(),
                     value = postViewModel.displayName.value,
                     onValueChange = { postViewModel.displayName.value = it },
                     placeholder = {
                         Text(
-                            text = stringRes(R.string.my_display_name),
+                            text = stringResource(Res.string.my_display_name),
                             color = MaterialTheme.colorScheme.placeholderText,
                         )
                     },
@@ -158,13 +176,13 @@ fun NewUserMetadataScreen(
                 Spacer(modifier = Modifier.height(10.dp))
 
                 OutlinedTextField(
-                    label = { Text(text = stringRes(R.string.about_me)) },
+                    label = { Text(text = stringResource(Res.string.about_me)) },
                     modifier = Modifier.fillMaxWidth().height(100.dp),
                     value = postViewModel.about.value,
                     onValueChange = { postViewModel.about.value = it },
                     placeholder = {
                         Text(
-                            text = stringRes(id = R.string.about_me),
+                            text = stringResource(Res.string.about_me),
                             color = MaterialTheme.colorScheme.placeholderText,
                         )
                     },
@@ -178,7 +196,7 @@ fun NewUserMetadataScreen(
                 Spacer(modifier = Modifier.height(10.dp))
 
                 OutlinedTextField(
-                    label = { Text(text = stringRes(R.string.avatar_url)) },
+                    label = { Text(text = stringResource(Res.string.avatar_url)) },
                     modifier = Modifier.fillMaxWidth(),
                     value = postViewModel.picture.value,
                     onValueChange = { postViewModel.picture.value = it },
@@ -203,7 +221,7 @@ fun NewUserMetadataScreen(
                 Spacer(modifier = Modifier.height(10.dp))
 
                 OutlinedTextField(
-                    label = { Text(text = stringRes(R.string.banner_url)) },
+                    label = { Text(text = stringResource(Res.string.banner_url)) },
                     modifier = Modifier.fillMaxWidth(),
                     value = postViewModel.banner.value,
                     onValueChange = { postViewModel.banner.value = it },
@@ -228,7 +246,7 @@ fun NewUserMetadataScreen(
                 Spacer(modifier = Modifier.height(10.dp))
 
                 OutlinedTextField(
-                    label = { Text(text = stringRes(R.string.nip_05) + " (NIP-05)") },
+                    label = { Text(text = stringResource(Res.string.nip_05) + " (NIP-05)") },
                     modifier = Modifier.fillMaxWidth(),
                     value = postViewModel.nip05.value,
                     onValueChange = { postViewModel.nip05.value = it },
@@ -244,7 +262,7 @@ fun NewUserMetadataScreen(
                 Spacer(modifier = Modifier.height(10.dp))
 
                 OutlinedTextField(
-                    label = { Text(text = stringRes(R.string.website_url)) },
+                    label = { Text(text = stringResource(Res.string.website_url)) },
                     modifier = Modifier.fillMaxWidth(),
                     value = postViewModel.website.value,
                     onValueChange = { postViewModel.website.value = it },
@@ -260,7 +278,7 @@ fun NewUserMetadataScreen(
                 Spacer(modifier = Modifier.height(10.dp))
 
                 OutlinedTextField(
-                    label = { Text(text = stringRes(R.string.pronouns)) },
+                    label = { Text(text = stringResource(Res.string.pronouns)) },
                     modifier = Modifier.fillMaxWidth(),
                     value = postViewModel.pronouns.value,
                     onValueChange = { postViewModel.pronouns.value = it },
@@ -275,17 +293,17 @@ fun NewUserMetadataScreen(
 
                 // -- Social Proofs --
                 ExpandableSection(
-                    title = stringRes(R.string.social_proof),
+                    title = stringResource(Res.string.social_proof),
                     expanded = socialExpanded,
                 ) {
                     OutlinedTextField(
-                        label = { Text(text = stringRes(R.string.twitter)) },
+                        label = { Text(text = stringResource(Res.string.twitter)) },
                         modifier = Modifier.fillMaxWidth(),
                         value = postViewModel.twitter.value,
                         onValueChange = { postViewModel.twitter.value = it },
                         placeholder = {
                             Text(
-                                text = stringRes(R.string.twitter_proof_url_template),
+                                text = stringResource(Res.string.twitter_proof_url_template),
                                 color = MaterialTheme.colorScheme.placeholderText,
                             )
                         },
@@ -294,13 +312,13 @@ fun NewUserMetadataScreen(
                     Spacer(modifier = Modifier.height(10.dp))
 
                     OutlinedTextField(
-                        label = { Text(text = stringRes(R.string.mastodon)) },
+                        label = { Text(text = stringResource(Res.string.mastodon)) },
                         modifier = Modifier.fillMaxWidth(),
                         value = postViewModel.mastodon.value,
                         onValueChange = { postViewModel.mastodon.value = it },
                         placeholder = {
                             Text(
-                                text = stringRes(R.string.mastodon_proof_url_template),
+                                text = stringResource(Res.string.mastodon_proof_url_template),
                                 color = MaterialTheme.colorScheme.placeholderText,
                             )
                         },
@@ -309,13 +327,13 @@ fun NewUserMetadataScreen(
                     Spacer(modifier = Modifier.height(10.dp))
 
                     OutlinedTextField(
-                        label = { Text(text = stringRes(R.string.github)) },
+                        label = { Text(text = stringResource(Res.string.github)) },
                         modifier = Modifier.fillMaxWidth(),
                         value = postViewModel.github.value,
                         onValueChange = { postViewModel.github.value = it },
                         placeholder = {
                             Text(
-                                text = stringRes(R.string.github_proof_url_template),
+                                text = stringResource(Res.string.github_proof_url_template),
                                 color = MaterialTheme.colorScheme.placeholderText,
                             )
                         },

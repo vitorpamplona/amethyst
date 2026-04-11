@@ -43,6 +43,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.channel_created
+import com.vitorpamplona.amethyst.commons.resources.channel_image
+import com.vitorpamplona.amethyst.commons.resources.channel_information_changed_to
+import com.vitorpamplona.amethyst.commons.resources.referenced_event_not_found
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
@@ -77,6 +82,7 @@ import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun ChatroomHeaderCompose(
@@ -180,9 +186,9 @@ private fun ChannelRoomCompose(
 
     val description =
         if (noteEvent is ChannelCreateEvent) {
-            stringRes(R.string.channel_created)
+            stringResource(Res.string.channel_created)
         } else if (noteEvent is ChannelMetadataEvent) {
-            "${stringRes(R.string.channel_information_changed_to)} "
+            "${stringResource(Res.string.channel_information_changed_to)} "
         } else {
             noteEvent?.content?.take(200)
         }
@@ -306,7 +312,7 @@ private fun UserRoomCompose(
                     )
                 } else {
                     Text(
-                        stringRes(R.string.referenced_event_not_found),
+                        stringResource(Res.string.referenced_event_not_found),
                         color = MaterialTheme.colorScheme.grayText,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -360,7 +366,7 @@ fun ChannelName(
             RobohashFallbackAsyncImage(
                 robot = channelIdHex,
                 model = channelPicture,
-                contentDescription = stringRes(R.string.channel_image),
+                contentDescription = stringResource(Res.string.channel_image),
                 modifier = AccountPictureModifier,
                 loadProfilePicture = loadProfilePicture,
                 loadRobohash = loadRobohash,
@@ -401,7 +407,7 @@ fun ChannelName(
                 )
             } else {
                 Text(
-                    stringRes(R.string.referenced_event_not_found),
+                    stringResource(Res.string.referenced_event_not_found),
                     color = MaterialTheme.colorScheme.grayText,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,

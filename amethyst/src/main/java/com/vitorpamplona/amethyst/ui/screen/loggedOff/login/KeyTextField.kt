@@ -48,10 +48,15 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.hide_password
+import com.vitorpamplona.amethyst.commons.resources.login_with_qr_code
+import com.vitorpamplona.amethyst.commons.resources.nsec_npub_hex_private_key
+import com.vitorpamplona.amethyst.commons.resources.show_password
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.SimpleQrCodeScanner
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun KeyTextField(
@@ -77,7 +82,7 @@ fun KeyTextField(
             ),
         placeholder = {
             Text(
-                text = stringRes(R.string.nsec_npub_hex_private_key),
+                text = stringResource(Res.string.nsec_npub_hex_private_key),
                 color = MaterialTheme.colorScheme.placeholderText,
             )
         },
@@ -89,11 +94,9 @@ fun KeyTextField(
                             if (showCharsKey) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
                         contentDescription =
                             if (showCharsKey) {
-                                stringRes(R.string.show_password)
+                                stringResource(Res.string.show_password)
                             } else {
-                                stringRes(
-                                    R.string.hide_password,
-                                )
+                                stringResource(Res.string.hide_password)
                             },
                     )
                 }
@@ -111,7 +114,7 @@ fun KeyTextField(
             IconButton(onClick = { dialogOpen = true }) {
                 Icon(
                     painter = painterRes(R.drawable.ic_qrcode, 5),
-                    contentDescription = stringRes(R.string.login_with_qr_code),
+                    contentDescription = stringResource(Res.string.login_with_qr_code),
                     modifier = Modifier.size(24.dp),
                     tint = MaterialTheme.colorScheme.primary,
                 )

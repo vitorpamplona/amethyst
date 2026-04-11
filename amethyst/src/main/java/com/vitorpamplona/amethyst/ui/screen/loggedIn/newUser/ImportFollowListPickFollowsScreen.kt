@@ -58,6 +58,15 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.accounts_found
+import com.vitorpamplona.amethyst.commons.resources.fetching_follow_list
+import com.vitorpamplona.amethyst.commons.resources.follow_accounts
+import com.vitorpamplona.amethyst.commons.resources.no_follows_found
+import com.vitorpamplona.amethyst.commons.resources.num_selected
+import com.vitorpamplona.amethyst.commons.resources.select_users_to_follow
+import com.vitorpamplona.amethyst.commons.resources.skip_for_now
+import com.vitorpamplona.amethyst.commons.resources.start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEventAndMap
@@ -66,11 +75,11 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserLine
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toPersistentList
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun ImportFollowListPickFollowsScreen(
@@ -139,9 +148,9 @@ fun DisplayFollowList(
     val contacts = contactsState
 
     if (contacts == null) {
-        LoadingIndicator(stringRes(R.string.fetching_follow_list), modifier, nav)
+        LoadingIndicator(stringResource(Res.string.fetching_follow_list), modifier, nav)
     } else if (contacts.isEmpty()) {
-        ErrorMessage(stringRes(R.string.no_follows_found), modifier, nav)
+        ErrorMessage(stringResource(Res.string.no_follows_found), modifier, nav)
     } else {
         PreviewList(
             contacts,
@@ -170,12 +179,12 @@ private fun PreviewList(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                stringRes(R.string.accounts_found, contacts.size),
+                stringResource(Res.string.accounts_found, contacts.size),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
             )
             Text(
-                stringRes(R.string.num_selected, selected.size),
+                stringResource(Res.string.num_selected, selected.size),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.primary,
             )
@@ -221,7 +230,7 @@ private fun PreviewList(
                     nav.popUpTo(Route.Home, Route.Home::class)
                 },
             ) {
-                Text(stringRes(R.string.follow_accounts, selected.size))
+                Text(stringResource(Res.string.follow_accounts, selected.size))
             }
         }
     }
@@ -249,7 +258,7 @@ private fun LoadingIndicator(
         Spacer(Modifier.height(16.dp))
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            TextButton(onClick = { nav.popUpTo(Route.Home, Route.Home::class) }) { Text(stringRes(R.string.skip_for_now)) }
+            TextButton(onClick = { nav.popUpTo(Route.Home, Route.Home::class) }) { Text(stringResource(Res.string.skip_for_now)) }
         }
     }
 }
@@ -273,7 +282,7 @@ private fun ErrorMessage(
         Spacer(Modifier.height(16.dp))
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            TextButton(onClick = { nav.popUpTo(Route.Home, Route.Home::class) }) { Text(stringRes(R.string.skip_for_now)) }
+            TextButton(onClick = { nav.popUpTo(Route.Home, Route.Home::class) }) { Text(stringResource(Res.string.skip_for_now)) }
         }
     }
 }
@@ -290,14 +299,14 @@ private fun ImportHeader() {
             )
             Spacer(Modifier.width(10.dp))
             Text(
-                stringRes(R.string.select_users_to_follow),
+                stringResource(Res.string.select_users_to_follow),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
             )
         }
         Spacer(Modifier.height(8.dp))
         Text(
-            stringRes(R.string.start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust),
+            stringResource(Res.string.start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

@@ -55,11 +55,17 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.add
+import com.vitorpamplona.amethyst.commons.resources.delete_payment_target
+import com.vitorpamplona.amethyst.commons.resources.no_payment_targets_message
+import com.vitorpamplona.amethyst.commons.resources.payment_target_authority
+import com.vitorpamplona.amethyst.commons.resources.payment_target_type
+import com.vitorpamplona.amethyst.commons.resources.payment_targets_explainer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.SettingsCategory
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.SettingsCategoryFirstModifier
@@ -68,6 +74,7 @@ import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTarget
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun PaymentTargetsScreen(
@@ -122,7 +129,7 @@ fun PaymentTargetsScaffold(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
-                text = stringRes(id = R.string.payment_targets_explainer),
+                text = stringResource(Res.string.payment_targets_explainer),
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(top = 10.dp),
                 style = MaterialTheme.typography.bodyLarge,
@@ -154,7 +161,7 @@ fun PaymentTargetsBody(viewModel: PaymentTargetsViewModel) {
         if (targets.isEmpty()) {
             item {
                 Text(
-                    text = stringRes(id = R.string.no_payment_targets_message),
+                    text = stringResource(Res.string.no_payment_targets_message),
                     modifier = Modifier.padding(vertical = 16.dp),
                 )
             }
@@ -204,7 +211,7 @@ fun PaymentTargetEntry(
         IconButton(onClick = onDelete) {
             Icon(
                 imageVector = Icons.Rounded.Delete,
-                contentDescription = stringRes(id = R.string.delete_payment_target),
+                contentDescription = stringResource(Res.string.delete_payment_target),
             )
         }
     }
@@ -222,7 +229,7 @@ fun PaymentTargetAddField(onAdd: (type: String, authority: String) -> Unit) {
             horizontalArrangement = Arrangement.spacedBy(Size10dp),
         ) {
             OutlinedTextField(
-                label = { Text(text = stringRes(R.string.payment_target_type)) },
+                label = { Text(text = stringResource(Res.string.payment_target_type)) },
                 modifier = Modifier.weight(1f),
                 value = type,
                 onValueChange = { type = it },
@@ -241,7 +248,7 @@ fun PaymentTargetAddField(onAdd: (type: String, authority: String) -> Unit) {
             horizontalArrangement = Arrangement.spacedBy(Size10dp),
         ) {
             OutlinedTextField(
-                label = { Text(text = stringRes(R.string.payment_target_authority)) },
+                label = { Text(text = stringResource(Res.string.payment_target_authority)) },
                 modifier = Modifier.weight(1f),
                 value = authority,
                 onValueChange = { authority = it },
@@ -265,7 +272,7 @@ fun PaymentTargetAddField(onAdd: (type: String, authority: String) -> Unit) {
                 shape = ButtonBorder,
                 enabled = isValid,
             ) {
-                Text(text = stringRes(id = R.string.add), color = Color.White)
+                Text(text = stringResource(Res.string.add), color = Color.White)
             }
         }
     }

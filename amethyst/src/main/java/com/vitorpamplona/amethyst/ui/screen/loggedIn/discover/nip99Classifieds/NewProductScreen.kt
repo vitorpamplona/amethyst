@@ -46,6 +46,10 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.lightning_create_and_add_invoice
+import com.vitorpamplona.amethyst.commons.resources.lightning_invoice
+import com.vitorpamplona.amethyst.commons.resources.zapraiser
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromFiles
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
@@ -77,7 +81,6 @@ import com.vitorpamplona.amethyst.ui.note.creators.zapraiser.ZapRaiserRequest
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.ForwardZapTo
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.ForwardZapToButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
@@ -87,6 +90,7 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.withContext
+import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class, FlowPreview::class)
 @Composable
@@ -295,8 +299,8 @@ private fun NewProductBody(
                             lud16,
                             accountViewModel.account.userProfile(),
                             accountViewModel,
-                            stringRes(id = R.string.lightning_invoice),
-                            stringRes(id = R.string.lightning_create_and_add_invoice),
+                            stringResource(Res.string.lightning_invoice),
+                            stringResource(Res.string.lightning_create_and_add_invoice),
                             onNewInvoice = {
                                 postViewModel.insertAtCursor(it)
                                 postViewModel.wantsInvoice = false
@@ -327,7 +331,7 @@ private fun NewProductBody(
                     modifier = Modifier.padding(vertical = Size10dp, horizontal = Size10dp),
                 ) {
                     ZapRaiserRequest(
-                        stringRes(id = R.string.zapraiser),
+                        stringResource(Res.string.zapraiser),
                         postViewModel,
                     )
                 }

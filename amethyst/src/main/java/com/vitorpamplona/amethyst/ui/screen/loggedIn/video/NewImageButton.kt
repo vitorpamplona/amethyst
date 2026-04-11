@@ -49,6 +49,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.new_short
+import com.vitorpamplona.amethyst.commons.resources.record_a_video
+import com.vitorpamplona.amethyst.commons.resources.take_a_picture
+import com.vitorpamplona.amethyst.commons.resources.upload_image
 import com.vitorpamplona.amethyst.ui.actions.NewMediaModel
 import com.vitorpamplona.amethyst.ui.actions.NewMediaView
 import com.vitorpamplona.amethyst.ui.actions.uploads.GallerySelect
@@ -58,7 +63,6 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.TakeVideo
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size26Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
 import kotlinx.collections.immutable.ImmutableList
@@ -67,6 +71,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun NewImageButton(
@@ -145,7 +150,7 @@ fun NewImageButton(
                 ) {
                     Icon(
                         imageVector = Icons.Default.CameraAlt,
-                        contentDescription = stringRes(id = R.string.take_a_picture),
+                        contentDescription = stringResource(Res.string.take_a_picture),
                         modifier = Modifier.size(26.dp),
                         tint = Color.White,
                     )
@@ -164,7 +169,7 @@ fun NewImageButton(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Videocam,
-                        contentDescription = stringRes(id = R.string.record_a_video),
+                        contentDescription = stringResource(Res.string.record_a_video),
                         modifier = Modifier.size(26.dp),
                         tint = Color.White,
                     )
@@ -183,7 +188,7 @@ fun NewImageButton(
                 ) {
                     Icon(
                         imageVector = Icons.Default.AddPhotoAlternate,
-                        contentDescription = stringRes(id = R.string.upload_image),
+                        contentDescription = stringResource(Res.string.upload_image),
                         modifier = Modifier.size(26.dp),
                         tint = Color.White,
                     )
@@ -208,7 +213,7 @@ fun NewImageButton(
             ) {
                 Icon(
                     imageVector = Icons.Outlined.Close,
-                    contentDescription = stringRes(id = R.string.new_short),
+                    contentDescription = stringResource(Res.string.new_short),
                     modifier = Size26Modifier,
                     tint = Color.White,
                 )
@@ -221,7 +226,7 @@ fun NewImageButton(
             ) {
                 Icon(
                     painter = painterRes(R.drawable.ic_compose, 5),
-                    contentDescription = stringRes(id = R.string.new_short),
+                    contentDescription = stringResource(Res.string.new_short),
                     modifier = Size26Modifier,
                     tint = Color.White,
                 )

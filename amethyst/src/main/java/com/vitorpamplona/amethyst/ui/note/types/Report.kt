@@ -26,17 +26,27 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.explicit_content
+import com.vitorpamplona.amethyst.commons.resources.harassment
+import com.vitorpamplona.amethyst.commons.resources.illegal_behavior
+import com.vitorpamplona.amethyst.commons.resources.impersonation
+import com.vitorpamplona.amethyst.commons.resources.malware
+import com.vitorpamplona.amethyst.commons.resources.nudity
+import com.vitorpamplona.amethyst.commons.resources.other
+import com.vitorpamplona.amethyst.commons.resources.profanity_hateful_speech
+import com.vitorpamplona.amethyst.commons.resources.spam
+import com.vitorpamplona.amethyst.commons.resources.violence
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportType
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun RenderReport(
@@ -54,17 +64,17 @@ fun RenderReport(
         base
             .map {
                 when (it.type) {
-                    ReportType.EXPLICIT -> stringRes(R.string.explicit_content)
-                    ReportType.NUDITY -> stringRes(R.string.nudity)
-                    ReportType.PROFANITY -> stringRes(R.string.profanity_hateful_speech)
-                    ReportType.SPAM -> stringRes(R.string.spam)
-                    ReportType.IMPERSONATION -> stringRes(R.string.impersonation)
-                    ReportType.ILLEGAL -> stringRes(R.string.illegal_behavior)
-                    ReportType.MALWARE -> stringRes(R.string.malware)
-                    ReportType.OTHER -> stringRes(R.string.other)
-                    ReportType.HARASSMENT -> stringRes(R.string.harassment)
-                    ReportType.VIOLENCE -> stringRes(R.string.violence)
-                    null -> stringRes(R.string.other)
+                    ReportType.EXPLICIT -> stringResource(Res.string.explicit_content)
+                    ReportType.NUDITY -> stringResource(Res.string.nudity)
+                    ReportType.PROFANITY -> stringResource(Res.string.profanity_hateful_speech)
+                    ReportType.SPAM -> stringResource(Res.string.spam)
+                    ReportType.IMPERSONATION -> stringResource(Res.string.impersonation)
+                    ReportType.ILLEGAL -> stringResource(Res.string.illegal_behavior)
+                    ReportType.MALWARE -> stringResource(Res.string.malware)
+                    ReportType.OTHER -> stringResource(Res.string.other)
+                    ReportType.HARASSMENT -> stringResource(Res.string.harassment)
+                    ReportType.VIOLENCE -> stringResource(Res.string.violence)
+                    null -> stringResource(Res.string.other)
                 }
             }.toSet()
             .joinToString(", ")

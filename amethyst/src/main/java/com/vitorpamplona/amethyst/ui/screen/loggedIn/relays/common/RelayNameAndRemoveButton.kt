@@ -40,13 +40,17 @@ import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.paid_relay
+import com.vitorpamplona.amethyst.commons.resources.remove
+import com.vitorpamplona.amethyst.commons.resources.tor_relay
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.painterRes
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.LightRedColor
 import com.vitorpamplona.amethyst.ui.theme.allGoodColor
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -78,7 +82,7 @@ fun RelayNameAndRemoveButton(
             if (item.paidRelay) {
                 Icon(
                     imageVector = Icons.Default.Paid,
-                    contentDescription = stringRes(id = R.string.paid_relay),
+                    contentDescription = stringResource(Res.string.paid_relay),
                     modifier =
                         Modifier
                             .padding(start = 5.dp)
@@ -90,7 +94,7 @@ fun RelayNameAndRemoveButton(
             if (item.forcesTor) {
                 Icon(
                     painter = painterRes(R.drawable.ic_tor, 2),
-                    contentDescription = stringRes(id = R.string.tor_relay),
+                    contentDescription = stringResource(Res.string.tor_relay),
                     modifier =
                         Modifier
                             .padding(start = 5.dp)
@@ -107,7 +111,7 @@ fun RelayNameAndRemoveButton(
             ) {
                 Icon(
                     imageVector = Icons.Default.Cancel,
-                    contentDescription = stringRes(id = R.string.remove),
+                    contentDescription = stringResource(Res.string.remove),
                     modifier =
                         Modifier
                             .padding(start = 10.dp)

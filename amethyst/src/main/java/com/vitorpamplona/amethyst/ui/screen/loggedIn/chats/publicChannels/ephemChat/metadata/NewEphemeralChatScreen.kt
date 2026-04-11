@@ -42,6 +42,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.channel_name
+import com.vitorpamplona.amethyst.commons.resources.group_relay
+import com.vitorpamplona.amethyst.commons.resources.my_awesome_group
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
@@ -49,11 +53,11 @@ import com.vitorpamplona.amethyst.ui.navigation.topbars.PostingTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.SettingsCategory
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.SettingsCategoryFirstModifier
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun NewEphemeralChatScreen(
@@ -141,13 +145,13 @@ private fun ChannelMetadataScaffold(
 @Composable
 private fun ChannelName(postViewModel: NewEphemeralChatMetaViewModel) {
     OutlinedTextField(
-        label = { Text(text = stringRes(R.string.channel_name)) },
+        label = { Text(text = stringResource(Res.string.channel_name)) },
         modifier = Modifier.fillMaxWidth(),
         value = postViewModel.channelName.value,
         onValueChange = { postViewModel.channelName.value = it },
         placeholder = {
             Text(
-                text = stringRes(R.string.my_awesome_group),
+                text = stringResource(Res.string.my_awesome_group),
                 color = MaterialTheme.colorScheme.placeholderText,
             )
         },
@@ -162,7 +166,7 @@ private fun ChannelName(postViewModel: NewEphemeralChatMetaViewModel) {
 @Composable
 private fun RelayUrl(postViewModel: NewEphemeralChatMetaViewModel) {
     OutlinedTextField(
-        label = { Text(text = stringRes(R.string.group_relay)) },
+        label = { Text(text = stringResource(Res.string.group_relay)) },
         modifier = Modifier.fillMaxWidth(),
         value = postViewModel.relayUrl.value,
         onValueChange = { postViewModel.relayUrl.value = it },

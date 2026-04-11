@@ -42,11 +42,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.error_dialog_button_ok
+import com.vitorpamplona.amethyst.commons.resources.error_dialog_talk_to_user
 import com.vitorpamplona.amethyst.ui.painterRes
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size16dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 @Preview
@@ -85,7 +88,7 @@ fun ErrorMessageDialog(
                             contentDescription = null,
                         )
                         Spacer(StdHorzSpacer)
-                        Text(stringRes(R.string.error_dialog_talk_to_user))
+                        Text(stringResource(Res.string.error_dialog_talk_to_user))
                     }
                 }
                 Button(
@@ -101,7 +104,7 @@ fun ErrorMessageDialog(
                             contentDescription = null,
                         )
                         Spacer(StdHorzSpacer)
-                        Text(stringRes(R.string.error_dialog_button_ok))
+                        Text(stringResource(Res.string.error_dialog_button_ok))
                     }
                 }
             }

@@ -44,6 +44,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.add_media_server
+import com.vitorpamplona.amethyst.commons.resources.delete_media_server
+import com.vitorpamplona.amethyst.commons.resources.use_default_servers
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.SettingsCategory
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.SettingsCategoryWithButton
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -54,6 +58,7 @@ import com.vitorpamplona.amethyst.ui.theme.SettingsCategoryFirstModifier
 import com.vitorpamplona.amethyst.ui.theme.SettingsCategorySpacingModifier
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.grayText
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun AllMediaBody(blossomServersViewModel: BlossomServersViewModel) {
@@ -99,7 +104,7 @@ fun AllMediaBody(blossomServersViewModel: BlossomServersViewModel) {
                             )
                         },
                     ) {
-                        Text(text = stringRes(id = R.string.use_default_servers))
+                        Text(text = stringResource(Res.string.use_default_servers))
                     }
                 }
             }
@@ -212,9 +217,9 @@ fun MediaServerEntry(
                     imageVector = if (isAmethystDefault) Icons.Rounded.Add else Icons.Rounded.Delete,
                     contentDescription =
                         if (isAmethystDefault) {
-                            stringRes(id = R.string.add_media_server)
+                            stringResource(Res.string.add_media_server)
                         } else {
-                            stringRes(id = R.string.delete_media_server)
+                            stringResource(Res.string.delete_media_server)
                         },
                 )
             }

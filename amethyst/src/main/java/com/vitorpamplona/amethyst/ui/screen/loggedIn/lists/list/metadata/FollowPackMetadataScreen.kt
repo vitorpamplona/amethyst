@@ -44,6 +44,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.about_us
+import com.vitorpamplona.amethyst.commons.resources.follow_pack_copy_name_label
+import com.vitorpamplona.amethyst.commons.resources.follow_pack_creation_desc_label
+import com.vitorpamplona.amethyst.commons.resources.follow_pack_creation_name_label
+import com.vitorpamplona.amethyst.commons.resources.picture_url
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectSingleFromGallery
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -52,12 +58,12 @@ import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.SettingsCategory
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.SettingsCategoryFirstModifier
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun FollowPackMetadataScreen(
@@ -201,13 +207,13 @@ fun FollowPackMetadataTopBar(
 @Composable
 private fun Description(postViewModel: FollowPackMetadataViewModel) {
     OutlinedTextField(
-        label = { Text(text = stringRes(R.string.follow_pack_creation_desc_label)) },
+        label = { Text(text = stringResource(Res.string.follow_pack_creation_desc_label)) },
         modifier = Modifier.fillMaxWidth(),
         value = postViewModel.description.value,
         onValueChange = { postViewModel.description.value = it },
         placeholder = {
             Text(
-                text = stringRes(R.string.about_us),
+                text = stringResource(Res.string.about_us),
                 color = MaterialTheme.colorScheme.placeholderText,
             )
         },
@@ -226,7 +232,7 @@ private fun Picture(
     accountViewModel: AccountViewModel,
 ) {
     OutlinedTextField(
-        label = { Text(text = stringRes(R.string.picture_url)) },
+        label = { Text(text = stringResource(Res.string.picture_url)) },
         modifier = Modifier.fillMaxWidth(),
         value = postViewModel.picture.value,
         onValueChange = { postViewModel.picture.value = it },
@@ -252,13 +258,13 @@ private fun Picture(
 @Composable
 private fun ListName(postViewModel: FollowPackMetadataViewModel) {
     OutlinedTextField(
-        label = { Text(text = stringRes(R.string.follow_pack_creation_name_label)) },
+        label = { Text(text = stringResource(Res.string.follow_pack_creation_name_label)) },
         modifier = Modifier.fillMaxWidth(),
         value = postViewModel.name.value,
         onValueChange = { postViewModel.name.value = it },
         placeholder = {
             Text(
-                text = stringRes(R.string.follow_pack_copy_name_label),
+                text = stringResource(Res.string.follow_pack_copy_name_label),
                 color = MaterialTheme.colorScheme.placeholderText,
             )
         },

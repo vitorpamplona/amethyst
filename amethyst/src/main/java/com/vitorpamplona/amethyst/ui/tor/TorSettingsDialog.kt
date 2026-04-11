@@ -49,6 +49,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.invalid_port_number
 import com.vitorpamplona.amethyst.ui.components.SetDialogToEdgeToEdge
 import com.vitorpamplona.amethyst.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
@@ -59,6 +61,7 @@ import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.CancellationException
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun ConnectTorDialog(
@@ -128,7 +131,7 @@ fun TorDialogContents(
 ) {
     Scaffold(
         topBar = {
-            val toastMessage = stringRes(R.string.invalid_port_number)
+            val toastMessage = stringResource(Res.string.invalid_port_number)
             SavingTopBar(
                 titleRes = R.string.privacy_options,
                 onCancel = onClose,

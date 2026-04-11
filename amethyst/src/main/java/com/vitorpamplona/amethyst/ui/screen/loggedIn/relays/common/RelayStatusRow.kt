@@ -40,11 +40,15 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.errors
+import com.vitorpamplona.amethyst.commons.resources.read_from_relay
+import com.vitorpamplona.amethyst.commons.resources.spam
+import com.vitorpamplona.amethyst.commons.resources.write_to_relay
 import com.vitorpamplona.amethyst.service.countToHumanReadable
 import com.vitorpamplona.amethyst.service.countToHumanReadableBytes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
 import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
@@ -54,6 +58,7 @@ import com.vitorpamplona.amethyst.ui.theme.redColorOnSecondSurface
 import com.vitorpamplona.amethyst.ui.theme.warningColor
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStat
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 @Preview
@@ -112,7 +117,7 @@ fun RelayStatusRow(
         ) {
             Icon(
                 imageVector = Icons.Default.Download,
-                contentDescription = stringRes(R.string.read_from_relay),
+                contentDescription = stringResource(Res.string.read_from_relay),
                 modifier = Size15Modifier,
                 tint = MaterialTheme.colorScheme.allGoodColor,
             )
@@ -144,7 +149,7 @@ fun RelayStatusRow(
         ) {
             Icon(
                 imageVector = Icons.Default.Upload,
-                stringRes(R.string.write_to_relay),
+                stringResource(Res.string.write_to_relay),
                 modifier = Size15Modifier,
                 tint = MaterialTheme.colorScheme.allGoodColor,
             )
@@ -178,7 +183,7 @@ fun RelayStatusRow(
 
             Icon(
                 imageVector = Icons.Default.SyncProblem,
-                stringRes(R.string.errors),
+                stringResource(Res.string.errors),
                 modifier = Size15Modifier,
                 tint =
                     if (successRate < 0.1) {
@@ -218,7 +223,7 @@ fun RelayStatusRow(
         ) {
             Icon(
                 imageVector = Icons.Default.DeleteSweep,
-                stringRes(R.string.spam),
+                stringResource(Res.string.spam),
                 modifier = Size15Modifier,
                 tint =
                     if (item.relayStat.spamCounter > 0) {

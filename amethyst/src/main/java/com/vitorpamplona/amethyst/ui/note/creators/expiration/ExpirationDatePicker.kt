@@ -57,11 +57,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.expiration_date_explainer
+import com.vitorpamplona.amethyst.commons.resources.expiration_date_label
+import com.vitorpamplona.amethyst.commons.resources.expiration_expires_in
 import com.vitorpamplona.amethyst.ui.note.timeAheadNoDot
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.utils.TimeUtils
+import org.jetbrains.compose.resources.stringResource
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZoneOffset
@@ -103,13 +107,13 @@ fun ExpirationDatePicker(model: IExpiration) {
         ) {
             Icon(
                 imageVector = Icons.Outlined.Timer,
-                contentDescription = stringRes(R.string.expiration_date_label),
+                contentDescription = stringResource(Res.string.expiration_date_label),
                 modifier = Modifier.size(20.dp),
                 tint = Color(0xFFFF6600),
             )
 
             Text(
-                text = stringRes(R.string.expiration_date_label),
+                text = stringResource(Res.string.expiration_date_label),
                 fontSize = 20.sp,
                 fontWeight = FontWeight.W500,
                 modifier = Modifier.padding(start = 10.dp),
@@ -119,7 +123,7 @@ fun ExpirationDatePicker(model: IExpiration) {
         HorizontalDivider(thickness = DividerThickness)
 
         Text(
-            text = stringRes(R.string.expiration_date_explainer),
+            text = stringResource(Res.string.expiration_date_explainer),
             color = MaterialTheme.colorScheme.placeholderText,
             modifier = Modifier.padding(vertical = 10.dp),
         )
@@ -136,10 +140,10 @@ fun ExpirationDatePicker(model: IExpiration) {
                 Spacer(Modifier.width(12.dp))
 
                 if (model.expirationDate < TimeUtils.oneMinuteFromNow()) {
-                    Text(stringRes(R.string.expiration_date_label) + " " + model.expirationDate, style = MaterialTheme.typography.bodyLarge)
+                    Text(stringResource(Res.string.expiration_date_label) + " " + model.expirationDate, style = MaterialTheme.typography.bodyLarge)
                 } else {
                     Text(
-                        text = stringRes(R.string.expiration_expires_in, timeAheadNoDot(model.expirationDate, context)),
+                        text = stringResource(Res.string.expiration_expires_in, timeAheadNoDot(model.expirationDate, context)),
                         style = MaterialTheme.typography.bodyLarge,
                     )
                 }

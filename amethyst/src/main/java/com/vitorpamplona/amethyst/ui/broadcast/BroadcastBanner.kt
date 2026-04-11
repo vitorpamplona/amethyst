@@ -57,12 +57,28 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.bookmarks
+import com.vitorpamplona.amethyst.commons.resources.boost
+import com.vitorpamplona.amethyst.commons.resources.bradcasting_result_failure
+import com.vitorpamplona.amethyst.commons.resources.bradcasting_result_partial
+import com.vitorpamplona.amethyst.commons.resources.bradcasting_result_success
+import com.vitorpamplona.amethyst.commons.resources.broadcasting
+import com.vitorpamplona.amethyst.commons.resources.broadcasting_name
+import com.vitorpamplona.amethyst.commons.resources.broadcasting_number_events
+import com.vitorpamplona.amethyst.commons.resources.event_sent
+import com.vitorpamplona.amethyst.commons.resources.post
+import com.vitorpamplona.amethyst.commons.resources.reaction
+import com.vitorpamplona.amethyst.commons.resources.retry_failed
+import com.vitorpamplona.amethyst.commons.resources.sent_number_events
+import com.vitorpamplona.amethyst.commons.resources.share_of
+import com.vitorpamplona.amethyst.commons.resources.tap_to_view_details
+import com.vitorpamplona.amethyst.commons.resources.voice_post
+import com.vitorpamplona.amethyst.commons.resources.voice_reply
 import com.vitorpamplona.amethyst.model.Constants
 import com.vitorpamplona.amethyst.service.broadcast.BroadcastEvent
 import com.vitorpamplona.amethyst.service.broadcast.BroadcastStatus
 import com.vitorpamplona.amethyst.service.broadcast.RelayResult
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
@@ -75,6 +91,7 @@ import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
+import org.jetbrains.compose.resources.stringResource
 import java.util.UUID
 
 /**
@@ -138,7 +155,7 @@ private fun SingleBroadcastContent(broadcast: BroadcastEvent) {
     ) {
         Icon(
             imageVector = Icons.Default.Sync,
-            contentDescription = stringRes(R.string.broadcasting),
+            contentDescription = stringResource(Res.string.broadcasting),
             tint = MaterialTheme.colorScheme.primary,
             modifier = Modifier.size(18.dp),
         )
@@ -149,7 +166,7 @@ private fun SingleBroadcastContent(broadcast: BroadcastEvent) {
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(
-                    text = stringRes(R.string.broadcasting_name, broadcast.event.toKindName()),
+                    text = stringResource(Res.string.broadcasting_name, broadcast.event.toKindName()),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
@@ -160,7 +177,7 @@ private fun SingleBroadcastContent(broadcast: BroadcastEvent) {
                 Spacer(Modifier.width(8.dp))
 
                 Text(
-                    text = stringRes(R.string.share_of, broadcast.results.size, broadcast.totalRelays),
+                    text = stringResource(Res.string.share_of, broadcast.results.size, broadcast.totalRelays),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary,
                 )
@@ -196,7 +213,7 @@ private fun MultipleBroadcastsContent(broadcasts: ImmutableList<BroadcastEvent>)
     ) {
         Icon(
             imageVector = Icons.Default.Sync,
-            contentDescription = stringRes(R.string.broadcasting),
+            contentDescription = stringResource(Res.string.broadcasting),
             tint = MaterialTheme.colorScheme.primary,
             modifier = Modifier.size(18.dp),
         )
@@ -207,13 +224,13 @@ private fun MultipleBroadcastsContent(broadcasts: ImmutableList<BroadcastEvent>)
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(
-                    text = stringRes(R.string.broadcasting_number_events, broadcasts.size),
+                    text = stringResource(Res.string.broadcasting_number_events, broadcasts.size),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
 
                 Text(
-                    text = stringRes(R.string.share_of, completedResponses, totalRelays),
+                    text = stringResource(Res.string.share_of, completedResponses, totalRelays),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary,
                 )
@@ -276,7 +293,7 @@ fun CompletedBroadcastContent(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(
-                    text = stringRes(R.string.event_sent, broadcast.event.toKindName()),
+                    text = stringResource(Res.string.event_sent, broadcast.event.toKindName()),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
@@ -287,7 +304,7 @@ fun CompletedBroadcastContent(
 
             if (broadcast.failedRelays.isNotEmpty()) {
                 Text(
-                    text = stringRes(R.string.tap_to_view_details),
+                    text = stringResource(Res.string.tap_to_view_details),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -295,7 +312,7 @@ fun CompletedBroadcastContent(
         }
 
         Text(
-            text = stringRes(R.string.share_of, broadcast.successCount, broadcast.totalRelays),
+            text = stringResource(Res.string.share_of, broadcast.successCount, broadcast.totalRelays),
             style = MaterialTheme.typography.labelMedium,
             color = iconTint,
         )
@@ -308,7 +325,7 @@ fun CompletedBroadcastContent(
             ) {
                 Icon(
                     imageVector = Icons.Default.Refresh,
-                    contentDescription = stringRes(R.string.retry_failed),
+                    contentDescription = stringResource(Res.string.retry_failed),
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(18.dp),
                 )
@@ -362,11 +379,11 @@ fun MultipleCompletedBroadcastContent(
             imageVector = statusIcon,
             contentDescription =
                 if (allSuccess) {
-                    stringRes(R.string.bradcasting_result_success)
+                    stringResource(Res.string.bradcasting_result_success)
                 } else if (allFailed) {
-                    stringRes(R.string.bradcasting_result_failure)
+                    stringResource(Res.string.bradcasting_result_failure)
                 } else {
-                    stringRes(R.string.bradcasting_result_partial)
+                    stringResource(Res.string.bradcasting_result_partial)
                 },
             tint = iconTint,
             modifier = Modifier.size(18.dp),
@@ -379,7 +396,7 @@ fun MultipleCompletedBroadcastContent(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(
-                    text = stringRes(R.string.sent_number_events, broadcasts.size),
+                    text = stringResource(Res.string.sent_number_events, broadcasts.size),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
@@ -390,7 +407,7 @@ fun MultipleCompletedBroadcastContent(
 
             if (failedRelayCount > 0) {
                 Text(
-                    text = stringRes(R.string.tap_to_view_details),
+                    text = stringResource(Res.string.tap_to_view_details),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -398,7 +415,7 @@ fun MultipleCompletedBroadcastContent(
         }
 
         Text(
-            text = stringRes(R.string.share_of, (totalRelayCount - failedRelayCount), totalRelayCount),
+            text = stringResource(Res.string.share_of, (totalRelayCount - failedRelayCount), totalRelayCount),
             style = MaterialTheme.typography.labelMedium,
             color = iconTint,
         )
@@ -411,7 +428,7 @@ fun MultipleCompletedBroadcastContent(
             ) {
                 Icon(
                     imageVector = Icons.Default.Refresh,
-                    contentDescription = stringRes(R.string.retry_failed),
+                    contentDescription = stringResource(Res.string.retry_failed),
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(18.dp),
                 )
@@ -434,14 +451,14 @@ fun MultipleCompletedBroadcastContent(
 @Composable
 fun Event.toKindName(): String =
     when (this) {
-        is ReactionEvent -> stringRes(R.string.reaction)
-        is RepostEvent -> stringRes(R.string.boost)
-        is GenericRepostEvent -> stringRes(R.string.boost)
-        is VoiceEvent -> stringRes(R.string.voice_post)
-        is VoiceReplyEvent -> stringRes(R.string.voice_reply)
-        is BookmarkListEvent -> stringRes(R.string.bookmarks)
-        is OldBookmarkListEvent -> stringRes(R.string.bookmarks)
-        else -> stringRes(R.string.post)
+        is ReactionEvent -> stringResource(Res.string.reaction)
+        is RepostEvent -> stringResource(Res.string.boost)
+        is GenericRepostEvent -> stringResource(Res.string.boost)
+        is VoiceEvent -> stringResource(Res.string.voice_post)
+        is VoiceReplyEvent -> stringResource(Res.string.voice_reply)
+        is BookmarkListEvent -> stringResource(Res.string.bookmarks)
+        is OldBookmarkListEvent -> stringResource(Res.string.bookmarks)
+        else -> stringResource(Res.string.post)
     }
 
 @Preview

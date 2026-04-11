@@ -35,8 +35,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.resources.follow_set_creation_action_btn_label
+import com.vitorpamplona.amethyst.commons.resources.follow_set_creation_desc_label
+import com.vitorpamplona.amethyst.commons.resources.follow_set_creation_name_label
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun NewPeopleListCreationDialog(
@@ -70,7 +76,7 @@ fun NewPeopleListCreationDialog(
                     value = newListName.value,
                     onValueChange = { newListName.value = it },
                     label = {
-                        Text(text = stringRes(R.string.follow_set_creation_name_label))
+                        Text(text = stringResource(Res.string.follow_set_creation_name_label))
                     },
                 )
                 Spacer(modifier = DoubleVertSpacer)
@@ -82,7 +88,7 @@ fun NewPeopleListCreationDialog(
                         ).toString(),
                     onValueChange = { newListDescription.value = it },
                     label = {
-                        Text(text = stringRes(R.string.follow_set_creation_desc_label))
+                        Text(text = stringResource(Res.string.follow_set_creation_desc_label))
                     },
                 )
             }
@@ -94,14 +100,14 @@ fun NewPeopleListCreationDialog(
                     onDismiss()
                 },
             ) {
-                Text(stringRes(R.string.follow_set_creation_action_btn_label))
+                Text(stringResource(Res.string.follow_set_creation_action_btn_label))
             }
         },
         dismissButton = {
             Button(
                 onClick = onDismiss,
             ) {
-                Text(stringRes(R.string.cancel))
+                Text(stringResource(Res.string.cancel))
             }
         },
     )

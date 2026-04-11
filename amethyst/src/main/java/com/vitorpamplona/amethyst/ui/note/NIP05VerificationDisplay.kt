@@ -51,6 +51,10 @@ import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.hashtags.Tunestr
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.Nip05State
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.Nip05VerifState
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.nip05_checking
+import com.vitorpamplona.amethyst.commons.resources.nip05_failed
+import com.vitorpamplona.amethyst.commons.resources.nip05_verified
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -67,7 +71,6 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.routeForUser
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.NIP05IconSize
 import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
@@ -88,6 +91,7 @@ import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.coroutines.delay
+import org.jetbrains.compose.resources.stringResource
 import kotlin.time.Duration.Companion.seconds
 
 @Composable
@@ -462,7 +466,7 @@ fun RenderNIP05VerifiedSymbol(
             is Nip05VerifState.Verifying -> {
                 Icon(
                     imageVector = Icons.Default.Downloading,
-                    contentDescription = stringRes(id = R.string.nip05_checking),
+                    contentDescription = stringResource(Res.string.nip05_checking),
                     modifier = modifier,
                     tint = Color.Yellow,
                 )
@@ -471,7 +475,7 @@ fun RenderNIP05VerifiedSymbol(
             is Nip05VerifState.NotStarted -> {
                 Icon(
                     imageVector = Icons.Default.Downloading,
-                    contentDescription = stringRes(id = R.string.nip05_checking),
+                    contentDescription = stringResource(Res.string.nip05_checking),
                     modifier = modifier,
                     tint = Color.Yellow,
                 )
@@ -480,7 +484,7 @@ fun RenderNIP05VerifiedSymbol(
             is Nip05VerifState.Verified -> {
                 Icon(
                     painter = painterRes(R.drawable.nip_05, compositionSizeReference),
-                    contentDescription = stringRes(id = R.string.nip05_verified),
+                    contentDescription = stringResource(Res.string.nip05_verified),
                     modifier = modifier,
                     tint = Color.Unspecified,
                 )
@@ -489,7 +493,7 @@ fun RenderNIP05VerifiedSymbol(
             is Nip05VerifState.Failed -> {
                 Icon(
                     imageVector = Icons.Default.Report,
-                    contentDescription = stringRes(id = R.string.nip05_failed),
+                    contentDescription = stringResource(Res.string.nip05_failed),
                     modifier = modifier,
                     tint = Color.Red,
                 )
@@ -498,7 +502,7 @@ fun RenderNIP05VerifiedSymbol(
             is Nip05VerifState.Error -> {
                 Icon(
                     imageVector = Icons.Default.Report,
-                    contentDescription = stringRes(id = R.string.nip05_failed),
+                    contentDescription = stringResource(Res.string.nip05_failed),
                     modifier = modifier,
                     tint = Color.Red,
                 )

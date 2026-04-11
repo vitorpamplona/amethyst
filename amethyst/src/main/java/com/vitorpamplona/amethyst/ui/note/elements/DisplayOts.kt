@@ -30,14 +30,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.existed_since
+import com.vitorpamplona.amethyst.commons.resources.timestamp_pending_short
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.buildLinkString
 import com.vitorpamplona.amethyst.ui.note.LoadOts
 import com.vitorpamplona.amethyst.ui.note.timeAgoNoDot
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
+import org.jetbrains.compose.resources.stringResource
 import java.text.SimpleDateFormat
 import java.util.Date
 
@@ -62,7 +65,7 @@ fun DisplayOts(
 
             Text(
                 text =
-                    buildLinkString(stringRes(R.string.existed_since, timeStr)) {
+                    buildLinkString(stringResource(Res.string.existed_since, timeStr)) {
                         accountViewModel.toastManager.toast(
                             R.string.ots_info_title,
                             R.string.ots_info_description,
@@ -80,7 +83,7 @@ fun DisplayOts(
         },
         whenPending = {
             Text(
-                stringRes(id = R.string.timestamp_pending_short),
+                stringResource(Res.string.timestamp_pending_short),
                 color = MaterialTheme.colorScheme.lessImportantLink,
                 fontSize = Font14SP,
                 fontWeight = FontWeight.Bold,

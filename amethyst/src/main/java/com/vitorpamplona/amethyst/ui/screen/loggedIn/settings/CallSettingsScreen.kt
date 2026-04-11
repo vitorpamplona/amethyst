@@ -54,13 +54,27 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.call_settings
+import com.vitorpamplona.amethyst.commons.resources.call_settings_add_turn
+import com.vitorpamplona.amethyst.commons.resources.call_settings_custom_turn
+import com.vitorpamplona.amethyst.commons.resources.call_settings_default_servers
+import com.vitorpamplona.amethyst.commons.resources.call_settings_max_bitrate
+import com.vitorpamplona.amethyst.commons.resources.call_settings_no_custom_turn
+import com.vitorpamplona.amethyst.commons.resources.call_settings_remove_turn
+import com.vitorpamplona.amethyst.commons.resources.call_settings_turn_credential
+import com.vitorpamplona.amethyst.commons.resources.call_settings_turn_description
+import com.vitorpamplona.amethyst.commons.resources.call_settings_turn_servers
+import com.vitorpamplona.amethyst.commons.resources.call_settings_turn_url
+import com.vitorpamplona.amethyst.commons.resources.call_settings_turn_username
+import com.vitorpamplona.amethyst.commons.resources.call_settings_video_quality
+import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.model.CallTurnServer
 import com.vitorpamplona.amethyst.model.CallVideoResolution
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun CallSettingsScreen(
@@ -69,7 +83,7 @@ fun CallSettingsScreen(
 ) {
     Scaffold(
         topBar = {
-            TopBarWithBackButton(stringRes(id = R.string.call_settings), nav::popBack)
+            TopBarWithBackButton(stringResource(Res.string.call_settings), nav::popBack)
         },
     ) { padding ->
         Column(
@@ -86,7 +100,7 @@ fun CallSettingsScreen(
 private fun CallSettingsContent(accountViewModel: AccountViewModel) {
     val settings = accountViewModel.account.settings
 
-    SectionHeader(stringRes(R.string.call_settings_video_quality))
+    SectionHeader(stringResource(Res.string.call_settings_video_quality))
     VideoResolutionSection(
         currentResolution = settings.callVideoResolution,
         onResolutionChanged = { settings.changeCallVideoResolution(it) },
@@ -101,9 +115,9 @@ private fun CallSettingsContent(accountViewModel: AccountViewModel) {
 
     HorizontalDivider(thickness = 4.dp, modifier = Modifier.padding(vertical = 8.dp))
 
-    SectionHeader(stringRes(R.string.call_settings_turn_servers))
+    SectionHeader(stringResource(Res.string.call_settings_turn_servers))
     Text(
-        text = stringRes(R.string.call_settings_turn_description),
+        text = stringResource(Res.string.call_settings_turn_description),
         fontSize = 13.sp,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp),
@@ -176,7 +190,7 @@ private fun BitrateSection(
 
     Column(modifier = Modifier.padding(horizontal = 24.dp)) {
         Text(
-            text = stringRes(R.string.call_settings_max_bitrate),
+            text = stringResource(Res.string.call_settings_max_bitrate),
             fontSize = 14.sp,
             fontWeight = FontWeight.Medium,
             modifier = Modifier.padding(bottom = 4.dp),
@@ -213,7 +227,7 @@ private fun DefaultTurnServersSection() {
         )
     Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp)) {
         Text(
-            text = stringRes(R.string.call_settings_default_servers),
+            text = stringResource(Res.string.call_settings_default_servers),
             fontSize = 14.sp,
             fontWeight = FontWeight.Medium,
             modifier = Modifier.padding(bottom = 4.dp),
@@ -239,7 +253,7 @@ private fun CustomTurnServersSection(
 
     Column(modifier = Modifier.padding(horizontal = 24.dp)) {
         Text(
-            text = stringRes(R.string.call_settings_custom_turn),
+            text = stringResource(Res.string.call_settings_custom_turn),
             fontSize = 14.sp,
             fontWeight = FontWeight.Medium,
             modifier = Modifier.padding(bottom = 8.dp),
@@ -260,7 +274,7 @@ private fun CustomTurnServersSection(
 
         if (editableServers.isEmpty() && !showAddForm) {
             Text(
-                text = stringRes(R.string.call_settings_no_custom_turn),
+                text = stringResource(Res.string.call_settings_no_custom_turn),
                 fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(vertical = 8.dp),
@@ -285,7 +299,7 @@ private fun CustomTurnServersSection(
             ) {
                 Icon(Icons.Outlined.Add, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(stringRes(R.string.call_settings_add_turn))
+                Text(stringResource(Res.string.call_settings_add_turn))
             }
         }
     }
@@ -312,7 +326,7 @@ private fun TurnServerRow(
         IconButton(onClick = onDelete) {
             Icon(
                 Icons.Outlined.Delete,
-                contentDescription = stringRes(R.string.call_settings_remove_turn),
+                contentDescription = stringResource(Res.string.call_settings_remove_turn),
                 tint = MaterialTheme.colorScheme.error,
             )
         }
@@ -332,7 +346,7 @@ private fun AddTurnServerForm(
         OutlinedTextField(
             value = url,
             onValueChange = { url = it },
-            label = { Text(stringRes(R.string.call_settings_turn_url)) },
+            label = { Text(stringResource(Res.string.call_settings_turn_url)) },
             placeholder = { Text("turn:your-server.com:443") },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
@@ -341,7 +355,7 @@ private fun AddTurnServerForm(
         OutlinedTextField(
             value = username,
             onValueChange = { username = it },
-            label = { Text(stringRes(R.string.call_settings_turn_username)) },
+            label = { Text(stringResource(Res.string.call_settings_turn_username)) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
@@ -349,7 +363,7 @@ private fun AddTurnServerForm(
         OutlinedTextField(
             value = credential,
             onValueChange = { credential = it },
-            label = { Text(stringRes(R.string.call_settings_turn_credential)) },
+            label = { Text(stringResource(Res.string.call_settings_turn_credential)) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
@@ -362,7 +376,7 @@ private fun AddTurnServerForm(
                 onClick = onCancel,
                 colors = ButtonDefaults.textButtonColors(),
             ) {
-                Text(stringRes(R.string.cancel))
+                Text(stringResource(Res.string.cancel))
             }
             Spacer(modifier = Modifier.width(8.dp))
             Button(
@@ -373,7 +387,7 @@ private fun AddTurnServerForm(
                 },
                 enabled = url.isNotBlank(),
             ) {
-                Text(stringRes(R.string.call_settings_add_turn))
+                Text(stringResource(Res.string.call_settings_add_turn))
             }
         }
     }

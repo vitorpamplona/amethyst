@@ -31,6 +31,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.error_dialog_button_ok
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
@@ -44,6 +46,7 @@ import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 @Preview
@@ -99,7 +102,7 @@ fun MultiUserErrorMessageDialog(
                     contentDescription = null,
                 )
                 Spacer(StdHorzSpacer)
-                Text(stringRes(R.string.error_dialog_button_ok))
+                Text(stringResource(Res.string.error_dialog_button_ok))
             }
         },
     )

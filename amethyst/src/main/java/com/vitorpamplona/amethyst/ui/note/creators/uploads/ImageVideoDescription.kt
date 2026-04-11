@@ -56,6 +56,17 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.add_content
+import com.vitorpamplona.amethyst.commons.resources.content_description
+import com.vitorpamplona.amethyst.commons.resources.content_description_example
+import com.vitorpamplona.amethyst.commons.resources.file_server
+import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_explainer
+import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_high
+import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_label
+import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_low
+import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_medium
+import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_uncompressed
 import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
@@ -73,6 +84,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 import kotlinx.collections.immutable.toImmutableList
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun ImageVideoDescription(
@@ -192,7 +204,7 @@ fun ImageVideoDescription(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 TextSpinner(
-                    label = stringRes(id = R.string.file_server),
+                    label = stringResource(Res.string.file_server),
                     placeholder =
                         fileServers
                             .firstOrNull { it == defaultServer }
@@ -232,7 +244,7 @@ fun ImageVideoDescription(
                         .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)),
             ) {
                 OutlinedTextField(
-                    label = { Text(text = stringRes(R.string.content_description)) },
+                    label = { Text(text = stringResource(Res.string.content_description)) },
                     modifier =
                         Modifier
                             .fillMaxWidth()
@@ -241,7 +253,7 @@ fun ImageVideoDescription(
                     onValueChange = { message = it },
                     placeholder = {
                         Text(
-                            text = stringRes(R.string.content_description_example),
+                            text = stringResource(Res.string.content_description_example),
                             color = MaterialTheme.colorScheme.placeholderText,
                         )
                     },
@@ -284,12 +296,12 @@ fun ImageVideoDescription(
                         verticalArrangement = Arrangement.spacedBy(Size5dp),
                     ) {
                         Text(
-                            text = stringRes(R.string.media_compression_quality_label),
+                            text = stringResource(Res.string.media_compression_quality_label),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
                         Text(
-                            text = stringRes(R.string.media_compression_quality_explainer),
+                            text = stringResource(Res.string.media_compression_quality_explainer),
                             style = MaterialTheme.typography.bodySmall,
                             color = Color.Gray,
                             maxLines = 5,
@@ -302,11 +314,11 @@ fun ImageVideoDescription(
                         Text(
                             text =
                                 when (mediaQualitySlider) {
-                                    0 -> stringRes(R.string.media_compression_quality_low)
-                                    1 -> stringRes(R.string.media_compression_quality_medium)
-                                    2 -> stringRes(R.string.media_compression_quality_high)
-                                    3 -> stringRes(R.string.media_compression_quality_uncompressed)
-                                    else -> stringRes(R.string.media_compression_quality_medium)
+                                    0 -> stringResource(Res.string.media_compression_quality_low)
+                                    1 -> stringResource(Res.string.media_compression_quality_medium)
+                                    2 -> stringResource(Res.string.media_compression_quality_high)
+                                    3 -> stringResource(Res.string.media_compression_quality_uncompressed)
+                                    else -> stringResource(Res.string.media_compression_quality_medium)
                                 },
                             modifier = Modifier.align(Alignment.Center),
                         )
@@ -363,7 +375,7 @@ fun ImageVideoDescription(
                         containerColor = MaterialTheme.colorScheme.primary,
                     ),
             ) {
-                Text(text = stringRes(R.string.add_content), color = Color.White, fontSize = 20.sp)
+                Text(text = stringResource(Res.string.add_content), color = Color.White, fontSize = 20.sp)
             }
         }
     }

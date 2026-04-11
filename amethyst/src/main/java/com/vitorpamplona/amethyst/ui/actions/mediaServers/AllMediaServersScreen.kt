@@ -38,11 +38,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.set_preferred_media_servers
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.grayText
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun AllMediaServersScreen(
@@ -98,7 +100,7 @@ fun MediaServersScaffold(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
-                text = stringRes(id = R.string.set_preferred_media_servers),
+                text = stringResource(Res.string.set_preferred_media_servers),
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(top = 10.dp),
                 style = MaterialTheme.typography.bodyLarge,

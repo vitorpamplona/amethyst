@@ -62,6 +62,28 @@ import com.vitorpamplona.amethyst.commons.icons.Repost
 import com.vitorpamplona.amethyst.commons.icons.Reposted
 import com.vitorpamplona.amethyst.commons.icons.Search
 import com.vitorpamplona.amethyst.commons.icons.Zap
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.accessibility_download_for_offline
+import com.vitorpamplona.amethyst.commons.resources.accessibility_play_username
+import com.vitorpamplona.amethyst.commons.resources.accessibility_pushpin
+import com.vitorpamplona.amethyst.commons.resources.app_logo
+import com.vitorpamplona.amethyst.commons.resources.back
+import com.vitorpamplona.amethyst.commons.resources.boost_or_quote_description
+import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.resources.cashu
+import com.vitorpamplona.amethyst.commons.resources.change_reaction
+import com.vitorpamplona.amethyst.commons.resources.clear
+import com.vitorpamplona.amethyst.commons.resources.copy_to_clipboard
+import com.vitorpamplona.amethyst.commons.resources.enter_picture_in_picture
+import com.vitorpamplona.amethyst.commons.resources.following
+import com.vitorpamplona.amethyst.commons.resources.lightning_address
+import com.vitorpamplona.amethyst.commons.resources.like_description
+import com.vitorpamplona.amethyst.commons.resources.note_options
+import com.vitorpamplona.amethyst.commons.resources.record_a_message
+import com.vitorpamplona.amethyst.commons.resources.reply_description
+import com.vitorpamplona.amethyst.commons.resources.search_button
+import com.vitorpamplona.amethyst.commons.resources.share_or_save
+import com.vitorpamplona.amethyst.commons.resources.website
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Size19Modifier
@@ -70,12 +92,13 @@ import com.vitorpamplona.amethyst.ui.theme.Size30Modifier
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.subtleButton
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun AmethystIcon(iconSize: Dp) {
     Icon(
         imageVector = CustomHashTagIcons.Amethyst,
-        contentDescription = stringRes(id = R.string.app_logo),
+        contentDescription = stringResource(Res.string.app_logo),
         modifier = Modifier.size(iconSize),
         tint = Color.Unspecified,
     )
@@ -85,7 +108,7 @@ fun AmethystIcon(iconSize: Dp) {
 fun FollowingIcon(modifier: Modifier) {
     Icon(
         imageVector = Following,
-        contentDescription = stringRes(id = R.string.following),
+        contentDescription = stringResource(Res.string.following),
         modifier = modifier,
         tint = Color.Unspecified,
     )
@@ -95,7 +118,7 @@ fun FollowingIcon(modifier: Modifier) {
 fun ArrowBackIcon(tint: Color = MaterialTheme.colorScheme.grayText) {
     Icon(
         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-        contentDescription = stringRes(R.string.back),
+        contentDescription = stringResource(Res.string.back),
         tint = tint,
     )
 }
@@ -107,7 +130,7 @@ fun DownloadForOfflineIcon(
 ) {
     Icon(
         imageVector = Icons.Default.DownloadForOffline,
-        contentDescription = stringRes(id = R.string.accessibility_download_for_offline),
+        contentDescription = stringResource(Res.string.accessibility_download_for_offline),
         modifier = remember(iconSize) { Modifier.size(iconSize) },
         tint = tint,
     )
@@ -120,7 +143,7 @@ fun LikedIcon(
 ) {
     Icon(
         imageVector = Liked,
-        contentDescription = stringRes(id = R.string.like_description),
+        contentDescription = stringResource(Res.string.like_description),
         modifier = modifier,
         tint = tint,
     )
@@ -133,7 +156,7 @@ fun ChangeReactionIcon(
 ) {
     Icon(
         imageVector = Icons.Outlined.AddReaction,
-        contentDescription = stringRes(id = R.string.change_reaction),
+        contentDescription = stringResource(Res.string.change_reaction),
         modifier = modifier,
         tint = tint,
     )
@@ -146,7 +169,7 @@ fun LikeIcon(
 ) {
     Icon(
         imageVector = Like,
-        contentDescription = stringRes(id = R.string.like_description),
+        contentDescription = stringResource(Res.string.like_description),
         modifier = iconSizeModifier,
         tint = grayTint,
     )
@@ -159,7 +182,7 @@ fun RepostIcon(
 ) {
     Icon(
         imageVector = Repost,
-        contentDescription = stringRes(id = R.string.boost_or_quote_description),
+        contentDescription = stringResource(Res.string.boost_or_quote_description),
         modifier = modifier,
         tint = tint,
     )
@@ -172,7 +195,7 @@ fun RepostedIcon(
 ) {
     Icon(
         imageVector = Reposted,
-        contentDescription = stringRes(id = R.string.boost_or_quote_description),
+        contentDescription = stringResource(Res.string.boost_or_quote_description),
         modifier = modifier,
         tint = tint,
     )
@@ -185,7 +208,7 @@ fun LightningAddressIcon(
 ) {
     Icon(
         imageVector = Icons.Default.Bolt,
-        contentDescription = stringRes(R.string.lightning_address),
+        contentDescription = stringResource(Res.string.lightning_address),
         tint = tint,
         modifier = modifier,
     )
@@ -251,7 +274,7 @@ fun ShareIcon(
     Icon(
         imageVector = Icons.Default.Share,
         modifier = modifier,
-        contentDescription = stringRes(R.string.share_or_save),
+        contentDescription = stringResource(Res.string.share_or_save),
         tint = tint,
     )
 }
@@ -260,7 +283,7 @@ fun ShareIcon(
 fun CashuIcon(modifier: Modifier) {
     Icon(
         imageVector = CustomHashTagIcons.Cashu,
-        stringRes(R.string.cashu),
+        stringResource(Res.string.cashu),
         tint = Color.Unspecified,
         modifier = modifier,
     )
@@ -270,7 +293,7 @@ fun CashuIcon(modifier: Modifier) {
 fun CopyIcon(modifier: Modifier) {
     Icon(
         imageVector = Icons.Default.ContentCopy,
-        stringRes(id = R.string.copy_to_clipboard),
+        stringResource(Res.string.copy_to_clipboard),
         modifier = modifier,
     )
 }
@@ -279,7 +302,7 @@ fun CopyIcon(modifier: Modifier) {
 fun OpenInNewIcon(modifier: Modifier) {
     Icon(
         imageVector = Icons.AutoMirrored.Filled.OpenInNew,
-        stringRes(id = R.string.copy_to_clipboard),
+        stringResource(Res.string.copy_to_clipboard),
         modifier = modifier,
     )
 }
@@ -317,7 +340,7 @@ fun VoiceReplyIcon(
 ) {
     Icon(
         imageVector = Icons.Outlined.Mic,
-        contentDescription = stringRes(id = R.string.record_a_message),
+        contentDescription = stringResource(Res.string.record_a_message),
         tint = tint,
         modifier = iconSizeModifier,
     )
@@ -330,7 +353,7 @@ fun CommentIcon(
 ) {
     Icon(
         imageVector = Reply,
-        contentDescription = stringRes(id = R.string.reply_description),
+        contentDescription = stringResource(Res.string.reply_description),
         modifier = iconSizeModifier,
         tint = tint,
     )
@@ -340,7 +363,7 @@ fun CommentIcon(
 fun CancelIcon() {
     Icon(
         imageVector = Icons.Default.Cancel,
-        contentDescription = stringRes(id = R.string.cancel),
+        contentDescription = stringResource(Res.string.cancel),
         modifier = Size30Modifier,
         tint = MaterialTheme.colorScheme.placeholderText,
     )
@@ -350,7 +373,7 @@ fun CancelIcon() {
 fun CloseIcon() {
     Icon(
         imageVector = Icons.Outlined.Close,
-        contentDescription = stringRes(id = R.string.cancel),
+        contentDescription = stringResource(Res.string.cancel),
         modifier = Size20Modifier,
     )
 }
@@ -362,7 +385,7 @@ fun SearchIcon(
 ) {
     Icon(
         imageVector = Search,
-        contentDescription = stringRes(id = R.string.search_button),
+        contentDescription = stringResource(Res.string.search_button),
         modifier = modifier,
         tint = tint,
     )
@@ -375,7 +398,7 @@ fun PlayIcon(
 ) {
     Icon(
         imageVector = Icons.Outlined.PlayCircle,
-        contentDescription = stringRes(id = R.string.accessibility_play_username),
+        contentDescription = stringResource(Res.string.accessibility_play_username),
         modifier = modifier,
         tint = tint,
     )
@@ -388,7 +411,7 @@ fun PinIcon(
 ) {
     Icon(
         imageVector = Icons.Default.PushPin,
-        contentDescription = stringRes(id = R.string.accessibility_pushpin),
+        contentDescription = stringResource(Res.string.accessibility_pushpin),
         modifier = modifier,
         tint = tint,
     )
@@ -401,7 +424,7 @@ fun EnablePiP(
 ) {
     Icon(
         imageVector = Icons.AutoMirrored.Outlined.OpenInNew,
-        contentDescription = stringRes(id = R.string.enter_picture_in_picture),
+        contentDescription = stringResource(Res.string.enter_picture_in_picture),
         modifier = modifier,
         tint = tint,
     )
@@ -411,7 +434,7 @@ fun EnablePiP(
 fun ClearTextIcon() {
     Icon(
         imageVector = Icons.Default.Clear,
-        contentDescription = stringRes(R.string.clear),
+        contentDescription = stringResource(Res.string.clear),
     )
 }
 
@@ -422,7 +445,7 @@ fun LinkIcon(
 ) {
     Icon(
         imageVector = Icons.Default.Link,
-        contentDescription = stringRes(R.string.website),
+        contentDescription = stringResource(Res.string.website),
         modifier = modifier,
         tint = tint,
     )
@@ -432,7 +455,7 @@ fun LinkIcon(
 fun VerticalDotsIcon() {
     Icon(
         imageVector = Icons.Default.MoreVert,
-        contentDescription = stringRes(id = R.string.note_options),
+        contentDescription = stringResource(Res.string.note_options),
         modifier = Size19Modifier,
         tint = MaterialTheme.colorScheme.placeholderText,
     )

@@ -48,11 +48,23 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.goal_amount_label
+import com.vitorpamplona.amethyst.commons.resources.goal_amount_placeholder
+import com.vitorpamplona.amethyst.commons.resources.goal_description_label
+import com.vitorpamplona.amethyst.commons.resources.goal_description_placeholder
+import com.vitorpamplona.amethyst.commons.resources.goal_image_label
+import com.vitorpamplona.amethyst.commons.resources.goal_image_placeholder
+import com.vitorpamplona.amethyst.commons.resources.goal_set_deadline
+import com.vitorpamplona.amethyst.commons.resources.goal_summary_label
+import com.vitorpamplona.amethyst.commons.resources.goal_summary_placeholder
+import com.vitorpamplona.amethyst.commons.resources.goal_website_label
+import com.vitorpamplona.amethyst.commons.resources.goal_website_placeholder
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.PostingTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
+import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -129,8 +141,8 @@ private fun NewGoalBody(goalViewModel: NewGoalViewModel) {
         OutlinedTextField(
             value = goalViewModel.description,
             onValueChange = { goalViewModel.description = it },
-            label = { Text(stringRes(R.string.goal_description_label)) },
-            placeholder = { Text(stringRes(R.string.goal_description_placeholder)) },
+            label = { Text(stringResource(Res.string.goal_description_label)) },
+            placeholder = { Text(stringResource(Res.string.goal_description_placeholder)) },
             modifier = Modifier.fillMaxWidth(),
             minLines = 3,
             maxLines = 6,
@@ -141,8 +153,8 @@ private fun NewGoalBody(goalViewModel: NewGoalViewModel) {
         OutlinedTextField(
             value = goalViewModel.amount,
             onValueChange = { goalViewModel.amount = it },
-            label = { Text(stringRes(R.string.goal_amount_label)) },
-            placeholder = { Text(stringRes(R.string.goal_amount_placeholder)) },
+            label = { Text(stringResource(Res.string.goal_amount_label)) },
+            placeholder = { Text(stringResource(Res.string.goal_amount_placeholder)) },
             modifier = Modifier.fillMaxWidth(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             singleLine = true,
@@ -153,8 +165,8 @@ private fun NewGoalBody(goalViewModel: NewGoalViewModel) {
         OutlinedTextField(
             value = goalViewModel.summary,
             onValueChange = { goalViewModel.summary = it },
-            label = { Text(stringRes(R.string.goal_summary_label)) },
-            placeholder = { Text(stringRes(R.string.goal_summary_placeholder)) },
+            label = { Text(stringResource(Res.string.goal_summary_label)) },
+            placeholder = { Text(stringResource(Res.string.goal_summary_placeholder)) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
         )
@@ -164,8 +176,8 @@ private fun NewGoalBody(goalViewModel: NewGoalViewModel) {
         OutlinedTextField(
             value = goalViewModel.imageUrl,
             onValueChange = { goalViewModel.imageUrl = it },
-            label = { Text(stringRes(R.string.goal_image_label)) },
-            placeholder = { Text(stringRes(R.string.goal_image_placeholder)) },
+            label = { Text(stringResource(Res.string.goal_image_label)) },
+            placeholder = { Text(stringResource(Res.string.goal_image_placeholder)) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
         )
@@ -175,8 +187,8 @@ private fun NewGoalBody(goalViewModel: NewGoalViewModel) {
         OutlinedTextField(
             value = goalViewModel.websiteUrl,
             onValueChange = { goalViewModel.websiteUrl = it },
-            label = { Text(stringRes(R.string.goal_website_label)) },
-            placeholder = { Text(stringRes(R.string.goal_website_placeholder)) },
+            label = { Text(stringResource(Res.string.goal_website_label)) },
+            placeholder = { Text(stringResource(Res.string.goal_website_placeholder)) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
         )
@@ -189,7 +201,7 @@ private fun NewGoalBody(goalViewModel: NewGoalViewModel) {
                 onCheckedChange = { goalViewModel.wantsDeadline = it },
             )
             Text(
-                text = stringRes(R.string.goal_set_deadline),
+                text = stringResource(Res.string.goal_set_deadline),
                 style = MaterialTheme.typography.bodyMedium,
             )
         }

@@ -70,6 +70,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.call.CallState
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.call_add_participant
+import com.vitorpamplona.amethyst.commons.resources.call_dismiss
+import com.vitorpamplona.amethyst.commons.resources.call_hangup
+import com.vitorpamplona.amethyst.commons.resources.call_search_users
+import com.vitorpamplona.amethyst.commons.resources.call_switch_camera
+import com.vitorpamplona.amethyst.commons.resources.call_waiting_for_others
 import com.vitorpamplona.amethyst.service.call.AudioRoute
 import com.vitorpamplona.amethyst.service.call.CallController
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
@@ -78,6 +85,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.delay
+import org.jetbrains.compose.resources.stringResource
 import org.webrtc.VideoTrack
 
 @Composable
@@ -181,7 +189,7 @@ fun ConnectedCallUI(
 
             if (state.pendingPeerPubKeys.isNotEmpty()) {
                 Text(
-                    text = stringRes(R.string.call_waiting_for_others),
+                    text = stringResource(Res.string.call_waiting_for_others),
                     color = Color.White.copy(alpha = 0.5f),
                     fontSize = 13.sp,
                     modifier =
@@ -217,7 +225,7 @@ fun ConnectedCallUI(
                 if (state.pendingPeerPubKeys.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = stringRes(R.string.call_waiting_for_others),
+                        text = stringResource(Res.string.call_waiting_for_others),
                         color = Color.White.copy(alpha = 0.5f),
                         fontSize = 13.sp,
                     )
@@ -293,7 +301,7 @@ private fun CallControls(
                             } else {
                                 Icons.Default.CameraFront
                             },
-                        contentDescription = stringRes(R.string.call_switch_camera),
+                        contentDescription = stringResource(Res.string.call_switch_camera),
                         tint = Color.White,
                         modifier = Modifier.size(28.dp),
                     )
@@ -327,7 +335,7 @@ private fun CallControls(
             IconButton(onClick = onAddParticipant, modifier = Modifier.size(56.dp)) {
                 Icon(
                     imageVector = Icons.Default.PersonAdd,
-                    contentDescription = stringRes(R.string.call_add_participant),
+                    contentDescription = stringResource(Res.string.call_add_participant),
                     tint = Color.White,
                     modifier = Modifier.size(28.dp),
                 )
@@ -342,7 +350,7 @@ private fun CallControls(
         ) {
             Icon(
                 Icons.Default.CallEnd,
-                contentDescription = stringRes(R.string.call_hangup),
+                contentDescription = stringResource(Res.string.call_hangup),
                 tint = Color.White,
                 modifier = Modifier.size(32.dp),
             )
@@ -365,7 +373,7 @@ private fun AddParticipantDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringRes(R.string.call_add_participant)) },
+        title = { Text(stringResource(Res.string.call_add_participant)) },
         text = {
             Column {
                 OutlinedTextField(
@@ -374,7 +382,7 @@ private fun AddParticipantDialog(
                         searchText = it
                         userSuggestions.processCurrentWord(it)
                     },
-                    label = { Text(stringRes(R.string.call_search_users)) },
+                    label = { Text(stringResource(Res.string.call_search_users)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -394,7 +402,7 @@ private fun AddParticipantDialog(
         confirmButton = {},
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringRes(R.string.call_dismiss))
+                Text(stringResource(Res.string.call_dismiss))
             }
         },
     )

@@ -77,11 +77,19 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.broadcast_results
+import com.vitorpamplona.amethyst.commons.resources.broadcasts_number
+import com.vitorpamplona.amethyst.commons.resources.collapse
+import com.vitorpamplona.amethyst.commons.resources.dismiss
+import com.vitorpamplona.amethyst.commons.resources.expand
+import com.vitorpamplona.amethyst.commons.resources.retry_failed_number
+import com.vitorpamplona.amethyst.commons.resources.retrying
+import com.vitorpamplona.amethyst.commons.resources.timeout
 import com.vitorpamplona.amethyst.model.Constants
 import com.vitorpamplona.amethyst.service.broadcast.BroadcastEvent
 import com.vitorpamplona.amethyst.service.broadcast.BroadcastStatus
 import com.vitorpamplona.amethyst.service.broadcast.RelayResult
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
@@ -89,6 +97,7 @@ import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
+import org.jetbrains.compose.resources.stringResource
 import java.util.UUID
 
 private const val MAX_EXPANDED_SECTIONS = 2
@@ -168,7 +177,7 @@ fun MultiBroadcastDetailsSheetContent(
     ) {
         // Header
         Text(
-            text = if (broadcasts.size == 1) stringRes(R.string.broadcast_results) else stringRes(R.string.broadcasts_number, broadcasts.size),
+            text = if (broadcasts.size == 1) stringResource(Res.string.broadcast_results) else stringResource(Res.string.broadcasts_number, broadcasts.size),
             style = MaterialTheme.typography.titleLarge,
             color = MaterialTheme.colorScheme.onSurface,
         )
@@ -205,7 +214,7 @@ fun MultiBroadcastDetailsSheetContent(
             onClick = onDismiss,
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Text(stringRes(R.string.dismiss))
+            Text(stringResource(Res.string.dismiss))
         }
     }
 }
@@ -253,7 +262,7 @@ private fun BroadcastSection(
 
                 Icon(
                     imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    contentDescription = if (isExpanded) stringRes(R.string.collapse) else stringRes(R.string.expand),
+                    contentDescription = if (isExpanded) stringResource(Res.string.collapse) else stringResource(Res.string.expand),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(24.dp),
                 )
@@ -294,7 +303,7 @@ private fun BroadcastSection(
                             modifier = Modifier.size(18.dp),
                         )
                         Spacer(Modifier.width(4.dp))
-                        Text(stringRes(R.string.retry_failed_number, broadcast.failedRelays.size))
+                        Text(stringResource(Res.string.retry_failed_number, broadcast.failedRelays.size))
                     }
                 }
             }
@@ -412,7 +421,7 @@ private fun RelayResultRow(
 
                 is RelayResult.Timeout -> {
                     Text(
-                        text = stringRes(R.string.timeout),
+                        text = stringResource(Res.string.timeout),
                         style = MaterialTheme.typography.bodySmall,
                         color = warningColor,
                     )
@@ -420,7 +429,7 @@ private fun RelayResultRow(
 
                 is RelayResult.Retrying -> {
                     Text(
-                        text = stringRes(R.string.retrying),
+                        text = stringResource(Res.string.retrying),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary,
                     )

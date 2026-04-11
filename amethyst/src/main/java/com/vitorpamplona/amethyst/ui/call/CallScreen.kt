@@ -59,11 +59,21 @@ import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.call.CallManager
 import com.vitorpamplona.amethyst.commons.call.CallState
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.call_accept
+import com.vitorpamplona.amethyst.commons.resources.call_calling
+import com.vitorpamplona.amethyst.commons.resources.call_connecting
+import com.vitorpamplona.amethyst.commons.resources.call_dismiss
+import com.vitorpamplona.amethyst.commons.resources.call_ended
+import com.vitorpamplona.amethyst.commons.resources.call_hangup
+import com.vitorpamplona.amethyst.commons.resources.call_incoming
+import com.vitorpamplona.amethyst.commons.resources.call_reject
 import com.vitorpamplona.amethyst.service.call.CallController
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun CallScreen(
@@ -102,11 +112,11 @@ fun CallScreen(
                         state.peerPubKeys - accountViewModel.account.signer.pubKey
                     }
                 if (isInPipMode) {
-                    PipCallUI(peerPubKeys = otherMembers, statusText = stringRes(R.string.call_calling), accountViewModel = accountViewModel)
+                    PipCallUI(peerPubKeys = otherMembers, statusText = stringResource(Res.string.call_calling), accountViewModel = accountViewModel)
                 } else {
                     CallInProgressUI(
                         peerPubKeys = otherMembers,
-                        statusText = stringRes(R.string.call_calling),
+                        statusText = stringResource(Res.string.call_calling),
                         accountViewModel = accountViewModel,
                         onHangup = { scope.launch { callManager.hangup() } },
                     )
@@ -119,7 +129,7 @@ fun CallScreen(
                         state.groupMembers - accountViewModel.account.signer.pubKey
                     }
                 if (isInPipMode) {
-                    PipCallUI(peerPubKeys = otherMembers, statusText = stringRes(R.string.call_incoming), accountViewModel = accountViewModel)
+                    PipCallUI(peerPubKeys = otherMembers, statusText = stringResource(Res.string.call_incoming), accountViewModel = accountViewModel)
                 } else {
                     val isVideoCall = state.callType == com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType.VIDEO
                     val acceptWithPermission =
@@ -142,11 +152,11 @@ fun CallScreen(
                         state.peerPubKeys - accountViewModel.account.signer.pubKey
                     }
                 if (isInPipMode) {
-                    PipCallUI(peerPubKeys = otherMembers, statusText = stringRes(R.string.call_connecting), accountViewModel = accountViewModel)
+                    PipCallUI(peerPubKeys = otherMembers, statusText = stringResource(Res.string.call_connecting), accountViewModel = accountViewModel)
                 } else {
                     CallInProgressUI(
                         peerPubKeys = otherMembers,
-                        statusText = stringRes(R.string.call_connecting),
+                        statusText = stringResource(Res.string.call_connecting),
                         accountViewModel = accountViewModel,
                         onHangup = { scope.launch { callManager.hangup() } },
                     )
@@ -178,7 +188,7 @@ fun CallScreen(
                 if (!isInPipMode) {
                     CallInProgressUI(
                         peerPubKeys = otherMembers,
-                        statusText = stringRes(R.string.call_ended),
+                        statusText = stringResource(Res.string.call_ended),
                         accountViewModel = accountViewModel,
                         onHangup = { onCallEnded() },
                     )
@@ -199,7 +209,7 @@ fun CallScreen(
                             onClick = { callController?.clearError() },
                         ) {
                             Text(
-                                stringRes(R.string.call_dismiss),
+                                stringResource(Res.string.call_dismiss),
                                 color = MaterialTheme.colorScheme.inversePrimary,
                             )
                         }
@@ -257,7 +267,7 @@ private fun CallInProgressUI(
             ) {
                 Icon(
                     Icons.Default.CallEnd,
-                    contentDescription = stringRes(R.string.call_hangup),
+                    contentDescription = stringResource(Res.string.call_hangup),
                     tint = Color.White,
                     modifier = Modifier.size(32.dp),
                 )
@@ -322,7 +332,7 @@ private fun IncomingCallUI(
                 ) {
                     Icon(
                         Icons.Default.CallEnd,
-                        contentDescription = stringRes(R.string.call_reject),
+                        contentDescription = stringResource(Res.string.call_reject),
                         tint = Color.White,
                         modifier = Modifier.size(32.dp),
                     )
@@ -335,7 +345,7 @@ private fun IncomingCallUI(
                 ) {
                     Icon(
                         Icons.Default.Call,
-                        contentDescription = stringRes(R.string.call_accept),
+                        contentDescription = stringResource(Res.string.call_accept),
                         tint = Color.White,
                         modifier = Modifier.size(32.dp),
                     )

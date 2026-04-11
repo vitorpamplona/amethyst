@@ -73,11 +73,31 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.back
+import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.resources.wallet
+import com.vitorpamplona.amethyst.commons.resources.wallet_add
+import com.vitorpamplona.amethyst.commons.resources.wallet_add_connection
+import com.vitorpamplona.amethyst.commons.resources.wallet_default
+import com.vitorpamplona.amethyst.commons.resources.wallet_move_down
+import com.vitorpamplona.amethyst.commons.resources.wallet_move_up
+import com.vitorpamplona.amethyst.commons.resources.wallet_name
+import com.vitorpamplona.amethyst.commons.resources.wallet_no_wallets
+import com.vitorpamplona.amethyst.commons.resources.wallet_no_wallets_description
+import com.vitorpamplona.amethyst.commons.resources.wallet_remove
+import com.vitorpamplona.amethyst.commons.resources.wallet_remove_confirm
+import com.vitorpamplona.amethyst.commons.resources.wallet_remove_confirm_description
+import com.vitorpamplona.amethyst.commons.resources.wallet_rename
+import com.vitorpamplona.amethyst.commons.resources.wallet_rename_title
+import com.vitorpamplona.amethyst.commons.resources.wallet_sats
+import com.vitorpamplona.amethyst.commons.resources.wallet_save
+import com.vitorpamplona.amethyst.commons.resources.wallet_set_default
+import com.vitorpamplona.amethyst.commons.resources.wallet_your_wallets
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
+import org.jetbrains.compose.resources.stringResource
 import java.text.NumberFormat
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -94,12 +114,12 @@ fun WalletScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringRes(R.string.wallet)) },
+                title = { Text(stringResource(Res.string.wallet)) },
                 navigationIcon = {
                     IconButton(onClick = { nav.popBack() }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringRes(R.string.back),
+                            contentDescription = stringResource(Res.string.back),
                         )
                     }
                 },
@@ -107,7 +127,7 @@ fun WalletScreen(
                     IconButton(onClick = { nav.nav(Route.WalletAdd) }) {
                         Icon(
                             imageVector = Icons.Filled.Add,
-                            contentDescription = stringRes(R.string.wallet_add),
+                            contentDescription = stringResource(Res.string.wallet_add),
                         )
                     }
                 },
@@ -143,13 +163,13 @@ private fun NoWalletSetup(
         verticalArrangement = Arrangement.Center,
     ) {
         Text(
-            text = stringRes(R.string.wallet_no_wallets),
+            text = stringResource(Res.string.wallet_no_wallets),
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            text = stringRes(R.string.wallet_no_wallets_description),
+            text = stringResource(Res.string.wallet_no_wallets_description),
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -158,7 +178,7 @@ private fun NoWalletSetup(
         Button(onClick = { nav.nav(Route.WalletAdd) }) {
             Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(8.dp))
-            Text(stringRes(R.string.wallet_add_connection))
+            Text(stringResource(Res.string.wallet_add_connection))
         }
     }
 }
@@ -188,7 +208,7 @@ private fun MultiWalletHomeContent(
         item {
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = stringRes(R.string.wallet_your_wallets),
+                text = stringResource(Res.string.wallet_your_wallets),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
             )
@@ -233,7 +253,7 @@ private fun MultiWalletHomeContent(
             ) {
                 Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(stringRes(R.string.wallet_add))
+                Text(stringResource(Res.string.wallet_add))
             }
             Spacer(modifier = Modifier.height(24.dp))
         }
@@ -258,19 +278,19 @@ private fun WalletCard(
     if (showRemoveDialog) {
         AlertDialog(
             onDismissRequest = { showRemoveDialog = false },
-            title = { Text(stringRes(R.string.wallet_remove_confirm)) },
-            text = { Text(stringRes(R.string.wallet_remove_confirm_description)) },
+            title = { Text(stringResource(Res.string.wallet_remove_confirm)) },
+            text = { Text(stringResource(Res.string.wallet_remove_confirm_description)) },
             confirmButton = {
                 TextButton(onClick = {
                     showRemoveDialog = false
                     onRemove()
                 }) {
-                    Text(stringRes(R.string.wallet_remove))
+                    Text(stringResource(Res.string.wallet_remove))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showRemoveDialog = false }) {
-                    Text(stringRes(R.string.cancel))
+                    Text(stringResource(Res.string.cancel))
                 }
             },
         )
@@ -328,7 +348,7 @@ private fun WalletCard(
                             Spacer(modifier = Modifier.width(8.dp))
                             Icon(
                                 imageVector = Icons.Filled.Star,
-                                contentDescription = stringRes(R.string.wallet_default),
+                                contentDescription = stringResource(Res.string.wallet_default),
                                 modifier = Modifier.size(16.dp),
                                 tint = MaterialTheme.colorScheme.primary,
                             )
@@ -353,7 +373,7 @@ private fun WalletCard(
                         ) {
                             Icon(
                                 Icons.Filled.KeyboardArrowUp,
-                                contentDescription = stringRes(R.string.wallet_move_up),
+                                contentDescription = stringResource(Res.string.wallet_move_up),
                                 modifier = Modifier.size(20.dp),
                             )
                         }
@@ -364,7 +384,7 @@ private fun WalletCard(
                         ) {
                             Icon(
                                 Icons.Filled.KeyboardArrowDown,
-                                contentDescription = stringRes(R.string.wallet_move_down),
+                                contentDescription = stringResource(Res.string.wallet_move_down),
                                 modifier = Modifier.size(20.dp),
                             )
                         }
@@ -387,7 +407,7 @@ private fun WalletCard(
                             fontWeight = FontWeight.Bold,
                         )
                         Text(
-                            text = stringRes(R.string.wallet_sats),
+                            text = stringResource(Res.string.wallet_sats),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -420,7 +440,7 @@ private fun WalletCard(
                     ) {
                         Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(14.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text(stringRes(R.string.wallet_set_default), style = MaterialTheme.typography.bodySmall)
+                        Text(stringResource(Res.string.wallet_set_default), style = MaterialTheme.typography.bodySmall)
                     }
                 }
 
@@ -431,7 +451,7 @@ private fun WalletCard(
                 ) {
                     Icon(Icons.Filled.Edit, contentDescription = null, modifier = Modifier.size(14.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(stringRes(R.string.wallet_rename), style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(Res.string.wallet_rename), style = MaterialTheme.typography.bodySmall)
                 }
 
                 Spacer(modifier = Modifier.weight(1f))
@@ -442,7 +462,7 @@ private fun WalletCard(
                 ) {
                     Icon(
                         Icons.Filled.Delete,
-                        contentDescription = stringRes(R.string.wallet_remove),
+                        contentDescription = stringResource(Res.string.wallet_remove),
                         modifier = Modifier.size(18.dp),
                         tint = MaterialTheme.colorScheme.error,
                     )
@@ -462,12 +482,12 @@ private fun RenameWalletDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringRes(R.string.wallet_rename_title)) },
+        title = { Text(stringResource(Res.string.wallet_rename_title)) },
         text = {
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
-                label = { Text(stringRes(R.string.wallet_name)) },
+                label = { Text(stringResource(Res.string.wallet_name)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -477,12 +497,12 @@ private fun RenameWalletDialog(
                 onClick = { onConfirm(name.trim()) },
                 enabled = name.isNotBlank(),
             ) {
-                Text(stringRes(R.string.wallet_save))
+                Text(stringResource(Res.string.wallet_save))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringRes(R.string.cancel))
+                Text(stringResource(Res.string.cancel))
             }
         },
     )

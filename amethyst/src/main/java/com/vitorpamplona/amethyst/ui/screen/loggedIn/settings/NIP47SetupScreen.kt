@@ -45,6 +45,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.delete_payment_target
+import com.vitorpamplona.amethyst.commons.resources.lightning_address
+import com.vitorpamplona.amethyst.commons.resources.no_payment_targets_message
 import com.vitorpamplona.amethyst.ui.actions.paymentTargets.PaymentTargetAddField
 import com.vitorpamplona.amethyst.ui.actions.paymentTargets.PaymentTargetsViewModel
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -54,11 +58,11 @@ import com.vitorpamplona.amethyst.ui.note.UpdateZapAmountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.SettingsCategory
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.WalletViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.SettingsCategorySpacingModifier
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTarget
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun NIP47SetupScreen(
@@ -141,7 +145,7 @@ private fun LightningAddressSetupSection(walletViewModel: WalletViewModel) {
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
-            text = stringRes(R.string.lightning_address),
+            text = stringResource(Res.string.lightning_address),
             color = MaterialTheme.colorScheme.primary,
             style = MaterialTheme.typography.titleSmall,
             modifier = SettingsCategorySpacingModifier,
@@ -173,7 +177,7 @@ private fun PaymentTargetsInlineSection(viewModel: PaymentTargetsViewModel) {
 
     if (targets.isEmpty()) {
         Text(
-            text = stringRes(id = R.string.no_payment_targets_message),
+            text = stringResource(Res.string.no_payment_targets_message),
             modifier = Modifier.padding(vertical = 8.dp),
             color = MaterialTheme.colorScheme.grayText,
             style = MaterialTheme.typography.bodyMedium,
@@ -218,7 +222,7 @@ private fun PaymentTargetInlineEntry(
         IconButton(onClick = onDelete) {
             Icon(
                 imageVector = Icons.Rounded.Delete,
-                contentDescription = stringRes(id = R.string.delete_payment_target),
+                contentDescription = stringResource(Res.string.delete_payment_target),
             )
         }
     }

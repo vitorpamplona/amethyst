@@ -56,18 +56,28 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.accessibility_scan_qr_code
+import com.vitorpamplona.amethyst.commons.resources.back
+import com.vitorpamplona.amethyst.commons.resources.paste_from_clipboard
+import com.vitorpamplona.amethyst.commons.resources.wallet_add_connection
+import com.vitorpamplona.amethyst.commons.resources.wallet_connect_connect_app
+import com.vitorpamplona.amethyst.commons.resources.wallet_name
+import com.vitorpamplona.amethyst.commons.resources.wallet_name_hint
+import com.vitorpamplona.amethyst.commons.resources.wallet_paste_uri
+import com.vitorpamplona.amethyst.commons.resources.wallet_save
 import com.vitorpamplona.amethyst.ui.components.util.getText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.SimpleQrCodeScanner
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.Size24Modifier
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -90,12 +100,12 @@ fun AddWalletScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringRes(R.string.wallet_add_connection)) },
+                title = { Text(stringResource(Res.string.wallet_add_connection)) },
                 navigationIcon = {
                     IconButton(onClick = { nav.popBack() }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringRes(R.string.back),
+                            contentDescription = stringResource(Res.string.back),
                         )
                     }
                 },
@@ -114,8 +124,8 @@ fun AddWalletScreen(
             OutlinedTextField(
                 value = walletName,
                 onValueChange = { walletName = it },
-                label = { Text(stringRes(R.string.wallet_name)) },
-                placeholder = { Text(stringRes(R.string.wallet_name_hint)) },
+                label = { Text(stringResource(Res.string.wallet_name)) },
+                placeholder = { Text(stringResource(Res.string.wallet_name_hint)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -149,7 +159,7 @@ fun AddWalletScreen(
                         modifier = Modifier.size(18.dp),
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(text = stringRes(R.string.wallet_connect_connect_app))
+                    Text(text = stringResource(Res.string.wallet_connect_connect_app))
                 }
 
                 Spacer(DoubleHorzSpacer)
@@ -168,7 +178,7 @@ fun AddWalletScreen(
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.ContentPaste,
-                        contentDescription = stringRes(id = R.string.paste_from_clipboard),
+                        contentDescription = stringResource(Res.string.paste_from_clipboard),
                         modifier = Size24Modifier,
                         tint = MaterialTheme.colorScheme.primary,
                     )
@@ -178,7 +188,7 @@ fun AddWalletScreen(
                 IconButton(onClick = { qrScanning = true }) {
                     Icon(
                         painter = painterRes(R.drawable.ic_qrcode, 3),
-                        contentDescription = stringRes(id = R.string.accessibility_scan_qr_code),
+                        contentDescription = stringResource(Res.string.accessibility_scan_qr_code),
                         modifier = Modifier.size(24.dp),
                         tint = MaterialTheme.colorScheme.primary,
                     )
@@ -203,7 +213,7 @@ fun AddWalletScreen(
                     nwcUri = it
                     error = null
                 },
-                label = { Text(stringRes(R.string.wallet_paste_uri)) },
+                label = { Text(stringResource(Res.string.wallet_paste_uri)) },
                 placeholder = { Text("nostr+walletconnect://...") },
                 minLines = 3,
                 maxLines = 5,
@@ -235,7 +245,7 @@ fun AddWalletScreen(
                 enabled = nwcUri.isNotBlank(),
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(stringRes(R.string.wallet_save))
+                Text(stringResource(Res.string.wallet_save))
             }
         }
     }

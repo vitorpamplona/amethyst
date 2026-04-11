@@ -100,6 +100,13 @@ import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.followers
+import com.vitorpamplona.amethyst.commons.resources.following
+import com.vitorpamplona.amethyst.commons.resources.profile_image
+import com.vitorpamplona.amethyst.commons.resources.relay_setup
+import com.vitorpamplona.amethyst.commons.resources.show_npub_as_a_qr_code
+import com.vitorpamplona.amethyst.commons.resources.status_update
 import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.User
@@ -136,6 +143,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun DrawerContent(
@@ -232,7 +240,7 @@ fun ProfileContentTemplate(
         if (profileBanner != null) {
             AsyncImage(
                 model = profileBanner,
-                contentDescription = stringRes(id = R.string.profile_image),
+                contentDescription = stringResource(Res.string.profile_image),
                 contentScale = ContentScale.FillWidth,
                 modifier = bannerModifier,
             )
@@ -249,7 +257,7 @@ fun ProfileContentTemplate(
             RobohashFallbackAsyncImage(
                 robot = profilePubHex,
                 model = profilePicture,
-                contentDescription = stringRes(id = R.string.profile_image),
+                contentDescription = stringResource(Res.string.profile_image),
                 modifier =
                     Modifier
                         .width(100.dp)
@@ -344,7 +352,7 @@ fun FakeEditBar(
             contentAlignment = Alignment.CenterStart,
         ) {
             Text(
-                text = savedStatus?.ifEmpty { null } ?: stringRes(R.string.status_update),
+                text = savedStatus?.ifEmpty { null } ?: stringResource(Res.string.status_update),
                 style = MaterialTheme.typography.bodyLarge,
                 color =
                     if (savedStatus?.ifEmpty { null } == null) {
@@ -357,7 +365,7 @@ fun FakeEditBar(
 
         // Floating label — sits on top of the border like Material does
         Text(
-            text = stringRes(R.string.status_update),
+            text = stringResource(Res.string.status_update),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier =
@@ -396,11 +404,11 @@ fun StatusEditBar(
     OutlinedTextField(
         value = currentStatus.value,
         onValueChange = { currentStatus.value = it },
-        label = { Text(text = stringRes(R.string.status_update)) },
+        label = { Text(text = stringResource(Res.string.status_update)) },
         modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
         placeholder = {
             Text(
-                text = stringRes(R.string.status_update),
+                text = stringResource(Res.string.status_update),
                 color = MaterialTheme.colorScheme.placeholderText,
             )
         },
@@ -491,13 +499,13 @@ private fun FollowingAndFollowerCounts(
     ) {
         DisplayFollowingCount(baseAccountUser)
 
-        Text(stringRes(R.string.following))
+        Text(stringResource(Res.string.following))
 
         Spacer(modifier = DoubleHorzSpacer)
 
         DisplayFollowerCount(baseAccountUser, accountViewModel)
 
-        Text(stringRes(R.string.followers))
+        Text(stringResource(Res.string.followers))
     }
 }
 
@@ -790,14 +798,14 @@ fun IconRowRelays(
     ) {
         Icon(
             painter = painterRes(R.drawable.relays, 4),
-            contentDescription = stringRes(R.string.relay_setup),
+            contentDescription = stringResource(Res.string.relay_setup),
             modifier = Size22Modifier,
             tint = MaterialTheme.colorScheme.onSurface,
         )
 
         Text(
             modifier = IconRowTextModifier,
-            text = stringRes(id = R.string.relay_setup),
+            text = stringResource(Res.string.relay_setup),
             fontSize = Font18SP,
         )
 
@@ -887,7 +895,7 @@ fun BottomContent(
             ) {
                 Icon(
                     painter = painterRes(R.drawable.ic_qrcode, 2),
-                    contentDescription = stringRes(id = R.string.show_npub_as_a_qr_code),
+                    contentDescription = stringResource(Res.string.show_npub_as_a_qr_code),
                     modifier = Size24Modifier,
                     tint = MaterialTheme.colorScheme.primary,
                 )

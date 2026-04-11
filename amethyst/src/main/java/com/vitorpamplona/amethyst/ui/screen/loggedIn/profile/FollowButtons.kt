@@ -34,11 +34,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.follow_set_profile_actions_menu_description
+import com.vitorpamplona.amethyst.commons.resources.unfollow
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
 import com.vitorpamplona.amethyst.ui.theme.LeftHalfCircleButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun FollowButton(
@@ -68,7 +72,7 @@ fun UnfollowButton(
         shape = if (isInProfileActions) LeftHalfCircleButtonBorder else ButtonBorder,
         contentPadding = ButtonPadding,
     ) {
-        Text(text = stringRes(R.string.unfollow))
+        Text(text = stringResource(Res.string.unfollow))
     }
 }
 
@@ -82,7 +86,7 @@ fun ListButton(onClick: () -> Unit) {
     ) {
         Icon(
             imageVector = Icons.AutoMirrored.Filled.List,
-            contentDescription = stringRes(R.string.follow_set_profile_actions_menu_description),
+            contentDescription = stringResource(Res.string.follow_set_profile_actions_menu_description),
         )
     }
 }

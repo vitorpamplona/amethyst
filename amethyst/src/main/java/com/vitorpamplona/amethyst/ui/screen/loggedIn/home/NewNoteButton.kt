@@ -36,15 +36,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.new_post
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingFloatingButton
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.painterRes
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size26Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
+import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Preview
@@ -81,7 +83,7 @@ fun NewNoteButton(nav: INav) {
     ) {
         Icon(
             painter = painterRes(R.drawable.ic_compose, 4),
-            contentDescription = stringRes(R.string.new_post),
+            contentDescription = stringResource(Res.string.new_post),
             modifier = Size26Modifier,
             tint = Color.White,
         )

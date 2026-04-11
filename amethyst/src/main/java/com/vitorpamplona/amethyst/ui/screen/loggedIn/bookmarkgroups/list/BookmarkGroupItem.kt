@@ -57,6 +57,21 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.bookmark_list_articles_btn_label
+import com.vitorpamplona.amethyst.commons.resources.bookmark_list_clone_btn_label
+import com.vitorpamplona.amethyst.commons.resources.bookmark_list_icon_label
+import com.vitorpamplona.amethyst.commons.resources.bookmark_list_posts_btn_label
+import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.resources.follow_set_copy_action_btn_label
+import com.vitorpamplona.amethyst.commons.resources.follow_set_copy_desc_label
+import com.vitorpamplona.amethyst.commons.resources.follow_set_copy_indicator_description
+import com.vitorpamplona.amethyst.commons.resources.follow_set_copy_name_label
+import com.vitorpamplona.amethyst.commons.resources.follow_set_desc_modify_label
+import com.vitorpamplona.amethyst.commons.resources.follow_set_empty_label2
+import com.vitorpamplona.amethyst.commons.resources.follow_set_rename_btn_label
+import com.vitorpamplona.amethyst.commons.resources.group_actions_dialog_title
+import com.vitorpamplona.amethyst.commons.resources.quick_action_delete
 import com.vitorpamplona.amethyst.model.nip51Lists.labeledBookmarkLists.LabeledBookmarkList
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
@@ -64,7 +79,6 @@ import com.vitorpamplona.amethyst.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.ui.components.M3ActionSection
 import com.vitorpamplona.amethyst.ui.note.VerticalDotsIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.BookmarkType
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.Font10SP
 import com.vitorpamplona.amethyst.ui.theme.NoSoTinyBorders
@@ -74,6 +88,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.SpacedBy2dp
 import com.vitorpamplona.amethyst.ui.theme.SpacedBy5dp
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun BookmarkGroupItem(
@@ -136,7 +151,7 @@ fun BookmarkGroupItem(
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.CollectionsBookmark,
-                            contentDescription = stringRes(R.string.bookmark_list_icon_label),
+                            contentDescription = stringResource(Res.string.bookmark_list_icon_label),
                             modifier = Size40Modifier,
                         )
                         Spacer(StdVertSpacer)
@@ -180,7 +195,7 @@ private fun BookmarkGroupActions(
                 painter = painterResource(R.drawable.post),
                 contentDescription = null,
             )
-            Text(stringRes(R.string.bookmark_list_posts_btn_label))
+            Text(stringResource(Res.string.bookmark_list_posts_btn_label))
         }
         FilledTonalButton(
             onClick = openArticleBookmarks,
@@ -189,7 +204,7 @@ private fun BookmarkGroupActions(
                 imageVector = Icons.AutoMirrored.Outlined.Article,
                 contentDescription = null,
             )
-            Text(stringRes(R.string.bookmark_list_articles_btn_label))
+            Text(stringResource(Res.string.bookmark_list_articles_btn_label))
         }
     }
 }
@@ -207,7 +222,7 @@ fun BookmarkMembershipStatusAndNumberDisplay(
     ) {
         if (postBookmarksSize <= 0 && articleBookmarksSize <= 0) {
             Text(
-                text = stringRes(R.string.follow_set_empty_label2),
+                text = stringResource(Res.string.follow_set_empty_label2),
                 fontSize = Font10SP,
             )
         } else {
@@ -295,25 +310,25 @@ private fun GroupOptionsMenu(
 
     if (isExpanded) {
         M3ActionDialog(
-            title = stringRes(R.string.group_actions_dialog_title),
+            title = stringResource(Res.string.group_actions_dialog_title),
             onDismiss = onDismiss,
         ) {
             M3ActionSection {
-                M3ActionRow(icon = Icons.Outlined.Edit, text = stringRes(R.string.follow_set_rename_btn_label)) {
+                M3ActionRow(icon = Icons.Outlined.Edit, text = stringResource(Res.string.follow_set_rename_btn_label)) {
                     onGroupRename()
                     onDismiss()
                 }
-                M3ActionRow(icon = Icons.Outlined.Description, text = stringRes(R.string.follow_set_desc_modify_label)) {
+                M3ActionRow(icon = Icons.Outlined.Description, text = stringResource(Res.string.follow_set_desc_modify_label)) {
                     onGroupDescriptionChange()
                     onDismiss()
                 }
-                M3ActionRow(icon = Icons.Outlined.ContentCopy, text = stringRes(R.string.follow_set_copy_action_btn_label)) {
+                M3ActionRow(icon = Icons.Outlined.ContentCopy, text = stringResource(Res.string.follow_set_copy_action_btn_label)) {
                     isCopyDialogOpen.value = true
                     onDismiss()
                 }
             }
             M3ActionSection {
-                M3ActionRow(icon = Icons.Outlined.Delete, text = stringRes(R.string.quick_action_delete), isDestructive = true) {
+                M3ActionRow(icon = Icons.Outlined.Delete, text = stringResource(Res.string.quick_action_delete), isDestructive = true) {
                     onDelete()
                     onDismiss()
                 }
@@ -357,7 +372,7 @@ private fun GroupCloneDialog(
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Text(
-                    text = stringRes(R.string.bookmark_list_clone_btn_label),
+                    text = stringResource(Res.string.bookmark_list_clone_btn_label),
                 )
             }
         },
@@ -366,7 +381,7 @@ private fun GroupCloneDialog(
                 verticalArrangement = Arrangement.spacedBy(Size5dp),
             ) {
                 Text(
-                    text = stringRes(R.string.follow_set_copy_indicator_description),
+                    text = stringResource(Res.string.follow_set_copy_indicator_description),
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Light,
                     fontStyle = FontStyle.Italic,
@@ -376,7 +391,7 @@ private fun GroupCloneDialog(
                     value = optionalNewName ?: "",
                     onValueChange = onCloneNameChange,
                     label = {
-                        Text(text = stringRes(R.string.follow_set_copy_name_label))
+                        Text(text = stringResource(Res.string.follow_set_copy_name_label))
                     },
                 )
                 Spacer(modifier = DoubleVertSpacer)
@@ -385,7 +400,7 @@ private fun GroupCloneDialog(
                     value = optionalNewDesc ?: "",
                     onValueChange = onCloneDescChange,
                     label = {
-                        Text(text = stringRes(R.string.follow_set_copy_desc_label))
+                        Text(text = stringResource(Res.string.follow_set_copy_desc_label))
                     },
                 )
             }
@@ -397,14 +412,14 @@ private fun GroupCloneDialog(
                     onDismiss()
                 },
             ) {
-                Text(stringRes(R.string.follow_set_copy_action_btn_label))
+                Text(stringResource(Res.string.follow_set_copy_action_btn_label))
             }
         },
         dismissButton = {
             Button(
                 onClick = onDismiss,
             ) {
-                Text(stringRes(R.string.cancel))
+                Text(stringResource(Res.string.cancel))
             }
         },
     )

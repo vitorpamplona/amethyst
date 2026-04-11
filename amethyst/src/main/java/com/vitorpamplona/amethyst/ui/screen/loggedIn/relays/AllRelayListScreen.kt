@@ -49,6 +49,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.default_relays
+import com.vitorpamplona.amethyst.commons.resources.export_actions_dialog_title
+import com.vitorpamplona.amethyst.commons.resources.export_as_text
+import com.vitorpamplona.amethyst.commons.resources.export_as_zip
+import com.vitorpamplona.amethyst.commons.resources.export_relay_settings
 import com.vitorpamplona.amethyst.model.DefaultDMRelayList
 import com.vitorpamplona.amethyst.model.DefaultIndexerRelayList
 import com.vitorpamplona.amethyst.model.DefaultSearchRelayList
@@ -94,6 +100,7 @@ import com.vitorpamplona.amethyst.ui.theme.RowColSpacing
 import com.vitorpamplona.amethyst.ui.theme.SettingsCategoryFirstWithHorzBorderModifier
 import com.vitorpamplona.amethyst.ui.theme.SettingsCategorySpacingWithHorzBorderModifier
 import com.vitorpamplona.amethyst.ui.theme.grayText
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun AllRelayListScreen(
@@ -473,7 +480,7 @@ fun ResetSearchRelays(postViewModel: SearchRelayListViewModel) {
             postViewModel.loadRelayDocuments()
         },
     ) {
-        Text(stringRes(R.string.default_relays))
+        Text(stringResource(Res.string.default_relays))
     }
 }
 
@@ -490,7 +497,7 @@ fun ResetIndexerRelays(postViewModel: IndexerRelayListViewModel) {
             postViewModel.loadRelayDocuments()
         },
     ) {
-        Text(stringRes(R.string.default_relays))
+        Text(stringResource(Res.string.default_relays))
     }
 }
 
@@ -505,7 +512,7 @@ fun ResetDMRelays(postViewModel: DMRelayListViewModel) {
             postViewModel.loadRelayDocuments()
         },
     ) {
-        Text(stringRes(R.string.default_relays))
+        Text(stringResource(Res.string.default_relays))
     }
 }
 
@@ -566,26 +573,26 @@ fun ExportDropdownMenu(collection: () -> RelayListCollection) {
     IconButton(onClick = { expanded = true }) {
         Icon(
             imageVector = Icons.Default.Share,
-            contentDescription = stringRes(R.string.export_relay_settings),
+            contentDescription = stringResource(Res.string.export_relay_settings),
         )
     }
 
     if (expanded) {
         M3ActionDialog(
-            title = stringRes(R.string.export_actions_dialog_title),
+            title = stringResource(Res.string.export_actions_dialog_title),
             onDismiss = { expanded = false },
         ) {
             M3ActionSection {
                 M3ActionRow(
                     icon = Icons.Outlined.Description,
-                    text = stringRes(R.string.export_as_text),
+                    text = stringResource(Res.string.export_as_text),
                 ) {
                     expanded = false
                     RelayExporter(context).export(collection())
                 }
                 M3ActionRow(
                     icon = Icons.Outlined.FolderZip,
-                    text = stringRes(R.string.export_as_zip),
+                    text = stringResource(Res.string.export_as_zip),
                 ) {
                     expanded = false
                     RelayZipExporter(context).export(collection())

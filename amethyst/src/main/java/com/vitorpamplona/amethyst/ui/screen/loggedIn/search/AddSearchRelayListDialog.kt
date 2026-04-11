@@ -38,6 +38,10 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.default_relays_longer
+import com.vitorpamplona.amethyst.commons.resources.search_relays_not_found_editing
+import com.vitorpamplona.amethyst.commons.resources.search_relays_not_found_examples
 import com.vitorpamplona.amethyst.model.DefaultSearchRelayList
 import com.vitorpamplona.amethyst.ui.components.SetDialogToEdgeToEdge
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -46,9 +50,9 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.search.SearchRelayList
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.search.SearchRelayListViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
+import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -108,13 +112,13 @@ private fun Explanation(postViewModel: SearchRelayListViewModel) {
     Card(modifier = MaterialTheme.colorScheme.imageModifier) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = stringRes(id = R.string.search_relays_not_found_editing),
+                text = stringResource(Res.string.search_relays_not_found_editing),
             )
 
             Spacer(modifier = StdVertSpacer)
 
             Text(
-                text = stringRes(id = R.string.search_relays_not_found_examples),
+                text = stringResource(Res.string.search_relays_not_found_examples),
             )
 
             Spacer(modifier = StdVertSpacer)
@@ -135,6 +139,6 @@ fun ResetSearchRelaysLonger(postViewModel: SearchRelayListViewModel) {
             postViewModel.loadRelayDocuments()
         },
     ) {
-        Text(stringRes(R.string.default_relays_longer))
+        Text(stringResource(Res.string.default_relays_longer))
     }
 }

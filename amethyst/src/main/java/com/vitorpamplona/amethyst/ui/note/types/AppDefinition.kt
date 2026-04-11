@@ -57,6 +57,9 @@ import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.profile_banner
+import com.vitorpamplona.amethyst.commons.resources.profile_image
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.ClickableTextPrimary
@@ -68,7 +71,6 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.LinkIcon
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -77,6 +79,7 @@ import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppMetadata
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -104,7 +107,7 @@ fun RenderAppDefinition(
 
                 AsyncImage(
                     model = theAppMetadata.banner,
-                    contentDescription = stringRes(id = R.string.profile_image),
+                    contentDescription = stringResource(Res.string.profile_image),
                     contentScale = ContentScale.FillWidth,
                     modifier =
                         Modifier
@@ -132,7 +135,7 @@ fun RenderAppDefinition(
             } else {
                 Image(
                     painter = painterRes(R.drawable.profile_banner, 6),
-                    contentDescription = stringRes(id = R.string.profile_banner),
+                    contentDescription = stringResource(Res.string.profile_banner),
                     contentScale = ContentScale.FillWidth,
                     modifier =
                         Modifier

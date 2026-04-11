@@ -28,15 +28,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.send_a_direct_message
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeToMessage
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun MessageButton(
@@ -61,7 +63,7 @@ fun MessageButton(
     ) {
         Icon(
             painter = painterRes(R.drawable.ic_dm, 1),
-            stringRes(R.string.send_a_direct_message),
+            stringResource(Res.string.send_a_direct_message),
             modifier = Size20Modifier,
         )
     }

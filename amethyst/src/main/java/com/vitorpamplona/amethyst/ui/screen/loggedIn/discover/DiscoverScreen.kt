@@ -55,6 +55,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.new_long_form_post
+import com.vitorpamplona.amethyst.commons.resources.new_product
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
@@ -91,6 +94,7 @@ import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun DiscoverScreen(
@@ -356,7 +360,7 @@ fun NewProductButton(
     ) {
         Icon(
             imageVector = Icons.Outlined.Add,
-            contentDescription = stringRes(id = R.string.new_product),
+            contentDescription = stringResource(Res.string.new_product),
             modifier = Size26Modifier,
             tint = Color.White,
         )
@@ -378,7 +382,7 @@ fun NewLongFormMarkdownButton(
     ) {
         Icon(
             imageVector = Icons.Outlined.Add,
-            contentDescription = stringRes(id = R.string.new_long_form_post),
+            contentDescription = stringResource(Res.string.new_long_form_post),
             modifier = Size26Modifier,
             tint = Color.White,
         )

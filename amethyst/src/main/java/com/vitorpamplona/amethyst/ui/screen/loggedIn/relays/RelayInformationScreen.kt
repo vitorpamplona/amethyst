@@ -105,6 +105,81 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.accepts_up_to
+import com.vitorpamplona.amethyst.commons.resources.access_control
+import com.vitorpamplona.amethyst.commons.resources.admission
+import com.vitorpamplona.amethyst.commons.resources.all_countries
+import com.vitorpamplona.amethyst.commons.resources.all_languages
+import com.vitorpamplona.amethyst.commons.resources.amount_in_bits
+import com.vitorpamplona.amethyst.commons.resources.and_more
+import com.vitorpamplona.amethyst.commons.resources.auth_required
+import com.vitorpamplona.amethyst.commons.resources.connectivity
+import com.vitorpamplona.amethyst.commons.resources.contact
+import com.vitorpamplona.amethyst.commons.resources.content_size
+import com.vitorpamplona.amethyst.commons.resources.countries
+import com.vitorpamplona.amethyst.commons.resources.discards_older_than
+import com.vitorpamplona.amethyst.commons.resources.duplicated_post
+import com.vitorpamplona.amethyst.commons.resources.errors
+import com.vitorpamplona.amethyst.commons.resources.event_retention
+import com.vitorpamplona.amethyst.commons.resources.fees_and_payments
+import com.vitorpamplona.amethyst.commons.resources.languages
+import com.vitorpamplona.amethyst.commons.resources.limitations
+import com.vitorpamplona.amethyst.commons.resources.manage
+import com.vitorpamplona.amethyst.commons.resources.max_content_length
+import com.vitorpamplona.amethyst.commons.resources.max_filters_per_sub
+import com.vitorpamplona.amethyst.commons.resources.max_limit_events_returning
+import com.vitorpamplona.amethyst.commons.resources.max_message_length
+import com.vitorpamplona.amethyst.commons.resources.max_subid_length
+import com.vitorpamplona.amethyst.commons.resources.max_subs
+import com.vitorpamplona.amethyst.commons.resources.maximum_event_tags
+import com.vitorpamplona.amethyst.commons.resources.minimum_pow
+import com.vitorpamplona.amethyst.commons.resources.minimum_prefix
+import com.vitorpamplona.amethyst.commons.resources.no
+import com.vitorpamplona.amethyst.commons.resources.not_available_acronym
+import com.vitorpamplona.amethyst.commons.resources.owner
+import com.vitorpamplona.amethyst.commons.resources.payment_required
+import com.vitorpamplona.amethyst.commons.resources.payments_url
+import com.vitorpamplona.amethyst.commons.resources.policies_and_links
+import com.vitorpamplona.amethyst.commons.resources.posting_policy
+import com.vitorpamplona.amethyst.commons.resources.privacy_policy
+import com.vitorpamplona.amethyst.commons.resources.publication
+import com.vitorpamplona.amethyst.commons.resources.relay_active_subscriptions
+import com.vitorpamplona.amethyst.commons.resources.relay_count_subscriptions
+import com.vitorpamplona.amethyst.commons.resources.relay_error_messages
+import com.vitorpamplona.amethyst.commons.resources.relay_filter_authors
+import com.vitorpamplona.amethyst.commons.resources.relay_filter_ids
+import com.vitorpamplona.amethyst.commons.resources.relay_filter_limit
+import com.vitorpamplona.amethyst.commons.resources.relay_filter_since
+import com.vitorpamplona.amethyst.commons.resources.relay_filter_until
+import com.vitorpamplona.amethyst.commons.resources.relay_members
+import com.vitorpamplona.amethyst.commons.resources.relay_monitor_ms
+import com.vitorpamplona.amethyst.commons.resources.relay_monitor_network
+import com.vitorpamplona.amethyst.commons.resources.relay_monitor_relay_type
+import com.vitorpamplona.amethyst.commons.resources.relay_monitor_reports
+import com.vitorpamplona.amethyst.commons.resources.relay_monitor_requirements
+import com.vitorpamplona.amethyst.commons.resources.relay_monitor_rtt_open
+import com.vitorpamplona.amethyst.commons.resources.relay_monitor_rtt_read
+import com.vitorpamplona.amethyst.commons.resources.relay_monitor_rtt_write
+import com.vitorpamplona.amethyst.commons.resources.relay_notice
+import com.vitorpamplona.amethyst.commons.resources.relay_outbox_events
+import com.vitorpamplona.amethyst.commons.resources.relay_req_subscriptions
+import com.vitorpamplona.amethyst.commons.resources.restricted_writes
+import com.vitorpamplona.amethyst.commons.resources.see_relay_feed
+import com.vitorpamplona.amethyst.commons.resources.self
+import com.vitorpamplona.amethyst.commons.resources.software
+import com.vitorpamplona.amethyst.commons.resources.spam
+import com.vitorpamplona.amethyst.commons.resources.subscription
+import com.vitorpamplona.amethyst.commons.resources.supported_grasps
+import com.vitorpamplona.amethyst.commons.resources.supports
+import com.vitorpamplona.amethyst.commons.resources.target_audience
+import com.vitorpamplona.amethyst.commons.resources.terms_and_conditions
+import com.vitorpamplona.amethyst.commons.resources.time_in_the_future
+import com.vitorpamplona.amethyst.commons.resources.time_in_the_past
+import com.vitorpamplona.amethyst.commons.resources.topics
+import com.vitorpamplona.amethyst.commons.resources.used_by
+import com.vitorpamplona.amethyst.commons.resources.version
+import com.vitorpamplona.amethyst.commons.resources.yes
 import com.vitorpamplona.amethyst.commons.util.timeDiffAgoShortish
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
@@ -125,7 +200,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.BackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.datasource.RelayInfoNip66FilterAssemblerSubscription
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.Height25Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size100dp
@@ -290,6 +364,7 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.map
+import org.jetbrains.compose.resources.stringResource
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
 
@@ -403,34 +478,34 @@ fun RelayInformationBody(
                 relayInfo.relay_countries != null
 
         if (targetAudience) {
-            item { SectionHeader(stringRes(R.string.target_audience)) }
+            item { SectionHeader(stringResource(Res.string.target_audience)) }
             item { TargetAudienceCard(relayInfo, nav) }
         }
 
         relayInfo.pubkey?.let {
             item {
-                SectionHeader(stringRes(R.string.owner))
+                SectionHeader(stringResource(Res.string.owner))
                 DisplayOwnerInformation(it, accountViewModel, nav)
             }
         }
 
         relayInfo.self?.let {
             item {
-                SectionHeader(stringRes(R.string.self))
+                SectionHeader(stringResource(Res.string.self))
                 DisplayOwnerInformation(it, accountViewModel, nav)
             }
         }
 
-        item { SectionHeader(stringRes(R.string.policies_and_links)) }
+        item { SectionHeader(stringResource(Res.string.policies_and_links)) }
         item { PoliciesCard(relayInfo) }
 
         relayInfo.fees?.let { fees ->
-            item { SectionHeader(stringRes(R.string.fees_and_payments)) }
+            item { SectionHeader(stringResource(Res.string.fees_and_payments)) }
             item { FeesCard(fees, relayInfo.payments_url) }
         }
 
         relayInfo.limitation?.let {
-            item { SectionHeader(stringRes(R.string.limitations)) }
+            item { SectionHeader(stringResource(Res.string.limitations)) }
             item { LimitationsCard(it) }
         }
 
@@ -441,12 +516,12 @@ fun RelayInformationBody(
                 relayInfo.supported_nips != null
 
         if (atLeastOneSoftware) {
-            item { SectionHeader(stringRes(R.string.software)) }
+            item { SectionHeader(stringResource(Res.string.software)) }
             item { SoftwareCard(relayInfo) }
         }
 
         if (discoveryEvents.isNotEmpty()) {
-            item { SectionHeader(stringRes(R.string.relay_monitor_reports)) }
+            item { SectionHeader(stringResource(Res.string.relay_monitor_reports)) }
             items(discoveryEvents, key = { it.addressTag() }) { event ->
                 RelayMonitorReportCard(event, accountViewModel, nav)
             }
@@ -454,7 +529,7 @@ fun RelayInformationBody(
 
         if (usedBy.isNotEmpty()) {
             item {
-                SectionHeader(stringRes(R.string.used_by))
+                SectionHeader(stringResource(Res.string.used_by))
             }
             item {
                 OutlinedCard(
@@ -473,7 +548,7 @@ fun RelayInformationBody(
                         if (usedBy.size > 30) {
                             Box(contentAlignment = Alignment.Center, modifier = Height25Modifier) {
                                 Text(
-                                    text = stringRes(R.string.and_more, usedBy.size - 30),
+                                    text = stringResource(Res.string.and_more, usedBy.size - 30),
                                     maxLines = 1,
                                 )
                             }
@@ -489,12 +564,12 @@ fun RelayInformationBody(
         val hasOutbox = activeOutbox.isNotEmpty()
 
         if (hasReqs || hasCounts || hasOutbox) {
-            item { SectionHeader(stringRes(R.string.relay_active_subscriptions)) }
+            item { SectionHeader(stringResource(Res.string.relay_active_subscriptions)) }
 
             if (hasReqs) {
                 item {
                     Text(
-                        text = stringRes(R.string.relay_req_subscriptions, activeReqs.size),
+                        text = stringResource(Res.string.relay_req_subscriptions, activeReqs.size),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(bottom = 4.dp),
@@ -509,7 +584,7 @@ fun RelayInformationBody(
             if (hasCounts) {
                 item {
                     Text(
-                        text = stringRes(R.string.relay_count_subscriptions, activeCounts.size),
+                        text = stringResource(Res.string.relay_count_subscriptions, activeCounts.size),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.secondary,
                         modifier = Modifier.padding(bottom = 4.dp, top = if (hasReqs) 8.dp else 0.dp),
@@ -524,7 +599,7 @@ fun RelayInformationBody(
             if (hasOutbox) {
                 item {
                     Text(
-                        text = stringRes(R.string.relay_outbox_events, activeOutbox.size),
+                        text = stringResource(Res.string.relay_outbox_events, activeOutbox.size),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.tertiary,
                         modifier = Modifier.padding(bottom = 4.dp, top = if (hasReqs || hasCounts) 8.dp else 0.dp),
@@ -537,7 +612,7 @@ fun RelayInformationBody(
         }
 
         item {
-            SectionHeader(stringRes(R.string.relay_error_messages))
+            SectionHeader(stringResource(Res.string.relay_error_messages))
         }
 
         items(messages) { msg ->
@@ -797,7 +872,7 @@ private fun FilterVisual(
                 filter.authors?.let { authors ->
                     if (authors.isNotEmpty()) {
                         FilterAttributeChip(
-                            text = "👤 ${stringRes(R.string.relay_filter_authors, authors.size)}",
+                            text = "👤 ${stringResource(Res.string.relay_filter_authors, authors.size)}",
                             color = MaterialTheme.colorScheme.secondaryContainer,
                             textColor = MaterialTheme.colorScheme.onSecondaryContainer,
                         )
@@ -808,7 +883,7 @@ private fun FilterVisual(
                 filter.ids?.let { ids ->
                     if (ids.isNotEmpty()) {
                         FilterAttributeChip(
-                            text = "🆔 ${stringRes(R.string.relay_filter_ids, ids.size)}",
+                            text = "🆔 ${stringResource(Res.string.relay_filter_ids, ids.size)}",
                         )
                     }
                 }
@@ -864,7 +939,7 @@ private fun FilterVisual(
                 // Since
                 filter.since?.let { since ->
                     FilterAttributeChip(
-                        text = stringRes(R.string.relay_filter_since, timeAgoNoDot(since, context)),
+                        text = stringResource(Res.string.relay_filter_since, timeAgoNoDot(since, context)),
                         color = MaterialTheme.colorScheme.surfaceVariant,
                         textColor = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -873,14 +948,14 @@ private fun FilterVisual(
                 // Until
                 filter.until?.let { until ->
                     FilterAttributeChip(
-                        text = stringRes(R.string.relay_filter_until, timeAgoNoDot(until, context)),
+                        text = stringResource(Res.string.relay_filter_until, timeAgoNoDot(until, context)),
                     )
                 }
 
                 // Limit
                 filter.limit?.let { limit ->
                     FilterAttributeChip(
-                        text = stringRes(R.string.relay_filter_limit, limit),
+                        text = stringResource(Res.string.relay_filter_limit, limit),
                         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
                     )
                 }
@@ -1010,9 +1085,9 @@ private fun RenderDebugMessage(msg: IRelayDebugMessage) {
             Text(
                 text =
                     when (msg) {
-                        is ErrorDebugMessage -> stringRes(R.string.errors)
-                        is NoticeDebugMessage -> stringRes(R.string.relay_notice)
-                        is SpamDebugMessage -> stringRes(R.string.spam)
+                        is ErrorDebugMessage -> stringResource(Res.string.errors)
+                        is NoticeDebugMessage -> stringResource(Res.string.relay_notice)
+                        is SpamDebugMessage -> stringResource(Res.string.spam)
                     },
                 style =
                     MaterialTheme.typography.labelSmall.copy(
@@ -1052,7 +1127,7 @@ private fun RenderDebugMessage(msg: IRelayDebugMessage) {
             is SpamDebugMessage -> {
                 SelectionContainer {
                     val uri = LocalUriHandler.current
-                    val start = stringRes(R.string.duplicated_post)
+                    val start = stringResource(Res.string.duplicated_post)
                     Text(
                         text =
                             remember {
@@ -1149,7 +1224,7 @@ private fun RelayHeader(
                     modifier = Modifier.size(18.dp),
                 )
                 Spacer(modifier = Modifier.width(4.dp))
-                Text(text = stringRes(R.string.see_relay_feed))
+                Text(text = stringResource(Res.string.see_relay_feed))
             }
 
             if (supportsNip43(relayInfo.supported_nips)) {
@@ -1159,11 +1234,11 @@ private fun RelayHeader(
                 ) {
                     Icon(
                         Icons.Default.People,
-                        contentDescription = stringRes(R.string.relay_members),
+                        contentDescription = stringResource(Res.string.relay_members),
                         modifier = Modifier.size(18.dp),
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(text = stringRes(R.string.relay_members))
+                    Text(text = stringResource(Res.string.relay_members))
                 }
             }
 
@@ -1174,7 +1249,7 @@ private fun RelayHeader(
                 ) {
                     Icon(
                         Icons.Default.Settings,
-                        contentDescription = stringRes(R.string.manage),
+                        contentDescription = stringResource(Res.string.manage),
                         modifier = Height25Modifier,
                     )
                 }
@@ -1193,17 +1268,17 @@ fun FeesCard(
     OutlinedCard(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
         Column(modifier = Modifier.padding(16.dp)) {
             fees.admission?.forEach {
-                FeeRow(stringRes(R.string.admission), it)
+                FeeRow(stringResource(Res.string.admission), it)
             }
             fees.subscription?.forEach {
-                FeeRow(stringRes(R.string.subscription), it)
+                FeeRow(stringResource(Res.string.subscription), it)
             }
             fees.publication?.forEach {
-                FeeRow(stringRes(R.string.publication), it)
+                FeeRow(stringResource(Res.string.publication), it)
             }
             payUrl?.let {
                 val uri = LocalUriHandler.current
-                ClickableInfoRow(Icons.Default.Payment, stringRes(R.string.payments_url), it.removePrefix(HTTPS_PREFIX)) {
+                ClickableInfoRow(Icons.Default.Payment, stringResource(Res.string.payments_url), it.removePrefix(HTTPS_PREFIX)) {
                     runCatching {
                         uri.openUri(it)
                     }
@@ -1226,30 +1301,30 @@ fun LimitationsCard(lim: Nip11RelayInformation.RelayInformationLimitation) {
 
             if (atLeastOneAccessControl) {
                 Column {
-                    Text(stringRes(R.string.access_control), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                    Text(stringResource(Res.string.access_control), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
-                    val yes = stringRes(R.string.yes)
-                    val no = stringRes(R.string.no)
+                    val yes = stringResource(Res.string.yes)
+                    val no = stringResource(Res.string.no)
 
                     lim.auth_required?.let {
-                        InfoRow(Icons.Default.History, stringRes(R.string.auth_required), if (it) yes else no)
+                        InfoRow(Icons.Default.History, stringResource(Res.string.auth_required), if (it) yes else no)
                     }
                     lim.payment_required?.let {
-                        InfoRow(Icons.Default.Lock, stringRes(R.string.payment_required), if (it) yes else no)
+                        InfoRow(Icons.Default.Lock, stringResource(Res.string.payment_required), if (it) yes else no)
                     }
                     lim.restricted_writes?.let {
-                        InfoRow(Icons.Default.EditOff, stringRes(R.string.restricted_writes), if (it) yes else no)
+                        InfoRow(Icons.Default.EditOff, stringResource(Res.string.restricted_writes), if (it) yes else no)
                     }
 
                     val minPoW = lim.min_pow_difficulty
 
                     if (minPoW != null && minPoW > 0) {
-                        InfoRow(Icons.Default.Bolt, stringRes(R.string.minimum_pow), stringRes(R.string.amount_in_bits, minPoW))
+                        InfoRow(Icons.Default.Bolt, stringResource(Res.string.minimum_pow), stringResource(Res.string.amount_in_bits, minPoW))
                     } else {
                         lim.min_prefix?.let {
                             if (it > 0) {
-                                InfoRow(Icons.Default.Key, stringRes(R.string.minimum_prefix), stringRes(R.string.amount_in_bits, it * 8))
+                                InfoRow(Icons.Default.Key, stringResource(Res.string.minimum_prefix), stringResource(Res.string.amount_in_bits, it * 8))
                             }
                         }
                     }
@@ -1266,27 +1341,27 @@ fun LimitationsCard(lim: Nip11RelayInformation.RelayInformationLimitation) {
 
             if (atLeastOneConnectivity) {
                 Column {
-                    Text(stringRes(R.string.connectivity), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                    Text(stringResource(Res.string.connectivity), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
 
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
                     lim.max_message_length?.let {
-                        InfoRow(Icons.AutoMirrored.Default.Message, stringRes(R.string.max_message_length), "${it / 1024} kb")
+                        InfoRow(Icons.AutoMirrored.Default.Message, stringResource(Res.string.max_message_length), "${it / 1024} kb")
                     }
                     lim.max_subscriptions?.let {
-                        InfoRow(Icons.Default.Dns, stringRes(R.string.max_subs), it.toString())
+                        InfoRow(Icons.Default.Dns, stringResource(Res.string.max_subs), it.toString())
                     }
                     lim.max_filters?.let {
-                        InfoRow(Icons.Default.FilterAlt, stringRes(R.string.max_filters_per_sub), it.toString())
+                        InfoRow(Icons.Default.FilterAlt, stringResource(Res.string.max_filters_per_sub), it.toString())
                     }
                     lim.max_limit?.let {
-                        InfoRow(Icons.AutoMirrored.Default.List, stringRes(R.string.max_limit_events_returning), it.toString())
+                        InfoRow(Icons.AutoMirrored.Default.List, stringResource(Res.string.max_limit_events_returning), it.toString())
                     }
                     lim.default_limit?.let {
-                        InfoRow(Icons.AutoMirrored.Default.List, stringRes(R.string.max_limit_events_returning), it.toString())
+                        InfoRow(Icons.AutoMirrored.Default.List, stringResource(Res.string.max_limit_events_returning), it.toString())
                     }
                     lim.max_subid_length?.let {
-                        InfoRow(Icons.AutoMirrored.Default.Label, stringRes(R.string.max_subid_length), it.toString())
+                        InfoRow(Icons.AutoMirrored.Default.Label, stringResource(Res.string.max_subid_length), it.toString())
                     }
                 }
             }
@@ -1297,16 +1372,16 @@ fun LimitationsCard(lim: Nip11RelayInformation.RelayInformationLimitation) {
 
             if (atLeastOneContentSize) {
                 Column {
-                    Text(stringRes(R.string.content_size), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                    Text(stringResource(Res.string.content_size), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
 
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
                     lim.max_event_tags?.let {
-                        InfoRow(Icons.Default.Tag, stringRes(R.string.maximum_event_tags), it.toString())
+                        InfoRow(Icons.Default.Tag, stringResource(Res.string.maximum_event_tags), it.toString())
                     }
 
                     lim.max_content_length?.let {
-                        InfoRow(Icons.AutoMirrored.Default.Article, stringRes(R.string.max_content_length), "${it / 1024} kb")
+                        InfoRow(Icons.AutoMirrored.Default.Article, stringResource(Res.string.max_content_length), "${it / 1024} kb")
                     }
                 }
             }
@@ -1317,18 +1392,18 @@ fun LimitationsCard(lim: Nip11RelayInformation.RelayInformationLimitation) {
 
             if (atLeastOneRestriction) {
                 Column {
-                    Text(stringRes(R.string.event_retention), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                    Text(stringResource(Res.string.event_retention), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
 
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
                     lim.created_at_lower_limit?.let {
                         if (it > 0) {
-                            InfoRow(Icons.Default.History, stringRes(R.string.discards_older_than), stringRes(R.string.time_in_the_past, timeDiffAgoShortish(it)))
+                            InfoRow(Icons.Default.History, stringResource(Res.string.discards_older_than), stringResource(Res.string.time_in_the_past, timeDiffAgoShortish(it)))
                         }
                     }
                     lim.created_at_upper_limit?.let {
                         if (it > 0) {
-                            InfoRow(Icons.Default.History, stringRes(R.string.accepts_up_to), stringRes(R.string.time_in_the_future, timeDiffAgoShortish(it)))
+                            InfoRow(Icons.Default.History, stringResource(Res.string.accepts_up_to), stringResource(Res.string.time_in_the_future, timeDiffAgoShortish(it)))
                         }
                     }
                 }
@@ -1353,23 +1428,23 @@ fun SoftwareCard(relayInfo: Nip11RelayInformation) {
             val uri = LocalUriHandler.current
             relayInfo.software?.let {
                 if (it.contains(HTTPS_PREFIX)) {
-                    ClickableInfoRow(Icons.Default.Code, stringRes(R.string.software), it.removePrefix("git+https://").removePrefix(HTTPS_PREFIX)) {
+                    ClickableInfoRow(Icons.Default.Code, stringResource(Res.string.software), it.removePrefix("git+https://").removePrefix(HTTPS_PREFIX)) {
                         runCatching {
                             uri.openUri(it.removePrefix("git+"))
                         }
                     }
                 } else {
-                    InfoRow(Icons.Default.Code, stringRes(R.string.software), it)
+                    InfoRow(Icons.Default.Code, stringResource(Res.string.software), it)
                 }
             }
 
             relayInfo.version?.let {
-                InfoRow(Icons.Default.Storage, stringRes(R.string.version), it)
+                InfoRow(Icons.Default.Storage, stringResource(Res.string.version), it)
             }
 
             relayInfo.supported_nips?.let { nips ->
                 Text(
-                    stringRes(R.string.supports),
+                    stringResource(Res.string.supports),
                     modifier = Modifier.padding(top = 8.dp),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary,
@@ -1399,7 +1474,7 @@ fun SoftwareCard(relayInfo: Nip11RelayInformation) {
 
             relayInfo.supported_grasps?.let { grasps ->
                 Text(
-                    stringRes(R.string.supported_grasps),
+                    stringResource(Res.string.supported_grasps),
                     modifier = Modifier.padding(top = 8.dp),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary,
@@ -1440,7 +1515,7 @@ fun TargetAudienceCard(
             relay.tags?.let { tags ->
                 if (tags.size > 2) {
                     Column {
-                        Text(stringRes(R.string.topics), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                        Text(stringResource(Res.string.topics), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
 
                         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
@@ -1459,14 +1534,14 @@ fun TargetAudienceCard(
                         }
                     }
                 } else if (tags.isNotEmpty()) {
-                    InfoRow(Icons.Default.Topic, stringRes(R.string.topics), tags.joinToString())
+                    InfoRow(Icons.Default.Topic, stringResource(Res.string.topics), tags.joinToString())
                 }
             }
             relay.relay_countries?.let { countries ->
-                val allCountries = stringRes(R.string.all_countries)
+                val allCountries = stringResource(Res.string.all_countries)
                 if (countries.size > 2) {
                     Column {
-                        Text(stringRes(R.string.countries), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                        Text(stringResource(Res.string.countries), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
 
                         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
@@ -1498,7 +1573,7 @@ fun TargetAudienceCard(
                 } else if (countries.isNotEmpty()) {
                     InfoRow(
                         Icons.Default.Language,
-                        stringRes(R.string.countries),
+                        stringResource(Res.string.countries),
                         countries.joinToString {
                             if (it == "*") allCountries else it
                         },
@@ -1506,10 +1581,10 @@ fun TargetAudienceCard(
                 }
             }
             relay.language_tags?.let { languages ->
-                val allLang = stringRes(R.string.all_languages)
+                val allLang = stringResource(Res.string.all_languages)
                 if (languages.size > 2) {
                     Column {
-                        Text(stringRes(R.string.languages), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                        Text(stringResource(Res.string.languages), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
 
                         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
@@ -1539,7 +1614,7 @@ fun TargetAudienceCard(
                 } else if (languages.isNotEmpty()) {
                     InfoRow(
                         Icons.Default.Translate,
-                        stringRes(R.string.languages),
+                        stringResource(Res.string.languages),
                         languages.joinToString {
                             if (it == "*") allLang else it
                         },
@@ -1557,18 +1632,18 @@ fun PoliciesCard(relay: Nip11RelayInformation) {
             val uri = LocalUriHandler.current
             relay.contact?.let {
                 if (it.contains("@")) {
-                    ClickableInfoRow(Icons.AutoMirrored.Default.ContactSupport, stringRes(R.string.contact), it) {
+                    ClickableInfoRow(Icons.AutoMirrored.Default.ContactSupport, stringResource(Res.string.contact), it) {
                         runCatching {
                             uri.openUri("mailto:$it")
                         }
                     }
                 } else {
-                    InfoRow(Icons.AutoMirrored.Default.ContactSupport, stringRes(R.string.contact), it)
+                    InfoRow(Icons.AutoMirrored.Default.ContactSupport, stringResource(Res.string.contact), it)
                 }
             }
 
             relay.posting_policy?.let {
-                ClickableInfoRow(Icons.Default.EditNote, stringRes(R.string.posting_policy), it) {
+                ClickableInfoRow(Icons.Default.EditNote, stringResource(Res.string.posting_policy), it) {
                     runCatching {
                         uri.openUri(it)
                     }
@@ -1578,24 +1653,24 @@ fun PoliciesCard(relay: Nip11RelayInformation) {
             val pp = relay.privacy_policy
 
             if (pp != null) {
-                ClickableInfoRow(Icons.Default.PrivacyTip, stringRes(R.string.privacy_policy), pp.removePrefix(HTTPS_PREFIX)) {
+                ClickableInfoRow(Icons.Default.PrivacyTip, stringResource(Res.string.privacy_policy), pp.removePrefix(HTTPS_PREFIX)) {
                     runCatching {
                         uri.openUri(pp)
                     }
                 }
             } else {
-                InfoRow(Icons.Default.PrivacyTip, stringRes(R.string.privacy_policy), stringRes(R.string.not_available_acronym))
+                InfoRow(Icons.Default.PrivacyTip, stringResource(Res.string.privacy_policy), stringResource(Res.string.not_available_acronym))
             }
 
             val ts = relay.terms_of_service
             if (ts != null) {
-                ClickableInfoRow(Icons.Default.Gavel, stringRes(R.string.terms_and_conditions), ts.removePrefix(HTTPS_PREFIX)) {
+                ClickableInfoRow(Icons.Default.Gavel, stringResource(Res.string.terms_and_conditions), ts.removePrefix(HTTPS_PREFIX)) {
                     runCatching {
                         uri.openUri(ts)
                     }
                 }
             } else {
-                InfoRow(Icons.Default.Gavel, stringRes(R.string.terms_and_conditions), stringRes(R.string.not_available_acronym))
+                InfoRow(Icons.Default.Gavel, stringResource(Res.string.terms_and_conditions), stringResource(Res.string.not_available_acronym))
             }
         }
     }
@@ -1673,13 +1748,13 @@ private fun RelayMonitorReportCard(
                     horizontalArrangement = Arrangement.SpaceEvenly,
                 ) {
                     rttOpen?.let {
-                        RttChip(stringRes(R.string.relay_monitor_rtt_open), it)
+                        RttChip(stringResource(Res.string.relay_monitor_rtt_open), it)
                     }
                     rttRead?.let {
-                        RttChip(stringRes(R.string.relay_monitor_rtt_read), it)
+                        RttChip(stringResource(Res.string.relay_monitor_rtt_read), it)
                     }
                     rttWrite?.let {
-                        RttChip(stringRes(R.string.relay_monitor_rtt_write), it)
+                        RttChip(stringResource(Res.string.relay_monitor_rtt_write), it)
                     }
                 }
             }
@@ -1689,7 +1764,7 @@ private fun RelayMonitorReportCard(
             if (networkTypes.isNotEmpty()) {
                 InfoRow(
                     Icons.Default.Language,
-                    stringRes(R.string.relay_monitor_network),
+                    stringResource(Res.string.relay_monitor_network),
                     networkTypes.joinToString { it.code },
                 )
             }
@@ -1699,7 +1774,7 @@ private fun RelayMonitorReportCard(
             if (relayTypes.isNotEmpty()) {
                 InfoRow(
                     Icons.Default.Dns,
-                    stringRes(R.string.relay_monitor_relay_type),
+                    stringResource(Res.string.relay_monitor_relay_type),
                     relayTypes.joinToString(),
                 )
             }
@@ -1709,7 +1784,7 @@ private fun RelayMonitorReportCard(
             if (requirements.isNotEmpty()) {
                 InfoRow(
                     Icons.Default.Lock,
-                    stringRes(R.string.relay_monitor_requirements),
+                    stringResource(Res.string.relay_monitor_requirements),
                     requirements.joinToString { req ->
                         if (req.negated) "!${req.value}" else req.value
                     },
@@ -1745,7 +1820,7 @@ private fun RttChip(
             color = color.copy(alpha = 0.15f),
         ) {
             Text(
-                text = stringRes(R.string.relay_monitor_ms, ms.toInt()),
+                text = stringResource(Res.string.relay_monitor_ms, ms.toInt()),
                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold,

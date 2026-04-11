@@ -54,6 +54,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.add_caption
+import com.vitorpamplona.amethyst.commons.resources.add_caption_example
+import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_explainer
+import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_high
+import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_label
+import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_low
+import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_medium
+import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_uncompressed
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.ShowImageUploadGallery
@@ -65,11 +74,11 @@ import com.vitorpamplona.amethyst.ui.navigation.topbars.PostingTopBar
 import com.vitorpamplona.amethyst.ui.note.creators.contentWarning.SettingSwitchItem
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsRow
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
+import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -169,7 +178,7 @@ fun ImageVideoPost(
     }
 
     OutlinedTextField(
-        label = { Text(text = stringRes(R.string.add_caption)) },
+        label = { Text(text = stringResource(Res.string.add_caption)) },
         modifier =
             Modifier
                 .fillMaxWidth()
@@ -180,7 +189,7 @@ fun ImageVideoPost(
         onValueChange = { postViewModel.caption = it },
         placeholder = {
             Text(
-                text = stringRes(R.string.add_caption_example),
+                text = stringResource(Res.string.add_caption_example),
                 color = MaterialTheme.colorScheme.placeholderText,
             )
         },
@@ -223,12 +232,12 @@ fun ImageVideoPost(
         verticalArrangement = Arrangement.spacedBy(Size5dp),
     ) {
         Text(
-            text = stringRes(R.string.media_compression_quality_label),
+            text = stringResource(Res.string.media_compression_quality_label),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
         Text(
-            text = stringRes(R.string.media_compression_quality_explainer),
+            text = stringResource(Res.string.media_compression_quality_explainer),
             style = MaterialTheme.typography.bodySmall,
             color = Color.Gray,
             maxLines = 5,
@@ -241,11 +250,11 @@ fun ImageVideoPost(
             Text(
                 text =
                     when (postViewModel.mediaQualitySlider) {
-                        0 -> stringRes(R.string.media_compression_quality_low)
-                        1 -> stringRes(R.string.media_compression_quality_medium)
-                        2 -> stringRes(R.string.media_compression_quality_high)
-                        3 -> stringRes(R.string.media_compression_quality_uncompressed)
-                        else -> stringRes(R.string.media_compression_quality_medium)
+                        0 -> stringResource(Res.string.media_compression_quality_low)
+                        1 -> stringResource(Res.string.media_compression_quality_medium)
+                        2 -> stringResource(Res.string.media_compression_quality_high)
+                        3 -> stringResource(Res.string.media_compression_quality_uncompressed)
+                        else -> stringResource(Res.string.media_compression_quality_medium)
                     },
                 modifier = Modifier.align(Alignment.Center),
             )

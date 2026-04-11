@@ -43,10 +43,21 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.ai_tone_correct
+import com.vitorpamplona.amethyst.commons.resources.ai_tone_elaborate
+import com.vitorpamplona.amethyst.commons.resources.ai_tone_emojify
+import com.vitorpamplona.amethyst.commons.resources.ai_tone_friendly
+import com.vitorpamplona.amethyst.commons.resources.ai_tone_more_direct
+import com.vitorpamplona.amethyst.commons.resources.ai_tone_professional
+import com.vitorpamplona.amethyst.commons.resources.ai_tone_punchy
+import com.vitorpamplona.amethyst.commons.resources.ai_tone_rephrase
+import com.vitorpamplona.amethyst.commons.resources.ai_tone_shorter
+import com.vitorpamplona.amethyst.commons.resources.ai_writing_dismiss
+import com.vitorpamplona.amethyst.commons.resources.ai_writing_use_this
 import com.vitorpamplona.amethyst.service.ai.WritingResult
 import com.vitorpamplona.amethyst.service.ai.WritingTone
-import com.vitorpamplona.amethyst.ui.stringRes
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun AiWritingHelpPanel(
@@ -119,10 +130,10 @@ private fun AiResultCard(
             horizontalArrangement = Arrangement.End,
         ) {
             TextButton(onClick = onDismiss) {
-                Text(stringRes(R.string.ai_writing_dismiss))
+                Text(stringResource(Res.string.ai_writing_dismiss))
             }
             OutlinedButton(onClick = onApply) {
-                Text(stringRes(R.string.ai_writing_use_this))
+                Text(stringResource(Res.string.ai_writing_use_this))
             }
         }
     }
@@ -157,13 +168,13 @@ private fun ToneChipRow(
 @Composable
 private fun toneDisplayName(tone: WritingTone): String =
     when (tone) {
-        WritingTone.CORRECT -> stringRes(R.string.ai_tone_correct)
-        WritingTone.REPHRASE -> stringRes(R.string.ai_tone_rephrase)
-        WritingTone.SHORTER -> stringRes(R.string.ai_tone_shorter)
-        WritingTone.ELABORATE -> stringRes(R.string.ai_tone_elaborate)
-        WritingTone.FRIENDLY -> stringRes(R.string.ai_tone_friendly)
-        WritingTone.PROFESSIONAL -> stringRes(R.string.ai_tone_professional)
-        WritingTone.MORE_DIRECT -> stringRes(R.string.ai_tone_more_direct)
-        WritingTone.PUNCHY -> stringRes(R.string.ai_tone_punchy)
-        WritingTone.EMOJIFY -> stringRes(R.string.ai_tone_emojify)
+        WritingTone.CORRECT -> stringResource(Res.string.ai_tone_correct)
+        WritingTone.REPHRASE -> stringResource(Res.string.ai_tone_rephrase)
+        WritingTone.SHORTER -> stringResource(Res.string.ai_tone_shorter)
+        WritingTone.ELABORATE -> stringResource(Res.string.ai_tone_elaborate)
+        WritingTone.FRIENDLY -> stringResource(Res.string.ai_tone_friendly)
+        WritingTone.PROFESSIONAL -> stringResource(Res.string.ai_tone_professional)
+        WritingTone.MORE_DIRECT -> stringResource(Res.string.ai_tone_more_direct)
+        WritingTone.PUNCHY -> stringResource(Res.string.ai_tone_punchy)
+        WritingTone.EMOJIFY -> stringResource(Res.string.ai_tone_emojify)
     }

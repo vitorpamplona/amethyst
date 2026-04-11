@@ -74,12 +74,16 @@ import com.vitorpamplona.amethyst.commons.chess.OutgoingChallengeCard
 import com.vitorpamplona.amethyst.commons.chess.OverlappingAvatars
 import com.vitorpamplona.amethyst.commons.chess.PublicGameCard
 import com.vitorpamplona.amethyst.commons.chess.SpectatingGameCard
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.back
+import com.vitorpamplona.amethyst.commons.resources.dismiss
+import com.vitorpamplona.amethyst.commons.resources.relay_settings
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.datasource.ChessSubscription
-import com.vitorpamplona.amethyst.ui.stringRes
+import org.jetbrains.compose.resources.stringResource
 import com.vitorpamplona.quartz.nip64Chess.Color as ChessColor
 
 /**
@@ -167,7 +171,7 @@ fun ChessLobbyScreen(
                     IconButton(onClick = { nav.popBack() }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringRes(R.string.back),
+                            contentDescription = stringResource(Res.string.back),
                         )
                     }
                 },
@@ -175,7 +179,7 @@ fun ChessLobbyScreen(
                     IconButton(onClick = { showRelaySettings = true }) {
                         Icon(
                             imageVector = Icons.Default.Settings,
-                            contentDescription = stringRes(R.string.relay_settings),
+                            contentDescription = stringResource(Res.string.relay_settings),
                         )
                     }
                 },
@@ -277,7 +281,7 @@ fun ErrorDisplay(chessViewModel: ChessViewModelNew) {
             ) {
                 Text(errorMsg, color = MaterialTheme.colorScheme.onErrorContainer)
                 OutlinedButton(onClick = { chessViewModel.clearError() }) {
-                    Text(stringRes(R.string.dismiss))
+                    Text(stringResource(Res.string.dismiss))
                 }
             }
         }

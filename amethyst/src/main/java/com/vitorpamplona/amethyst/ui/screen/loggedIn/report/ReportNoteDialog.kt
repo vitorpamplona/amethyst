@@ -58,17 +58,35 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.block_only
+import com.vitorpamplona.amethyst.commons.resources.report_dialog_additional_reason_label
+import com.vitorpamplona.amethyst.commons.resources.report_dialog_additional_reason_placeholder
+import com.vitorpamplona.amethyst.commons.resources.report_dialog_block_hide_user_btn
+import com.vitorpamplona.amethyst.commons.resources.report_dialog_blocking_a_user
+import com.vitorpamplona.amethyst.commons.resources.report_dialog_illegal
+import com.vitorpamplona.amethyst.commons.resources.report_dialog_impersonation
+import com.vitorpamplona.amethyst.commons.resources.report_dialog_nudity
+import com.vitorpamplona.amethyst.commons.resources.report_dialog_post_report_btn
+import com.vitorpamplona.amethyst.commons.resources.report_dialog_profanity
+import com.vitorpamplona.amethyst.commons.resources.report_dialog_reminder_public
+import com.vitorpamplona.amethyst.commons.resources.report_dialog_report_btn
+import com.vitorpamplona.amethyst.commons.resources.report_dialog_select_reason_label
+import com.vitorpamplona.amethyst.commons.resources.report_dialog_select_reason_placeholder
+import com.vitorpamplona.amethyst.commons.resources.report_dialog_spam
+import com.vitorpamplona.amethyst.commons.resources.report_dialog_title
+import com.vitorpamplona.amethyst.commons.resources.report_malware
+import com.vitorpamplona.amethyst.commons.resources.violence
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.LightRedColor
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 import kotlinx.collections.immutable.toImmutableList
+import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -79,13 +97,13 @@ fun ReportNoteDialog(
 ) {
     val reportTypes =
         listOf(
-            Pair(ReportType.SPAM, stringRes(R.string.report_dialog_spam)),
-            Pair(ReportType.PROFANITY, stringRes(R.string.report_dialog_profanity)),
-            Pair(ReportType.IMPERSONATION, stringRes(R.string.report_dialog_impersonation)),
-            Pair(ReportType.NUDITY, stringRes(R.string.report_dialog_nudity)),
-            Pair(ReportType.ILLEGAL, stringRes(R.string.report_dialog_illegal)),
-            Pair(ReportType.MALWARE, stringRes(R.string.report_malware)),
-            Pair(ReportType.VIOLENCE, stringRes(R.string.violence)),
+            Pair(ReportType.SPAM, stringResource(Res.string.report_dialog_spam)),
+            Pair(ReportType.PROFANITY, stringResource(Res.string.report_dialog_profanity)),
+            Pair(ReportType.IMPERSONATION, stringResource(Res.string.report_dialog_impersonation)),
+            Pair(ReportType.NUDITY, stringResource(Res.string.report_dialog_nudity)),
+            Pair(ReportType.ILLEGAL, stringResource(Res.string.report_dialog_illegal)),
+            Pair(ReportType.MALWARE, stringResource(Res.string.report_malware)),
+            Pair(ReportType.VIOLENCE, stringResource(Res.string.violence)),
         )
 
     val reasonOptions = remember { reportTypes.map { TitleExplainer(it.second) }.toImmutableList() }
@@ -99,7 +117,7 @@ fun ReportNoteDialog(
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text(text = stringRes(id = R.string.report_dialog_title)) },
+                    title = { Text(text = stringResource(Res.string.report_dialog_title)) },
                     navigationIcon = { IconButton(onClick = onDismiss) { ArrowBackIcon() } },
                     colors =
                         TopAppBarDefaults.topAppBarColors(
@@ -114,14 +132,14 @@ fun ReportNoteDialog(
                 verticalArrangement = Arrangement.SpaceAround,
             ) {
                 SpacerH16()
-                SectionHeader(text = stringRes(id = R.string.block_only))
+                SectionHeader(text = stringResource(Res.string.block_only))
                 SpacerH16()
                 Text(
-                    text = stringRes(R.string.report_dialog_blocking_a_user),
+                    text = stringResource(Res.string.report_dialog_blocking_a_user),
                 )
                 SpacerH16()
                 ActionButton(
-                    text = stringRes(R.string.report_dialog_block_hide_user_btn),
+                    text = stringResource(Res.string.report_dialog_block_hide_user_btn),
                     icon = Icons.Default.Block,
                     onClick = {
                         note.author?.let { accountViewModel.hide(it) }
@@ -133,13 +151,13 @@ fun ReportNoteDialog(
                 HorizontalDivider(color = MaterialTheme.colorScheme.onSurface, thickness = DividerThickness)
 
                 SpacerH16()
-                SectionHeader(text = stringRes(R.string.report_dialog_report_btn))
+                SectionHeader(text = stringResource(Res.string.report_dialog_report_btn))
                 SpacerH16()
-                Text(stringRes(R.string.report_dialog_reminder_public))
+                Text(stringResource(Res.string.report_dialog_reminder_public))
                 SpacerH16()
                 TextSpinner(
-                    label = stringRes(R.string.report_dialog_select_reason_label),
-                    placeholder = stringRes(R.string.report_dialog_select_reason_placeholder),
+                    label = stringResource(Res.string.report_dialog_select_reason_label),
+                    placeholder = stringResource(Res.string.report_dialog_select_reason_placeholder),
                     options = reasonOptions,
                     onSelect = { selectedReason = it },
                     modifier = Modifier.fillMaxWidth(),
@@ -149,15 +167,15 @@ fun ReportNoteDialog(
                     value = additionalReason,
                     onValueChange = { additionalReason = it },
                     placeholder = {
-                        Text(text = stringRes(R.string.report_dialog_additional_reason_placeholder))
+                        Text(text = stringResource(Res.string.report_dialog_additional_reason_placeholder))
                     },
-                    label = { Text(stringRes(R.string.report_dialog_additional_reason_label)) },
+                    label = { Text(stringResource(Res.string.report_dialog_additional_reason_label)) },
                     modifier = Modifier.fillMaxWidth(),
                 )
                 SpacerH16()
 
                 ActionButton(
-                    text = stringRes(R.string.report_dialog_post_report_btn),
+                    text = stringResource(Res.string.report_dialog_post_report_btn),
                     icon = Icons.Default.Report,
                     enabled = selectedReason in 0..reportTypes.lastIndex,
                     onClick = {

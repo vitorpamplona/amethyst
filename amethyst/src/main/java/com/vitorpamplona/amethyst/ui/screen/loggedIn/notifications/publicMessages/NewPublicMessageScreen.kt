@@ -55,6 +55,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.messages_new_message_to
+import com.vitorpamplona.amethyst.commons.resources.messages_new_message_to_caption
+import com.vitorpamplona.amethyst.commons.resources.zapraiser
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromFiles
@@ -88,7 +92,6 @@ import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.ForwardZapToButton
 import com.vitorpamplona.amethyst.ui.note.types.ReplyRenderType
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.MessageFieldRow
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
@@ -102,6 +105,7 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class, FlowPreview::class)
 @Composable
@@ -279,7 +283,7 @@ fun PublicMessageScreenContent(
 
                 if (postViewModel.wantsZapraiser && postViewModel.hasLnAddress()) {
                     ZapRaiserRequest(
-                        stringRes(id = R.string.zapraiser),
+                        stringResource(Res.string.zapraiser),
                         postViewModel,
                     )
                 }
@@ -409,7 +413,7 @@ fun SendDirectMessageTo(
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(
-                text = stringRes(R.string.messages_new_message_to),
+                text = stringResource(Res.string.messages_new_message_to),
                 fontSize = Font14SP,
                 fontWeight = FontWeight.W500,
             )
@@ -428,7 +432,7 @@ fun SendDirectMessageTo(
                         },
                 placeholder = {
                     Text(
-                        text = stringRes(R.string.messages_new_message_to_caption),
+                        text = stringResource(Res.string.messages_new_message_to_caption),
                         color = MaterialTheme.colorScheme.placeholderText,
                     )
                 },

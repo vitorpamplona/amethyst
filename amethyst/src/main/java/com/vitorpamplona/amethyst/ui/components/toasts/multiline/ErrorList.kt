@@ -42,6 +42,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.error_dialog_talk_to_user
+import com.vitorpamplona.amethyst.commons.resources.error_dialog_talk_to_user_name
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
@@ -51,7 +54,6 @@ import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size30Modifier
@@ -63,6 +65,7 @@ import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 @Preview
@@ -136,8 +139,8 @@ fun ErrorRow(
                 ) {
                     val descriptor =
                         it.metadataOrNull()?.flow?.value?.info?.bestName()?.let {
-                            stringRes(R.string.error_dialog_talk_to_user_name, it)
-                        } ?: stringRes(R.string.error_dialog_talk_to_user)
+                            stringResource(Res.string.error_dialog_talk_to_user_name, it)
+                        } ?: stringResource(Res.string.error_dialog_talk_to_user)
 
                     Icon(
                         painter = painterRes(R.drawable.ic_dm, 2),

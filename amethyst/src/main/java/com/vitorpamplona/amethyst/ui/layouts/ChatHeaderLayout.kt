@@ -39,17 +39,19 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.profile_banner
 import com.vitorpamplona.amethyst.ui.layouts.listItem.SlimListItem
 import com.vitorpamplona.amethyst.ui.note.elements.TimeAgo
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.NewItemsBubble
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.Height4dpModifier
 import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.quartz.utils.TimeUtils
+import org.jetbrains.compose.resources.stringResource
 
 private const val PREVIEW_AUTHOR = "This is my author"
 private const val PREVIEW_MESSAGE = "This is a message from this person"
@@ -63,7 +65,7 @@ fun ChannelNamePreview() {
                 channelPicture = {
                     Image(
                         painter = painterRes(R.drawable.github, 1),
-                        contentDescription = stringRes(id = R.string.profile_banner),
+                        contentDescription = stringResource(Res.string.profile_banner),
                         contentScale = ContentScale.FillWidth,
                     )
                 },
@@ -97,7 +99,7 @@ fun ChannelNamePreview() {
                 leadingContent = {
                     Image(
                         painter = painterRes(R.drawable.github, 2),
-                        contentDescription = stringRes(id = R.string.profile_banner),
+                        contentDescription = stringResource(Res.string.profile_banner),
                         contentScale = ContentScale.FillWidth,
                         modifier = Size55Modifier,
                     )
@@ -122,7 +124,7 @@ fun ChannelNamePreview() {
                 leadingContent = {
                     Image(
                         painter = painterRes(R.drawable.github, 2),
-                        contentDescription = stringRes(id = R.string.profile_banner),
+                        contentDescription = stringResource(Res.string.profile_banner),
                         contentScale = ContentScale.FillWidth,
                         modifier = Size55Modifier,
                     )

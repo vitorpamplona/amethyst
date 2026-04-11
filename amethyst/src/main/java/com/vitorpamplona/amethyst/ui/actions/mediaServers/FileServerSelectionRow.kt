@@ -23,11 +23,13 @@ package com.vitorpamplona.amethyst.ui.actions.mediaServers
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.upload_server_relays_nip95
 import com.vitorpamplona.amethyst.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsRow
-import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.collections.immutable.toImmutableList
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun FileServerSelectionRow(
@@ -35,7 +37,7 @@ fun FileServerSelectionRow(
     selectedServer: ServerName?,
     onSelect: (ServerName) -> Unit,
 ) {
-    val nip95description = stringRes(id = R.string.upload_server_relays_nip95)
+    val nip95description = stringResource(Res.string.upload_server_relays_nip95)
 
     val fileServerOptions =
         remember(fileServers) {
