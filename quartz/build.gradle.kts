@@ -87,6 +87,8 @@ kotlin {
 
     linuxX64()
 
+    macosArm64()
+
     // This makes sure that the resource file directory is visible for iOS tests.
     val rootDir = "${rootProject.rootDir.path}/quartz/src/commonTest/resources"
 
@@ -295,6 +297,24 @@ kotlin {
 
         val iosSimulatorArm64Test by getting {
             dependsOn(iosTest.get())
+        }
+
+        val macosMain =
+            create("macosMain") {
+                dependsOn(appleMain)
+            }
+
+        val macosTest =
+            create("macosTest") {
+                dependsOn(appleTest)
+            }
+
+        val macosArm64Main by getting {
+            dependsOn(macosMain)
+        }
+
+        val macosArm64Test by getting {
+            dependsOn(macosTest)
         }
 
         val linuxMain =

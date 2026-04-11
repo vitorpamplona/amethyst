@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.utils.secp256k1
 
+import com.vitorpamplona.quartz.utils.platform
 import kotlin.test.Test
 import kotlin.test.assertTrue
 import kotlin.time.TimeSource
@@ -42,7 +43,9 @@ import kotlin.time.TimeSource
  *
  * Test data is the same across all 3 platform benchmarks for cross-platform comparability.
  *
- * Run with: ./gradlew :quartz:linuxX64Test --tests "*.Secp256k1NativeBenchmark"
+ * Run with:
+ *   ./gradlew :quartz:linuxX64Test --tests "*.Secp256k1NativeBenchmark"
+ *   ./gradlew :quartz:macosArm64Test --tests "*.Secp256k1NativeBenchmark"
  *
  * IMPORTANT: Requires -opt in the compiler options for meaningful results.
  * Without it, K/N compiles in debug mode (~12x slower). See build.gradle.kts.
@@ -167,7 +170,7 @@ class Secp256k1NativeBenchmark {
                 Secp256k1.ecdhXOnly(pub2xOnly, privKey)
             }
 
-        printResults("secp256k1 Benchmark: Kotlin/Native (LLVM AOT) on linuxX64", results)
+        printResults("secp256k1 Benchmark: Kotlin/Native (LLVM AOT) on ${platform()}", results)
 
         // ==================== Batch verification ====================
         // Same pubkey, n events — the typical Nostr pattern (feed from one author).
@@ -274,7 +277,7 @@ class Secp256k1NativeBenchmark {
                 ltSink = if (uLt(a.l0 xor ltSink, b.l0)) 1L else 0L
             }
 
-        printResults("secp256k1 Field Micro-Benchmarks: Kotlin/Native (LLVM AOT) on linuxX64", results)
+        printResults("secp256k1 Field Micro-Benchmarks: Kotlin/Native (LLVM AOT) on ${platform()}", results)
 
         // Use sinks to prevent dead code elimination of the entire benchmark
         assertTrue(hiSink != Long.MIN_VALUE || ltSink != Long.MIN_VALUE || out.l0 != Long.MIN_VALUE)
