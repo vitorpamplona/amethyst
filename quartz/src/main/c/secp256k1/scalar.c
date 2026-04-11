@@ -191,41 +191,8 @@ static const secp256k1_scalar GLV_MINUS_LAMBDA = {{
  * Only the upper 128 bits (bits 384..511) are needed for the GLV decomposition.
  */
 static void mul_shift384(secp256k1_scalar *r, const secp256k1_scalar *k, const uint64_t g[4]) {
-    uint64_t t[8] = {0};
-#if HAVE_INT128
-    for (int i = 0; i < 4; i++) {
-        uint128_t carry = 0;
-        for (int j = 0; j < 4; j++) {
-            carry += (uint128_t)k->d[i] * g[j] + t[i + j];
-            t[i + j] = (uint64_t)carry;
-            carry >>= 64;
-        }
-        t[i + 4] = (uint64_t)carry;
-    }
-#else
-    /* Portable fallback */
-    for (int i = 0; i < 4; i++) {
-        uint64_t carry = 0;
-        for (int j = 0; j < 4; j++) {
-            uint64_t a_lo = k->d[i] & 0xFFFFFFFF;
-            uint64_t a_hi = k->d[i] >> 32;
-            uint64_t b_lo = g[j] & 0xFFFFFFFF;
-            uint64_t b_hi = g[j] >> 32;
-            uint64_t ll = a_lo * b_lo;
-            uint64_t lh = a_lo * b_hi;
-            uint64_t hl = a_hi * b_lo;
-            uint64_t hh = a_hi * b_hi;
-            uint64_t mid = (ll >> 32) + (lh & 0xFFFFFFFF) + (hl & 0xFFFFFFFF);
-            uint64_t lo = (ll & 0xFFFFFFFF) | (mid << 32);
-            uint64_t hi = hh + (lh >> 32) + (hl >> 32) + (mid >> 32);
-            uint64_t sum = t[i + j] + lo + carry;
-            carry = hi + (sum < lo ? 1 : 0);
-            if (carry < hi) carry++; /* handle double overflow */
-            t[i + j] = sum;
-        }
-        t[i + 4] += carry;
-    }
-#endif
+    uint64_t t[8];
+    mul_wide(t, k->d, g); /* Use the proven mul_wide from field.c */
     /* Extract bits [384..511] = t[6] and t[7], rounded */
     /* Add rounding bit at position 383 */
     uint64_t round = (t[5] >> 63) & 1;
