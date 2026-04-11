@@ -470,11 +470,9 @@ int secp256k1c_pubkey_tweak_mul(uint8_t *result, size_t result_len,
 }
 
 int secp256k1c_ecdh_xonly(uint8_t *result32, const uint8_t *xonly_pub32, const uint8_t *scalar32) {
-    secp256k1_fe x;
-    fe_from_bytes(&x, xonly_pub32);
-
+    /* Use cached liftX — same peer key in NIP-44 conversations */
     secp256k1_fe px, py;
-    if (!point_lift_x(&px, &py, &x)) return 0;
+    if (!lift_x_cached(&px, &py, xonly_pub32)) return 0;
 
     secp256k1_scalar k;
     scalar_from_bytes(&k, scalar32);
