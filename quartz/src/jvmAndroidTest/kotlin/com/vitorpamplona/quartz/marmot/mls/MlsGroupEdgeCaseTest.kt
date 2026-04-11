@@ -239,7 +239,7 @@ class MlsGroupEdgeCaseTest {
         // Advance through several epochs with empty commits
         for (i in 0 until 5) {
             val commitResult = alice.commit()
-            bob.processCommit(commitResult.commitBytes, alice.leafIndex)
+            bob.processCommit(commitResult.commitBytes, alice.leafIndex, ByteArray(0))
         }
 
         assertEquals(7L, alice.epoch) // epoch 0 + addMember(1) + 5 commits = 6... wait
@@ -277,7 +277,7 @@ class MlsGroupEdgeCaseTest {
 
         for (i in 0 until 3) {
             val commitResult = alice.commit()
-            bob.processCommit(commitResult.commitBytes, alice.leafIndex)
+            bob.processCommit(commitResult.commitBytes, alice.leafIndex, ByteArray(0))
             keys.add(alice.exporterSecret("marmot", "group-event".encodeToByteArray(), 32))
         }
 

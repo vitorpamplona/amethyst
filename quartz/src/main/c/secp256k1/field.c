@@ -276,11 +276,12 @@ int fe_from_bytes(secp256k1_fe *r, const uint8_t *in32) {
 }
 
 int fe_cmp(const secp256k1_fe *a, const secp256k1_fe *b) {
-    secp256k1_fe ta = *a, tb = *b;
-    fe_normalize_full(&ta); fe_normalize_full(&tb);
+    /* Compare raw limb values without normalization.
+     * fe_normalize reduces values in [P, 2^256) to [0, 2^32+977),
+     * which would turn P itself into 0 and break comparisons against P. */
     for (int i = 3; i >= 0; i--) {
-        if (ta.d[i] < tb.d[i]) return -1;
-        if (ta.d[i] > tb.d[i]) return 1;
+        if (a->d[i] < b->d[i]) return -1;
+        if (a->d[i] > b->d[i]) return 1;
     }
     return 0;
 }
