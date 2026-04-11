@@ -20,14 +20,11 @@
  */
 package com.vitorpamplona.amethyst.ui.note.elements
 
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+// backward-compat: definition moved to commons
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
-import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
+import com.vitorpamplona.amethyst.commons.ui.note.elements.DisplayPoW as CommonsDisplayPoW
 
 @Composable
 @Preview
@@ -38,12 +35,4 @@ fun DisplayPoWPreview() {
 }
 
 @Composable
-fun DisplayPoW(pow: Int) {
-    Text(
-        "PoW-$pow",
-        color = MaterialTheme.colorScheme.lessImportantLink,
-        fontSize = Font14SP,
-        fontWeight = FontWeight.Bold,
-        maxLines = 1,
-    )
-}
+fun DisplayPoW(pow: Int) = CommonsDisplayPoW(pow = pow)

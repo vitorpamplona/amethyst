@@ -20,39 +20,12 @@
  */
 package com.vitorpamplona.amethyst.ui.feeds
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.Button
-import androidx.compose.material3.Text
+// backward-compat: definition moved to commons
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.error_loading_replies
-import com.vitorpamplona.amethyst.commons.resources.try_again
-import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
-import org.jetbrains.compose.resources.stringResource
+import com.vitorpamplona.amethyst.commons.ui.feeds.FeedError as CommonsFeedError
 
 @Composable
 fun FeedError(
     errorMessage: String,
     onRefresh: () -> Unit,
-) {
-    Column(
-        Modifier.fillMaxHeight().fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Text("${stringResource(Res.string.error_loading_replies)} $errorMessage")
-        Spacer(modifier = StdVertSpacer)
-        Button(
-            modifier = Modifier.align(Alignment.CenterHorizontally),
-            onClick = onRefresh,
-        ) {
-            Text(text = stringResource(Res.string.try_again))
-        }
-    }
-}
+) = CommonsFeedError(errorMessage = errorMessage, onRefresh = onRefresh)

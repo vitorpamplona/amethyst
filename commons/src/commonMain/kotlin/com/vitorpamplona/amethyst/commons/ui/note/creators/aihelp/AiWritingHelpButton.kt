@@ -18,16 +18,39 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.buttons
+package com.vitorpamplona.amethyst.commons.ui.note.creators.aihelp
 
-// backward-compat: definition moved to commons
+import androidx.compose.foundation.layout.height
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import com.vitorpamplona.amethyst.commons.ui.note.buttons.PostButton as CommonsPostButton
+import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.ai_writing_help
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
-fun PostButton(
-    onPost: () -> Unit = {},
+fun AiWritingHelpButton(
     isActive: Boolean,
-    modifier: Modifier = Modifier,
-) = CommonsPostButton(onPost = onPost, isActive = isActive, modifier = modifier)
+    onClick: () -> Unit,
+) {
+    IconButton(
+        onClick = { onClick() },
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.AutoAwesome,
+            contentDescription = stringResource(Res.string.ai_writing_help),
+            modifier = Modifier.height(22.dp),
+            tint =
+                if (isActive) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onBackground
+                },
+        )
+    }
+}

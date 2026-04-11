@@ -20,30 +20,9 @@
  */
 package com.vitorpamplona.amethyst.ui.feeds
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Text
+// backward-compat: definition moved to commons
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.feed_is_empty
-import com.vitorpamplona.amethyst.commons.resources.refresh
-import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
-import org.jetbrains.compose.resources.stringResource
+import com.vitorpamplona.amethyst.commons.ui.feeds.FeedEmpty as CommonsFeedEmpty
 
 @Composable
-fun FeedEmpty(onRefresh: () -> Unit) {
-    Column(
-        Modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Text(stringResource(Res.string.feed_is_empty))
-        Spacer(modifier = StdVertSpacer)
-        OutlinedButton(onClick = onRefresh) { Text(text = stringResource(Res.string.refresh)) }
-    }
-}
+fun FeedEmpty(onRefresh: () -> Unit) = CommonsFeedEmpty(onRefresh = onRefresh)

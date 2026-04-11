@@ -20,37 +20,12 @@
  */
 package com.vitorpamplona.amethyst.ui.note.creators.aihelp
 
-import androidx.compose.foundation.layout.height
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.AutoAwesome
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
+// backward-compat: definition moved to commons
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.ai_writing_help
-import org.jetbrains.compose.resources.stringResource
+import com.vitorpamplona.amethyst.commons.ui.note.creators.aihelp.AiWritingHelpButton as CommonsAiWritingHelpButton
 
 @Composable
 fun AiWritingHelpButton(
     isActive: Boolean,
     onClick: () -> Unit,
-) {
-    IconButton(
-        onClick = { onClick() },
-    ) {
-        Icon(
-            imageVector = Icons.Outlined.AutoAwesome,
-            contentDescription = stringResource(Res.string.ai_writing_help),
-            modifier = Modifier.height(22.dp),
-            tint =
-                if (isActive) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.onBackground
-                },
-        )
-    }
-}
+) = CommonsAiWritingHelpButton(isActive = isActive, onClick = onClick)

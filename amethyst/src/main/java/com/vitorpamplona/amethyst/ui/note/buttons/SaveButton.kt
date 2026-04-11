@@ -20,25 +20,14 @@
  */
 package com.vitorpamplona.amethyst.ui.note.buttons
 
-import androidx.compose.material3.Button
-import androidx.compose.material3.Text
+// backward-compat: definition moved to commons
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.save
-import org.jetbrains.compose.resources.stringResource
+import com.vitorpamplona.amethyst.commons.ui.note.buttons.SaveButton as CommonsSaveButton
 
 @Composable
 fun SaveButton(
     onPost: () -> Unit = {},
     isActive: Boolean,
     modifier: Modifier = Modifier,
-) {
-    Button(
-        enabled = isActive,
-        modifier = modifier,
-        onClick = onPost,
-    ) {
-        Text(text = stringResource(Res.string.save))
-    }
-}
+) = CommonsSaveButton(onPost = onPost, isActive = isActive, modifier = modifier)

@@ -18,16 +18,18 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.buttons
+package com.vitorpamplona.amethyst.commons.ui.theme
 
-// backward-compat: definition moved to commons
-import androidx.compose.runtime.Composable
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Modifier
-import com.vitorpamplona.amethyst.commons.ui.note.buttons.PostButton as CommonsPostButton
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
-@Composable
-fun PostButton(
-    onPost: () -> Unit = {},
-    isActive: Boolean,
-    modifier: Modifier = Modifier,
-) = CommonsPostButton(onPost = onPost, isActive = isActive, modifier = modifier)
+val HalfStartPadding = Modifier.padding(start = 5.dp)
+val StdVertSpacer = Modifier.height(5.dp)
+val ButtonBorder = RoundedCornerShape(20.dp)
+val ButtonPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
+val Font14SP = 14.sp

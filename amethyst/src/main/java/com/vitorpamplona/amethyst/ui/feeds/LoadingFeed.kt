@@ -20,25 +20,9 @@
  */
 package com.vitorpamplona.amethyst.ui.feeds
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.Text
+// backward-compat: definition moved to commons
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.loading_feed
-import org.jetbrains.compose.resources.stringResource
+import com.vitorpamplona.amethyst.commons.ui.feeds.LoadingFeed as CommonsLoadingFeed
 
 @Composable
-fun LoadingFeed() {
-    Column(
-        Modifier.fillMaxHeight().fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Text(stringResource(Res.string.loading_feed))
-    }
-}
+fun LoadingFeed() = CommonsLoadingFeed()

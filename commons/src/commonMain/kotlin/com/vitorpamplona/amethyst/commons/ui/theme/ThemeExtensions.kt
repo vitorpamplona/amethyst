@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.ui.theme
 
 import androidx.compose.material3.ColorScheme
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.luminance
 
@@ -36,3 +37,15 @@ val ColorScheme.isLight: Boolean
  */
 val ColorScheme.onBackgroundColorFilter: ColorFilter
     get() = ColorFilter.tint(onBackground)
+
+/**
+ * Placeholder text color (onSurface with reduced alpha).
+ */
+val ColorScheme.placeholderText: Color
+    get() = onSurface.copy(alpha = 0.42f)
+
+/**
+ * Less important link color (primary with reduced alpha).
+ */
+val ColorScheme.lessImportantLink: Color
+    get() = primary.copy(alpha = 0.52f)

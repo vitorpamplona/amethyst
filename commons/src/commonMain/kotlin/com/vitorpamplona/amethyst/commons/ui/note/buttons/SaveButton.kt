@@ -18,16 +18,27 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.buttons
+package com.vitorpamplona.amethyst.commons.ui.note.buttons
 
-// backward-compat: definition moved to commons
+import androidx.compose.material3.Button
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import com.vitorpamplona.amethyst.commons.ui.note.buttons.PostButton as CommonsPostButton
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.save
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
-fun PostButton(
+fun SaveButton(
     onPost: () -> Unit = {},
     isActive: Boolean,
     modifier: Modifier = Modifier,
-) = CommonsPostButton(onPost = onPost, isActive = isActive, modifier = modifier)
+) {
+    Button(
+        enabled = isActive,
+        modifier = modifier,
+        onClick = onPost,
+    ) {
+        Text(text = stringResource(Res.string.save))
+    }
+}

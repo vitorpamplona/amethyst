@@ -20,32 +20,9 @@
  */
 package com.vitorpamplona.amethyst.ui.note
 
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+// backward-compat: definition moved to commons
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.unblock
-import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
-import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
-import org.jetbrains.compose.resources.stringResource
+import com.vitorpamplona.amethyst.commons.ui.note.ShowUserButton as CommonsShowUserButton
 
 @Composable
-fun ShowUserButton(onClick: () -> Unit) {
-    FilledTonalButton(
-        modifier = Modifier.padding(start = 3.dp),
-        onClick = onClick,
-        shape = ButtonBorder,
-        colors =
-            ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-            ),
-        contentPadding = ButtonPadding,
-    ) {
-        Text(text = stringResource(Res.string.unblock))
-    }
-}
+fun ShowUserButton(onClick: () -> Unit) = CommonsShowUserButton(onClick = onClick)

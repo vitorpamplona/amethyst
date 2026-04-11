@@ -18,16 +18,34 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.buttons
+package com.vitorpamplona.amethyst.commons.ui.note
 
-// backward-compat: definition moved to commons
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import com.vitorpamplona.amethyst.commons.ui.note.buttons.PostButton as CommonsPostButton
+import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.unblock
+import com.vitorpamplona.amethyst.commons.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.commons.ui.theme.ButtonPadding
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
-fun PostButton(
-    onPost: () -> Unit = {},
-    isActive: Boolean,
-    modifier: Modifier = Modifier,
-) = CommonsPostButton(onPost = onPost, isActive = isActive, modifier = modifier)
+fun ShowUserButton(onClick: () -> Unit) {
+    FilledTonalButton(
+        modifier = Modifier.padding(start = 3.dp),
+        onClick = onClick,
+        shape = ButtonBorder,
+        colors =
+            ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+            ),
+        contentPadding = ButtonPadding,
+    ) {
+        Text(text = stringResource(Res.string.unblock))
+    }
+}
