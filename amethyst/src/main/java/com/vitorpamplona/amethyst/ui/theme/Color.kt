@@ -20,54 +20,83 @@
  */
 package com.vitorpamplona.amethyst.ui.theme
 
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.ColorMatrix
+import com.vitorpamplona.amethyst.commons.ui.theme.DEFAULT_PRIMARY as CommonsDEFAULT_PRIMARY
+import com.vitorpamplona.amethyst.commons.ui.theme.DarkAllGoodColor as CommonsDarkAllGoodColor
+import com.vitorpamplona.amethyst.commons.ui.theme.DarkFundraiserProgressColor as CommonsDarkFundraiserProgressColor
+import com.vitorpamplona.amethyst.commons.ui.theme.DarkRedColorOnSecondSurface as CommonsDarkRedColorOnSecondSurface
+import com.vitorpamplona.amethyst.commons.ui.theme.DarkWarningColor as CommonsDarkWarningColor
+import com.vitorpamplona.amethyst.commons.ui.theme.DarkWarningColorOnSecondSurface as CommonsDarkWarningColorOnSecondSurface
+import com.vitorpamplona.amethyst.commons.ui.theme.DarkerGreen as CommonsDarkerGreen
+import com.vitorpamplona.amethyst.commons.ui.theme.Following as CommonsFollowing
+import com.vitorpamplona.amethyst.commons.ui.theme.FollowsFollow as CommonsFollowsFollow
+import com.vitorpamplona.amethyst.commons.ui.theme.LIGHT_PURPLE as CommonsLIGHT_PURPLE
+import com.vitorpamplona.amethyst.commons.ui.theme.LightAllGoodColor as CommonsLightAllGoodColor
+import com.vitorpamplona.amethyst.commons.ui.theme.LightFundraiserProgressColor as CommonsLightFundraiserProgressColor
+import com.vitorpamplona.amethyst.commons.ui.theme.LightRedColor as CommonsLightRedColor
+import com.vitorpamplona.amethyst.commons.ui.theme.LightRedColorOnSecondSurface as CommonsLightRedColorOnSecondSurface
+import com.vitorpamplona.amethyst.commons.ui.theme.LightWarningColor as CommonsLightWarningColor
+import com.vitorpamplona.amethyst.commons.ui.theme.LightWarningColorOnSecondSurface as CommonsLightWarningColorOnSecondSurface
+import com.vitorpamplona.amethyst.commons.ui.theme.LighterRedColor as CommonsLighterRedColor
+import com.vitorpamplona.amethyst.commons.ui.theme.NIP05Verified as CommonsNIP05Verified
+import com.vitorpamplona.amethyst.commons.ui.theme.Nip05EmailColor as CommonsNip05EmailColor
+import com.vitorpamplona.amethyst.commons.ui.theme.Nip05EmailColorDark as CommonsNip05EmailColorDark
+import com.vitorpamplona.amethyst.commons.ui.theme.Nip05EmailColorLight as CommonsNip05EmailColorLight
+import com.vitorpamplona.amethyst.commons.ui.theme.Primary50 as CommonsPrimary50
+import com.vitorpamplona.amethyst.commons.ui.theme.Primary60 as CommonsPrimary60
+import com.vitorpamplona.amethyst.commons.ui.theme.Primary70 as CommonsPrimary70
+import com.vitorpamplona.amethyst.commons.ui.theme.Primary80 as CommonsPrimary80
+import com.vitorpamplona.amethyst.commons.ui.theme.Purple200 as CommonsPurple200
+import com.vitorpamplona.amethyst.commons.ui.theme.Purple500 as CommonsPurple500
+import com.vitorpamplona.amethyst.commons.ui.theme.Purple700 as CommonsPurple700
+import com.vitorpamplona.amethyst.commons.ui.theme.RelayIconFilter as CommonsRelayIconFilter
+import com.vitorpamplona.amethyst.commons.ui.theme.RoyalBlue as CommonsRoyalBlue
+import com.vitorpamplona.amethyst.commons.ui.theme.Teal200 as CommonsTeal200
 
-val Primary50 = Color(red = 127, green = 103, blue = 190)
-val Primary60 = Color(red = 154, green = 130, blue = 219)
-val Primary70 = Color(red = 182, green = 157, blue = 248)
-val Primary80 = Color(red = 208, green = 188, blue = 255)
+// Backward-compatible re-exports — all color definitions live in commons
+val Primary50 = CommonsPrimary50
+val Primary60 = CommonsPrimary60
+val Primary70 = CommonsPrimary70
+val Primary80 = CommonsPrimary80
 
-val DEFAULT_PRIMARY = Color(red = 208, green = 188, blue = 255)
-val LIGHT_PURPLE = Color(red = 187, green = 134, blue = 252)
+val DEFAULT_PRIMARY = CommonsDEFAULT_PRIMARY
+val LIGHT_PURPLE = CommonsLIGHT_PURPLE
 
-val Purple200 = Color(0xFFBB86FC)
-val Purple500 = Color(0xFF6200EE)
-val Purple700 = Color(0xFF3700B3)
-val Teal200 = Color(0xFF03DAC5)
-val BitcoinOrange = Color(0xFFF7931A)
-val RoyalBlue = Color(0xFF4169E1)
+val Purple200 = CommonsPurple200
+val Purple500 = CommonsPurple500
+val Purple700 = CommonsPurple700
+val Teal200 = CommonsTeal200
+val BitcoinOrange = com.vitorpamplona.amethyst.commons.ui.theme.BitcoinOrange
+val RoyalBlue = CommonsRoyalBlue
 
-val BitcoinDark = Color(0xFFF7931A)
-val BitcoinLight = Color(0xFFB66605)
+val BitcoinDark = com.vitorpamplona.amethyst.commons.ui.theme.BitcoinDark
+val BitcoinLight = com.vitorpamplona.amethyst.commons.ui.theme.BitcoinLight
 
-val Following = Color(0xFF03DAC5)
-val FollowsFollow = Color.Yellow
-val NIP05Verified = Color.Blue
+val Following = CommonsFollowing
+val FollowsFollow = CommonsFollowsFollow
+val NIP05Verified = CommonsNIP05Verified
 
-val Nip05EmailColor = Color(0xFFb198ec)
-val Nip05EmailColorDark = Color(0xFF765AA2)
-val Nip05EmailColorLight = Color(0xFFa770f3)
+val Nip05EmailColor = CommonsNip05EmailColor
+val Nip05EmailColorDark = CommonsNip05EmailColorDark
+val Nip05EmailColorLight = CommonsNip05EmailColorLight
 
-val DarkerGreen = Color.Green.copy(alpha = 0.32f)
+val DarkerGreen = CommonsDarkerGreen
 
-val LightRedColor = Color(0xFFC62828)
-val LighterRedColor = Color(0xFFFF0E0E)
+val LightRedColor = CommonsLightRedColor
+val LighterRedColor = CommonsLighterRedColor
 
-val RelayIconFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0.5f) })
+val RelayIconFilter = CommonsRelayIconFilter
 
-val LightWarningColor = Color(0xFFffcc00)
-val DarkWarningColor = Color(0xFFF8DE22)
+val LightWarningColor = CommonsLightWarningColor
+val DarkWarningColor = CommonsDarkWarningColor
 
-val LightRedColorOnSecondSurface = Color(0xFFC62828)
-val DarkRedColorOnSecondSurface = Color(0xFFF34747)
+val LightRedColorOnSecondSurface = CommonsLightRedColorOnSecondSurface
+val DarkRedColorOnSecondSurface = CommonsDarkRedColorOnSecondSurface
 
-val LightWarningColorOnSecondSurface = Color(0xFFC09B14)
-val DarkWarningColorOnSecondSurface = Color(0xFFE1C419)
+val LightWarningColorOnSecondSurface = CommonsLightWarningColorOnSecondSurface
+val DarkWarningColorOnSecondSurface = CommonsDarkWarningColorOnSecondSurface
 
-val LightAllGoodColor = Color(0xFF339900)
-val DarkAllGoodColor = Color(0xFF99cc33)
+val LightAllGoodColor = CommonsLightAllGoodColor
+val DarkAllGoodColor = CommonsDarkAllGoodColor
 
-val LightFundraiserProgressColor = Color(0xFF3DB601)
-val DarkFundraiserProgressColor = Color(0xFF61A229)
+val LightFundraiserProgressColor = CommonsLightFundraiserProgressColor
+val DarkFundraiserProgressColor = CommonsDarkFundraiserProgressColor
