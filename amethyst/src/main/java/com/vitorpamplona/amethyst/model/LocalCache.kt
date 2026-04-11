@@ -380,7 +380,7 @@ object LocalCache : ILocalCache, ICacheProvider {
 
     fun observeLatestNote(filter: Filter) = observeNotes(filter).map { it.firstOrNull() }
 
-    fun checkGetOrCreateUser(key: String): User? = runCatching { getOrCreateUser(key) }.getOrNull()
+    override fun checkGetOrCreateUser(key: String): User? = runCatching { getOrCreateUser(key) }.getOrNull()
 
     fun load(keys: List<String>): List<User> = keys.mapNotNull(::checkGetOrCreateUser)
 

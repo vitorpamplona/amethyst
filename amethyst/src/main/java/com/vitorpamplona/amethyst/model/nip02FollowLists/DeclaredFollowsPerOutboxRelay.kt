@@ -20,45 +20,4 @@
  */
 package com.vitorpamplona.amethyst.model.nip02FollowLists
 
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.topNavFeeds.OutboxRelayLoader
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.emitAll
-import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.onStart
-import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.transformLatest
-
-class DeclaredFollowsPerOutboxRelay(
-    kind3Follows: Kind3FollowListState,
-    val cache: LocalCache,
-    scope: CoroutineScope,
-) {
-    val calculator = OutboxRelayLoader(true)
-
-    @OptIn(ExperimentalCoroutinesApi::class)
-    val flow: StateFlow<Map<NormalizedRelayUrl, Set<HexKey>>> =
-        kind3Follows.flow
-            .transformLatest {
-                emitAll(
-                    calculator.toAuthorsPerRelayFlow(it.authors, cache) { it },
-                )
-            }.onStart {
-                emit(
-                    calculator.authorsPerRelaySnapshot(kind3Follows.flow.value.authors, cache) { it },
-                )
-            }.distinctUntilChanged()
-            .flowOn(Dispatchers.IO)
-            .stateIn(
-                scope,
-                SharingStarted.Eagerly,
-                emptyMap(),
-            )
-}
+typealias DeclaredFollowsPerOutboxRelay = com.vitorpamplona.amethyst.commons.model.nip02FollowLists.DeclaredFollowsPerOutboxRelay

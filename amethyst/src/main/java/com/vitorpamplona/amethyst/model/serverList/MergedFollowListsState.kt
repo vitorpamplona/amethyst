@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.model.serverList
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.model.nip02FollowLists.Kind3FollowListState
+import com.vitorpamplona.amethyst.commons.model.nip02FollowLists.Kind3FollowListState
 import com.vitorpamplona.amethyst.model.nip51Lists.geohashLists.GeohashListState
 import com.vitorpamplona.amethyst.model.nip51Lists.hashtagLists.HashtagListState
 import com.vitorpamplona.amethyst.model.nip51Lists.peopleList.FollowListsState

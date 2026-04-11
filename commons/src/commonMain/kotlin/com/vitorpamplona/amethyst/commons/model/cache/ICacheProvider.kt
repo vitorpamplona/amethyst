@@ -139,6 +139,8 @@ interface ICacheProvider {
      */
     fun getOrCreateUser(pubkey: HexKey): User?
 
+    fun checkGetOrCreateUser(key: HexKey): User? = runCatching { getOrCreateUser(key) }.getOrNull()
+
     fun justConsumeMyOwnEvent(event: Event): Boolean
 
     // --- Methods needed by Account.kt ---
