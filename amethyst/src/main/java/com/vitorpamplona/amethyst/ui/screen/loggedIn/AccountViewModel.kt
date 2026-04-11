@@ -49,6 +49,14 @@ import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.commons.model.observables.CreatedAtComparator
+import com.vitorpamplona.amethyst.commons.platform.StringResolver
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cashu_failed_redemption
+import com.vitorpamplona.amethyst.commons.resources.cashu_failed_redemption_explainer_error_msg
+import com.vitorpamplona.amethyst.commons.resources.cashu_successful_redemption
+import com.vitorpamplona.amethyst.commons.resources.cashu_successful_redemption_explainer
+import com.vitorpamplona.amethyst.commons.resources.no_lightning_address_set
+import com.vitorpamplona.amethyst.commons.resources.user_x_does_not_have_a_lightning_address_setup_to_receive_sats
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.ui.notifications.CardFeedState
 import com.vitorpamplona.amethyst.logTime
@@ -86,7 +94,6 @@ import com.vitorpamplona.amethyst.ui.note.showAmountInteger
 import com.vitorpamplona.amethyst.ui.screen.UiSettingsState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CombinedZap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync.EventSync
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
 import com.vitorpamplona.amethyst.ui.tor.TorType
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
@@ -1615,10 +1622,9 @@ class AccountViewModel(
                 try {
                     val meltResult = MeltProcessor().melt(token, lud16, httpClientBuilder::okHttpClientForMoney, context)
                     onDone(
-                        stringRes(context, R.string.cashu_successful_redemption),
-                        stringRes(
-                            context,
-                            R.string.cashu_successful_redemption_explainer,
+                        StringResolver.resolve(Res.string.cashu_successful_redemption),
+                        StringResolver.resolve(
+                            Res.string.cashu_successful_redemption_explainer,
                             token.totalAmount.toString(),
                             meltResult.fees.toString(),
                         ),
@@ -1628,19 +1634,15 @@ class AccountViewModel(
                 } catch (e: Exception) {
                     if (e is kotlin.coroutines.cancellation.CancellationException) throw e
                     onDone(
-                        stringRes(context, R.string.cashu_failed_redemption),
-                        stringRes(context, R.string.cashu_failed_redemption_explainer_error_msg, e.message),
+                        StringResolver.resolve(Res.string.cashu_failed_redemption),
+                        StringResolver.resolve(Res.string.cashu_failed_redemption_explainer_error_msg, e.message ?: ""),
                     )
                 }
             }
         } else {
             onDone(
-                stringRes(context, R.string.no_lightning_address_set),
-                stringRes(
-                    context,
-                    R.string.user_x_does_not_have_a_lightning_address_setup_to_receive_sats,
-                    account.userProfile().toBestDisplayName(),
-                ),
+                StringResolver.resolve(Res.string.no_lightning_address_set),
+                StringResolver.resolve(Res.string.user_x_does_not_have_a_lightning_address_setup_to_receive_sats, account.userProfile().toBestDisplayName()),
             )
         }
     }

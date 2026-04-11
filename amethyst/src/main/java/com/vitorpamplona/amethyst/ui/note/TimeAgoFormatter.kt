@@ -23,6 +23,13 @@ package com.vitorpamplona.amethyst.ui.note
 import android.content.Context
 import android.text.format.DateUtils
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.platform.StringResolver
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.d
+import com.vitorpamplona.amethyst.commons.resources.h
+import com.vitorpamplona.amethyst.commons.resources.m
+import com.vitorpamplona.amethyst.commons.resources.never
+import com.vitorpamplona.amethyst.commons.resources.now
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.utils.TimeUtils
 import java.text.SimpleDateFormat
@@ -52,7 +59,7 @@ fun timeAgo(
     days: Int = R.string.d,
 ): String {
     if (time == null) return " "
-    if (time == 0L) return prefix + stringRes(context, R.string.never)
+    if (time == 0L) return prefix + StringResolver.resolve(Res.string.never)
 
     val timeDifference = TimeUtils.now() - time
 
@@ -92,7 +99,7 @@ fun timeAgoNoDot(
     context: Context,
 ): String {
     if (time == null) return " "
-    if (time == 0L) return " ${stringRes(context, R.string.never)}"
+    if (time == 0L) return " ${StringResolver.resolve(Res.string.never)}"
 
     val timeDifference = TimeUtils.now() - time
 
@@ -117,13 +124,13 @@ fun timeAgoNoDot(
         monthFormatter.format(time * 1000)
     } else if (timeDifference > TimeUtils.ONE_DAY) {
         // 2 days
-        (timeDifference / TimeUtils.ONE_DAY).toString() + stringRes(context, R.string.d)
+        (timeDifference / TimeUtils.ONE_DAY).toString() + StringResolver.resolve(Res.string.d)
     } else if (timeDifference > TimeUtils.ONE_HOUR) {
-        (timeDifference / TimeUtils.ONE_HOUR).toString() + stringRes(context, R.string.h)
+        (timeDifference / TimeUtils.ONE_HOUR).toString() + StringResolver.resolve(Res.string.h)
     } else if (timeDifference > TimeUtils.ONE_MINUTE) {
-        (timeDifference / TimeUtils.ONE_MINUTE).toString() + stringRes(context, R.string.m)
+        (timeDifference / TimeUtils.ONE_MINUTE).toString() + StringResolver.resolve(Res.string.m)
     } else {
-        stringRes(context, R.string.now)
+        StringResolver.resolve(Res.string.now)
     }
 }
 
@@ -132,7 +139,7 @@ fun timeAgoNoDotNoDay(
     context: Context,
 ): String {
     if (time == null) return " "
-    if (time == 0L) return " ${stringRes(context, R.string.never)}"
+    if (time == 0L) return " ${StringResolver.resolve(Res.string.never)}"
 
     val timeDifference = TimeUtils.now() - time
 
@@ -157,13 +164,13 @@ fun timeAgoNoDotNoDay(
         monthNoDayFormatter.format(time * 1000)
     } else if (timeDifference > TimeUtils.ONE_DAY) {
         // 2 days
-        (timeDifference / TimeUtils.ONE_DAY).toString() + stringRes(context, R.string.d)
+        (timeDifference / TimeUtils.ONE_DAY).toString() + StringResolver.resolve(Res.string.d)
     } else if (timeDifference > TimeUtils.ONE_HOUR) {
-        (timeDifference / TimeUtils.ONE_HOUR).toString() + stringRes(context, R.string.h)
+        (timeDifference / TimeUtils.ONE_HOUR).toString() + StringResolver.resolve(Res.string.h)
     } else if (timeDifference > TimeUtils.ONE_MINUTE) {
-        (timeDifference / TimeUtils.ONE_MINUTE).toString() + stringRes(context, R.string.m)
+        (timeDifference / TimeUtils.ONE_MINUTE).toString() + StringResolver.resolve(Res.string.m)
     } else {
-        stringRes(context, R.string.now)
+        StringResolver.resolve(Res.string.now)
     }
 }
 
@@ -172,7 +179,7 @@ fun timeAheadNoDot(
     context: Context,
 ): String {
     if (time == null) return " "
-    if (time == 0L) return " ${stringRes(context, R.string.never)}"
+    if (time == 0L) return " ${StringResolver.resolve(Res.string.never)}"
 
     val timeDifference = time - TimeUtils.now()
 
@@ -197,13 +204,13 @@ fun timeAheadNoDot(
         monthFormatter.format(time * 1000)
     } else if (timeDifference > TimeUtils.ONE_DAY) {
         // 2 days
-        round(timeDifference / TimeUtils.ONE_DAY.toFloat()).toInt().toString() + stringRes(context, R.string.d)
+        round(timeDifference / TimeUtils.ONE_DAY.toFloat()).toInt().toString() + StringResolver.resolve(Res.string.d)
     } else if (timeDifference > TimeUtils.ONE_HOUR) {
-        round(timeDifference / TimeUtils.ONE_HOUR.toFloat()).toInt().toString() + stringRes(context, R.string.h)
+        round(timeDifference / TimeUtils.ONE_HOUR.toFloat()).toInt().toString() + StringResolver.resolve(Res.string.h)
     } else if (timeDifference > TimeUtils.ONE_MINUTE) {
-        round(timeDifference / TimeUtils.ONE_MINUTE.toFloat()).toInt().toString() + stringRes(context, R.string.m)
+        round(timeDifference / TimeUtils.ONE_MINUTE.toFloat()).toInt().toString() + StringResolver.resolve(Res.string.m)
     } else {
-        stringRes(context, R.string.now)
+        StringResolver.resolve(Res.string.now)
     }
 }
 

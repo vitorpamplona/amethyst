@@ -32,11 +32,13 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.compose.currentWord
 import com.vitorpamplona.amethyst.commons.compose.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.compose.replaceCurrentWord
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
+import com.vitorpamplona.amethyst.commons.platform.StringResolver
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -455,7 +457,7 @@ open class NewProductViewModel :
             } else {
                 val errorMessages = results.errors.map { stringRes(context, it.errorResource, *it.params) }.distinct()
 
-                onError(stringRes(context, R.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
+                onError(StringResolver.resolve(Res.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
             }
 
             mediaUploadTracker.finishUpload()

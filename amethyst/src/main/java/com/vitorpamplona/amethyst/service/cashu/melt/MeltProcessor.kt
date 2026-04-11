@@ -23,10 +23,13 @@ package com.vitorpamplona.amethyst.service.cashu.melt
 import android.content.Context
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.platform.StringResolver
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cashu_failed_redemption
+import com.vitorpamplona.amethyst.commons.resources.cashu_failed_redemption_explainer_error_msg
+import com.vitorpamplona.amethyst.commons.resources.cashu_successful_redemption
 import com.vitorpamplona.amethyst.service.cashu.CashuToken
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.utils.asTextOrNull
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -135,11 +138,11 @@ class MeltProcessor {
                                 ?.ifBlank { null }
 
                         throw LightningAddressResolver.LightningAddressError(
-                            stringRes(context, R.string.cashu_failed_redemption),
+                            StringResolver.resolve(Res.string.cashu_failed_redemption),
                             if (msg != null) {
-                                stringRes(context, R.string.cashu_failed_redemption_explainer_error_msg, msg)
+                                StringResolver.resolve(Res.string.cashu_failed_redemption_explainer_error_msg, msg)
                             } else {
-                                stringRes(context, R.string.cashu_failed_redemption_explainer_error_msg)
+                                StringResolver.resolve(Res.string.cashu_failed_redemption_explainer_error_msg)
                             },
                         )
                     }
@@ -150,8 +153,8 @@ class MeltProcessor {
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             throw LightningAddressResolver.LightningAddressError(
-                stringRes(context, R.string.cashu_failed_redemption),
-                stringRes(context, R.string.cashu_failed_redemption_explainer_error_msg, e.message),
+                StringResolver.resolve(Res.string.cashu_failed_redemption),
+                StringResolver.resolve(Res.string.cashu_failed_redemption_explainer_error_msg, e.message ?: ""),
             )
         }
 
@@ -211,11 +214,11 @@ class MeltProcessor {
                                 ?.ifBlank { null }
 
                         throw LightningAddressResolver.LightningAddressError(
-                            stringRes(context, R.string.cashu_failed_redemption),
+                            StringResolver.resolve(Res.string.cashu_failed_redemption),
                             if (msg != null) {
-                                stringRes(context, R.string.cashu_failed_redemption_explainer_error_msg, msg)
+                                StringResolver.resolve(Res.string.cashu_failed_redemption_explainer_error_msg, msg)
                             } else {
-                                stringRes(context, R.string.cashu_failed_redemption_explainer_error_msg)
+                                StringResolver.resolve(Res.string.cashu_failed_redemption_explainer_error_msg)
                             },
                         )
                     }
@@ -224,8 +227,8 @@ class MeltProcessor {
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             throw LightningAddressResolver.LightningAddressError(
-                stringRes(context, R.string.cashu_successful_redemption),
-                stringRes(context, R.string.cashu_failed_redemption_explainer_error_msg, e.message),
+                StringResolver.resolve(Res.string.cashu_successful_redemption),
+                StringResolver.resolve(Res.string.cashu_failed_redemption_explainer_error_msg, e.message ?: ""),
             )
         }
     }

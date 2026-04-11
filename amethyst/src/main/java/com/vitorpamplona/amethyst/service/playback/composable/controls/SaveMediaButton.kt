@@ -50,6 +50,9 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.platform.StringResolver
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.video_download_has_started_toast
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.PinBottomIconSize
@@ -101,7 +104,7 @@ fun rememberSaveMediaAction(onSaveClick: (Context) -> Unit): () -> Unit {
             Toast
                 .makeText(
                     context,
-                    stringRes(context, R.string.video_download_has_started_toast),
+                    StringResolver.resolve(Res.string.video_download_has_started_toast),
                     Toast.LENGTH_SHORT,
                 ).show()
         }

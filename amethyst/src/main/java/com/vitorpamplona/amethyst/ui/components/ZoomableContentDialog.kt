@@ -72,6 +72,9 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.platform.StringResolver
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.media_download_has_started_toast
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaLocalImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaLocalVideo
@@ -266,7 +269,7 @@ private fun DialogContent(
                                             Toast
                                                 .makeText(
                                                     localContext,
-                                                    stringRes(localContext, R.string.media_download_has_started_toast),
+                                                    StringResolver.resolve(Res.string.media_download_has_started_toast),
                                                     Toast.LENGTH_SHORT,
                                                 ).show()
                                         }
@@ -286,7 +289,7 @@ private fun DialogContent(
                                             Toast
                                                 .makeText(
                                                     localContext,
-                                                    stringRes(localContext, R.string.media_download_has_started_toast),
+                                                    StringResolver.resolve(Res.string.media_download_has_started_toast),
                                                     Toast.LENGTH_SHORT,
                                                 ).show()
                                         }

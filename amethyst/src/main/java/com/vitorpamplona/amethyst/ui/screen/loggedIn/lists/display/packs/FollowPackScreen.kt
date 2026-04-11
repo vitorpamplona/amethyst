@@ -66,6 +66,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.platform.StringResolver
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.quick_action_share
+import com.vitorpamplona.amethyst.commons.resources.quick_action_share_browser_link
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
@@ -296,12 +300,12 @@ private fun ListActionsMenuButton(
                             )
                             putExtra(
                                 Intent.EXTRA_TITLE,
-                                stringRes(context, R.string.quick_action_share_browser_link),
+                                StringResolver.resolve(Res.string.quick_action_share_browser_link),
                             )
                         }
 
                     val shareIntent =
-                        Intent.createChooser(sendIntent, stringRes(context, R.string.quick_action_share))
+                        Intent.createChooser(sendIntent, StringResolver.resolve(Res.string.quick_action_share))
                     context.startActivity(shareIntent)
                     isActionListOpen.value = false
                 }

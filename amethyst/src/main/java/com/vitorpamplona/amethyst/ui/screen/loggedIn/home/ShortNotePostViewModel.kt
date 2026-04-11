@@ -34,12 +34,21 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.compose.currentWord
 import com.vitorpamplona.amethyst.commons.compose.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.compose.replaceCurrentWord
 import com.vitorpamplona.amethyst.commons.compose.setTextAndPlaceCursorAtBeginning
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState.EmojiMedia
+import com.vitorpamplona.amethyst.commons.platform.StringResolver
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.error
+import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
+import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_sign_events
+import com.vitorpamplona.amethyst.commons.resources.read_only_user
+import com.vitorpamplona.amethyst.commons.resources.upload_error_title
+import com.vitorpamplona.amethyst.commons.resources.upload_error_voice_message_exception
+import com.vitorpamplona.amethyst.commons.resources.upload_error_voice_message_failed
+import com.vitorpamplona.amethyst.commons.resources.upload_error_voice_message_nip95_not_supported
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.BooleanType
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -233,7 +242,7 @@ open class ShortNotePostViewModel :
             logTag = "ShortNotePostViewModel",
             onError = { error ->
                 accountViewModel.toastManager.toast(
-                    stringRes(Amethyst.instance.appContext, R.string.error),
+                    StringResolver.resolve(Res.string.error),
                     error.message ?: "Voice anonymization failed",
                 )
             },
@@ -1066,8 +1075,8 @@ open class ShortNotePostViewModel :
         uploadUnsafe(alt, contentWarningReason, mediaQuality, server, onError, context, useH265, stripMetadata, convertGifToMp4)
     } catch (_: SignerExceptions.ReadOnlyException) {
         onError(
-            stringRes(context, R.string.read_only_user),
-            stringRes(context, R.string.login_with_a_private_key_to_be_able_to_sign_events),
+            StringResolver.resolve(Res.string.read_only_user),
+            StringResolver.resolve(Res.string.login_with_a_private_key_to_be_able_to_sign_events),
         )
     }
 
@@ -1145,7 +1154,7 @@ open class ShortNotePostViewModel :
                 multiOrchestrator = null
             } else {
                 val errorMessages = results.errors.map { stringRes(context, it.errorResource, *it.params) }.distinct()
-                onError(stringRes(context, R.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
+                onError(StringResolver.resolve(Res.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
             }
 
             mediaUploadTracker.finishUpload()
@@ -1401,11 +1410,11 @@ open class ShortNotePostViewModel :
         val fileToUpload = activeFile ?: recording.file
         val waveform = activeWaveform ?: recording.amplitudes
         val appContext = Amethyst.instance.appContext
-        val uploadErrorTitle = stringRes(appContext, R.string.upload_error_title)
-        val uploadVoiceNip95NotSupported = stringRes(appContext, R.string.upload_error_voice_message_nip95_not_supported)
-        val uploadVoiceFailed = stringRes(appContext, R.string.upload_error_voice_message_failed)
+        val uploadErrorTitle = StringResolver.resolve(Res.string.upload_error_title)
+        val uploadVoiceNip95NotSupported = StringResolver.resolve(Res.string.upload_error_voice_message_nip95_not_supported)
+        val uploadVoiceFailed = StringResolver.resolve(Res.string.upload_error_voice_message_failed)
         val uploadVoiceExceptionMessage: (String) -> String = { detail ->
-            stringRes(appContext, R.string.upload_error_voice_message_exception, detail)
+            StringResolver.resolve(Res.string.upload_error_voice_message_exception, detail)
         }
 
         isUploadingVoice = true

@@ -32,9 +32,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.util.Consumer
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.platform.StringResolver
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.invalid_nip19_uri_description
 import com.vitorpamplona.amethyst.ui.components.getActivityOrNull
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -77,7 +78,7 @@ fun OpenURIIfNotLoggedIn(onNewNIP19: suspend (String) -> Unit) {
                     Toast
                         .makeText(
                             context,
-                            stringRes(context, R.string.invalid_nip19_uri_description, intentNextPage),
+                            StringResolver.resolve(Res.string.invalid_nip19_uri_description, intentNextPage),
                             Toast.LENGTH_SHORT,
                         ).show()
                 }
@@ -103,7 +104,7 @@ fun OpenURIIfNotLoggedIn(onNewNIP19: suspend (String) -> Unit) {
                             Toast
                                 .makeText(
                                     context,
-                                    stringRes(context, R.string.invalid_nip19_uri_description, uri),
+                                    StringResolver.resolve(Res.string.invalid_nip19_uri_description, uri),
                                     Toast.LENGTH_SHORT,
                                 ).show()
                         }

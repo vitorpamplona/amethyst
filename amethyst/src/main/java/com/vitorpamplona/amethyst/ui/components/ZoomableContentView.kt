@@ -77,6 +77,12 @@ import coil3.compose.SubcomposeAsyncImageContent
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.platform.StringResolver
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.downloading_video_for_sharing
+import com.vitorpamplona.amethyst.commons.resources.hash_verification_failed
+import com.vitorpamplona.amethyst.commons.resources.hash_verification_info_title
+import com.vitorpamplona.amethyst.commons.resources.hash_verification_passed
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaLocalImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaLocalVideo
@@ -831,7 +837,7 @@ fun ShareMediaAction(
                                         enabled = !isDownloadingVideo.value,
                                     ) {
                                         isDownloadingVideo.value = true
-                                        Toast.makeText(context, stringRes(context, R.string.downloading_video_for_sharing), Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, StringResolver.resolve(Res.string.downloading_video_for_sharing), Toast.LENGTH_SHORT).show()
                                         accountViewModel.viewModelScope.launch {
                                             shareVideoFile(
                                                 context = context,
@@ -1049,7 +1055,7 @@ private fun HashVerificationSymbol(verifiedHash: Boolean) {
 
     openDialogMsg.value?.let {
         InformationDialog(
-            title = stringRes(localContext, R.string.hash_verification_info_title),
+            title = StringResolver.resolve(Res.string.hash_verification_info_title),
             textContent = it,
         ) {
             openDialogMsg.value = null
@@ -1060,7 +1066,7 @@ private fun HashVerificationSymbol(verifiedHash: Boolean) {
         IconButton(
             modifier = hashVerifierMark,
             onClick = {
-                openDialogMsg.value = stringRes(localContext, R.string.hash_verification_passed)
+                openDialogMsg.value = StringResolver.resolve(Res.string.hash_verification_passed)
             },
         ) {
             Icon(
@@ -1074,7 +1080,7 @@ private fun HashVerificationSymbol(verifiedHash: Boolean) {
         IconButton(
             modifier = hashVerifierMark,
             onClick = {
-                openDialogMsg.value = stringRes(localContext, R.string.hash_verification_failed)
+                openDialogMsg.value = StringResolver.resolve(Res.string.hash_verification_failed)
             },
         ) {
             Icon(

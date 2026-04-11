@@ -103,6 +103,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
+import com.vitorpamplona.amethyst.commons.platform.StringResolver
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.no_payment_app_found
+import com.vitorpamplona.amethyst.commons.resources.quick_action_share
+import com.vitorpamplona.amethyst.commons.resources.quick_action_share_browser_link
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.ReactionRowAction
 import com.vitorpamplona.amethyst.model.ReactionRowItem
@@ -323,14 +328,14 @@ fun ShareReaction(
                     )
                     putExtra(
                         Intent.EXTRA_TITLE,
-                        stringRes(context, R.string.quick_action_share_browser_link),
+                        StringResolver.resolve(Res.string.quick_action_share_browser_link),
                     )
                 }
 
             val shareIntent =
                 Intent.createChooser(
                     sendIntent,
-                    stringRes(context, R.string.quick_action_share),
+                    StringResolver.resolve(Res.string.quick_action_share),
                 )
             context.startActivity(shareIntent)
         },
@@ -394,7 +399,7 @@ fun PayReaction(
                                         context.startActivity(intent)
                                     } catch (e: Exception) {
                                         if (e is kotlinx.coroutines.CancellationException) throw e
-                                        errorMessage = stringRes(context, R.string.no_payment_app_found)
+                                        errorMessage = StringResolver.resolve(Res.string.no_payment_app_found)
                                     }
                                 },
                             )

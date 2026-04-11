@@ -32,6 +32,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.platform.StringResolver
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.quick_action_share
+import com.vitorpamplona.amethyst.commons.resources.quick_action_share_browser_link
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
@@ -82,10 +86,10 @@ fun UserProfileDropDownMenu(
                         putExtra(Intent.EXTRA_TEXT, externalLinkForUser(user))
                         putExtra(
                             Intent.EXTRA_TITLE,
-                            stringRes(context, R.string.quick_action_share_browser_link),
+                            StringResolver.resolve(Res.string.quick_action_share_browser_link),
                         )
                     }
-                val shareIntent = Intent.createChooser(sendIntent, stringRes(context, R.string.quick_action_share))
+                val shareIntent = Intent.createChooser(sendIntent, StringResolver.resolve(Res.string.quick_action_share))
                 context.startActivity(shareIntent)
                 onDismiss()
             }

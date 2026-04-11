@@ -85,6 +85,12 @@ import com.halilibo.richtext.ui.RichTextStyle
 import com.halilibo.richtext.ui.material3.RichText
 import com.halilibo.richtext.ui.resolveDefaults
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.platform.StringResolver
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.copy_my_secret_key
+import com.vitorpamplona.amethyst.commons.resources.failed_to_encrypt_key
+import com.vitorpamplona.amethyst.commons.resources.password_is_required
+import com.vitorpamplona.amethyst.commons.resources.secret_key_copied_to_clipboard
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -272,7 +278,7 @@ private fun NSecCopyButton(accountViewModel: AccountViewModel) {
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = {
             authenticate(
-                title = stringRes(context, R.string.copy_my_secret_key),
+                title = StringResolver.resolve(Res.string.copy_my_secret_key),
                 context = context,
                 keyguardLauncher = keyguardLauncher,
                 onApproved = { copyNSec(context, scope, accountViewModel.account, clipboardManager) },
@@ -322,7 +328,7 @@ private fun EncryptNSecCopyButton(
                 modifier = Modifier.padding(horizontal = 3.dp),
                 onClick = {
                     authenticate(
-                        title = stringRes(context, R.string.copy_my_secret_key),
+                        title = StringResolver.resolve(Res.string.copy_my_secret_key),
                         context = context,
                         keyguardLauncher = keyguardLauncher,
                         onApproved = { encryptCopyNSec(password, context, scope, accountViewModel, clipboardManager) },
@@ -374,7 +380,7 @@ private fun copyNSec(
             Toast
                 .makeText(
                     context,
-                    stringRes(context, R.string.secret_key_copied_to_clipboard),
+                    StringResolver.resolve(Res.string.secret_key_copied_to_clipboard),
                     Toast.LENGTH_SHORT,
                 ).show()
         }
@@ -393,7 +399,7 @@ private fun encryptCopyNSec(
             Toast
                 .makeText(
                     context,
-                    stringRes(context, R.string.password_is_required),
+                    StringResolver.resolve(Res.string.password_is_required),
                     Toast.LENGTH_SHORT,
                 ).show()
         }
@@ -406,7 +412,7 @@ private fun encryptCopyNSec(
                     Toast
                         .makeText(
                             context,
-                            stringRes(context, R.string.secret_key_copied_to_clipboard),
+                            StringResolver.resolve(Res.string.secret_key_copied_to_clipboard),
                             Toast.LENGTH_SHORT,
                         ).show()
                 }
@@ -415,7 +421,7 @@ private fun encryptCopyNSec(
                     Toast
                         .makeText(
                             context,
-                            stringRes(context, R.string.failed_to_encrypt_key),
+                            StringResolver.resolve(Res.string.failed_to_encrypt_key),
                             Toast.LENGTH_SHORT,
                         ).show()
                 }
@@ -447,7 +453,7 @@ private fun QrCodeButtonBase(
         enabled = isEnabled,
         onClick = {
             authenticate(
-                title = stringRes(context, R.string.copy_my_secret_key),
+                title = StringResolver.resolve(Res.string.copy_my_secret_key),
                 context = context,
                 keyguardLauncher = keyguardLauncher,
                 onApproved = { dialogOpen = true },

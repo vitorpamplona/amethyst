@@ -56,6 +56,11 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.platform.StringResolver
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.pause
+import com.vitorpamplona.amethyst.commons.resources.play
+import com.vitorpamplona.amethyst.commons.resources.remove
 import com.vitorpamplona.amethyst.ui.components.AudioWaveformReadOnly
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nipA0VoiceMessages.AudioMeta
@@ -126,7 +131,7 @@ fun VoiceMessagePreview(
                 ) {
                     Icon(
                         imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = if (isPlaying) stringRes(context, R.string.pause) else stringRes(context, R.string.play),
+                        contentDescription = if (isPlaying) StringResolver.resolve(Res.string.pause) else StringResolver.resolve(Res.string.play),
                         tint = MaterialTheme.colorScheme.primary,
                     )
                 }
@@ -169,7 +174,7 @@ fun VoiceMessagePreview(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Close,
-                        contentDescription = stringRes(context, R.string.remove),
+                        contentDescription = StringResolver.resolve(Res.string.remove),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }

@@ -102,6 +102,15 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.platform.StringResolver
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.app_name
+import com.vitorpamplona.amethyst.commons.resources.biometric_authentication_failed
+import com.vitorpamplona.amethyst.commons.resources.biometric_authentication_failed_explainer
+import com.vitorpamplona.amethyst.commons.resources.biometric_authentication_failed_explainer_with_error
+import com.vitorpamplona.amethyst.commons.resources.error_parsing_nip47
+import com.vitorpamplona.amethyst.commons.resources.error_parsing_nip47_no_error
+import com.vitorpamplona.amethyst.commons.resources.error_parsing_nip47_title
 import com.vitorpamplona.amethyst.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.ui.components.util.getText
@@ -192,13 +201,13 @@ fun UpdateZapAmountContent(
             } catch (e: IllegalArgumentException) {
                 if (e.message != null) {
                     accountViewModel.toastManager.toast(
-                        stringRes(context, R.string.error_parsing_nip47_title),
-                        stringRes(context, R.string.error_parsing_nip47, nip47uri, e.message!!),
+                        StringResolver.resolve(Res.string.error_parsing_nip47_title),
+                        StringResolver.resolve(Res.string.error_parsing_nip47, nip47uri, e.message!!),
                     )
                 } else {
                     accountViewModel.toastManager.toast(
-                        stringRes(context, R.string.error_parsing_nip47_title),
-                        stringRes(context, R.string.error_parsing_nip47_no_error, nip47uri),
+                        StringResolver.resolve(Res.string.error_parsing_nip47_title),
+                        StringResolver.resolve(Res.string.error_parsing_nip47_no_error, nip47uri),
                     )
                 }
             }
@@ -491,13 +500,13 @@ fun UpdateZapAmountContent(
                     } catch (e: IllegalArgumentException) {
                         if (e.message != null) {
                             accountViewModel.toastManager.toast(
-                                stringRes(context, R.string.error_parsing_nip47_title),
-                                stringRes(context, R.string.error_parsing_nip47, it, e.message!!),
+                                StringResolver.resolve(Res.string.error_parsing_nip47_title),
+                                StringResolver.resolve(Res.string.error_parsing_nip47, it, e.message!!),
                             )
                         } else {
                             accountViewModel.toastManager.toast(
-                                stringRes(context, R.string.error_parsing_nip47_title),
-                                stringRes(context, R.string.error_parsing_nip47_no_error, it),
+                                StringResolver.resolve(Res.string.error_parsing_nip47_title),
+                                StringResolver.resolve(Res.string.error_parsing_nip47_no_error, it),
                             )
                         }
                     }
@@ -677,7 +686,7 @@ fun authenticate(
     fun keyguardPrompt() {
         val intent =
             keyguardManager.createConfirmDeviceCredentialIntent(
-                stringRes(context, R.string.app_name),
+                StringResolver.resolve(Res.string.app_name),
                 title,
             )
 
@@ -697,7 +706,7 @@ fun authenticate(
     val promptInfo =
         BiometricPrompt.PromptInfo
             .Builder()
-            .setTitle(stringRes(context, R.string.app_name))
+            .setTitle(StringResolver.resolve(Res.string.app_name))
             .setSubtitle(title)
             .setAllowedAuthenticators(authenticators)
             .build()
@@ -723,12 +732,8 @@ fun authenticate(
 
                         else -> {
                             onError(
-                                stringRes(context, R.string.biometric_authentication_failed),
-                                stringRes(
-                                    context,
-                                    R.string.biometric_authentication_failed_explainer_with_error,
-                                    errString.toString(),
-                                ),
+                                StringResolver.resolve(Res.string.biometric_authentication_failed),
+                                StringResolver.resolve(Res.string.biometric_authentication_failed_explainer_with_error, errString.toString()),
                             )
                         }
                     }
@@ -737,8 +742,8 @@ fun authenticate(
                 override fun onAuthenticationFailed() {
                     super.onAuthenticationFailed()
                     onError(
-                        stringRes(context, R.string.biometric_authentication_failed),
-                        stringRes(context, R.string.biometric_authentication_failed_explainer),
+                        StringResolver.resolve(Res.string.biometric_authentication_failed),
+                        StringResolver.resolve(Res.string.biometric_authentication_failed_explainer),
                     )
                 }
 

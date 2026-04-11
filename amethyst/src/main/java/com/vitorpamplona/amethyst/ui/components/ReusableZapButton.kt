@@ -45,6 +45,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.platform.StringResolver
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.error_dialog_zap_error
+import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_send_zaps
+import com.vitorpamplona.amethyst.commons.resources.no_zap_amount_setup_long_press_to_change
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
@@ -295,13 +300,13 @@ private fun handleZapClick(
 
     if (choices.isEmpty()) {
         accountViewModel.toastManager.toast(
-            stringRes(context, R.string.error_dialog_zap_error),
-            stringRes(context, R.string.no_zap_amount_setup_long_press_to_change),
+            StringResolver.resolve(Res.string.error_dialog_zap_error),
+            StringResolver.resolve(Res.string.no_zap_amount_setup_long_press_to_change),
         )
     } else if (!accountViewModel.isWriteable()) {
         accountViewModel.toastManager.toast(
-            stringRes(context, R.string.error_dialog_zap_error),
-            stringRes(context, R.string.login_with_a_private_key_to_be_able_to_send_zaps),
+            StringResolver.resolve(Res.string.error_dialog_zap_error),
+            StringResolver.resolve(Res.string.login_with_a_private_key_to_be_able_to_send_zaps),
         )
     } else if (choices.size == 1) {
         val amount = choices.first()

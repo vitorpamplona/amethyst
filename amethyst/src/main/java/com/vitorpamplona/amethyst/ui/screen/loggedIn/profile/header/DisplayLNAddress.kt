@@ -33,6 +33,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.platform.StringResolver
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.error_parsing_error_message
+import com.vitorpamplona.amethyst.commons.resources.payment_successful
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.actions.InformationDialog
 import com.vitorpamplona.amethyst.ui.components.ClickableTextPrimary
@@ -77,7 +81,7 @@ fun DisplayLNAddress(
     var showInfoMessageDialog by remember { mutableStateOf<String?>(null) }
     if (showInfoMessageDialog != null) {
         InformationDialog(
-            title = stringRes(context, R.string.payment_successful),
+            title = StringResolver.resolve(Res.string.payment_successful),
             textContent = showInfoMessageDialog ?: "",
         ) {
             showInfoMessageDialog = null
@@ -112,12 +116,12 @@ fun DisplayLNAddress(
                         if (accountViewModel.account.nip47SignerState.hasWalletConnectSetup()) {
                             accountViewModel.sendZapPaymentRequestFor(it, null) { response ->
                                 if (response is PayInvoiceSuccessResponse) {
-                                    showInfoMessageDialog = stringRes(context, R.string.payment_successful)
+                                    showInfoMessageDialog = StringResolver.resolve(Res.string.payment_successful)
                                 } else if (response is PayInvoiceErrorResponse) {
                                     showErrorMessageDialog =
                                         response.error?.message
                                             ?: response.error?.code?.toString()
-                                            ?: stringRes(context, R.string.error_parsing_error_message)
+                                            ?: StringResolver.resolve(Res.string.error_parsing_error_message)
                                 }
                             }
                         } else {

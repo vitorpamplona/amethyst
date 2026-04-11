@@ -21,7 +21,11 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.upload
 
 import android.content.Context
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.platform.StringResolver
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_encrypted_media_message
+import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_encrypted_media_title
+import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
@@ -79,8 +83,8 @@ class ChatFileUploader(
                 val errorMessages = results.errors.map { stringRes(context, it.errorResource, *it.params) }.distinct()
 
                 onEncryptedUploadError(
-                    stringRes(context, R.string.failed_to_upload_encrypted_media_title),
-                    stringRes(context, R.string.failed_to_upload_encrypted_media_message) + "\n\n" + errorMessages.joinToString(".\n"),
+                    StringResolver.resolve(Res.string.failed_to_upload_encrypted_media_title),
+                    StringResolver.resolve(Res.string.failed_to_upload_encrypted_media_message) + "\n\n" + errorMessages.joinToString(".\n"),
                 )
             }
         } else {
@@ -127,7 +131,7 @@ class ChatFileUploader(
         } else {
             val errorMessages = results.errors.map { stringRes(context, it.errorResource, *it.params) }.distinct()
 
-            onError(stringRes(context, R.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
+            onError(StringResolver.resolve(Res.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
         }
 
         viewState.mediaUploadTracker.finishUpload()
@@ -174,7 +178,7 @@ class ChatFileUploader(
         } else {
             val errorMessages = results.errors.map { stringRes(context, it.errorResource, *it.params) }.distinct()
 
-            onError(stringRes(context, R.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
+            onError(StringResolver.resolve(Res.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
         }
 
         viewState.mediaUploadTracker.finishUpload()

@@ -27,7 +27,13 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.platform.StringResolver
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.error
+import com.vitorpamplona.amethyst.commons.resources.upload_error_title
+import com.vitorpamplona.amethyst.commons.resources.upload_error_voice_message_exception
+import com.vitorpamplona.amethyst.commons.resources.upload_error_voice_message_failed
+import com.vitorpamplona.amethyst.commons.resources.upload_error_voice_message_nip95_not_supported
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
@@ -37,7 +43,6 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.RecordingResult
 import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceAnonymizationController
 import com.vitorpamplona.amethyst.ui.actions.uploads.VoicePreset
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.tags.people.toPTag
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip10Notes.tags.markedETags
@@ -75,7 +80,7 @@ class VoiceReplyViewModel : ViewModel() {
             onError = { error ->
                 if (::accountViewModel.isInitialized) {
                     accountViewModel.toastManager.toast(
-                        stringRes(Amethyst.instance.appContext, R.string.error),
+                        StringResolver.resolve(Res.string.error),
                         error.message ?: "Voice anonymization failed",
                     )
                 }
@@ -206,9 +211,9 @@ class VoiceReplyViewModel : ViewModel() {
                     Log.w("VoiceReplyViewModel", "User canceled, or ViewModel cleared", e)
                 } catch (e: Exception) {
                     val appContext = Amethyst.instance.appContext
-                    val uploadErrorTitle = stringRes(appContext, R.string.upload_error_title)
+                    val uploadErrorTitle = StringResolver.resolve(Res.string.upload_error_title)
                     val uploadVoiceExceptionMessage: (String) -> String = { detail ->
-                        stringRes(appContext, R.string.upload_error_voice_message_exception, detail)
+                        StringResolver.resolve(Res.string.upload_error_voice_message_exception, detail)
                     }
                     accountViewModel.toastManager.toast(
                         uploadErrorTitle,
@@ -231,9 +236,9 @@ class VoiceReplyViewModel : ViewModel() {
         onSuccess: () -> Unit,
     ) {
         val appContext = Amethyst.instance.appContext
-        val uploadErrorTitle = stringRes(appContext, R.string.upload_error_title)
-        val uploadVoiceNip95NotSupported = stringRes(appContext, R.string.upload_error_voice_message_nip95_not_supported)
-        val uploadVoiceFailed = stringRes(appContext, R.string.upload_error_voice_message_failed)
+        val uploadErrorTitle = StringResolver.resolve(Res.string.upload_error_title)
+        val uploadVoiceNip95NotSupported = StringResolver.resolve(Res.string.upload_error_voice_message_nip95_not_supported)
+        val uploadVoiceFailed = StringResolver.resolve(Res.string.upload_error_voice_message_failed)
 
         when (result) {
             is UploadingState.Finished -> {

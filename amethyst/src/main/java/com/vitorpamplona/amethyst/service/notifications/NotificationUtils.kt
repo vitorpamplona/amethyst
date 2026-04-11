@@ -38,9 +38,34 @@ import coil3.asDrawable
 import coil3.request.ImageRequest
 import coil3.request.allowHardware
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.platform.StringResolver
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.app_notification_calls_channel_description
+import com.vitorpamplona.amethyst.commons.resources.app_notification_calls_channel_name
+import com.vitorpamplona.amethyst.commons.resources.app_notification_chess_channel_description
+import com.vitorpamplona.amethyst.commons.resources.app_notification_chess_channel_id
+import com.vitorpamplona.amethyst.commons.resources.app_notification_chess_channel_name
+import com.vitorpamplona.amethyst.commons.resources.app_notification_chess_summary
+import com.vitorpamplona.amethyst.commons.resources.app_notification_dms_channel_description
+import com.vitorpamplona.amethyst.commons.resources.app_notification_dms_channel_id
+import com.vitorpamplona.amethyst.commons.resources.app_notification_dms_channel_name
+import com.vitorpamplona.amethyst.commons.resources.app_notification_dms_summary
+import com.vitorpamplona.amethyst.commons.resources.app_notification_mark_read_label
+import com.vitorpamplona.amethyst.commons.resources.app_notification_private_message
+import com.vitorpamplona.amethyst.commons.resources.app_notification_reactions_channel_description
+import com.vitorpamplona.amethyst.commons.resources.app_notification_reactions_channel_id
+import com.vitorpamplona.amethyst.commons.resources.app_notification_reactions_channel_name
+import com.vitorpamplona.amethyst.commons.resources.app_notification_reactions_summary
+import com.vitorpamplona.amethyst.commons.resources.app_notification_reply_label
+import com.vitorpamplona.amethyst.commons.resources.app_notification_zaps_channel_description
+import com.vitorpamplona.amethyst.commons.resources.app_notification_zaps_channel_id
+import com.vitorpamplona.amethyst.commons.resources.app_notification_zaps_channel_name
+import com.vitorpamplona.amethyst.commons.resources.app_notification_zaps_summary
+import com.vitorpamplona.amethyst.commons.resources.call_accept
+import com.vitorpamplona.amethyst.commons.resources.call_incoming
+import com.vitorpamplona.amethyst.commons.resources.call_reject
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.MainActivity
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import kotlinx.coroutines.Dispatchers
@@ -77,12 +102,12 @@ object NotificationUtils {
 
         dmChannel =
             NotificationChannel(
-                stringRes(applicationContext, R.string.app_notification_dms_channel_id),
-                stringRes(applicationContext, R.string.app_notification_dms_channel_name),
+                StringResolver.resolve(Res.string.app_notification_dms_channel_id),
+                StringResolver.resolve(Res.string.app_notification_dms_channel_name),
                 NotificationManager.IMPORTANCE_HIGH,
             ).apply {
                 description =
-                    stringRes(applicationContext, R.string.app_notification_dms_channel_description)
+                    StringResolver.resolve(Res.string.app_notification_dms_channel_description)
             }
 
         val notificationManager: NotificationManager =
@@ -98,12 +123,12 @@ object NotificationUtils {
 
         zapChannel =
             NotificationChannel(
-                stringRes(applicationContext, R.string.app_notification_zaps_channel_id),
-                stringRes(applicationContext, R.string.app_notification_zaps_channel_name),
+                StringResolver.resolve(Res.string.app_notification_zaps_channel_id),
+                StringResolver.resolve(Res.string.app_notification_zaps_channel_name),
                 NotificationManager.IMPORTANCE_DEFAULT,
             ).apply {
                 description =
-                    stringRes(applicationContext, R.string.app_notification_zaps_channel_description)
+                    StringResolver.resolve(Res.string.app_notification_zaps_channel_description)
             }
 
         val notificationManager: NotificationManager =
@@ -119,12 +144,12 @@ object NotificationUtils {
 
         reactionChannel =
             NotificationChannel(
-                stringRes(applicationContext, R.string.app_notification_reactions_channel_id),
-                stringRes(applicationContext, R.string.app_notification_reactions_channel_name),
+                StringResolver.resolve(Res.string.app_notification_reactions_channel_id),
+                StringResolver.resolve(Res.string.app_notification_reactions_channel_name),
                 NotificationManager.IMPORTANCE_DEFAULT,
             ).apply {
                 description =
-                    stringRes(applicationContext, R.string.app_notification_reactions_channel_description)
+                    StringResolver.resolve(Res.string.app_notification_reactions_channel_description)
             }
 
         val notificationManager: NotificationManager =
@@ -140,12 +165,12 @@ object NotificationUtils {
 
         chessChannel =
             NotificationChannel(
-                stringRes(applicationContext, R.string.app_notification_chess_channel_id),
-                stringRes(applicationContext, R.string.app_notification_chess_channel_name),
+                StringResolver.resolve(Res.string.app_notification_chess_channel_id),
+                StringResolver.resolve(Res.string.app_notification_chess_channel_name),
                 NotificationManager.IMPORTANCE_DEFAULT,
             ).apply {
                 description =
-                    stringRes(applicationContext, R.string.app_notification_chess_channel_description)
+                    StringResolver.resolve(Res.string.app_notification_chess_channel_description)
             }
 
         val notificationManager: NotificationManager =
@@ -166,7 +191,7 @@ object NotificationUtils {
         applicationContext: Context,
     ) {
         getOrCreateReactionChannel(applicationContext)
-        val channelId = stringRes(applicationContext, R.string.app_notification_reactions_channel_id)
+        val channelId = StringResolver.resolve(Res.string.app_notification_reactions_channel_id)
 
         sendNotification(
             id = id,
@@ -179,7 +204,7 @@ object NotificationUtils {
             notificationGroupKey = REACTION_GROUP_KEY,
             category = NotificationCompat.CATEGORY_SOCIAL,
             summaryId = REACTION_SUMMARY_ID,
-            summaryText = stringRes(applicationContext, R.string.app_notification_reactions_summary),
+            summaryText = StringResolver.resolve(Res.string.app_notification_reactions_summary),
             applicationContext = applicationContext,
         )
     }
@@ -194,7 +219,7 @@ object NotificationUtils {
         applicationContext: Context,
     ) {
         getOrCreateChessChannel(applicationContext)
-        val channelId = stringRes(applicationContext, R.string.app_notification_chess_channel_id)
+        val channelId = StringResolver.resolve(Res.string.app_notification_chess_channel_id)
 
         sendNotification(
             id = id,
@@ -207,7 +232,7 @@ object NotificationUtils {
             notificationGroupKey = CHESS_GROUP_KEY,
             category = NotificationCompat.CATEGORY_SOCIAL,
             summaryId = CHESS_SUMMARY_ID,
-            summaryText = stringRes(applicationContext, R.string.app_notification_chess_summary),
+            summaryText = StringResolver.resolve(Res.string.app_notification_chess_summary),
             applicationContext = applicationContext,
         )
     }
@@ -222,7 +247,7 @@ object NotificationUtils {
         applicationContext: Context,
     ) {
         getOrCreateZapChannel(applicationContext)
-        val channelId = stringRes(applicationContext, R.string.app_notification_zaps_channel_id)
+        val channelId = StringResolver.resolve(Res.string.app_notification_zaps_channel_id)
 
         sendNotification(
             id = id,
@@ -235,7 +260,7 @@ object NotificationUtils {
             notificationGroupKey = ZAP_GROUP_KEY,
             category = NotificationCompat.CATEGORY_SOCIAL,
             summaryId = ZAP_SUMMARY_ID,
-            summaryText = stringRes(applicationContext, R.string.app_notification_zaps_summary),
+            summaryText = StringResolver.resolve(Res.string.app_notification_zaps_summary),
             applicationContext = applicationContext,
         )
     }
@@ -253,7 +278,7 @@ object NotificationUtils {
         chatroomMembers: String? = null,
     ) {
         getOrCreateDMChannel(applicationContext)
-        val channelId = stringRes(applicationContext, R.string.app_notification_dms_channel_id)
+        val channelId = StringResolver.resolve(Res.string.app_notification_dms_channel_id)
 
         sendDMNotificationStyled(
             id = id,
@@ -346,7 +371,7 @@ object NotificationUtils {
                 .Builder(applicationContext, channelId)
                 .setSmallIcon(R.drawable.amethyst)
                 .setContentTitle(senderName)
-                .setContentText(stringRes(applicationContext, R.string.app_notification_private_message))
+                .setContentText(StringResolver.resolve(Res.string.app_notification_private_message))
                 .setLargeIcon(bitmap)
                 .setContentIntent(contentPendingIntent)
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
@@ -372,7 +397,7 @@ object NotificationUtils {
             val remoteInput =
                 RemoteInput
                     .Builder(KEY_REPLY_TEXT)
-                    .setLabel(stringRes(applicationContext, R.string.app_notification_reply_label))
+                    .setLabel(StringResolver.resolve(Res.string.app_notification_reply_label))
                     .build()
 
             val replyIntent =
@@ -393,7 +418,7 @@ object NotificationUtils {
 
             val replyAction =
                 NotificationCompat.Action
-                    .Builder(R.drawable.amethyst, stringRes(applicationContext, R.string.app_notification_reply_label), replyPendingIntent)
+                    .Builder(R.drawable.amethyst, StringResolver.resolve(Res.string.app_notification_reply_label), replyPendingIntent)
                     .addRemoteInput(remoteInput)
                     .setAllowGeneratedReplies(true)
                     .setSemanticAction(NotificationCompat.Action.SEMANTIC_ACTION_REPLY)
@@ -419,7 +444,7 @@ object NotificationUtils {
 
         val markReadAction =
             NotificationCompat.Action
-                .Builder(R.drawable.amethyst, stringRes(applicationContext, R.string.app_notification_mark_read_label), markReadPendingIntent)
+                .Builder(R.drawable.amethyst, StringResolver.resolve(Res.string.app_notification_mark_read_label), markReadPendingIntent)
                 .setSemanticAction(NotificationCompat.Action.SEMANTIC_ACTION_MARK_AS_READ)
                 .build()
 
@@ -428,7 +453,7 @@ object NotificationUtils {
         notify(notId, builder.build())
 
         // Group summary notification
-        sendGroupSummary(channelId, DM_GROUP_KEY, DM_SUMMARY_ID, stringRes(applicationContext, R.string.app_notification_dms_summary), applicationContext)
+        sendGroupSummary(channelId, DM_GROUP_KEY, DM_SUMMARY_ID, StringResolver.resolve(Res.string.app_notification_dms_summary), applicationContext)
     }
 
     private suspend fun NotificationManager.sendNotification(
@@ -467,7 +492,7 @@ object NotificationUtils {
                 .Builder(applicationContext, channelId)
                 .setSmallIcon(R.drawable.amethyst)
                 .setContentTitle(messageTitle)
-                .setContentText(stringRes(applicationContext, R.string.app_notification_private_message))
+                .setContentText(StringResolver.resolve(Res.string.app_notification_private_message))
                 .setLargeIcon(bitmap)
                 .setContentIntent(contentPendingIntent)
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
@@ -528,10 +553,10 @@ object NotificationUtils {
         callChannel =
             NotificationChannel(
                 CALL_CHANNEL_ID,
-                stringRes(applicationContext, R.string.app_notification_calls_channel_name),
+                StringResolver.resolve(Res.string.app_notification_calls_channel_name),
                 NotificationManager.IMPORTANCE_HIGH,
             ).apply {
-                description = stringRes(applicationContext, R.string.app_notification_calls_channel_description)
+                description = StringResolver.resolve(Res.string.app_notification_calls_channel_description)
                 // Silence the notification sound — CallAudioManager plays the ringtone
                 setSound(null, null)
                 enableVibration(false)
@@ -603,7 +628,7 @@ object NotificationUtils {
             NotificationCompat
                 .Builder(applicationContext, channel.id)
                 .setSmallIcon(R.drawable.amethyst)
-                .setContentTitle(stringRes(applicationContext, R.string.call_incoming))
+                .setContentTitle(StringResolver.resolve(Res.string.call_incoming))
                 .setContentText(callerName)
                 .setLargeIcon(callerBitmap)
                 .setContentIntent(contentPendingIntent)
@@ -614,8 +639,8 @@ object NotificationUtils {
                 .setOngoing(true)
                 .setTimeoutAfter(60_000)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-                .addAction(R.drawable.amethyst, stringRes(applicationContext, R.string.call_reject), rejectPendingIntent)
-                .addAction(R.drawable.amethyst, stringRes(applicationContext, R.string.call_accept), acceptPendingIntent)
+                .addAction(R.drawable.amethyst, StringResolver.resolve(Res.string.call_reject), rejectPendingIntent)
+                .addAction(R.drawable.amethyst, StringResolver.resolve(Res.string.call_accept), acceptPendingIntent)
 
         notificationManager.notify("call", CALL_NOTIFICATION_ID, builder.build())
     }

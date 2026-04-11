@@ -76,6 +76,10 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.core.graphics.ColorUtils
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.platform.StringResolver
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.quick_action_share
+import com.vitorpamplona.amethyst.commons.resources.quick_action_share_browser_link
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -404,14 +408,14 @@ fun CardBody(
                             )
                             putExtra(
                                 Intent.EXTRA_TITLE,
-                                stringRes(context, R.string.quick_action_share_browser_link),
+                                StringResolver.resolve(Res.string.quick_action_share_browser_link),
                             )
                         }
 
                     val shareIntent =
                         Intent.createChooser(
                             sendIntent,
-                            stringRes(context, R.string.quick_action_share),
+                            StringResolver.resolve(Res.string.quick_action_share),
                         )
                     context.startActivity(shareIntent)
                     onDismiss()

@@ -36,9 +36,10 @@ import androidx.compose.ui.platform.LocalContext
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.platform.StringResolver
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.record_a_message_description
 import com.vitorpamplona.amethyst.ui.components.ToggleableBox
-import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 
@@ -88,7 +89,7 @@ fun RecordAudioBox(
             Toast
                 .makeText(
                     context,
-                    stringRes(context, R.string.record_a_message_description),
+                    StringResolver.resolve(Res.string.record_a_message_description),
                     Toast.LENGTH_SHORT,
                 ).show()
         }

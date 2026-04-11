@@ -28,7 +28,12 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.graphics.drawable.Icon
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.platform.StringResolver
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.mute_button
+import com.vitorpamplona.amethyst.commons.resources.muted_button
+import com.vitorpamplona.amethyst.commons.resources.pause
+import com.vitorpamplona.amethyst.commons.resources.play
 
 const val ACTION_MUTE = "com.vitorpamplona.amethyst.MUTE"
 const val ACTION_PLAY_PAUSE = "com.vitorpamplona.amethyst.PLAY_PAUSE"
@@ -61,7 +66,7 @@ fun createMuteAction(
         } else {
             Icon.createWithResource(context, androidx.media3.session.R.drawable.media3_icon_volume_off)
         }
-    val title = if (isMuted) stringRes(context, R.string.muted_button) else stringRes(context, R.string.mute_button)
+    val title = if (isMuted) StringResolver.resolve(Res.string.muted_button) else StringResolver.resolve(Res.string.mute_button)
 
     val intent =
         PendingIntent.getBroadcast(
@@ -83,7 +88,7 @@ fun createPlayPauseAction(
         } else {
             Icon.createWithResource(context, androidx.media3.session.R.drawable.media3_icon_pause)
         }
-    val title = if (!isPlaying) stringRes(context, R.string.play) else stringRes(context, R.string.pause)
+    val title = if (!isPlaying) StringResolver.resolve(Res.string.play) else StringResolver.resolve(Res.string.pause)
     val intent =
         PendingIntent.getBroadcast(
             context,

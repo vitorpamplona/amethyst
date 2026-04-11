@@ -26,7 +26,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.platform.StringResolver
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
+import com.vitorpamplona.amethyst.commons.resources.metadata_strip_failed_title
+import com.vitorpamplona.amethyst.commons.resources.metadata_strip_failed_upload_cancelled
+import com.vitorpamplona.amethyst.commons.resources.server_did_not_provide_a_url_after_uploading
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
@@ -36,7 +41,6 @@ import com.vitorpamplona.amethyst.service.uploads.nip96.Nip96Uploader
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip39ExtIdentities.GitHubIdentity
 import com.vitorpamplona.quartz.nip39ExtIdentities.MastodonIdentity
 import com.vitorpamplona.quartz.nip39ExtIdentities.TwitterIdentity
@@ -216,8 +220,8 @@ class NewUserMetadataViewModel : ViewModel() {
                 !strippingResult.stripped
             ) {
                 onError(
-                    stringRes(context, R.string.metadata_strip_failed_title),
-                    stringRes(context, R.string.metadata_strip_failed_upload_cancelled),
+                    StringResolver.resolve(Res.string.metadata_strip_failed_title),
+                    StringResolver.resolve(Res.string.metadata_strip_failed_upload_cancelled),
                 )
                 return null
             } else {
@@ -256,13 +260,13 @@ class NewUserMetadataViewModel : ViewModel() {
                 }
 
             if (result.url == null) {
-                onError(stringRes(context, R.string.failed_to_upload_media_no_details), stringRes(context, R.string.server_did_not_provide_a_url_after_uploading))
+                onError(StringResolver.resolve(Res.string.failed_to_upload_media_no_details), StringResolver.resolve(Res.string.server_did_not_provide_a_url_after_uploading))
             }
 
             result.url
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            onError(stringRes(context, R.string.failed_to_upload_media_no_details), e.message ?: e.javaClass.simpleName)
+            onError(StringResolver.resolve(Res.string.failed_to_upload_media_no_details), e.message ?: e.javaClass.simpleName)
             null
         } finally {
             isUploadingImageForPicture = false

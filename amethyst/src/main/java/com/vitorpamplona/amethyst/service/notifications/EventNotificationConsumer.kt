@@ -33,6 +33,10 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.call.CallManager
+import com.vitorpamplona.amethyst.commons.platform.StringResolver
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.app_notification_chess_channel_name
+import com.vitorpamplona.amethyst.commons.resources.app_notification_zaps_channel_message
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -504,7 +508,7 @@ class EventNotificationConsumer(
                             val zappedContent = decrypted.split("\n")[0]
 
                             val user = senderInfo.first.toBestDisplayName()
-                            var title = stringRes(applicationContext, R.string.app_notification_zaps_channel_message, amount)
+                            var title = StringResolver.resolve(Res.string.app_notification_zaps_channel_message, amount)
                             senderInfo.second?.ifBlank { null }?.let { title += " ($it)" }
 
                             var content =
@@ -548,7 +552,7 @@ class EventNotificationConsumer(
                         Log.d(TAG, "Notify Zapped note not available")
 
                         val user = senderInfo.first.toBestDisplayName()
-                        var title = stringRes(applicationContext, R.string.app_notification_zaps_channel_message, amount)
+                        var title = StringResolver.resolve(Res.string.app_notification_zaps_channel_message, amount)
                         senderInfo.second?.ifBlank { null }?.let { title += " ($it)" }
 
                         val content =
@@ -669,7 +673,7 @@ class EventNotificationConsumer(
             val author = LocalCache.getOrCreateUser(event.pubKey)
             val user = author.toBestDisplayName()
             val userPicture = author.profilePicture()
-            val title = stringRes(applicationContext, R.string.app_notification_chess_channel_name)
+            val title = StringResolver.resolve(Res.string.app_notification_chess_channel_name)
             val content = stringRes(applicationContext, contentStringRes, user)
             val noteUri =
                 "notifications$ACCOUNT_QUERY_PARAM" +

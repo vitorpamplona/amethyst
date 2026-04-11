@@ -61,6 +61,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.platform.StringResolver
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.quick_action_share
+import com.vitorpamplona.amethyst.commons.resources.quick_action_share_browser_link
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -512,12 +516,12 @@ fun ShareCommunityButton(
                     )
                     putExtra(
                         Intent.EXTRA_TITLE,
-                        stringRes(actContext, R.string.quick_action_share_browser_link),
+                        StringResolver.resolve(Res.string.quick_action_share_browser_link),
                     )
                 }
 
             val shareIntent =
-                Intent.createChooser(sendIntent, stringRes(actContext, R.string.quick_action_share))
+                Intent.createChooser(sendIntent, StringResolver.resolve(Res.string.quick_action_share))
             actContext.startActivity(shareIntent)
         },
     ) {

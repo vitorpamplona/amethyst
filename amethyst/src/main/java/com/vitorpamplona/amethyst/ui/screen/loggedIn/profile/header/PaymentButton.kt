@@ -37,6 +37,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.platform.StringResolver
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.no_payment_app_found
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
@@ -114,7 +117,7 @@ fun PaymentButtonWithTargets(targets: List<PaymentTarget>) {
                                     context.startActivity(intent)
                                 } catch (e: Exception) {
                                     if (e is kotlinx.coroutines.CancellationException) throw e
-                                    errorMessage = stringRes(context, R.string.no_payment_app_found)
+                                    errorMessage = StringResolver.resolve(Res.string.no_payment_app_found)
                                 }
                             },
                         )

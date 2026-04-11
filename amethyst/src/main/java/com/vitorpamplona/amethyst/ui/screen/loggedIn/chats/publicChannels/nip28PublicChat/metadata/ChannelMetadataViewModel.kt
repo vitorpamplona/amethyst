@@ -30,8 +30,14 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
+import com.vitorpamplona.amethyst.commons.platform.StringResolver
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
+import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_upload
+import com.vitorpamplona.amethyst.commons.resources.metadata_strip_failed_title
+import com.vitorpamplona.amethyst.commons.resources.metadata_strip_failed_upload_cancelled
+import com.vitorpamplona.amethyst.commons.resources.server_did_not_provide_a_url_after_uploading
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
@@ -44,7 +50,6 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
@@ -213,8 +218,8 @@ class ChannelMetadataViewModel : ViewModel() {
                 val result = MetadataStripper.strip(galleryUri.uri, galleryUri.mimeType, context.applicationContext)
                 if (!result.stripped) {
                     onError(
-                        stringRes(context, R.string.metadata_strip_failed_title),
-                        stringRes(context, R.string.metadata_strip_failed_upload_cancelled),
+                        StringResolver.resolve(Res.string.metadata_strip_failed_title),
+                        StringResolver.resolve(Res.string.metadata_strip_failed_upload_cancelled),
                     )
                     onUploading(false)
                     return
@@ -259,15 +264,15 @@ class ChannelMetadataViewModel : ViewModel() {
                 onUploaded(result.url)
             } else {
                 onUploading(false)
-                onError(stringRes(context, R.string.failed_to_upload_media_no_details), stringRes(context, R.string.server_did_not_provide_a_url_after_uploading))
+                onError(StringResolver.resolve(Res.string.failed_to_upload_media_no_details), StringResolver.resolve(Res.string.server_did_not_provide_a_url_after_uploading))
             }
         } catch (_: SignerExceptions.ReadOnlyException) {
             onUploading(false)
-            onError(stringRes(context, R.string.failed_to_upload_media_no_details), stringRes(context, R.string.login_with_a_private_key_to_be_able_to_upload))
+            onError(StringResolver.resolve(Res.string.failed_to_upload_media_no_details), StringResolver.resolve(Res.string.login_with_a_private_key_to_be_able_to_upload))
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             onUploading(false)
-            onError(stringRes(context, R.string.failed_to_upload_media_no_details), e.message ?: e.javaClass.simpleName)
+            onError(StringResolver.resolve(Res.string.failed_to_upload_media_no_details), e.message ?: e.javaClass.simpleName)
         }
     }
 }

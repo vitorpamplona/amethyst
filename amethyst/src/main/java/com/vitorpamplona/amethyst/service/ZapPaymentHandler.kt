@@ -23,6 +23,13 @@ package com.vitorpamplona.amethyst.service
 import android.content.Context
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.platform.StringResolver
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.error_dialog_pay_invoice_error
+import com.vitorpamplona.amethyst.commons.resources.error_unable_to_fetch_invoice
+import com.vitorpamplona.amethyst.commons.resources.missing_lud16
+import com.vitorpamplona.amethyst.commons.resources.user_does_not_have_a_lightning_address_setup_to_receive_sats
+import com.vitorpamplona.amethyst.commons.resources.user_x_does_not_have_a_lightning_address_setup_to_receive_sats
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -137,17 +144,13 @@ class ZapPaymentHandler(
             errors.forEach {
                 val message =
                     if (it.user != null) {
-                        stringRes(
-                            context,
-                            R.string.user_x_does_not_have_a_lightning_address_setup_to_receive_sats,
-                            it.user.toBestDisplayName(),
-                        )
+                        StringResolver.resolve(Res.string.user_x_does_not_have_a_lightning_address_setup_to_receive_sats, it.user.toBestDisplayName())
                     } else {
-                        stringRes(context, R.string.user_does_not_have_a_lightning_address_setup_to_receive_sats)
+                        StringResolver.resolve(Res.string.user_does_not_have_a_lightning_address_setup_to_receive_sats)
                     }
 
                 onError(
-                    stringRes(context, R.string.missing_lud16),
+                    StringResolver.resolve(Res.string.missing_lud16),
                     message,
                     it.user,
                 )
@@ -282,10 +285,7 @@ class ZapPaymentHandler(
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 onError(
-                    stringRes(
-                        context,
-                        R.string.error_unable_to_fetch_invoice,
-                    ),
+                    StringResolver.resolve(Res.string.error_unable_to_fetch_invoice),
                     stringRes(
                         context,
                         R.string.unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error,
@@ -323,7 +323,7 @@ class ZapPaymentHandler(
                             progressAllPayments += 0.5f / payables.size
                             onProgress(progressAllPayments)
                             onError(
-                                stringRes(context, R.string.error_dialog_pay_invoice_error),
+                                StringResolver.resolve(Res.string.error_dialog_pay_invoice_error),
                                 stringRes(
                                     context,
                                     R.string.wallet_connect_pay_invoice_error_error,

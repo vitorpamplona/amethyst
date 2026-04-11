@@ -246,6 +246,7 @@ dependencies {
 
     implementation project(path: ':quartz')
     implementation project(path: ':commons')
+    implementation libs.jetbrains.compose.components.resources
     implementation project(path: ':ammolite')
     implementation libs.androidx.core.ktx
     implementation libs.androidx.activity.compose

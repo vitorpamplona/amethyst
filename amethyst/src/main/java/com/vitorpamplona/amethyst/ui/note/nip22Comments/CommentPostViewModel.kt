@@ -32,12 +32,16 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.compose.currentWord
 import com.vitorpamplona.amethyst.commons.compose.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.compose.replaceCurrentWord
 import com.vitorpamplona.amethyst.commons.compose.setTextAndPlaceCursorAtBeginning
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
+import com.vitorpamplona.amethyst.commons.platform.StringResolver
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
+import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_sign_events
+import com.vitorpamplona.amethyst.commons.resources.read_only_user
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -489,8 +493,8 @@ open class CommentPostViewModel :
         uploadUnsafe(alt, contentWarningReason, mediaQuality, server, onError, context, stripMetadata)
     } catch (_: SignerExceptions.ReadOnlyException) {
         onError(
-            stringRes(context, R.string.read_only_user),
-            stringRes(context, R.string.login_with_a_private_key_to_be_able_to_sign_events),
+            StringResolver.resolve(Res.string.read_only_user),
+            StringResolver.resolve(Res.string.login_with_a_private_key_to_be_able_to_sign_events),
         )
     }
 
@@ -573,7 +577,7 @@ open class CommentPostViewModel :
                             )
                         }.distinct()
 
-                onError(stringRes(context, R.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
+                onError(StringResolver.resolve(Res.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
             }
 
             mediaUploadTracker.finishUpload()

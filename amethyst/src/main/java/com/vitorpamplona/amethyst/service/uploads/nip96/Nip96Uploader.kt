@@ -27,7 +27,10 @@ import android.provider.OpenableColumns
 import android.webkit.MimeTypeMap
 import androidx.core.net.toFile
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.platform.StringResolver
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.failed_to_delete_with_message
+import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_to_server_with_message
 import com.vitorpamplona.amethyst.service.HttpStatusMessages
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.uploads.BlurhashMetadataCalculator
@@ -193,10 +196,10 @@ class Nip96Uploader {
                             if (event != null) {
                                 convertToMediaResult(event)
                             } else {
-                                throw RuntimeException(stringRes(context, R.string.failed_to_upload_to_server_with_message, server.apiUrl.displayUrl(), result.message))
+                                throw RuntimeException(StringResolver.resolve(Res.string.failed_to_upload_to_server_with_message, server.apiUrl.displayUrl(), result.message ?: ""))
                             }
                         } else {
-                            throw RuntimeException(stringRes(context, R.string.failed_to_upload_to_server_with_message, server.apiUrl.displayUrl(), result.message))
+                            throw RuntimeException(StringResolver.resolve(Res.string.failed_to_upload_to_server_with_message, server.apiUrl.displayUrl(), result.message ?: ""))
                         }
                     }
                 } else {
@@ -218,11 +221,11 @@ class Nip96Uploader {
 
                     val explanation = HttpStatusMessages.resourceIdFor(response.code)
                     if (errorMessage != null) {
-                        throw RuntimeException(stringRes(context, R.string.failed_to_upload_to_server_with_message, server.apiUrl.displayUrl(), errorMessage))
+                        throw RuntimeException(StringResolver.resolve(Res.string.failed_to_upload_to_server_with_message, server.apiUrl.displayUrl(), errorMessage))
                     } else if (explanation != null) {
-                        throw RuntimeException(stringRes(context, R.string.failed_to_upload_to_server_with_message, server.apiUrl.displayUrl(), stringRes(context, explanation)))
+                        throw RuntimeException(StringResolver.resolve(Res.string.failed_to_upload_to_server_with_message, server.apiUrl.displayUrl(), stringRes(context, explanation)))
                     } else {
-                        throw RuntimeException(stringRes(context, R.string.failed_to_upload_to_server_with_message, server.apiUrl.displayUrl(), response.code.toString()))
+                        throw RuntimeException(StringResolver.resolve(Res.string.failed_to_upload_to_server_with_message, server.apiUrl.displayUrl(), response.code.toString()))
                     }
                 }
             }
@@ -296,9 +299,9 @@ class Nip96Uploader {
                 } else {
                     val explanation = HttpStatusMessages.resourceIdFor(response.code)
                     if (explanation != null) {
-                        throw RuntimeException(stringRes(context, R.string.failed_to_delete_with_message, stringRes(context, explanation)))
+                        throw RuntimeException(StringResolver.resolve(Res.string.failed_to_delete_with_message, stringRes(context, explanation)))
                     } else {
-                        throw RuntimeException(stringRes(context, R.string.failed_to_delete_with_message, response.code))
+                        throw RuntimeException(StringResolver.resolve(Res.string.failed_to_delete_with_message, response.code))
                     }
                 }
             }

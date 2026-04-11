@@ -50,6 +50,9 @@ import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.hashtags.Lightning
+import com.vitorpamplona.amethyst.commons.platform.StringResolver
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.error_dialog_pay_invoice_error
 import com.vitorpamplona.amethyst.service.lnurl.CachedLnInvoiceParser
 import com.vitorpamplona.amethyst.service.lnurl.InvoiceAmount
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
@@ -111,7 +114,7 @@ fun InvoicePreview(
 
     if (showErrorMessageDialog != null) {
         ErrorMessageDialog(
-            title = stringRes(context, R.string.error_dialog_pay_invoice_error),
+            title = StringResolver.resolve(Res.string.error_dialog_pay_invoice_error),
             textContent = showErrorMessageDialog ?: "",
             onDismiss = { showErrorMessageDialog = null },
         )

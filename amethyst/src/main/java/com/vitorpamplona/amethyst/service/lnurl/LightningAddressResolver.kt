@@ -23,6 +23,12 @@ package com.vitorpamplona.amethyst.service.lnurl
 import android.content.Context
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.platform.StringResolver
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup
+import com.vitorpamplona.amethyst.commons.resources.could_not_fetch_invoice_from_details
+import com.vitorpamplona.amethyst.commons.resources.error_unable_to_fetch_invoice
+import com.vitorpamplona.amethyst.commons.resources.incorrect_invoice_amount_sats_from_it_should_have_been
 import com.vitorpamplona.amethyst.service.HttpStatusMessages
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
@@ -67,8 +73,8 @@ class LightningAddressResolver {
     ): String {
         val url =
             assembleUrl(lnAddress) ?: throw LightningAddressError(
-                stringRes(context, R.string.error_unable_to_fetch_invoice),
-                stringRes(context, R.string.could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup, lnAddress),
+                StringResolver.resolve(Res.string.error_unable_to_fetch_invoice),
+                StringResolver.resolve(Res.string.could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup, lnAddress),
             )
 
         val client = okHttpClient(url)
@@ -86,7 +92,7 @@ class LightningAddressResolver {
                         response.body.string()
                     } else {
                         throw LightningAddressError(
-                            stringRes(context, R.string.error_unable_to_fetch_invoice),
+                            StringResolver.resolve(Res.string.error_unable_to_fetch_invoice),
                             stringRes(
                                 context,
                                 R.string
@@ -102,7 +108,7 @@ class LightningAddressResolver {
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             throw LightningAddressError(
-                stringRes(context, R.string.error_unable_to_fetch_invoice),
+                StringResolver.resolve(Res.string.error_unable_to_fetch_invoice),
                 stringRes(
                     context,
                     R.string
@@ -149,8 +155,8 @@ class LightningAddressResolver {
                     response.body.string()
                 } else {
                     throw LightningAddressError(
-                        stringRes(context, R.string.error_unable_to_fetch_invoice),
-                        stringRes(context, R.string.could_not_fetch_invoice_from_details, lnCallback, errorMessage(response, context)),
+                        StringResolver.resolve(Res.string.error_unable_to_fetch_invoice),
+                        StringResolver.resolve(Res.string.could_not_fetch_invoice_from_details, lnCallback, errorMessage(response, context)),
                     )
                 }
             }
@@ -223,7 +229,7 @@ class LightningAddressResolver {
             } catch (t: Throwable) {
                 if (t is CancellationException) throw t
                 throw LightningAddressError(
-                    stringRes(context, R.string.error_unable_to_fetch_invoice),
+                    StringResolver.resolve(Res.string.error_unable_to_fetch_invoice),
                     stringRes(
                         context,
                         R.string.error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup_with_user,
@@ -236,7 +242,7 @@ class LightningAddressResolver {
 
         if (callbackUrl == null) {
             throw LightningAddressError(
-                stringRes(context, R.string.error_unable_to_fetch_invoice),
+                StringResolver.resolve(Res.string.error_unable_to_fetch_invoice),
                 stringRes(
                     context,
                     R.string.callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user,
@@ -265,7 +271,7 @@ class LightningAddressResolver {
             } catch (t: Throwable) {
                 if (t is CancellationException) throw t
                 throw LightningAddressError(
-                    stringRes(context, R.string.error_unable_to_fetch_invoice),
+                    StringResolver.resolve(Res.string.error_unable_to_fetch_invoice),
                     stringRes(
                         context,
                         R.string
@@ -283,7 +289,7 @@ class LightningAddressResolver {
 
             if (reason != null) {
                 throw LightningAddressError(
-                    stringRes(context, R.string.error_unable_to_fetch_invoice),
+                    StringResolver.resolve(Res.string.error_unable_to_fetch_invoice),
                     stringRes(
                         context,
                         R.string
@@ -294,7 +300,7 @@ class LightningAddressResolver {
                 )
             } else {
                 throw LightningAddressError(
-                    stringRes(context, R.string.error_unable_to_fetch_invoice),
+                    StringResolver.resolve(Res.string.error_unable_to_fetch_invoice),
                     stringRes(
                         context,
                         R.string
@@ -314,10 +320,9 @@ class LightningAddressResolver {
         if (invoiceAmount.toLong() != expectedAmountInSats) {
             onProgress(0.0f)
             throw LightningAddressError(
-                stringRes(context, R.string.error_unable_to_fetch_invoice),
-                stringRes(
-                    context,
-                    R.string.incorrect_invoice_amount_sats_from_it_should_have_been,
+                StringResolver.resolve(Res.string.error_unable_to_fetch_invoice),
+                StringResolver.resolve(
+                    Res.string.incorrect_invoice_amount_sats_from_it_should_have_been,
                     invoiceAmount.toLong().toString(),
                     lnAddress,
                     expectedAmountInSats.toString(),

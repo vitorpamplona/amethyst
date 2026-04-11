@@ -25,7 +25,10 @@ import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
 import android.webkit.MimeTypeMap
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.platform.StringResolver
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.failed_to_delete_with_message
+import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_to_server_with_message
 import com.vitorpamplona.amethyst.service.HttpStatusMessages
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.uploads.BlurhashMetadataCalculator
@@ -179,11 +182,11 @@ class BlossomUploader {
 
                     val explanation = HttpStatusMessages.resourceIdFor(response.code)
                     if (errorMessage != null) {
-                        throw RuntimeException(stringRes(context, R.string.failed_to_upload_to_server_with_message, serverBaseUrl.displayUrl(), errorMessage))
+                        throw RuntimeException(StringResolver.resolve(Res.string.failed_to_upload_to_server_with_message, serverBaseUrl.displayUrl(), errorMessage))
                     } else if (explanation != null) {
-                        throw RuntimeException(stringRes(context, R.string.failed_to_upload_to_server_with_message, serverBaseUrl.displayUrl(), stringRes(context, explanation)))
+                        throw RuntimeException(StringResolver.resolve(Res.string.failed_to_upload_to_server_with_message, serverBaseUrl.displayUrl(), stringRes(context, explanation)))
                     } else {
-                        throw RuntimeException(stringRes(context, R.string.failed_to_upload_to_server_with_message, serverBaseUrl.displayUrl(), response.code.toString()))
+                        throw RuntimeException(StringResolver.resolve(Res.string.failed_to_upload_to_server_with_message, serverBaseUrl.displayUrl(), response.code.toString()))
                     }
                 }
             }
@@ -236,9 +239,9 @@ class BlossomUploader {
                 } else {
                     val explanation = HttpStatusMessages.resourceIdFor(response.code)
                     if (explanation != null) {
-                        throw RuntimeException(stringRes(context, R.string.failed_to_delete_with_message, stringRes(context, explanation)))
+                        throw RuntimeException(StringResolver.resolve(Res.string.failed_to_delete_with_message, stringRes(context, explanation)))
                     } else {
-                        throw RuntimeException(stringRes(context, R.string.failed_to_delete_with_message, response.code))
+                        throw RuntimeException(StringResolver.resolve(Res.string.failed_to_delete_with_message, response.code))
                     }
                 }
             }

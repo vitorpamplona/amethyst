@@ -78,6 +78,9 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.platform.StringResolver
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.error_dialog_zap_error
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -590,7 +593,7 @@ fun ZapVote(
                                     val payable = it.first()
                                     payViaIntent(payable.invoice, context, { }) { error ->
                                         zappingProgress = 0f
-                                        showErrorMessageDialog = StringToastMsg(stringRes(context, R.string.error_dialog_zap_error), error)
+                                        showErrorMessageDialog = StringToastMsg(StringResolver.resolve(Res.string.error_dialog_zap_error), error)
                                     }
                                 } else {
                                     val uid = Uuid.random().toString()
@@ -628,7 +631,7 @@ fun ZapVote(
                         val payable = it.first()
                         payViaIntent(payable.invoice, context, { }) { error ->
                             zappingProgress = 0f
-                            showErrorMessageDialog = StringToastMsg(stringRes(context, R.string.error_dialog_zap_error), error)
+                            showErrorMessageDialog = StringToastMsg(StringResolver.resolve(Res.string.error_dialog_zap_error), error)
                         }
                     } else {
                         val uid = Uuid.random().toString()

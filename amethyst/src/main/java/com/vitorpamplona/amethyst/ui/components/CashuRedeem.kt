@@ -55,6 +55,10 @@ import androidx.core.net.toUri
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.Cashu
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
+import com.vitorpamplona.amethyst.commons.platform.StringResolver
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cashu
+import com.vitorpamplona.amethyst.commons.resources.cashu_no_wallet_found
 import com.vitorpamplona.amethyst.service.cashu.CachedCashuParser
 import com.vitorpamplona.amethyst.service.cashu.CashuToken
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
@@ -220,7 +224,7 @@ fun CashuPreviewNew(
                             context.startActivity(intent)
                         } catch (e: Exception) {
                             if (e is CancellationException) throw e
-                            toast(stringRes(context, R.string.cashu), stringRes(context, R.string.cashu_no_wallet_found))
+                            toast(StringResolver.resolve(Res.string.cashu), StringResolver.resolve(Res.string.cashu_no_wallet_found))
                         }
                     },
                     shape = SmallishBorder,
