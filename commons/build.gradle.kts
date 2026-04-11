@@ -107,6 +107,11 @@ kotlin {
         val iosMain =
             create("iosMain") {
                 dependsOn(commonMain.get())
+                dependencies {
+                    // iOS: Coil network via Ktor (Darwin engine)
+                    implementation(libs.coil.network.ktor3)
+                    implementation(libs.ktor.client.darwin)
+                }
             }
 
         val iosArm64Main by getting {

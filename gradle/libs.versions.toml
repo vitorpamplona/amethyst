@@ -26,6 +26,7 @@ jacksonModuleKotlin = "2.21.2"
 javaKeyring = "1.0.4"
 junit = "4.13.2"
 kchesslib = "1.0.5"
+ktor = "3.4.2"
 kotlin = "2.3.20"
 kotlinxAtomicfu = "0.27.0"
 kotlinxCollectionsImmutable = "0.4.0"
@@ -124,6 +125,8 @@ coil-gif = { group = "io.coil-kt.coil3", name = "coil-gif", version.ref = "coil"
 coil-svg = { group = "io.coil-kt.coil3", name = "coil-svg", version.ref = "coil" }
 coil-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version.ref = "coil" }
 coil-video = { group = "io.coil-kt.coil3", name = "coil-video", version.ref = "coil" }
+coil-network-ktor3 = { group = "io.coil-kt.coil3", name = "coil-network-ktor3", version.ref = "coil" }
+ktor-client-darwin = { group = "io.ktor", name = "ktor-client-darwin", version.ref = "ktor" }
 commons-imaging = { group = "org.apache.commons", name = "commons-imaging", version.ref = "commonsImaging" }
 slf4j-nop = { module = "org.slf4j:slf4j-nop", version.ref = "slf4j" }
 vlcj = { group = "uk.co.caprica", name = "vlcj", version.ref = "vlcj" }
