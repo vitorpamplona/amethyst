@@ -9,6 +9,7 @@
 #include <jni.h>
 #include "secp256k1_c.h"
 #include <string.h>
+#include <stdlib.h>
 
 #define JNI_CLASS "com/vitorpamplona/quartz/utils/Secp256k1C"
 
