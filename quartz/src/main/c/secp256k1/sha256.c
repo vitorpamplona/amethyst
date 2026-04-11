@@ -3,6 +3,7 @@
  * Minimal SHA-256 for BIP-340. No external dependencies.
  */
 #include "sha256.h"
+#include "sha256_hw.h"
 #include <string.h>
 
 static const uint32_t K[64] = {
@@ -44,7 +45,14 @@ static inline void be32_put(uint8_t *p, uint32_t v) {
     p[3] = (uint8_t)v;
 }
 
+#if SHA256_HW_AVAILABLE
+/* Use hardware-accelerated transform (SHA-NI on x86_64, CE on ARM64) */
 static void sha256_transform(uint32_t state[8], const uint8_t block[64]) {
+    sha256_transform_hw(state, block);
+}
+#else
+/* Software fallback */
+static void sha256_transform_sw(uint32_t state[8], const uint8_t block[64]) {
     uint32_t W[64];
     uint32_t a, b, c, d, e, f, g, h;
     int i;
@@ -67,6 +75,10 @@ static void sha256_transform(uint32_t state[8], const uint8_t block[64]) {
     state[0] += a; state[1] += b; state[2] += c; state[3] += d;
     state[4] += e; state[5] += f; state[6] += g; state[7] += h;
 }
+static void sha256_transform(uint32_t state[8], const uint8_t block[64]) {
+    sha256_transform_sw(state, block);
+}
+#endif /* SHA256_HW_AVAILABLE */
 
 void secp256k1_sha256_init(secp256k1_sha256 *ctx) {
     ctx->state[0] = 0x6a09e667; ctx->state[1] = 0xbb67ae85;
