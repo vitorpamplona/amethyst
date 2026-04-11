@@ -148,6 +148,12 @@ interface IAccountViewModel {
         content: String,
     )
 
+    fun report(
+        user: User,
+        type: com.vitorpamplona.quartz.nip56Reports.ReportType,
+        content: String = "",
+    )
+
     // ── settings accessors (9+ usages) ───────────────────────────────
 
     fun showSensitiveContent(): MutableStateFlow<Boolean?>

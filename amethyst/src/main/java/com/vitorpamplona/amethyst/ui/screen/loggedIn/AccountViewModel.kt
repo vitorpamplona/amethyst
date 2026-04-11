@@ -849,10 +849,10 @@ class AccountViewModel(
         content: String,
     ) = launchSigner { account.report(note, type, content) }
 
-    fun report(
+    override fun report(
         user: User,
         type: ReportType,
-        content: String = "",
+        content: String,
     ) {
         launchSigner {
             account.report(user, type, content)
