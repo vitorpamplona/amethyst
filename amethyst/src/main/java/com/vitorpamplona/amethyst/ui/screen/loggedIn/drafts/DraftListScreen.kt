@@ -45,11 +45,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.delete_all
+import com.vitorpamplona.amethyst.commons.resources.delete_all_drafts_confirmation
 import com.vitorpamplona.amethyst.commons.resources.drafts
+import com.vitorpamplona.amethyst.commons.resources.no
+import com.vitorpamplona.amethyst.commons.resources.yes
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.ui.components.SwipeToDeleteWithConfirmation
@@ -94,10 +96,10 @@ private fun RenderDraftListScreen(
                 showDeleteDialog = false
             },
             title = {
-                Text(text = stringResource(R.string.drafts))
+                Text(text = stringResource(Res.string.drafts))
             },
             text = {
-                Text(text = stringResource(R.string.delete_all_drafts_confirmation))
+                Text(text = stringResource(Res.string.delete_all_drafts_confirmation))
             },
             confirmButton = {
                 TextButton(
@@ -109,7 +111,7 @@ private fun RenderDraftListScreen(
                         showDeleteDialog = false
                     },
                 ) {
-                    Text(text = stringResource(R.string.yes))
+                    Text(text = stringResource(Res.string.yes))
                 }
             },
             dismissButton = {
@@ -118,7 +120,7 @@ private fun RenderDraftListScreen(
                         showDeleteDialog = false
                     },
                 ) {
-                    Text(text = stringResource(R.string.no))
+                    Text(text = stringResource(Res.string.no))
                 }
             },
         )
@@ -142,7 +144,7 @@ private fun RenderDraftListScreen(
                     IconButton(onClick = { showDeleteDialog = true }) {
                         Icon(
                             imageVector = Icons.Default.Delete,
-                            contentDescription = stringResource(R.string.delete_all),
+                            contentDescription = stringResource(Res.string.delete_all),
                         )
                     }
                 },

@@ -57,6 +57,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.core.graphics.drawable.toBitmap
 import coil3.compose.rememberAsyncImagePainter
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.select_signer
 import com.vitorpamplona.amethyst.model.DefaultSignerPermissions
 import com.vitorpamplona.amethyst.ui.theme.Size0dp
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
@@ -68,6 +70,7 @@ import com.vitorpamplona.quartz.nip55AndroidSigner.client.getExternalSignersInst
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun ExternalSignerButton(loginViewModel: LoginViewModel) {
@@ -108,7 +111,9 @@ fun ExternalSignerButton(loginViewModel: LoginViewModel) {
                     ) {
                         Text(
                             modifier = Modifier.padding(8.dp),
-                            text = stringResource(R.string.select_signer),
+                            text =
+                                org.jetbrains.compose.resources
+                                    .stringResource(Res.string.select_signer),
                             fontWeight = FontWeight.Bold,
                             fontSize = 24.sp,
                         )

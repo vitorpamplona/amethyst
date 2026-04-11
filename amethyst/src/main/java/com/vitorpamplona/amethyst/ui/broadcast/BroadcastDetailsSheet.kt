@@ -71,20 +71,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.broadcast_results
 import com.vitorpamplona.amethyst.commons.resources.broadcasts_number
 import com.vitorpamplona.amethyst.commons.resources.collapse
 import com.vitorpamplona.amethyst.commons.resources.dismiss
 import com.vitorpamplona.amethyst.commons.resources.expand
+import com.vitorpamplona.amethyst.commons.resources.retry
 import com.vitorpamplona.amethyst.commons.resources.retry_failed_number
 import com.vitorpamplona.amethyst.commons.resources.retrying
+import com.vitorpamplona.amethyst.commons.resources.share_of
 import com.vitorpamplona.amethyst.commons.resources.timeout
 import com.vitorpamplona.amethyst.model.Constants
 import com.vitorpamplona.amethyst.service.broadcast.BroadcastEvent
@@ -255,7 +255,7 @@ private fun BroadcastSection(
                 }
 
                 Text(
-                    text = stringResource(R.string.share_of, broadcast.successCount, broadcast.totalRelays),
+                    text = stringResource(Res.string.share_of, broadcast.successCount, broadcast.totalRelays),
                     style = MaterialTheme.typography.labelLarge,
                     color = statusColor(broadcast.status),
                 )
@@ -447,7 +447,7 @@ private fun RelayResultRow(
             ) {
                 Icon(
                     imageVector = Icons.Default.Refresh,
-                    contentDescription = stringResource(R.string.retry),
+                    contentDescription = stringResource(Res.string.retry),
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(18.dp),
                 )

@@ -49,11 +49,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.accessibility_select_date
+import com.vitorpamplona.amethyst.commons.resources.closing_time
+import com.vitorpamplona.amethyst.commons.resources.confirm
+import com.vitorpamplona.amethyst.commons.resources.next
 import com.vitorpamplona.amethyst.commons.resources.poll_closing_date_time
 import com.vitorpamplona.amethyst.commons.resources.poll_closing_in
 import com.vitorpamplona.amethyst.ui.note.timeAheadNoDot
@@ -102,7 +104,7 @@ fun ZapPollDeadlinePicker(model: ShortNotePostViewModel) {
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(Icons.Default.DateRange, contentDescription = stringResource(R.string.accessibility_select_date))
+            Icon(Icons.Default.DateRange, contentDescription = stringResource(Res.string.accessibility_select_date))
             Spacer(Modifier.width(12.dp))
 
             if (model.zapPollClosedAt < TimeUtils.oneMinuteFromNow()) {
@@ -124,7 +126,7 @@ fun ZapPollDeadlinePicker(model: ShortNotePostViewModel) {
                 TextButton(onClick = {
                     showDatePicker = false
                     showTimePicker = true
-                }) { Text(stringResource(R.string.next)) }
+                }) { Text(stringResource(Res.string.next)) }
             },
         ) {
             DatePicker(state = datePickerState)
@@ -135,7 +137,7 @@ fun ZapPollDeadlinePicker(model: ShortNotePostViewModel) {
     if (showTimePicker) {
         TimePickerDialog(
             title = {
-                Text(stringResource(R.string.closing_time))
+                Text(stringResource(Res.string.closing_time))
             },
             onDismissRequest = { showTimePicker = false },
             confirmButton = {
@@ -155,7 +157,7 @@ fun ZapPollDeadlinePicker(model: ShortNotePostViewModel) {
 
                         showTimePicker = false
                     },
-                ) { Text(stringResource(R.string.confirm)) }
+                ) { Text(stringResource(Res.string.confirm)) }
             },
         ) {
             TimePicker(state = timePickerState)

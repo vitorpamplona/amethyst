@@ -45,13 +45,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.compose.ContentFrame
 import androidx.media3.ui.compose.SURFACE_TYPE_TEXTURE_VIEW
 import androidx.media3.ui.compose.state.rememberPlayPauseButtonState
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.pause
+import com.vitorpamplona.amethyst.commons.resources.play
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.playback.composable.DEFAULT_MUTED_SETTING
@@ -84,6 +85,7 @@ import com.vitorpamplona.quartz.nip14Subject.subject
 import com.vitorpamplona.quartz.nip92IMeta.imetas
 import com.vitorpamplona.quartz.nipA0VoiceMessages.AudioMeta
 import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun RenderVoiceTrack(
@@ -250,7 +252,7 @@ fun PlayPauseButton(controllerState: MediaControllerState) {
     ) {
         Icon(
             imageVector = if (state.showPlay) Icons.Default.PlayCircleOutline else Icons.Default.PauseCircleOutline,
-            contentDescription = if (state.showPlay) stringResource(R.string.play) else stringResource(R.string.pause),
+            contentDescription = if (state.showPlay) stringResource(Res.string.play) else stringResource(Res.string.pause),
             modifier = Size50Modifier,
             tint = Color.White,
         )

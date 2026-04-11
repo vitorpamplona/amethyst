@@ -44,6 +44,7 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.errors
 import com.vitorpamplona.amethyst.commons.resources.read_from_relay
 import com.vitorpamplona.amethyst.commons.resources.spam
+import com.vitorpamplona.amethyst.commons.resources.uptime
 import com.vitorpamplona.amethyst.commons.resources.write_to_relay
 import com.vitorpamplona.amethyst.service.countToHumanReadable
 import com.vitorpamplona.amethyst.service.countToHumanReadableBytes
@@ -196,7 +197,7 @@ fun RelayStatusRow(
             )
 
             Text(
-                text = stringResource(R.string.uptime, successRate),
+                text = stringResource(Res.string.uptime, successRate),
                 maxLines = 1,
                 fontSize = Font12SP,
                 modifier = HalfStartPadding,

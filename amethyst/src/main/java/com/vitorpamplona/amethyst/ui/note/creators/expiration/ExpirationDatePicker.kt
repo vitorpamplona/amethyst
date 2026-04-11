@@ -52,15 +52,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.confirm
 import com.vitorpamplona.amethyst.commons.resources.expiration_date_explainer
 import com.vitorpamplona.amethyst.commons.resources.expiration_date_label
+import com.vitorpamplona.amethyst.commons.resources.expiration_date_select
 import com.vitorpamplona.amethyst.commons.resources.expiration_expires_in
+import com.vitorpamplona.amethyst.commons.resources.expiration_time
+import com.vitorpamplona.amethyst.commons.resources.next
 import com.vitorpamplona.amethyst.ui.note.timeAheadNoDot
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -136,7 +138,7 @@ fun ExpirationDatePicker(model: IExpiration) {
                 modifier = Modifier.padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(Icons.Outlined.Timer, contentDescription = stringResource(R.string.expiration_date_select))
+                Icon(Icons.Outlined.Timer, contentDescription = stringResource(Res.string.expiration_date_select))
                 Spacer(Modifier.width(12.dp))
 
                 if (model.expirationDate < TimeUtils.oneMinuteFromNow()) {
@@ -158,7 +160,7 @@ fun ExpirationDatePicker(model: IExpiration) {
                 TextButton(onClick = {
                     showDatePicker = false
                     showTimePicker = true
-                }) { Text(stringResource(R.string.next)) }
+                }) { Text(stringResource(Res.string.next)) }
             },
         ) {
             DatePicker(state = datePickerState)
@@ -168,7 +170,7 @@ fun ExpirationDatePicker(model: IExpiration) {
     if (showTimePicker) {
         TimePickerDialog(
             title = {
-                Text(stringResource(R.string.expiration_time))
+                Text(stringResource(Res.string.expiration_time))
             },
             onDismissRequest = { showTimePicker = false },
             confirmButton = {
@@ -187,7 +189,7 @@ fun ExpirationDatePicker(model: IExpiration) {
 
                         showTimePicker = false
                     },
-                ) { Text(stringResource(R.string.confirm)) }
+                ) { Text(stringResource(Res.string.confirm)) }
             },
         ) {
             TimePicker(state = timePickerState)

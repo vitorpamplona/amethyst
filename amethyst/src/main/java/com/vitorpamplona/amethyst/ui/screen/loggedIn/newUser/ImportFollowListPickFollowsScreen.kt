@@ -54,16 +54,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.accounts_found
 import com.vitorpamplona.amethyst.commons.resources.fetching_follow_list
 import com.vitorpamplona.amethyst.commons.resources.follow_accounts
 import com.vitorpamplona.amethyst.commons.resources.no_follows_found
 import com.vitorpamplona.amethyst.commons.resources.num_selected
+import com.vitorpamplona.amethyst.commons.resources.select_all
 import com.vitorpamplona.amethyst.commons.resources.select_users_to_follow
 import com.vitorpamplona.amethyst.commons.resources.skip_for_now
 import com.vitorpamplona.amethyst.commons.resources.start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust
@@ -204,7 +203,7 @@ private fun PreviewList(
                 },
             )
             Spacer(Modifier.width(8.dp))
-            Text(stringResource(R.string.select_all), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+            Text(stringResource(Res.string.select_all), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
         }
 
         HorizontalDivider()

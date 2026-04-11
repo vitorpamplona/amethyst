@@ -84,6 +84,42 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.Nip05State
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.relay_management_add
+import com.vitorpamplona.amethyst.commons.resources.relay_management_allow
+import com.vitorpamplona.amethyst.commons.resources.relay_management_allow_kind
+import com.vitorpamplona.amethyst.commons.resources.relay_management_allow_pubkey
+import com.vitorpamplona.amethyst.commons.resources.relay_management_allowed_kinds
+import com.vitorpamplona.amethyst.commons.resources.relay_management_allowed_pubkeys
+import com.vitorpamplona.amethyst.commons.resources.relay_management_apply
+import com.vitorpamplona.amethyst.commons.resources.relay_management_ban
+import com.vitorpamplona.amethyst.commons.resources.relay_management_ban_event
+import com.vitorpamplona.amethyst.commons.resources.relay_management_ban_pubkey
+import com.vitorpamplona.amethyst.commons.resources.relay_management_banned_events
+import com.vitorpamplona.amethyst.commons.resources.relay_management_banned_pubkeys
+import com.vitorpamplona.amethyst.commons.resources.relay_management_block_ip
+import com.vitorpamplona.amethyst.commons.resources.relay_management_blocked_ips
+import com.vitorpamplona.amethyst.commons.resources.relay_management_cancel
+import com.vitorpamplona.amethyst.commons.resources.relay_management_confirm
+import com.vitorpamplona.amethyst.commons.resources.relay_management_dismiss
+import com.vitorpamplona.amethyst.commons.resources.relay_management_error
+import com.vitorpamplona.amethyst.commons.resources.relay_management_event_id_hex
+import com.vitorpamplona.amethyst.commons.resources.relay_management_ip_address
+import com.vitorpamplona.amethyst.commons.resources.relay_management_kind_number
+import com.vitorpamplona.amethyst.commons.resources.relay_management_loading
+import com.vitorpamplona.amethyst.commons.resources.relay_management_moderation_queue
+import com.vitorpamplona.amethyst.commons.resources.relay_management_no_allowed_kinds
+import com.vitorpamplona.amethyst.commons.resources.relay_management_no_allowed_pubkeys
+import com.vitorpamplona.amethyst.commons.resources.relay_management_no_banned_events
+import com.vitorpamplona.amethyst.commons.resources.relay_management_no_banned_pubkeys
+import com.vitorpamplona.amethyst.commons.resources.relay_management_no_blocked_ips
+import com.vitorpamplona.amethyst.commons.resources.relay_management_no_methods
+import com.vitorpamplona.amethyst.commons.resources.relay_management_no_moderation_events
+import com.vitorpamplona.amethyst.commons.resources.relay_management_reason_optional
+import com.vitorpamplona.amethyst.commons.resources.relay_management_relay_description
+import com.vitorpamplona.amethyst.commons.resources.relay_management_relay_icon_url
+import com.vitorpamplona.amethyst.commons.resources.relay_management_relay_name
+import com.vitorpamplona.amethyst.commons.resources.relay_management_remove
+import com.vitorpamplona.amethyst.commons.resources.relay_management_title
 import com.vitorpamplona.amethyst.commons.resources.search_and_add_a_user
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
@@ -174,7 +210,7 @@ fun RelayManagementScreen(
                 actions = {},
                 title = {
                     Text(
-                        stringResource(R.string.relay_management_title, relay.displayUrl()),
+                        stringResource(Res.string.relay_management_title, relay.displayUrl()),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -200,7 +236,7 @@ fun RelayManagementScreen(
             ) {
                 CircularProgressIndicator()
                 Spacer(modifier = Modifier.height(16.dp))
-                Text(stringResource(R.string.relay_management_loading))
+                Text(stringResource(Res.string.relay_management_loading))
             }
         } else if (supportedMethods.isEmpty() && error != null) {
             Column(
@@ -221,7 +257,7 @@ fun RelayManagementScreen(
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    stringResource(R.string.relay_management_error),
+                    stringResource(Res.string.relay_management_error),
                     style = MaterialTheme.typography.titleMedium,
                 )
                 Spacer(modifier = Modifier.height(8.dp))
@@ -283,7 +319,7 @@ private fun RelayManagementContent(
                 modifier = Modifier.padding(8.dp),
                 action = {
                     TextButton(onClick = { viewModel.clearError() }) {
-                        Text(stringResource(R.string.relay_management_dismiss))
+                        Text(stringResource(Res.string.relay_management_dismiss))
                     }
                 },
             ) {
@@ -335,7 +371,7 @@ private fun RelayManagementContent(
                 verticalArrangement = Arrangement.Center,
             ) {
                 Text(
-                    stringResource(R.string.relay_management_no_methods),
+                    stringResource(Res.string.relay_management_no_methods),
                     style = MaterialTheme.typography.bodyLarge,
                 )
             }
@@ -372,14 +408,14 @@ private fun PubkeysTab(
         if (supportedMethods.contains(Nip86Method.LIST_BANNED_PUBKEYS)) {
             item {
                 SectionHeaderWithAdd(
-                    stringResource(R.string.relay_management_banned_pubkeys),
+                    stringResource(Res.string.relay_management_banned_pubkeys),
                     showAdd = supportedMethods.contains(Nip86Method.BAN_PUBKEY),
                     onAdd = { showBanDialog = true },
                 )
             }
 
             if (bannedPubkeyUsers.isEmpty()) {
-                item { EmptyListMessage(stringResource(R.string.relay_management_no_banned_pubkeys)) }
+                item { EmptyListMessage(stringResource(Res.string.relay_management_no_banned_pubkeys)) }
             } else {
                 items(bannedPubkeyUsers, key = { it.user.pubkeyHex }) { entry ->
                     PubkeyUserCard(
@@ -396,14 +432,14 @@ private fun PubkeysTab(
             item { Spacer(modifier = Modifier.height(8.dp)) }
             item {
                 SectionHeaderWithAdd(
-                    stringResource(R.string.relay_management_allowed_pubkeys),
+                    stringResource(Res.string.relay_management_allowed_pubkeys),
                     showAdd = supportedMethods.contains(Nip86Method.ALLOW_PUBKEY),
                     onAdd = { showAllowDialog = true },
                 )
             }
 
             if (allowedPubkeyUsers.isEmpty()) {
-                item { EmptyListMessage(stringResource(R.string.relay_management_no_allowed_pubkeys)) }
+                item { EmptyListMessage(stringResource(Res.string.relay_management_no_allowed_pubkeys)) }
             } else {
                 items(allowedPubkeyUsers, key = { it.user.pubkeyHex }) { entry ->
                     PubkeyUserCard(
@@ -419,7 +455,7 @@ private fun PubkeysTab(
 
     if (showBanDialog) {
         UserSearchDialog(
-            title = stringResource(R.string.relay_management_ban_pubkey),
+            title = stringResource(Res.string.relay_management_ban_pubkey),
             onConfirm = { user, reason ->
                 viewModel.banPubkey(user.pubkeyHex, reason.ifBlank { null })
                 showBanDialog = false
@@ -431,7 +467,7 @@ private fun PubkeysTab(
 
     if (showAllowDialog) {
         UserSearchDialog(
-            title = stringResource(R.string.relay_management_allow_pubkey),
+            title = stringResource(Res.string.relay_management_allow_pubkey),
             onConfirm = { user, reason ->
                 viewModel.allowPubkey(user.pubkeyHex, reason.ifBlank { null })
                 showAllowDialog = false
@@ -479,7 +515,7 @@ private fun PubkeyUserCard(
                 IconButton(onClick = onRemove) {
                     Icon(
                         Icons.Default.Close,
-                        contentDescription = stringResource(R.string.relay_management_remove),
+                        contentDescription = stringResource(Res.string.relay_management_remove),
                         tint = MaterialTheme.colorScheme.error,
                     )
                 }
@@ -545,14 +581,14 @@ private fun EventsTab(
         if (supportedMethods.contains(Nip86Method.LIST_EVENTS_NEEDING_MODERATION)) {
             item {
                 SectionHeaderWithAdd(
-                    stringResource(R.string.relay_management_moderation_queue),
+                    stringResource(Res.string.relay_management_moderation_queue),
                     showAdd = false,
                     onAdd = {},
                 )
             }
 
             if (eventsNeedingModeration.isEmpty()) {
-                item { EmptyListMessage(stringResource(R.string.relay_management_no_moderation_events)) }
+                item { EmptyListMessage(stringResource(Res.string.relay_management_no_moderation_events)) }
             } else {
                 items(eventsNeedingModeration, key = { it.id }) { entry ->
                     ModerationEventCard(
@@ -571,14 +607,14 @@ private fun EventsTab(
             item { Spacer(modifier = Modifier.height(8.dp)) }
             item {
                 SectionHeaderWithAdd(
-                    stringResource(R.string.relay_management_banned_events),
+                    stringResource(Res.string.relay_management_banned_events),
                     showAdd = supportedMethods.contains(Nip86Method.BAN_EVENT),
                     onAdd = { showBanDialog = true },
                 )
             }
 
             if (bannedEvents.isEmpty()) {
-                item { EmptyListMessage(stringResource(R.string.relay_management_no_banned_events)) }
+                item { EmptyListMessage(stringResource(Res.string.relay_management_no_banned_events)) }
             } else {
                 items(bannedEvents, key = { it.id }) { entry ->
                     HexEntryCard(
@@ -594,8 +630,8 @@ private fun EventsTab(
 
     if (showBanDialog) {
         HexInputDialog(
-            title = stringResource(R.string.relay_management_ban_event),
-            label = stringResource(R.string.relay_management_event_id_hex),
+            title = stringResource(Res.string.relay_management_ban_event),
+            label = stringResource(Res.string.relay_management_event_id_hex),
             onConfirm = { hex, reason ->
                 viewModel.banEvent(hex, reason.ifBlank { null })
                 showBanDialog = false
@@ -620,14 +656,14 @@ private fun KindsTab(
     ) {
         item {
             SectionHeaderWithAdd(
-                stringResource(R.string.relay_management_allowed_kinds),
+                stringResource(Res.string.relay_management_allowed_kinds),
                 showAdd = supportedMethods.contains(Nip86Method.ALLOW_KIND),
                 onAdd = { showAddDialog = true },
             )
         }
 
         if (allowedKinds.isEmpty()) {
-            item { EmptyListMessage(stringResource(R.string.relay_management_no_allowed_kinds)) }
+            item { EmptyListMessage(stringResource(Res.string.relay_management_no_allowed_kinds)) }
         } else {
             items(allowedKinds, key = { it }) { kind ->
                 KindEntryCard(
@@ -665,14 +701,14 @@ private fun IpsTab(
     ) {
         item {
             SectionHeaderWithAdd(
-                stringResource(R.string.relay_management_blocked_ips),
+                stringResource(Res.string.relay_management_blocked_ips),
                 showAdd = supportedMethods.contains(Nip86Method.BLOCK_IP),
                 onAdd = { showBlockDialog = true },
             )
         }
 
         if (blockedIps.isEmpty()) {
-            item { EmptyListMessage(stringResource(R.string.relay_management_no_blocked_ips)) }
+            item { EmptyListMessage(stringResource(Res.string.relay_management_no_blocked_ips)) }
         } else {
             items(blockedIps, key = { it.ip }) { entry ->
                 IpEntryCard(
@@ -687,8 +723,8 @@ private fun IpsTab(
 
     if (showBlockDialog) {
         HexInputDialog(
-            title = stringResource(R.string.relay_management_block_ip),
-            label = stringResource(R.string.relay_management_ip_address),
+            title = stringResource(Res.string.relay_management_block_ip),
+            label = stringResource(Res.string.relay_management_ip_address),
             onConfirm = { ip, reason ->
                 viewModel.blockIp(ip, reason.ifBlank { null })
                 showBlockDialog = false
@@ -715,7 +751,7 @@ private fun SettingsTab(
         if (supportedMethods.contains(Nip86Method.CHANGE_RELAY_NAME)) {
             item {
                 SettingsField(
-                    label = stringResource(R.string.relay_management_relay_name),
+                    label = stringResource(Res.string.relay_management_relay_name),
                     value = relayName,
                     onValueChange = { relayName = it },
                     onApply = { viewModel.changeRelayName(relayName) },
@@ -726,7 +762,7 @@ private fun SettingsTab(
         if (supportedMethods.contains(Nip86Method.CHANGE_RELAY_DESCRIPTION)) {
             item {
                 SettingsField(
-                    label = stringResource(R.string.relay_management_relay_description),
+                    label = stringResource(Res.string.relay_management_relay_description),
                     value = relayDescription,
                     onValueChange = { relayDescription = it },
                     onApply = { viewModel.changeRelayDescription(relayDescription) },
@@ -737,7 +773,7 @@ private fun SettingsTab(
         if (supportedMethods.contains(Nip86Method.CHANGE_RELAY_ICON)) {
             item {
                 SettingsField(
-                    label = stringResource(R.string.relay_management_relay_icon_url),
+                    label = stringResource(Res.string.relay_management_relay_icon_url),
                     value = relayIcon,
                     onValueChange = { relayIcon = it },
                     onApply = { viewModel.changeRelayIcon(relayIcon) },
@@ -769,7 +805,7 @@ private fun SectionHeaderWithAdd(
             IconButton(onClick = onAdd) {
                 Icon(
                     Icons.Default.Add,
-                    contentDescription = stringResource(R.string.relay_management_add),
+                    contentDescription = stringResource(Res.string.relay_management_add),
                     tint = MaterialTheme.colorScheme.primary,
                 )
             }
@@ -824,7 +860,7 @@ private fun HexEntryCard(
                 IconButton(onClick = onRemove) {
                     Icon(
                         Icons.Default.Close,
-                        contentDescription = stringResource(R.string.relay_management_remove),
+                        contentDescription = stringResource(Res.string.relay_management_remove),
                         tint = MaterialTheme.colorScheme.error,
                     )
                 }
@@ -869,7 +905,7 @@ private fun ModerationEventCard(
                     IconButton(onClick = onAllow) {
                         Icon(
                             Icons.Default.CheckCircle,
-                            contentDescription = stringResource(R.string.relay_management_allow),
+                            contentDescription = stringResource(Res.string.relay_management_allow),
                             tint = MaterialTheme.colorScheme.primary,
                         )
                     }
@@ -878,7 +914,7 @@ private fun ModerationEventCard(
                     IconButton(onClick = onBan) {
                         Icon(
                             Icons.Default.Block,
-                            contentDescription = stringResource(R.string.relay_management_ban),
+                            contentDescription = stringResource(Res.string.relay_management_ban),
                             tint = MaterialTheme.colorScheme.error,
                         )
                     }
@@ -915,7 +951,7 @@ private fun KindEntryCard(
                 IconButton(onClick = onRemove) {
                     Icon(
                         Icons.Default.Delete,
-                        contentDescription = stringResource(R.string.relay_management_remove),
+                        contentDescription = stringResource(Res.string.relay_management_remove),
                         tint = MaterialTheme.colorScheme.error,
                     )
                 }
@@ -958,7 +994,7 @@ private fun IpEntryCard(
                 IconButton(onClick = onRemove) {
                     Icon(
                         Icons.Default.Close,
-                        contentDescription = stringResource(R.string.relay_management_remove),
+                        contentDescription = stringResource(Res.string.relay_management_remove),
                         tint = MaterialTheme.colorScheme.error,
                     )
                 }
@@ -988,7 +1024,7 @@ private fun SettingsField(
             modifier = Modifier.align(Alignment.End),
             enabled = value.isNotBlank(),
         ) {
-            Text(stringResource(R.string.relay_management_apply))
+            Text(stringResource(Res.string.relay_management_apply))
         }
     }
 }
@@ -1037,7 +1073,7 @@ private fun UserSearchDialog(
                     OutlinedTextField(
                         value = reasonValue,
                         onValueChange = { reasonValue = it },
-                        label = { Text(stringResource(R.string.relay_management_reason_optional)) },
+                        label = { Text(stringResource(Res.string.relay_management_reason_optional)) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                     )
@@ -1084,12 +1120,12 @@ private fun UserSearchDialog(
                 onClick = { selectedUser?.let { onConfirm(it, reasonValue.trim()) } },
                 enabled = selectedUser != null,
             ) {
-                Text(stringResource(R.string.relay_management_confirm))
+                Text(stringResource(Res.string.relay_management_confirm))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.relay_management_cancel))
+                Text(stringResource(Res.string.relay_management_cancel))
             }
         },
     )
@@ -1122,7 +1158,7 @@ private fun SelectedUserRow(
         IconButton(onClick = onClear) {
             Icon(
                 Icons.Default.Close,
-                contentDescription = stringResource(R.string.relay_management_remove),
+                contentDescription = stringResource(Res.string.relay_management_remove),
                 modifier = Modifier.size(20.dp),
             )
         }
@@ -1200,7 +1236,7 @@ private fun HexInputDialog(
                 OutlinedTextField(
                     value = reasonValue,
                     onValueChange = { reasonValue = it },
-                    label = { Text(stringResource(R.string.relay_management_reason_optional)) },
+                    label = { Text(stringResource(Res.string.relay_management_reason_optional)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                 )
@@ -1211,12 +1247,12 @@ private fun HexInputDialog(
                 onClick = { onConfirm(hexValue.trim(), reasonValue.trim()) },
                 enabled = hexValue.isNotBlank(),
             ) {
-                Text(stringResource(R.string.relay_management_confirm))
+                Text(stringResource(Res.string.relay_management_confirm))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.relay_management_cancel))
+                Text(stringResource(Res.string.relay_management_cancel))
             }
         },
     )
@@ -1231,12 +1267,12 @@ private fun KindInputDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.relay_management_allow_kind)) },
+        title = { Text(stringResource(Res.string.relay_management_allow_kind)) },
         text = {
             OutlinedTextField(
                 value = kindValue,
                 onValueChange = { kindValue = it.filter { c -> c.isDigit() } },
-                label = { Text(stringResource(R.string.relay_management_kind_number)) },
+                label = { Text(stringResource(Res.string.relay_management_kind_number)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
             )
@@ -1248,12 +1284,12 @@ private fun KindInputDialog(
                 },
                 enabled = kindValue.toIntOrNull() != null,
             ) {
-                Text(stringResource(R.string.relay_management_confirm))
+                Text(stringResource(Res.string.relay_management_confirm))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.relay_management_cancel))
+                Text(stringResource(Res.string.relay_management_cancel))
             }
         },
     )

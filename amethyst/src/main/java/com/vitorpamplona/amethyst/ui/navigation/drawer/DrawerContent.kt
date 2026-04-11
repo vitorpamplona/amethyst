@@ -103,6 +103,7 @@ import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.followers
 import com.vitorpamplona.amethyst.commons.resources.following
+import com.vitorpamplona.amethyst.commons.resources.profile_banner
 import com.vitorpamplona.amethyst.commons.resources.profile_image
 import com.vitorpamplona.amethyst.commons.resources.relay_setup
 import com.vitorpamplona.amethyst.commons.resources.show_npub_as_a_qr_code
@@ -247,7 +248,7 @@ fun ProfileContentTemplate(
         } else {
             AsyncImage(
                 model = R.drawable.profile_banner,
-                contentDescription = stringResource(R.string.profile_banner),
+                contentDescription = stringResource(Res.string.profile_banner),
                 contentScale = ContentScale.FillWidth,
                 modifier = bannerModifier,
             )
