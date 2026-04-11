@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.ui.theme
 import androidx.compose.material3.ColorScheme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.luminance
 
 /**
@@ -91,3 +92,69 @@ val ColorScheme.overPictureBackground: Color
  */
 val ColorScheme.bitcoinColor: Color
     get() = if (isLight) Color(0xFFB66605) else Color(0xFFF7931A)
+
+/**
+ * Background color for new/unread items.
+ */
+val ColorScheme.newItemBackgroundColor: Color
+    get() = primary.copy(alpha = 0.12f)
+
+/**
+ * Transparent background overlay.
+ */
+val ColorScheme.transparentBackground: Color
+    get() = background.copy(alpha = 0.32f)
+
+/**
+ * Background for selected notes (new item color composited over background).
+ */
+val ColorScheme.selectedNote: Color
+    get() = newItemBackgroundColor.compositeOver(background)
+
+/**
+ * Secondary button background (primary composited over background).
+ */
+val ColorScheme.secondaryButtonBackground: Color
+    get() = primary.copy(alpha = 0.32f).compositeOver(background)
+
+/**
+ * Chat message background.
+ */
+val ColorScheme.chatBackground: Color
+    get() = if (isLight) onSurface.copy(alpha = 0.08f) else onSurface.copy(alpha = 0.12f)
+
+/**
+ * Chat draft message background.
+ */
+val ColorScheme.chatDraftBackground: Color
+    get() = onSurface.copy(alpha = 0.15f)
+
+/**
+ * Warning color (yellow).
+ */
+val ColorScheme.warningColor: Color
+    get() = if (isLight) LightWarningColor else DarkWarningColor
+
+/**
+ * Warning color on second surface.
+ */
+val ColorScheme.warningColorOnSecondSurface: Color
+    get() = if (isLight) LightWarningColorOnSecondSurface else DarkWarningColorOnSecondSurface
+
+/**
+ * Red color on second surface.
+ */
+val ColorScheme.redColorOnSecondSurface: Color
+    get() = if (isLight) LightRedColorOnSecondSurface else DarkRedColorOnSecondSurface
+
+/**
+ * All good / success color (green).
+ */
+val ColorScheme.allGoodColor: Color
+    get() = if (isLight) LightAllGoodColor else DarkAllGoodColor
+
+/**
+ * Fundraiser progress bar color.
+ */
+val ColorScheme.fundraiserProgressColor: Color
+    get() = if (isLight) LightFundraiserProgressColor else DarkFundraiserProgressColor

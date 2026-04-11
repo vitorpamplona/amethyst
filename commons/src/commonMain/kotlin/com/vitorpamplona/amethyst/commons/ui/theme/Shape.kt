@@ -20,16 +20,38 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.theme
 
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.CornerSize
+import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.ripple
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.Placeholder
+import androidx.compose.ui.text.PlaceholderVerticalAlign
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -45,6 +67,9 @@ val SmallBorder = RoundedCornerShape(7.dp)
 val QuoteBorder = RoundedCornerShape(15.dp)
 val ButtonBorder = RoundedCornerShape(20.dp)
 val EditFieldBorder = RoundedCornerShape(25.dp)
+val SmallishBorder = RoundedCornerShape(9.dp)
+val LeftHalfCircleButtonBorder = ButtonBorder.copy(topEnd = CornerSize(0f), bottomEnd = CornerSize(0f))
+val PopupUpEffect = RoundedCornerShape(0.dp, 0.dp, 15.dp, 15.dp)
 
 // ── Dp size constants ───────────────────────────────────────────────────────
 
@@ -87,6 +112,8 @@ val StdHorzSpacer = Modifier.width(5.dp)
 val StdVertSpacer = Modifier.height(5.dp)
 val DoubleHorzSpacer = Modifier.width(10.dp)
 val DoubleVertSpacer = Modifier.height(10.dp)
+val MinHorzSpacer = Modifier.width(1.dp)
+val HalfDoubleVertSpacer = Modifier.height(7.dp)
 
 // ── Padding modifiers ───────────────────────────────────────────────────────
 
@@ -96,6 +123,7 @@ val StdEndPadding = Modifier.padding(end = 10.dp)
 val HalfEndPadding = Modifier.padding(end = 5.dp)
 val StdTopPadding = Modifier.padding(top = 10.dp)
 val HalfTopPadding = Modifier.padding(top = 5.dp)
+val HalfHalfTopPadding = Modifier.padding(top = 3.dp)
 
 val HalfPadding = Modifier.padding(5.dp)
 val StdPadding = Modifier.padding(10.dp)
@@ -106,6 +134,10 @@ val HalfVertPadding = Modifier.padding(vertical = 5.dp)
 val HorzPadding = Modifier.padding(horizontal = 10.dp)
 val VertPadding = Modifier.padding(vertical = 10.dp)
 val HorzHalfVertPadding = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+val HalfHalfVertPadding = Modifier.padding(vertical = 3.dp)
+val HalfHalfHorzModifier = Modifier.padding(horizontal = 3.dp)
+val DoubleHorzPadding = Modifier.padding(horizontal = 20.dp)
+val DoubleVertPadding = Modifier.padding(vertical = 20.dp)
 
 val MaxWidthWithHorzPadding = Modifier.fillMaxWidth().padding(horizontal = 10.dp)
 
@@ -156,3 +188,212 @@ val SpacedBy55dp = Arrangement.spacedBy(Size55dp)
 val DividerThickness = 0.25.dp
 
 val ripple24dp = ripple(bounded = false, radius = Size24dp)
+val RippleRadius45dp = 45.dp
+
+// ── Height / width modifiers ────────────────────────────────────────────────
+
+val BottomTopHeight = Modifier.height(50.dp)
+val Height100Modifier = Modifier.height(100.dp)
+val Height24dpModifier = Modifier.height(24.dp)
+val Height4dpModifier = Modifier.height(4.dp)
+val Height25Modifier = Modifier.height(Size25dp)
+val Height24dpFilledModifier = Modifier.fillMaxWidth().height(24.dp)
+val Height4dpFilledModifier = Modifier.fillMaxWidth().height(4.dp)
+val ModifierWidth3dp = Modifier.width(3.dp)
+val Width16Space = Modifier.width(Size16dp)
+val StdButtonSizeModifier = Modifier.size(19.dp)
+
+// ── Compound padding / border modifiers ─────────────────────────────────────
+
+val TinyBorders = Modifier.padding(2.dp)
+val NoSoTinyBorders = Modifier.padding(start = 5.dp, end = 5.dp, top = 2.dp, bottom = 2.dp)
+val PaddingHorizontal12Modifier = Modifier.padding(horizontal = 12.dp)
+val MaxWidthPaddingTop5dp = Modifier.fillMaxWidth().padding(top = 5.dp)
+
+// ── Reaction row modifiers ──────────────────────────────────────────────────
+
+val ReactionRowZapraiserWithPadding = Modifier.defaultMinSize(minHeight = 4.dp).padding(start = Size75dp).fillMaxWidth()
+val ReactionRowZapraiser = Modifier.defaultMinSize(minHeight = 4.dp).fillMaxWidth()
+val ReactionRowExpandButton = Modifier.width(65.dp).padding(start = 31.dp)
+val ReactionRowHeight = Modifier.padding(vertical = 7.dp).heightIn(min = 24.dp)
+val ReactionRowHeightWithPadding = Modifier.padding(vertical = 6.dp).heightIn(min = 24.dp).padding(horizontal = 10.dp)
+val ReactionRowHeightChat = Modifier.height(20.dp)
+val ReactionRowHeightChatMaxWidth = Modifier.height(25.dp).fillMaxWidth()
+val UserNameRowHeight = Modifier.fillMaxWidth()
+val UserNameMaxRowHeight = Modifier.fillMaxWidth()
+
+val reactionBox =
+    Modifier
+        .padding(horizontal = 6.dp, vertical = 6.dp)
+        .size(Size40dp)
+        .padding(5.dp)
+
+// ── Author / picture modifiers ──────────────────────────────────────────────
+
+val WidthAuthorPictureModifier = Modifier.width(55.dp)
+val WidthAuthorPictureModifierWithPadding = Modifier.width(65.dp)
+val AccountPictureModifier = Modifier.size(55.dp).clip(shape = CircleShape)
+val HeaderPictureModifier = Modifier.size(34.dp).clip(shape = CircleShape)
+val BadgePictureModifier = Modifier.size(35.dp).clip(shape = CutCornerShape(20))
+val authorNotePictureForImageHeader = Modifier.size(75.dp).padding(10.dp)
+
+// ── Image modifiers ─────────────────────────────────────────────────────────
+
+val imageHeaderBannerSize = Modifier.fillMaxWidth().height(150.dp)
+val SimpleImage75Modifier = Modifier.size(Size75dp).clip(QuoteBorder)
+val SimpleImage35Modifier = Modifier.size(Size34dp).clip(shape = CircleShape)
+val SimpleImageBorder = Modifier.fillMaxSize().clip(QuoteBorder)
+val SimpleHeaderImage = Modifier.fillMaxWidth().heightIn(max = 200.dp)
+val SquaredQuoteBorderModifier = Modifier.aspectRatio(1f).clip(shape = QuoteBorder)
+val FillWidthQuoteBorderModifier = Modifier.fillMaxWidth().clip(shape = QuoteBorder)
+val FollowSetImageModifier =
+    Modifier
+        .fillMaxWidth()
+        .clip(QuoteBorder)
+        .aspectRatio(ratio = 21f / 9f)
+val previewCardImageModifier = Modifier.fillMaxWidth().heightIn(max = 200.dp).padding(bottom = 5.dp)
+
+// ── Relay icon modifiers ────────────────────────────────────────────────────
+
+val MediumRelayIconModifier =
+    Modifier
+        .size(Size35dp)
+        .clip(shape = CircleShape)
+
+val LargeRelayIconModifier =
+    Modifier
+        .size(Size55dp)
+        .clip(shape = CircleShape)
+
+val ShowMoreRelaysButtonIconButtonModifier = Modifier.size(15.dp)
+val ShowMoreRelaysButtonIconModifier = Modifier.size(20.dp)
+val ShowMoreRelaysButtonBoxModifer = Modifier.width(55.dp).height(17.dp)
+
+// ── Note modifiers ──────────────────────────────────────────────────────────
+
+val normalWithTopMarginNoteModifier =
+    Modifier
+        .fillMaxWidth()
+        .padding(
+            start = 12.dp,
+            end = 12.dp,
+            top = 10.dp,
+        )
+
+val boostedNoteModifier =
+    Modifier
+        .fillMaxWidth()
+        .padding(
+            start = 0.dp,
+            end = 0.dp,
+            top = 0.dp,
+        )
+
+val noteComposeRelayBox = Modifier.width(55.dp).heightIn(min = 17.dp).padding(start = 2.dp, end = 1.dp)
+val emptyLineItemModifier = Modifier.height(Size75dp).fillMaxWidth()
+
+// ── Chat modifiers (see ChatTheme.kt for ChatBubbleShape*, ChatPaddingModifier, etc.) ──
+
+val ChatHeadlineBorders = StdPadding
+
+// ── Notification modifiers ──────────────────────────────────────────────────
+
+val NotificationIconModifier = Modifier.width(55.dp).padding(end = 5.dp)
+val NotificationIconModifierSmaller = Modifier.width(55.dp).padding(end = 4.dp)
+
+// ── Video / streaming modifiers ─────────────────────────────────────────────
+
+val VideoReactionColumnPadding = Modifier.padding(bottom = 75.dp)
+val AuthorInfoVideoFeed = Modifier.width(75.dp).padding(end = 15.dp)
+val VolumeBottomIconSize = Modifier.size(60.dp).padding(5.dp)
+val PinBottomIconSize = Modifier.size(60.dp).padding(5.dp)
+val PlayIconSize = Modifier.size(110.dp).padding(10.dp)
+val StreamingHeaderModifier =
+    Modifier
+        .fillMaxWidth()
+        .heightIn(min = 50.dp, max = 300.dp)
+
+val liveStreamTag =
+    Modifier
+        .clip(SmallBorder)
+        .background(Color.Black)
+        .padding(horizontal = Size5dp)
+
+// ── Profile / drawer modifiers ──────────────────────────────────────────────
+
+val profileContentHeaderModifier =
+    Modifier.fillMaxWidth().padding(top = 70.dp, start = Size25dp, end = Size25dp)
+val bannerModifier = Modifier.fillMaxWidth().height(120.dp)
+val drawerSpacing = Modifier.padding(top = Size10dp, start = Size25dp, end = Size25dp)
+val IconRowTextModifier = Modifier.padding(start = 16.dp)
+val IconRowModifier = Modifier.fillMaxWidth().padding(vertical = 15.dp, horizontal = 25.dp)
+
+// ── Edit field modifiers ────────────────────────────────────────────────────
+
+val EditFieldModifier =
+    Modifier.padding(start = 10.dp, end = 10.dp, bottom = 10.dp, top = 5.dp).fillMaxWidth()
+val EditFieldTrailingIconModifier = Modifier.padding(start = 5.dp, end = 0.dp)
+
+// ── NIP05 / Incognito / hash modifiers ──────────────────────────────────────
+
+val NIP05IconSize = Modifier.size(13.dp).padding(top = 1.dp, start = 1.dp, end = 1.dp)
+val IncognitoIconModifier = Modifier.padding(top = 1.dp).size(14.dp)
+val IncognitoIconButtonModifier = Modifier.padding(top = 2.dp).size(20.dp)
+val hashVerifierMark = Modifier.width(40.dp).height(40.dp).padding(10.dp)
+
+// ── Cashu / zap modifiers ───────────────────────────────────────────────────
+
+val CashuCardBorders = Modifier.fillMaxWidth().padding(10.dp).clip(shape = QuoteBorder)
+val ZapPictureCommentModifier = Modifier.height(35.dp).widthIn(min = 35.dp)
+
+// ── Settings modifiers ──────────────────────────────────────────────────────
+
+val SettingsCategoryFirstModifier = Modifier.padding(bottom = 8.dp)
+val SettingsCategorySpacingModifier = Modifier.padding(top = 24.dp, bottom = 8.dp)
+val SettingsCategoryFirstWithHorzBorderModifier = Modifier.padding(bottom = 8.dp, start = 10.dp, end = 10.dp)
+val SettingsCategorySpacingWithHorzBorderModifier = Modifier.padding(top = 24.dp, bottom = 8.dp, start = 10.dp, end = 10.dp)
+
+// ── Voice / suggestion modifiers ────────────────────────────────────────────
+
+val VoiceHeightModifier = Modifier.fillMaxWidth().height(100.dp)
+val SuggestionListDefaultHeightChat = Modifier.heightIn(0.dp, 200.dp)
+val SuggestionListDefaultHeightPage = Modifier.heightIn(0.dp, 300.dp)
+
+// ── Shadow / popup modifiers ────────────────────────────────────────────────
+
+val QuickActionPopupShadow = Modifier.shadow(elevation = Size6dp, shape = SmallestBorder)
+val Size50ModifierOffset10 = Modifier.size(50.dp).offset(y = (-10).dp)
+val Size22ModifierWith4Padding = Modifier.size(22.dp).padding(end = 4.dp)
+
+// ── Inline placeholder ──────────────────────────────────────────────────────
+
+val inlinePlaceholder =
+    Placeholder(
+        width = Font17SP,
+        height = Font17SP,
+        placeholderVerticalAlign = PlaceholderVerticalAlign.Center,
+    )
+
+// ── Animation specs ─────────────────────────────────────────────────────────
+
+val defaultTweenDuration = 100
+val defaultTweenFloatSpec = tween<Float>(durationMillis = defaultTweenDuration)
+val defaultTweenIntOffsetSpec = tween<IntOffset>(durationMillis = defaultTweenDuration)
+
+// ── Keyboard options ────────────────────────────────────────────────────────
+
+val PostKeyboard =
+    KeyboardOptions.Default.copy(
+        autoCorrectEnabled = true,
+        capitalization = KeyboardCapitalization.Sentences,
+    )
+
+// ── Text styles ─────────────────────────────────────────────────────────────
+
+val TextStyleBottomNavBar =
+    TextLinkStyles(
+        SpanStyle(
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+        ),
+    )
