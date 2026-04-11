@@ -20,113 +20,33 @@
  */
 package com.vitorpamplona.amethyst.ui.theme
 
-import androidx.compose.material3.Typography
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.TextUnit
-import androidx.compose.ui.unit.em
-import androidx.compose.ui.unit.sp
-import com.halilibo.richtext.ui.HeadingStyle
+// Backward-compatible re-exports — all typography definitions live in commons
+import com.vitorpamplona.amethyst.commons.ui.theme.DefaultHeadingStyle as CommonsDefaultHeadingStyle
+import com.vitorpamplona.amethyst.commons.ui.theme.DefaultParagraphSpacing as CommonsDefaultParagraphSpacing
+import com.vitorpamplona.amethyst.commons.ui.theme.Font10SP as CommonsFont10SP
+import com.vitorpamplona.amethyst.commons.ui.theme.Font12SP as CommonsFont12SP
+import com.vitorpamplona.amethyst.commons.ui.theme.Font14SP as CommonsFont14SP
+import com.vitorpamplona.amethyst.commons.ui.theme.Font17SP as CommonsFont17SP
+import com.vitorpamplona.amethyst.commons.ui.theme.Font18SP as CommonsFont18SP
+import com.vitorpamplona.amethyst.commons.ui.theme.Font4SP as CommonsFont4SP
+import com.vitorpamplona.amethyst.commons.ui.theme.Font6SP as CommonsFont6SP
+import com.vitorpamplona.amethyst.commons.ui.theme.Font8SP as CommonsFont8SP
+import com.vitorpamplona.amethyst.commons.ui.theme.MarkdownTextStyle as CommonsMarkdownTextStyle
+import com.vitorpamplona.amethyst.commons.ui.theme.Typography as CommonsTypography
 
-// Set of Material typography styles to start with
-val Typography =
-    Typography(
-        bodyLarge =
-            TextStyle(
-                fontFamily = FontFamily.Default,
-                fontWeight = FontWeight.Normal,
-                fontSize = 16.sp,
-            ),
-    /* Other default text styles to override
-    button = TextStyle(
-        fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.W500,
-        fontSize = Font14SP
-    ),
-    caption = TextStyle(
-        fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.Normal,
-        fontSize = 12.sp
-    )
-     */
-    )
+val Typography = CommonsTypography
 
-val Font4SP = 4.sp
-val Font6SP = 6.sp
-val Font8SP = 8.sp
-val Font10SP = 10.sp
-val Font12SP = 12.sp
-val Font14SP = 14.sp
-val Font17SP = 17.sp
-val Font18SP = 18.sp
+val Font4SP = CommonsFont4SP
+val Font6SP = CommonsFont6SP
+val Font8SP = CommonsFont8SP
+val Font10SP = CommonsFont10SP
+val Font12SP = CommonsFont12SP
+val Font14SP = CommonsFont14SP
+val Font17SP = CommonsFont17SP
+val Font18SP = CommonsFont18SP
 
-val MarkdownTextStyle = TextStyle(lineHeight = 1.50.em)
+val MarkdownTextStyle = CommonsMarkdownTextStyle
 
-val DefaultParagraphSpacing: TextUnit = 20.sp
+val DefaultParagraphSpacing = CommonsDefaultParagraphSpacing
 
-internal val DefaultHeadingStyle: HeadingStyle = { level, textStyle ->
-    when (level) {
-        0 -> {
-            Typography.displayLarge.copy(
-                fontSize = 32.sp,
-                lineHeight = 40.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = (-0.5).sp,
-            )
-        }
-
-        1 -> {
-            Typography.displayMedium.copy(
-                fontSize = 26.sp,
-                lineHeight = 34.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = (-0.25).sp,
-            )
-        }
-
-        2 -> {
-            Typography.displaySmall.copy(
-                fontSize = 22.sp,
-                lineHeight = 30.sp,
-                fontWeight = FontWeight.SemiBold,
-            )
-        }
-
-        3 -> {
-            Typography.displaySmall.copy(
-                fontSize = 20.sp,
-                lineHeight = 28.sp,
-                fontWeight = FontWeight.SemiBold,
-            )
-        }
-
-        4 -> {
-            Typography.headlineLarge.copy(
-                fontSize = 18.sp,
-                lineHeight = 24.sp,
-                fontWeight = FontWeight.Medium,
-            )
-        }
-
-        5 -> {
-            Typography.headlineMedium.copy(
-                fontSize = 16.sp,
-                lineHeight = 22.sp,
-                fontWeight = FontWeight.Medium,
-            )
-        }
-
-        6 -> {
-            Typography.headlineSmall.copy(
-                fontSize = 15.sp,
-                lineHeight = 20.sp,
-                fontWeight = FontWeight.Medium,
-            )
-        }
-
-        else -> {
-            textStyle
-        }
-    }
-}
+val DefaultHeadingStyle = CommonsDefaultHeadingStyle
