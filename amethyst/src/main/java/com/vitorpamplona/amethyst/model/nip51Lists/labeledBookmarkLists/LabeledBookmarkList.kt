@@ -20,23 +20,4 @@
  */
 package com.vitorpamplona.amethyst.model.nip51Lists.labeledBookmarkLists
 
-import androidx.compose.runtime.Stable
-import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
-import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.BookmarkIdTag
-import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.EventBookmark
-
-@Stable
-data class LabeledBookmarkList(
-    val identifier: String,
-    val title: String,
-    val description: String?,
-    val image: String?,
-    val privateBookmarks: Set<BookmarkIdTag> = emptySet(),
-    val publicBookmarks: Set<BookmarkIdTag> = emptySet(),
-) {
-    val privatePostBookmarks = privateBookmarks.filterIsInstance<EventBookmark>()
-    val publicPostBookmarks = publicBookmarks.filterIsInstance<EventBookmark>()
-
-    val privateArticleBookmarks = privateBookmarks.filterIsInstance<AddressBookmark>()
-    val publicArticleBookmarks = publicBookmarks.filterIsInstance<AddressBookmark>()
-}
+typealias LabeledBookmarkList = com.vitorpamplona.amethyst.commons.model.nip51Lists.labeledBookmarkLists.LabeledBookmarkList

@@ -20,40 +20,4 @@
  */
 package com.vitorpamplona.amethyst.model.nip17Dms
 
-import com.vitorpamplona.amethyst.model.edits.PrivateStorageRelayListState
-import com.vitorpamplona.amethyst.model.localRelays.LocalRelayListState
-import com.vitorpamplona.amethyst.model.nip65RelayList.Nip65RelayListState
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.stateIn
-
-class DmInboxRelayState(
-    // main relay
-    dmRelayList: DmRelayListState,
-    // backup relays
-    nip65RelayList: Nip65RelayListState,
-    privateOutbox: PrivateStorageRelayListState,
-    localRelayList: LocalRelayListState,
-    scope: CoroutineScope,
-) {
-    val flow =
-        combine(
-            nip65RelayList.inboxFlow,
-            dmRelayList.flow,
-            privateOutbox.flow,
-            localRelayList.flow,
-        ) { nip65Inbox, dmRelayList, privateOutBox, localRelays ->
-            nip65Inbox + dmRelayList + privateOutBox + localRelays
-        }.flowOn(Dispatchers.IO)
-            .stateIn(
-                scope,
-                SharingStarted.Eagerly,
-                nip65RelayList.inboxFlow.value +
-                    dmRelayList.flow.value +
-                    privateOutbox.flow.value +
-                    localRelayList.flow.value,
-            )
-}
+typealias DmInboxRelayState = com.vitorpamplona.amethyst.commons.model.nip17Dms.DmInboxRelayState

@@ -20,41 +20,4 @@
  */
 package com.vitorpamplona.amethyst.model.localRelays
 
-import com.vitorpamplona.amethyst.model.AccountSettings
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
-
-class LocalRelayListState(
-    val signer: NostrSigner,
-    val cache: LocalCache,
-    val scope: CoroutineScope,
-    val settings: AccountSettings,
-) {
-    fun normalizeLocalRelayListWithBackup(relayList: Set<String>): Set<NormalizedRelayUrl> = relayList.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }.toSet()
-
-    val flow =
-        settings.localRelayServers
-            .map { normalizeLocalRelayListWithBackup(it) }
-            .flowOn(Dispatchers.IO)
-            .stateIn(
-                scope,
-                SharingStarted.Eagerly,
-                normalizeLocalRelayListWithBackup(settings.localRelayServers.value),
-            )
-
-    fun saveRelayList(
-        relays: List<NormalizedRelayUrl>,
-        onDone: () -> Unit,
-    ) {
-        settings.updateLocalRelayServers(relays.map { it.url }.toSet())
-        onDone()
-    }
-}
+typealias LocalRelayListState = com.vitorpamplona.amethyst.commons.model.localRelays.LocalRelayListState

@@ -20,20 +20,4 @@
  */
 package com.vitorpamplona.amethyst.model.nip51Lists.peopleList
 
-import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.model.User
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.toPersistentList
-
-@Stable
-data class PeopleList(
-    val identifierTag: String,
-    val title: String,
-    val description: String?,
-    val image: String?,
-    val privateMembers: Set<User> = emptySet(),
-    val publicMembers: Set<User> = emptySet(),
-) {
-    val privateMembersList: ImmutableList<User> = privateMembers.toPersistentList()
-    val publicMembersList: ImmutableList<User> = publicMembers.toPersistentList()
-}
+typealias PeopleList = com.vitorpamplona.amethyst.commons.model.nip51Lists.peopleList.PeopleList

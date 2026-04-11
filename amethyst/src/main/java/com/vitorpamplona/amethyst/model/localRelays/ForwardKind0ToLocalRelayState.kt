@@ -20,23 +20,4 @@
  */
 package com.vitorpamplona.amethyst.model.localRelays
 
-import com.vitorpamplona.amethyst.model.AccountSettings
-import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
-import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.EventCollector
-
-class ForwardKind0ToLocalRelayState(
-    val client: INostrClient,
-    val localRelayList: LocalRelayListState,
-    val settings: AccountSettings,
-) {
-    private val eventCollector =
-        EventCollector(client) { event, _ ->
-            if (event is MetadataEvent && settings.syncedSettings.security.sendKind0EventsToLocalRelay.value) {
-                val localRelays = localRelayList.flow.value
-                if (localRelays.isNotEmpty()) {
-                    client.publish(event, localRelays)
-                }
-            }
-        }
-}
+typealias ForwardKind0ToLocalRelayState = com.vitorpamplona.amethyst.commons.model.localRelays.ForwardKind0ToLocalRelayState

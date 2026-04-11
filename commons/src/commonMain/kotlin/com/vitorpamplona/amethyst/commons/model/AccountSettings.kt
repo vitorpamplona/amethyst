@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.commons.model.mediaServers.DEFAULT_MEDIA_SERVE
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatListRepository
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntryNorm
+import com.vitorpamplona.amethyst.commons.model.nip65RelayList.Nip65RelayListRepository
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
@@ -166,7 +167,7 @@ class AccountSettings(
     var backupUserMetadata: MetadataEvent? = null,
     var backupContactList: ContactListEvent? = null,
     var backupDMRelayList: ChatMessageRelayListEvent? = null,
-    var backupNIP65RelayList: AdvertisedRelayListEvent? = null,
+    override var backupNIP65RelayList: AdvertisedRelayListEvent? = null,
     var backupSearchRelayList: SearchRelayListEvent? = null,
     var backupIndexRelayList: IndexerRelayListEvent? = null,
     var backupRelayFeedsList: RelayFeedsListEvent? = null,
@@ -191,7 +192,11 @@ class AccountSettings(
     var callVideoResolution: CallVideoResolution = CallVideoResolution.HD_720,
     var callMaxBitrateBps: Int = 1_500_000,
 ) : EphemeralChatRepository,
+    Nip65RelayListRepository,
     PublicChatListRepository {
+    override val defaultOutboxRelays: Set<com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl> get() = Constants.eventFinderRelays
+    override val defaultInboxRelays: Set<com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl> get() = Constants.bootstrapInbox
+
     val saveable = MutableStateFlow(AccountSettingsUpdater(null))
     val syncedSettings: AccountSyncedSettings = AccountSyncedSettings(AccountSyncedSettingsInternal())
 
@@ -522,8 +527,8 @@ class AccountSettings(
         }
     }
 
-    fun updateNIP65RelayList(newNIP65RelayList: AdvertisedRelayListEvent?) {
-        if (newNIP65RelayList == null || newNIP65RelayList.tags.isEmpty()) return
+    override fun updateNIP65RelayList(newNIP65RelayList: AdvertisedRelayListEvent) {
+        if (newNIP65RelayList.tags.isEmpty()) return
 
         if (backupNIP65RelayList?.id != newNIP65RelayList.id) {
             backupNIP65RelayList = newNIP65RelayList

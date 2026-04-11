@@ -20,35 +20,4 @@
  */
 package com.vitorpamplona.amethyst.model.nip01UserMetadata
 
-import com.vitorpamplona.amethyst.model.edits.PrivateStorageRelayListState
-import com.vitorpamplona.amethyst.model.localRelays.LocalRelayListState
-import com.vitorpamplona.amethyst.model.nip65RelayList.Nip65RelayListState
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.stateIn
-
-class AccountHomeRelayState(
-    nip65: Nip65RelayListState,
-    privateStorage: PrivateStorageRelayListState,
-    local: LocalRelayListState,
-    scope: CoroutineScope,
-) {
-    val flow =
-        combine(
-            nip65.outboxFlow,
-            privateStorage.flow,
-            local.flow,
-        ) { nip65Outbox, privateOutBox, localRelays ->
-            nip65Outbox + privateOutBox + localRelays
-        }.flowOn(Dispatchers.IO)
-            .stateIn(
-                scope,
-                SharingStarted.Eagerly,
-                nip65.outboxFlow.value +
-                    privateStorage.flow.value +
-                    local.flow.value,
-            )
-}
+typealias AccountHomeRelayState = com.vitorpamplona.amethyst.commons.model.nip01UserMetadata.AccountHomeRelayState

@@ -20,30 +20,4 @@
  */
 package com.vitorpamplona.amethyst.model.nip01UserMetadata
 
-import com.vitorpamplona.amethyst.model.localRelays.LocalRelayListState
-import com.vitorpamplona.amethyst.model.nip65RelayList.Nip65RelayListState
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.stateIn
-
-class NotificationInboxRelayState(
-    nip65RelayList: Nip65RelayListState,
-    localRelayList: LocalRelayListState,
-    scope: CoroutineScope,
-) {
-    val flow =
-        combine(
-            nip65RelayList.inboxFlow,
-            localRelayList.flow,
-        ) { nip65Inbox, localRelays ->
-            nip65Inbox + localRelays
-        }.flowOn(Dispatchers.IO)
-            .stateIn(
-                scope,
-                SharingStarted.Eagerly,
-                nip65RelayList.inboxFlow.value + localRelayList.flow.value,
-            )
-}
+typealias NotificationInboxRelayState = com.vitorpamplona.amethyst.commons.model.nip01UserMetadata.NotificationInboxRelayState
