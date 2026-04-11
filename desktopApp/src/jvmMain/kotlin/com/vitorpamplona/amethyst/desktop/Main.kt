@@ -80,9 +80,14 @@ import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.service.highlights.DesktopHighlightStore
 import com.vitorpamplona.amethyst.desktop.service.images.DesktopImageLoaderSetup
 import com.vitorpamplona.amethyst.desktop.service.media.VlcjPlayerPool
+import com.vitorpamplona.amethyst.desktop.service.namecoin.DesktopNamecoinNameService
+import com.vitorpamplona.amethyst.desktop.service.namecoin.DesktopNamecoinPreferences
+import com.vitorpamplona.amethyst.desktop.service.namecoin.LocalNamecoinPreferences
+import com.vitorpamplona.amethyst.desktop.service.namecoin.LocalNamecoinService
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.desktop.ui.ComposeNoteDialog
 import com.vitorpamplona.amethyst.desktop.ui.ConnectingRelaysScreen
+import com.vitorpamplona.amethyst.desktop.ui.ImportFollowListDialog
 import com.vitorpamplona.amethyst.desktop.ui.LoginScreen
 import com.vitorpamplona.amethyst.desktop.ui.ZapFeedback
 import com.vitorpamplona.amethyst.desktop.ui.auth.ForceLogoutDialog
@@ -97,11 +102,6 @@ import com.vitorpamplona.amethyst.desktop.ui.media.LocalAwtWindow
 import com.vitorpamplona.amethyst.desktop.ui.media.LocalIsImmersiveFullscreen
 import com.vitorpamplona.amethyst.desktop.ui.media.LocalWindowState
 import com.vitorpamplona.amethyst.desktop.ui.profile.ProfileInfoCard
-import com.vitorpamplona.amethyst.desktop.service.namecoin.DesktopNamecoinNameService
-import com.vitorpamplona.amethyst.desktop.service.namecoin.DesktopNamecoinPreferences
-import com.vitorpamplona.amethyst.desktop.service.namecoin.LocalNamecoinPreferences
-import com.vitorpamplona.amethyst.desktop.service.namecoin.LocalNamecoinService
-import com.vitorpamplona.amethyst.desktop.ui.ImportFollowListDialog
 import com.vitorpamplona.amethyst.desktop.ui.relay.RelayStatusCard
 import com.vitorpamplona.amethyst.desktop.ui.settings.MediaServerSettings
 import com.vitorpamplona.amethyst.desktop.ui.settings.NamecoinSettingsSection
@@ -562,9 +562,10 @@ fun App(
                     // Lazy-load Namecoin services — almost never used,
                     // no need to keep in memory from the start (matches Android lazy pattern)
                     val namecoinPreferences = remember { DesktopNamecoinPreferences() }
-                    val namecoinService = remember {
-                        DesktopNamecoinNameService(preferencesProvider = { namecoinPreferences.current })
-                    }
+                    val namecoinService =
+                        remember {
+                            DesktopNamecoinNameService(preferencesProvider = { namecoinPreferences.current })
+                        }
 
                     // Load NWC connection on first composition
                     LaunchedEffect(Unit) {
@@ -575,51 +576,51 @@ fun App(
                         LocalNamecoinPreferences provides namecoinPreferences,
                         LocalNamecoinService provides namecoinService,
                     ) {
-                    MainContent(
-                        layoutMode = layoutMode,
-                        deckState = deckState,
-                        relayManager = relayManager,
-                        localCache = localCache,
-                        accountManager = accountManager,
-                        account = account,
-                        nwcConnection = nwcConnection,
-                        subscriptionsCoordinator = subscriptionsCoordinator,
-                        appScope = scope,
-                        onShowComposeDialog = onShowComposeDialog,
-                        onShowReplyDialog = onShowReplyDialog,
-                        onShowAddColumnDialog = onShowAddColumnDialog,
-                    )
-
-                    // Compose dialog
-                    if (showComposeDialog) {
-                        ComposeNoteDialog(
-                            onDismiss = onDismissComposeDialog,
+                        MainContent(
+                            layoutMode = layoutMode,
+                            deckState = deckState,
                             relayManager = relayManager,
-                            account = account,
-                            replyTo = replyToNote,
-                        )
-                    }
-
-                    // Add column dialog
-                    if (showAddColumnDialog) {
-                        AddColumnDialog(
-                            onDismiss = onDismissAddColumnDialog,
-                            onAdd = { type ->
-                                deckState.addColumn(type)
-                                onDismissAddColumnDialog()
-                            },
-                        )
-                    }
-
-                    // Import Follow List dialog
-                    if (showImportFollowListDialog) {
-                        ImportFollowListDialog(
-                            onDismiss = onDismissImportFollowListDialog,
-                            relayManager = relayManager,
-                            account = account,
                             localCache = localCache,
+                            accountManager = accountManager,
+                            account = account,
+                            nwcConnection = nwcConnection,
+                            subscriptionsCoordinator = subscriptionsCoordinator,
+                            appScope = scope,
+                            onShowComposeDialog = onShowComposeDialog,
+                            onShowReplyDialog = onShowReplyDialog,
+                            onShowAddColumnDialog = onShowAddColumnDialog,
                         )
-                    }
+
+                        // Compose dialog
+                        if (showComposeDialog) {
+                            ComposeNoteDialog(
+                                onDismiss = onDismissComposeDialog,
+                                relayManager = relayManager,
+                                account = account,
+                                replyTo = replyToNote,
+                            )
+                        }
+
+                        // Add column dialog
+                        if (showAddColumnDialog) {
+                            AddColumnDialog(
+                                onDismiss = onDismissAddColumnDialog,
+                                onAdd = { type ->
+                                    deckState.addColumn(type)
+                                    onDismissAddColumnDialog()
+                                },
+                            )
+                        }
+
+                        // Import Follow List dialog
+                        if (showImportFollowListDialog) {
+                            ImportFollowListDialog(
+                                onDismiss = onDismissImportFollowListDialog,
+                                relayManager = relayManager,
+                                account = account,
+                                localCache = localCache,
+                            )
+                        }
                     } // end CompositionLocalProvider
                 }
             }

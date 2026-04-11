@@ -24,7 +24,6 @@ import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.namecoin.Nam
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.namecoin.NamecoinSettings
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.DEFAULT_ELECTRUMX_SERVERS
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumXClient
-import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumxServer
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinLookupCache
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNostrResult
@@ -49,17 +48,19 @@ class DesktopNamecoinNameService(
 ) {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-    private val electrumxClient = ElectrumXClient(
-        socketFactory = { SocketFactory.getDefault() },
-    )
+    private val electrumxClient =
+        ElectrumXClient(
+            socketFactory = { SocketFactory.getDefault() },
+        )
 
-    private val resolver = NamecoinNameResolver(
-        electrumxClient = electrumxClient,
-        serverListProvider = {
-            val settings = preferencesProvider()
-            settings.toElectrumxServers() ?: DEFAULT_ELECTRUMX_SERVERS
-        },
-    )
+    private val resolver =
+        NamecoinNameResolver(
+            electrumxClient = electrumxClient,
+            serverListProvider = {
+                val settings = preferencesProvider()
+                settings.toElectrumxServers() ?: DEFAULT_ELECTRUMX_SERVERS
+            },
+        )
 
     private val cache = NamecoinLookupCache()
 
@@ -92,8 +93,7 @@ class DesktopNamecoinNameService(
     /**
      * Resolve with detailed outcome for error reporting.
      */
-    suspend fun resolveDetailed(identifier: String): NamecoinResolveOutcome =
-        resolver.resolveDetailed(identifier)
+    suspend fun resolveDetailed(identifier: String): NamecoinResolveOutcome = resolver.resolveDetailed(identifier)
 
     /**
      * Verify that a Namecoin name maps to the expected pubkey.
@@ -120,11 +120,12 @@ class DesktopNamecoinNameService(
         scope.launch {
             try {
                 val result = resolve(identifier)
-                state.value = if (result != null) {
-                    NamecoinResolveState.Resolved(result)
-                } else {
-                    NamecoinResolveState.NotFound
-                }
+                state.value =
+                    if (result != null) {
+                        NamecoinResolveState.Resolved(result)
+                    } else {
+                        NamecoinResolveState.NotFound
+                    }
             } catch (e: Exception) {
                 state.value = NamecoinResolveState.Error(e.message ?: "Unknown error")
             }

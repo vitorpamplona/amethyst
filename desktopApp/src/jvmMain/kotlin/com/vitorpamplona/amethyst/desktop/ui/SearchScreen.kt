@@ -83,6 +83,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.chess.RelaySyncStatus
+import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.namecoin.NamecoinResolveState
 import com.vitorpamplona.amethyst.commons.search.AdvancedSearchBarState
 import com.vitorpamplona.amethyst.commons.search.QuerySerializer
 import com.vitorpamplona.amethyst.commons.search.SavedSearch
@@ -93,6 +94,8 @@ import com.vitorpamplona.amethyst.commons.search.parseSearchInput
 import com.vitorpamplona.amethyst.desktop.SearchHistoryStore
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
+import com.vitorpamplona.amethyst.desktop.service.namecoin.LocalNamecoinPreferences
+import com.vitorpamplona.amethyst.desktop.service.namecoin.LocalNamecoinService
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.desktop.subscriptions.SearchFilterFactory
 import com.vitorpamplona.amethyst.desktop.subscriptions.SubscriptionConfig
@@ -103,15 +106,10 @@ import com.vitorpamplona.amethyst.desktop.subscriptions.rememberSubscription
 import com.vitorpamplona.amethyst.desktop.ui.search.AdvancedSearchPanel
 import com.vitorpamplona.amethyst.desktop.ui.search.SearchResultsList
 import com.vitorpamplona.amethyst.desktop.ui.search.SearchSyncBanner
-import com.vitorpamplona.amethyst.desktop.service.namecoin.DesktopNamecoinNameService
-import com.vitorpamplona.amethyst.desktop.service.namecoin.LocalNamecoinPreferences
-import com.vitorpamplona.amethyst.desktop.service.namecoin.LocalNamecoinService
-import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.namecoin.NamecoinResolveState
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinResolveOutcome
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
-
 
 @Composable
 fun SearchScreen(
@@ -161,10 +159,16 @@ fun SearchScreen(
     // Namecoin resolution
     val namecoinService = LocalNamecoinService.current
     val namecoinPrefs = LocalNamecoinPreferences.current
-    val namecoinEnabled = namecoinPrefs?.settings?.collectAsState()?.value?.enabled ?: false
-    val isNamecoinQuery = remember(displayText) {
-        displayText.isNotBlank() && NamecoinNameResolver.isNamecoinIdentifier(displayText.trim())
-    }
+    val namecoinEnabled =
+        namecoinPrefs
+            ?.settings
+            ?.collectAsState()
+            ?.value
+            ?.enabled ?: false
+    val isNamecoinQuery =
+        remember(displayText) {
+            displayText.isNotBlank() && NamecoinNameResolver.isNamecoinIdentifier(displayText.trim())
+        }
 
     var namecoinState by remember { mutableStateOf<NamecoinResolveState?>(null) }
 
@@ -178,20 +182,32 @@ fun SearchScreen(
         }
         namecoinState = NamecoinResolveState.Loading
         val outcome = namecoinService.resolveDetailed(displayText.trim())
-        namecoinState = when (outcome) {
-            is NamecoinResolveOutcome.Success ->
-                NamecoinResolveState.Resolved(outcome.result)
-            is NamecoinResolveOutcome.NameNotFound ->
-                NamecoinResolveState.NotFound
-            is NamecoinResolveOutcome.NoNostrField ->
-                NamecoinResolveState.Error("Name exists but has no Nostr pubkey")
-            is NamecoinResolveOutcome.ServersUnreachable ->
-                NamecoinResolveState.Error("ElectrumX servers unreachable — check your connection or try again")
-            is NamecoinResolveOutcome.InvalidIdentifier ->
-                NamecoinResolveState.Error("Invalid Namecoin identifier")
-            is NamecoinResolveOutcome.Timeout ->
-                NamecoinResolveState.Error("Resolution timed out — servers may be slow, try again")
-        }
+        namecoinState =
+            when (outcome) {
+                is NamecoinResolveOutcome.Success -> {
+                    NamecoinResolveState.Resolved(outcome.result)
+                }
+
+                is NamecoinResolveOutcome.NameNotFound -> {
+                    NamecoinResolveState.NotFound
+                }
+
+                is NamecoinResolveOutcome.NoNostrField -> {
+                    NamecoinResolveState.Error("Name exists but has no Nostr pubkey")
+                }
+
+                is NamecoinResolveOutcome.ServersUnreachable -> {
+                    NamecoinResolveState.Error("ElectrumX servers unreachable — check your connection or try again")
+                }
+
+                is NamecoinResolveOutcome.InvalidIdentifier -> {
+                    NamecoinResolveState.Error("Invalid Namecoin identifier")
+                }
+
+                is NamecoinResolveOutcome.Timeout -> {
+                    NamecoinResolveState.Error("Resolution timed out — servers may be slow, try again")
+                }
+            }
     }
 
     // Skip people search when query specifies kinds that don't include profile (kind 0)
@@ -488,12 +504,14 @@ fun SearchScreen(
                             )
                         }
                     }
+
                     is NamecoinResolveState.Resolved -> {
                         SearchResultCard(
-                            result = SearchResult.UserResult(
-                                pubKeyHex = state.result.pubkey,
-                                displayId = "${state.result.namecoinName} → ${state.result.pubkey.take(12)}...",
-                            ),
+                            result =
+                                SearchResult.UserResult(
+                                    pubKeyHex = state.result.pubkey,
+                                    displayId = "${state.result.namecoinName} → ${state.result.pubkey.take(12)}...",
+                                ),
                             onNavigateToProfile = onNavigateToProfile,
                             onNavigateToThread = onNavigateToThread,
                             onNavigateToHashtag = onNavigateToHashtag,
@@ -508,6 +526,7 @@ fun SearchScreen(
                             )
                         }
                     }
+
                     is NamecoinResolveState.NotFound -> {
                         Text(
                             "Name not found on Namecoin blockchain",
@@ -515,6 +534,7 @@ fun SearchScreen(
                             color = MaterialTheme.colorScheme.error,
                         )
                     }
+
                     is NamecoinResolveState.Error -> {
                         Text(
                             "Resolution error: ${state.message}",
@@ -522,6 +542,7 @@ fun SearchScreen(
                             color = MaterialTheme.colorScheme.error,
                         )
                     }
+
                     null -> {}
                 }
             }
