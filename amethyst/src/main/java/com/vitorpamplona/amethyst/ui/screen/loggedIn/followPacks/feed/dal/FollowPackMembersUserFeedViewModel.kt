@@ -24,12 +24,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.screen.UserFeedViewModel
 
 class FollowPackMembersUserFeedViewModel(
     val followPackNote: AddressableNote,
     val account: Account,
-) : UserFeedViewModel(FollowPackMembersFeedFilter(followPackNote, account)) {
+) : UserFeedViewModel(FollowPackMembersFeedFilter(followPackNote, account), LocalCache) {
     class Factory(
         val followPackNote: AddressableNote,
         val account: Account,

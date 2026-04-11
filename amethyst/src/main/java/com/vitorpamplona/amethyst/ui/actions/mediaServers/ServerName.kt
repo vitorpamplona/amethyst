@@ -20,30 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.actions.mediaServers
 
-import kotlinx.serialization.Serializable
+// Re-export from commons for backwards compatibility
+typealias ServerName = com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
+typealias ServerType = com.vitorpamplona.amethyst.commons.model.mediaServers.ServerType
 
-@Serializable
-data class ServerName(
-    val name: String,
-    val baseUrl: String,
-    val type: ServerType = ServerType.Blossom,
-)
-
-enum class ServerType {
-    Blossom,
-    NIP95,
-    NIP96,
-}
-
-val DEFAULT_MEDIA_SERVERS: List<ServerName> =
-    listOf(
-        ServerName("Nostr.Build", "https://blossom.band/", ServerType.Blossom),
-        ServerName("24242.io", "https://24242.io/", ServerType.Blossom),
-        ServerName("Azzamo", "https://blossom.azzamo.media", ServerType.Blossom),
-        ServerName("YakiHonne", "https://blossom.yakihonne.com/", ServerType.Blossom),
-        ServerName("Primal", "https://blossom.primal.net/", ServerType.Blossom),
-        ServerName("Sovbit", "https://cdn.sovbit.host", ServerType.Blossom),
-        ServerName("Nostr.Download", "https://nostr.download", ServerType.Blossom),
-        ServerName("Satellite (Paid)", "https://cdn.satellite.earth", ServerType.Blossom),
-        ServerName("NostrMedia (Paid)", "https://nostrmedia.com", ServerType.Blossom),
-    )
+val DEFAULT_MEDIA_SERVERS = com.vitorpamplona.amethyst.commons.model.mediaServers.DEFAULT_MEDIA_SERVERS
