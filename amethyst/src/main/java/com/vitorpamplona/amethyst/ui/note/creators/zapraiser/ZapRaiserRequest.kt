@@ -20,94 +20,13 @@
  */
 package com.vitorpamplona.amethyst.ui.note.creators.zapraiser
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
-import com.vitorpamplona.amethyst.commons.hashtags.Lightning
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.DividerThickness
-import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
-import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.amethyst.commons.ui.note.creators.zapraiser.ZapRaiserRequest as CommonsZapRaiserRequest
 
 @Composable
 fun ZapRaiserRequest(
     titleText: String? = null,
     model: IZapRaiser,
 ) {
-    Column {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth().padding(bottom = 5.dp),
-        ) {
-            Icon(
-                imageVector = CustomHashTagIcons.Lightning,
-                null,
-                modifier = Size20Modifier,
-                tint = Color.Unspecified,
-            )
-
-            Text(
-                text = titleText ?: stringRes(R.string.zapraiser),
-                fontSize = 20.sp,
-                fontWeight = FontWeight.W500,
-                modifier = Modifier.padding(start = 10.dp),
-            )
-        }
-
-        HorizontalDivider(thickness = DividerThickness)
-
-        Text(
-            text = stringRes(R.string.zapraiser_explainer),
-            color = MaterialTheme.colorScheme.placeholderText,
-            modifier = Modifier.padding(vertical = 10.dp),
-        )
-
-        OutlinedTextField(
-            label = { Text(text = stringRes(R.string.zapraiser_target_amount_in_sats)) },
-            modifier = Modifier.fillMaxWidth(),
-            value =
-                if (model.zapRaiserAmount.value != null) {
-                    model.zapRaiserAmount.value.toString()
-                } else {
-                    ""
-                },
-            onValueChange = {
-                runCatching {
-                    if (it.isEmpty()) {
-                        model.updateZapRaiserAmount(null)
-                    } else {
-                        model.updateZapRaiserAmount(it.toLongOrNull())
-                    }
-                }
-            },
-            placeholder = {
-                Text(
-                    text = "1000",
-                    color = MaterialTheme.colorScheme.placeholderText,
-                )
-            },
-            keyboardOptions =
-                KeyboardOptions.Default.copy(
-                    keyboardType = KeyboardType.Number,
-                ),
-            singleLine = true,
-        )
-    }
+    CommonsZapRaiserRequest(titleText = titleText, model = model)
 }

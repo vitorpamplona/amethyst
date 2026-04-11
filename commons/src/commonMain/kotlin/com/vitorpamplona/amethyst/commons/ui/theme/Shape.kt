@@ -18,18 +18,20 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.creators.contentWarning
+package com.vitorpamplona.amethyst.commons.ui.theme
 
-import androidx.compose.runtime.Composable
-import com.vitorpamplona.amethyst.commons.ui.note.creators.contentWarning.ContentSensitivityExplainer as CommonsContentSensitivityExplainer
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ColorScheme
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 
-@Composable
-fun ContentSensitivityExplainer(
-    description: String,
-    onDescriptionChange: (String) -> Unit,
-) {
-    CommonsContentSensitivityExplainer(
-        description = description,
-        onDescriptionChange = onDescriptionChange,
-    )
-}
+val QuoteBorder = RoundedCornerShape(15.dp)
+
+val Size20Modifier = Modifier.size(20.dp)
+
+val DividerThickness = 0.25.dp
+
+val ColorScheme.placeholderText: Color
+    get() = onSurface.copy(alpha = 0.42f)

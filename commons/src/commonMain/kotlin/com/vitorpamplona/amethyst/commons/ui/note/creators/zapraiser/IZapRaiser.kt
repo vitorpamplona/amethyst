@@ -18,18 +18,14 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.creators.contentWarning
+package com.vitorpamplona.amethyst.commons.ui.note.creators.zapraiser
 
-import androidx.compose.runtime.Composable
-import com.vitorpamplona.amethyst.commons.ui.note.creators.contentWarning.ContentSensitivityExplainer as CommonsContentSensitivityExplainer
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.Stable
 
-@Composable
-fun ContentSensitivityExplainer(
-    description: String,
-    onDescriptionChange: (String) -> Unit,
-) {
-    CommonsContentSensitivityExplainer(
-        description = description,
-        onDescriptionChange = onDescriptionChange,
-    )
+@Stable
+interface IZapRaiser {
+    val zapRaiserAmount: MutableState<Long?>
+
+    fun updateZapRaiserAmount(newAmount: Long?)
 }

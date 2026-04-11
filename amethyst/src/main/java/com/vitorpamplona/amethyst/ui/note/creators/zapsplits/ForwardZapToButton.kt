@@ -29,47 +29,23 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowForwardIos
 import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.commons.icons.ZapSplit
+import com.vitorpamplona.amethyst.commons.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
-import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
+import com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.ForwardZapToButton as CommonsForwardZapToButton
+import com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.ZapSplitIcon as CommonsZapSplitIcon
 
 @Composable
 fun ForwardZapToButton(
     isActive: Boolean,
     onClick: () -> Unit,
 ) {
-    IconButton(
-        onClick = { onClick() },
-    ) {
-        if (!isActive) {
-            ZapSplitIcon(tint = MaterialTheme.colorScheme.onBackground)
-        } else {
-            ZapSplitIcon(tint = BitcoinOrange)
-        }
-    }
-}
-
-@Composable
-fun ZapSplitIcon(
-    modifier: Modifier = Size20Modifier,
-    tint: Color = BitcoinOrange,
-) {
-    Icon(
-        imageVector = ZapSplit,
-        contentDescription = stringRes(id = R.string.zap_split_title),
-        modifier = modifier,
-        tint = tint,
-    )
+    CommonsForwardZapToButton(isActive = isActive, onClick = onClick)
 }
 
 @Preview
@@ -102,4 +78,12 @@ fun ZapSplitPreview() {
         }
         ZapSplitIcon(tint = BitcoinOrange)
     }
+}
+
+@Composable
+fun ZapSplitIcon(
+    modifier: Modifier = com.vitorpamplona.amethyst.commons.ui.theme.Size20Modifier,
+    tint: androidx.compose.ui.graphics.Color = BitcoinOrange,
+) {
+    CommonsZapSplitIcon(modifier = modifier, tint = tint)
 }
