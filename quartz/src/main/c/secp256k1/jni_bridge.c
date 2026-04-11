@@ -273,3 +273,20 @@ Java_com_vitorpamplona_quartz_utils_Secp256k1C_nativeEcdhXOnly(
     if (!secp256k1c_ecdh_xonly(result, pub, sc)) return NULL;
     return make_bytes(env, result, 32);
 }
+
+/* ==================== SHA-256 (for benchmarking hardware vs software) ==================== */
+
+JNIEXPORT jbyteArray JNICALL
+Java_com_vitorpamplona_quartz_utils_Secp256k1C_nativeSha256(
+    JNIEnv *env, jclass cls, jbyteArray data
+) {
+    (void)cls;
+    jint len = (*env)->GetArrayLength(env, data);
+    uint8_t *buf = (uint8_t *)(*env)->GetByteArrayElements(env, data, NULL);
+    if (!buf) return NULL;
+
+    uint8_t out[32];
+    secp256k1_sha256_hash(out, buf, (size_t)len);
+    (*env)->ReleaseByteArrayElements(env, data, (jbyte *)buf, JNI_ABORT);
+    return make_bytes(env, out, 32);
+}
