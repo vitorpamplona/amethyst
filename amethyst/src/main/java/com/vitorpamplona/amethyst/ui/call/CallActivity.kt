@@ -48,10 +48,8 @@ import com.vitorpamplona.amethyst.ui.screen.ManageWebOkHttp
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 class CallActivity : AppCompatActivity() {
     val isInPipMode = mutableStateOf(false)
@@ -69,6 +67,7 @@ class CallActivity : AppCompatActivity() {
         }
 
     private var pendingAcceptIsVideo = false
+    private var hangupInitiated = false
 
     private val pipActionReceiver =
         object : BroadcastReceiver() {
@@ -201,13 +200,17 @@ class CallActivity : AppCompatActivity() {
         // We must NOT hang up when the user simply presses Home from the full-screen
         // call UI (that enters PiP via onUserLeaveHint instead).
         if (wasInPipMode && !isInPictureInPictureMode) {
-            val state = CallSessionBridge.callManager?.state?.value
+            hangupInitiated = true
+            val manager = CallSessionBridge.callManager
+            val state = manager?.state?.value
             if (state is CallState.Connected || state is CallState.Connecting || state is CallState.Offering) {
-                lifecycleScope.launch {
-                    withContext(NonCancellable) { CallSessionBridge.callManager?.hangup() }
+                CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate).launch {
+                    manager.hangup()
+                    finishAndRemoveTask()
                 }
+            } else {
+                finishAndRemoveTask()
             }
-            finishAndRemoveTask()
         }
     }
 
@@ -216,26 +219,27 @@ class CallActivity : AppCompatActivity() {
 
         // Safety net: if the Activity is destroyed while a call is still
         // ringing/offering, ensure the call is hung up so audio stops.
-        // Use a standalone CoroutineScope because lifecycleScope is cancelled
-        // during super.onDestroy() and may drop suspend work.
-        val manager = CallSessionBridge.callManager
-        when (manager?.state?.value) {
-            is CallState.IncomingCall -> {
-                CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate).launch {
-                    manager.rejectCall()
+        // Skip if onStop already initiated the hangup to avoid double signaling.
+        if (!hangupInitiated) {
+            val manager = CallSessionBridge.callManager
+            when (manager?.state?.value) {
+                is CallState.IncomingCall -> {
+                    CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate).launch {
+                        manager.rejectCall()
+                    }
                 }
-            }
 
-            is CallState.Offering,
-            is CallState.Connecting,
-            is CallState.Connected,
-            -> {
-                CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate).launch {
-                    manager.hangup()
+                is CallState.Offering,
+                is CallState.Connecting,
+                is CallState.Connected,
+                -> {
+                    CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate).launch {
+                        manager.hangup()
+                    }
                 }
-            }
 
-            else -> {}
+                else -> {}
+            }
         }
 
         super.onDestroy()

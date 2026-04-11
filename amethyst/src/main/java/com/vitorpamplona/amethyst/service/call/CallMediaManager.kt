@@ -117,6 +117,7 @@ class CallMediaManager(
         }
     }
 
+    @Synchronized
     fun createVideoResources() {
         if (localVideoSource != null) return
         val factory = peerConnectionFactory ?: return
