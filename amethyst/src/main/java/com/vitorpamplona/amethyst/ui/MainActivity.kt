@@ -26,10 +26,17 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.runtime.CompositionLocalProvider
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.platform.LocalPlatformClipboard
+import com.vitorpamplona.amethyst.commons.platform.LocalPlatformShare
+import com.vitorpamplona.amethyst.commons.platform.LocalPlatformToast
 import com.vitorpamplona.amethyst.debugState
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.platform.AndroidClipboard
+import com.vitorpamplona.amethyst.platform.AndroidShare
+import com.vitorpamplona.amethyst.platform.AndroidToast
 import com.vitorpamplona.amethyst.service.lang.LanguageTranslatorService
 import com.vitorpamplona.amethyst.service.playback.composable.DEFAULT_MUTED_SETTING
 import com.vitorpamplona.amethyst.service.playback.pip.BackgroundMedia
@@ -65,8 +72,14 @@ class MainActivity : AppCompatActivity() {
 
         setContent {
             StringResSetup()
-            AmethystTheme {
-                AccountScreen(Amethyst.instance.sessionManager)
+            CompositionLocalProvider(
+                LocalPlatformClipboard provides AndroidClipboard(applicationContext),
+                LocalPlatformShare provides AndroidShare(applicationContext),
+                LocalPlatformToast provides AndroidToast(applicationContext),
+            ) {
+                AmethystTheme {
+                    AccountScreen(Amethyst.instance.sessionManager)
+                }
             }
         }
     }
