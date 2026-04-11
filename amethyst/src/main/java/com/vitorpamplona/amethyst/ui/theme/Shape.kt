@@ -55,8 +55,8 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarSize
 import com.vitorpamplona.amethyst.commons.ui.theme.Font17SP
-import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarSize
 
 val Shapes =
     Shapes(

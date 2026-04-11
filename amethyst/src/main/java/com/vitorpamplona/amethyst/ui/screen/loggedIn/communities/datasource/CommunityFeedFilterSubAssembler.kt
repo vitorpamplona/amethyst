@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.datasource
 
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.SingleSubEoseManager
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.communities.datasource.filterCommunityPostsFromEverybody
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.communities.datasource.filterCommunityPostsFromModerators
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient

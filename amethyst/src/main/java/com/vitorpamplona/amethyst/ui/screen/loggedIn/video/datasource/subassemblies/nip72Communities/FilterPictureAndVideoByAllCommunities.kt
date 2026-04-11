@@ -20,12 +20,12 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.subassemblies.nip72Communities
 
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.video.datasource.LegacyMimeTypes
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.video.datasource.PictureAndVideoKTags
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.video.datasource.PictureAndVideoKinds
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.video.datasource.PictureAndVideoLegacyKinds
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.allcommunities.AllCommunitiesTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.LegacyMimeTypes
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.PictureAndVideoKTags
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.PictureAndVideoKinds
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.PictureAndVideoLegacyKinds
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter

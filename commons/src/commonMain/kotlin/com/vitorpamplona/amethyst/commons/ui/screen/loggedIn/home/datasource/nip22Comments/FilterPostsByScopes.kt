@@ -18,14 +18,32 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.tor
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.home.datasource.nip22Comments
 
-sealed class TorServiceStatus {
-    data class Active(
-        val port: Int,
-    ) : TorServiceStatus()
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 
-    object Off : TorServiceStatus()
+val CommentKinds = listOf(CommentEvent.KIND)
 
-    object Connecting : TorServiceStatus()
+fun filterHomePostsByScopes(
+    relay: NormalizedRelayUrl,
+    scopesToLoad: Set<String>,
+    since: Long?,
+): List<RelayBasedFilter> {
+    if (scopesToLoad.isEmpty()) return emptyList()
+
+    return listOf(
+        RelayBasedFilter(
+            relay = relay,
+            filter =
+                Filter(
+                    kinds = CommentKinds,
+                    tags = mapOf("I" to scopesToLoad.toList()),
+                    limit = 100,
+                    since = since,
+                ),
+        ),
+    )
 }
