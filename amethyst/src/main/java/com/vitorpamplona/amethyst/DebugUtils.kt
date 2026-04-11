@@ -35,7 +35,10 @@ import kotlin.time.DurationUnit
 import kotlin.time.measureTimedValue
 
 @Suppress("SENSELESS_COMPARISON")
-val isDebug = BuildConfig.DEBUG || BuildConfig.BUILD_TYPE == "benchmark"
+val isDebug =
+    (BuildConfig.DEBUG || BuildConfig.BUILD_TYPE == "benchmark").also {
+        com.vitorpamplona.amethyst.commons.debug.isDebugEnabled = it
+    }
 
 private const val STATE_DUMP_TAG = "STATE DUMP"
 

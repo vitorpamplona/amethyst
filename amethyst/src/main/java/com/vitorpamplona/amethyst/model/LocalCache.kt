@@ -277,7 +277,7 @@ object LocalCache : ILocalCache, ICacheProvider {
 
     val paymentTracker = NwcPaymentTracker()
 
-    val relayHints = HintIndexer()
+    override val relayHints = HintIndexer()
 
     val deletionIndex = DeletionIndex()
 
@@ -418,9 +418,9 @@ object LocalCache : ILocalCache, ICacheProvider {
         return count
     }
 
-    fun getAddressableNoteIfExists(key: String): AddressableNote? = Address.parse(key)?.let { addressables.get(it) }
+    override fun getAddressableNoteIfExists(key: String): AddressableNote? = Address.parse(key)?.let { addressables.get(it) }
 
-    fun getAddressableNoteIfExists(address: Address): AddressableNote? = addressables.get(address)
+    override fun getAddressableNoteIfExists(address: Address): AddressableNote? = addressables.get(address)
 
     override fun getNoteIfExists(hexKey: String): Note? = if (hexKey.length == 64) notes.get(hexKey) else Address.parse(hexKey)?.let { addressables.get(it) }
 
@@ -439,7 +439,7 @@ object LocalCache : ILocalCache, ICacheProvider {
             getNoteIfExists(event.id)
         }
 
-    fun getOrCreateNote(event: Event): Note =
+    override fun getOrCreateNote(event: Event): Note =
         if (event is AddressableEvent) {
             getOrCreateAddressableNote(event.address())
         } else {
@@ -491,7 +491,7 @@ object LocalCache : ILocalCache, ICacheProvider {
             false
         }
 
-    fun getOrAddAliasNote(
+    override fun getOrAddAliasNote(
         idHex: String,
         note: Note,
     ): Note {
@@ -502,7 +502,7 @@ object LocalCache : ILocalCache, ICacheProvider {
         }
     }
 
-    fun getOrCreateNote(idHex: String): Note {
+    override fun getOrCreateNote(idHex: String): Note {
         require(isValidHex(idHex)) { "$idHex is not a valid hex" }
 
         return notes.getOrCreate(idHex) {
@@ -510,7 +510,7 @@ object LocalCache : ILocalCache, ICacheProvider {
         }
     }
 
-    fun getOrCreateChatroomList(key: HexKey): ChatroomList = chatroomList.getOrCreate(key) { ChatroomList(key) }
+    override fun getOrCreateChatroomList(key: HexKey): ChatroomList = chatroomList.getOrCreate(key) { ChatroomList(key) }
 
     fun getOrCreatePublicChatChannel(key: HexKey): PublicChatChannel = publicChatChannels.getOrCreate(key) { PublicChatChannel(key) }
 
@@ -530,7 +530,7 @@ object LocalCache : ILocalCache, ICacheProvider {
         return Hex.isHex64(key)
     }
 
-    fun checkGetOrCreateAddressableNote(key: String): AddressableNote? =
+    override fun checkGetOrCreateAddressableNote(key: String): AddressableNote? =
         try {
             val addr = Address.parse(key)
             if (addr != null) {

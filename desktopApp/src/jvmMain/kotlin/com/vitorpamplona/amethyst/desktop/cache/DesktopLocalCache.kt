@@ -512,7 +512,7 @@ class DesktopLocalCache : ICacheProvider {
 
     override fun checkGetOrCreateNote(hexKey: HexKey): Note = getOrCreateNote(hexKey)
 
-    fun getOrCreateNote(hexKey: HexKey): Note =
+    override fun getOrCreateNote(hexKey: HexKey): Note =
         notes.getOrCreate(hexKey) {
             Note(hexKey)
         }

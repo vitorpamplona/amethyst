@@ -24,9 +24,11 @@ import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.hints.HintIndexer
 
 /**
  * Cache provider interface for accessing cached Notes, Users, and Channels.
@@ -135,4 +137,51 @@ interface ICacheProvider {
     fun getOrCreateUser(pubkey: HexKey): User?
 
     fun justConsumeMyOwnEvent(event: Event): Boolean
+
+    // --- Methods needed by Account.kt ---
+
+    /**
+     * Gets the relay hint indexer for resolving relay URLs for keys.
+     */
+    val relayHints: HintIndexer
+        get() = HintIndexer()
+
+    /**
+     * Gets or creates a Note by event ID hex.
+     */
+    fun getOrCreateNote(idHex: HexKey): Note
+
+    /**
+     * Gets or creates a Note from an Event (addressable or regular).
+     */
+    fun getOrCreateNote(event: Event): Note = getOrCreateNote(event.id) ?: error("Failed to create note for event ${event.id}")
+
+    /**
+     * Gets an AddressableNote if it exists, by string key.
+     */
+    fun getAddressableNoteIfExists(key: String): AddressableNote? = null
+
+    /**
+     * Gets an AddressableNote if it exists, by Address.
+     */
+    fun getAddressableNoteIfExists(address: Address): AddressableNote? = null
+
+    /**
+     * Gets or creates a ChatroomList for a given key.
+     */
+    fun getOrCreateChatroomList(key: HexKey): ChatroomList = ChatroomList(key)
+
+    /**
+     * Gets or adds an alias note mapping.
+     */
+    fun getOrAddAliasNote(
+        idHex: String,
+        note: Note,
+    ): Note = note
+
+    /**
+     * Checks and gets or creates an AddressableNote from a string key.
+     * Returns null if the key cannot be parsed as an Address.
+     */
+    fun checkGetOrCreateAddressableNote(key: String): AddressableNote? = null
 }
