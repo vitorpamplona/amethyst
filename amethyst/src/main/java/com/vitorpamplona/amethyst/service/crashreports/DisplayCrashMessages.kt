@@ -36,9 +36,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.res.stringResource
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.crashreport_found
+import com.vitorpamplona.amethyst.commons.resources.would_you_like_to_send_the_recent_crash_report_to_amethyst_in_a_dm_no_personal_information_will_be_shared
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeToMessage
@@ -48,6 +50,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size16dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun DisplayCrashMessages(
@@ -65,10 +68,10 @@ fun DisplayCrashMessages(
     stackTrace.value?.let { stack ->
         AlertDialog(
             onDismissRequest = { stackTrace.value = null },
-            title = { Text(stringResource(R.string.crashreport_found)) },
+            title = { Text(stringResource(Res.string.crashreport_found)) },
             text = {
                 SelectionContainer {
-                    Text(stringResource(R.string.would_you_like_to_send_the_recent_crash_report_to_amethyst_in_a_dm_no_personal_information_will_be_shared))
+                    Text(stringResource(Res.string.would_you_like_to_send_the_recent_crash_report_to_amethyst_in_a_dm_no_personal_information_will_be_shared))
                 }
             },
             dismissButton = {
