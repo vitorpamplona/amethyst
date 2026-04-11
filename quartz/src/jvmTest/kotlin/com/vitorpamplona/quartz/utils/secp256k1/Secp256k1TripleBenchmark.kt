@@ -84,7 +84,7 @@ class Secp256k1TripleBenchmark {
         iterations: Int,
         crossinline acinqOp: () -> Unit,
         crossinline kotlinOp: () -> Unit,
-        crossinline cOp: (() -> Unit)? = null,
+        noinline cOp: (() -> Unit)? = null,
     ): TripleResult {
         repeat(warmup) { acinqOp() }
         val acinqStart = System.nanoTime()
