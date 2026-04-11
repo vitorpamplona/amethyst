@@ -77,6 +77,7 @@ import coil3.compose.SubcomposeAsyncImageContent
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.platform.toJavaFile
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaLocalImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaLocalVideo
@@ -188,7 +189,7 @@ fun ZoomableContentView(
         }
 
         is MediaLocalVideo -> {
-            content.localFile?.let {
+            content.localFile?.toJavaFile()?.let {
                 Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                     VideoView(
                         videoUri = it.toUri().toString(),
@@ -251,7 +252,7 @@ fun LocalImageView(
         CrossfadeIfEnabled(targetState = showImage.value, contentAlignment = Alignment.Center, accountViewModel = accountViewModel) { imageVisible ->
             if (imageVisible) {
                 SubcomposeAsyncImage(
-                    model = content.localFile,
+                    model = content.localFile?.toJavaFile(),
                     contentDescription = content.description,
                     contentScale = contentScale,
                     modifier = mainImageModifier,
@@ -735,7 +736,11 @@ fun ShareMediaAction(
     } else if (content is MediaPreloadedContent) {
         ShareMediaAction(
             popupExpanded = popupExpanded,
-            videoUri = content.localFile?.toUri().toString(),
+            videoUri =
+                content.localFile
+                    ?.toJavaFile()
+                    ?.toUri()
+                    .toString(),
             postNostrUri = content.uri,
             blurhash = content.blurhash,
             dim = content.dim,
@@ -855,7 +860,7 @@ fun ShareMediaAction(
                         }
 
                         is MediaLocalVideo -> {
-                            content.localFile?.let { localFile ->
+                            content.localFile?.toJavaFile()?.let { localFile ->
                                 M3ActionRow(icon = Icons.Outlined.Share, text = stringRes(R.string.share_video)) {
                                     accountViewModel.viewModelScope.launch { shareLocalVideoFile(context, localFile, mimeType) }
                                     onDismiss()
