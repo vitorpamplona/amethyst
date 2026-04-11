@@ -20,93 +20,19 @@
  */
 package com.vitorpamplona.amethyst.model
 
-import android.content.res.Resources
-import androidx.core.os.ConfigurationCompat
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
-import kotlinx.serialization.Serializable
-import java.util.Locale
+import com.vitorpamplona.amethyst.commons.platform.getDeviceLanguages
 
-val DefaultReactions =
-    listOf(
-        "\uD83D\uDE80",
-        "\uD83E\uDEC2",
-        "\uD83D\uDC40",
-        "\uD83D\uDE02",
-        "\uD83C\uDF89",
-        "\uD83E\uDD14",
-        "\uD83D\uDE31",
-    )
+// Re-export all types from commons for backward compatibility
+typealias AccountSyncedSettingsInternal = com.vitorpamplona.amethyst.commons.model.AccountSyncedSettingsInternal
+typealias AccountReactionPreferencesInternal = com.vitorpamplona.amethyst.commons.model.AccountReactionPreferencesInternal
+typealias AccountZapPreferencesInternal = com.vitorpamplona.amethyst.commons.model.AccountZapPreferencesInternal
+typealias AccountLanguagePreferencesInternal = com.vitorpamplona.amethyst.commons.model.AccountLanguagePreferencesInternal
+typealias AccountSecurityPreferencesInternal = com.vitorpamplona.amethyst.commons.model.AccountSecurityPreferencesInternal
+typealias ReactionRowAction = com.vitorpamplona.amethyst.commons.model.ReactionRowAction
+typealias ReactionRowItem = com.vitorpamplona.amethyst.commons.model.ReactionRowItem
 
-val DefaultZapAmounts = listOf(100L, 500L, 1000L)
+val DefaultReactions = com.vitorpamplona.amethyst.commons.model.DefaultReactions
+val DefaultZapAmounts = com.vitorpamplona.amethyst.commons.model.DefaultZapAmounts
+val DefaultReactionRowItems = com.vitorpamplona.amethyst.commons.model.DefaultReactionRowItems
 
-@Serializable
-enum class ReactionRowAction {
-    Reply,
-    Boost,
-    Like,
-    Zap,
-    Share,
-    Pay,
-}
-
-@Serializable
-data class ReactionRowItem(
-    val action: ReactionRowAction,
-    val enabled: Boolean = true,
-    val showCounter: Boolean = true,
-)
-
-val DefaultReactionRowItems =
-    listOf(
-        ReactionRowItem(ReactionRowAction.Reply),
-        ReactionRowItem(ReactionRowAction.Boost),
-        ReactionRowItem(ReactionRowAction.Like),
-        ReactionRowItem(ReactionRowAction.Zap),
-        ReactionRowItem(ReactionRowAction.Share, showCounter = false),
-        ReactionRowItem(ReactionRowAction.Pay, showCounter = false),
-    )
-
-fun getLanguagesSpokenByUser(): Set<String> {
-    val languageList = ConfigurationCompat.getLocales(Resources.getSystem().getConfiguration())
-    val codedList = mutableSetOf<String>()
-    for (i in 0 until languageList.size()) {
-        languageList.get(i)?.let { codedList.add(it.language) }
-    }
-    return codedList
-}
-
-@Serializable
-class AccountSyncedSettingsInternal(
-    val reactions: AccountReactionPreferencesInternal = AccountReactionPreferencesInternal(),
-    val zaps: AccountZapPreferencesInternal = AccountZapPreferencesInternal(),
-    val languages: AccountLanguagePreferencesInternal = AccountLanguagePreferencesInternal(),
-    val security: AccountSecurityPreferencesInternal = AccountSecurityPreferencesInternal(),
-)
-
-@Serializable
-class AccountReactionPreferencesInternal(
-    var reactionChoices: List<String> = DefaultReactions,
-    var reactionRowItems: List<ReactionRowItem> = DefaultReactionRowItems,
-)
-
-@Serializable
-class AccountZapPreferencesInternal(
-    var zapAmountChoices: List<Long> = DefaultZapAmounts,
-    val defaultZapType: LnZapEvent.ZapType = LnZapEvent.ZapType.PUBLIC,
-)
-
-@Serializable
-class AccountLanguagePreferencesInternal(
-    var dontTranslateFrom: Set<String> = getLanguagesSpokenByUser(),
-    var languagePreferences: Map<String, String> = mapOf(),
-    var translateTo: String = Locale.getDefault().language,
-)
-
-@Serializable
-class AccountSecurityPreferencesInternal(
-    val showSensitiveContent: Boolean? = null,
-    var warnAboutPostsWithReports: Boolean = true,
-    var filterSpamFromStrangers: Boolean = true,
-    val maxHashtagLimit: Int = 5,
-    var sendKind0EventsToLocalRelay: Boolean = false,
-)
+fun getLanguagesSpokenByUser(): Set<String> = getDeviceLanguages()

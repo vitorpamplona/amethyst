@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.model.topNavFeeds
 
+import com.vitorpamplona.amethyst.commons.model.TopFilter
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.model.nip02FollowLists.Kind3FollowListState
 import com.vitorpamplona.amethyst.model.serverList.MergedFollowListsState
 import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsFeedFlow

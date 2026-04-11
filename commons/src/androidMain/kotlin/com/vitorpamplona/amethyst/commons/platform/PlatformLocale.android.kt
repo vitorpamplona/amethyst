@@ -18,11 +18,18 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model
+package com.vitorpamplona.amethyst.commons.platform
 
-// Re-export all types from commons for backward compatibility
-typealias AccountSyncedSettings = com.vitorpamplona.amethyst.commons.model.AccountSyncedSettings
-typealias AccountReactionPreferences = com.vitorpamplona.amethyst.commons.model.AccountReactionPreferences
-typealias AccountZapPreferences = com.vitorpamplona.amethyst.commons.model.AccountZapPreferences
-typealias AccountLanguagePreferences = com.vitorpamplona.amethyst.commons.model.AccountLanguagePreferences
-typealias AccountSecurityPreferences = com.vitorpamplona.amethyst.commons.model.AccountSecurityPreferences
+import android.content.res.Resources
+import java.util.Locale
+
+actual fun getDeviceLanguages(): Set<String> {
+    val locales = Resources.getSystem().configuration.locales
+    val codedList = mutableSetOf<String>()
+    for (i in 0 until locales.size()) {
+        locales.get(i)?.let { codedList.add(it.language) }
+    }
+    return codedList
+}
+
+actual fun getDefaultLanguage(): String = Locale.getDefault().language

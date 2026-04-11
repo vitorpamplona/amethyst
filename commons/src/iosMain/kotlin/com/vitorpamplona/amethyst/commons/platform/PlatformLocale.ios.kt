@@ -18,11 +18,19 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model
+package com.vitorpamplona.amethyst.commons.platform
 
-// Re-export all types from commons for backward compatibility
-typealias AccountSyncedSettings = com.vitorpamplona.amethyst.commons.model.AccountSyncedSettings
-typealias AccountReactionPreferences = com.vitorpamplona.amethyst.commons.model.AccountReactionPreferences
-typealias AccountZapPreferences = com.vitorpamplona.amethyst.commons.model.AccountZapPreferences
-typealias AccountLanguagePreferences = com.vitorpamplona.amethyst.commons.model.AccountLanguagePreferences
-typealias AccountSecurityPreferences = com.vitorpamplona.amethyst.commons.model.AccountSecurityPreferences
+import platform.Foundation.NSLocale
+import platform.Foundation.preferredLanguages
+
+actual fun getDeviceLanguages(): Set<String> {
+    @Suppress("UNCHECKED_CAST")
+    val languages = NSLocale.preferredLanguages as List<String>
+    return languages.map { it.substringBefore("-") }.toSet()
+}
+
+actual fun getDefaultLanguage(): String {
+    @Suppress("UNCHECKED_CAST")
+    val languages = NSLocale.preferredLanguages as List<String>
+    return languages.firstOrNull()?.substringBefore("-") ?: "en"
+}
