@@ -46,10 +46,16 @@ class OkHttpClientFactory(
             .addNetworkInterceptor(keyDecryptor)
             .build()
 
+    private var lastProxy: Proxy? = null
+
     fun buildHttpClient(
         proxy: Proxy?,
         timeoutSeconds: Int,
     ): OkHttpClient {
+        if (proxy != lastProxy) {
+            rootClient.connectionPool.evictAll()
+            lastProxy = proxy
+        }
         val seconds = if (proxy != null) timeoutSeconds * 3 else timeoutSeconds
         return rootClient
             .newBuilder()
