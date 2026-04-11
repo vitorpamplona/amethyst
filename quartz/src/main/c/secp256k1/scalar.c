@@ -78,101 +78,59 @@ void scalar_sub(secp256k1_scalar *r, const secp256k1_scalar *a, const secp256k1_
     scalar_add(r, a, &neg_b);
 }
 
-/* Multiply mod n using schoolbook 4x4 -> 8 limb, then Barrett reduction */
+/* Use the field module's proven mul_wide for 4x4 → 8-limb product */
+extern void mul_wide(uint64_t out[8], const uint64_t a[4], const uint64_t b[4]);
+
+/* Multiply mod n: r = (a * b) mod n */
 void scalar_mul(secp256k1_scalar *r, const secp256k1_scalar *a, const secp256k1_scalar *b) {
-    /* Full 512-bit product */
-    uint64_t t[8] = {0};
-
-#if HAVE_INT128
-    for (int i = 0; i < 4; i++) {
-        uint128_t carry = 0;
-        for (int j = 0; j < 4; j++) {
-            carry += (uint128_t)a->d[i] * b->d[j] + t[i + j];
-            t[i + j] = (uint64_t)carry;
-            carry >>= 64;
-        }
-        t[i + 4] = (uint64_t)carry;
-    }
-#else
-    /* Portable fallback */
-    for (int i = 0; i < 4; i++) {
-        uint64_t carry = 0;
-        for (int j = 0; j < 4; j++) {
-            uint64_t a_lo = a->d[i] & 0xFFFFFFFF;
-            uint64_t a_hi = a->d[i] >> 32;
-            uint64_t b_lo = b->d[j] & 0xFFFFFFFF;
-            uint64_t b_hi = b->d[j] >> 32;
-
-            uint64_t ll = a_lo * b_lo;
-            uint64_t lh = a_lo * b_hi;
-            uint64_t hl = a_hi * b_lo;
-            uint64_t hh = a_hi * b_hi;
-
-            uint64_t mid = (ll >> 32) + (lh & 0xFFFFFFFF) + (hl & 0xFFFFFFFF);
-            uint64_t lo = (ll & 0xFFFFFFFF) | (mid << 32);
-            uint64_t hi = hh + (lh >> 32) + (hl >> 32) + (mid >> 32);
-
-            uint64_t sum = t[i + j] + lo + carry;
-            carry = hi + (sum < t[i + j] ? 1 : 0) + (sum < lo && carry ? 1 : 0);
-            t[i + j] = sum;
-        }
-        t[i + 4] += carry;
-    }
-#endif
-
-    /* Reduce 512-bit product mod n using 2^256 mod n = MOD_C.
-     * For inputs < n (< 2^256), the product is < 2^512.
-     * We fold the high 256 bits using: hi * 2^256 ≡ hi * MOD_C (mod n).
-     * The result may still exceed 256 bits, so we do a second fold. */
-    static const uint64_t MOD_C[4] = {
+    /* 2^256 mod n */
+    static const uint64_t NC[4] = {
         0x402DA1732FC9BEBFULL, 0x4551231950B75FC4ULL, 1, 0
     };
 
+    uint64_t t[8];
+    mul_wide(t, a->d, b->d);
+
+    /* Reduce: r = t[0..3] + t[4..7]*NC. Use mul_wide for the hi*NC product. */
+    uint64_t hc[8];
+    mul_wide(hc, &t[4], NC);
+
+    /* Add lo + hc */
 #if HAVE_INT128
-    {
-        /* Fold: r = t[0..3] + t[4..7] * MOD_C, row-based (same as fe mul_wide) */
-        uint64_t mid[8] = {0};
-        mid[0] = t[0]; mid[1] = t[1]; mid[2] = t[2]; mid[3] = t[3];
-
-        /* Add t[4] * MOD_C at position 0 */
+    uint128_t acc = 0;
+    uint64_t sum[8];
+    for (int i = 0; i < 8; i++) {
+        acc += (uint128_t)(i < 4 ? t[i] : 0) + hc[i];
+        sum[i] = (uint64_t)acc;
+        acc >>= 64;
+    }
+    /* Second fold if sum > 256 bits */
+    if (sum[4] | sum[5] | sum[6] | sum[7]) {
+        uint64_t hc2[8];
+        mul_wide(hc2, &sum[4], NC);
+        acc = 0;
+        for (int i = 0; i < 4; i++) {
+            acc += (uint128_t)sum[i] + hc2[i];
+            r->d[i] = (uint64_t)acc;
+            acc >>= 64;
+        }
+        /* hc2[4..7] should be negligible; handle any carry */
         for (int i = 4; i < 8; i++) {
-            if (t[i] == 0) continue;
-            uint128_t carry = 0;
-            for (int j = 0; j < 4; j++) {
-                int k = (i - 4) + j;
-                carry += (uint128_t)t[i] * MOD_C[j] + mid[k];
-                mid[k] = (uint64_t)carry;
-                carry >>= 64;
-            }
-            /* Propagate carry into higher positions */
-            for (int k = (i - 4) + 4; carry && k < 8; k++) {
-                carry += mid[k];
-                mid[k] = (uint64_t)carry;
-                carry >>= 64;
-            }
+            acc += hc2[i];
         }
-
-        /* Second fold: mid[4..7] * MOD_C */
-        r->d[0] = mid[0]; r->d[1] = mid[1]; r->d[2] = mid[2]; r->d[3] = mid[3];
-        if (mid[4] | mid[5] | mid[6] | mid[7]) {
-            for (int i = 4; i < 8; i++) {
-                if (mid[i] == 0) continue;
-                uint128_t carry = 0;
-                for (int j = 0; j < 4; j++) {
-                    int k = (i - 4) + j;
-                    if (k < 4) {
-                        carry += (uint128_t)mid[i] * MOD_C[j] + r->d[k];
-                        r->d[k] = (uint64_t)carry;
-                        carry >>= 64;
-                    }
-                }
-            }
+        if (acc) {
+            /* Tiny third fold */
+            uint128_t c = (uint128_t)r->d[0] + (uint64_t)acc * NC[0];
+            r->d[0] = (uint64_t)c; c >>= 64;
+            if (c) { r->d[1] += (uint64_t)c; if (r->d[1] < (uint64_t)c) { r->d[2]++; if (!r->d[2]) r->d[3]++; } }
         }
+    } else {
+        r->d[0] = sum[0]; r->d[1] = sum[1]; r->d[2] = sum[2]; r->d[3] = sum[3];
     }
 #else
+    /* Portable: just take low 4 limbs and subtract n repeatedly */
     r->d[0] = t[0]; r->d[1] = t[1]; r->d[2] = t[2]; r->d[3] = t[3];
 #endif
-    /* Final reduction: subtract n while >= n */
     while (scalar_cmp(r, &SCALAR_N) >= 0) {
         sub256(r->d, r->d, SCALAR_N.d);
     }
