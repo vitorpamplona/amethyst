@@ -18,19 +18,14 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.search
+package com.vitorpamplona.amethyst.commons.concurrency
 
-import com.vitorpamplona.amethyst.commons.concurrency.kmpSynchronized
+import java.lang.ref.WeakReference
 
-class EventDeduplicator {
-    private val lock = Any()
-    private val seenIds = mutableSetOf<String>()
+actual class WeakRef<T : Any> actual constructor(
+    value: T,
+) {
+    private val ref = WeakReference(value)
 
-    fun tryAdd(id: String): Boolean = kmpSynchronized(lock) { seenIds.add(id) }
-
-    fun contains(id: String): Boolean = kmpSynchronized(lock) { id in seenIds }
-
-    fun clear() = kmpSynchronized(lock) { seenIds.clear() }
-
-    val size: Int get() = kmpSynchronized(lock) { seenIds.size }
+    actual fun get(): T? = ref.get()
 }

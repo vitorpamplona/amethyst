@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.viewmodels
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.concurrency.Dispatchers_IO
 import com.vitorpamplona.amethyst.commons.model.ListChange
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
@@ -30,7 +31,6 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.ChangesFlowFilter
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.InvalidatableContent
 import com.vitorpamplona.quartz.utils.Log
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @Stable
@@ -48,10 +48,10 @@ abstract class ListChangeFeedViewModel(
     init {
         Log.d("Init") { "Starting new Model: ${this::class.simpleName}" }
         // Trigger initial load so empty rooms show Empty instead of Loading
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers_IO) {
             feedState.invalidateData(ignoreIfDoing = false)
         }
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers_IO) {
             localFilter.changesFlow().collect {
                 Log.d("Init") { "Collecting changes to: ${this@ListChangeFeedViewModel::class.simpleName}" }
                 when (it) {

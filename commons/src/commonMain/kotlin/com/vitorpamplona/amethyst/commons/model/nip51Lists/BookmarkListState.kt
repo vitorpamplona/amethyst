@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.model.nip51Lists
 
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.concurrency.Dispatchers_IO
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.NoteState
@@ -31,7 +32,6 @@ import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.BookmarkIdTag
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.EventBookmark
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -80,7 +80,7 @@ class BookmarkListState(
             }.onStart {
                 emit(publicBookmarks(bookmarkList))
             }.debounce(100)
-            .flowOn(Dispatchers.IO)
+            .flowOn(Dispatchers_IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -95,7 +95,7 @@ class BookmarkListState(
             }.onStart {
                 emit(privateBookmarks(bookmarkList))
             }.debounce(100)
-            .flowOn(Dispatchers.IO)
+            .flowOn(Dispatchers_IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -109,7 +109,7 @@ class BookmarkListState(
                     .mapNotNull {
                         if (it is EventBookmark) it.eventId else null
                     }.toSet()
-            }.flowOn(Dispatchers.IO)
+            }.flowOn(Dispatchers_IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -123,7 +123,7 @@ class BookmarkListState(
                     .mapNotNull {
                         if (it is AddressBookmark) it.address else null
                     }.toSet()
-            }.flowOn(Dispatchers.IO)
+            }.flowOn(Dispatchers_IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -137,7 +137,7 @@ class BookmarkListState(
                     .mapNotNull {
                         if (it is EventBookmark) it.eventId else null
                     }.toSet()
-            }.flowOn(Dispatchers.IO)
+            }.flowOn(Dispatchers_IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -151,7 +151,7 @@ class BookmarkListState(
                     .mapNotNull {
                         if (it is AddressBookmark) it.address else null
                     }.toSet()
-            }.flowOn(Dispatchers.IO)
+            }.flowOn(Dispatchers_IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -187,7 +187,7 @@ class BookmarkListState(
             emit(bookmarkList(private, public))
         }.onStart {
             emit(bookmarkList(privateBookmarks.value, publicBookmarks.value))
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers_IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,

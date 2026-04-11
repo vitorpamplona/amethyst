@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.model.nip02FollowList
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.amethyst.commons.concurrency.Dispatchers_IO
 import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
@@ -31,7 +32,6 @@ import com.vitorpamplona.quartz.nip02FollowList.tags.ContactTag
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
@@ -68,7 +68,7 @@ class Kind3FollowListState(
 
     val flow =
         innerFlow
-            .flowOn(Dispatchers.IO)
+            .flowOn(Dispatchers_IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -83,7 +83,7 @@ class Kind3FollowListState(
                 kind3Follows.authors.mapNotNull {
                     runCatching { cache.getOrCreateUser(it) }.getOrNull()
                 }
-            }.flowOn(Dispatchers.IO)
+            }.flowOn(Dispatchers_IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -164,11 +164,11 @@ class Kind3FollowListState(
             Log.d("AccountRegisterObservers") { "Loading saved ${it.tags.size} contacts" }
 
             @OptIn(DelicateCoroutinesApi::class)
-            scope.launch(Dispatchers.IO) { cache.justConsumeMyOwnEvent(it) }
+            scope.launch(Dispatchers_IO) { cache.justConsumeMyOwnEvent(it) }
         }
 
         // saves contact list for the next time.
-        scope.launch(Dispatchers.IO) {
+        scope.launch(Dispatchers_IO) {
             Log.d("AccountRegisterObservers", "Kind 3 Collector Start")
             getFollowListFlow().collect {
                 Log.d("AccountRegisterObservers") { "Updating Kind 3 ${signer.pubKey}" }

@@ -20,13 +20,13 @@
  */
 package com.vitorpamplona.amethyst.commons.model.trustedAssertions
 
+import com.vitorpamplona.amethyst.commons.concurrency.Dispatchers_IO
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.UserDependencies
 import com.vitorpamplona.amethyst.commons.relays.EOSERelayList
 import com.vitorpamplona.amethyst.commons.util.PlatformNumberFormatter
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.ContactCardEvent
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combineTransform
 import kotlinx.coroutines.flow.emitAll
@@ -104,7 +104,7 @@ class UserCardsCache : UserDependencies {
             }
         }.map {
             (it?.note?.event as? ContactCardEvent)?.rank()
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers_IO)
 
     private val formatter = PlatformNumberFormatter()
 
@@ -138,5 +138,5 @@ class UserCardsCache : UserDependencies {
             } else {
                 "--"
             }
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers_IO)
 }

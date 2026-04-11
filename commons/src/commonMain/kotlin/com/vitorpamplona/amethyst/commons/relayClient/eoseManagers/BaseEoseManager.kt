@@ -20,12 +20,12 @@
  */
 package com.vitorpamplona.amethyst.commons.relayClient.eoseManagers
 
+import com.vitorpamplona.amethyst.commons.concurrency.Dispatchers_IO
 import com.vitorpamplona.amethyst.commons.service.BundledUpdate
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.SubscriptionController
-import kotlinx.coroutines.Dispatchers
 
 abstract class BaseEoseManager<T>(
     val client: INostrClient,
@@ -43,7 +43,7 @@ abstract class BaseEoseManager<T>(
     fun dismissSubscription(subId: String) = orchestrator.dismissSubscription(subId)
 
     // Refreshes observers in batches.
-    private val bundler = BundledUpdate(sampleTime, Dispatchers.IO)
+    private val bundler = BundledUpdate(sampleTime, Dispatchers_IO)
 
     override fun invalidateFilters(ignoreIfDoing: Boolean) {
         bundler.invalidate(ignoreIfDoing, ::forceInvalidate)

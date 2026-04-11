@@ -18,19 +18,9 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.search
+package com.vitorpamplona.amethyst.commons.concurrency
 
-import com.vitorpamplona.amethyst.commons.concurrency.kmpSynchronized
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 
-class EventDeduplicator {
-    private val lock = Any()
-    private val seenIds = mutableSetOf<String>()
-
-    fun tryAdd(id: String): Boolean = kmpSynchronized(lock) { seenIds.add(id) }
-
-    fun contains(id: String): Boolean = kmpSynchronized(lock) { id in seenIds }
-
-    fun clear() = kmpSynchronized(lock) { seenIds.clear() }
-
-    val size: Int get() = kmpSynchronized(lock) { seenIds.size }
-}
+actual val Dispatchers_IO: CoroutineDispatcher = Dispatchers.IO

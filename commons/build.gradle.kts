@@ -70,6 +70,9 @@ kotlin {
                 // Immutable collections
                 api(libs.kotlinx.collections.immutable)
 
+                // Atomic operations (KMP-compatible)
+                implementation(libs.kotlinx.atomicfu)
+
                 // Compose Multiplatform Resources
                 implementation(libs.jetbrains.compose.components.resources)
 

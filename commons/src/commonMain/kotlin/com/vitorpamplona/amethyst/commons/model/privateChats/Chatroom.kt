@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.model.privateChats
 
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.concurrency.WeakRef
 import com.vitorpamplona.amethyst.commons.model.Channel.Companion.DefaultFeedOrder
 import com.vitorpamplona.amethyst.commons.model.ListChange
 import com.vitorpamplona.amethyst.commons.model.Note
@@ -33,7 +34,6 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import java.lang.ref.WeakReference
 
 @Stable
 class Chatroom : NotesGatherer {
@@ -44,13 +44,13 @@ class Chatroom : NotesGatherer {
     var ownerSentMessage: Boolean = false
     var newestMessage: Note? = null
 
-    private var changesFlow: WeakReference<MutableSharedFlow<ListChange<Note>>> = WeakReference(null)
+    private var changesFlow: WeakRef<MutableSharedFlow<ListChange<Note>>>? = null
 
     fun changesFlow(): MutableSharedFlow<ListChange<Note>> {
-        val current = changesFlow.get()
+        val current = changesFlow?.get()
         if (current != null) return current
         val new = MutableSharedFlow<ListChange<Note>>(0, 100, BufferOverflow.DROP_OLDEST)
-        changesFlow = WeakReference(new)
+        changesFlow = WeakRef(new)
         return new
     }
 
@@ -82,7 +82,7 @@ class Chatroom : NotesGatherer {
                 subjectCreatedAt = msg.createdAt()
             }
 
-            changesFlow.get()?.tryEmit(ListChange.Addition(msg))
+            changesFlow?.get()?.tryEmit(ListChange.Addition(msg))
 
             return true
         }
@@ -114,7 +114,7 @@ class Chatroom : NotesGatherer {
                     }
             }
 
-            changesFlow.get()?.tryEmit(ListChange.Deletion(msg))
+            changesFlow?.get()?.tryEmit(ListChange.Deletion(msg))
 
             return true
         }
@@ -138,7 +138,7 @@ class Chatroom : NotesGatherer {
         val toRemove = messages.minus(toKeep)
         messages = toKeep
 
-        changesFlow.get()?.tryEmit(ListChange.SetDeletion<Note>(toRemove))
+        changesFlow?.get()?.tryEmit(ListChange.SetDeletion<Note>(toRemove))
 
         return toRemove
     }

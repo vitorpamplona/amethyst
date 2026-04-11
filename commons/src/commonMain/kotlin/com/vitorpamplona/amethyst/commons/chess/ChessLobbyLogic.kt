@@ -20,6 +20,9 @@
  */
 package com.vitorpamplona.amethyst.commons.chess
 
+import com.vitorpamplona.amethyst.commons.concurrency.concurrentMutableMapOf
+import com.vitorpamplona.amethyst.commons.concurrency.kmpSynchronized
+import com.vitorpamplona.amethyst.commons.concurrency.synchronizedMutableSetOf
 import com.vitorpamplona.quartz.nip64Chess.ChessGameEnd
 import com.vitorpamplona.quartz.nip64Chess.ChessMoveEvent
 import com.vitorpamplona.quartz.nip64Chess.Color
@@ -130,17 +133,17 @@ class ChessLobbyLogic(
     val state = ChessLobbyState(userPubkey, scope)
 
     private val dismissedGameIds: MutableSet<String> =
-        java.util.Collections.synchronizedSet(
+        synchronizedMutableSetOf(
             dismissedStorage?.load(userPubkey)?.toMutableSet() ?: mutableSetOf(),
         )
 
     // Track when games were last loaded to prevent duplicate fetches
     // (e.g., discoverUserGames loads a game, then polling immediately re-fetches it)
-    private val recentlyLoadedGames = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    private val recentlyLoadedGames = concurrentMutableMapOf<String, Long>()
 
     // Dedup incoming events (same event delivered by multiple relays)
     // Bounded LRU: evict oldest when exceeding capacity
-    private val seenEventIds = java.util.Collections.synchronizedSet(LinkedHashSet<String>())
+    private val seenEventIds = synchronizedMutableSetOf<String>()
     private val seenEventIdsMax = 500
 
     private val pollingDelegate =
@@ -207,7 +210,7 @@ class ChessLobbyLogic(
         if (!event.isStartEvent() && !event.isMoveEvent()) return
 
         // Dedup: skip if we already processed this event ID (multiple relays deliver same event)
-        synchronized(seenEventIds) {
+        kmpSynchronized(seenEventIds) {
             if (!seenEventIds.add(event.id)) return
             if (seenEventIds.size > seenEventIdsMax) {
                 seenEventIds.iterator().let {

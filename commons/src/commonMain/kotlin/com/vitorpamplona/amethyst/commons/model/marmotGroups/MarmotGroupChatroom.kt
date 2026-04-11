@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.model.marmotGroups
 
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.concurrency.WeakRef
 import com.vitorpamplona.amethyst.commons.model.Channel.Companion.DefaultFeedOrder
 import com.vitorpamplona.amethyst.commons.model.ListChange
 import com.vitorpamplona.amethyst.commons.model.Note
@@ -29,7 +30,6 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import java.lang.ref.WeakReference
 
 /**
  * Represents a Marmot MLS group chat room.
@@ -49,13 +49,13 @@ class MarmotGroupChatroom(
     var newestMessage: Note? = null
     val unreadCount = MutableStateFlow(0)
 
-    private var changesFlow: WeakReference<MutableSharedFlow<ListChange<Note>>> = WeakReference(null)
+    private var changesFlow: WeakRef<MutableSharedFlow<ListChange<Note>>>? = null
 
     fun changesFlow(): MutableSharedFlow<ListChange<Note>> {
-        val current = changesFlow.get()
+        val current = changesFlow?.get()
         if (current != null) return current
         val new = MutableSharedFlow<ListChange<Note>>(0, 100, BufferOverflow.DROP_OLDEST)
-        changesFlow = WeakReference(new)
+        changesFlow = WeakRef(new)
         return new
     }
 
@@ -75,7 +75,7 @@ class MarmotGroupChatroom(
             }
 
             unreadCount.value += 1
-            changesFlow.get()?.tryEmit(ListChange.Addition(msg))
+            changesFlow?.get()?.tryEmit(ListChange.Addition(msg))
             return true
         }
         return false
@@ -91,7 +91,7 @@ class MarmotGroupChatroom(
                 newestMessage = messages.maxByOrNull { it.createdAt() ?: 0L }
             }
 
-            changesFlow.get()?.tryEmit(ListChange.Deletion(msg))
+            changesFlow?.get()?.tryEmit(ListChange.Deletion(msg))
             return true
         }
         return false
@@ -110,7 +110,7 @@ class MarmotGroupChatroom(
         val toRemove = messages.minus(toKeep)
         messages = toKeep
 
-        changesFlow.get()?.tryEmit(ListChange.SetDeletion<Note>(toRemove))
+        changesFlow?.get()?.tryEmit(ListChange.SetDeletion<Note>(toRemove))
         return toRemove
     }
 }

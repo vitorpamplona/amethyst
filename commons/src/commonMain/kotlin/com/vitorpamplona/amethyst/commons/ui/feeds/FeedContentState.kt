@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.ui.feeds
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateOf
+import com.vitorpamplona.amethyst.commons.concurrency.Dispatchers_IO
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.service.BasicBundledInsert
@@ -34,7 +35,6 @@ import com.vitorpamplona.quartz.utils.flattenToSet
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -63,7 +63,7 @@ class FeedContentState(
         if (scrollToTopPending) return
 
         scrollToTopPending = true
-        viewModelScope.launch(Dispatchers.IO) { _scrollToTop.emit(_scrollToTop.value + 1) }
+        viewModelScope.launch(Dispatchers_IO) { _scrollToTop.emit(_scrollToTop.value + 1) }
     }
 
     suspend fun sentToTop() {
@@ -71,7 +71,7 @@ class FeedContentState(
     }
 
     private fun refresh() {
-        viewModelScope.launch(Dispatchers.IO) { refreshSuspended() }
+        viewModelScope.launch(Dispatchers_IO) { refreshSuspended() }
     }
 
     fun visibleNotes(): List<Note> {
@@ -186,11 +186,11 @@ class FeedContentState(
         }
     }
 
-    private val bundler = BasicBundledUpdate(250, Dispatchers.IO, viewModelScope)
-    private val bundlerInsert = BasicBundledInsert<Set<Note>>(250, Dispatchers.IO, viewModelScope)
+    private val bundler = BasicBundledUpdate(250, Dispatchers_IO, viewModelScope)
+    private val bundlerInsert = BasicBundledInsert<Set<Note>>(250, Dispatchers_IO, viewModelScope)
 
     override fun invalidateData(ignoreIfDoing: Boolean) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers_IO) {
             bundler.invalidate(ignoreIfDoing) {
                 // adds the time to perform the refresh into this delay
                 // holding off new updates in case of heavy refresh routines.

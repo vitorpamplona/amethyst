@@ -20,11 +20,11 @@
  */
 package com.vitorpamplona.amethyst.commons.service
 
+import com.vitorpamplona.amethyst.commons.concurrency.Dispatchers_IO
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
@@ -37,7 +37,7 @@ import kotlinx.coroutines.withContext
 /** This class is designed to have a waiting time between two calls of invalidate */
 class BundledUpdate(
     val delay: Long,
-    val dispatcher: CoroutineDispatcher = Dispatchers.IO,
+    val dispatcher: CoroutineDispatcher = Dispatchers_IO,
 ) {
     // Exists to avoid exceptions stopping the coroutine
     val exceptionHandler =
@@ -62,7 +62,7 @@ class BundledUpdate(
 /** This class is designed to have a waiting time between two calls of invalidate */
 class BasicBundledUpdate(
     val delay: Long,
-    val dispatcher: CoroutineDispatcher = Dispatchers.IO,
+    val dispatcher: CoroutineDispatcher = Dispatchers_IO,
     val scope: CoroutineScope,
 ) {
     private val mutex = Mutex()
@@ -105,7 +105,7 @@ class BasicBundledUpdate(
 /** This class is designed to have a waiting time between two calls of invalidate */
 class BundledInsert<T>(
     val delay: Long,
-    val dispatcher: CoroutineDispatcher = Dispatchers.IO,
+    val dispatcher: CoroutineDispatcher = Dispatchers_IO,
 ) {
     // Exists to avoid exceptions stopping the coroutine
     val exceptionHandler =
@@ -130,7 +130,7 @@ class BundledInsert<T>(
 /** This class is designed to have a waiting time between two calls of invalidate */
 class BasicBundledInsert<T>(
     val delay: Long,
-    val dispatcher: CoroutineDispatcher = Dispatchers.IO,
+    val dispatcher: CoroutineDispatcher = Dispatchers_IO,
     val scope: CoroutineScope,
 ) {
     private val mutex = Mutex()

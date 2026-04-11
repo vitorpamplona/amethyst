@@ -23,13 +23,13 @@ package com.vitorpamplona.amethyst.commons.viewmodels
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.concurrency.Dispatchers_IO
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedFilter
 import com.vitorpamplona.amethyst.commons.ui.feeds.InvalidatableContent
 import com.vitorpamplona.quartz.utils.Log
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @Stable
@@ -50,14 +50,14 @@ abstract class FeedViewModel(
 
     init {
         Log.d("Init") { "Starting new Model: ${this::class.simpleName}" }
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers_IO) {
             cacheProvider.getEventStream().newEventBundles.collect { newNotes ->
                 Log.d("Rendering Metrics") { "Update feeds: ${this@FeedViewModel::class.simpleName} with ${newNotes.size}" }
                 feedState.updateFeedWith(newNotes)
             }
         }
 
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers_IO) {
             cacheProvider.getEventStream().deletedEventBundles.collect { newNotes ->
                 Log.d("Rendering Metrics") { "Delete from feeds: ${this@FeedViewModel::class.simpleName} with ${newNotes.size}" }
                 feedState.deleteFromFeed(newNotes)

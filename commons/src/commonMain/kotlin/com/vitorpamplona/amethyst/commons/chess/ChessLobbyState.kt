@@ -24,12 +24,12 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip64Chess.Color
 import com.vitorpamplona.quartz.nip64Chess.GameStatus
 import com.vitorpamplona.quartz.nip64Chess.LiveChessGameState
+import kotlinx.atomicfu.atomic
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import java.util.concurrent.atomic.AtomicLong
 
 /**
  * Challenge expiry: 24 hours
@@ -247,7 +247,7 @@ class ChessLobbyState(
 
     // State version counter - increments on every game state update
     // UI can observe this to force recomposition when internal state changes
-    private val stateVersionCounter = AtomicLong(0)
+    private val stateVersionCounter = atomic(0L)
     private val _stateVersion = MutableStateFlow(0L)
     val stateVersion: StateFlow<Long> = _stateVersion.asStateFlow()
 

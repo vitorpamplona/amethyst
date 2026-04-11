@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis
 
+import com.vitorpamplona.amethyst.commons.concurrency.Dispatchers_IO
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
@@ -29,7 +30,6 @@ import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiPackSelectionEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.taggedEmojis
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -74,7 +74,7 @@ class EmojiPackState(
                 emit(convertEmojiSelectionPack(it.note.event as? EmojiPackSelectionEvent))
             }.onStart {
                 emit(convertEmojiSelectionPack(getEmojiPackSelection()))
-            }.flowOn(Dispatchers.IO)
+            }.flowOn(Dispatchers_IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -119,7 +119,7 @@ class EmojiPackState(
                         )?.map { it.value }?.toTypedArray() ?: emptyArray(),
                     ),
                 )
-            }.flowOn(Dispatchers.IO)
+            }.flowOn(Dispatchers_IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.model.nip28PublicChats
 
+import com.vitorpamplona.amethyst.commons.concurrency.Dispatchers_IO
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
@@ -30,7 +31,6 @@ import com.vitorpamplona.quartz.nip28PublicChat.list.tags.ChannelTag
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -75,7 +75,7 @@ class PublicChatListState(
                 emit(publicChatListWithBackup(noteState.note))
             }.onStart {
                 emit(publicChatListWithBackup(publicChatListNote))
-            }.flowOn(Dispatchers.IO)
+            }.flowOn(Dispatchers_IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -89,7 +89,7 @@ class PublicChatListState(
                 it.mapTo(mutableSetOf()) { it.eventId }
             }.onStart {
                 emit(flow.value.mapTo(mutableSetOf()) { it.eventId })
-            }.flowOn(Dispatchers.IO)
+            }.flowOn(Dispatchers_IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -131,12 +131,12 @@ class PublicChatListState(
         settings.channelList()?.let { event ->
             Log.d("AccountRegisterObservers") { "Loading saved channel list ${event.toJson()}" }
             @OptIn(DelicateCoroutinesApi::class)
-            scope.launch(Dispatchers.IO) {
+            scope.launch(Dispatchers_IO) {
                 cache.justConsumeMyOwnEvent(event)
             }
         }
 
-        scope.launch(Dispatchers.IO) {
+        scope.launch(Dispatchers_IO) {
             Log.d("AccountRegisterObservers", "Channel List Collector Start")
             getChannelListFlow().collect {
                 Log.d("AccountRegisterObservers") { "Channel List for ${signer.pubKey}" }

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.model.nip65RelayList
 
+import com.vitorpamplona.amethyst.commons.concurrency.Dispatchers_IO
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
@@ -30,7 +31,6 @@ import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayInfo
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flowOn
@@ -72,7 +72,7 @@ class Nip65RelayListState(
         getNIP65RelayListFlow()
             .map { normalizeNIP65WriteRelayListWithBackup(it.note) }
             .onStart { emit(normalizeNIP65WriteRelayListWithBackup(nip65ListNote)) }
-            .flowOn(Dispatchers.IO)
+            .flowOn(Dispatchers_IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -83,7 +83,7 @@ class Nip65RelayListState(
         getNIP65RelayListFlow()
             .map { normalizeNIP65ReadRelayListWithBackup(it.note) }
             .onStart { emit(normalizeNIP65ReadRelayListWithBackup(nip65ListNote)) }
-            .flowOn(Dispatchers.IO)
+            .flowOn(Dispatchers_IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -94,7 +94,7 @@ class Nip65RelayListState(
         getNIP65RelayListFlow()
             .map { normalizeNIP65WriteRelayListNoDefaults(it.note) }
             .onStart { emit(normalizeNIP65WriteRelayListNoDefaults(nip65ListNote)) }
-            .flowOn(Dispatchers.IO)
+            .flowOn(Dispatchers_IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -105,7 +105,7 @@ class Nip65RelayListState(
         getNIP65RelayListFlow()
             .map { normalizeNIP65ReadRelayListNoDefaults(it.note) }
             .onStart { emit(normalizeNIP65ReadRelayListNoDefaults(nip65ListNote)) }
-            .flowOn(Dispatchers.IO)
+            .flowOn(Dispatchers_IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -116,7 +116,7 @@ class Nip65RelayListState(
         getNIP65RelayListFlow()
             .map { normalizeNIP65AllRelayListWithBackupNoDefaults(it.note) }
             .onStart { emit(normalizeNIP65AllRelayListWithBackupNoDefaults(nip65ListNote)) }
-            .flowOn(Dispatchers.IO)
+            .flowOn(Dispatchers_IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -144,10 +144,10 @@ class Nip65RelayListState(
         settings.backupNIP65RelayList?.let {
             Log.d("AccountRegisterObservers") { "Loading saved nip65 relay list ${it.toJson()}" }
             @OptIn(DelicateCoroutinesApi::class)
-            scope.launch(Dispatchers.IO) { cache.justConsumeMyOwnEvent(it) }
+            scope.launch(Dispatchers_IO) { cache.justConsumeMyOwnEvent(it) }
         }
 
-        scope.launch(Dispatchers.IO) {
+        scope.launch(Dispatchers_IO) {
             Log.d("AccountRegisterObservers", "NIP-65 Relay List Collector Start")
             getNIP65RelayListFlow().collect {
                 Log.d("AccountRegisterObservers") { "Updating NIP-65 List for ${signer.pubKey}" }

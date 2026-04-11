@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.model.emphChat
 
+import com.vitorpamplona.amethyst.commons.concurrency.Dispatchers_IO
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
@@ -29,7 +30,6 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -73,7 +73,7 @@ class EphemeralChatListState(
                 emit(ephemeralChatListWithBackup(noteState.note))
             }.onStart {
                 emit(ephemeralChatListWithBackup(ephemeralChatListNote))
-            }.flowOn(Dispatchers.IO)
+            }.flowOn(Dispatchers_IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -116,12 +116,12 @@ class EphemeralChatListState(
         settings.ephemeralChatList()?.let { event ->
             Log.d("AccountRegisterObservers", "Loading saved ephemeral chat list")
             @OptIn(DelicateCoroutinesApi::class)
-            scope.launch(Dispatchers.IO) {
+            scope.launch(Dispatchers_IO) {
                 cache.justConsumeMyOwnEvent(event)
             }
         }
 
-        scope.launch(Dispatchers.IO) {
+        scope.launch(Dispatchers_IO) {
             Log.d("AccountRegisterObservers", "EphemeralChatList Collector Start")
             getEphemeralChatListFlow().collect { noteState ->
                 Log.d("AccountRegisterObservers") { "EphemeralChatList List for ${signer.pubKey}" }

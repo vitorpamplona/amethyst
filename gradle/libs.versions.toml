@@ -27,6 +27,7 @@ javaKeyring = "1.0.4"
 junit = "4.13.2"
 kchesslib = "1.0.5"
 kotlin = "2.3.20"
+kotlinxAtomicfu = "0.27.0"
 kotlinxCollectionsImmutable = "0.4.0"
 kotlinxCoroutinesCore = "1.10.2"
 kotlinxSerialization = "1.10.0"
@@ -146,6 +147,7 @@ jackson-module-kotlin = { group = "com.fasterxml.jackson.module", name = "jackso
 java-keyring = { group = "com.github.javakeyring", name = "java-keyring", version.ref = "javaKeyring" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 kchesslib = { module = "io.github.cvb941:kchesslib", version.ref = "kchesslib" }
+kotlinx-atomicfu = { module = "org.jetbrains.kotlinx:atomicfu", version.ref = "kotlinxAtomicfu" }
 kotlinx-collections-immutable = { group = "org.jetbrains.kotlinx", name = "kotlinx-collections-immutable", version.ref = "kotlinxCollectionsImmutable" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutinesCore" }
 kotlinx-coroutines-swing = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-swing", version.ref = "kotlinxCoroutinesCore" }
