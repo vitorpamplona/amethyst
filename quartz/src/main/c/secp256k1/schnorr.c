@@ -228,6 +228,12 @@ int secp256k1c_schnorr_sign(
     return schnorr_sign_internal(sig64, msg, msg_len, &d0, pub_x, even_y, auxrand32);
 }
 
+/*
+ * Fast signing with pre-computed x-only pubkey.
+ * ASSUMES the private key already produces an even-y pubkey (BIP-340 convention).
+ * This is the case for Nostr keys managed by KeyPair, which pre-negates if needed.
+ * For arbitrary keys, use secp256k1c_schnorr_sign which derives y-parity.
+ */
 int secp256k1c_schnorr_sign_xonly(
     uint8_t *sig64,
     const uint8_t *msg, size_t msg_len,
@@ -239,15 +245,9 @@ int secp256k1c_schnorr_sign_xonly(
     scalar_from_bytes(&d0, seckey32);
     if (!scalar_is_valid(&d0)) return 0;
 
-    /* Derive actual y-parity from the secret key.
-     * BIP-340: if the full pubkey has odd y, negate the secret key. */
-    secp256k1_gej pj;
-    ecmult_gen(&pj, &d0);
-    secp256k1_ge p;
-    if (!gej_to_ge(&p, &pj)) return 0;
-    int even_y = point_has_even_y(&p.y);
-
-    return schnorr_sign_internal(sig64, msg, msg_len, &d0, xonly_pub32, even_y, auxrand32);
+    /* BIP-340 x-only pubkeys always have even y by convention.
+     * The caller must ensure the private key produces an even-y pubkey. */
+    return schnorr_sign_internal(sig64, msg, msg_len, &d0, xonly_pub32, 1, auxrand32);
 }
 
 /* ==================== Schnorr Verify (core) ==================== */

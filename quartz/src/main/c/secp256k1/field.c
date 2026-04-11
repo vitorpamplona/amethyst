@@ -123,9 +123,72 @@ void reduce_wide(secp256k1_fe *r, const uint64_t w[8]) {
 }
 
 void fe_mul(secp256k1_fe *r, const secp256k1_fe *a, const secp256k1_fe *b) {
+#if HAVE_INT128
+    /* Inline mul + reduce to avoid function call overhead and enable
+     * the compiler to keep intermediates in registers. */
+    uint64_t a0=a->d[0], a1=a->d[1], a2=a->d[2], a3=a->d[3];
+    uint64_t b0=b->d[0], b1=b->d[1], b2=b->d[2], b3=b->d[3];
+    uint128_t acc;
+    uint64_t lo0, lo1, lo2, lo3, hi0, hi1, hi2, hi3;
+
+    /* 4x4 schoolbook product (row-based, no overflow) */
+    acc = (uint128_t)a0*b0;
+    lo0 = (uint64_t)acc; acc >>= 64;
+    acc += (uint128_t)a0*b1;
+    lo1 = (uint64_t)acc; acc >>= 64;
+    acc += (uint128_t)a0*b2;
+    lo2 = (uint64_t)acc; acc >>= 64;
+    acc += (uint128_t)a0*b3;
+    lo3 = (uint64_t)acc; hi0 = (uint64_t)(acc>>64);
+
+    acc = (uint128_t)lo1 + (uint128_t)a1*b0;
+    lo1 = (uint64_t)acc; acc >>= 64;
+    acc += (uint128_t)lo2 + (uint128_t)a1*b1;
+    lo2 = (uint64_t)acc; acc >>= 64;
+    acc += (uint128_t)lo3 + (uint128_t)a1*b2;
+    lo3 = (uint64_t)acc; acc >>= 64;
+    acc += (uint128_t)hi0 + (uint128_t)a1*b3;
+    hi0 = (uint64_t)acc; hi1 = (uint64_t)(acc>>64);
+
+    acc = (uint128_t)lo2 + (uint128_t)a2*b0;
+    lo2 = (uint64_t)acc; acc >>= 64;
+    acc += (uint128_t)lo3 + (uint128_t)a2*b1;
+    lo3 = (uint64_t)acc; acc >>= 64;
+    acc += (uint128_t)hi0 + (uint128_t)a2*b2;
+    hi0 = (uint64_t)acc; acc >>= 64;
+    acc += (uint128_t)hi1 + (uint128_t)a2*b3;
+    hi1 = (uint64_t)acc; hi2 = (uint64_t)(acc>>64);
+
+    acc = (uint128_t)lo3 + (uint128_t)a3*b0;
+    lo3 = (uint64_t)acc; acc >>= 64;
+    acc += (uint128_t)hi0 + (uint128_t)a3*b1;
+    hi0 = (uint64_t)acc; acc >>= 64;
+    acc += (uint128_t)hi1 + (uint128_t)a3*b2;
+    hi1 = (uint64_t)acc; acc >>= 64;
+    acc += (uint128_t)hi2 + (uint128_t)a3*b3;
+    hi2 = (uint64_t)acc; hi3 = (uint64_t)(acc>>64);
+
+    /* Reduce: lo + hi * C */
+    acc = (uint128_t)lo0 + (uint128_t)hi0 * FIELD_C;
+    r->d[0] = (uint64_t)acc; acc >>= 64;
+    acc += (uint128_t)lo1 + (uint128_t)hi1 * FIELD_C;
+    r->d[1] = (uint64_t)acc; acc >>= 64;
+    acc += (uint128_t)lo2 + (uint128_t)hi2 * FIELD_C;
+    r->d[2] = (uint64_t)acc; acc >>= 64;
+    acc += (uint128_t)lo3 + (uint128_t)hi3 * FIELD_C;
+    r->d[3] = (uint64_t)acc;
+    uint64_t carry = (uint64_t)(acc >> 64);
+    if (carry) {
+        acc = (uint128_t)r->d[0] + (uint128_t)carry * FIELD_C;
+        r->d[0] = (uint64_t)acc; carry = (uint64_t)(acc >> 64);
+        if (carry) { r->d[1] += carry; if (r->d[1] < carry) { r->d[2]++; if (!r->d[2]) r->d[3]++; } }
+    }
+    fe_normalize(r);
+#else
     uint64_t w[8];
     mul_wide(w, a->d, b->d);
     reduce_wide(r, w);
+#endif
 }
 
 /*

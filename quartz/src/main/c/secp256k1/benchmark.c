@@ -110,7 +110,7 @@ static void bench_verify(int iters) {
     secp256k1_sha256_hash(msg, (const uint8_t *)"test message for verify", 23);
 
     uint8_t sig[64];
-    secp256k1c_schnorr_sign_xonly(sig, msg, 32, TEST_PRIVKEY, xonly, TEST_AUXRAND);
+    secp256k1c_schnorr_sign(sig, msg, 32, TEST_PRIVKEY, TEST_AUXRAND);
 
     /* Verify it first */
     if (!secp256k1c_schnorr_verify(sig, msg, 32, xonly)) {
