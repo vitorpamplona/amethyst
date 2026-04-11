@@ -20,51 +20,5 @@
  */
 package com.vitorpamplona.amethyst.model.nip03Timestamp
 
-import androidx.compose.runtime.Stable
-import com.vitorpamplona.quartz.nip03Timestamp.okhttp.OkHttpBitcoinExplorer
-import kotlinx.serialization.Serializable
-
-/**
- * Immutable data class representing the current OTS blockchain explorer config.
- *
- * When a custom URL is configured, it is used instead of the automatic
- * Tor-aware selection (Mempool when Tor is active, Blockstream otherwise).
- * This gives users control over which explorer observes their OTS verifications.
- */
-@Serializable
-@Stable
-data class OtsSettings(
-    /**
-     * Custom blockchain explorer base API URL.
-     * When null/blank, the default Tor-aware selection is used.
-     * Must be a Mempool-compatible REST API (e.g. https://mempool.space/api/).
-     */
-    val customExplorerUrl: String? = null,
-) {
-    /** True when the user has configured a custom explorer URL. */
-    val hasCustomExplorer: Boolean get() = !customExplorerUrl.isNullOrBlank()
-
-    /**
-     * Returns the normalized custom URL (trailing slash ensured) or null if not set.
-     */
-    fun normalizedUrl(): String? {
-        val url = customExplorerUrl?.trim()?.takeIf { it.isNotBlank() } ?: return null
-        return if (url.endsWith("/")) url else "$url/"
-    }
-
-    companion object {
-        val DEFAULT = OtsSettings()
-
-        val KNOWN_EXPLORERS =
-            listOf(
-                OkHttpBitcoinExplorer.MEMPOOL_API_URL to "mempool.space (Tor-friendly)",
-                OkHttpBitcoinExplorer.BLOCKSTREAM_API_URL to "blockstream.info",
-            )
-
-        fun isValidUrl(url: String): Boolean {
-            val trimmed = url.trim()
-            if (trimmed.isBlank()) return false
-            return trimmed.startsWith("http://") || trimmed.startsWith("https://")
-        }
-    }
-}
+// Re-export from commons for backward compatibility
+typealias OtsSettings = com.vitorpamplona.amethyst.commons.model.nip03Timestamp.OtsSettings

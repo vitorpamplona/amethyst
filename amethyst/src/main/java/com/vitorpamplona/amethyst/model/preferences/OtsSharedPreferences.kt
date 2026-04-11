@@ -78,8 +78,9 @@ class OtsSharedPreferences(
         _settings.value = settings
         try {
             context.sharedPreferencesDataStore.edit { prefs ->
-                if (settings.customExplorerUrl != null) {
-                    prefs[KEY_CUSTOM_EXPLORER_URL] = settings.customExplorerUrl
+                val url = settings.customExplorerUrl
+                if (url != null) {
+                    prefs[KEY_CUSTOM_EXPLORER_URL] = url
                 } else {
                     prefs.remove(KEY_CUSTOM_EXPLORER_URL)
                 }

@@ -20,40 +20,5 @@
  */
 package com.vitorpamplona.amethyst.model.nip03Timestamp
 
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
-import com.vitorpamplona.quartz.nip03Timestamp.VerificationStateCache
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.stateIn
-
-class IncomingOtsEventVerifier(
-    private val otsVerifCache: () -> VerificationStateCache,
-    private val cache: LocalCache,
-    private val scope: CoroutineScope,
-) {
-    val verifying =
-        cache.live.newEventBundles
-            .onEach { newNotes ->
-                newNotes.forEach {
-                    consume(it)
-                }
-            }.flowOn(Dispatchers.IO)
-            .stateIn(
-                scope,
-                SharingStarted.Eagerly,
-                null,
-            )
-
-    suspend fun consume(note: Note) {
-        note.event?.let { event ->
-            if (event is OtsEvent) {
-                otsVerifCache().cacheVerify(event)
-            }
-        }
-    }
-}
+// Re-export from commons for backward compatibility
+typealias IncomingOtsEventVerifier = com.vitorpamplona.amethyst.commons.model.nip03Timestamp.IncomingOtsEventVerifier
