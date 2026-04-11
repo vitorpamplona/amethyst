@@ -120,40 +120,59 @@ void scalar_mul(secp256k1_scalar *r, const secp256k1_scalar *a, const secp256k1_
     }
 #endif
 
-    /* Reduce 512-bit product mod n.
-     * Method: fold high limbs using 2^256 mod n = 0x14551231950B75FC4402DA1732FC9BEBF.
-     * For the crypto operations we use (challenge * secret_key), inputs are < n,
-     * so the product is < n^2 < 2^512. We reduce by subtracting n repeatedly.
-     * This is simple and correct; a Barrett reduction could be added for speed. */
-    r->d[0] = t[0]; r->d[1] = t[1]; r->d[2] = t[2]; r->d[3] = t[3];
+    /* Reduce 512-bit product mod n using 2^256 mod n = MOD_C.
+     * For inputs < n (< 2^256), the product is < 2^512.
+     * We fold the high 256 bits using: hi * 2^256 ≡ hi * MOD_C (mod n).
+     * The result may still exceed 256 bits, so we do a second fold. */
+    static const uint64_t MOD_C[4] = {
+        0x402DA1732FC9BEBFULL, 0x4551231950B75FC4ULL, 1, 0
+    };
 
-    /* Fold high limbs: for each non-zero high limb, the product is too large.
-     * Simple approach: reduce by subtracting n while result >= n. */
-    if (t[4] | t[5] | t[6] | t[7]) {
-        /* High part is non-zero: use the modular constant c = 2^256 mod n.
-         * c = {0x402DA1732FC9BEBF, 0x4551231950B75FC4, 0x1, 0x0} */
-        static const uint64_t MOD_C[4] = {
-            0x402DA1732FC9BEBFULL, 0x4551231950B75FC4ULL, 1, 0
-        };
 #if HAVE_INT128
-        /* Accumulate: r += t[i+4] * c * 2^(64*i) for i=0..3 */
-        for (int i = 0; i < 4; i++) {
-            if (t[i + 4] == 0) continue;
+    {
+        /* Fold: r = t[0..3] + t[4..7] * MOD_C, row-based (same as fe mul_wide) */
+        uint64_t mid[8] = {0};
+        mid[0] = t[0]; mid[1] = t[1]; mid[2] = t[2]; mid[3] = t[3];
+
+        /* Add t[4] * MOD_C at position 0 */
+        for (int i = 4; i < 8; i++) {
+            if (t[i] == 0) continue;
             uint128_t carry = 0;
             for (int j = 0; j < 4; j++) {
-                int k = i + j;
-                if (k < 4) {
-                    carry += (uint128_t)t[i + 4] * MOD_C[j] + r->d[k];
-                    r->d[k] = (uint64_t)carry;
-                    carry >>= 64;
+                int k = (i - 4) + j;
+                carry += (uint128_t)t[i] * MOD_C[j] + mid[k];
+                mid[k] = (uint64_t)carry;
+                carry >>= 64;
+            }
+            /* Propagate carry into higher positions */
+            for (int k = (i - 4) + 4; carry && k < 8; k++) {
+                carry += mid[k];
+                mid[k] = (uint64_t)carry;
+                carry >>= 64;
+            }
+        }
+
+        /* Second fold: mid[4..7] * MOD_C */
+        r->d[0] = mid[0]; r->d[1] = mid[1]; r->d[2] = mid[2]; r->d[3] = mid[3];
+        if (mid[4] | mid[5] | mid[6] | mid[7]) {
+            for (int i = 4; i < 8; i++) {
+                if (mid[i] == 0) continue;
+                uint128_t carry = 0;
+                for (int j = 0; j < 4; j++) {
+                    int k = (i - 4) + j;
+                    if (k < 4) {
+                        carry += (uint128_t)mid[i] * MOD_C[j] + r->d[k];
+                        r->d[k] = (uint64_t)carry;
+                        carry >>= 64;
+                    }
                 }
             }
         }
-#else
-        (void)MOD_C;
-#endif
     }
-    /* Final reduction */
+#else
+    r->d[0] = t[0]; r->d[1] = t[1]; r->d[2] = t[2]; r->d[3] = t[3];
+#endif
+    /* Final reduction: subtract n while >= n */
     while (scalar_cmp(r, &SCALAR_N) >= 0) {
         sub256(r->d, r->d, SCALAR_N.d);
     }
@@ -205,8 +224,8 @@ static const secp256k1_scalar GLV_MINUS_B2 = {{
 }};
 
 static const secp256k1_scalar GLV_MINUS_LAMBDA = {{
-    0xE0CFC810B51283CFULL, 0xA880B9FC8EC739C2ULL,
-    0x5AD9E3FD77ED9BA4ULL, 0xAC9C52B33FA3CF1FULL
+    0xE0CFC810B51283CFULL, 0xC8B936E903BCBCBEULL,
+    0x5AD9E3FD77ED9BA3ULL, 0xAC9C52B33FA3CF1FULL
 }};
 
 /*
