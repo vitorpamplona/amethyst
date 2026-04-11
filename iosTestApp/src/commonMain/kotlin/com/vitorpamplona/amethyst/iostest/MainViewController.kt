@@ -18,11 +18,9 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.actions.mediaServers
+package com.vitorpamplona.amethyst.iostest
 
-typealias ServerName = com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
+import androidx.compose.ui.window.ComposeUIViewController
 
-typealias ServerType = com.vitorpamplona.amethyst.commons.model.mediaServers.ServerType
-
-val DEFAULT_MEDIA_SERVERS: List<ServerName>
-    get() = com.vitorpamplona.amethyst.commons.model.mediaServers.DEFAULT_MEDIA_SERVERS
+@Suppress("ktlint:standard:function-naming")
+fun MainViewController() = ComposeUIViewController { AmethystTestApp() }

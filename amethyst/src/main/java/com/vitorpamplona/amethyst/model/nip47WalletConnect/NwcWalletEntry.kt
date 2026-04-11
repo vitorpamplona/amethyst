@@ -20,29 +20,6 @@
  */
 package com.vitorpamplona.amethyst.model.nip47WalletConnect
 
-import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
-import kotlinx.serialization.Serializable
-import java.util.UUID
+typealias NwcWalletEntry = com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntry
 
-@Serializable
-data class NwcWalletEntry(
-    val id: String = UUID.randomUUID().toString(),
-    val name: String,
-    val uri: Nip47WalletConnect.Nip47URI,
-) {
-    fun normalize(): NwcWalletEntryNorm? =
-        uri.normalize()?.let {
-            NwcWalletEntryNorm(id, name, it)
-        }
-}
-
-data class NwcWalletEntryNorm(
-    val id: String,
-    val name: String,
-    val uri: Nip47WalletConnect.Nip47URINorm,
-) {
-    fun denormalize(): NwcWalletEntry? =
-        uri.denormalize()?.let {
-            NwcWalletEntry(id, name, it)
-        }
-}
+typealias NwcWalletEntryNorm = com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntryNorm

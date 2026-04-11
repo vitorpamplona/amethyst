@@ -46,7 +46,7 @@ fun PicturesTopBar(
             followListsModel = accountViewModel.feedStates.feedListOptions,
             listName = list,
             accountViewModel = accountViewModel,
-            onChange = accountViewModel.account.settings::changeDefaultPicturesFollowList,
+            onChange = { accountViewModel.account.settings.changeDefaultPicturesFollowList(it.code) },
         )
     }
 }

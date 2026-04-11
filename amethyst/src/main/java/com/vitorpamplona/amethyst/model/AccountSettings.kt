@@ -26,7 +26,6 @@ import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatListR
 import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcWalletEntryNorm
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
-import com.vitorpamplona.amethyst.ui.screen.FeedDefinition
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
@@ -388,19 +387,11 @@ class AccountSettings(
     // list names
     // ---
 
-    fun changeDefaultHomeFollowList(name: FeedDefinition) {
-        changeDefaultHomeFollowList(name.code)
-    }
-
     fun changeDefaultHomeFollowList(name: TopFilter) {
         if (defaultHomeFollowList.value != name) {
             defaultHomeFollowList.tryEmit(name)
             saveAccountSettings()
         }
-    }
-
-    fun changeDefaultStoriesFollowList(name: FeedDefinition) {
-        changeDefaultStoriesFollowList(name.code)
     }
 
     fun changeDefaultStoriesFollowList(name: TopFilter) {
@@ -410,19 +401,11 @@ class AccountSettings(
         }
     }
 
-    fun changeDefaultNotificationFollowList(name: FeedDefinition) {
-        changeDefaultNotificationFollowList(name.code)
-    }
-
     fun changeDefaultNotificationFollowList(name: TopFilter) {
         if (defaultNotificationFollowList.value != name) {
             defaultNotificationFollowList.tryEmit(name)
             saveAccountSettings()
         }
-    }
-
-    fun changeDefaultDiscoveryFollowList(name: FeedDefinition) {
-        changeDefaultDiscoveryFollowList(name.code)
     }
 
     fun changeDefaultDiscoveryFollowList(name: TopFilter) {
@@ -432,19 +415,11 @@ class AccountSettings(
         }
     }
 
-    fun changeDefaultPollsFollowList(name: FeedDefinition) {
-        changeDefaultPollsFollowList(name.code)
-    }
-
     fun changeDefaultPollsFollowList(name: TopFilter) {
         if (defaultPollsFollowList.value != name) {
             defaultPollsFollowList.tryEmit(name)
             saveAccountSettings()
         }
-    }
-
-    fun changeDefaultPicturesFollowList(name: FeedDefinition) {
-        changeDefaultPicturesFollowList(name.code)
     }
 
     fun changeDefaultPicturesFollowList(name: TopFilter) {
@@ -454,19 +429,11 @@ class AccountSettings(
         }
     }
 
-    fun changeDefaultShortsFollowList(name: FeedDefinition) {
-        changeDefaultShortsFollowList(name.code)
-    }
-
     fun changeDefaultShortsFollowList(name: TopFilter) {
         if (defaultShortsFollowList.value != name) {
             defaultShortsFollowList.tryEmit(name)
             saveAccountSettings()
         }
-    }
-
-    fun changeDefaultLongsFollowList(name: FeedDefinition) {
-        changeDefaultLongsFollowList(name.code)
     }
 
     fun changeDefaultLongsFollowList(name: TopFilter) {

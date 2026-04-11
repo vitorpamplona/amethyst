@@ -18,11 +18,32 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.actions.mediaServers
+package com.vitorpamplona.amethyst.commons.model.mediaServers
 
-typealias ServerName = com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
+import kotlinx.serialization.Serializable
 
-typealias ServerType = com.vitorpamplona.amethyst.commons.model.mediaServers.ServerType
+@Serializable
+data class ServerName(
+    val name: String,
+    val baseUrl: String,
+    val type: ServerType = ServerType.Blossom,
+)
 
-val DEFAULT_MEDIA_SERVERS: List<ServerName>
-    get() = com.vitorpamplona.amethyst.commons.model.mediaServers.DEFAULT_MEDIA_SERVERS
+enum class ServerType {
+    Blossom,
+    NIP95,
+    NIP96,
+}
+
+val DEFAULT_MEDIA_SERVERS: List<ServerName> =
+    listOf(
+        ServerName("Nostr.Build", "https://blossom.band/", ServerType.Blossom),
+        ServerName("24242.io", "https://24242.io/", ServerType.Blossom),
+        ServerName("Azzamo", "https://blossom.azzamo.media", ServerType.Blossom),
+        ServerName("YakiHonne", "https://blossom.yakihonne.com/", ServerType.Blossom),
+        ServerName("Primal", "https://blossom.primal.net/", ServerType.Blossom),
+        ServerName("Sovbit", "https://cdn.sovbit.host", ServerType.Blossom),
+        ServerName("Nostr.Download", "https://nostr.download", ServerType.Blossom),
+        ServerName("Satellite (Paid)", "https://cdn.satellite.earth", ServerType.Blossom),
+        ServerName("NostrMedia (Paid)", "https://nostrmedia.com", ServerType.Blossom),
+    )

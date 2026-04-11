@@ -46,7 +46,7 @@ fun PollsTopBar(
             followListsModel = accountViewModel.feedStates.feedListOptions,
             listName = list,
             accountViewModel = accountViewModel,
-            onChange = accountViewModel.account.settings::changeDefaultPollsFollowList,
+            onChange = { accountViewModel.account.settings.changeDefaultPollsFollowList(it.code) },
         )
     }
 }

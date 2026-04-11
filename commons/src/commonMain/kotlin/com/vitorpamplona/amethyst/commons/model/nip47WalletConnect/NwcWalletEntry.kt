@@ -18,11 +18,34 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.actions.mediaServers
+package com.vitorpamplona.amethyst.commons.model.nip47WalletConnect
 
-typealias ServerName = com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
+import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
+import kotlinx.serialization.Serializable
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
-typealias ServerType = com.vitorpamplona.amethyst.commons.model.mediaServers.ServerType
+@Serializable
+data class NwcWalletEntry
+    @OptIn(ExperimentalUuidApi::class)
+    constructor(
+        val id: String = Uuid.random().toString(),
+        val name: String,
+        val uri: Nip47WalletConnect.Nip47URI,
+    ) {
+        fun normalize(): NwcWalletEntryNorm? =
+            uri.normalize()?.let {
+                NwcWalletEntryNorm(id, name, it)
+            }
+    }
 
-val DEFAULT_MEDIA_SERVERS: List<ServerName>
-    get() = com.vitorpamplona.amethyst.commons.model.mediaServers.DEFAULT_MEDIA_SERVERS
+data class NwcWalletEntryNorm(
+    val id: String,
+    val name: String,
+    val uri: Nip47WalletConnect.Nip47URINorm,
+) {
+    fun denormalize(): NwcWalletEntry? =
+        uri.denormalize()?.let {
+            NwcWalletEntry(id, name, it)
+        }
+}

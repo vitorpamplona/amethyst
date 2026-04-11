@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.androidKotlinMultiplatformLibrary)
     alias(libs.plugins.jetbrainsComposeCompiler)
     alias(libs.plugins.composeMultiplatform)
+    alias(libs.plugins.serialization)
 }
 
 kotlin {
@@ -50,6 +51,7 @@ kotlin {
         commonMain {
             dependencies {
                 implementation(project(":quartz"))
+                implementation(libs.kotlinx.serialization.json)
 
                 // Compose Multiplatform
                 implementation(libs.jetbrains.compose.ui)
