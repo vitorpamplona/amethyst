@@ -84,4 +84,6 @@ object Secp256k1C {
         xonlyPub: ByteArray,
         scalar: ByteArray,
     ): ByteArray?
+
+    @JvmStatic external fun nativeSha256(data: ByteArray): ByteArray?
 }

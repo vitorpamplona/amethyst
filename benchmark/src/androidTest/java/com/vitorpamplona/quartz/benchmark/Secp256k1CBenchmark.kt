@@ -214,6 +214,40 @@ class Secp256k1CBenchmark {
         }
     }
 
+    // ==================== SHA-256 Comparison ====================
+
+    private val sha256Input = ByteArray(160) { it.toByte() } // BIP-340 tagged hash size
+
+    @Test
+    fun sha256Android() {
+        // Android's native SHA-256 (BoringSSL with ARM64 Crypto Extensions)
+        val md = java.security.MessageDigest.getInstance("SHA-256")
+        benchmarkRule.measureRepeated {
+            md.reset()
+            md.update(sha256Input)
+            md.digest()
+        }
+    }
+
+    @Test
+    fun sha256OurC() {
+        // Our C SHA-256 (ARM64 CE hardware acceleration)
+        Secp256k1InstanceC.init()
+        benchmarkRule.measureRepeated {
+            com.vitorpamplona.quartz.utils.Secp256k1C
+                .nativeSha256(sha256Input)
+        }
+    }
+
+    @Test
+    fun sha256Kotlin() {
+        // Kotlin SHA-256 (uses platform MessageDigest on Android)
+        benchmarkRule.measureRepeated {
+            com.vitorpamplona.quartz.utils.sha256
+                .sha256(sha256Input)
+        }
+    }
+
     private fun hexToBytes(hex: String): ByteArray {
         val len = hex.length / 2
         val result = ByteArray(len)
