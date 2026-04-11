@@ -143,11 +143,12 @@ void gej_double(secp256k1_gej *r, const secp256k1_gej *p) {
     r->infinity = 0;
 }
 
-/* Mixed addition: r = p + q where q is affine (Z=1). 8M + 3S */
+/* Mixed addition: r = p + q where q is affine (Z=1). 8M + 3S.
+ * Callers in the hot path (ecmult loops) always pass r != p.
+ * The aliasing check is kept for safety in table-build code. */
 void gej_add_ge(secp256k1_gej *r, const secp256k1_gej *p, const secp256k1_ge *q) {
-    /* Handle aliasing: if r == p, copy input first */
-    secp256k1_gej tmp;
-    if (r == p) { tmp = *p; p = &tmp; }
+    secp256k1_gej _tmp;
+    if (__builtin_expect(r == p, 0)) { _tmp = *p; p = &_tmp; }
     secp256k1_fe z12, z13, u2, s2, h, h2, i, j, rr, v, t;
 
     if (p->infinity) {
@@ -166,59 +167,40 @@ void gej_add_ge(secp256k1_gej *r, const secp256k1_gej *p, const secp256k1_ge *q)
     /* H = U2 - X1 */
     fe_negate(&t, &p->x, 1);
     fe_add(&h, &u2, &t);
-    fe_normalize(&h);
 
     if (fe_is_zero(&h)) {
         fe_negate(&t, &p->y, 1);
         fe_add(&t, &s2, &t);
-        fe_normalize(&t);
-        if (fe_is_zero(&t)) {
-            gej_double(r, p);
-        } else {
-            gej_set_infinity(r);
-        }
+        if (fe_is_zero(&t)) { gej_double(r, p); }
+        else { gej_set_infinity(r); }
         return;
     }
 
-    /* I = (2H)^2 */
     fe_add(&h2, &h, &h);
-    fe_sqr(&i, &h2);
-
-    /* J = H * I */
-    fe_mul(&j, &h, &i);
-
-    /* r = 2 * (S2 - Y1) */
+    fe_sqr(&i, &h2);           /* I = (2H)² */
+    fe_mul(&j, &h, &i);        /* J = H*I */
     fe_negate(&t, &p->y, 1);
     fe_add(&rr, &s2, &t);
-    fe_add(&rr, &rr, &rr);
-    fe_normalize(&rr);
+    fe_add(&rr, &rr, &rr);     /* r = 2*(S2-Y1) */
+    fe_mul(&v, &p->x, &i);     /* V = X1*I */
 
-    /* V = X1 * I */
-    fe_mul(&v, &p->x, &i);
-
-    /* X3 = r^2 - J - 2V */
-    fe_sqr(&r->x, &rr);
+    fe_sqr(&r->x, &rr);        /* X3 = r² */
     fe_negate(&t, &j, 1);
     fe_add_assign(&r->x, &t);
     fe_negate(&t, &v, 1);
     fe_add_assign(&r->x, &t);
     fe_add_assign(&r->x, &t);
-    fe_normalize(&r->x);
 
-    /* Y3 = r*(V - X3) - 2*Y1*J */
     fe_negate(&t, &r->x, 5);
-    fe_add(&t, &v, &t);
-    fe_mul(&r->y, &rr, &t);
+    fe_add(&t, &v, &t);        /* V - X3 */
+    fe_mul(&r->y, &rr, &t);    /* r*(V-X3) */
     fe_mul(&t, &p->y, &j);
     fe_add(&t, &t, &t);
     fe_negate(&t, &t, 2);
-    fe_add_assign(&r->y, &t);
-    fe_normalize(&r->y);
+    fe_add_assign(&r->y, &t);  /* - 2*Y1*J */
 
-    /* Z3 = 2 * Z1 * H */
     fe_mul(&r->z, &p->z, &h);
-    fe_add(&r->z, &r->z, &r->z);
-    fe_normalize(&r->z);
+    fe_add(&r->z, &r->z, &r->z); /* Z3 = 2*Z1*H */
 
     r->infinity = 0;
 }
