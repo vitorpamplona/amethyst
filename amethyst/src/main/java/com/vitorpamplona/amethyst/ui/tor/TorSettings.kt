@@ -20,7 +20,21 @@
  */
 package com.vitorpamplona.amethyst.ui.tor
 
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.tor_custom
+import com.vitorpamplona.amethyst.commons.resources.tor_custom_explainer
+import com.vitorpamplona.amethyst.commons.resources.tor_default
+import com.vitorpamplona.amethyst.commons.resources.tor_default_explainer
+import com.vitorpamplona.amethyst.commons.resources.tor_external
+import com.vitorpamplona.amethyst.commons.resources.tor_full_privacy
+import com.vitorpamplona.amethyst.commons.resources.tor_full_privacy_explainer
+import com.vitorpamplona.amethyst.commons.resources.tor_internal
+import com.vitorpamplona.amethyst.commons.resources.tor_off
+import com.vitorpamplona.amethyst.commons.resources.tor_small_payloads
+import com.vitorpamplona.amethyst.commons.resources.tor_small_payloads_explainer
+import com.vitorpamplona.amethyst.commons.resources.tor_when_needed
+import com.vitorpamplona.amethyst.commons.resources.tor_when_needed_explainer
+import org.jetbrains.compose.resources.StringResource
 
 data class TorSettings(
     val torType: TorType = TorType.INTERNAL,
@@ -40,11 +54,11 @@ data class TorSettings(
 
 enum class TorType(
     val screenCode: Int,
-    val resourceId: Int,
+    val resourceId: StringResource,
 ) {
-    OFF(0, R.string.tor_off),
-    INTERNAL(1, R.string.tor_internal),
-    EXTERNAL(2, R.string.tor_external),
+    OFF(0, Res.string.tor_off),
+    INTERNAL(1, Res.string.tor_internal),
+    EXTERNAL(2, Res.string.tor_external),
 }
 
 fun parseTorType(code: Int?): TorType =
@@ -57,14 +71,14 @@ fun parseTorType(code: Int?): TorType =
 
 enum class TorPresetType(
     val screenCode: Int,
-    val resourceId: Int,
-    val explainerId: Int,
+    val resourceId: StringResource,
+    val explainerId: StringResource,
 ) {
-    ONLY_WHEN_NEEDED(0, R.string.tor_when_needed, R.string.tor_when_needed_explainer),
-    DEFAULT(1, R.string.tor_default, R.string.tor_default_explainer),
-    SMALL_PAYLOADS(2, R.string.tor_small_payloads, R.string.tor_small_payloads_explainer),
-    FULL_PRIVACY(3, R.string.tor_full_privacy, R.string.tor_full_privacy_explainer),
-    CUSTOM(4, R.string.tor_custom, R.string.tor_custom_explainer),
+    ONLY_WHEN_NEEDED(0, Res.string.tor_when_needed, Res.string.tor_when_needed_explainer),
+    DEFAULT(1, Res.string.tor_default, Res.string.tor_default_explainer),
+    SMALL_PAYLOADS(2, Res.string.tor_small_payloads, Res.string.tor_small_payloads_explainer),
+    FULL_PRIVACY(3, Res.string.tor_full_privacy, Res.string.tor_full_privacy_explainer),
+    CUSTOM(4, Res.string.tor_custom, Res.string.tor_custom_explainer),
 }
 
 fun parseTorPresetType(code: Int?): TorPresetType =

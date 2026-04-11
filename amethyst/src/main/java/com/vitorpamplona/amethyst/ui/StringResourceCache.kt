@@ -29,6 +29,8 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource as kmpStringResource
 
 /**
  * Cache for stringResource because it seems to be > 1ms function in some phones
@@ -71,6 +73,15 @@ fun StringResSetup() {
 
 @Composable
 fun stringRes(id: Int): String = resourceCache.get(id) ?: stringResource(id).also { resourceCache.put(id, it) }
+
+@Composable
+fun stringRes(id: StringResource): String = kmpStringResource(id)
+
+@Composable
+fun stringRes(
+    id: StringResource,
+    vararg args: String,
+): String = kmpStringResource(id, *args)
 
 @Composable
 fun stringRes(

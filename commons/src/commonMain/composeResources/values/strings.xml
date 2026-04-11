@@ -622,4 +622,44 @@
     <string name="zapraiser_explainer">Adds a target amount of sats to raise for this post. Supporting clients may show this as a progress bar to incentivize donations</string>
     <string name="zapraiser_target_amount_in_sats">Target Amount in Sats</string>
     <string name="zaps">Zaps</string>
+
+    <!-- Settings enums (Int→StringResource migration) -->
+    <string name="system">System</string>
+    <string name="light">Light</string>
+    <string name="dark">Dark</string>
+    <string name="connectivity_type_always">Always</string>
+    <string name="connectivity_type_never">Never</string>
+    <string name="connectivity_type_unmetered_wifi_only">Unmetered WiFi</string>
+    <string name="ui_feature_set_type_complete">Complete</string>
+    <string name="ui_feature_set_type_simplified">Simplified</string>
+    <string name="ui_feature_set_type_performance">Performance</string>
+    <string name="gallery_type_classic">Classic</string>
+    <string name="gallery_type_modern">Modern</string>
+    <string name="content_warning_hide_all_sensitive_content_option">Hide</string>
+    <string name="content_warning_see_warnings_option">Warn</string>
+    <string name="content_warning_show_all_sensitive_content_option">Show</string>
+    <string name="tor_off">Off</string>
+    <string name="tor_internal">Internal</string>
+    <string name="tor_external">Orbot</string>
+    <string name="tor_custom">Custom</string>
+    <string name="tor_custom_explainer">Make your own</string>
+    <string name="tor_default">Default</string>
+    <string name="tor_default_explainer">Hide your IP from random relays</string>
+    <string name="tor_full_privacy">Full Privacy</string>
+    <string name="tor_full_privacy_explainer">Hide your IP in all connections</string>
+    <string name="tor_small_payloads">All but Media</string>
+    <string name="tor_small_payloads_explainer">Hide your IP from everything, but images and videos</string>
+    <string name="tor_when_needed">Basic</string>
+    <string name="tor_when_needed_explainer">Use Tor when it\'s required by the server</string>
+    <string name="route_home">Home</string>
+    <string name="route_messages">Messages</string>
+    <string name="route_video">Shorts</string>
+    <string name="route_discover">Discover</string>
+    <string name="route_notifications">Notifications</string>
+    <string name="feed_group_communities">Communities</string>
+    <string name="feed_group_feeds">Feeds</string>
+    <string name="feed_group_hashtags">Hashtags</string>
+    <string name="feed_group_lists">Lists</string>
+    <string name="feed_group_locations">Locations</string>
+    <string name="feed_group_relays">Relays</string>
 </resources>

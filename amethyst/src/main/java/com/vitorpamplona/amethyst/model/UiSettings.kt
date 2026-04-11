@@ -21,8 +21,23 @@
 package com.vitorpamplona.amethyst.model
 
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.connectivity_type_always
+import com.vitorpamplona.amethyst.commons.resources.connectivity_type_never
+import com.vitorpamplona.amethyst.commons.resources.connectivity_type_unmetered_wifi_only
+import com.vitorpamplona.amethyst.commons.resources.content_warning_hide_all_sensitive_content_option
+import com.vitorpamplona.amethyst.commons.resources.content_warning_see_warnings_option
+import com.vitorpamplona.amethyst.commons.resources.content_warning_show_all_sensitive_content_option
+import com.vitorpamplona.amethyst.commons.resources.dark
+import com.vitorpamplona.amethyst.commons.resources.gallery_type_classic
+import com.vitorpamplona.amethyst.commons.resources.gallery_type_modern
+import com.vitorpamplona.amethyst.commons.resources.light
+import com.vitorpamplona.amethyst.commons.resources.system
+import com.vitorpamplona.amethyst.commons.resources.ui_feature_set_type_complete
+import com.vitorpamplona.amethyst.commons.resources.ui_feature_set_type_performance
+import com.vitorpamplona.amethyst.commons.resources.ui_feature_set_type_simplified
 import kotlinx.serialization.Serializable
+import org.jetbrains.compose.resources.StringResource
 
 @Stable
 @Serializable
@@ -43,11 +58,11 @@ data class UiSettings(
 
 enum class ThemeType(
     val screenCode: Int,
-    val resourceId: Int,
+    val resourceId: StringResource,
 ) {
-    SYSTEM(0, R.string.system),
-    LIGHT(1, R.string.light),
-    DARK(2, R.string.dark),
+    SYSTEM(0, Res.string.system),
+    LIGHT(1, Res.string.light),
+    DARK(2, Res.string.dark),
 }
 
 fun parseThemeType(code: Int?): ThemeType =
@@ -61,28 +76,28 @@ fun parseThemeType(code: Int?): ThemeType =
 enum class ConnectivityType(
     val prefCode: Boolean?,
     val screenCode: Int,
-    val resourceId: Int,
+    val resourceId: StringResource,
 ) {
-    ALWAYS(null, 0, R.string.connectivity_type_always),
-    WIFI_ONLY(true, 1, R.string.connectivity_type_unmetered_wifi_only),
-    NEVER(false, 2, R.string.connectivity_type_never),
+    ALWAYS(null, 0, Res.string.connectivity_type_always),
+    WIFI_ONLY(true, 1, Res.string.connectivity_type_unmetered_wifi_only),
+    NEVER(false, 2, Res.string.connectivity_type_never),
 }
 
 enum class FeatureSetType(
     val screenCode: Int,
-    val resourceId: Int,
+    val resourceId: StringResource,
 ) {
-    COMPLETE(0, R.string.ui_feature_set_type_complete),
-    SIMPLIFIED(1, R.string.ui_feature_set_type_simplified),
-    PERFORMANCE(2, R.string.ui_feature_set_type_performance),
+    COMPLETE(0, Res.string.ui_feature_set_type_complete),
+    SIMPLIFIED(1, Res.string.ui_feature_set_type_simplified),
+    PERFORMANCE(2, Res.string.ui_feature_set_type_performance),
 }
 
 enum class ProfileGalleryType(
     val screenCode: Int,
-    val resourceId: Int,
+    val resourceId: StringResource,
 ) {
-    CLASSIC(0, R.string.gallery_type_classic),
-    MODERN(1, R.string.gallery_type_modern),
+    CLASSIC(0, Res.string.gallery_type_classic),
+    MODERN(1, Res.string.gallery_type_modern),
 }
 
 fun parseConnectivityType(code: Boolean?): ConnectivityType =
@@ -119,10 +134,10 @@ fun parseGalleryType(screenCode: Int): ProfileGalleryType =
 enum class BooleanType(
     val prefCode: Boolean?,
     val screenCode: Int,
-    val reourceId: Int,
+    val reourceId: StringResource,
 ) {
-    ALWAYS(null, 0, R.string.connectivity_type_always),
-    NEVER(false, 1, R.string.connectivity_type_never),
+    ALWAYS(null, 0, Res.string.connectivity_type_always),
+    NEVER(false, 1, Res.string.connectivity_type_never),
 }
 
 fun parseBooleanType(code: Boolean?): BooleanType =
@@ -142,11 +157,11 @@ fun parseBooleanType(screenCode: Int): BooleanType =
 enum class WarningType(
     val prefCode: Boolean?,
     val screenCode: Int,
-    val resourceId: Int,
+    val resourceId: StringResource,
 ) {
-    WARN(null, 0, R.string.content_warning_see_warnings_option),
-    SHOW(true, 1, R.string.content_warning_show_all_sensitive_content_option),
-    HIDE(false, 2, R.string.content_warning_hide_all_sensitive_content_option),
+    WARN(null, 0, Res.string.content_warning_see_warnings_option),
+    SHOW(true, 1, Res.string.content_warning_show_all_sensitive_content_option),
+    HIDE(false, 2, Res.string.content_warning_hide_all_sensitive_content_option),
 }
 
 fun parseWarningType(screenCode: Int): WarningType =

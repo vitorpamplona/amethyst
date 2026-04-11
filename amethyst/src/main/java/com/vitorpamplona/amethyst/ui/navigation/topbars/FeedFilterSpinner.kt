@@ -76,6 +76,13 @@ import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.feed_group_communities
+import com.vitorpamplona.amethyst.commons.resources.feed_group_feeds
+import com.vitorpamplona.amethyst.commons.resources.feed_group_hashtags
+import com.vitorpamplona.amethyst.commons.resources.feed_group_lists
+import com.vitorpamplona.amethyst.commons.resources.feed_group_locations
+import com.vitorpamplona.amethyst.commons.resources.feed_group_relays
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.service.call.CallSessionBridge.accountViewModel
@@ -101,6 +108,7 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import kotlinx.collections.immutable.ImmutableList
+import org.jetbrains.compose.resources.StringResource
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
@@ -339,14 +347,14 @@ private data class IndexedFeedDefinition(
 )
 
 private enum class FeedGroup(
-    @param:androidx.annotation.StringRes val labelRes: Int,
+    val labelRes: StringResource,
 ) {
-    FEEDS(R.string.feed_group_feeds),
-    HASHTAGS(R.string.feed_group_hashtags),
-    COMMUNITIES(R.string.feed_group_communities),
-    LOCATIONS(R.string.feed_group_locations),
-    LISTS(R.string.feed_group_lists),
-    RELAYS(R.string.feed_group_relays),
+    FEEDS(Res.string.feed_group_feeds),
+    HASHTAGS(Res.string.feed_group_hashtags),
+    COMMUNITIES(Res.string.feed_group_communities),
+    LOCATIONS(Res.string.feed_group_locations),
+    LISTS(Res.string.feed_group_lists),
+    RELAYS(Res.string.feed_group_relays),
 }
 
 private fun groupFeedDefinitions(options: ImmutableList<FeedDefinition>): Map<FeedGroup, List<IndexedFeedDefinition>> {
