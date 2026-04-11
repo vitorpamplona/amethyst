@@ -575,29 +575,42 @@ void ecmult(secp256k1_gej *r, const secp256k1_gej *p, const secp256k1_scalar *sc
     int len1 = wnaf_encode(wnaf1, 145, &split.k1, w);
     int len2 = wnaf_encode(wnaf2, 145, &split.k2, w);
 
-    /* Build P odd-multiples table */
-    secp256k1_gej p2;
-    gej_double(&p2, p);
+    /* P-side tables: check cache first (same cache as ecmult_double_g).
+     * For ECDH, the same peer key is used repeatedly (NIP-44 conversations). */
+    const secp256k1_ge *p_odd;
+    const secp256k1_ge *p_lam_odd;
+    int slot = p_cache_slot(&p->x);
+    cached_p_table *cached = &p_table_cache[slot];
 
-    secp256k1_gej p_odd_jac[8];
-    p_odd_jac[0] = *p;
-    for (int i = 1; i < table_size; i++) {
-        gej_add(&p_odd_jac[i], &p_odd_jac[i-1], &p2);
+    if (cached->valid && fe_equal(&cached->px, &p->x)) {
+        p_odd = cached->p_odd;
+        p_lam_odd = cached->p_lam_odd;
+    } else {
+        secp256k1_gej p2;
+        gej_double(&p2, p);
+
+        secp256k1_gej p_odd_jac[8];
+        p_odd_jac[0] = *p;
+        for (int i = 1; i < table_size; i++) {
+            gej_add(&p_odd_jac[i], &p_odd_jac[i-1], &p2);
+        }
+
+        secp256k1_gej p_lam_jac[8];
+        for (int i = 0; i < table_size; i++) {
+            fe_mul(&p_lam_jac[i].x, &p_odd_jac[i].x, &GLV_BETA);
+            p_lam_jac[i].y = p_odd_jac[i].y;
+            p_lam_jac[i].z = p_odd_jac[i].z;
+            p_lam_jac[i].infinity = 0;
+        }
+
+        batch_to_affine(cached->p_odd, p_odd_jac, table_size);
+        batch_to_affine(cached->p_lam_odd, p_lam_jac, table_size);
+        cached->px = p->x;
+        cached->valid = 1;
+
+        p_odd = cached->p_odd;
+        p_lam_odd = cached->p_lam_odd;
     }
-
-    /* Build lambda(P) odd-multiples */
-    secp256k1_gej p_lam_jac[8];
-    for (int i = 0; i < table_size; i++) {
-        fe_mul(&p_lam_jac[i].x, &p_odd_jac[i].x, &GLV_BETA);
-        p_lam_jac[i].y = p_odd_jac[i].y;
-        p_lam_jac[i].z = p_odd_jac[i].z;
-        p_lam_jac[i].infinity = 0;
-    }
-
-    /* Convert to affine for mixed addition */
-    secp256k1_ge p_odd[8], p_lam_odd[8];
-    batch_to_affine(p_odd, p_odd_jac, table_size);
-    batch_to_affine(p_lam_odd, p_lam_jac, table_size);
 
     /* Find highest non-zero digit */
     int bits = (len1 > len2) ? len1 : len2;
