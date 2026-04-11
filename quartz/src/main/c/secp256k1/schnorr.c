@@ -239,8 +239,15 @@ int secp256k1c_schnorr_sign_xonly(
     scalar_from_bytes(&d0, seckey32);
     if (!scalar_is_valid(&d0)) return 0;
 
-    /* BIP-340 x-only pubkeys always have even y */
-    return schnorr_sign_internal(sig64, msg, msg_len, &d0, xonly_pub32, 1, auxrand32);
+    /* Derive actual y-parity from the secret key.
+     * BIP-340: if the full pubkey has odd y, negate the secret key. */
+    secp256k1_gej pj;
+    ecmult_gen(&pj, &d0);
+    secp256k1_ge p;
+    if (!gej_to_ge(&p, &pj)) return 0;
+    int even_y = point_has_even_y(&p.y);
+
+    return schnorr_sign_internal(sig64, msg, msg_len, &d0, xonly_pub32, even_y, auxrand32);
 }
 
 /* ==================== Schnorr Verify (core) ==================== */
