@@ -33,7 +33,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.badge_award_image
+import com.vitorpamplona.amethyst.commons.resources.badge_award_image_for
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -46,7 +48,6 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BadgePictureModifier
 import com.vitorpamplona.amethyst.ui.theme.Size35Modifier
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
@@ -62,6 +63,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun DisplayBadges(
@@ -210,9 +212,9 @@ private fun RenderBadgeImage(
 ) {
     val description =
         if (name != null) {
-            stringRes(id = R.string.badge_award_image_for, name)
+            stringResource(Res.string.badge_award_image_for, name)
         } else {
-            stringRes(id = R.string.badge_award_image)
+            stringResource(Res.string.badge_award_image)
         }
 
     if (image == null) {

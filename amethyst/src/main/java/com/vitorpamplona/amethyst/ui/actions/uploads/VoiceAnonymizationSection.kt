@@ -32,10 +32,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.voice_anonymize_description
+import com.vitorpamplona.amethyst.commons.resources.voice_anonymize_title
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun VoiceAnonymizationSection(
@@ -55,12 +57,12 @@ fun VoiceAnonymizationSection(
             verticalArrangement = Arrangement.spacedBy(Size5dp),
         ) {
             Text(
-                text = stringRes(R.string.voice_anonymize_title),
+                text = stringResource(Res.string.voice_anonymize_title),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                text = stringRes(R.string.voice_anonymize_description),
+                text = stringResource(Res.string.voice_anonymize_description),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 3,

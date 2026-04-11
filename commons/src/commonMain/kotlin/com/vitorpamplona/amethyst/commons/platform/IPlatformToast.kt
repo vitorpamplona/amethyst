@@ -18,31 +18,11 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.header.actions
+package com.vitorpamplona.amethyst.commons.platform
 
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.leave
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
-import com.vitorpamplona.amethyst.ui.theme.HalfHalfHorzModifier
-import org.jetbrains.compose.resources.stringResource
-
-@Composable
-fun LeaveChatButton(
-    channel: PublicChatChannel,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    FilledTonalButton(
-        modifier = HalfHalfHorzModifier,
-        onClick = { accountViewModel.unfollow(channel) },
-        contentPadding = ButtonPadding,
-    ) {
-        Text(text = stringResource(Res.string.leave))
-    }
+interface IPlatformToast {
+    fun show(
+        message: String,
+        long: Boolean = false,
+    )
 }

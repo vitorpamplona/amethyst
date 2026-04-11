@@ -33,18 +33,19 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.profile_image
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadState
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.HeaderPictureModifier
 import com.vitorpamplona.amethyst.ui.theme.Size34dp
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun ChannelFileUploadDialog(
@@ -68,7 +69,7 @@ fun ChannelFileUploadDialog(
                             RobohashFallbackAsyncImage(
                                 robot = channel.idHex,
                                 model = it,
-                                contentDescription = stringRes(R.string.profile_image),
+                                contentDescription = stringResource(Res.string.profile_image),
                                 contentScale = ContentScale.Crop,
                                 modifier = HeaderPictureModifier,
                                 loadProfilePicture = accountViewModel.settings.showProfilePictures(),

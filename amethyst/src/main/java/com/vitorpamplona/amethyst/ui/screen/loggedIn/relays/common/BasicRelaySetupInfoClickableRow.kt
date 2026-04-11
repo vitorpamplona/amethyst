@@ -43,7 +43,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.and_more
+import com.vitorpamplona.amethyst.commons.resources.relay_reorder
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.components.util.setText
@@ -51,7 +53,6 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.RenderRelayIcon
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.HalfHalfVertPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfHorzPadding
@@ -61,6 +62,7 @@ import com.vitorpamplona.amethyst.ui.theme.ReactionRowHeightChatMaxWidth
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -116,7 +118,7 @@ fun BasicRelaySetupInfoClickableRow(
                 val handleModifier = Modifier.height(24.dp).relayDragHandle(index, dragState)
                 Icon(
                     Icons.Default.DragIndicator,
-                    contentDescription = stringRes(R.string.relay_reorder),
+                    contentDescription = stringResource(Res.string.relay_reorder),
                     modifier = handleModifier,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -207,7 +209,7 @@ fun UsedBy(
             if (item.users.size > 4) {
                 Box(contentAlignment = Alignment.Center, modifier = Height25Modifier) {
                     Text(
-                        text = stringRes(R.string.and_more, item.users.size - 4),
+                        text = stringResource(Res.string.and_more, item.users.size - 4),
                         maxLines = 1,
                     )
                 }

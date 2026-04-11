@@ -35,7 +35,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.preview_card_image_for
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -44,12 +45,12 @@ import com.vitorpamplona.amethyst.ui.note.WatchAuthor
 import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeader
 import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeaderBackground
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.authorNotePictureForImageHeader
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun RenderLongFormContent(
@@ -80,7 +81,7 @@ fun LongFormHeader(
             Box {
                 MyAsyncImage(
                     imageUrl = it,
-                    contentDescription = stringRes(R.string.preview_card_image_for, it),
+                    contentDescription = stringResource(Res.string.preview_card_image_for, it),
                     contentScale = ContentScale.FillWidth,
                     mainImageModifier = Modifier.fillMaxWidth(),
                     loadedImageModifier = Modifier,

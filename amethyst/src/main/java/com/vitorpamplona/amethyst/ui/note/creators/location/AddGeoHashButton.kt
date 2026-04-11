@@ -30,8 +30,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.add_location
+import com.vitorpamplona.amethyst.commons.resources.remove_location
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun AddGeoHashButton(
@@ -44,14 +46,14 @@ fun AddGeoHashButton(
         if (!isActive) {
             Icon(
                 imageVector = Icons.Default.LocationOff,
-                contentDescription = stringRes(id = R.string.add_location),
+                contentDescription = stringResource(Res.string.add_location),
                 modifier = Modifier.size(20.dp),
                 tint = MaterialTheme.colorScheme.onBackground,
             )
         } else {
             Icon(
                 imageVector = Icons.Default.LocationOn,
-                contentDescription = stringRes(id = R.string.remove_location),
+                contentDescription = stringResource(Res.string.remove_location),
                 modifier = Modifier.size(20.dp),
                 tint = MaterialTheme.colorScheme.primary,
             )

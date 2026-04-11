@@ -36,19 +36,24 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.discover_follows
+import com.vitorpamplona.amethyst.commons.resources.discover_follows_explainer
+import com.vitorpamplona.amethyst.commons.resources.feed_is_empty
+import com.vitorpamplona.amethyst.commons.resources.follow_sets
+import com.vitorpamplona.amethyst.commons.resources.follow_sets_explainer
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.list.NewListButton
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.MaxWidthWithHorzPadding
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.SpacedBy5dp
 import com.vitorpamplona.amethyst.ui.theme.grayText
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun FollowListAndPackAndUserView(
@@ -72,12 +77,12 @@ fun FollowListAndPackAndUserView(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = stringRes(R.string.follow_sets),
+                        text = stringResource(Res.string.follow_sets),
                         color = MaterialTheme.colorScheme.primary,
                         style = MaterialTheme.typography.titleSmall,
                     )
                     Text(
-                        text = stringRes(R.string.follow_sets_explainer),
+                        text = stringResource(Res.string.follow_sets_explainer),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.grayText,
                     )
@@ -91,7 +96,7 @@ fun FollowListAndPackAndUserView(
             item {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
                     Text(
-                        text = stringRes(R.string.feed_is_empty),
+                        text = stringResource(Res.string.feed_is_empty),
                         modifier = Modifier.padding(vertical = Size20dp),
                     )
                     HorizontalDivider(thickness = DividerThickness)
@@ -145,12 +150,12 @@ fun FollowListAndPackAndUserView(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = stringRes(R.string.discover_follows),
+                        text = stringResource(Res.string.discover_follows),
                         color = MaterialTheme.colorScheme.primary,
                         style = MaterialTheme.typography.titleSmall,
                     )
                     Text(
-                        text = stringRes(R.string.discover_follows_explainer),
+                        text = stringResource(Res.string.discover_follows_explainer),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.grayText,
                     )
@@ -164,7 +169,7 @@ fun FollowListAndPackAndUserView(
             item {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
                     Text(
-                        text = stringRes(R.string.feed_is_empty),
+                        text = stringResource(Res.string.feed_is_empty),
                         modifier = Modifier.padding(vertical = Size20dp),
                     )
                     HorizontalDivider(thickness = DividerThickness)

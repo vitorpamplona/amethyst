@@ -33,10 +33,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.account_switch_add_account_dialog_title
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
-import com.vitorpamplona.amethyst.ui.stringRes
+import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -54,7 +55,7 @@ fun AddAccountDialog(
                 LoginOrSignupScreen(newAccountKey, accountSessionManager, isFirstLogin = false)
                 TopAppBar(
                     title = {
-                        Text(text = stringRes(R.string.account_switch_add_account_dialog_title))
+                        Text(text = stringResource(Res.string.account_switch_add_account_dialog_title))
                     },
                     navigationIcon = {
                         IconButton(onClick = onClose) { ArrowBackIcon() }

@@ -27,13 +27,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.open_poll
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun OpenPollsSectionHeader() {
     Text(
-        text = stringRes(R.string.open_poll),
+        text = stringResource(Res.string.open_poll),
         style = MaterialTheme.typography.titleSmall,
         fontWeight = FontWeight.Bold,
         modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),

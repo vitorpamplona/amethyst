@@ -50,11 +50,14 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.content_warning
+import com.vitorpamplona.amethyst.commons.resources.content_warning_explanation
+import com.vitorpamplona.amethyst.commons.resources.content_warning_with_reason
+import com.vitorpamplona.amethyst.commons.resources.show_anyway
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
 import com.vitorpamplona.amethyst.ui.theme.PaddingHorizontal12Modifier
@@ -62,6 +65,7 @@ import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarningReason
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitiveOrNSFW
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun SensitivityWarning(
@@ -160,7 +164,7 @@ fun ContentWarningNote(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Visibility,
-                            contentDescription = stringRes(R.string.content_warning),
+                            contentDescription = stringResource(Res.string.content_warning),
                             modifier =
                                 Modifier
                                     .size(70.dp)
@@ -169,7 +173,7 @@ fun ContentWarningNote(
                         )
                         Icon(
                             imageVector = Icons.Rounded.Warning,
-                            contentDescription = stringRes(R.string.content_warning),
+                            contentDescription = stringResource(Res.string.content_warning),
                             modifier =
                                 Modifier
                                     .size(30.dp)
@@ -183,9 +187,9 @@ fun ContentWarningNote(
                     Text(
                         text =
                             if (reason.isNullOrBlank()) {
-                                stringRes(R.string.content_warning)
+                                stringResource(Res.string.content_warning)
                             } else {
-                                stringRes(R.string.content_warning_with_reason, reason)
+                                stringResource(Res.string.content_warning_with_reason, reason)
                             },
                         fontWeight = FontWeight.Bold,
                         fontSize = 18.sp,
@@ -197,7 +201,7 @@ fun ContentWarningNote(
                 if (reason.isNullOrBlank()) {
                     Row {
                         Text(
-                            text = stringRes(R.string.content_warning_explanation),
+                            text = stringResource(Res.string.content_warning_explanation),
                             color = Color.Gray,
                             modifier = Modifier.padding(top = 10.dp),
                             textAlign = TextAlign.Center,
@@ -213,7 +217,7 @@ fun ContentWarningNote(
                         contentPadding = ButtonPadding,
                     ) {
                         Text(
-                            text = stringRes(R.string.show_anyway),
+                            text = stringResource(Res.string.show_anyway),
                         )
                     }
                 }

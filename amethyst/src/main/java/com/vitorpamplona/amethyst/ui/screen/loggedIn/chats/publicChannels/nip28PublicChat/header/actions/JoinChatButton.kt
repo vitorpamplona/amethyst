@@ -23,13 +23,14 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.join
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfHalfHorzModifier
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun JoinChatButton(
@@ -42,6 +43,6 @@ fun JoinChatButton(
         onClick = { accountViewModel.follow(channel) },
         contentPadding = ButtonPadding,
     ) {
-        Text(text = stringRes(R.string.join))
+        Text(text = stringResource(Res.string.join))
     }
 }

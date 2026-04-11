@@ -31,11 +31,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.live_stream_ended_tag
+import com.vitorpamplona.amethyst.commons.resources.live_stream_live_tag
+import com.vitorpamplona.amethyst.commons.resources.live_stream_offline_tag
+import com.vitorpamplona.amethyst.commons.resources.live_stream_planned_tag
 import com.vitorpamplona.amethyst.ui.theme.SmallBorder
 import com.vitorpamplona.amethyst.ui.theme.liveStreamTag
 import com.vitorpamplona.quartz.utils.TimeUtils
+import org.jetbrains.compose.resources.stringResource
 import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -43,7 +47,7 @@ import java.util.Date
 @Composable
 fun LiveFlag() {
     Text(
-        text = stringRes(id = R.string.live_stream_live_tag),
+        text = stringResource(Res.string.live_stream_live_tag),
         color = Color.White,
         fontWeight = FontWeight.Bold,
         fontSize = 16.sp,
@@ -60,7 +64,7 @@ fun LiveFlag() {
 @Composable
 fun EndedFlag() {
     Text(
-        text = stringRes(id = R.string.live_stream_ended_tag),
+        text = stringResource(Res.string.live_stream_ended_tag),
         color = Color.White,
         fontWeight = FontWeight.Bold,
         modifier =
@@ -76,7 +80,7 @@ fun EndedFlag() {
 @Composable
 fun OfflineFlag() {
     Text(
-        text = stringRes(id = R.string.live_stream_offline_tag),
+        text = stringResource(Res.string.live_stream_offline_tag),
         color = Color.White,
         fontWeight = FontWeight.Bold,
         modifier =
@@ -105,7 +109,7 @@ fun ScheduledFlag(starts: Long?) {
         }
 
     Text(
-        text = startsIn ?: stringRes(id = R.string.live_stream_planned_tag),
+        text = startsIn ?: stringResource(Res.string.live_stream_planned_tag),
         color = Color.White,
         fontWeight = FontWeight.Bold,
         modifier = liveStreamTag,

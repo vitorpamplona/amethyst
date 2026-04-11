@@ -38,13 +38,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.hashtags.Lightning
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.zapraiser
+import com.vitorpamplona.amethyst.commons.resources.zapraiser_explainer
+import com.vitorpamplona.amethyst.commons.resources.zapraiser_target_amount_in_sats
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun ZapRaiserRequest(
@@ -64,7 +67,7 @@ fun ZapRaiserRequest(
             )
 
             Text(
-                text = titleText ?: stringRes(R.string.zapraiser),
+                text = titleText ?: stringResource(Res.string.zapraiser),
                 fontSize = 20.sp,
                 fontWeight = FontWeight.W500,
                 modifier = Modifier.padding(start = 10.dp),
@@ -74,13 +77,13 @@ fun ZapRaiserRequest(
         HorizontalDivider(thickness = DividerThickness)
 
         Text(
-            text = stringRes(R.string.zapraiser_explainer),
+            text = stringResource(Res.string.zapraiser_explainer),
             color = MaterialTheme.colorScheme.placeholderText,
             modifier = Modifier.padding(vertical = 10.dp),
         )
 
         OutlinedTextField(
-            label = { Text(text = stringRes(R.string.zapraiser_target_amount_in_sats)) },
+            label = { Text(text = stringResource(Res.string.zapraiser_target_amount_in_sats)) },
             modifier = Modifier.fillMaxWidth(),
             value =
                 if (model.zapRaiserAmount.value != null) {

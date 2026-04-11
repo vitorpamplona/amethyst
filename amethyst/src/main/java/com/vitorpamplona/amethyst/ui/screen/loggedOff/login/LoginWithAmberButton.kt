@@ -27,11 +27,12 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.login_with_external_signer
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size40dp
 import com.vitorpamplona.amethyst.ui.theme.Size50dp
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun LoginWithAmberButton(
@@ -45,7 +46,7 @@ fun LoginWithAmberButton(
         modifier = Modifier.height(Size50dp),
     ) {
         Text(
-            text = stringRes(R.string.login_with_external_signer),
+            text = stringResource(Res.string.login_with_external_signer),
             modifier = Modifier.padding(horizontal = Size40dp),
         )
     }

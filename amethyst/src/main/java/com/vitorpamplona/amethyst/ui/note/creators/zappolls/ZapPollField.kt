@@ -34,9 +34,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.add_poll_option_button
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.ShortNotePostViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun ZapPollField(postViewModel: ShortNotePostViewModel) {
@@ -69,7 +70,7 @@ fun ZapPollField(postViewModel: ShortNotePostViewModel) {
                     containerColor = MaterialTheme.colorScheme.surface,
                 ),
         ) {
-            Icon(Icons.Default.Add, contentDescription = stringRes(R.string.add_poll_option_button))
+            Icon(Icons.Default.Add, contentDescription = stringResource(Res.string.add_poll_option_button))
         }
     }
 }

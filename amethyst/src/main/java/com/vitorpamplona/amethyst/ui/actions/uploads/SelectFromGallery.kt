@@ -40,11 +40,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.upload_image
 import com.vitorpamplona.amethyst.ui.components.LoadingAnimation
-import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
+import org.jetbrains.compose.resources.stringResource
 import java.util.concurrent.atomic.AtomicBoolean
 
 @Stable
@@ -129,7 +130,7 @@ private fun GallerySelectButton(
         if (!isUploading) {
             Icon(
                 imageVector = Icons.Default.AddPhotoAlternate,
-                contentDescription = stringRes(id = R.string.upload_image),
+                contentDescription = stringResource(Res.string.upload_image),
                 modifier = Modifier.height(25.dp),
                 tint = tint,
             )

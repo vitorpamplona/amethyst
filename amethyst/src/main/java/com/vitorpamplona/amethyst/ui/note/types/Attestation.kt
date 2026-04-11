@@ -59,9 +59,21 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.attestation
+import com.vitorpamplona.amethyst.commons.resources.attestation_invalid
+import com.vitorpamplona.amethyst.commons.resources.attestation_request
+import com.vitorpamplona.amethyst.commons.resources.attestation_requests_attestation_to
+import com.vitorpamplona.amethyst.commons.resources.attestation_status_revoked
+import com.vitorpamplona.amethyst.commons.resources.attestation_status_verifying
+import com.vitorpamplona.amethyst.commons.resources.attestation_valid
+import com.vitorpamplona.amethyst.commons.resources.attestation_valid_from
+import com.vitorpamplona.amethyst.commons.resources.attestation_valid_to
+import com.vitorpamplona.amethyst.commons.resources.attestor_proficiency
+import com.vitorpamplona.amethyst.commons.resources.attestor_recommendation
+import com.vitorpamplona.amethyst.commons.resources.attestor_recommendation_for_kinds
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.LoadNote
@@ -75,7 +87,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.KindChip
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
@@ -84,6 +95,7 @@ import com.vitorpamplona.quartz.experimental.attestations.attestation.tags.Attes
 import com.vitorpamplona.quartz.experimental.attestations.proficiency.AttestorProficiencyEvent
 import com.vitorpamplona.quartz.experimental.attestations.recommendation.AttestorRecommendationEvent
 import com.vitorpamplona.quartz.experimental.attestations.request.AttestationRequestEvent
+import org.jetbrains.compose.resources.stringResource
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -183,7 +195,7 @@ fun RenderAttestation(
         ) {
             Icon(
                 imageVector = statusIcon,
-                contentDescription = stringRes(R.string.attestation),
+                contentDescription = stringResource(Res.string.attestation),
                 tint = statusColor,
                 modifier = Modifier.size(24.dp),
             )
@@ -200,14 +212,14 @@ fun RenderAttestation(
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 validFrom?.let {
                     Text(
-                        text = stringRes(R.string.attestation_valid_from, formatTimestamp(it)),
+                        text = stringResource(Res.string.attestation_valid_from, formatTimestamp(it)),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 validTo?.let {
                     Text(
-                        text = stringRes(R.string.attestation_valid_to, formatTimestamp(it)),
+                        text = stringResource(Res.string.attestation_valid_to, formatTimestamp(it)),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -309,12 +321,12 @@ fun RenderAttestationRequest(
         ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.Send,
-                contentDescription = stringRes(R.string.attestation_request),
+                contentDescription = stringResource(Res.string.attestation_request),
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(24.dp),
             )
             Text(
-                text = stringRes(R.string.attestation_request),
+                text = stringResource(Res.string.attestation_request),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.primary,
@@ -344,7 +356,7 @@ fun RenderAttestationRequest(
                 if (it != null) {
                     Spacer(modifier = DoubleVertSpacer)
                     Text(
-                        text = stringRes(R.string.attestation_requests_attestation_to),
+                        text = stringResource(Res.string.attestation_requests_attestation_to),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -366,7 +378,7 @@ fun RenderAttestationRequest(
                 if (it != null) {
                     Spacer(modifier = DoubleVertSpacer)
                     Text(
-                        text = stringRes(R.string.attestation_requests_attestation_to),
+                        text = stringResource(Res.string.attestation_requests_attestation_to),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -388,7 +400,7 @@ fun RenderAttestationRequest(
                 if (it != null) {
                     Spacer(modifier = DoubleVertSpacer)
                     Text(
-                        text = stringRes(R.string.attestation_requests_attestation_to),
+                        text = stringResource(Res.string.attestation_requests_attestation_to),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -436,12 +448,12 @@ fun RenderAttestorRecommendation(
         ) {
             Icon(
                 imageVector = Icons.Default.Recommend,
-                contentDescription = stringRes(R.string.attestor_recommendation),
+                contentDescription = stringResource(Res.string.attestor_recommendation),
                 tint = MaterialTheme.colorScheme.tertiary,
                 modifier = Modifier.size(24.dp),
             )
             Text(
-                text = stringRes(R.string.attestor_recommendation),
+                text = stringResource(Res.string.attestor_recommendation),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.tertiary,
@@ -462,7 +474,7 @@ fun RenderAttestorRecommendation(
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 Text(
-                    text = stringRes(R.string.attestor_recommendation_for_kinds),
+                    text = stringResource(Res.string.attestor_recommendation_for_kinds),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -528,12 +540,12 @@ fun RenderAttestorProficiency(
         ) {
             Icon(
                 imageVector = Icons.Default.Star,
-                contentDescription = stringRes(R.string.attestor_proficiency),
+                contentDescription = stringResource(Res.string.attestor_proficiency),
                 tint = MaterialTheme.colorScheme.secondary,
                 modifier = Modifier.size(24.dp),
             )
             Text(
-                text = stringRes(R.string.attestor_proficiency),
+                text = stringResource(Res.string.attestor_proficiency),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.secondary,
@@ -597,11 +609,11 @@ private fun attestationIcon(status: AttestationStatus?): ImageVector =
 @Composable
 private fun attestationStatusLabel(status: AttestationStatus?): String =
     when {
-        status == AttestationStatus.INVALID -> stringRes(R.string.attestation_invalid)
-        status == AttestationStatus.VALID -> stringRes(R.string.attestation_valid)
-        status == AttestationStatus.REVOKED -> stringRes(R.string.attestation_status_revoked)
-        status == AttestationStatus.VERIFYING -> stringRes(R.string.attestation_status_verifying)
-        else -> stringRes(R.string.attestation)
+        status == AttestationStatus.INVALID -> stringResource(Res.string.attestation_invalid)
+        status == AttestationStatus.VALID -> stringResource(Res.string.attestation_valid)
+        status == AttestationStatus.REVOKED -> stringResource(Res.string.attestation_status_revoked)
+        status == AttestationStatus.VERIFYING -> stringResource(Res.string.attestation_status_verifying)
+        else -> stringResource(Res.string.attestation)
     }
 
 private fun formatTimestamp(timestamp: Long): String {

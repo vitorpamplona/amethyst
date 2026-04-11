@@ -47,7 +47,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.mark_all_as_read
+import com.vitorpamplona.amethyst.commons.resources.mark_all_known_as_read
+import com.vitorpamplona.amethyst.commons.resources.mark_all_new_as_read
+import com.vitorpamplona.amethyst.commons.resources.mark_as_read_dialog_title
+import com.vitorpamplona.amethyst.commons.resources.more_options
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
@@ -61,6 +66,7 @@ import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 
 @Immutable
 class MessagesTabItem(
@@ -104,7 +110,7 @@ fun MessagesTabHeader(
         ) {
             Icon(
                 imageVector = Icons.Default.MoreVert,
-                contentDescription = stringRes(id = R.string.more_options),
+                contentDescription = stringResource(Res.string.more_options),
                 tint = MaterialTheme.colorScheme.placeholderText,
             )
         }
@@ -153,27 +159,27 @@ fun MessagesMarkAsReadDialog(
     onMarkNewAsRead: () -> Unit,
 ) {
     M3ActionDialog(
-        title = stringRes(R.string.mark_as_read_dialog_title),
+        title = stringResource(Res.string.mark_as_read_dialog_title),
         onDismiss = onDismiss,
     ) {
         M3ActionSection {
             M3ActionRow(
                 icon = Icons.Outlined.Groups,
-                text = stringRes(R.string.mark_all_known_as_read),
+                text = stringResource(Res.string.mark_all_known_as_read),
             ) {
                 onMarkKnownAsRead()
                 onDismiss()
             }
             M3ActionRow(
                 icon = Icons.Outlined.MoveToInbox,
-                text = stringRes(R.string.mark_all_new_as_read),
+                text = stringResource(Res.string.mark_all_new_as_read),
             ) {
                 onMarkNewAsRead()
                 onDismiss()
             }
             M3ActionRow(
                 icon = Icons.Outlined.DoneAll,
-                text = stringRes(R.string.mark_all_as_read),
+                text = stringResource(Res.string.mark_all_as_read),
             ) {
                 onMarkKnownAsRead()
                 onMarkNewAsRead()

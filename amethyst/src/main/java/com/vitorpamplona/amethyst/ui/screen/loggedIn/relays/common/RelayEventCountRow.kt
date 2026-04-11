@@ -39,12 +39,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.relay_event_count
 import com.vitorpamplona.amethyst.service.countToHumanReadable
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Font10SP
 import com.vitorpamplona.amethyst.ui.theme.Size10Modifier
 import com.vitorpamplona.amethyst.ui.theme.allGoodColor
+import org.jetbrains.compose.resources.stringResource
 
 private val PillShape = RoundedCornerShape(12.dp)
 
@@ -85,7 +87,7 @@ fun RelayEventCountRow(
             ) {
                 Icon(
                     imageVector = Icons.Default.Storage,
-                    contentDescription = stringRes(R.string.relay_event_count),
+                    contentDescription = stringResource(Res.string.relay_event_count),
                     modifier = Size10Modifier,
                     tint = pillColor,
                 )

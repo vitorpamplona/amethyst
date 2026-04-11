@@ -64,11 +64,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.relay_members_count
+import com.vitorpamplona.amethyst.commons.resources.relay_members_empty
+import com.vitorpamplona.amethyst.commons.resources.relay_members_join_sent
+import com.vitorpamplona.amethyst.commons.resources.relay_members_leave_sent
+import com.vitorpamplona.amethyst.commons.resources.relay_members_loading
+import com.vitorpamplona.amethyst.commons.resources.relay_members_request_join
+import com.vitorpamplona.amethyst.commons.resources.relay_members_request_leave
+import com.vitorpamplona.amethyst.commons.resources.relay_members_title
+import com.vitorpamplona.amethyst.commons.resources.relay_members_you_are_member
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.UserCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.fetchAsFlow
@@ -82,6 +90,7 @@ import com.vitorpamplona.quartz.nip43RelayMembers.list.RelayMembershipListEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.lastOrNull
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -130,7 +139,7 @@ fun RelayMembersScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = stringRes(R.string.relay_members_title, normalizedRelayUrl.displayUrl()),
+                        text = stringResource(Res.string.relay_members_title, normalizedRelayUrl.displayUrl()),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -182,7 +191,7 @@ fun RelayMembersScreen(
                 ) {
                     CircularProgressIndicator()
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text(text = stringRes(R.string.relay_members_loading))
+                    Text(text = stringResource(Res.string.relay_members_loading))
                 }
             } else if (members.isEmpty()) {
                 Column(
@@ -198,13 +207,13 @@ fun RelayMembersScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = stringRes(R.string.relay_members_empty),
+                        text = stringResource(Res.string.relay_members_empty),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             } else {
                 Text(
-                    text = stringRes(R.string.relay_members_count, members.size),
+                    text = stringResource(Res.string.relay_members_count, members.size),
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -254,7 +263,7 @@ fun MembershipActions(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = stringRes(R.string.relay_members_you_are_member),
+                    text = stringResource(Res.string.relay_members_you_are_member),
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary,
                 )
@@ -264,7 +273,7 @@ fun MembershipActions(
 
             if (leaveRequestSent) {
                 Text(
-                    text = stringRes(R.string.relay_members_leave_sent),
+                    text = stringResource(Res.string.relay_members_leave_sent),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             } else {
@@ -278,13 +287,13 @@ fun MembershipActions(
                         modifier = Modifier.size(18.dp),
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(text = stringRes(R.string.relay_members_request_leave))
+                    Text(text = stringResource(Res.string.relay_members_request_leave))
                 }
             }
         } else {
             if (joinRequestSent) {
                 Text(
-                    text = stringRes(R.string.relay_members_join_sent),
+                    text = stringResource(Res.string.relay_members_join_sent),
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold,
                 )
@@ -296,7 +305,7 @@ fun MembershipActions(
                         modifier = Modifier.size(18.dp),
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(text = stringRes(R.string.relay_members_request_join))
+                    Text(text = stringResource(Res.string.relay_members_request_join))
                 }
             }
         }

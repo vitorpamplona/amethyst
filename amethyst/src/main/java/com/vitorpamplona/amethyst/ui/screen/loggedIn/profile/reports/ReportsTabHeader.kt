@@ -24,11 +24,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.number_reports
+import com.vitorpamplona.amethyst.commons.resources.reports
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.reports.dal.UserProfileReportFeedViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun ReportsTabHeader(
@@ -39,8 +41,8 @@ fun ReportsTabHeader(
     val reportCount by reportsFeedViewModel.followerCount.collectAsStateWithLifecycle()
 
     if (reportCount > 0) {
-        Text(text = stringRes(R.string.number_reports, reportCount))
+        Text(text = stringResource(Res.string.number_reports, reportCount))
     } else {
-        Text(text = stringRes(R.string.reports))
+        Text(text = stringResource(Res.string.reports))
     }
 }

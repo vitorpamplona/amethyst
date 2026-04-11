@@ -53,7 +53,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.ephemeral_relay_chat
+import com.vitorpamplona.amethyst.commons.resources.npub_hex_username
+import com.vitorpamplona.amethyst.commons.resources.search_by_hashtag
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.TextSearchDataSourceSubscription
@@ -70,7 +73,6 @@ import com.vitorpamplona.amethyst.ui.note.UserCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.ChannelName
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoClickableRow
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
@@ -79,6 +81,7 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun SearchScreen(
@@ -191,7 +194,7 @@ private fun SearchTextField(
                     .focusRequester(searchBarViewModel.focusRequester),
             placeholder = {
                 Text(
-                    text = stringRes(R.string.npub_hex_username),
+                    text = stringResource(Res.string.npub_hex_username),
                     color = MaterialTheme.colorScheme.placeholderText,
                 )
             },
@@ -322,7 +325,7 @@ private fun DisplaySearchResults(
                     )
                 },
                 channelLastTime = null,
-                channelLastContent = stringRes(R.string.ephemeral_relay_chat),
+                channelLastContent = stringResource(Res.string.ephemeral_relay_chat),
                 hasNewMessages = false,
                 loadProfilePicture = accountViewModel.settings.showProfilePictures(),
                 loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
@@ -400,7 +403,7 @@ fun HashtagLine(
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(
-                stringRes(R.string.search_by_hashtag, tag),
+                stringResource(Res.string.search_by_hashtag, tag),
                 fontWeight = FontWeight.Bold,
             )
         }

@@ -36,8 +36,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.profile_image
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserIsFollowingChannel
 import com.vitorpamplona.amethyst.ui.components.LoadNote
@@ -47,11 +48,11 @@ import com.vitorpamplona.amethyst.ui.note.LikeReaction
 import com.vitorpamplona.amethyst.ui.note.ZapReaction
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.header.actions.JoinChatButton
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.HeaderPictureModifier
 import com.vitorpamplona.amethyst.ui.theme.RowColSpacing
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun ShortPublicChatChannelHeader(
@@ -67,7 +68,7 @@ fun ShortPublicChatChannelHeader(
             RobohashFallbackAsyncImage(
                 robot = channel.idHex,
                 model = it,
-                contentDescription = stringRes(R.string.profile_image),
+                contentDescription = stringResource(Res.string.profile_image),
                 contentScale = ContentScale.Crop,
                 modifier = HeaderPictureModifier,
                 loadProfilePicture = accountViewModel.settings.showProfilePictures(),

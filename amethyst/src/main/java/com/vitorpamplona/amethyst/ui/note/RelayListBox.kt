@@ -49,18 +49,19 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.expand_relay_list
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ShowMoreRelaysButtonBoxModifer
 import com.vitorpamplona.amethyst.ui.theme.Size17Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.noteComposeRelayBox
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.flow.mapNotNull
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun RelayBadges(
@@ -243,7 +244,7 @@ private fun ShowMoreRelaysButton(onClick: () -> Unit) {
         ) {
             Icon(
                 imageVector = Icons.Default.ExpandMore,
-                contentDescription = stringRes(id = R.string.expand_relay_list),
+                contentDescription = stringResource(Res.string.expand_relay_list),
                 tint = MaterialTheme.colorScheme.placeholderText,
             )
         }

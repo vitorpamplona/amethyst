@@ -47,13 +47,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.messages_create_public_chat
+import com.vitorpamplona.amethyst.commons.resources.messages_create_public_private_chat_description
+import com.vitorpamplona.amethyst.commons.resources.messages_new_message
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route.NewGroupDM
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun ChannelFabColumn(nav: INav) {
@@ -76,7 +79,7 @@ fun ChannelFabColumn(nav: INav) {
                     containerColor = MaterialTheme.colorScheme.primary,
                 ) {
                     Text(
-                        text = stringRes(R.string.messages_new_message),
+                        text = stringResource(Res.string.messages_new_message),
                         color = Color.White,
                         textAlign = TextAlign.Center,
                         fontSize = Font12SP,
@@ -95,7 +98,7 @@ fun ChannelFabColumn(nav: INav) {
                     containerColor = MaterialTheme.colorScheme.primary,
                 ) {
                     Text(
-                        text = stringRes(R.string.messages_create_public_chat),
+                        text = stringResource(Res.string.messages_create_public_chat),
                         color = Color.White,
                         textAlign = TextAlign.Center,
                         fontSize = Font12SP,
@@ -137,7 +140,7 @@ fun ChannelFabColumn(nav: INav) {
         ) {
             Icon(
                 imageVector = Icons.Outlined.Add,
-                contentDescription = stringRes(R.string.messages_create_public_private_chat_description),
+                contentDescription = stringResource(Res.string.messages_create_public_private_chat_description),
                 modifier =
                     Modifier.size(26.dp).graphicsLayer {
                         rotationZ = rotationDegree

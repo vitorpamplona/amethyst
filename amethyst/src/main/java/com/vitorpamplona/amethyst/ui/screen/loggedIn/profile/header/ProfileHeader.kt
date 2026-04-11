@@ -57,7 +57,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.more_options
+import com.vitorpamplona.amethyst.commons.resources.upload_image
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserPicture
@@ -70,7 +72,6 @@ import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.apps.UserAppRecommendationsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.identity.UserExternalIdentitiesViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.Size100dp
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
@@ -78,6 +79,7 @@ import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.userProfileBorderModifier
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun ProfileHeader(
@@ -116,7 +118,7 @@ fun ProfileHeader(
                 Icon(
                     tint = MaterialTheme.colorScheme.placeholderText,
                     imageVector = Icons.Default.MoreVert,
-                    contentDescription = stringRes(R.string.more_options),
+                    contentDescription = stringResource(Res.string.more_options),
                 )
 
                 UserProfileDropDownMenu(
@@ -269,7 +271,7 @@ private fun ProfilePictureUploadButton(
         ) {
             Icon(
                 imageVector = Icons.Default.AddPhotoAlternate,
-                contentDescription = stringRes(R.string.upload_image),
+                contentDescription = stringResource(Res.string.upload_image),
                 modifier = Modifier.size(40.dp),
                 tint = MaterialTheme.colorScheme.onSurface,
             )

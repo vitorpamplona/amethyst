@@ -45,13 +45,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.add_poll_option_button
+import com.vitorpamplona.amethyst.commons.resources.clear
+import com.vitorpamplona.amethyst.commons.resources.poll_multiple_choice
+import com.vitorpamplona.amethyst.commons.resources.poll_option_description
+import com.vitorpamplona.amethyst.commons.resources.poll_option_index
+import com.vitorpamplona.amethyst.commons.resources.poll_single_choice
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.ShortNotePostViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip88Polls.poll.tags.OptionTag
 import com.vitorpamplona.quartz.nip88Polls.poll.tags.PollType
 import com.vitorpamplona.quartz.utils.RandomInstance
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun PollOptionsField(postViewModel: ShortNotePostViewModel) {
@@ -75,13 +81,13 @@ fun PollOptionsField(postViewModel: ShortNotePostViewModel) {
                 },
                 label = {
                     Text(
-                        text = stringRes(R.string.poll_option_index, option.key + 1),
+                        text = stringResource(Res.string.poll_option_index, option.key + 1),
                         color = MaterialTheme.colorScheme.placeholderText,
                     )
                 },
                 placeholder = {
                     Text(
-                        text = stringRes(R.string.poll_option_description),
+                        text = stringResource(Res.string.poll_option_description),
                         color = MaterialTheme.colorScheme.placeholderText,
                     )
                 },
@@ -97,7 +103,7 @@ fun PollOptionsField(postViewModel: ShortNotePostViewModel) {
                     ) {
                         Icon(
                             imageVector = Icons.Default.Delete,
-                            contentDescription = stringRes(R.string.clear),
+                            contentDescription = stringResource(Res.string.clear),
                         )
                     }
                 },
@@ -124,7 +130,7 @@ fun PollOptionsField(postViewModel: ShortNotePostViewModel) {
                     containerColor = MaterialTheme.colorScheme.surface,
                 ),
         ) {
-            Icon(Icons.Default.Add, contentDescription = stringRes(R.string.add_poll_option_button))
+            Icon(Icons.Default.Add, contentDescription = stringResource(Res.string.add_poll_option_button))
         }
     }
 }
@@ -140,12 +146,12 @@ fun PollTypeSelector(
         FilterChip(
             selected = selectedType == PollType.SINGLE_CHOICE,
             onClick = { onTypeSelected(PollType.SINGLE_CHOICE) },
-            label = { Text(stringRes(R.string.poll_single_choice)) },
+            label = { Text(stringResource(Res.string.poll_single_choice)) },
         )
         FilterChip(
             selected = selectedType == PollType.MULTI_CHOICE,
             onClick = { onTypeSelected(PollType.MULTI_CHOICE) },
-            label = { Text(stringRes(R.string.poll_multiple_choice)) },
+            label = { Text(stringResource(Res.string.poll_multiple_choice)) },
         )
     }
 }

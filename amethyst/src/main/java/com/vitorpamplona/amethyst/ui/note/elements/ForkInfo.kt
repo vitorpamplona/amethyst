@@ -27,7 +27,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.forked_from
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
@@ -37,9 +38,9 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.quartz.experimental.forks.IForkableEvent
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun ShowForkInformation(
@@ -82,7 +83,7 @@ fun ForkInformationRowLightColor(
             val userState by observeUserInfo(author, accountViewModel)
 
             CreateClickableTextWithEmoji(
-                clickablePart = stringRes(id = R.string.forked_from) + " " + (userState?.info?.bestName() ?: author.pubkeyDisplayHex()),
+                clickablePart = stringResource(Res.string.forked_from) + " " + (userState?.info?.bestName() ?: author.pubkeyDisplayHex()),
                 maxLines = 1,
                 route = route,
                 overrideColor = MaterialTheme.colorScheme.primary,

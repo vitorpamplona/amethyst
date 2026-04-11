@@ -24,8 +24,9 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.join
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun JoinButton(
@@ -38,6 +39,6 @@ fun JoinButton(
         modifier = modifier,
         onClick = onPost,
     ) {
-        Text(text = stringRes(R.string.join))
+        Text(text = stringResource(Res.string.join))
     }
 }

@@ -58,11 +58,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.back
+import com.vitorpamplona.amethyst.commons.resources.wallet
+import com.vitorpamplona.amethyst.commons.resources.wallet_receive
+import com.vitorpamplona.amethyst.commons.resources.wallet_sats
+import com.vitorpamplona.amethyst.commons.resources.wallet_send
+import com.vitorpamplona.amethyst.commons.resources.wallet_transactions
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
+import org.jetbrains.compose.resources.stringResource
 import java.text.NumberFormat
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -81,7 +87,7 @@ fun WalletDetailScreen(
     val isLoading by walletViewModel.isLoading.collectAsState()
     val error by walletViewModel.error.collectAsState()
     val wallets by walletViewModel.wallets.collectAsState()
-    val walletName = wallets.firstOrNull { it.id == walletId }?.name ?: stringRes(R.string.wallet)
+    val walletName = wallets.firstOrNull { it.id == walletId }?.name ?: stringResource(Res.string.wallet)
 
     LaunchedEffect(walletId) {
         walletViewModel.fetchBalance()
@@ -96,7 +102,7 @@ fun WalletDetailScreen(
                     IconButton(onClick = { nav.popBack() }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringRes(R.string.back),
+                            contentDescription = stringResource(Res.string.back),
                         )
                     }
                 },
@@ -129,7 +135,7 @@ fun WalletDetailScreen(
                     color = MaterialTheme.colorScheme.onBackground,
                 )
                 Text(
-                    text = stringRes(R.string.wallet_sats),
+                    text = stringResource(Res.string.wallet_sats),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -171,7 +177,7 @@ fun WalletDetailScreen(
                         modifier = Modifier.size(20.dp),
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(stringRes(R.string.wallet_receive), fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(Res.string.wallet_receive), fontWeight = FontWeight.SemiBold)
                 }
 
                 Button(
@@ -188,7 +194,7 @@ fun WalletDetailScreen(
                         modifier = Modifier.size(20.dp),
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(stringRes(R.string.wallet_send), fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(Res.string.wallet_send), fontWeight = FontWeight.SemiBold)
                 }
             }
 
@@ -209,7 +215,7 @@ fun WalletDetailScreen(
                     modifier = Modifier.size(20.dp),
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(stringRes(R.string.wallet_transactions))
+                Text(stringResource(Res.string.wallet_transactions))
             }
 
             Spacer(modifier = Modifier.height(24.dp))

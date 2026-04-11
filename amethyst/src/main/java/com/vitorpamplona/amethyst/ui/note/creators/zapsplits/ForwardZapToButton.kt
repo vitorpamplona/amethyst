@@ -37,11 +37,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.ZapSplit
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.zap_split_title
+import com.vitorpamplona.amethyst.commons.resources.zaps
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun ForwardZapToButton(
@@ -66,7 +68,7 @@ fun ZapSplitIcon(
 ) {
     Icon(
         imageVector = ZapSplit,
-        contentDescription = stringRes(id = R.string.zap_split_title),
+        contentDescription = stringResource(Res.string.zap_split_title),
         modifier = modifier,
         tint = tint,
     )
@@ -83,7 +85,7 @@ fun ZapSplitPreview() {
         ) {
             Icon(
                 imageVector = Icons.Outlined.Bolt,
-                contentDescription = stringRes(id = R.string.zaps),
+                contentDescription = stringResource(Res.string.zaps),
                 modifier =
                     Modifier
                         .size(20.dp)
@@ -92,7 +94,7 @@ fun ZapSplitPreview() {
             )
             Icon(
                 imageVector = Icons.AutoMirrored.Outlined.ArrowForwardIos,
-                contentDescription = stringRes(id = R.string.zaps),
+                contentDescription = stringResource(Res.string.zaps),
                 modifier =
                     Modifier
                         .size(13.dp)

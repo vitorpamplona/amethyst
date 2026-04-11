@@ -41,17 +41,22 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.bookmark_list_icon_label
+import com.vitorpamplona.amethyst.commons.resources.bookmarks_explainer
+import com.vitorpamplona.amethyst.commons.resources.bookmarks_title
+import com.vitorpamplona.amethyst.commons.resources.old_bookmarks_explainer
+import com.vitorpamplona.amethyst.commons.resources.old_bookmarks_title
 import com.vitorpamplona.amethyst.model.nip51Lists.BookmarkListState
 import com.vitorpamplona.amethyst.model.nip51Lists.OldBookmarkListState
 import com.vitorpamplona.amethyst.model.nip51Lists.labeledBookmarkLists.LabeledBookmarkList
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.BookmarkType
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.Size40Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import kotlinx.coroutines.flow.StateFlow
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun ListOfBookmarkGroupsFeedView(
@@ -110,14 +115,14 @@ fun DefaultBookmarkList(
     ListItem(
         modifier = Modifier.clickable(onClick = openDefaultBookmarks),
         headlineContent = {
-            Text(stringRes(R.string.bookmarks_title), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(stringResource(Res.string.bookmarks_title), maxLines = 1, overflow = TextOverflow.Ellipsis)
         },
         supportingContent = {
             Column(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(
-                    stringRes(R.string.bookmarks_explainer),
+                    stringResource(Res.string.bookmarks_explainer),
                     overflow = TextOverflow.Ellipsis,
                     maxLines = 2,
                 )
@@ -130,7 +135,7 @@ fun DefaultBookmarkList(
             ) {
                 Icon(
                     imageVector = Icons.Outlined.BookmarkBorder,
-                    contentDescription = stringRes(R.string.bookmark_list_icon_label),
+                    contentDescription = stringResource(Res.string.bookmark_list_icon_label),
                     modifier = Size40Modifier,
                 )
                 Spacer(StdVertSpacer)
@@ -154,14 +159,14 @@ fun OldBookmarkList(
     ListItem(
         modifier = Modifier.clickable(onClick = openOldBookmarks),
         headlineContent = {
-            Text(stringRes(R.string.old_bookmarks_title), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(stringResource(Res.string.old_bookmarks_title), maxLines = 1, overflow = TextOverflow.Ellipsis)
         },
         supportingContent = {
             Column(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(
-                    stringRes(R.string.old_bookmarks_explainer),
+                    stringResource(Res.string.old_bookmarks_explainer),
                     overflow = TextOverflow.Ellipsis,
                     maxLines = 2,
                 )
@@ -174,7 +179,7 @@ fun OldBookmarkList(
             ) {
                 Icon(
                     imageVector = Icons.Outlined.BookmarkBorder,
-                    contentDescription = stringRes(R.string.bookmark_list_icon_label),
+                    contentDescription = stringResource(Res.string.bookmark_list_icon_label),
                     modifier = Size40Modifier,
                 )
                 Spacer(StdVertSpacer)

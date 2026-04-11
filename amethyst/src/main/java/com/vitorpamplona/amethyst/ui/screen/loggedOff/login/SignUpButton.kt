@@ -28,10 +28,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.sign_up
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size40dp
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun SignUpButton(onClick: () -> Unit) {
@@ -41,7 +42,7 @@ fun SignUpButton(onClick: () -> Unit) {
         modifier = Modifier.height(50.dp),
     ) {
         Text(
-            text = stringRes(R.string.sign_up),
+            text = stringResource(Res.string.sign_up),
             modifier = Modifier.padding(horizontal = Size40dp),
         )
     }

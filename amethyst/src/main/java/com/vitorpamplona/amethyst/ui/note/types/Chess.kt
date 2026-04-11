@@ -43,9 +43,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.chess.ChessChallenge
 import com.vitorpamplona.amethyst.commons.chess.ChessGameViewer
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.chess_accept
+import com.vitorpamplona.amethyst.commons.resources.chess_decline
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
@@ -58,10 +60,10 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.ChessViewModelFactory
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.ChessViewModelNew
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip64Chess.challenge.offer.LiveChessGameChallengeEvent
 import com.vitorpamplona.quartz.nip64Chess.end.LiveChessGameEndEvent
 import com.vitorpamplona.quartz.nip64Chess.game.ChessGameEvent
+import org.jetbrains.compose.resources.stringResource
 import com.vitorpamplona.quartz.nip64Chess.Color as ChessColor
 
 /**
@@ -226,7 +228,7 @@ fun RenderLiveChessChallenge(
                     horizontalArrangement = Arrangement.End,
                 ) {
                     OutlinedButton(onClick = { /* TODO: Decline */ }) {
-                        Text(stringRes(R.string.chess_decline))
+                        Text(stringResource(Res.string.chess_decline))
                     }
 
                     Spacer(modifier = Modifier.width(8.dp))
@@ -255,7 +257,7 @@ fun RenderLiveChessChallenge(
                             nav.nav(Route.ChessGame(gameId))
                         },
                     ) {
-                        Text(stringRes(R.string.chess_accept))
+                        Text(stringResource(Res.string.chess_accept))
                     }
                 }
             }

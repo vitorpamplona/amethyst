@@ -40,8 +40,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.record_a_message
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun RecordVoiceButton(
@@ -92,7 +93,7 @@ fun RecordVoiceButton(
                 // Microphone icon
                 Icon(
                     imageVector = Icons.Default.Mic,
-                    contentDescription = stringRes(id = R.string.record_a_message),
+                    contentDescription = stringResource(Res.string.record_a_message),
                     modifier = Modifier.height(22.dp),
                     tint =
                         if (recordingState) {

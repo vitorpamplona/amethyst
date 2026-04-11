@@ -34,12 +34,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.nsite_root_site
+import com.vitorpamplona.amethyst.commons.resources.nsite_servers
+import com.vitorpamplona.amethyst.commons.resources.nsite_source
+import com.vitorpamplona.amethyst.commons.resources.nsite_title
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
@@ -48,6 +51,7 @@ import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun RenderRootSiteEvent(
@@ -105,10 +109,10 @@ private fun RenderStaticWebsite(
             val displayTitle =
                 title
                     ?: identifier
-                    ?: stringRes(id = R.string.nsite_root_site)
+                    ?: stringResource(Res.string.nsite_root_site)
 
             Text(
-                text = stringRes(id = R.string.nsite_title, displayTitle),
+                text = stringResource(Res.string.nsite_title, displayTitle),
                 style = MaterialTheme.typography.titleMedium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -129,7 +133,7 @@ private fun RenderStaticWebsite(
             source?.let {
                 Row(Modifier.fillMaxWidth().padding(top = Size5dp)) {
                     Text(
-                        text = stringRes(id = R.string.nsite_source),
+                        text = stringResource(Res.string.nsite_source),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -144,7 +148,7 @@ private fun RenderStaticWebsite(
             if (servers.isNotEmpty()) {
                 Row(Modifier.fillMaxWidth().padding(top = Size5dp)) {
                     Text(
-                        text = stringRes(id = R.string.nsite_servers),
+                        text = stringResource(Res.string.nsite_servers),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )

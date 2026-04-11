@@ -64,18 +64,25 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.chess.ChessBroadcastBanner
 import com.vitorpamplona.amethyst.commons.chess.ChessBroadcastStatus
 import com.vitorpamplona.amethyst.commons.chess.ChessSyncBanner
 import com.vitorpamplona.amethyst.commons.chess.LiveChessGameScreen
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.back
+import com.vitorpamplona.amethyst.commons.resources.chess_game_id
+import com.vitorpamplona.amethyst.commons.resources.chess_game_not_found
+import com.vitorpamplona.amethyst.commons.resources.chess_game_waiting
+import com.vitorpamplona.amethyst.commons.resources.chess_loading_game
+import com.vitorpamplona.amethyst.commons.resources.go_back
+import com.vitorpamplona.amethyst.commons.resources.relay_settings
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.datasource.ChessSubscription
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Height4dpModifier
 import com.vitorpamplona.quartz.nip64Chess.ChessGameNameGenerator
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Wrapper screen for live chess game
@@ -191,7 +198,7 @@ fun ChessGameScreen(
                         IconButton(onClick = { nav.popBack() }) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = stringRes(R.string.back),
+                                contentDescription = stringResource(Res.string.back),
                             )
                         }
                     },
@@ -199,7 +206,7 @@ fun ChessGameScreen(
                         IconButton(onClick = { showRelaySettings = true }) {
                             Icon(
                                 imageVector = Icons.Default.Settings,
-                                contentDescription = stringRes(R.string.relay_settings),
+                                contentDescription = stringResource(Res.string.relay_settings),
                             )
                         }
                     },
@@ -244,7 +251,7 @@ fun ChessGameScreen(
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         CircularProgressIndicator()
                         Spacer(modifier = Modifier.height(16.dp))
-                        Text(stringRes(R.string.chess_loading_game))
+                        Text(stringResource(Res.string.chess_loading_game))
                     }
                 }
             }
@@ -261,7 +268,7 @@ fun ChessGameScreen(
                     verticalArrangement = Arrangement.Center,
                 ) {
                     Text(
-                        text = stringRes(R.string.chess_game_not_found),
+                        text = stringResource(Res.string.chess_game_not_found),
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold,
                     )
@@ -270,7 +277,7 @@ fun ChessGameScreen(
 
                     // Show specific error if available
                     Text(
-                        text = error ?: stringRes(R.string.chess_game_waiting),
+                        text = error ?: stringResource(Res.string.chess_game_waiting),
                         style = MaterialTheme.typography.bodyMedium,
                         color = if (error != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -278,7 +285,7 @@ fun ChessGameScreen(
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Text(
-                        text = stringRes(R.string.chess_game_id, gameId.take(16)),
+                        text = stringResource(Res.string.chess_game_id, gameId.take(16)),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -291,10 +298,10 @@ fun ChessGameScreen(
                     }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringRes(R.string.back),
+                            contentDescription = stringResource(Res.string.back),
                             modifier = Modifier.padding(end = 8.dp),
                         )
-                        Text(stringRes(R.string.go_back))
+                        Text(stringResource(Res.string.go_back))
                     }
                 }
             }

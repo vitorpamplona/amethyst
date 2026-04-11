@@ -71,7 +71,7 @@ kotlin {
                 api(libs.kotlinx.collections.immutable)
 
                 // Compose Multiplatform Resources
-                implementation(libs.jetbrains.compose.components.resources)
+                api(libs.jetbrains.compose.components.resources)
 
                 // Markdown rendering (richtext-commonmark)
                 implementation(libs.markdown.commonmark)

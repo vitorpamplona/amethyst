@@ -29,13 +29,14 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.login
 import com.vitorpamplona.amethyst.ui.components.LoadingAnimation
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size40dp
 import com.vitorpamplona.amethyst.ui.theme.Size50dp
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun LoginButton(
@@ -54,7 +55,7 @@ fun LoginButton(
                 LoadingAnimation()
                 Spacer(modifier = DoubleHorzSpacer)
             }
-            Text(stringRes(R.string.login))
+            Text(stringResource(Res.string.login))
         }
     }
 }

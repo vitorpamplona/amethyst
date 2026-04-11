@@ -44,7 +44,17 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.blocked_relays_title
+import com.vitorpamplona.amethyst.commons.resources.broadcast_relays_title
+import com.vitorpamplona.amethyst.commons.resources.dm_relays_title
+import com.vitorpamplona.amethyst.commons.resources.favorite_relays_title
+import com.vitorpamplona.amethyst.commons.resources.indexer_relays_title
+import com.vitorpamplona.amethyst.commons.resources.proxy_relays_title
+import com.vitorpamplona.amethyst.commons.resources.public_home_section
+import com.vitorpamplona.amethyst.commons.resources.public_notif_section
+import com.vitorpamplona.amethyst.commons.resources.search_relays_title
+import com.vitorpamplona.amethyst.commons.resources.trusted_relays_title
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.nip51Lists.relayLists.RelayListCard
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserRelayIntoList
@@ -56,7 +66,6 @@ import com.vitorpamplona.amethyst.ui.note.AddRelayButton
 import com.vitorpamplona.amethyst.ui.note.RemoveRelayButton
 import com.vitorpamplona.amethyst.ui.note.getGradient
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValueFor
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
@@ -65,6 +74,7 @@ import com.vitorpamplona.quartz.nip51Lists.relaySets.RelaySetEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun DisplayRelaySet(
@@ -128,7 +138,7 @@ fun DisplayNIP65RelayList(
 
     DisplayRelaySet(
         writeRelays,
-        stringRes(id = R.string.public_home_section),
+        stringResource(Res.string.public_home_section),
         null,
         backgroundColor,
         accountViewModel,
@@ -137,7 +147,7 @@ fun DisplayNIP65RelayList(
 
     DisplayRelaySet(
         readRelays,
-        stringRes(id = R.string.public_notif_section),
+        stringResource(Res.string.public_notif_section),
         null,
         backgroundColor,
         accountViewModel,
@@ -165,7 +175,7 @@ fun DisplayDMRelayList(
 
     DisplayRelaySet(
         relays,
-        stringRes(id = R.string.dm_relays_title),
+        stringResource(Res.string.dm_relays_title),
         null,
         backgroundColor,
         accountViewModel,
@@ -186,7 +196,7 @@ fun DisplaySearchRelayList(
 
     DisplayRelaySet(
         relays,
-        stringRes(id = R.string.search_relays_title),
+        stringResource(Res.string.search_relays_title),
         null,
         backgroundColor,
         accountViewModel,
@@ -207,7 +217,7 @@ fun DisplayBlockedRelayList(
 
     DisplayRelaySet(
         relays,
-        stringRes(id = R.string.blocked_relays_title),
+        stringResource(Res.string.blocked_relays_title),
         null,
         backgroundColor,
         accountViewModel,
@@ -228,7 +238,7 @@ fun DisplayTrustedRelayList(
 
     DisplayRelaySet(
         relays,
-        stringRes(id = R.string.trusted_relays_title),
+        stringResource(Res.string.trusted_relays_title),
         null,
         backgroundColor,
         accountViewModel,
@@ -249,7 +259,7 @@ fun DisplayRelayFeedsList(
 
     DisplayRelaySet(
         relays,
-        stringRes(id = R.string.favorite_relays_title),
+        stringResource(Res.string.favorite_relays_title),
         null,
         backgroundColor,
         accountViewModel,
@@ -270,7 +280,7 @@ fun DisplayProxyRelayList(
 
     DisplayRelaySet(
         relays,
-        stringRes(id = R.string.proxy_relays_title),
+        stringResource(Res.string.proxy_relays_title),
         null,
         backgroundColor,
         accountViewModel,
@@ -291,7 +301,7 @@ fun DisplayIndexerRelayList(
 
     DisplayRelaySet(
         relays,
-        stringRes(id = R.string.indexer_relays_title),
+        stringResource(Res.string.indexer_relays_title),
         null,
         backgroundColor,
         accountViewModel,
@@ -312,7 +322,7 @@ fun DisplayBroadcastRelayList(
 
     DisplayRelaySet(
         relays,
-        stringRes(id = R.string.broadcast_relays_title),
+        stringResource(Res.string.broadcast_relays_title),
         null,
         backgroundColor,
         accountViewModel,

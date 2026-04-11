@@ -34,19 +34,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.expiration_date_label
+import com.vitorpamplona.amethyst.commons.resources.now
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.note.timeAgoShort
 import com.vitorpamplona.amethyst.ui.note.timeAheadNoDot
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip40Expiration.expiration
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun ChatTimeAgo(baseNote: Note) {
-    val nowStr = stringRes(id = R.string.now)
+    val nowStr = stringResource(Res.string.now)
     val time = remember(baseNote) { timeAgoShort(baseNote.createdAt() ?: 0L, nowStr) }
 
     Text(
@@ -76,7 +78,7 @@ fun ChatDisplayExpiration(expirationDate: Long) {
         Spacer(modifier = StdHorzSpacer)
         Icon(
             imageVector = Icons.Outlined.Timer,
-            contentDescription = stringRes(R.string.expiration_date_label),
+            contentDescription = stringResource(Res.string.expiration_date_label),
             modifier = Modifier.size(12.dp),
             tint = MaterialTheme.colorScheme.placeholderText,
         )

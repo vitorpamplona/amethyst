@@ -58,17 +58,29 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.vanish_all_relays
+import com.vitorpamplona.amethyst.commons.resources.vanish_all_relays_compliance_hint
+import com.vitorpamplona.amethyst.commons.resources.vanish_compliant
+import com.vitorpamplona.amethyst.commons.resources.vanish_date_label
+import com.vitorpamplona.amethyst.commons.resources.vanish_events_description
+import com.vitorpamplona.amethyst.commons.resources.vanish_events_empty
+import com.vitorpamplona.amethyst.commons.resources.vanish_events_empty_hint
+import com.vitorpamplona.amethyst.commons.resources.vanish_events_title
+import com.vitorpamplona.amethyst.commons.resources.vanish_non_compliant
+import com.vitorpamplona.amethyst.commons.resources.vanish_target_relays_label
+import com.vitorpamplona.amethyst.commons.resources.vanish_test_button
+import com.vitorpamplona.amethyst.commons.resources.vanish_test_error
 import com.vitorpamplona.amethyst.model.nip62Vanish.ComplianceStatus
 import com.vitorpamplona.amethyst.model.nip62Vanish.VanishEventItem
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -81,7 +93,7 @@ fun VanishEventsScreen(
     Scaffold(
         topBar = {
             TopBarWithBackButton(
-                stringRes(id = R.string.vanish_events_title),
+                stringResource(Res.string.vanish_events_title),
                 nav::popBack,
             )
         },
@@ -120,13 +132,13 @@ fun VanishEventsBody(
             )
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = stringRes(R.string.vanish_events_empty),
+                text = stringResource(Res.string.vanish_events_empty),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = stringRes(R.string.vanish_events_empty_hint),
+                text = stringResource(Res.string.vanish_events_empty_hint),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -137,7 +149,7 @@ fun VanishEventsBody(
         ) {
             item {
                 Text(
-                    text = stringRes(R.string.vanish_events_description),
+                    text = stringResource(Res.string.vanish_events_description),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -182,7 +194,7 @@ private fun VanishEventCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = stringRes(R.string.vanish_date_label),
+                    text = stringResource(Res.string.vanish_date_label),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -209,7 +221,7 @@ private fun VanishEventCard(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = stringRes(R.string.vanish_all_relays),
+                        text = stringResource(Res.string.vanish_all_relays),
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.error,
@@ -219,13 +231,13 @@ private fun VanishEventCard(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = stringRes(R.string.vanish_all_relays_compliance_hint),
+                    text = stringResource(Res.string.vanish_all_relays_compliance_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             } else {
                 Text(
-                    text = stringRes(R.string.vanish_target_relays_label),
+                    text = stringResource(Res.string.vanish_target_relays_label),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -303,7 +315,7 @@ private fun RelayComplianceRow(
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        stringRes(R.string.vanish_test_button),
+                        stringResource(Res.string.vanish_test_button),
                         style = MaterialTheme.typography.labelSmall,
                     )
                 }
@@ -316,13 +328,13 @@ private fun RelayComplianceRow(
             ComplianceStatus.COMPLIANT -> {
                 Icon(
                     Icons.Outlined.CheckCircle,
-                    contentDescription = stringRes(R.string.vanish_compliant),
+                    contentDescription = stringResource(Res.string.vanish_compliant),
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(20.dp),
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    stringRes(R.string.vanish_compliant),
+                    stringResource(Res.string.vanish_compliant),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.primary,
                 )
@@ -331,13 +343,13 @@ private fun RelayComplianceRow(
             ComplianceStatus.NON_COMPLIANT -> {
                 Icon(
                     Icons.Outlined.Error,
-                    contentDescription = stringRes(R.string.vanish_non_compliant),
+                    contentDescription = stringResource(Res.string.vanish_non_compliant),
                     tint = MaterialTheme.colorScheme.error,
                     modifier = Modifier.size(20.dp),
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    stringRes(R.string.vanish_non_compliant),
+                    stringResource(Res.string.vanish_non_compliant),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.error,
                 )
@@ -346,13 +358,13 @@ private fun RelayComplianceRow(
             ComplianceStatus.ERROR -> {
                 Icon(
                     Icons.Outlined.Error,
-                    contentDescription = stringRes(R.string.vanish_test_error),
+                    contentDescription = stringResource(Res.string.vanish_test_error),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(20.dp),
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    stringRes(R.string.vanish_test_error),
+                    stringResource(Res.string.vanish_test_error),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

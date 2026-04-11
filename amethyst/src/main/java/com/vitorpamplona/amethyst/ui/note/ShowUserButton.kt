@@ -28,10 +28,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.unblock
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun ShowUserButton(onClick: () -> Unit) {
@@ -45,6 +46,6 @@ fun ShowUserButton(onClick: () -> Unit) {
             ),
         contentPadding = ButtonPadding,
     ) {
-        Text(text = stringRes(R.string.unblock))
+        Text(text = stringResource(Res.string.unblock))
     }
 }

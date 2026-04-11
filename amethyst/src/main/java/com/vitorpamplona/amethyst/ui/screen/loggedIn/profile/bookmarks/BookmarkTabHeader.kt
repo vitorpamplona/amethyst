@@ -23,11 +23,12 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.bookmarks
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.bookmarks_title
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserBookmarkCount
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun BookmarkTabHeader(
@@ -36,5 +37,5 @@ fun BookmarkTabHeader(
 ) {
     val userBookmarks by observeUserBookmarkCount(baseUser, accountViewModel)
 
-    Text(text = "$userBookmarks ${stringRes(R.string.bookmarks_title)}")
+    Text(text = "$userBookmarks ${stringResource(Res.string.bookmarks_title)}")
 }

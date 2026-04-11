@@ -32,13 +32,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.quick_actions_open_in_another_app
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun OpenChatButton(
@@ -63,7 +64,7 @@ fun OpenChatButton(
     ) {
         Icon(
             imageVector = Icons.AutoMirrored.Filled.OpenInNew,
-            contentDescription = stringRes(R.string.quick_actions_open_in_another_app),
+            contentDescription = stringResource(Res.string.quick_actions_open_in_another_app),
             modifier = Size20Modifier,
         )
     }

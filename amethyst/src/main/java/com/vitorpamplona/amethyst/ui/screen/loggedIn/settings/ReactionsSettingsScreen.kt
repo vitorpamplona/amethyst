@@ -61,7 +61,24 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.reactions_settings
+import com.vitorpamplona.amethyst.commons.resources.reactions_settings_boost
+import com.vitorpamplona.amethyst.commons.resources.reactions_settings_boost_description
+import com.vitorpamplona.amethyst.commons.resources.reactions_settings_description
+import com.vitorpamplona.amethyst.commons.resources.reactions_settings_enabled
+import com.vitorpamplona.amethyst.commons.resources.reactions_settings_like
+import com.vitorpamplona.amethyst.commons.resources.reactions_settings_like_description
+import com.vitorpamplona.amethyst.commons.resources.reactions_settings_pay
+import com.vitorpamplona.amethyst.commons.resources.reactions_settings_pay_description
+import com.vitorpamplona.amethyst.commons.resources.reactions_settings_reorder
+import com.vitorpamplona.amethyst.commons.resources.reactions_settings_reply
+import com.vitorpamplona.amethyst.commons.resources.reactions_settings_reply_description
+import com.vitorpamplona.amethyst.commons.resources.reactions_settings_share
+import com.vitorpamplona.amethyst.commons.resources.reactions_settings_share_description
+import com.vitorpamplona.amethyst.commons.resources.reactions_settings_show_counter
+import com.vitorpamplona.amethyst.commons.resources.reactions_settings_zap
+import com.vitorpamplona.amethyst.commons.resources.reactions_settings_zap_description
 import com.vitorpamplona.amethyst.model.ReactionRowAction
 import com.vitorpamplona.amethyst.model.ReactionRowItem
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
@@ -69,9 +86,9 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 @Preview(device = "spec:width=2100px,height=2340px,dpi=440")
@@ -91,7 +108,7 @@ fun ReactionsSettingsScreen(
 ) {
     Scaffold(
         topBar = {
-            TopBarWithBackButton(stringRes(id = R.string.reactions_settings), nav::popBack)
+            TopBarWithBackButton(stringResource(Res.string.reactions_settings), nav::popBack)
         },
     ) { padding ->
         Column(Modifier.padding(padding)) {
@@ -125,7 +142,7 @@ fun ReactionsSettingsContent(accountViewModel: AccountViewModel) {
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = stringRes(R.string.reactions_settings_description),
+            text = stringResource(Res.string.reactions_settings_description),
             style = MaterialTheme.typography.bodyMedium,
             color = Color.Gray,
             modifier = Modifier.padding(bottom = 16.dp, start = Size20dp, end = Size20dp),
@@ -302,7 +319,7 @@ private fun ReactionRowItemCard(
             ) {
                 Icon(
                     Icons.Default.DragIndicator,
-                    contentDescription = stringRes(R.string.reactions_settings_reorder),
+                    contentDescription = stringResource(Res.string.reactions_settings_reorder),
                     modifier = Modifier.size(28.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -325,7 +342,7 @@ private fun ReactionRowItemCard(
                     onCheckedChange = { onToggleEnabled() },
                 )
                 Text(
-                    text = stringRes(R.string.reactions_settings_enabled),
+                    text = stringResource(Res.string.reactions_settings_enabled),
                     style = MaterialTheme.typography.bodyMedium,
                 )
             }
@@ -342,7 +359,7 @@ private fun ReactionRowItemCard(
                         enabled = item.enabled,
                     )
                     Text(
-                        text = stringRes(R.string.reactions_settings_show_counter),
+                        text = stringResource(Res.string.reactions_settings_show_counter),
                         style = MaterialTheme.typography.bodyMedium,
                         color = if (item.enabled) MaterialTheme.colorScheme.onSurface else Color.Gray,
                     )
@@ -357,21 +374,21 @@ private fun ReactionRowItemCard(
 @Composable
 fun reactionActionName(action: ReactionRowAction): String =
     when (action) {
-        ReactionRowAction.Reply -> stringRes(R.string.reactions_settings_reply)
-        ReactionRowAction.Boost -> stringRes(R.string.reactions_settings_boost)
-        ReactionRowAction.Like -> stringRes(R.string.reactions_settings_like)
-        ReactionRowAction.Zap -> stringRes(R.string.reactions_settings_zap)
-        ReactionRowAction.Share -> stringRes(R.string.reactions_settings_share)
-        ReactionRowAction.Pay -> stringRes(R.string.reactions_settings_pay)
+        ReactionRowAction.Reply -> stringResource(Res.string.reactions_settings_reply)
+        ReactionRowAction.Boost -> stringResource(Res.string.reactions_settings_boost)
+        ReactionRowAction.Like -> stringResource(Res.string.reactions_settings_like)
+        ReactionRowAction.Zap -> stringResource(Res.string.reactions_settings_zap)
+        ReactionRowAction.Share -> stringResource(Res.string.reactions_settings_share)
+        ReactionRowAction.Pay -> stringResource(Res.string.reactions_settings_pay)
     }
 
 @Composable
 fun reactionActionDescription(action: ReactionRowAction): String =
     when (action) {
-        ReactionRowAction.Reply -> stringRes(R.string.reactions_settings_reply_description)
-        ReactionRowAction.Boost -> stringRes(R.string.reactions_settings_boost_description)
-        ReactionRowAction.Like -> stringRes(R.string.reactions_settings_like_description)
-        ReactionRowAction.Zap -> stringRes(R.string.reactions_settings_zap_description)
-        ReactionRowAction.Share -> stringRes(R.string.reactions_settings_share_description)
-        ReactionRowAction.Pay -> stringRes(R.string.reactions_settings_pay_description)
+        ReactionRowAction.Reply -> stringResource(Res.string.reactions_settings_reply_description)
+        ReactionRowAction.Boost -> stringResource(Res.string.reactions_settings_boost_description)
+        ReactionRowAction.Like -> stringResource(Res.string.reactions_settings_like_description)
+        ReactionRowAction.Zap -> stringResource(Res.string.reactions_settings_zap_description)
+        ReactionRowAction.Share -> stringResource(Res.string.reactions_settings_share_description)
+        ReactionRowAction.Pay -> stringResource(Res.string.reactions_settings_pay_description)
     }

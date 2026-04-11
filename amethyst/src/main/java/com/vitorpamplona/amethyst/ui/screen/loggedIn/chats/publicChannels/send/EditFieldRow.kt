@@ -36,7 +36,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.reply_here
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
@@ -47,13 +48,13 @@ import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSugge
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.DisplayReplyingToNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ThinSendButton
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.EditFieldBorder
 import com.vitorpamplona.amethyst.ui.theme.EditFieldModifier
 import com.vitorpamplona.amethyst.ui.theme.EditFieldTrailingIconModifier
 import com.vitorpamplona.amethyst.ui.theme.SuggestionListDefaultHeightChat
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.FlowPreview
+import org.jetbrains.compose.resources.stringResource
 
 @OptIn(FlowPreview::class)
 @Composable
@@ -124,7 +125,7 @@ fun EditFieldRow(
             modifier = Modifier.fillMaxWidth(),
             placeholder = {
                 Text(
-                    text = stringRes(R.string.reply_here),
+                    text = stringResource(Res.string.reply_here),
                     color = MaterialTheme.colorScheme.placeholderText,
                 )
             },

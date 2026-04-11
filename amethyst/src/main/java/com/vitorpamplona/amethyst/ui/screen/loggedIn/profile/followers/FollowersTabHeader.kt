@@ -24,12 +24,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.number_followers
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserContactCardsFollowerCount
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.followers.dal.UserProfileFollowersUserFeedViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun FollowersTabHeader(
@@ -42,7 +43,7 @@ fun FollowersTabHeader(
     if (followerCount == "--") {
         FollowersTabHeaderLocal(followersFeedViewModel, accountViewModel)
     } else {
-        Text(text = stringRes(R.string.number_followers, followerCount))
+        Text(text = stringResource(Res.string.number_followers, followerCount))
     }
 }
 
@@ -53,5 +54,5 @@ fun FollowersTabHeaderLocal(
 ) {
     val followerCount by followersFeedViewModel.followerCount.collectAsStateWithLifecycle()
 
-    Text(text = stringRes(R.string.number_followers, followerCount))
+    Text(text = stringResource(Res.string.number_followers, followerCount))
 }

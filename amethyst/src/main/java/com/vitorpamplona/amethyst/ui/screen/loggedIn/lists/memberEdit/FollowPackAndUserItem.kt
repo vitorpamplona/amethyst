@@ -44,14 +44,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.add_user_to_the_list
+import com.vitorpamplona.amethyst.commons.resources.follow_set_absence_indicator2
+import com.vitorpamplona.amethyst.commons.resources.follow_set_icon_description
+import com.vitorpamplona.amethyst.commons.resources.follow_set_public_presence_indicator
+import com.vitorpamplona.amethyst.commons.resources.remove_user_from_the_list
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.list.DisplayParticipantNumberAndStatus
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.HalfHalfVertPadding
 import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size50ModifierOffset10
 import com.vitorpamplona.amethyst.ui.theme.SpacedBy5dp
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
+import org.jetbrains.compose.resources.stringResource
 
 @Preview
 @Composable
@@ -114,7 +119,7 @@ fun FollowPackAndUserItem(
             Box(contentAlignment = Alignment.Center) {
                 Icon(
                     imageVector = Icons.Outlined.Groups,
-                    contentDescription = stringRes(R.string.follow_set_icon_description),
+                    contentDescription = stringResource(Res.string.follow_set_icon_description),
                     modifier = Size50ModifierOffset10,
                 )
                 DisplayParticipantNumberAndStatus(
@@ -142,9 +147,9 @@ private fun UserStatusInList(
     ) {
         val text =
             if (isMember) {
-                stringRes(R.string.follow_set_public_presence_indicator, userName)
+                stringResource(Res.string.follow_set_public_presence_indicator, userName)
             } else {
-                stringRes(R.string.follow_set_absence_indicator2, userName)
+                stringResource(Res.string.follow_set_absence_indicator2, userName)
             }
 
         val icon =
@@ -201,13 +206,13 @@ private fun UserAdditionOptions(
             if (isUserInList) {
                 Icon(
                     imageVector = Icons.Filled.PersonRemove,
-                    contentDescription = stringRes(R.string.remove_user_from_the_list),
+                    contentDescription = stringResource(Res.string.remove_user_from_the_list),
                     tint = MaterialTheme.colorScheme.onErrorContainer,
                 )
             } else {
                 Icon(
                     imageVector = Icons.Filled.PersonAdd,
-                    contentDescription = stringRes(R.string.add_user_to_the_list),
+                    contentDescription = stringResource(Res.string.add_user_to_the_list),
                     tint = MaterialTheme.colorScheme.onPrimary,
                 )
             }

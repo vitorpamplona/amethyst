@@ -23,7 +23,8 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.polls
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.select_list_to_filter
 import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.FeedFilterSpinner
@@ -31,7 +32,7 @@ import com.vitorpamplona.amethyst.ui.navigation.topbars.UserDrawerSearchTopBar
 import com.vitorpamplona.amethyst.ui.screen.FeedDefinition
 import com.vitorpamplona.amethyst.ui.screen.TopNavFilterState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun PollsTopBar(
@@ -62,7 +63,7 @@ private fun PollsTopNavFilterBar(
 
     FeedFilterSpinner(
         placeholderCode = listName,
-        explainer = stringRes(R.string.select_list_to_filter),
+        explainer = stringResource(Res.string.select_list_to_filter),
         options = allLists,
         onSelect = { onChange(allLists.getOrNull(it) ?: followListsModel.allFollows) },
         accountViewModel = accountViewModel,

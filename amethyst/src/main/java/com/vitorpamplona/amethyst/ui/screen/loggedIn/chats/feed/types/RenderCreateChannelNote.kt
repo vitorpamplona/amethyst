@@ -47,10 +47,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.changed_chat_profile_to
+import com.vitorpamplona.amethyst.commons.resources.channel_image
+import com.vitorpamplona.amethyst.commons.resources.public_chat_relays_title
+import com.vitorpamplona.amethyst.commons.resources.relay_info
 import com.vitorpamplona.amethyst.model.Constants
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
@@ -63,7 +67,6 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.RelayIconFilter
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
@@ -76,6 +79,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.base.ChannelDataNorm
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun RenderCreateChannelNote(
@@ -137,7 +141,7 @@ fun RenderChannelData(
     Column {
         Row {
             TranslatableRichTextViewer(
-                content = stringRes(R.string.changed_chat_profile_to),
+                content = stringResource(Res.string.changed_chat_profile_to),
                 canPreview = true,
                 quotesLeft = 1,
                 modifier = Modifier,
@@ -158,7 +162,7 @@ fun RenderChannelData(
                 RobohashFallbackAsyncImage(
                     robot = id,
                     model = it,
-                    contentDescription = stringRes(R.string.channel_image),
+                    contentDescription = stringResource(Res.string.channel_image),
                     modifier = MaterialTheme.colorScheme.largeProfilePictureModifier,
                     loadProfilePicture = accountViewModel.settings.showProfilePictures(),
                     loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
@@ -201,7 +205,7 @@ fun RenderChannelData(
 
         channelInfo.relays?.let {
             Text(
-                stringRes(R.string.public_chat_relays_title) + ": ",
+                stringResource(Res.string.public_chat_relays_title) + ": ",
                 modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
             )
             it.forEach {
@@ -283,7 +287,7 @@ fun RenderRelayLine(
         RobohashFallbackAsyncImage(
             robot = url,
             model = icon,
-            contentDescription = stringRes(id = R.string.relay_info, url),
+            contentDescription = stringResource(Res.string.relay_info, url),
             colorFilter = RelayIconFilter,
             modifier =
                 Modifier

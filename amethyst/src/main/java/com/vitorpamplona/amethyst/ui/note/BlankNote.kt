@@ -35,19 +35,24 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.post_not_found
+import com.vitorpamplona.amethyst.commons.resources.post_not_found_short
+import com.vitorpamplona.amethyst.commons.resources.post_was_flagged_as_inappropriate_by
+import com.vitorpamplona.amethyst.commons.resources.post_was_hidden
+import com.vitorpamplona.amethyst.commons.resources.show_anyway
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentSetOf
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 @Preview
@@ -78,9 +83,9 @@ fun BlankNote(
                     Text(
                         text =
                             if (shortPreview) {
-                                stringRes(R.string.post_not_found_short)
+                                stringResource(Res.string.post_not_found_short)
                             } else {
-                                stringRes(R.string.post_not_found) + if (idHex != null) ": $idHex" else ""
+                                stringResource(Res.string.post_not_found) + if (idHex != null) ": $idHex" else ""
                             },
                         modifier = Modifier.padding(30.dp),
                         color = Color.Gray,
@@ -128,7 +133,7 @@ fun HiddenNote(
                 modifier = Modifier.padding(30.dp),
             ) {
                 Text(
-                    text = stringRes(R.string.post_was_flagged_as_inappropriate_by),
+                    text = stringResource(Res.string.post_was_flagged_as_inappropriate_by),
                     color = Color.Gray,
                 )
                 FlowRow(modifier = Modifier.padding(top = 10.dp)) {
@@ -156,7 +161,7 @@ fun HiddenNote(
                     shape = ButtonBorder,
                     contentPadding = ButtonPadding,
                 ) {
-                    Text(text = stringRes(R.string.show_anyway))
+                    Text(text = stringResource(Res.string.show_anyway))
                 }
             }
         }
@@ -187,7 +192,7 @@ fun HiddenNoteByMe(
                 modifier = Modifier.padding(30.dp),
             ) {
                 Text(
-                    text = stringRes(R.string.post_was_hidden),
+                    text = stringResource(Res.string.post_was_hidden),
                     color = Color.Gray,
                     textAlign = TextAlign.Center,
                 )
@@ -198,7 +203,7 @@ fun HiddenNoteByMe(
                     shape = ButtonBorder,
                     contentPadding = ButtonPadding,
                 ) {
-                    Text(text = stringRes(R.string.show_anyway))
+                    Text(text = stringResource(Res.string.show_anyway))
                 }
             }
         }

@@ -29,9 +29,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.feed_is_empty
+import com.vitorpamplona.amethyst.commons.resources.refresh
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun FeedEmpty(onRefresh: () -> Unit) {
@@ -40,8 +42,8 @@ fun FeedEmpty(onRefresh: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text(stringRes(R.string.feed_is_empty))
+        Text(stringResource(Res.string.feed_is_empty))
         Spacer(modifier = StdVertSpacer)
-        OutlinedButton(onClick = onRefresh) { Text(text = stringRes(R.string.refresh)) }
+        OutlinedButton(onClick = onRefresh) { Text(text = stringResource(Res.string.refresh)) }
     }
 }

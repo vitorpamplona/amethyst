@@ -30,9 +30,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.error_loading_replies
+import com.vitorpamplona.amethyst.commons.resources.try_again
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun FeedError(
@@ -44,13 +46,13 @@ fun FeedError(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text("${stringRes(R.string.error_loading_replies)} $errorMessage")
+        Text("${stringResource(Res.string.error_loading_replies)} $errorMessage")
         Spacer(modifier = StdVertSpacer)
         Button(
             modifier = Modifier.align(Alignment.CenterHorizontally),
             onClick = onRefresh,
         ) {
-            Text(text = stringRes(R.string.try_again))
+            Text(text = stringResource(Res.string.try_again))
         }
     }
 }

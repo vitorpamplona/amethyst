@@ -66,15 +66,52 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.event_sync_activity_log
+import com.vitorpamplona.amethyst.commons.resources.event_sync_activity_log_finished
+import com.vitorpamplona.amethyst.commons.resources.event_sync_cancel
+import com.vitorpamplona.amethyst.commons.resources.event_sync_date_filter_all_time
+import com.vitorpamplona.amethyst.commons.resources.event_sync_date_filter_now
+import com.vitorpamplona.amethyst.commons.resources.event_sync_date_filter_since
+import com.vitorpamplona.amethyst.commons.resources.event_sync_date_filter_title
+import com.vitorpamplona.amethyst.commons.resources.event_sync_date_filter_until
+import com.vitorpamplona.amethyst.commons.resources.event_sync_dm_relays
+import com.vitorpamplona.amethyst.commons.resources.event_sync_done_accepted
+import com.vitorpamplona.amethyst.commons.resources.event_sync_done_duration
+import com.vitorpamplona.amethyst.commons.resources.event_sync_done_sent
+import com.vitorpamplona.amethyst.commons.resources.event_sync_done_title
+import com.vitorpamplona.amethyst.commons.resources.event_sync_error_title
+import com.vitorpamplona.amethyst.commons.resources.event_sync_events_sent
+import com.vitorpamplona.amethyst.commons.resources.event_sync_inbox_relays
+import com.vitorpamplona.amethyst.commons.resources.event_sync_less_than_until
+import com.vitorpamplona.amethyst.commons.resources.event_sync_log_new
+import com.vitorpamplona.amethyst.commons.resources.event_sync_log_recv
+import com.vitorpamplona.amethyst.commons.resources.event_sync_log_sent
+import com.vitorpamplona.amethyst.commons.resources.event_sync_mobile_data_dialog_title
+import com.vitorpamplona.amethyst.commons.resources.event_sync_outbox_relays
+import com.vitorpamplona.amethyst.commons.resources.event_sync_relays_progress
+import com.vitorpamplona.amethyst.commons.resources.event_sync_sending_to
+import com.vitorpamplona.amethyst.commons.resources.event_sync_start
+import com.vitorpamplona.amethyst.commons.resources.event_sync_start_anyway
+import com.vitorpamplona.amethyst.commons.resources.event_sync_status_completed
+import com.vitorpamplona.amethyst.commons.resources.event_sync_status_connecting
+import com.vitorpamplona.amethyst.commons.resources.event_sync_status_downloading
+import com.vitorpamplona.amethyst.commons.resources.event_sync_status_error
+import com.vitorpamplona.amethyst.commons.resources.event_sync_step1
+import com.vitorpamplona.amethyst.commons.resources.event_sync_step2
+import com.vitorpamplona.amethyst.commons.resources.event_sync_step3
+import com.vitorpamplona.amethyst.commons.resources.event_sync_title
+import com.vitorpamplona.amethyst.commons.resources.event_sync_what_happens_body
+import com.vitorpamplona.amethyst.commons.resources.event_sync_what_happens_title
+import com.vitorpamplona.amethyst.commons.resources.event_sync_wifi_warning
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.note.timeAgoNoDotNoDay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import org.jetbrains.compose.resources.stringResource
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -92,7 +129,7 @@ fun EventSyncScreen(
     Scaffold(
         topBar = {
             TopBarWithBackButton(
-                caption = stringRes(R.string.event_sync_title),
+                caption = stringResource(Res.string.event_sync_title),
                 popBack = nav::popBack,
             )
         },
@@ -154,7 +191,7 @@ fun EventScreenBody(
             item {
                 Spacer(Modifier.height(16.dp))
                 Text(
-                    text = stringRes(R.string.event_sync_activity_log, runningSize),
+                    text = stringResource(Res.string.event_sync_activity_log, runningSize),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                 )
@@ -176,7 +213,7 @@ fun EventScreenBody(
             item {
                 Spacer(Modifier.height(16.dp))
                 Text(
-                    text = stringRes(R.string.event_sync_activity_log_finished, completedSize),
+                    text = stringResource(Res.string.event_sync_activity_log_finished, completedSize),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                 )
@@ -212,15 +249,15 @@ private fun StartSyncButton(
         },
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Text(stringRes(R.string.event_sync_start))
+        Text(stringResource(Res.string.event_sync_start))
     }
 
     // ---- Mobile-data confirmation dialog ----
     if (showMobileDataDialog) {
         AlertDialog(
             onDismissRequest = { showMobileDataDialog = false },
-            title = { Text(stringRes(R.string.event_sync_mobile_data_dialog_title)) },
-            text = { Text(stringRes(R.string.event_sync_wifi_warning)) },
+            title = { Text(stringResource(Res.string.event_sync_mobile_data_dialog_title)) },
+            text = { Text(stringResource(Res.string.event_sync_wifi_warning)) },
             confirmButton = {
                 Button(
                     onClick = {
@@ -228,12 +265,12 @@ private fun StartSyncButton(
                         onClick()
                     },
                 ) {
-                    Text(stringRes(R.string.event_sync_start_anyway))
+                    Text(stringResource(Res.string.event_sync_start_anyway))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showMobileDataDialog = false }) {
-                    Text(stringRes(R.string.event_sync_cancel))
+                    Text(stringResource(Res.string.event_sync_cancel))
                 }
             },
         )
@@ -254,21 +291,21 @@ private fun ExplanationCard(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = stringRes(R.string.event_sync_what_happens_title),
+                text = stringResource(Res.string.event_sync_what_happens_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
             )
             Spacer(Modifier.height(8.dp))
             Text(
-                text = stringRes(R.string.event_sync_what_happens_body),
+                text = stringResource(Res.string.event_sync_what_happens_body),
                 style = MaterialTheme.typography.bodyMedium,
             )
             Spacer(Modifier.height(12.dp))
-            StepRow(number = "1", text = stringRes(R.string.event_sync_step1))
+            StepRow(number = "1", text = stringResource(Res.string.event_sync_step1))
             Spacer(Modifier.height(4.dp))
-            StepRow(number = "2", text = stringRes(R.string.event_sync_step2))
+            StepRow(number = "2", text = stringResource(Res.string.event_sync_step2))
             Spacer(Modifier.height(4.dp))
-            StepRow(number = "3", text = stringRes(R.string.event_sync_step3))
+            StepRow(number = "3", text = stringResource(Res.string.event_sync_step3))
             Spacer(Modifier.height(10.dp))
 
             // ---- WiFi warning ----
@@ -281,7 +318,7 @@ private fun ExplanationCard(
                         ),
                 ) {
                     Text(
-                        text = stringRes(R.string.event_sync_wifi_warning),
+                        text = stringResource(Res.string.event_sync_wifi_warning),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onErrorContainer,
                         modifier = Modifier.padding(16.dp),
@@ -327,7 +364,7 @@ private fun SyncProgressCard(
                         contentColor = MaterialTheme.colorScheme.error,
                     ),
             ) {
-                Text(stringRes(R.string.event_sync_cancel))
+                Text(stringResource(Res.string.event_sync_cancel))
             }
         }
     }
@@ -340,7 +377,7 @@ private fun EventsReceivedStatement(state: EventSync.SyncState.Running) {
     val eventsAccepted by state.eventsAccepted.collectAsStateWithLifecycle()
 
     Text(
-        text = stringRes(R.string.event_sync_events_sent, eventsAccepted, eventsSent, eventsReceived),
+        text = stringResource(Res.string.event_sync_events_sent, eventsAccepted, eventsSent, eventsReceived),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
@@ -352,7 +389,7 @@ private fun RelayStatement(state: EventSync.SyncState.Running) {
     val totalRelays by state.totalRelays.collectAsStateWithLifecycle()
 
     Text(
-        text = stringRes(R.string.event_sync_relays_progress, relaysCompleted, totalRelays),
+        text = stringResource(Res.string.event_sync_relays_progress, relaysCompleted, totalRelays),
         style = MaterialTheme.typography.titleSmall,
         fontWeight = FontWeight.SemiBold,
     )
@@ -386,27 +423,27 @@ private fun DoneCard(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = stringRes(R.string.event_sync_done_title),
+                text = stringResource(Res.string.event_sync_done_title),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onPrimaryContainer,
             )
             Spacer(Modifier.height(6.dp))
             Text(
-                text = stringRes(R.string.event_sync_done_sent, state.totalEventsSent, state.totalEventsReceived),
+                text = stringResource(Res.string.event_sync_done_sent, state.totalEventsSent, state.totalEventsReceived),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onPrimaryContainer,
             )
             Spacer(Modifier.height(2.dp))
             Text(
-                text = stringRes(R.string.event_sync_done_accepted, state.totalEventsAccepted),
+                text = stringResource(Res.string.event_sync_done_accepted, state.totalEventsAccepted),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onPrimaryContainer,
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                text = stringRes(R.string.event_sync_done_duration, (state.durationMs / 1000).toInt()),
+                text = stringResource(Res.string.event_sync_done_duration, (state.durationMs / 1000).toInt()),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
             )
@@ -443,7 +480,7 @@ private fun ErrorCard(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = stringRes(R.string.event_sync_error_title),
+                text = stringResource(Res.string.event_sync_error_title),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onErrorContainer,
@@ -485,7 +522,7 @@ private fun DestinationRelaysCard(activity: EventSync.LiveSyncActivity) {
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = stringRes(R.string.event_sync_sending_to),
+                text = stringResource(Res.string.event_sync_sending_to),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
             )
@@ -493,7 +530,7 @@ private fun DestinationRelaysCard(activity: EventSync.LiveSyncActivity) {
             if (activity.outboxTargets.isNotEmpty()) {
                 Spacer(Modifier.height(10.dp))
                 DestinationSection(
-                    label = stringRes(R.string.event_sync_outbox_relays),
+                    label = stringResource(Res.string.event_sync_outbox_relays),
                     relays = activity.outboxTargets.values,
                     color = MaterialTheme.colorScheme.primary,
                 )
@@ -504,7 +541,7 @@ private fun DestinationRelaysCard(activity: EventSync.LiveSyncActivity) {
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 Spacer(Modifier.height(10.dp))
                 DestinationSection(
-                    label = stringRes(R.string.event_sync_inbox_relays),
+                    label = stringResource(Res.string.event_sync_inbox_relays),
                     relays = activity.inboxTargets.values,
                     color = MaterialTheme.colorScheme.secondary,
                 )
@@ -515,7 +552,7 @@ private fun DestinationRelaysCard(activity: EventSync.LiveSyncActivity) {
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 Spacer(Modifier.height(10.dp))
                 DestinationSection(
-                    label = stringRes(R.string.event_sync_dm_relays),
+                    label = stringResource(Res.string.event_sync_dm_relays),
                     relays = activity.dmTargets.values,
                     color = MaterialTheme.colorScheme.tertiary,
                 )
@@ -582,7 +619,7 @@ private fun DestinationRelayRow(
         if (eventsSent > 0) {
             val eventsAccepted by info.eventsAccepted.collectAsStateWithLifecycle()
             Text(
-                text = stringRes(R.string.event_sync_log_sent, formatCount(eventsSent)),
+                text = stringResource(Res.string.event_sync_log_sent, formatCount(eventsSent)),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.weight(0.3f),
@@ -591,7 +628,7 @@ private fun DestinationRelayRow(
                 overflow = TextOverflow.StartEllipsis,
             )
             Text(
-                text = stringRes(R.string.event_sync_log_new, formatCount(eventsAccepted)),
+                text = stringResource(Res.string.event_sync_log_new, formatCount(eventsAccepted)),
                 style = MaterialTheme.typography.bodySmall,
                 fontWeight = if (eventsAccepted > 0) FontWeight.SemiBold else FontWeight.Normal,
                 color = if (eventsAccepted > 0) color else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -650,7 +687,7 @@ private fun ActivityLogRow(info: EventSync.LiveSyncActivity.SourceRelayInfo) {
             val eventsAccepted by info.eventsAccepted.collectAsStateWithLifecycle()
             untilPage?.let {
                 Text(
-                    text = stringRes(R.string.event_sync_less_than_until, timeAgoNoDotNoDay(it, context)),
+                    text = stringResource(Res.string.event_sync_less_than_until, timeAgoNoDotNoDay(it, context)),
                     style = MaterialTheme.typography.bodySmall,
                     color = textColor,
                     modifier = Modifier.weight(0.3f),
@@ -660,7 +697,7 @@ private fun ActivityLogRow(info: EventSync.LiveSyncActivity.SourceRelayInfo) {
                 )
             }
             Text(
-                text = stringRes(R.string.event_sync_log_recv, formatCount(eventsFound)),
+                text = stringResource(Res.string.event_sync_log_recv, formatCount(eventsFound)),
                 style = MaterialTheme.typography.bodySmall,
                 color = textColor,
                 modifier = Modifier.weight(0.3f),
@@ -669,7 +706,7 @@ private fun ActivityLogRow(info: EventSync.LiveSyncActivity.SourceRelayInfo) {
                 overflow = TextOverflow.StartEllipsis,
             )
             Text(
-                text = stringRes(R.string.event_sync_log_new, formatCount(eventsAccepted)),
+                text = stringResource(Res.string.event_sync_log_new, formatCount(eventsAccepted)),
                 style = MaterialTheme.typography.bodySmall,
                 fontWeight = if (eventsAccepted > 0) FontWeight.SemiBold else FontWeight.Normal,
                 color =
@@ -688,10 +725,10 @@ private fun ActivityLogRow(info: EventSync.LiveSyncActivity.SourceRelayInfo) {
             Text(
                 text =
                     when (status) {
-                        EventSync.LiveSyncActivity.ConnectionStatus.Connecting -> stringRes(R.string.event_sync_status_connecting)
-                        EventSync.LiveSyncActivity.ConnectionStatus.Querying -> stringRes(R.string.event_sync_status_downloading)
-                        is EventSync.LiveSyncActivity.ConnectionStatus.Error -> (status as EventSync.LiveSyncActivity.ConnectionStatus.Error).msg.ifBlank { stringRes(R.string.event_sync_status_error) }
-                        EventSync.LiveSyncActivity.ConnectionStatus.Completed -> stringRes(R.string.event_sync_status_completed)
+                        EventSync.LiveSyncActivity.ConnectionStatus.Connecting -> stringResource(Res.string.event_sync_status_connecting)
+                        EventSync.LiveSyncActivity.ConnectionStatus.Querying -> stringResource(Res.string.event_sync_status_downloading)
+                        is EventSync.LiveSyncActivity.ConnectionStatus.Error -> (status as EventSync.LiveSyncActivity.ConnectionStatus.Error).msg.ifBlank { stringResource(Res.string.event_sync_status_error) }
+                        EventSync.LiveSyncActivity.ConnectionStatus.Completed -> stringResource(Res.string.event_sync_status_completed)
                     },
                 style = MaterialTheme.typography.bodySmall,
                 color = textColor,
@@ -758,7 +795,7 @@ private fun DateRangeFilterCard(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = stringRes(R.string.event_sync_date_filter_title),
+                text = stringResource(Res.string.event_sync_date_filter_title),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
             )
@@ -773,9 +810,9 @@ private fun DateRangeFilterCard(
                 Text(
                     text =
                         if (effectiveSince == null) {
-                            stringRes(R.string.event_sync_date_filter_all_time)
+                            stringResource(Res.string.event_sync_date_filter_all_time)
                         } else {
-                            stringRes(R.string.event_sync_date_filter_since) + " " + formatEpochDate(sinceEpoch)
+                            stringResource(Res.string.event_sync_date_filter_since) + " " + formatEpochDate(sinceEpoch)
                         },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary,
@@ -783,9 +820,9 @@ private fun DateRangeFilterCard(
                 Text(
                     text =
                         if (effectiveUntil == null) {
-                            stringRes(R.string.event_sync_date_filter_now)
+                            stringResource(Res.string.event_sync_date_filter_now)
                         } else {
-                            stringRes(R.string.event_sync_date_filter_until) + " " + formatEpochDate(untilEpoch)
+                            stringResource(Res.string.event_sync_date_filter_until) + " " + formatEpochDate(untilEpoch)
                         },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary,

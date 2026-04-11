@@ -56,7 +56,14 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.AccountInfo
 import com.vitorpamplona.amethyst.LocalPreferences
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.account_switch_active_account
+import com.vitorpamplona.amethyst.commons.resources.account_switch_add_account_btn
+import com.vitorpamplona.amethyst.commons.resources.account_switch_select_account
+import com.vitorpamplona.amethyst.commons.resources.are_you_sure_you_want_to_log_out
+import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.resources.log_out
+import com.vitorpamplona.amethyst.commons.resources.profile_image
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
@@ -66,13 +73,13 @@ import com.vitorpamplona.amethyst.ui.note.toShortDisplay
 import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.AddAccountDialog
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.AccountPictureModifier
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -92,7 +99,7 @@ fun AccountSwitchBottomSheet(
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(stringRes(R.string.account_switch_select_account), fontWeight = FontWeight.Bold)
+            Text(stringResource(Res.string.account_switch_select_account), fontWeight = FontWeight.Bold)
         }
         DisplayAllAccounts(accountViewModel, accountSessionManager)
         Row(
@@ -104,7 +111,7 @@ fun AccountSwitchBottomSheet(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             TextButton(onClick = { popupExpanded = true }) {
-                Text(stringRes(R.string.account_switch_add_account_btn))
+                Text(stringResource(Res.string.account_switch_add_account_btn))
             }
         }
     }
@@ -206,7 +213,7 @@ private fun ActiveMarker(
     if (isCurrentUser) {
         Icon(
             imageVector = Icons.Default.RadioButtonChecked,
-            contentDescription = stringRes(R.string.account_switch_active_account),
+            contentDescription = stringResource(Res.string.account_switch_active_account),
             tint = MaterialTheme.colorScheme.secondary,
         )
     }
@@ -222,7 +229,7 @@ private fun AccountPicture(
     RobohashFallbackAsyncImage(
         robot = user.pubkeyHex,
         model = userInfo?.info?.profilePicture(),
-        contentDescription = stringRes(R.string.profile_image),
+        contentDescription = stringResource(Res.string.profile_image),
         modifier = AccountPictureModifier,
         loadProfilePicture = accountViewModel.settings.showProfilePictures(),
         loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
@@ -261,8 +268,8 @@ private fun LogoutButton(
     var logoutDialog by remember { mutableStateOf(false) }
     if (logoutDialog) {
         AlertDialog(
-            title = { Text(text = stringRes(R.string.log_out)) },
-            text = { Text(text = stringRes(R.string.are_you_sure_you_want_to_log_out)) },
+            title = { Text(text = stringResource(Res.string.log_out)) },
+            text = { Text(text = stringResource(Res.string.are_you_sure_you_want_to_log_out)) },
             onDismissRequest = { logoutDialog = false },
             confirmButton = {
                 TextButton(
@@ -271,14 +278,14 @@ private fun LogoutButton(
                         accountSessionManager.logOff(acc)
                     },
                 ) {
-                    Text(text = stringRes(R.string.log_out))
+                    Text(text = stringResource(Res.string.log_out))
                 }
             },
             dismissButton = {
                 TextButton(
                     onClick = { logoutDialog = false },
                 ) {
-                    Text(text = stringRes(R.string.cancel))
+                    Text(text = stringResource(Res.string.cancel))
                 }
             },
         )
@@ -289,7 +296,7 @@ private fun LogoutButton(
     ) {
         Icon(
             imageVector = Icons.AutoMirrored.Filled.Logout,
-            contentDescription = stringRes(R.string.log_out),
+            contentDescription = stringResource(Res.string.log_out),
             tint = MaterialTheme.colorScheme.onSurface,
         )
     }

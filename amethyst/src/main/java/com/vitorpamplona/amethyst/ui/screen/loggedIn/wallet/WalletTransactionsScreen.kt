@@ -60,15 +60,25 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.back
+import com.vitorpamplona.amethyst.commons.resources.wallet_filter_all
+import com.vitorpamplona.amethyst.commons.resources.wallet_filter_non_zaps
+import com.vitorpamplona.amethyst.commons.resources.wallet_filter_zaps
+import com.vitorpamplona.amethyst.commons.resources.wallet_incoming
+import com.vitorpamplona.amethyst.commons.resources.wallet_loading
+import com.vitorpamplona.amethyst.commons.resources.wallet_no_transactions
+import com.vitorpamplona.amethyst.commons.resources.wallet_outgoing
+import com.vitorpamplona.amethyst.commons.resources.wallet_refresh
+import com.vitorpamplona.amethyst.commons.resources.wallet_transactions
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcTransaction
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcTransactionType
+import org.jetbrains.compose.resources.stringResource
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -115,12 +125,12 @@ fun WalletTransactionsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringRes(R.string.wallet_transactions)) },
+                title = { Text(stringResource(Res.string.wallet_transactions)) },
                 navigationIcon = {
                     IconButton(onClick = { nav.popBack() }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringRes(R.string.back),
+                            contentDescription = stringResource(Res.string.back),
                         )
                     }
                 },
@@ -128,7 +138,7 @@ fun WalletTransactionsScreen(
                     IconButton(onClick = { walletViewModel.fetchTransactions() }) {
                         Icon(
                             imageVector = Icons.Filled.Refresh,
-                            contentDescription = stringRes(R.string.wallet_refresh),
+                            contentDescription = stringResource(Res.string.wallet_refresh),
                         )
                     }
                 },
@@ -147,7 +157,7 @@ fun WalletTransactionsScreen(
                 CircularProgressIndicator(modifier = Modifier.size(48.dp))
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    stringRes(R.string.wallet_loading),
+                    stringResource(Res.string.wallet_loading),
                     style = MaterialTheme.typography.bodyLarge,
                 )
             }
@@ -161,7 +171,7 @@ fun WalletTransactionsScreen(
                 verticalArrangement = Arrangement.Center,
             ) {
                 Text(
-                    stringRes(R.string.wallet_no_transactions),
+                    stringResource(Res.string.wallet_no_transactions),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -211,17 +221,17 @@ private fun TransactionFilterRow(
         FilterChip(
             selected = currentFilter == TransactionFilter.ALL,
             onClick = { onFilterSelected(TransactionFilter.ALL) },
-            label = { Text(stringRes(R.string.wallet_filter_all)) },
+            label = { Text(stringResource(Res.string.wallet_filter_all)) },
         )
         FilterChip(
             selected = currentFilter == TransactionFilter.ZAPS,
             onClick = { onFilterSelected(TransactionFilter.ZAPS) },
-            label = { Text(stringRes(R.string.wallet_filter_zaps)) },
+            label = { Text(stringResource(Res.string.wallet_filter_zaps)) },
         )
         FilterChip(
             selected = currentFilter == TransactionFilter.NON_ZAPS,
             onClick = { onFilterSelected(TransactionFilter.NON_ZAPS) },
-            label = { Text(stringRes(R.string.wallet_filter_non_zaps)) },
+            label = { Text(stringResource(Res.string.wallet_filter_non_zaps)) },
         )
     }
 }
@@ -299,9 +309,9 @@ private fun TransactionItem(
                     if (isIncoming) Icons.Filled.ArrowDownward else Icons.Filled.ArrowUpward,
                 contentDescription =
                     if (isIncoming) {
-                        stringRes(R.string.wallet_incoming)
+                        stringResource(Res.string.wallet_incoming)
                     } else {
-                        stringRes(R.string.wallet_outgoing)
+                        stringResource(Res.string.wallet_outgoing)
                     },
                 modifier = Modifier.size(40.dp),
                 tint =
@@ -327,7 +337,7 @@ private fun TransactionItem(
                 )
             } else {
                 Text(
-                    text = tx.description ?: if (isIncoming) stringRes(R.string.wallet_incoming) else stringRes(R.string.wallet_outgoing),
+                    text = tx.description ?: if (isIncoming) stringResource(Res.string.wallet_incoming) else stringResource(Res.string.wallet_outgoing),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium,
                     maxLines = 1,
@@ -343,7 +353,7 @@ private fun TransactionItem(
                     overflow = TextOverflow.Ellipsis,
                 )
             } else if (counterpartyPubkeyHex != null || counterpartyDisplayName != null) {
-                val descOrType = tx.description ?: if (isIncoming) stringRes(R.string.wallet_incoming) else stringRes(R.string.wallet_outgoing)
+                val descOrType = tx.description ?: if (isIncoming) stringResource(Res.string.wallet_incoming) else stringResource(Res.string.wallet_outgoing)
                 Text(
                     text = descOrType,
                     style = MaterialTheme.typography.bodySmall,

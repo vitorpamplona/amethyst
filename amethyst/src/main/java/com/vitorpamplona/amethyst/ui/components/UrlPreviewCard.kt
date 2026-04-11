@@ -38,15 +38,17 @@ import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextOverflow
 import coil3.compose.AsyncImage
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.preview.UrlInfoItem
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.copy_url_to_clipboard
+import com.vitorpamplona.amethyst.commons.resources.link_actions_dialog_title
 import com.vitorpamplona.amethyst.ui.components.util.setText
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.MaxWidthWithHorzPadding
 import com.vitorpamplona.amethyst.ui.theme.innerPostModifier
 import com.vitorpamplona.amethyst.ui.theme.previewCardImageModifier
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -64,13 +66,13 @@ fun UrlPreviewCard(
         val clipboardManager = LocalClipboard.current
         val scope = rememberCoroutineScope()
         M3ActionDialog(
-            title = stringRes(R.string.link_actions_dialog_title),
+            title = stringResource(Res.string.link_actions_dialog_title),
             onDismiss = { popupExpanded.value = false },
         ) {
             M3ActionSection {
                 M3ActionRow(
                     icon = Icons.Outlined.ContentCopy,
-                    text = stringRes(R.string.copy_url_to_clipboard),
+                    text = stringResource(Res.string.copy_url_to_clipboard),
                 ) {
                     scope.launch {
                         clipboardManager.setText(url)

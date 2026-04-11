@@ -49,17 +49,22 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.hashtags.Lightning
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.amount_in_sats
+import com.vitorpamplona.amethyst.commons.resources.lightning_tips
+import com.vitorpamplona.amethyst.commons.resources.note_to_receiver
+import com.vitorpamplona.amethyst.commons.resources.send_sats
+import com.vitorpamplona.amethyst.commons.resources.thank_you_so_much
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun InvoiceRequestCard(
@@ -117,7 +122,7 @@ fun InvoiceRequest(
             )
 
             Text(
-                text = titleText ?: stringRes(R.string.lightning_tips),
+                text = titleText ?: stringResource(Res.string.lightning_tips),
                 fontSize = 20.sp,
                 fontWeight = FontWeight.W500,
                 modifier = Modifier.padding(start = 10.dp),
@@ -130,13 +135,13 @@ fun InvoiceRequest(
         var amount by remember { mutableLongStateOf(1000L) }
 
         OutlinedTextField(
-            label = { Text(text = stringRes(R.string.note_to_receiver)) },
+            label = { Text(text = stringResource(Res.string.note_to_receiver)) },
             modifier = Modifier.fillMaxWidth(),
             value = message,
             onValueChange = { message = it },
             placeholder = {
                 Text(
-                    text = stringRes(R.string.thank_you_so_much),
+                    text = stringResource(Res.string.thank_you_so_much),
                     color = MaterialTheme.colorScheme.placeholderText,
                 )
             },
@@ -148,7 +153,7 @@ fun InvoiceRequest(
         )
 
         OutlinedTextField(
-            label = { Text(text = stringRes(R.string.amount_in_sats)) },
+            label = { Text(text = stringResource(Res.string.amount_in_sats)) },
             modifier = Modifier.fillMaxWidth(),
             value = amount.toString(),
             onValueChange = {
@@ -194,7 +199,7 @@ fun InvoiceRequest(
                 ),
         ) {
             Text(
-                text = buttonText ?: stringRes(R.string.send_sats),
+                text = buttonText ?: stringResource(Res.string.send_sats),
                 color = Color.White,
                 fontSize = 20.sp,
             )

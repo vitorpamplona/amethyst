@@ -59,9 +59,13 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.compose.produceCachedStateAsync
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.approve
+import com.vitorpamplona.amethyst.commons.resources.expiration_date_label
+import com.vitorpamplona.amethyst.commons.resources.group_picture
+import com.vitorpamplona.amethyst.commons.resources.pinned_notes
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannelPicture
@@ -173,7 +177,6 @@ import com.vitorpamplona.amethyst.ui.note.types.ReplyRenderType
 import com.vitorpamplona.amethyst.ui.note.types.VideoDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.RenderPublicChatChannelHeader
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.ui.theme.HalfDoubleVertSpacer
@@ -294,6 +297,7 @@ import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun NoteCompose(
@@ -778,7 +782,7 @@ fun RenderApproveButton(
             accountViewModel.approveCommunityPost(post, community)
         },
     ) {
-        Text(stringRes(R.string.approve))
+        Text(stringResource(Res.string.approve))
     }
 }
 
@@ -1549,7 +1553,7 @@ fun DisplayExpiration(expirationDate: Long) {
     ) {
         Icon(
             imageVector = Icons.Outlined.Timer,
-            contentDescription = stringRes(R.string.expiration_date_label),
+            contentDescription = stringResource(Res.string.expiration_date_label),
             modifier = Modifier.padding(start = 5.dp).size(15.dp),
             tint = MaterialTheme.colorScheme.placeholderText,
         )
@@ -1680,7 +1684,7 @@ fun FirstUserInfoRow(
 fun PinnedMark() {
     Icon(
         imageVector = Icons.Default.PushPin,
-        contentDescription = stringRes(R.string.pinned_notes),
+        contentDescription = stringResource(Res.string.pinned_notes),
         modifier = Modifier.padding(start = 5.dp).size(16.dp),
         tint = MaterialTheme.colorScheme.placeholderText,
     )
@@ -1813,7 +1817,7 @@ private fun ChannelNotePicture(
     RobohashFallbackAsyncImage(
         robot = baseChannel.idHex,
         model = model,
-        contentDescription = stringRes(R.string.group_picture),
+        contentDescription = stringResource(Res.string.group_picture),
         modifier = MaterialTheme.colorScheme.channelNotePictureModifier,
         loadProfilePicture = accountViewModel.settings.showProfilePictures(),
         loadRobohash = accountViewModel.settings.isNotPerformanceMode(),

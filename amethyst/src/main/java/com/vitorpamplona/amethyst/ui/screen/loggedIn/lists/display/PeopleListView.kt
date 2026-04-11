@@ -34,17 +34,18 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.remove_user_from_the_list
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.UserComposeNoAction
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfHalfHorzModifier
 import com.vitorpamplona.amethyst.ui.theme.HalfPadding
 import kotlinx.collections.immutable.ImmutableList
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun PeopleListView(
@@ -99,7 +100,7 @@ fun PeopleListItem(
             ) {
                 Icon(
                     imageVector = Icons.Filled.PersonRemove,
-                    contentDescription = stringRes(R.string.remove_user_from_the_list),
+                    contentDescription = stringResource(Res.string.remove_user_from_the_list),
                     tint = MaterialTheme.colorScheme.onErrorContainer,
                 )
             }

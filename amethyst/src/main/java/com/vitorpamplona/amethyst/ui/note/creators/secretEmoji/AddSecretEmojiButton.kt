@@ -26,10 +26,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.secret_emoji_maker_explainer
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun AddSecretEmojiButton(
@@ -42,14 +43,14 @@ fun AddSecretEmojiButton(
         if (!isSecretEmojiActive) {
             Icon(
                 imageVector = Icons.Outlined.Assistant,
-                contentDescription = stringRes(id = R.string.secret_emoji_maker_explainer),
+                contentDescription = stringResource(Res.string.secret_emoji_maker_explainer),
                 modifier = Size20Modifier,
                 tint = MaterialTheme.colorScheme.onBackground,
             )
         } else {
             Icon(
                 imageVector = Icons.Outlined.Assistant,
-                contentDescription = stringRes(id = R.string.secret_emoji_maker_explainer),
+                contentDescription = stringResource(Res.string.secret_emoji_maker_explainer),
                 modifier = Size20Modifier,
                 tint = BitcoinOrange,
             )

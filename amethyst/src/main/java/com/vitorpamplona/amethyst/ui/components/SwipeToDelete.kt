@@ -53,9 +53,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.resources.request_deletion
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -158,12 +160,12 @@ fun DismissBackground(dismissState: SwipeToDismissBoxState) {
     ) {
         Icon(
             Icons.Default.Delete,
-            contentDescription = stringRes(id = R.string.request_deletion),
+            contentDescription = stringResource(Res.string.request_deletion),
         )
         Spacer(modifier = Modifier)
         Icon(
             Icons.Default.Delete,
-            contentDescription = stringRes(id = R.string.request_deletion),
+            contentDescription = stringResource(Res.string.request_deletion),
         )
     }
 }
@@ -213,12 +215,12 @@ fun ConfirmDeleteBackground(
         ) {
             Icon(
                 Icons.Default.Delete,
-                contentDescription = stringRes(id = R.string.request_deletion),
+                contentDescription = stringResource(Res.string.request_deletion),
                 tint = Color.White,
             )
             Spacer(modifier = Modifier.padding(horizontal = 4.dp))
             Text(
-                text = stringRes(id = R.string.request_deletion),
+                text = stringResource(Res.string.request_deletion),
                 color = Color.White,
                 style = MaterialTheme.typography.titleMedium,
             )
@@ -234,12 +236,12 @@ fun ConfirmDeleteBackground(
         ) {
             Icon(
                 Icons.Default.Close,
-                contentDescription = stringRes(id = R.string.cancel),
+                contentDescription = stringResource(Res.string.cancel),
                 tint = Color.White,
             )
             Spacer(modifier = Modifier.padding(horizontal = 4.dp))
             Text(
-                text = stringRes(id = R.string.cancel),
+                text = stringResource(Res.string.cancel),
                 color = Color.White,
                 style = MaterialTheme.typography.titleMedium,
             )

@@ -71,8 +71,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.add
+import com.vitorpamplona.amethyst.commons.resources.new_reaction_symbol
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.service.firstFullChar
@@ -84,7 +86,6 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
 import com.vitorpamplona.amethyst.ui.note.types.RenderEmojiPack
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -96,6 +97,7 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 
 @Stable
 class UpdateReactionTypeViewModel : ViewModel() {
@@ -222,7 +224,7 @@ fun UpdateReactionTypeScreen(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             OutlinedTextField(
-                                label = { Text(text = stringRes(R.string.new_reaction_symbol)) },
+                                label = { Text(text = stringResource(Res.string.new_reaction_symbol)) },
                                 value = postViewModel.nextChoice,
                                 onValueChange = { postViewModel.nextChoice = it },
                                 keyboardOptions =
@@ -248,7 +250,7 @@ fun UpdateReactionTypeScreen(
                                         containerColor = MaterialTheme.colorScheme.primary,
                                     ),
                             ) {
-                                Text(text = stringRes(R.string.add), color = Color.White)
+                                Text(text = stringResource(Res.string.add), color = Color.White)
                             }
                         }
                     }

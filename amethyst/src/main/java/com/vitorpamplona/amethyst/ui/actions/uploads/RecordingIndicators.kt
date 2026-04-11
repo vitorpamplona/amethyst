@@ -50,8 +50,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.recording_indicator_description
+import com.vitorpamplona.amethyst.commons.resources.recording_indicator_with_time
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Animated expanding circles that pulse outward from the recording button
@@ -181,12 +183,12 @@ fun FloatingRecordingIndicator(
 ) {
     if (!isRecording) return
 
-    val recordingLabel = stringRes(id = R.string.recording_indicator_description)
+    val recordingLabel = stringResource(Res.string.recording_indicator_description)
     val recordingWithTime =
         if (isCompact) {
             formatSecondsToTime(elapsedSeconds)
         } else {
-            stringRes(id = R.string.recording_indicator_with_time, formatSecondsToTime(elapsedSeconds))
+            stringResource(Res.string.recording_indicator_with_time, formatSecondsToTime(elapsedSeconds))
         }
     val horizontalPadding = if (isCompact) 8.dp else 16.dp
     val innerPadding = if (isCompact) 6.dp else 12.dp

@@ -37,7 +37,10 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.dm_relays_not_found
+import com.vitorpamplona.amethyst.commons.resources.dm_relays_not_found_create_now
+import com.vitorpamplona.amethyst.commons.resources.dm_relays_not_found_description
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -45,7 +48,6 @@ import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.dm.AddDMRelayListDialog
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BigPadding
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
@@ -53,6 +55,7 @@ import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
+import org.jetbrains.compose.resources.stringResource
 
 @Preview
 @Composable
@@ -127,7 +130,7 @@ fun AddInboxRelayForDMCard(
             ) {
                 // Title
                 Text(
-                    text = stringRes(id = R.string.dm_relays_not_found),
+                    text = stringResource(Res.string.dm_relays_not_found),
                     style =
                         TextStyle(
                             fontSize = 20.sp,
@@ -138,7 +141,7 @@ fun AddInboxRelayForDMCard(
                 Spacer(modifier = StdVertSpacer)
 
                 Text(
-                    text = stringRes(id = R.string.dm_relays_not_found_description),
+                    text = stringResource(Res.string.dm_relays_not_found_description),
                 )
 
                 Spacer(modifier = StdVertSpacer)
@@ -154,7 +157,7 @@ fun AddInboxRelayForDMCard(
                     },
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text(text = stringRes(id = R.string.dm_relays_not_found_create_now))
+                    Text(text = stringResource(Res.string.dm_relays_not_found_create_now))
                 }
             }
         }
