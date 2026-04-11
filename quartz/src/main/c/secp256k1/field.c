@@ -24,7 +24,7 @@
  */
 #if HAVE_INT128
 
-static void mul_wide(uint64_t out[8], const uint64_t a[4], const uint64_t b[4]) {
+void mul_wide(uint64_t out[8], const uint64_t a[4], const uint64_t b[4]) {
     /*
      * Schoolbook 4x4 multiplication into 8 limbs. Uses a row-based approach:
      * multiply each a[i] by the full b[0..3] vector and accumulate into out.
@@ -85,7 +85,7 @@ static void mul_wide(uint64_t out[8], const uint64_t a[4], const uint64_t b[4]) 
  * Two reduction rounds: first folds hi[0..3] into lo[0..3] using C,
  * second handles any remaining overflow.
  */
-static void reduce_wide(secp256k1_fe *r, const uint64_t w[8]) {
+void reduce_wide(secp256k1_fe *r, const uint64_t w[8]) {
     uint128_t acc;
 
     /* Round 1: result = w[0..3] + w[4..7] * C */
