@@ -162,11 +162,16 @@ static void bench_verify_batch(int batch_size, int iters) {
 
         uint8_t seed[4] = {(uint8_t)i, (uint8_t)(i>>8), (uint8_t)(i>>16), (uint8_t)(i>>24)};
         secp256k1_sha256_hash(msgs[i], seed, 4);
-        secp256k1c_schnorr_sign_xonly(sigs[i], msgs[i], 32, TEST_PRIVKEY, xonly, TEST_AUXRAND);
+        secp256k1c_schnorr_sign(sigs[i], msgs[i], 32, TEST_PRIVKEY, TEST_AUXRAND);
     }
 
-    char name[64];
-    snprintf(name, sizeof(name), "verifySchnorrBatch(%d)", batch_size);
+    const char *name =
+        batch_size == 4   ? "verifyBatch(4)" :
+        batch_size == 8   ? "verifyBatch(8)" :
+        batch_size == 16  ? "verifyBatch(16)" :
+        batch_size == 32  ? "verifyBatch(32)" :
+        batch_size == 64  ? "verifyBatch(64)" :
+        batch_size == 200 ? "verifyBatch(200)" : "verifyBatch(?)";
 
     double start = now_ms();
     for (int i = 0; i < iters; i++) {
@@ -242,9 +247,11 @@ int main(void) {
     bench_sign_xonly(N);
     bench_verify(N);
     bench_verify_fast(N);
+    bench_verify_batch(4, N / 2);
     bench_verify_batch(8, N / 4);
     bench_verify_batch(16, N / 8);
     bench_verify_batch(32, N / 16);
+    bench_verify_batch(64, N / 32);
     bench_verify_batch(200, N / 50);
     bench_ecdh(N);
 
