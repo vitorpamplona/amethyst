@@ -104,25 +104,31 @@ void scalar_mul(secp256k1_scalar *r, const secp256k1_scalar *a, const secp256k1_
         sum[i] = (uint64_t)acc;
         acc >>= 64;
     }
-    /* Second fold if sum > 256 bits */
+    /* Second fold: sum[4..7] * NC + sum[0..3] */
     if (sum[4] | sum[5] | sum[6] | sum[7]) {
         uint64_t hc2[8];
         mul_wide(hc2, &sum[4], NC);
         acc = 0;
-        for (int i = 0; i < 4; i++) {
-            acc += (uint128_t)sum[i] + hc2[i];
-            r->d[i] = (uint64_t)acc;
+        uint64_t sum2[8];
+        for (int i = 0; i < 8; i++) {
+            acc += (uint128_t)(i < 4 ? sum[i] : 0) + hc2[i];
+            sum2[i] = (uint64_t)acc;
             acc >>= 64;
         }
-        /* hc2[4..7] should be negligible; handle any carry */
-        for (int i = 4; i < 8; i++) {
-            acc += hc2[i];
-        }
-        if (acc) {
-            /* Tiny third fold */
-            uint128_t c = (uint128_t)r->d[0] + (uint64_t)acc * NC[0];
-            r->d[0] = (uint64_t)c; c >>= 64;
-            if (c) { r->d[1] += (uint64_t)c; if (r->d[1] < (uint64_t)c) { r->d[2]++; if (!r->d[2]) r->d[3]++; } }
+        /* Third fold if still > 256 bits (sum2 is at most ~130 bits above 256) */
+        if (sum2[4] | sum2[5] | sum2[6] | sum2[7]) {
+            /* sum2[4..7] is tiny (~2 limbs at most). Use reduce_wide pattern. */
+            acc = (uint128_t)sum2[0] + (uint128_t)sum2[4] * NC[0];
+            r->d[0] = (uint64_t)acc; acc >>= 64;
+            acc += (uint128_t)sum2[1] + (uint128_t)sum2[4] * NC[1] + (uint128_t)sum2[5] * NC[0];
+            r->d[1] = (uint64_t)acc; acc >>= 64;
+            acc += (uint128_t)sum2[2] + (uint128_t)sum2[4] * NC[2] + (uint128_t)sum2[5] * NC[1] + (uint128_t)sum2[6] * NC[0];
+            r->d[2] = (uint64_t)acc; acc >>= 64;
+            acc += (uint128_t)sum2[3] + (uint128_t)sum2[5] * NC[2] + (uint128_t)sum2[6] * NC[1] + (uint128_t)sum2[7] * NC[0];
+            r->d[3] = (uint64_t)acc;
+            /* Any remaining carry is negligible — handled by while loop below */
+        } else {
+            r->d[0] = sum2[0]; r->d[1] = sum2[1]; r->d[2] = sum2[2]; r->d[3] = sum2[3];
         }
     } else {
         r->d[0] = sum[0]; r->d[1] = sum[1]; r->d[2] = sum[2]; r->d[3] = sum[3];
