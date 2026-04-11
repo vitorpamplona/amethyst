@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActiviti
 import com.vitorpamplona.amethyst.commons.model.observables.CreatedAtComparator
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.ui.notifications.CardFeedState
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings
@@ -175,14 +176,17 @@ import kotlinx.coroutines.withContext
 
 @Stable
 class AccountViewModel(
-    val account: Account,
+    override val account: Account,
     val settings: UiSettingsState,
     val torSettings: TorSettingsFlow,
     val dataSources: RelaySubscriptionsCoordinator,
     val httpClientBuilder: IRoleBasedHttpClientBuilder,
     val nip05ClientBuilder: () -> INip05Client,
 ) : ViewModel(),
-    Dao {
+    Dao,
+    IAccountViewModel {
+    override val scope: CoroutineScope get() = viewModelScope
+
     var firstRoute: Route? = null
 
     val toastManager = ToastManager()
@@ -418,11 +422,11 @@ class AccountViewModel(
             Route.Notification() to notificationHasNewItemsFlow,
         )
 
-    fun isWriteable(): Boolean = account.isWriteable()
+    override fun isWriteable(): Boolean = account.isWriteable()
 
-    fun userProfile(): User = account.userProfile()
+    override fun userProfile(): User = account.userProfile()
 
-    fun reactToOrDelete(
+    override fun reactToOrDelete(
         note: Note,
         reaction: String,
     ) {
@@ -450,7 +454,7 @@ class AccountViewModel(
         }
     }
 
-    fun reactToOrDelete(note: Note) {
+    override fun reactToOrDelete(note: Note) {
         val reaction = reactionChoices().first()
         reactToOrDelete(note, reaction)
     }
@@ -859,7 +863,7 @@ class AccountViewModel(
         }
     }
 
-    fun boost(note: Note) {
+    override fun boost(note: Note) {
         if (settings.isCompleteUIMode()) {
             // Tracked broadcasting with progress feedback
             launchSigner {
@@ -904,7 +908,7 @@ class AccountViewModel(
 
     fun pinnedNotes(user: User): Note = LocalCache.getOrCreateAddressableNote(PinListEvent.createPinAddress(user.pubkeyHex))
 
-    fun addPin(note: Note) {
+    override fun addPin(note: Note) {
         if (settings.isCompleteUIMode()) {
             launchSigner {
                 account.createAddPinEvent(note)?.let { (event, relays) ->
@@ -921,7 +925,7 @@ class AccountViewModel(
         }
     }
 
-    fun removePin(note: Note) {
+    override fun removePin(note: Note) {
         if (settings.isCompleteUIMode()) {
             launchSigner {
                 account.createRemovePinEvent(note)?.let { (event, relays) ->
@@ -938,7 +942,7 @@ class AccountViewModel(
         }
     }
 
-    fun addPrivateBookmark(note: Note) {
+    override fun addPrivateBookmark(note: Note) {
         if (settings.isCompleteUIMode()) {
             launchSigner {
                 account.createAddBookmarkEvent(note, true)?.let { (event, relays) ->
@@ -955,7 +959,7 @@ class AccountViewModel(
         }
     }
 
-    fun addPublicBookmark(note: Note) {
+    override fun addPublicBookmark(note: Note) {
         if (settings.isCompleteUIMode()) {
             launchSigner {
                 account.createAddBookmarkEvent(note, false)?.let { (event, relays) ->
@@ -972,7 +976,7 @@ class AccountViewModel(
         }
     }
 
-    fun removePrivateBookmark(note: Note) {
+    override fun removePrivateBookmark(note: Note) {
         if (settings.isCompleteUIMode()) {
             launchSigner {
                 account.createRemoveBookmarkEvent(note, true)?.let { (event, relays) ->
@@ -990,7 +994,7 @@ class AccountViewModel(
         }
     }
 
-    fun removePublicBookmark(note: Note) {
+    override fun removePublicBookmark(note: Note) {
         if (settings.isCompleteUIMode()) {
             launchSigner {
                 account.createRemoveBookmarkEvent(note, false)?.let { (event, relays) ->
@@ -1007,13 +1011,13 @@ class AccountViewModel(
         }
     }
 
-    fun broadcast(note: Note) = launchSigner { account.broadcast(note) }
+    override fun broadcast(note: Note) = launchSigner { account.broadcast(note) }
 
     fun timestamp(note: Note) = launchSigner { account.otsState.timestamp(note) }
 
-    fun delete(notes: List<Note>) = launchSigner { account.delete(notes) }
+    override fun delete(notes: List<Note>) = launchSigner { account.delete(notes) }
 
-    fun delete(note: Note) = launchSigner { account.delete(note) }
+    override fun delete(note: Note) = launchSigner { account.delete(note) }
 
     fun requestToVanish(
         relays: List<NormalizedRelayUrl>,
@@ -1026,9 +1030,9 @@ class AccountViewModel(
         createdAt: Long,
     ) = launchSigner { account.requestToVanishFromEverywhere(reason, createdAt) }
 
-    fun cachedDecrypt(note: Note): String? = account.cachedDecryptContent(note)
+    override fun cachedDecrypt(note: Note): String? = account.cachedDecryptContent(note)
 
-    fun decrypt(
+    override fun decrypt(
         note: Note,
         onReady: (String) -> Unit,
     ) = launchSigner {
@@ -1095,9 +1099,9 @@ class AccountViewModel(
 
     fun follow(users: List<User>) = launchSigner { account.follow(users) }
 
-    fun follow(user: User) = launchSigner { account.follow(user) }
+    override fun follow(user: User) = launchSigner { account.follow(user) }
 
-    fun unfollow(user: User) = launchSigner { account.unfollow(user) }
+    override fun unfollow(user: User) = launchSigner { account.unfollow(user) }
 
     fun followGeohash(tag: String) = launchSigner { account.followGeohash(tag) }
 
@@ -1115,16 +1119,16 @@ class AccountViewModel(
 
     fun hideWord(word: String) = launchSigner { account.hideWord(word) }
 
-    fun isLoggedUser(pubkeyHex: HexKey?): Boolean = account.signer.pubKey == pubkeyHex
+    override fun isLoggedUser(pubkeyHex: HexKey?): Boolean = account.signer.pubKey == pubkeyHex
 
-    fun isLoggedUser(user: User?): Boolean = isLoggedUser(user?.pubkeyHex)
+    override fun isLoggedUser(user: User?): Boolean = isLoggedUser(user?.pubkeyHex)
 
-    fun isFollowing(user: User?): Boolean {
+    override fun isFollowing(user: User?): Boolean {
         if (user == null) return false
         return account.isFollowing(user)
     }
 
-    fun isFollowing(user: HexKey): Boolean = account.isFollowing(user)
+    override fun isFollowing(user: HexKey): Boolean = account.isFollowing(user)
 
     fun markDonatedInThisVersion() = account.markDonatedInThisVersion()
 
@@ -1137,21 +1141,21 @@ class AccountViewModel(
         pollEndsAt: Long?,
     ) = account.markPollResultsViewed(noteId, pollEndsAt)
 
-    fun dontTranslateFrom() = account.settings.syncedSettings.languages.dontTranslateFrom.value
+    override fun dontTranslateFrom() = account.settings.syncedSettings.languages.dontTranslateFrom.value
 
-    fun translateTo() = account.settings.syncedSettings.languages.translateTo.value
+    override fun translateTo() = account.settings.syncedSettings.languages.translateTo.value
 
-    fun defaultZapType() = account.settings.syncedSettings.zaps.defaultZapType.value
+    override fun defaultZapType() = account.settings.syncedSettings.zaps.defaultZapType.value
 
-    fun showSensitiveContent(): MutableStateFlow<Boolean?> = account.settings.syncedSettings.security.showSensitiveContent
+    override fun showSensitiveContent(): MutableStateFlow<Boolean?> = account.settings.syncedSettings.security.showSensitiveContent
 
     fun zapAmountChoicesFlow() = account.settings.syncedSettings.zaps.zapAmountChoices
 
-    fun zapAmountChoices() = zapAmountChoicesFlow().value
+    override fun zapAmountChoices() = zapAmountChoicesFlow().value
 
     fun reactionChoicesFlow() = account.settings.syncedSettings.reactions.reactionChoices
 
-    fun reactionChoices() = reactionChoicesFlow().value
+    override fun reactionChoices() = reactionChoicesFlow().value
 
     fun filterSpamFromStrangers() = account.settings.syncedSettings.security.filterSpamFromStrangers
 
@@ -1205,9 +1209,9 @@ class AccountViewModel(
         preference: String,
     ) = launchSigner { account.prefer(source, target, preference) }
 
-    fun show(user: User) = launchSigner { account.showUser(user.pubkeyHex) }
+    override fun show(user: User) = launchSigner { account.showUser(user.pubkeyHex) }
 
-    fun hide(user: User) = launchSigner { account.hideUser(user.pubkeyHex) }
+    override fun hide(user: User) = launchSigner { account.hideUser(user.pubkeyHex) }
 
     fun hide(word: String) = launchSigner { account.hideWord(word) }
 
@@ -1236,23 +1240,23 @@ class AccountViewModel(
         }
     }
 
-    fun loadReactionTo(note: Note?): String? {
+    override fun loadReactionTo(note: Note?): String? {
         if (note == null) return null
 
         return note.getReactionBy(userProfile())
     }
 
-    fun runOnIO(runOnIO: suspend () -> Unit) {
+    override fun runOnIO(runOnIO: suspend () -> Unit) {
         viewModelScope.launch(Dispatchers.IO) { runOnIO() }
     }
 
-    fun checkGetOrCreateUser(key: HexKey): User? = LocalCache.checkGetOrCreateUser(key)
+    override fun checkGetOrCreateUser(key: HexKey): User? = LocalCache.checkGetOrCreateUser(key)
 
     override suspend fun getOrCreateUser(hex: HexKey): User = LocalCache.getOrCreateUser(hex)
 
-    fun getUserIfExists(hex: HexKey): User? = LocalCache.getUserIfExists(hex)
+    override fun getUserIfExists(hex: HexKey): User? = LocalCache.getUserIfExists(hex)
 
-    fun checkGetOrCreateNote(key: HexKey): Note? = LocalCache.checkGetOrCreateNote(key)
+    override fun checkGetOrCreateNote(key: HexKey): Note? = LocalCache.checkGetOrCreateNote(key)
 
     override suspend fun getOrCreateNote(hex: HexKey): Note = LocalCache.getOrCreateNote(hex)
 
@@ -1267,7 +1271,7 @@ class AccountViewModel(
         return note
     }
 
-    fun getNoteIfExists(hex: HexKey): Note? = LocalCache.getNoteIfExists(hex)
+    override fun getNoteIfExists(hex: HexKey): Note? = LocalCache.getNoteIfExists(hex)
 
     /**
      * Fixes author and relay hints in MarkedETag list by looking up notes from cache.
@@ -1297,9 +1301,9 @@ class AccountViewModel(
 
     override fun getOrCreateAddressableNote(address: Address): AddressableNote = LocalCache.getOrCreateAddressableNote(address)
 
-    fun getAddressableNoteIfExists(key: String): AddressableNote? = LocalCache.getAddressableNoteIfExists(key)
+    override fun getAddressableNoteIfExists(key: String): AddressableNote? = LocalCache.getAddressableNoteIfExists(key)
 
-    fun getAddressableNoteIfExists(key: Address): AddressableNote? = LocalCache.getAddressableNoteIfExists(key)
+    override fun getAddressableNoteIfExists(key: Address): AddressableNote? = LocalCache.getAddressableNoteIfExists(key)
 
     fun cachedModificationEventsForNote(note: Note) = LocalCache.cachedModificationEventsForNote(note)
 
@@ -1361,7 +1365,7 @@ class AccountViewModel(
             OnlineChecker.isOnline(videoUrl, httpClientBuilder::okHttpClientForVideo)
         }
 
-    fun loadAndMarkAsRead(
+    override fun loadAndMarkAsRead(
         routeForLastRead: String,
         createdAt: Long?,
     ): Boolean {
