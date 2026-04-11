@@ -20,14 +20,19 @@
  */
 package com.vitorpamplona.amethyst.desktop.model
 
+import com.vitorpamplona.amethyst.commons.model.AccountSettings
 import com.vitorpamplona.amethyst.commons.model.IAccount
 import com.vitorpamplona.amethyst.commons.model.INwcSignerState
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.model.nip02FollowList.Kind3FollowListRepository
 import com.vitorpamplona.amethyst.commons.model.nip02FollowList.Kind3FollowListState
+import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.BookmarkListState
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.OldBookmarkListState
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.PinListState
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.labeledBookmarkLists.LabeledBookmarkListsState
 import com.vitorpamplona.amethyst.commons.model.nip65RelayList.Nip65RelayListRepository
 import com.vitorpamplona.amethyst.commons.model.nip65RelayList.Nip65RelayListState
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
@@ -77,8 +82,17 @@ class DesktopIAccount(
 
     // ----- State Classes (pin important notes via strong refs for GC retention) -----
 
-    val oldBookmarkState = OldBookmarkListState(signer, localCache, scope)
-    val bookmarkState = BookmarkListState(signer, localCache, scope)
+    override val oldBookmarkState = OldBookmarkListState(signer, localCache, scope)
+    override val bookmarkState = BookmarkListState(signer, localCache, scope)
+    override val pinState = PinListState(signer, localCache, scope)
+    override val labeledBookmarkLists = LabeledBookmarkListsState(signer, localCache, scope)
+    override val emoji = EmojiPackState(signer, localCache, scope)
+    override val cache: ICacheProvider = localCache
+    override val settings: AccountSettings =
+        AccountSettings(
+            com.vitorpamplona.quartz.nip01Core.crypto
+                .KeyPair(),
+        )
 
     val kind3FollowList =
         Kind3FollowListState(
@@ -164,6 +178,12 @@ class DesktopIAccount(
     override fun followingKeySet(): Set<String> = kind3FollowList.flow.value.authors
 
     override fun isHidden(user: User): Boolean = false
+
+    override fun isHidden(userHex: String): Boolean = false
+
+    override fun isFollowing(user: User): Boolean =
+        kind3FollowList.flow.value.authors
+            .contains(user.pubkeyHex)
 
     override fun isAcceptable(note: Note): Boolean {
         // Accept all notes on desktop for now

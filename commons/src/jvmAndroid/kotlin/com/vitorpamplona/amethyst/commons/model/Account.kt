@@ -246,12 +246,12 @@ import com.vitorpamplona.amethyst.commons.model.trustedAssertions.TrustProviderL
 @OptIn(DelicateCoroutinesApi::class)
 @Stable
 class Account(
-    val settings: AccountSettings = AccountSettings(KeyPair()),
+    override val settings: AccountSettings = AccountSettings(KeyPair()),
     override val signer: NostrSigner,
     val geolocationFlow: () -> StateFlow<LocationResult>,
     val nwcFilterAssembler: () -> INWCPaymentFilterAssembler,
     val otsResolverBuilder: () -> OtsResolver,
-    val cache: ICacheProvider,
+    override val cache: ICacheProvider,
     val client: INostrClient,
     val scope: CoroutineScope,
     val mlsGroupStateStore: MlsGroupStateStore? = null,
@@ -338,11 +338,11 @@ class Account(
 
     val hiddenUsers = HiddenUsersState(muteList.flow, blockPeopleList.flow, scope, settings)
 
-    val labeledBookmarkLists = LabeledBookmarkListsState(signer, cache, scope)
-    val oldBookmarkState = OldBookmarkListState(signer, cache, scope)
-    val bookmarkState = BookmarkListState(signer, cache, scope)
-    val pinState = PinListState(signer, cache, scope)
-    val emoji = EmojiPackState(signer, cache, scope)
+    override val labeledBookmarkLists = LabeledBookmarkListsState(signer, cache, scope)
+    override val oldBookmarkState = OldBookmarkListState(signer, cache, scope)
+    override val bookmarkState = BookmarkListState(signer, cache, scope)
+    override val pinState = PinListState(signer, cache, scope)
+    override val emoji = EmojiPackState(signer, cache, scope)
 
     val vanish = VanishRequestsState(signer, cache, client, scope)
 
@@ -2225,7 +2225,7 @@ class Account(
 
     override fun isHidden(user: User) = isHidden(user.pubkeyHex)
 
-    fun isHidden(userHex: String): Boolean = hiddenUsers.flow.value.isUserHidden(userHex)
+    override fun isHidden(userHex: String): Boolean = hiddenUsers.flow.value.isUserHidden(userHex)
 
     override fun followingKeySet(): Set<HexKey> = kind3FollowList.flow.value.authors
 
@@ -2275,7 +2275,7 @@ class Account(
             false
         }
 
-    fun isFollowing(user: User): Boolean = user.pubkeyHex in followingKeySet()
+    override fun isFollowing(user: User): Boolean = user.pubkeyHex in followingKeySet()
 
     fun isFollowing(user: HexKey): Boolean = user in followingKeySet()
 

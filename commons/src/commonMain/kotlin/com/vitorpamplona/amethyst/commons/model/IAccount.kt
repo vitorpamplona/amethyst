@@ -20,7 +20,13 @@
  */
 package com.vitorpamplona.amethyst.commons.model
 
+import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupList
+import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.BookmarkListState
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.OldBookmarkListState
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.PinListState
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.labeledBookmarkLists.LabeledBookmarkListsState
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -147,4 +153,31 @@ interface IAccount {
 
     /** Send multiple events via public and private outbox relays */
     fun sendMyPublicAndPrivateOutbox(events: List<Event>)
+
+    /** Emoji pack state */
+    val emoji: EmojiPackState
+
+    /** Pin list state */
+    val pinState: PinListState
+
+    /** Bookmark list state */
+    val bookmarkState: BookmarkListState
+
+    /** Old bookmark list state */
+    val oldBookmarkState: OldBookmarkListState
+
+    /** Labeled bookmark lists */
+    val labeledBookmarkLists: LabeledBookmarkListsState
+
+    /** Cache provider (note/user lookups) */
+    val cache: ICacheProvider
+
+    /** Account settings */
+    val settings: AccountSettings
+
+    /** Check if following a user */
+    fun isFollowing(user: User): Boolean
+
+    /** Check if a user hex key is hidden */
+    fun isHidden(userHex: String): Boolean
 }
