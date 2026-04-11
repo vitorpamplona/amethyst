@@ -11,21 +11,23 @@
 
 /* G_x = 0x79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798 */
 /* G_y = 0x483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8 */
+/* 4x64 little-endian */
 const secp256k1_ge SECP256K1_G = {
-    .x = {{0x2815B16F81798ULL, 0xDB2DCE28D959FULL, 0xE870B07029BFCULL,
-            0xBBAC55A06295CULL, 0x079BE667EF9DCULL}},
-    .y = {{0x7D08FFB10D4B8ULL, 0x48A68554199C4ULL, 0xE1108A8FD17B4ULL,
-            0xC4655DA4FBFC0ULL, 0x0483ADA7726A3ULL}}
+    .x = {{0x59F2815B16F81798ULL, 0x029BFCDB2DCE28D9ULL,
+            0x55A06295CE870B07ULL, 0x79BE667EF9DCBBACULL}},
+    .y = {{0x9C47D08FFB10D4B8ULL, 0xFD17B448A6855419ULL,
+            0x5DA4FBFC0E1108A8ULL, 0x483ADA7726A3C465ULL}}
 };
 
-/* GLV beta: cube root of unity mod p (5x52 limbs) */
+/* GLV beta: cube root of unity mod p (4x64 little-endian) */
+/* beta = 0x7AE96A2B657C07106E64479EAC3434E99CF0497512F58995C1396C28719501EE */
 static const secp256k1_fe GLV_BETA = {{
-    0x96C28719501EEULL, 0x7512F58995C13ULL, 0xC3434E99CF049ULL,
-    0x07106E64479EAULL, 0x07AE96A2B657CULL
+    0xC1396C28719501EEULL, 0x9CF0497512F58995ULL,
+    0x6E64479EAC3434E9ULL, 0x7AE96A2B657C0710ULL
 }};
 
 /* Curve constant b = 7 */
-static const secp256k1_fe FE_SEVEN = {{7, 0, 0, 0, 0}};
+static const secp256k1_fe FE_SEVEN = {{7, 0, 0, 0}};
 
 /* ==================== Precomputed Tables ==================== */
 
@@ -66,6 +68,13 @@ int gej_is_infinity(const secp256k1_gej *r) {
 /* Point doubling: r = 2*p (3M + 4S) using a=0 formula from libsecp256k1 */
 void gej_double(secp256k1_gej *r, const secp256k1_gej *p) {
     secp256k1_fe s, l, t, u;
+
+    /* Handle aliasing: if r == p, copy input first */
+    secp256k1_gej tmp;
+    if (r == p) {
+        tmp = *p;
+        p = &tmp;
+    }
 
     if (p->infinity) {
         gej_set_infinity(r);
