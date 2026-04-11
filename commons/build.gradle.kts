@@ -74,7 +74,7 @@ kotlin {
                 implementation(libs.kotlinx.atomicfu)
 
                 // Compose Multiplatform Resources
-                implementation(libs.jetbrains.compose.components.resources)
+                api(libs.jetbrains.compose.components.resources)
             }
         }
 
