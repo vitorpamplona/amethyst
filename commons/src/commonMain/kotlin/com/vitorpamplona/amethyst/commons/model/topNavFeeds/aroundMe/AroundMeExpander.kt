@@ -18,26 +18,46 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.location
+package com.vitorpamplona.amethyst.commons.model.topNavFeeds.aroundMe
 
-import android.location.Location
 import com.vitorpamplona.amethyst.commons.geohash.GeoHash
 
-/**
- * Backward-compatible typealias. The core GeoHash class now lives in
- * commons (com.vitorpamplona.amethyst.commons.geohash.GeoHash).
- *
- * Android-specific extensions remain here.
- */
-@Suppress("unused")
-private typealias _GeoHashCompat = GeoHash
+fun compute50kmLine(geoHash: GeoHash): List<String> {
+    val hashes = mutableListOf<String>()
 
-fun Location.toGeoHash(charsCount: Int = GeoHash.MAX_CHAR_PRECISION): GeoHash = GeoHash.encode(latitude, longitude, charsCount)
+    hashes.add(geoHash.toString())
 
-fun GeoHash.toLocation(): Location =
-    Location("").also {
-        it.latitude = centerLat
-        it.longitude = centerLon
+    var currentGeoHash = geoHash
+    repeat(5) {
+        currentGeoHash = currentGeoHash.westernNeighbour
+        hashes.add(currentGeoHash.toString())
     }
 
-fun String.toGeoHash(): GeoHash? = GeoHash.decode(this)
+    currentGeoHash = geoHash
+    repeat(5) {
+        currentGeoHash = currentGeoHash.easternNeighbour
+        hashes.add(currentGeoHash.toString())
+    }
+
+    return hashes
+}
+
+fun compute50kmRange(geoHash: GeoHash): List<String> {
+    val hashes = mutableListOf<String>()
+
+    hashes.addAll(compute50kmLine(geoHash))
+
+    var currentGeoHash = geoHash
+    repeat(5) {
+        currentGeoHash = currentGeoHash.northernNeighbour
+        hashes.addAll(compute50kmLine(currentGeoHash))
+    }
+
+    currentGeoHash = geoHash
+    repeat(5) {
+        currentGeoHash = currentGeoHash.southernNeighbour
+        hashes.addAll(compute50kmLine(currentGeoHash))
+    }
+
+    return hashes
+}

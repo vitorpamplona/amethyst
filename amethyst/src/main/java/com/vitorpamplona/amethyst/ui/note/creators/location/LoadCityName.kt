@@ -29,6 +29,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import com.vitorpamplona.amethyst.service.location.CachedReversedGeoLocations
 import com.vitorpamplona.amethyst.service.location.toGeoHash
+import com.vitorpamplona.amethyst.service.location.toLocation
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 

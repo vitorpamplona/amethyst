@@ -18,46 +18,16 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+@file:JvmName("AroundMeExpanderKt")
+
 package com.vitorpamplona.amethyst.model.topNavFeeds.aroundMe
 
-import com.vitorpamplona.amethyst.service.location.GeoHash
+import com.vitorpamplona.amethyst.commons.geohash.GeoHash
 
-fun compute50kmLine(geoHash: GeoHash): List<String> {
-    val hashes = mutableListOf<String>()
+fun compute50kmLine(geoHash: GeoHash): List<String> =
+    com.vitorpamplona.amethyst.commons.model.topNavFeeds.aroundMe
+        .compute50kmLine(geoHash)
 
-    hashes.add(geoHash.toString())
-
-    var currentGeoHash = geoHash
-    repeat(5) {
-        currentGeoHash = currentGeoHash.westernNeighbour
-        hashes.add(currentGeoHash.toString())
-    }
-
-    currentGeoHash = geoHash
-    repeat(5) {
-        currentGeoHash = currentGeoHash.easternNeighbour
-        hashes.add(currentGeoHash.toString())
-    }
-
-    return hashes
-}
-
-fun compute50kmRange(geoHash: GeoHash): List<String> {
-    val hashes = mutableListOf<String>()
-
-    hashes.addAll(compute50kmLine(geoHash))
-
-    var currentGeoHash = geoHash
-    repeat(5) {
-        currentGeoHash = currentGeoHash.northernNeighbour
-        hashes.addAll(compute50kmLine(currentGeoHash))
-    }
-
-    currentGeoHash = geoHash
-    repeat(5) {
-        currentGeoHash = currentGeoHash.southernNeighbour
-        hashes.addAll(compute50kmLine(currentGeoHash))
-    }
-
-    return hashes
-}
+fun compute50kmRange(geoHash: GeoHash): List<String> =
+    com.vitorpamplona.amethyst.commons.model.topNavFeeds.aroundMe
+        .compute50kmRange(geoHash)
