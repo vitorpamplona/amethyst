@@ -53,6 +53,8 @@ import org.webrtc.EglBase
 import org.webrtc.IceCandidate
 import org.webrtc.VideoTrack
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 
 private const val TAG = "CallController"
 private const val VIDEO_MAX_BITRATE_BPS_DEFAULT = 1_500_000
@@ -95,9 +97,11 @@ class CallController(
     val audioRoute: StateFlow<AudioRoute> = audioManager.audioRoute
     val isBluetoothAvailable: StateFlow<Boolean> = audioManager.isBluetoothAvailable
 
-    private var videoPausedByProximity = false
-    private var foregroundServiceStarted = false
-    private val videoSenders = mutableMapOf<HexKey, org.webrtc.RtpSender>()
+    @Volatile private var videoPausedByProximity = false
+
+    @Volatile private var foregroundServiceStarted = false
+    private val cleanedUp = AtomicBoolean(false)
+    private val videoSenders = ConcurrentHashMap<HexKey, org.webrtc.RtpSender>()
 
     private val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
     private var networkCallbackRegistered = false
@@ -126,6 +130,7 @@ class CallController(
             callManager.state.collect { state ->
                 when (state) {
                     is CallState.IncomingCall -> {
+                        ensureForegroundService()
                         withContext(Dispatchers.IO) { audioManager.startRinging() }
                         scope.launch {
                             NotificationUtils.showIncomingCallNotification(state.callerPubKey, context)
@@ -209,6 +214,7 @@ class CallController(
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to initialize WebRTC", e)
                 _errorMessage.value = "Failed to start call: ${e.message}"
+                callManager.hangup()
                 return@launch
             }
 
@@ -247,6 +253,7 @@ class CallController(
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to initialize WebRTC", e)
                 _errorMessage.value = "Failed to accept call: ${e.message}"
+                callManager.rejectCall()
                 return@launch
             }
 
@@ -256,6 +263,7 @@ class CallController(
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to create PeerConnection", e)
                     _errorMessage.value = "Failed to accept call: ${e.message}"
+                    callManager.rejectCall()
                     return@launch
                 }
 
@@ -582,6 +590,7 @@ class CallController(
     // ---- Cleanup ----
 
     fun cleanup() {
+        if (!cleanedUp.compareAndSet(false, true)) return
         unregisterNetworkCallback()
         try {
             audioManager.release()
@@ -610,6 +619,7 @@ class CallController(
         _isAudioMuted.value = false
         videoPausedByProximity = false
         videoSenders.clear()
+        cleanedUp.set(false)
     }
 
     // ---- Foreground service ----

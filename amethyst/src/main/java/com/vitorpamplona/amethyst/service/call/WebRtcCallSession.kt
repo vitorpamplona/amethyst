@@ -55,8 +55,9 @@ class WebRtcCallSession(
     private val onRenegotiationNeeded: () -> Unit = {},
     private val onIceRestartOffer: (SessionDescription) -> Unit = {},
 ) {
-    private var peerConnection: PeerConnection? = null
-    private var iceRestartAttempted = false
+    @Volatile private var peerConnection: PeerConnection? = null
+
+    @Volatile private var iceRestartAttempted = false
 
     fun createPeerConnection() {
         val rtcConfig =
@@ -65,7 +66,7 @@ class WebRtcCallSession(
                 continualGatheringPolicy = PeerConnection.ContinualGatheringPolicy.GATHER_CONTINUALLY
             }
 
-        peerConnection =
+        val pc =
             peerConnectionFactory.createPeerConnection(
                 rtcConfig,
                 object : PeerConnection.Observer {
@@ -155,7 +156,8 @@ class WebRtcCallSession(
                         }
                     }
                 },
-            )
+            ) ?: throw IllegalStateException("PeerConnectionFactory.createPeerConnection returned null")
+        peerConnection = pc
     }
 
     /**
@@ -345,9 +347,10 @@ class WebRtcCallSession(
     }
 
     fun dispose() {
-        peerConnection?.close()
-        peerConnection?.dispose()
+        val pc = peerConnection ?: return
         peerConnection = null
+        pc.close()
+        pc.dispose()
     }
 
     private fun loggingSdpObserver(label: String) =
