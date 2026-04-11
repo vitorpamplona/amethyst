@@ -46,7 +46,10 @@ import com.vitorpamplona.amethyst.ui.StringResSetup
 import com.vitorpamplona.amethyst.ui.screen.ManageRelayServices
 import com.vitorpamplona.amethyst.ui.screen.ManageWebOkHttp
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -213,13 +216,13 @@ class CallActivity : AppCompatActivity() {
 
         // Safety net: if the Activity is destroyed while a call is still
         // ringing/offering, ensure the call is hung up so audio stops.
-        // Use NonCancellable so the signaling event is published even
-        // though the lifecycle scope is being cancelled.
+        // Use a standalone CoroutineScope because lifecycleScope is cancelled
+        // during super.onDestroy() and may drop suspend work.
         val manager = CallSessionBridge.callManager
         when (manager?.state?.value) {
             is CallState.IncomingCall -> {
-                lifecycleScope.launch {
-                    withContext(NonCancellable) { manager.rejectCall() }
+                CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate).launch {
+                    manager.rejectCall()
                 }
             }
 
@@ -227,8 +230,8 @@ class CallActivity : AppCompatActivity() {
             is CallState.Connecting,
             is CallState.Connected,
             -> {
-                lifecycleScope.launch {
-                    withContext(NonCancellable) { manager.hangup() }
+                CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate).launch {
+                    manager.hangup()
                 }
             }
 
