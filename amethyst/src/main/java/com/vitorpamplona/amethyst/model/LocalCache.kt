@@ -426,7 +426,7 @@ object LocalCache : ILocalCache, ICacheProvider {
 
     fun getNoteIfExists(key: ETag): Note? = notes.get(key.eventId)
 
-    fun getPublicChatChannelIfExists(key: String): PublicChatChannel? = publicChatChannels.get(key)
+    override fun getPublicChatChannelIfExists(key: String): PublicChatChannel? = publicChatChannels.get(key)
 
     fun getEphemeralChatChannelIfExists(key: RoomId): EphemeralChatChannel? = ephemeralChannels.get(key)
 

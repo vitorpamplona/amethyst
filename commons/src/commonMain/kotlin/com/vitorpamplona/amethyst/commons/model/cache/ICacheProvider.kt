@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -135,4 +136,13 @@ interface ICacheProvider {
     fun getOrCreateUser(pubkey: HexKey): User?
 
     fun justConsumeMyOwnEvent(event: Event): Boolean
+
+    /**
+     * Gets a PublicChatChannel by key if it exists.
+     * Used by ParticipantListBuilder to find channel participants.
+     *
+     * @param key The channel's key (note id hex)
+     * @return The PublicChatChannel if found, null otherwise
+     */
+    fun getPublicChatChannelIfExists(key: String): PublicChatChannel? = null
 }

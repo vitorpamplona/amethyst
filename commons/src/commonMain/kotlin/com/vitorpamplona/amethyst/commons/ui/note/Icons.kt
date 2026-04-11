@@ -1,0 +1,452 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.commons.ui.note
+
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.automirrored.outlined.OpenInNew
+import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.Cancel
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.DownloadForOffline
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.PushPin
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.outlined.AddReaction
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Mic
+import androidx.compose.material.icons.outlined.PlayCircle
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.hashtags.Amethyst
+import com.vitorpamplona.amethyst.commons.hashtags.Cashu
+import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
+import com.vitorpamplona.amethyst.commons.icons.Following
+import com.vitorpamplona.amethyst.commons.icons.Like
+import com.vitorpamplona.amethyst.commons.icons.Liked
+import com.vitorpamplona.amethyst.commons.icons.Reply
+import com.vitorpamplona.amethyst.commons.icons.Repost
+import com.vitorpamplona.amethyst.commons.icons.Reposted
+import com.vitorpamplona.amethyst.commons.icons.Search
+import com.vitorpamplona.amethyst.commons.icons.Zap
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.accessibility_download_for_offline
+import com.vitorpamplona.amethyst.commons.resources.accessibility_play_username
+import com.vitorpamplona.amethyst.commons.resources.accessibility_pushpin
+import com.vitorpamplona.amethyst.commons.resources.app_logo
+import com.vitorpamplona.amethyst.commons.resources.back
+import com.vitorpamplona.amethyst.commons.resources.boost_or_quote_description
+import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.resources.cashu
+import com.vitorpamplona.amethyst.commons.resources.change_reaction
+import com.vitorpamplona.amethyst.commons.resources.clear
+import com.vitorpamplona.amethyst.commons.resources.copy_to_clipboard
+import com.vitorpamplona.amethyst.commons.resources.enter_picture_in_picture
+import com.vitorpamplona.amethyst.commons.resources.following
+import com.vitorpamplona.amethyst.commons.resources.lightning_address
+import com.vitorpamplona.amethyst.commons.resources.like_description
+import com.vitorpamplona.amethyst.commons.resources.note_options
+import com.vitorpamplona.amethyst.commons.resources.record_a_message
+import com.vitorpamplona.amethyst.commons.resources.reply_description
+import com.vitorpamplona.amethyst.commons.resources.search_button
+import com.vitorpamplona.amethyst.commons.resources.share_or_save
+import com.vitorpamplona.amethyst.commons.resources.website
+import com.vitorpamplona.amethyst.commons.resources.zap_description
+import com.vitorpamplona.amethyst.commons.ui.theme.BitcoinOrange
+import com.vitorpamplona.amethyst.commons.ui.theme.grayText
+import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
+import com.vitorpamplona.amethyst.commons.ui.theme.subtleButton
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
+
+/** Standard icon size modifiers, matching the Android-side Shape.kt values. */
+val Size19Modifier = Modifier.size(19.dp)
+val Size20Modifier = Modifier.size(20.dp)
+val Size30Modifier = Modifier.size(30.dp)
+
+private val Dp19 = 19.dp
+private val Dp20 = 20.dp
+private val Dp30 = 30.dp
+
+@Composable
+fun AmethystIcon(iconSize: Dp) {
+    Icon(
+        imageVector = CustomHashTagIcons.Amethyst,
+        contentDescription = stringResource(Res.string.app_logo),
+        modifier = Modifier.size(iconSize),
+        tint = Color.Unspecified,
+    )
+}
+
+@Composable
+fun FollowingIcon(modifier: Modifier) {
+    Icon(
+        imageVector = Following,
+        contentDescription = stringResource(Res.string.following),
+        modifier = modifier,
+        tint = Color.Unspecified,
+    )
+}
+
+@Composable
+fun ArrowBackIcon(tint: Color = MaterialTheme.colorScheme.grayText) {
+    Icon(
+        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+        contentDescription = stringResource(Res.string.back),
+        tint = tint,
+    )
+}
+
+@Composable
+fun DownloadForOfflineIcon(
+    iconSize: Dp,
+    tint: Color = MaterialTheme.colorScheme.primary,
+) {
+    Icon(
+        imageVector = Icons.Default.DownloadForOffline,
+        contentDescription = stringResource(Res.string.accessibility_download_for_offline),
+        modifier = remember(iconSize) { Modifier.size(iconSize) },
+        tint = tint,
+    )
+}
+
+@Composable
+fun LikedIcon(
+    modifier: Modifier,
+    tint: Color = Color.Unspecified,
+) {
+    Icon(
+        imageVector = Liked,
+        contentDescription = stringResource(Res.string.like_description),
+        modifier = modifier,
+        tint = tint,
+    )
+}
+
+@Composable
+fun ChangeReactionIcon(
+    modifier: Modifier,
+    tint: Color = Color.Unspecified,
+) {
+    Icon(
+        imageVector = Icons.Outlined.AddReaction,
+        contentDescription = stringResource(Res.string.change_reaction),
+        modifier = modifier,
+        tint = tint,
+    )
+}
+
+@Composable
+fun LikeIcon(
+    iconSizeModifier: Modifier,
+    grayTint: Color,
+) {
+    Icon(
+        imageVector = Like,
+        contentDescription = stringResource(Res.string.like_description),
+        modifier = iconSizeModifier,
+        tint = grayTint,
+    )
+}
+
+@Composable
+fun RepostIcon(
+    modifier: Modifier,
+    tint: Color = Color.Unspecified,
+) {
+    Icon(
+        imageVector = Repost,
+        contentDescription = stringResource(Res.string.boost_or_quote_description),
+        modifier = modifier,
+        tint = tint,
+    )
+}
+
+@Composable
+fun RepostedIcon(
+    modifier: Modifier,
+    tint: Color = Color.Unspecified,
+) {
+    Icon(
+        imageVector = Reposted,
+        contentDescription = stringResource(Res.string.boost_or_quote_description),
+        modifier = modifier,
+        tint = tint,
+    )
+}
+
+@Composable
+fun LightningAddressIcon(
+    modifier: Modifier,
+    tint: Color = Color.Unspecified,
+) {
+    Icon(
+        imageVector = Icons.Default.Bolt,
+        contentDescription = stringResource(Res.string.lightning_address),
+        tint = tint,
+        modifier = modifier,
+    )
+}
+
+@Composable
+fun ZappedIcon(iconSize: Dp) {
+    ZappedIcon(modifier = remember(iconSize) { Modifier.size(iconSize) })
+}
+
+@Composable
+fun ZappedIcon(modifier: Modifier) {
+    ZapIcon(modifier = modifier, BitcoinOrange)
+}
+
+@Composable
+fun ZapIcon(
+    modifier: Modifier,
+    tint: Color = Color.Unspecified,
+    contentDescriptor: StringResource = Res.string.zap_description,
+) {
+    Icon(
+        imageVector = Icons.Default.Bolt,
+        contentDescription = stringResource(contentDescriptor),
+        tint = tint,
+        modifier = modifier,
+    )
+}
+
+@Composable
+fun OutlinedZapIcon(
+    modifier: Modifier,
+    tint: Color = Color.Unspecified,
+    contentDescriptor: StringResource = Res.string.zap_description,
+) {
+    Icon(
+        imageVector = Zap,
+        contentDescription = stringResource(contentDescriptor),
+        tint = tint,
+        modifier = modifier,
+    )
+}
+
+@Composable
+fun ShareIcon(
+    modifier: Modifier,
+    tint: Color = Color.Unspecified,
+) {
+    Icon(
+        imageVector = Icons.Default.Share,
+        modifier = modifier,
+        contentDescription = stringResource(Res.string.share_or_save),
+        tint = tint,
+    )
+}
+
+@Composable
+fun CashuIcon(modifier: Modifier) {
+    Icon(
+        imageVector = CustomHashTagIcons.Cashu,
+        stringResource(Res.string.cashu),
+        tint = Color.Unspecified,
+        modifier = modifier,
+    )
+}
+
+@Composable
+fun CopyIcon(modifier: Modifier) {
+    Icon(
+        imageVector = Icons.Default.ContentCopy,
+        stringResource(Res.string.copy_to_clipboard),
+        modifier = modifier,
+    )
+}
+
+@Composable
+fun OpenInNewIcon(modifier: Modifier) {
+    Icon(
+        imageVector = Icons.AutoMirrored.Filled.OpenInNew,
+        stringResource(Res.string.copy_to_clipboard),
+        modifier = modifier,
+    )
+}
+
+@Composable
+fun ExpandLessIcon(
+    modifier: Modifier,
+    contentDescriptor: StringResource,
+) {
+    Icon(
+        imageVector = Icons.Default.ExpandLess,
+        contentDescription = stringResource(contentDescriptor),
+        modifier = modifier,
+        tint = MaterialTheme.colorScheme.subtleButton,
+    )
+}
+
+@Composable
+fun ExpandMoreIcon(
+    modifier: Modifier,
+    contentDescriptor: StringResource,
+) {
+    Icon(
+        imageVector = Icons.Default.ExpandMore,
+        contentDescription = stringResource(contentDescriptor),
+        modifier = modifier,
+        tint = MaterialTheme.colorScheme.subtleButton,
+    )
+}
+
+@Composable
+fun VoiceReplyIcon(
+    iconSizeModifier: Modifier,
+    tint: Color,
+) {
+    Icon(
+        imageVector = Icons.Outlined.Mic,
+        contentDescription = stringResource(Res.string.record_a_message),
+        tint = tint,
+        modifier = iconSizeModifier,
+    )
+}
+
+@Composable
+fun CommentIcon(
+    iconSizeModifier: Modifier,
+    tint: Color,
+) {
+    Icon(
+        imageVector = Reply,
+        contentDescription = stringResource(Res.string.reply_description),
+        modifier = iconSizeModifier,
+        tint = tint,
+    )
+}
+
+@Composable
+fun CancelIcon() {
+    Icon(
+        imageVector = Icons.Default.Cancel,
+        contentDescription = stringResource(Res.string.cancel),
+        modifier = Size30Modifier,
+        tint = MaterialTheme.colorScheme.placeholderText,
+    )
+}
+
+@Composable
+fun CloseIcon() {
+    Icon(
+        imageVector = Icons.Outlined.Close,
+        contentDescription = stringResource(Res.string.cancel),
+        modifier = Size20Modifier,
+    )
+}
+
+@Composable
+fun SearchIcon(
+    modifier: Modifier,
+    tint: Color = Color.Unspecified,
+) {
+    Icon(
+        imageVector = Search,
+        contentDescription = stringResource(Res.string.search_button),
+        modifier = modifier,
+        tint = tint,
+    )
+}
+
+@Composable
+fun PlayIcon(
+    modifier: Modifier,
+    tint: Color,
+) {
+    Icon(
+        imageVector = Icons.Outlined.PlayCircle,
+        contentDescription = stringResource(Res.string.accessibility_play_username),
+        modifier = modifier,
+        tint = tint,
+    )
+}
+
+@Composable
+fun PinIcon(
+    modifier: Modifier,
+    tint: Color,
+) {
+    Icon(
+        imageVector = Icons.Default.PushPin,
+        contentDescription = stringResource(Res.string.accessibility_pushpin),
+        modifier = modifier,
+        tint = tint,
+    )
+}
+
+@Composable
+fun EnablePiP(
+    modifier: Modifier,
+    tint: Color,
+) {
+    Icon(
+        imageVector = Icons.AutoMirrored.Outlined.OpenInNew,
+        contentDescription = stringResource(Res.string.enter_picture_in_picture),
+        modifier = modifier,
+        tint = tint,
+    )
+}
+
+@Composable
+fun ClearTextIcon() {
+    Icon(
+        imageVector = Icons.Default.Clear,
+        contentDescription = stringResource(Res.string.clear),
+    )
+}
+
+@Composable
+fun LinkIcon(
+    modifier: Modifier,
+    tint: Color,
+) {
+    Icon(
+        imageVector = Icons.Default.Link,
+        contentDescription = stringResource(Res.string.website),
+        modifier = modifier,
+        tint = tint,
+    )
+}
+
+@Composable
+fun VerticalDotsIcon() {
+    Icon(
+        imageVector = Icons.Default.MoreVert,
+        contentDescription = stringResource(Res.string.note_options),
+        modifier = Size19Modifier,
+        tint = MaterialTheme.colorScheme.placeholderText,
+    )
+}

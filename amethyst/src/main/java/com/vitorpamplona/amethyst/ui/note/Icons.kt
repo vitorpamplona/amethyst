@@ -20,206 +20,116 @@
  */
 package com.vitorpamplona.amethyst.ui.note
 
+// Re-export all commons icons so existing callers don't need to change their imports.
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.OpenInNew
-import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.filled.Bolt
-import androidx.compose.material.icons.filled.Cancel
-import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.DownloadForOffline
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.Link
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.PushPin
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.outlined.AddReaction
-import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.Mic
-import androidx.compose.material.icons.outlined.PlayCircle
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.commons.hashtags.Amethyst
-import com.vitorpamplona.amethyst.commons.hashtags.Cashu
-import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
-import com.vitorpamplona.amethyst.commons.icons.Following
-import com.vitorpamplona.amethyst.commons.icons.Like
-import com.vitorpamplona.amethyst.commons.icons.Liked
-import com.vitorpamplona.amethyst.commons.icons.Reply
-import com.vitorpamplona.amethyst.commons.icons.Repost
-import com.vitorpamplona.amethyst.commons.icons.Reposted
-import com.vitorpamplona.amethyst.commons.icons.Search
 import com.vitorpamplona.amethyst.commons.icons.Zap
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
-import com.vitorpamplona.amethyst.ui.theme.Size19Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
-import com.vitorpamplona.amethyst.ui.theme.Size30Modifier
 import com.vitorpamplona.amethyst.ui.theme.grayText
-import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.subtleButton
+import com.vitorpamplona.amethyst.commons.ui.note.AmethystIcon as CommonsAmethystIcon
+import com.vitorpamplona.amethyst.commons.ui.note.ArrowBackIcon as CommonsArrowBackIcon
+import com.vitorpamplona.amethyst.commons.ui.note.CancelIcon as CommonsCancelIcon
+import com.vitorpamplona.amethyst.commons.ui.note.CashuIcon as CommonsCashuIcon
+import com.vitorpamplona.amethyst.commons.ui.note.ChangeReactionIcon as CommonsChangeReactionIcon
+import com.vitorpamplona.amethyst.commons.ui.note.ClearTextIcon as CommonsClearTextIcon
+import com.vitorpamplona.amethyst.commons.ui.note.CloseIcon as CommonsCloseIcon
+import com.vitorpamplona.amethyst.commons.ui.note.CommentIcon as CommonsCommentIcon
+import com.vitorpamplona.amethyst.commons.ui.note.CopyIcon as CommonsCopyIcon
+import com.vitorpamplona.amethyst.commons.ui.note.DownloadForOfflineIcon as CommonsDownloadForOfflineIcon
+import com.vitorpamplona.amethyst.commons.ui.note.EnablePiP as CommonsEnablePiP
+import com.vitorpamplona.amethyst.commons.ui.note.FollowingIcon as CommonsFollowingIcon
+import com.vitorpamplona.amethyst.commons.ui.note.LightningAddressIcon as CommonsLightningAddressIcon
+import com.vitorpamplona.amethyst.commons.ui.note.LikeIcon as CommonsLikeIcon
+import com.vitorpamplona.amethyst.commons.ui.note.LikedIcon as CommonsLikedIcon
+import com.vitorpamplona.amethyst.commons.ui.note.LinkIcon as CommonsLinkIcon
+import com.vitorpamplona.amethyst.commons.ui.note.OpenInNewIcon as CommonsOpenInNewIcon
+import com.vitorpamplona.amethyst.commons.ui.note.PinIcon as CommonsPinIcon
+import com.vitorpamplona.amethyst.commons.ui.note.PlayIcon as CommonsPlayIcon
+import com.vitorpamplona.amethyst.commons.ui.note.RepostIcon as CommonsRepostIcon
+import com.vitorpamplona.amethyst.commons.ui.note.RepostedIcon as CommonsRepostedIcon
+import com.vitorpamplona.amethyst.commons.ui.note.SearchIcon as CommonsSearchIcon
+import com.vitorpamplona.amethyst.commons.ui.note.ShareIcon as CommonsShareIcon
+import com.vitorpamplona.amethyst.commons.ui.note.VerticalDotsIcon as CommonsVerticalDotsIcon
+import com.vitorpamplona.amethyst.commons.ui.note.VoiceReplyIcon as CommonsVoiceReplyIcon
+import com.vitorpamplona.amethyst.commons.ui.note.ZappedIcon as CommonsZappedIcon
+
+// ---- Delegated composables (thin wrappers for source compatibility) ----
 
 @Composable
-fun AmethystIcon(iconSize: Dp) {
-    Icon(
-        imageVector = CustomHashTagIcons.Amethyst,
-        contentDescription = stringRes(id = R.string.app_logo),
-        modifier = Modifier.size(iconSize),
-        tint = Color.Unspecified,
-    )
-}
+fun AmethystIcon(iconSize: Dp) = CommonsAmethystIcon(iconSize)
 
 @Composable
-fun FollowingIcon(modifier: Modifier) {
-    Icon(
-        imageVector = Following,
-        contentDescription = stringRes(id = R.string.following),
-        modifier = modifier,
-        tint = Color.Unspecified,
-    )
-}
+fun FollowingIcon(modifier: Modifier) = CommonsFollowingIcon(modifier)
 
 @Composable
-fun ArrowBackIcon(tint: Color = MaterialTheme.colorScheme.grayText) {
-    Icon(
-        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-        contentDescription = stringRes(R.string.back),
-        tint = tint,
-    )
-}
+fun ArrowBackIcon(tint: Color = MaterialTheme.colorScheme.grayText) = CommonsArrowBackIcon(tint)
 
 @Composable
 fun DownloadForOfflineIcon(
     iconSize: Dp,
     tint: Color = MaterialTheme.colorScheme.primary,
-) {
-    Icon(
-        imageVector = Icons.Default.DownloadForOffline,
-        contentDescription = stringRes(id = R.string.accessibility_download_for_offline),
-        modifier = remember(iconSize) { Modifier.size(iconSize) },
-        tint = tint,
-    )
-}
+) = CommonsDownloadForOfflineIcon(iconSize, tint)
 
 @Composable
 fun LikedIcon(
     modifier: Modifier,
     tint: Color = Color.Unspecified,
-) {
-    Icon(
-        imageVector = Liked,
-        contentDescription = stringRes(id = R.string.like_description),
-        modifier = modifier,
-        tint = tint,
-    )
-}
+) = CommonsLikedIcon(modifier, tint)
 
 @Composable
 fun ChangeReactionIcon(
     modifier: Modifier,
     tint: Color = Color.Unspecified,
-) {
-    Icon(
-        imageVector = Icons.Outlined.AddReaction,
-        contentDescription = stringRes(id = R.string.change_reaction),
-        modifier = modifier,
-        tint = tint,
-    )
-}
+) = CommonsChangeReactionIcon(modifier, tint)
 
 @Composable
 fun LikeIcon(
     iconSizeModifier: Modifier,
     grayTint: Color,
-) {
-    Icon(
-        imageVector = Like,
-        contentDescription = stringRes(id = R.string.like_description),
-        modifier = iconSizeModifier,
-        tint = grayTint,
-    )
-}
+) = CommonsLikeIcon(iconSizeModifier, grayTint)
 
 @Composable
 fun RepostIcon(
     modifier: Modifier,
     tint: Color = Color.Unspecified,
-) {
-    Icon(
-        imageVector = Repost,
-        contentDescription = stringRes(id = R.string.boost_or_quote_description),
-        modifier = modifier,
-        tint = tint,
-    )
-}
+) = CommonsRepostIcon(modifier, tint)
 
 @Composable
 fun RepostedIcon(
     modifier: Modifier,
     tint: Color = Color.Unspecified,
-) {
-    Icon(
-        imageVector = Reposted,
-        contentDescription = stringRes(id = R.string.boost_or_quote_description),
-        modifier = modifier,
-        tint = tint,
-    )
-}
+) = CommonsRepostedIcon(modifier, tint)
 
 @Composable
 fun LightningAddressIcon(
     modifier: Modifier,
     tint: Color = Color.Unspecified,
-) {
-    Icon(
-        imageVector = Icons.Default.Bolt,
-        contentDescription = stringRes(R.string.lightning_address),
-        tint = tint,
-        modifier = modifier,
-    )
-}
+) = CommonsLightningAddressIcon(modifier, tint)
 
 @Composable
-fun ZappedIcon(iconSize: Dp) {
-    ZappedIcon(modifier = remember(iconSize) { Modifier.size(iconSize) })
-}
+fun ZappedIcon(iconSize: Dp) = CommonsZappedIcon(iconSize)
 
 @Composable
-fun ZappedIcon(modifier: Modifier) {
-    ZapIcon(modifier = modifier, BitcoinOrange)
-}
-
-@Preview
-@Composable
-fun ReactionRowIconPreview() {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        CommentIcon(Size20Modifier, Color.Unspecified)
-        RepostedIcon(Size20Modifier)
-        LikeIcon(Size20Modifier, Color.Unspecified)
-        OutlinedZapIcon(Size20Modifier)
-        ZapIcon(Size20Modifier)
-        ZappedIcon(Size20Modifier)
-        ShareIcon(Size20Modifier, Color.Unspecified)
-    }
-}
+fun ZappedIcon(modifier: Modifier) = CommonsZappedIcon(modifier)
 
 @Composable
 fun ZapIcon(
     modifier: Modifier,
     tint: Color = Color.Unspecified,
-    contentDescriptor: Int = R.string.zap_description,
+    contentDescriptor: Int = com.vitorpamplona.amethyst.R.string.zap_description,
 ) {
     Icon(
         imageVector = Icons.Default.Bolt,
@@ -233,7 +143,7 @@ fun ZapIcon(
 fun OutlinedZapIcon(
     modifier: Modifier,
     tint: Color = Color.Unspecified,
-    contentDescriptor: Int = R.string.zap_description,
+    contentDescriptor: Int = com.vitorpamplona.amethyst.R.string.zap_description,
 ) {
     Icon(
         imageVector = Zap,
@@ -247,42 +157,16 @@ fun OutlinedZapIcon(
 fun ShareIcon(
     modifier: Modifier,
     tint: Color = Color.Unspecified,
-) {
-    Icon(
-        imageVector = Icons.Default.Share,
-        modifier = modifier,
-        contentDescription = stringRes(R.string.share_or_save),
-        tint = tint,
-    )
-}
+) = CommonsShareIcon(modifier, tint)
 
 @Composable
-fun CashuIcon(modifier: Modifier) {
-    Icon(
-        imageVector = CustomHashTagIcons.Cashu,
-        stringRes(R.string.cashu),
-        tint = Color.Unspecified,
-        modifier = modifier,
-    )
-}
+fun CashuIcon(modifier: Modifier) = CommonsCashuIcon(modifier)
 
 @Composable
-fun CopyIcon(modifier: Modifier) {
-    Icon(
-        imageVector = Icons.Default.ContentCopy,
-        stringRes(id = R.string.copy_to_clipboard),
-        modifier = modifier,
-    )
-}
+fun CopyIcon(modifier: Modifier) = CommonsCopyIcon(modifier)
 
 @Composable
-fun OpenInNewIcon(modifier: Modifier) {
-    Icon(
-        imageVector = Icons.AutoMirrored.Filled.OpenInNew,
-        stringRes(id = R.string.copy_to_clipboard),
-        modifier = modifier,
-    )
-}
+fun OpenInNewIcon(modifier: Modifier) = CommonsOpenInNewIcon(modifier)
 
 @Composable
 fun ExpandLessIcon(
@@ -314,126 +198,66 @@ fun ExpandMoreIcon(
 fun VoiceReplyIcon(
     iconSizeModifier: Modifier,
     tint: Color,
-) {
-    Icon(
-        imageVector = Icons.Outlined.Mic,
-        contentDescription = stringRes(id = R.string.record_a_message),
-        tint = tint,
-        modifier = iconSizeModifier,
-    )
-}
+) = CommonsVoiceReplyIcon(iconSizeModifier, tint)
 
 @Composable
 fun CommentIcon(
     iconSizeModifier: Modifier,
     tint: Color,
-) {
-    Icon(
-        imageVector = Reply,
-        contentDescription = stringRes(id = R.string.reply_description),
-        modifier = iconSizeModifier,
-        tint = tint,
-    )
-}
+) = CommonsCommentIcon(iconSizeModifier, tint)
 
 @Composable
-fun CancelIcon() {
-    Icon(
-        imageVector = Icons.Default.Cancel,
-        contentDescription = stringRes(id = R.string.cancel),
-        modifier = Size30Modifier,
-        tint = MaterialTheme.colorScheme.placeholderText,
-    )
-}
+fun CancelIcon() = CommonsCancelIcon()
 
 @Composable
-fun CloseIcon() {
-    Icon(
-        imageVector = Icons.Outlined.Close,
-        contentDescription = stringRes(id = R.string.cancel),
-        modifier = Size20Modifier,
-    )
-}
+fun CloseIcon() = CommonsCloseIcon()
 
 @Composable
 fun SearchIcon(
     modifier: Modifier,
     tint: Color = Color.Unspecified,
-) {
-    Icon(
-        imageVector = Search,
-        contentDescription = stringRes(id = R.string.search_button),
-        modifier = modifier,
-        tint = tint,
-    )
-}
+) = CommonsSearchIcon(modifier, tint)
 
 @Composable
 fun PlayIcon(
     modifier: Modifier,
     tint: Color,
-) {
-    Icon(
-        imageVector = Icons.Outlined.PlayCircle,
-        contentDescription = stringRes(id = R.string.accessibility_play_username),
-        modifier = modifier,
-        tint = tint,
-    )
-}
+) = CommonsPlayIcon(modifier, tint)
 
 @Composable
 fun PinIcon(
     modifier: Modifier,
     tint: Color,
-) {
-    Icon(
-        imageVector = Icons.Default.PushPin,
-        contentDescription = stringRes(id = R.string.accessibility_pushpin),
-        modifier = modifier,
-        tint = tint,
-    )
-}
+) = CommonsPinIcon(modifier, tint)
 
 @Composable
 fun EnablePiP(
     modifier: Modifier,
     tint: Color,
-) {
-    Icon(
-        imageVector = Icons.AutoMirrored.Outlined.OpenInNew,
-        contentDescription = stringRes(id = R.string.enter_picture_in_picture),
-        modifier = modifier,
-        tint = tint,
-    )
-}
+) = CommonsEnablePiP(modifier, tint)
 
 @Composable
-fun ClearTextIcon() {
-    Icon(
-        imageVector = Icons.Default.Clear,
-        contentDescription = stringRes(R.string.clear),
-    )
-}
+fun ClearTextIcon() = CommonsClearTextIcon()
 
 @Composable
 fun LinkIcon(
     modifier: Modifier,
     tint: Color,
-) {
-    Icon(
-        imageVector = Icons.Default.Link,
-        contentDescription = stringRes(R.string.website),
-        modifier = modifier,
-        tint = tint,
-    )
-}
+) = CommonsLinkIcon(modifier, tint)
 
 @Composable
-fun VerticalDotsIcon() {
-    Icon(
-        imageVector = Icons.Default.MoreVert,
-        contentDescription = stringRes(id = R.string.note_options),
-        modifier = Size19Modifier,
-        tint = MaterialTheme.colorScheme.placeholderText,
-    )
+fun VerticalDotsIcon() = CommonsVerticalDotsIcon()
+
+@Preview
+@Composable
+fun ReactionRowIconPreview() {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        CommentIcon(Size20Modifier, Color.Unspecified)
+        RepostedIcon(Size20Modifier)
+        LikeIcon(Size20Modifier, Color.Unspecified)
+        OutlinedZapIcon(Size20Modifier)
+        ZapIcon(Size20Modifier)
+        ZappedIcon(Size20Modifier)
+        ShareIcon(Size20Modifier, Color.Unspecified)
+    }
 }

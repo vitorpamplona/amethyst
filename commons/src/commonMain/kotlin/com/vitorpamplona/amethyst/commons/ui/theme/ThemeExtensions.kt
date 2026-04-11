@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.ui.theme
 
 import androidx.compose.material3.ColorScheme
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.luminance
 
@@ -36,3 +37,24 @@ val ColorScheme.isLight: Boolean
  */
 val ColorScheme.onBackgroundColorFilter: ColorFilter
     get() = ColorFilter.tint(onBackground)
+
+/**
+ * Gray text color for less important UI elements.
+ * Uses onSurface with 52% opacity.
+ */
+val ColorScheme.grayText: Color
+    get() = onSurface.copy(alpha = 0.52f)
+
+/**
+ * Placeholder text color.
+ * Uses onSurface with 42% opacity.
+ */
+val ColorScheme.placeholderText: Color
+    get() = onSurface.copy(alpha = 0.42f)
+
+/**
+ * Subtle button tint.
+ * Uses onSurface with 22% opacity.
+ */
+val ColorScheme.subtleButton: Color
+    get() = onSurface.copy(alpha = 0.22f)

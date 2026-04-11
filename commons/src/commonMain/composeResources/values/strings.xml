@@ -54,4 +54,28 @@
     <!-- Accessibility -->
     <string name="accessibility_user_avatar">User avatar</string>
     <string name="accessibility_navigate">Navigate</string>
+    <string name="accessibility_download_for_offline">Download</string>
+    <string name="accessibility_play_username">Play username as audio</string>
+    <string name="accessibility_pushpin">Pushpin</string>
+
+    <!-- Icons -->
+    <string name="app_logo">App Logo</string>
+    <string name="following"> Following</string>
+    <string name="back">Back</string>
+    <string name="like_description">Like</string>
+    <string name="change_reaction">Change Quick Reactions</string>
+    <string name="boost_or_quote_description">Boost Or Quote</string>
+    <string name="lightning_address">Lightning Address</string>
+    <string name="zap_description">Zap</string>
+    <string name="share_or_save">Share or Save</string>
+    <string name="cashu">Cashu Token</string>
+    <string name="copy_to_clipboard">Copy to clipboard</string>
+    <string name="record_a_message">Record a message</string>
+    <string name="reply_description">Reply</string>
+    <string name="cancel">Cancel</string>
+    <string name="search_button">Search local and remote records</string>
+    <string name="enter_picture_in_picture">Start video in a popup</string>
+    <string name="clear">Clear</string>
+    <string name="website">Website</string>
+    <string name="note_options">Note options</string>
 </resources>
