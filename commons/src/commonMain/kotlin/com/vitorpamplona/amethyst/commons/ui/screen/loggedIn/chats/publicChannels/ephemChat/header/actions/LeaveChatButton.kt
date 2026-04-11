@@ -18,18 +18,19 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.header.actions
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.ephemChat.header.actions
 
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.leave
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
-import com.vitorpamplona.amethyst.ui.theme.HalfHalfHorzModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.ButtonPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.HalfHalfHorzModifier
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun LeaveChatButton(
@@ -42,6 +43,6 @@ fun LeaveChatButton(
         onClick = { accountViewModel.unfollow(channel) },
         contentPadding = ButtonPadding,
     ) {
-        Text(text = stringRes(R.string.leave))
+        Text(text = stringResource(Res.string.leave))
     }
 }

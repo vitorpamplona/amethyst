@@ -54,4 +54,8 @@
     <!-- Accessibility -->
     <string name="accessibility_user_avatar">User avatar</string>
     <string name="accessibility_navigate">Navigate</string>
+
+    <!-- Chat Actions -->
+    <string name="join">Join</string>
+    <string name="leave">Leave</string>
 </resources>

@@ -25,9 +25,10 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import kotlinx.coroutines.CoroutineScope
 import kotlin.reflect.KClass
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav as INavCommons
 
 @Stable
-interface INav {
+interface INav : INavCommons {
     val navigationScope: CoroutineScope
     val drawerState: DrawerState
 
@@ -41,7 +42,7 @@ interface INav {
 
     fun newStack(route: Route)
 
-    fun popBack()
+    override fun popBack()
 
     fun <T : Route> popUpTo(
         route: Route,
