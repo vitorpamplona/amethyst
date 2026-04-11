@@ -45,6 +45,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.donate_now
+import com.vitorpamplona.amethyst.commons.resources.thank_you
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
@@ -70,6 +73,7 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -263,9 +267,9 @@ fun ReusableZapButton(
 
         val displayText =
             when {
-                hasZapped -> config.thankYouText ?: stringRes(id = R.string.thank_you)
+                hasZapped -> config.thankYouText ?: stringResource(Res.string.thank_you)
                 config.buttonText != null -> config.buttonText
-                else -> stringRes(id = R.string.donate_now)
+                else -> stringResource(Res.string.donate_now)
             }
 
         Text(text = displayText)

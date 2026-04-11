@@ -37,6 +37,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.error_dialog_payment_error
+import com.vitorpamplona.amethyst.commons.resources.no_payment_targets_message
+import com.vitorpamplona.amethyst.commons.resources.payment_targets
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
@@ -48,6 +52,7 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTarget
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun PaymentButton(
@@ -84,20 +89,20 @@ fun PaymentButtonWithTargets(targets: List<PaymentTarget>) {
     ) {
         Icon(
             imageVector = Icons.Outlined.AccountBalanceWallet,
-            contentDescription = stringRes(R.string.payment_targets),
+            contentDescription = stringResource(Res.string.payment_targets),
         )
     }
 
     if (expanded) {
         M3ActionDialog(
-            title = stringRes(R.string.payment_targets),
+            title = stringResource(Res.string.payment_targets),
             onDismiss = { expanded = false },
         ) {
             M3ActionSection {
                 if (targets.isEmpty()) {
                     M3ActionRow(
                         icon = Icons.Outlined.AccountBalanceWallet,
-                        text = stringRes(R.string.no_payment_targets_message),
+                        text = stringResource(Res.string.no_payment_targets_message),
                         enabled = false,
                         onClick = {},
                     )
@@ -126,7 +131,7 @@ fun PaymentButtonWithTargets(targets: List<PaymentTarget>) {
 
     errorMessage?.let { msg ->
         ErrorMessageDialog(
-            title = stringRes(R.string.error_dialog_payment_error),
+            title = stringResource(Res.string.error_dialog_payment_error),
             textContent = msg,
             onDismiss = { errorMessage = null },
         )

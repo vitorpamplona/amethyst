@@ -55,6 +55,9 @@ import androidx.core.net.toUri
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.Cashu
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cashu
+import com.vitorpamplona.amethyst.commons.resources.sats
 import com.vitorpamplona.amethyst.service.cashu.CachedCashuParser
 import com.vitorpamplona.amethyst.service.cashu.CashuToken
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
@@ -75,6 +78,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun CashuPreview(
@@ -165,14 +169,14 @@ fun CashuPreviewNew(
                 )
 
                 Text(
-                    text = stringRes(R.string.cashu),
+                    text = stringResource(Res.string.cashu),
                     fontSize = 12.sp,
                     modifier = Modifier.padding(start = 5.dp, bottom = 1.dp),
                 )
             }
 
             Text(
-                text = "${token.totalAmount} ${stringRes(id = R.string.sats)}",
+                text = "${token.totalAmount} ${stringResource(Res.string.sats)}",
                 fontSize = 20.sp,
                 modifier = Modifier.padding(top = 5.dp),
             )

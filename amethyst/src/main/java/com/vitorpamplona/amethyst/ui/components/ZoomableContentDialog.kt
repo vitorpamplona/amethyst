@@ -73,6 +73,10 @@ import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.platform.toJavaFile
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.back
+import com.vitorpamplona.amethyst.commons.resources.download_to_phone
+import com.vitorpamplona.amethyst.commons.resources.quick_action_share
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaLocalImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaLocalVideo
@@ -98,6 +102,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import net.engawapg.lib.zoomable.rememberZoomState
 import net.engawapg.lib.zoomable.zoomable
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun ZoomableImageDialog(
@@ -230,7 +235,7 @@ private fun DialogContent(
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = stringRes(R.string.back),
+                        contentDescription = stringResource(Res.string.back),
                     )
                 }
 
@@ -246,7 +251,7 @@ private fun DialogContent(
                             Icon(
                                 imageVector = Icons.Default.Share,
                                 modifier = Size20Modifier,
-                                contentDescription = stringRes(R.string.quick_action_share),
+                                contentDescription = stringResource(Res.string.quick_action_share),
                             )
 
                             ShareMediaAction(accountViewModel = accountViewModel, popupExpanded = sharePopupExpanded, myContent, onDismiss = { sharePopupExpanded.value = false })
@@ -301,7 +306,7 @@ private fun DialogContent(
                                 Icon(
                                     imageVector = Icons.Default.Download,
                                     modifier = Size20Modifier,
-                                    contentDescription = stringRes(R.string.download_to_phone),
+                                    contentDescription = stringResource(Res.string.download_to_phone),
                                 )
                             }
                         }

@@ -102,6 +102,38 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.accessibility_scan_qr_code
+import com.vitorpamplona.amethyst.commons.resources.add
+import com.vitorpamplona.amethyst.commons.resources.hide_password
+import com.vitorpamplona.amethyst.commons.resources.new_amount_in_sats
+import com.vitorpamplona.amethyst.commons.resources.paste_from_clipboard
+import com.vitorpamplona.amethyst.commons.resources.quick_zap_amounts
+import com.vitorpamplona.amethyst.commons.resources.quick_zap_amounts_explainer
+import com.vitorpamplona.amethyst.commons.resources.remove
+import com.vitorpamplona.amethyst.commons.resources.show_password
+import com.vitorpamplona.amethyst.commons.resources.wallet_connect_connect_app
+import com.vitorpamplona.amethyst.commons.resources.wallet_connect_manual_config
+import com.vitorpamplona.amethyst.commons.resources.wallet_connect_service
+import com.vitorpamplona.amethyst.commons.resources.wallet_connect_service_explainer
+import com.vitorpamplona.amethyst.commons.resources.wallet_connect_service_pubkey
+import com.vitorpamplona.amethyst.commons.resources.wallet_connect_service_relay
+import com.vitorpamplona.amethyst.commons.resources.wallet_connect_service_secret
+import com.vitorpamplona.amethyst.commons.resources.wallet_connect_service_secret_placeholder
+import com.vitorpamplona.amethyst.commons.resources.wallet_connect_service_show_secret
+import com.vitorpamplona.amethyst.commons.resources.wallet_connect_status_connected
+import com.vitorpamplona.amethyst.commons.resources.wallet_connect_status_not_connected
+import com.vitorpamplona.amethyst.commons.resources.zap_privacy_section
+import com.vitorpamplona.amethyst.commons.resources.zap_type_anonymous
+import com.vitorpamplona.amethyst.commons.resources.zap_type_anonymous_explainer
+import com.vitorpamplona.amethyst.commons.resources.zap_type_explainer
+import com.vitorpamplona.amethyst.commons.resources.zap_type_nonzap
+import com.vitorpamplona.amethyst.commons.resources.zap_type_nonzap_explainer
+import com.vitorpamplona.amethyst.commons.resources.zap_type_private
+import com.vitorpamplona.amethyst.commons.resources.zap_type_private_explainer
+import com.vitorpamplona.amethyst.commons.resources.zap_type_public
+import com.vitorpamplona.amethyst.commons.resources.zap_type_public_explainer
+import com.vitorpamplona.amethyst.commons.resources.zap_type_section_explainer
 import com.vitorpamplona.amethyst.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.ui.components.util.getText
@@ -124,6 +156,7 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -160,23 +193,23 @@ fun UpdateZapAmountContent(
         listOf(
             Triple(
                 LnZapEvent.ZapType.PUBLIC,
-                stringRes(id = R.string.zap_type_public),
-                stringRes(id = R.string.zap_type_public_explainer),
+                stringResource(Res.string.zap_type_public),
+                stringResource(Res.string.zap_type_public_explainer),
             ),
             Triple(
                 LnZapEvent.ZapType.PRIVATE,
-                stringRes(id = R.string.zap_type_private),
-                stringRes(id = R.string.zap_type_private_explainer),
+                stringResource(Res.string.zap_type_private),
+                stringResource(Res.string.zap_type_private_explainer),
             ),
             Triple(
                 LnZapEvent.ZapType.ANONYMOUS,
-                stringRes(id = R.string.zap_type_anonymous),
-                stringRes(id = R.string.zap_type_anonymous_explainer),
+                stringResource(Res.string.zap_type_anonymous),
+                stringResource(Res.string.zap_type_anonymous_explainer),
             ),
             Triple(
                 LnZapEvent.ZapType.NONZAP,
-                stringRes(id = R.string.zap_type_nonzap),
-                stringRes(id = R.string.zap_type_nonzap_explainer),
+                stringResource(Res.string.zap_type_nonzap),
+                stringResource(Res.string.zap_type_nonzap_explainer),
             ),
         )
 
@@ -226,13 +259,13 @@ fun UpdateZapAmountContent(
         // ── Section 1: Quick Zap Amounts ──────────────────────────────────────
 
         Text(
-            text = stringRes(R.string.quick_zap_amounts),
+            text = stringResource(Res.string.quick_zap_amounts),
             color = MaterialTheme.colorScheme.primary,
             style = MaterialTheme.typography.titleSmall,
             modifier = SettingsCategoryFirstModifier,
         )
         Text(
-            text = stringRes(R.string.quick_zap_amounts_explainer),
+            text = stringResource(Res.string.quick_zap_amounts_explainer),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.placeholderText,
             modifier = Modifier.padding(bottom = 6.dp),
@@ -260,7 +293,7 @@ fun UpdateZapAmountContent(
                     trailingIcon = {
                         Icon(
                             imageVector = Icons.Filled.Close,
-                            contentDescription = stringRes(R.string.remove),
+                            contentDescription = stringResource(Res.string.remove),
                             modifier = Modifier.size(InputChipDefaults.AvatarSize),
                         )
                     },
@@ -283,7 +316,7 @@ fun UpdateZapAmountContent(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             OutlinedTextField(
-                label = { Text(text = stringRes(R.string.new_amount_in_sats)) },
+                label = { Text(text = stringResource(Res.string.new_amount_in_sats)) },
                 value = postViewModel.nextAmount,
                 onValueChange = { postViewModel.nextAmount = it },
                 keyboardOptions =
@@ -305,7 +338,7 @@ fun UpdateZapAmountContent(
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.AddCircle,
-                            contentDescription = stringRes(R.string.add),
+                            contentDescription = stringResource(Res.string.add),
                             modifier = Size20Modifier,
                         )
                     }
@@ -318,13 +351,13 @@ fun UpdateZapAmountContent(
         // ── Section 2: Zap Privacy ────────────────────────────────────────────
 
         Text(
-            text = stringRes(R.string.zap_privacy_section),
+            text = stringResource(Res.string.zap_privacy_section),
             color = MaterialTheme.colorScheme.primary,
             style = MaterialTheme.typography.titleSmall,
             modifier = SettingsCategorySpacingModifier,
         )
         Text(
-            text = stringRes(R.string.zap_type_section_explainer),
+            text = stringResource(Res.string.zap_type_section_explainer),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.placeholderText,
             modifier = Modifier.padding(bottom = 8.dp),
@@ -335,7 +368,7 @@ fun UpdateZapAmountContent(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             TextSpinner(
-                label = stringRes(id = R.string.zap_type_explainer),
+                label = stringResource(Res.string.zap_type_explainer),
                 placeholder =
                     zapTypes
                         .firstOrNull { it.first == accountViewModel.defaultZapType() }
@@ -362,12 +395,12 @@ fun UpdateZapAmountContent(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = stringRes(R.string.wallet_connect_service),
+                    text = stringResource(Res.string.wallet_connect_service),
                     color = MaterialTheme.colorScheme.primary,
                     style = MaterialTheme.typography.titleSmall,
                 )
                 Text(
-                    text = stringRes(R.string.wallet_connect_service_explainer),
+                    text = stringResource(Res.string.wallet_connect_service_explainer),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.placeholderText,
                     modifier = Modifier.padding(top = 2.dp),
@@ -402,9 +435,9 @@ fun UpdateZapAmountContent(
                 Text(
                     text =
                         if (connected) {
-                            stringRes(R.string.wallet_connect_status_connected)
+                            stringResource(Res.string.wallet_connect_status_connected)
                         } else {
-                            stringRes(R.string.wallet_connect_status_not_connected)
+                            stringResource(Res.string.wallet_connect_status_not_connected)
                         },
                     color = statusColor,
                     style = MaterialTheme.typography.bodyMedium,
@@ -441,7 +474,7 @@ fun UpdateZapAmountContent(
                     modifier = Modifier.size(18.dp),
                 )
                 Spacer(modifier = Modifier.width(4.dp))
-                Text(text = stringRes(R.string.wallet_connect_connect_app))
+                Text(text = stringResource(Res.string.wallet_connect_connect_app))
             }
 
             Spacer(DoubleHorzSpacer)
@@ -465,7 +498,7 @@ fun UpdateZapAmountContent(
             ) {
                 Icon(
                     imageVector = Icons.Outlined.ContentPaste,
-                    contentDescription = stringRes(id = R.string.paste_from_clipboard),
+                    contentDescription = stringResource(Res.string.paste_from_clipboard),
                     modifier = Size24Modifier,
                     tint = MaterialTheme.colorScheme.primary,
                 )
@@ -475,7 +508,7 @@ fun UpdateZapAmountContent(
             IconButton(onClick = { qrScanning = true }) {
                 Icon(
                     painter = painterRes(R.drawable.ic_qrcode, 3),
-                    contentDescription = stringRes(id = R.string.accessibility_scan_qr_code),
+                    contentDescription = stringResource(Res.string.accessibility_scan_qr_code),
                     modifier = Modifier.size(24.dp),
                     tint = MaterialTheme.colorScheme.primary,
                 )
@@ -515,7 +548,7 @@ fun UpdateZapAmountContent(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = stringRes(R.string.wallet_connect_manual_config),
+                text = stringResource(Res.string.wallet_connect_manual_config),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.placeholderText,
                 modifier = Modifier.weight(1f),
@@ -540,7 +573,7 @@ fun UpdateZapAmountContent(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     OutlinedTextField(
-                        label = { Text(text = stringRes(R.string.wallet_connect_service_pubkey)) },
+                        label = { Text(text = stringResource(Res.string.wallet_connect_service_pubkey)) },
                         value = postViewModel.walletConnectPubkey,
                         onValueChange = { postViewModel.walletConnectPubkey = it },
                         keyboardOptions =
@@ -563,7 +596,7 @@ fun UpdateZapAmountContent(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     OutlinedTextField(
-                        label = { Text(text = stringRes(R.string.wallet_connect_service_relay)) },
+                        label = { Text(text = stringResource(Res.string.wallet_connect_service_relay)) },
                         modifier = Modifier.fillMaxWidth(),
                         value = postViewModel.walletConnectRelay,
                         onValueChange = { postViewModel.walletConnectRelay = it },
@@ -589,14 +622,14 @@ fun UpdateZapAmountContent(
                         }
                     }
 
-                val authTitle = stringRes(id = R.string.wallet_connect_service_show_secret)
+                val authTitle = stringResource(Res.string.wallet_connect_service_show_secret)
 
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     OutlinedTextField(
-                        label = { Text(text = stringRes(R.string.wallet_connect_service_secret)) },
+                        label = { Text(text = stringResource(Res.string.wallet_connect_service_secret)) },
                         modifier = Modifier.fillMaxWidth(),
                         value = postViewModel.walletConnectSecret,
                         onValueChange = { postViewModel.walletConnectSecret = it },
@@ -608,7 +641,7 @@ fun UpdateZapAmountContent(
                             ),
                         placeholder = {
                             Text(
-                                text = stringRes(R.string.wallet_connect_service_secret_placeholder),
+                                text = stringResource(Res.string.wallet_connect_service_secret_placeholder),
                                 color = MaterialTheme.colorScheme.placeholderText,
                             )
                         },
@@ -637,9 +670,9 @@ fun UpdateZapAmountContent(
                                         },
                                     contentDescription =
                                         if (showPassword) {
-                                            stringRes(R.string.show_password)
+                                            stringResource(Res.string.show_password)
                                         } else {
-                                            stringRes(R.string.hide_password)
+                                            stringResource(Res.string.hide_password)
                                         },
                                 )
                             }

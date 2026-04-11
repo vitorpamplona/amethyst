@@ -32,6 +32,18 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.block_hide_user
+import com.vitorpamplona.amethyst.commons.resources.copy_user_id
+import com.vitorpamplona.amethyst.commons.resources.profile_actions_dialog_title
+import com.vitorpamplona.amethyst.commons.resources.quick_action_share
+import com.vitorpamplona.amethyst.commons.resources.report_hateful_speech
+import com.vitorpamplona.amethyst.commons.resources.report_illegal_behaviour
+import com.vitorpamplona.amethyst.commons.resources.report_impersonation
+import com.vitorpamplona.amethyst.commons.resources.report_malware
+import com.vitorpamplona.amethyst.commons.resources.report_nudity_porn
+import com.vitorpamplona.amethyst.commons.resources.report_spam_scam
+import com.vitorpamplona.amethyst.commons.resources.unblock_user
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
@@ -42,6 +54,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun UserProfileDropDownMenu(
@@ -53,7 +66,7 @@ fun UserProfileDropDownMenu(
     if (!popupExpanded) return
 
     M3ActionDialog(
-        title = stringRes(R.string.profile_actions_dialog_title),
+        title = stringResource(Res.string.profile_actions_dialog_title),
         onDismiss = onDismiss,
     ) {
         val clipboardManager = LocalClipboard.current
@@ -64,7 +77,7 @@ fun UserProfileDropDownMenu(
         M3ActionSection {
             M3ActionRow(
                 icon = Icons.Outlined.ContentCopy,
-                text = stringRes(R.string.copy_user_id),
+                text = stringResource(Res.string.copy_user_id),
             ) {
                 scope.launch {
                     clipboardManager.setText(user.pubkeyNpub())
@@ -73,7 +86,7 @@ fun UserProfileDropDownMenu(
             }
             M3ActionRow(
                 icon = Icons.Outlined.Share,
-                text = stringRes(R.string.quick_action_share),
+                text = stringResource(Res.string.quick_action_share),
             ) {
                 val sendIntent =
                     Intent().apply {
@@ -97,7 +110,7 @@ fun UserProfileDropDownMenu(
                 if (accountViewModel.account.isHidden(user)) {
                     M3ActionRow(
                         icon = Icons.Outlined.CheckCircle,
-                        text = stringRes(R.string.unblock_user),
+                        text = stringResource(Res.string.unblock_user),
                     ) {
                         accountViewModel.show(user)
                         onDismiss()
@@ -105,7 +118,7 @@ fun UserProfileDropDownMenu(
                 } else {
                     M3ActionRow(
                         icon = Icons.Outlined.Block,
-                        text = stringRes(R.string.block_hide_user),
+                        text = stringResource(Res.string.block_hide_user),
                         isDestructive = true,
                     ) {
                         accountViewModel.hide(user)
@@ -116,27 +129,27 @@ fun UserProfileDropDownMenu(
 
             // Report section
             M3ActionSection {
-                M3ActionRow(icon = Icons.Outlined.Report, text = stringRes(R.string.report_spam_scam), isDestructive = true) {
+                M3ActionRow(icon = Icons.Outlined.Report, text = stringResource(Res.string.report_spam_scam), isDestructive = true) {
                     accountViewModel.report(user, ReportType.SPAM)
                     onDismiss()
                 }
-                M3ActionRow(icon = Icons.Outlined.Report, text = stringRes(R.string.report_hateful_speech), isDestructive = true) {
+                M3ActionRow(icon = Icons.Outlined.Report, text = stringResource(Res.string.report_hateful_speech), isDestructive = true) {
                     accountViewModel.report(user, ReportType.PROFANITY)
                     onDismiss()
                 }
-                M3ActionRow(icon = Icons.Outlined.Report, text = stringRes(R.string.report_impersonation), isDestructive = true) {
+                M3ActionRow(icon = Icons.Outlined.Report, text = stringResource(Res.string.report_impersonation), isDestructive = true) {
                     accountViewModel.report(user, ReportType.IMPERSONATION)
                     onDismiss()
                 }
-                M3ActionRow(icon = Icons.Outlined.Report, text = stringRes(R.string.report_nudity_porn), isDestructive = true) {
+                M3ActionRow(icon = Icons.Outlined.Report, text = stringResource(Res.string.report_nudity_porn), isDestructive = true) {
                     accountViewModel.report(user, ReportType.NUDITY)
                     onDismiss()
                 }
-                M3ActionRow(icon = Icons.Outlined.Report, text = stringRes(R.string.report_illegal_behaviour), isDestructive = true) {
+                M3ActionRow(icon = Icons.Outlined.Report, text = stringResource(Res.string.report_illegal_behaviour), isDestructive = true) {
                     accountViewModel.report(user, ReportType.ILLEGAL)
                     onDismiss()
                 }
-                M3ActionRow(icon = Icons.Outlined.Report, text = stringRes(R.string.report_malware), isDestructive = true) {
+                M3ActionRow(icon = Icons.Outlined.Report, text = stringResource(Res.string.report_malware), isDestructive = true) {
                     accountViewModel.report(user, ReportType.MALWARE)
                     onDismiss()
                 }

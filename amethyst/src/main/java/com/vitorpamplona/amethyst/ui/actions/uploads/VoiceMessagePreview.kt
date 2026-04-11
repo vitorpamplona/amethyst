@@ -56,12 +56,17 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.re_record
+import com.vitorpamplona.amethyst.commons.resources.record_a_message
+import com.vitorpamplona.amethyst.commons.resources.recording_indicator_description
 import com.vitorpamplona.amethyst.ui.components.AudioWaveformReadOnly
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nipA0VoiceMessages.AudioMeta
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import org.jetbrains.compose.resources.stringResource
 import java.io.File
 
 @Composable
@@ -200,11 +205,11 @@ private fun ReRecordButton(
         ) {
             Icon(
                 imageVector = Icons.Default.Mic,
-                contentDescription = stringRes(id = R.string.record_a_message),
+                contentDescription = stringResource(Res.string.record_a_message),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
-                text = stringRes(id = R.string.re_record),
+                text = stringResource(Res.string.re_record),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
@@ -232,13 +237,13 @@ private fun ReRecordButton(
             if (isRecording) {
                 formatSecondsToTime(elapsedSeconds)
             } else {
-                stringRes(id = R.string.re_record)
+                stringResource(Res.string.re_record)
             }
         val iconDescription =
             if (isRecording) {
-                stringRes(id = R.string.recording_indicator_description)
+                stringResource(Res.string.recording_indicator_description)
             } else {
-                stringRes(id = R.string.record_a_message)
+                stringResource(Res.string.record_a_message)
             }
         Row(
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),

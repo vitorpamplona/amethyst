@@ -50,6 +50,33 @@ import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.add_to_private_bookmarks
+import com.vitorpamplona.amethyst.commons.resources.add_to_public_bookmarks
+import com.vitorpamplona.amethyst.commons.resources.article
+import com.vitorpamplona.amethyst.commons.resources.block_report
+import com.vitorpamplona.amethyst.commons.resources.broadcast
+import com.vitorpamplona.amethyst.commons.resources.copy_note_id
+import com.vitorpamplona.amethyst.commons.resources.copy_text
+import com.vitorpamplona.amethyst.commons.resources.copy_user_pubkey
+import com.vitorpamplona.amethyst.commons.resources.edit_article
+import com.vitorpamplona.amethyst.commons.resources.edit_draft
+import com.vitorpamplona.amethyst.commons.resources.edit_post
+import com.vitorpamplona.amethyst.commons.resources.follow
+import com.vitorpamplona.amethyst.commons.resources.follow_set_add_author_from_note_action
+import com.vitorpamplona.amethyst.commons.resources.manage_bookmark_label
+import com.vitorpamplona.amethyst.commons.resources.note_actions_dialog_title
+import com.vitorpamplona.amethyst.commons.resources.pin_to_profile
+import com.vitorpamplona.amethyst.commons.resources.post
+import com.vitorpamplona.amethyst.commons.resources.propose_an_edit
+import com.vitorpamplona.amethyst.commons.resources.quick_action_share
+import com.vitorpamplona.amethyst.commons.resources.remove_from_private_bookmarks
+import com.vitorpamplona.amethyst.commons.resources.remove_from_public_bookmarks
+import com.vitorpamplona.amethyst.commons.resources.request_deletion
+import com.vitorpamplona.amethyst.commons.resources.timestamp_it
+import com.vitorpamplona.amethyst.commons.resources.timestamp_pending
+import com.vitorpamplona.amethyst.commons.resources.unfollow
+import com.vitorpamplona.amethyst.commons.resources.unpin_from_profile
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.EditPostView
@@ -77,6 +104,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun MoreOptionsButton(
@@ -163,7 +191,7 @@ fun NoteDropDownMenu(
     }
 
     M3ActionDialog(
-        title = stringRes(R.string.note_actions_dialog_title),
+        title = stringResource(Res.string.note_actions_dialog_title),
         onDismiss = onDismiss,
     ) {
         val clipboardManager = LocalClipboard.current
@@ -173,19 +201,19 @@ fun NoteDropDownMenu(
         // Follow section
         M3ActionSection {
             if (!state.isFollowingAuthor) {
-                M3ActionRow(icon = Icons.Outlined.PersonAdd, text = stringRes(R.string.follow)) {
+                M3ActionRow(icon = Icons.Outlined.PersonAdd, text = stringResource(Res.string.follow)) {
                     val author = note.author ?: return@M3ActionRow
                     accountViewModel.follow(author)
                     onDismiss()
                 }
             } else {
-                M3ActionRow(icon = Icons.Outlined.PersonRemove, text = stringRes(R.string.unfollow)) {
+                M3ActionRow(icon = Icons.Outlined.PersonRemove, text = stringResource(Res.string.unfollow)) {
                     val author = note.author ?: return@M3ActionRow
                     accountViewModel.unfollow(author)
                     onDismiss()
                 }
             }
-            M3ActionRow(icon = Icons.AutoMirrored.Outlined.PlaylistAdd, text = stringRes(R.string.follow_set_add_author_from_note_action)) {
+            M3ActionRow(icon = Icons.AutoMirrored.Outlined.PlaylistAdd, text = stringResource(Res.string.follow_set_add_author_from_note_action)) {
                 val authorHexKey = note.author?.pubkeyHex ?: return@M3ActionRow
                 nav.nav(Route.PeopleListManagement(authorHexKey))
                 onDismiss()
@@ -194,7 +222,7 @@ fun NoteDropDownMenu(
 
         // Copy & Share section
         M3ActionSection {
-            M3ActionRow(icon = Icons.Outlined.ContentCopy, text = stringRes(R.string.copy_text)) {
+            M3ActionRow(icon = Icons.Outlined.ContentCopy, text = stringResource(Res.string.copy_text)) {
                 val lastNoteVersion = (editState?.value as? GenericLoadable.Loaded)?.loaded?.modificationToShow?.value ?: note
                 accountViewModel.decrypt(lastNoteVersion) {
                     scope.launch {
@@ -203,7 +231,7 @@ fun NoteDropDownMenu(
                 }
                 onDismiss()
             }
-            M3ActionRow(icon = Icons.Outlined.ContentCopy, text = stringRes(R.string.copy_user_pubkey)) {
+            M3ActionRow(icon = Icons.Outlined.ContentCopy, text = stringResource(Res.string.copy_user_pubkey)) {
                 note.author?.let {
                     scope.launch(Dispatchers.IO) {
                         clipboardManager.setText("nostr:${it.pubkeyNpub()}")
@@ -211,13 +239,13 @@ fun NoteDropDownMenu(
                     }
                 }
             }
-            M3ActionRow(icon = Icons.Outlined.ContentCopy, text = stringRes(R.string.copy_note_id)) {
+            M3ActionRow(icon = Icons.Outlined.ContentCopy, text = stringResource(Res.string.copy_note_id)) {
                 scope.launch(Dispatchers.IO) {
                     clipboardManager.setText(note.toNostrUri())
                     onDismiss()
                 }
             }
-            M3ActionRow(icon = Icons.Outlined.Share, text = stringRes(R.string.quick_action_share)) {
+            M3ActionRow(icon = Icons.Outlined.Share, text = stringResource(Res.string.quick_action_share)) {
                 val sendIntent =
                     Intent().apply {
                         action = Intent.ACTION_SEND
@@ -234,28 +262,28 @@ fun NoteDropDownMenu(
         // Edit & Broadcast section
         M3ActionSection {
             if (state.isLoggedUser && note.isDraft()) {
-                M3ActionRow(icon = Icons.Outlined.Edit, text = stringRes(R.string.edit_draft)) {
+                M3ActionRow(icon = Icons.Outlined.Edit, text = stringResource(Res.string.edit_draft)) {
                     nav.nav { routeEditDraftTo(note, accountViewModel.account) }
                 }
             }
             if (!note.isDraft()) {
                 if (note.event is TextNoteEvent) {
                     if (state.isLoggedUser) {
-                        M3ActionRow(icon = Icons.Outlined.Edit, text = stringRes(R.string.edit_post)) {
+                        M3ActionRow(icon = Icons.Outlined.Edit, text = stringResource(Res.string.edit_post)) {
                             wantsToEditPost.value = true
                         }
                     } else {
-                        M3ActionRow(icon = Icons.Outlined.Edit, text = stringRes(R.string.propose_an_edit)) {
+                        M3ActionRow(icon = Icons.Outlined.Edit, text = stringResource(Res.string.propose_an_edit)) {
                             wantsToEditPost.value = true
                         }
                     }
                 } else if (note.event is LongTextNoteEvent && state.isLoggedUser) {
-                    M3ActionRow(icon = Icons.Outlined.Edit, text = stringRes(R.string.edit_article)) {
+                    M3ActionRow(icon = Icons.Outlined.Edit, text = stringResource(Res.string.edit_article)) {
                         nav.nav { Route.NewLongFormPost(version = note.idHex) }
                     }
                 }
             }
-            M3ActionRow(icon = Icons.Outlined.CellTower, text = stringRes(R.string.broadcast)) {
+            M3ActionRow(icon = Icons.Outlined.CellTower, text = stringResource(Res.string.broadcast)) {
                 accountViewModel.broadcast(note)
                 onDismiss()
             }
@@ -264,28 +292,28 @@ fun NoteDropDownMenu(
         // Timestamp & Bookmarks section
         M3ActionSection {
             if (accountViewModel.account.otsState.hasPendingAttestations(note)) {
-                M3ActionRow(icon = Icons.Outlined.Schedule, text = stringRes(R.string.timestamp_pending)) { onDismiss() }
+                M3ActionRow(icon = Icons.Outlined.Schedule, text = stringResource(Res.string.timestamp_pending)) { onDismiss() }
             } else {
-                M3ActionRow(icon = Icons.Outlined.Schedule, text = stringRes(R.string.timestamp_it)) {
+                M3ActionRow(icon = Icons.Outlined.Schedule, text = stringResource(Res.string.timestamp_it)) {
                     accountViewModel.timestamp(note)
                     onDismiss()
                 }
             }
             if (state.isLoggedUser) {
                 if (state.isPinnedNote) {
-                    M3ActionRow(icon = Icons.Outlined.PushPin, text = stringRes(R.string.unpin_from_profile)) {
+                    M3ActionRow(icon = Icons.Outlined.PushPin, text = stringResource(Res.string.unpin_from_profile)) {
                         accountViewModel.removePin(note)
                         onDismiss()
                     }
                 } else {
-                    M3ActionRow(icon = Icons.Outlined.PushPin, text = stringRes(R.string.pin_to_profile)) {
+                    M3ActionRow(icon = Icons.Outlined.PushPin, text = stringResource(Res.string.pin_to_profile)) {
                         accountViewModel.addPin(note)
                         onDismiss()
                     }
                 }
             }
-            val noteBookmarkType = if (note.event is LongTextNoteEvent) stringRes(R.string.article) else stringRes(R.string.post)
-            M3ActionRow(icon = Icons.Outlined.BookmarkAdd, text = stringRes(R.string.manage_bookmark_label, noteBookmarkType)) {
+            val noteBookmarkType = if (note.event is LongTextNoteEvent) stringResource(Res.string.article) else stringResource(Res.string.post)
+            M3ActionRow(icon = Icons.Outlined.BookmarkAdd, text = stringResource(Res.string.manage_bookmark_label, noteBookmarkType)) {
                 if (note.event is LongTextNoteEvent) {
                     nav.nav(Route.ArticleBookmarkManagement((note as AddressableNote).address))
                 } else {
@@ -294,23 +322,23 @@ fun NoteDropDownMenu(
                 onDismiss()
             }
             if (state.isPrivateBookmarkNote) {
-                M3ActionRow(icon = Icons.Outlined.LockOpen, text = stringRes(R.string.remove_from_private_bookmarks)) {
+                M3ActionRow(icon = Icons.Outlined.LockOpen, text = stringResource(Res.string.remove_from_private_bookmarks)) {
                     accountViewModel.removePrivateBookmark(note)
                     onDismiss()
                 }
             } else {
-                M3ActionRow(icon = Icons.Outlined.Lock, text = stringRes(R.string.add_to_private_bookmarks)) {
+                M3ActionRow(icon = Icons.Outlined.Lock, text = stringResource(Res.string.add_to_private_bookmarks)) {
                     accountViewModel.addPrivateBookmark(note)
                     onDismiss()
                 }
             }
             if (state.isPublicBookmarkNote) {
-                M3ActionRow(icon = Icons.Outlined.BookmarkRemove, text = stringRes(R.string.remove_from_public_bookmarks)) {
+                M3ActionRow(icon = Icons.Outlined.BookmarkRemove, text = stringResource(Res.string.remove_from_public_bookmarks)) {
                     accountViewModel.removePublicBookmark(note)
                     onDismiss()
                 }
             } else {
-                M3ActionRow(icon = Icons.Outlined.Bookmark, text = stringRes(R.string.add_to_public_bookmarks)) {
+                M3ActionRow(icon = Icons.Outlined.Bookmark, text = stringResource(Res.string.add_to_public_bookmarks)) {
                     accountViewModel.addPublicBookmark(note)
                     onDismiss()
                 }
@@ -320,12 +348,12 @@ fun NoteDropDownMenu(
         // Moderation section
         M3ActionSection {
             if (state.isLoggedUser) {
-                M3ActionRow(icon = Icons.Outlined.Delete, text = stringRes(R.string.request_deletion), isDestructive = true) {
+                M3ActionRow(icon = Icons.Outlined.Delete, text = stringResource(Res.string.request_deletion), isDestructive = true) {
                     accountViewModel.delete(note)
                     onDismiss()
                 }
             } else {
-                M3ActionRow(icon = Icons.Outlined.Report, text = stringRes(R.string.block_report), isDestructive = true) {
+                M3ActionRow(icon = Icons.Outlined.Report, text = stringResource(Res.string.block_report), isDestructive = true) {
                     reportDialogShowing = true
                 }
             }

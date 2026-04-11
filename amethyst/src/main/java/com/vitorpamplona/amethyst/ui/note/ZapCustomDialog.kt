@@ -72,6 +72,28 @@ import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.amount_in_sats
+import com.vitorpamplona.amethyst.commons.resources.custom_zaps_add_a_message
+import com.vitorpamplona.amethyst.commons.resources.custom_zaps_add_a_message_example
+import com.vitorpamplona.amethyst.commons.resources.custom_zaps_add_a_message_nonzap
+import com.vitorpamplona.amethyst.commons.resources.custom_zaps_add_a_message_private
+import com.vitorpamplona.amethyst.commons.resources.feed_is_empty
+import com.vitorpamplona.amethyst.commons.resources.manual_zaps
+import com.vitorpamplona.amethyst.commons.resources.paid
+import com.vitorpamplona.amethyst.commons.resources.pay
+import com.vitorpamplona.amethyst.commons.resources.sats
+import com.vitorpamplona.amethyst.commons.resources.send_zap
+import com.vitorpamplona.amethyst.commons.resources.wallet_number
+import com.vitorpamplona.amethyst.commons.resources.zap_type
+import com.vitorpamplona.amethyst.commons.resources.zap_type_anonymous
+import com.vitorpamplona.amethyst.commons.resources.zap_type_anonymous_explainer
+import com.vitorpamplona.amethyst.commons.resources.zap_type_nonzap
+import com.vitorpamplona.amethyst.commons.resources.zap_type_nonzap_explainer
+import com.vitorpamplona.amethyst.commons.resources.zap_type_private
+import com.vitorpamplona.amethyst.commons.resources.zap_type_private_explainer
+import com.vitorpamplona.amethyst.commons.resources.zap_type_public
+import com.vitorpamplona.amethyst.commons.resources.zap_type_public_explainer
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -92,6 +114,7 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.CancellationException
+import org.jetbrains.compose.resources.stringResource
 
 class ZapOptionViewModel : ViewModel() {
     private var account: Account? = null
@@ -132,23 +155,23 @@ fun ZapCustomDialog(
         listOf(
             Triple(
                 LnZapEvent.ZapType.PUBLIC,
-                stringRes(id = R.string.zap_type_public),
-                stringRes(id = R.string.zap_type_public_explainer),
+                stringResource(Res.string.zap_type_public),
+                stringResource(Res.string.zap_type_public_explainer),
             ),
             Triple(
                 LnZapEvent.ZapType.PRIVATE,
-                stringRes(id = R.string.zap_type_private),
-                stringRes(id = R.string.zap_type_private_explainer),
+                stringResource(Res.string.zap_type_private),
+                stringResource(Res.string.zap_type_private_explainer),
             ),
             Triple(
                 LnZapEvent.ZapType.ANONYMOUS,
-                stringRes(id = R.string.zap_type_anonymous),
-                stringRes(id = R.string.zap_type_anonymous_explainer),
+                stringResource(Res.string.zap_type_anonymous),
+                stringResource(Res.string.zap_type_anonymous_explainer),
             ),
             Triple(
                 LnZapEvent.ZapType.NONZAP,
-                stringRes(id = R.string.zap_type_nonzap),
-                stringRes(id = R.string.zap_type_nonzap_explainer),
+                stringResource(Res.string.zap_type_nonzap),
+                stringResource(Res.string.zap_type_nonzap_explainer),
             ),
         )
 
@@ -182,7 +205,7 @@ fun ZapCustomDialog(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = stringRes(id = R.string.send_zap),
+                        text = stringResource(Res.string.send_zap),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                     )
@@ -218,7 +241,7 @@ fun ZapCustomDialog(
 
                 // Amount input
                 OutlinedTextField(
-                    label = { Text(text = stringRes(id = R.string.amount_in_sats)) },
+                    label = { Text(text = stringResource(Res.string.amount_in_sats)) },
                     value = postViewModel.customAmount,
                     onValueChange = { postViewModel.customAmount = it },
                     keyboardOptions =
@@ -232,7 +255,7 @@ fun ZapCustomDialog(
                             color = MaterialTheme.colorScheme.placeholderText,
                         )
                     },
-                    suffix = { Text(text = stringRes(id = R.string.sats)) },
+                    suffix = { Text(text = stringResource(Res.string.sats)) },
                     singleLine = true,
                     modifier =
                         Modifier
@@ -242,7 +265,7 @@ fun ZapCustomDialog(
 
                 // Zap type label
                 Text(
-                    text = stringRes(id = R.string.zap_type),
+                    text = stringResource(Res.string.zap_type),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(bottom = 4.dp),
@@ -275,15 +298,15 @@ fun ZapCustomDialog(
                     label = {
                         when (selectedZapType) {
                             LnZapEvent.ZapType.PUBLIC, LnZapEvent.ZapType.ANONYMOUS -> {
-                                Text(text = stringRes(id = R.string.custom_zaps_add_a_message))
+                                Text(text = stringResource(Res.string.custom_zaps_add_a_message))
                             }
 
                             LnZapEvent.ZapType.PRIVATE -> {
-                                Text(text = stringRes(id = R.string.custom_zaps_add_a_message_private))
+                                Text(text = stringResource(Res.string.custom_zaps_add_a_message_private))
                             }
 
                             LnZapEvent.ZapType.NONZAP -> {
-                                Text(text = stringRes(id = R.string.custom_zaps_add_a_message_nonzap))
+                                Text(text = stringResource(Res.string.custom_zaps_add_a_message_nonzap))
                             }
                         }
                     },
@@ -296,7 +319,7 @@ fun ZapCustomDialog(
                         ),
                     placeholder = {
                         Text(
-                            text = stringRes(id = R.string.custom_zaps_add_a_message_example),
+                            text = stringResource(Res.string.custom_zaps_add_a_message_example),
                             color = MaterialTheme.colorScheme.placeholderText,
                         )
                     },
@@ -359,7 +382,7 @@ fun PayViaIntentScreen(
 ) {
     Scaffold(
         topBar = {
-            TopBarWithBackButton(stringRes(id = R.string.manual_zaps), nav::popBack)
+            TopBarWithBackButton(stringResource(Res.string.manual_zaps), nav::popBack)
         },
     ) { pad ->
         val list = accountViewModel.tempManualPaymentCache.get(paymentId)
@@ -370,7 +393,7 @@ fun PayViaIntentScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
-                Text(stringRes(R.string.feed_is_empty))
+                Text(stringResource(Res.string.feed_is_empty))
             }
         } else {
             LazyColumn(
@@ -419,7 +442,7 @@ fun DisplayPayable(
                 UsernameDisplay(payable.info.user, accountViewModel = accountViewModel)
             } else {
                 Text(
-                    text = stringRes(id = R.string.wallet_number, index + 1),
+                    text = stringResource(Res.string.wallet_number, index + 1),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     fontWeight = FontWeight.Bold,
@@ -436,7 +459,7 @@ fun DisplayPayable(
                 )
                 Spacer(modifier = StdHorzSpacer)
                 Text(
-                    text = stringRes(id = R.string.sats),
+                    text = stringResource(Res.string.sats),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     fontWeight = FontWeight.Bold,
@@ -499,9 +522,9 @@ fun PayButton(
         contentPadding = ZeroPadding,
     ) {
         if (isActive) {
-            Text(text = stringRes(R.string.pay), color = Color.White)
+            Text(text = stringResource(Res.string.pay), color = Color.White)
         } else {
-            Text(text = stringRes(R.string.paid), color = Color.White)
+            Text(text = stringResource(Res.string.paid), color = Color.White)
         }
     }
 }

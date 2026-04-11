@@ -78,6 +78,15 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.platform.toJavaFile
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.add_media_to_gallery
+import com.vitorpamplona.amethyst.commons.resources.copy_the_note_id_to_the_clipboard
+import com.vitorpamplona.amethyst.commons.resources.copy_url_to_clipboard
+import com.vitorpamplona.amethyst.commons.resources.hash_verification_failed
+import com.vitorpamplona.amethyst.commons.resources.hash_verification_passed
+import com.vitorpamplona.amethyst.commons.resources.media_actions_dialog_title
+import com.vitorpamplona.amethyst.commons.resources.share_image
+import com.vitorpamplona.amethyst.commons.resources.share_video
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaLocalImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaLocalVideo
@@ -124,6 +133,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.coroutines.executeAsync
 import okio.sink
+import org.jetbrains.compose.resources.stringResource
 import java.io.File
 import java.io.IOException
 
@@ -772,7 +782,7 @@ fun ShareMediaAction(
 
     if (popupExpanded.value) {
         M3ActionDialog(
-            title = stringRes(R.string.media_actions_dialog_title),
+            title = stringResource(Res.string.media_actions_dialog_title),
             onDismiss = { if (!isDownloadingVideo.value) onDismiss() },
         ) {
             val clipboardManager = LocalClipboard.current
@@ -782,7 +792,7 @@ fun ShareMediaAction(
             if ((videoUri != null && !videoUri.startsWith("file")) || postNostrUri != null) {
                 M3ActionSection {
                     if (videoUri != null && !videoUri.startsWith("file")) {
-                        M3ActionRow(icon = Icons.Outlined.Link, text = stringRes(R.string.copy_url_to_clipboard)) {
+                        M3ActionRow(icon = Icons.Outlined.Link, text = stringResource(Res.string.copy_url_to_clipboard)) {
                             scope.launch {
                                 clipboardManager.setText(videoUri)
                             }
@@ -790,13 +800,13 @@ fun ShareMediaAction(
                         }
                     }
                     postNostrUri?.let {
-                        M3ActionRow(icon = Icons.Outlined.ContentCopy, text = stringRes(R.string.copy_the_note_id_to_the_clipboard)) {
+                        M3ActionRow(icon = Icons.Outlined.ContentCopy, text = stringResource(Res.string.copy_the_note_id_to_the_clipboard)) {
                             scope.launch {
                                 clipboardManager.setText(it)
                             }
                             onDismiss()
                         }
-                        M3ActionRow(icon = Icons.Outlined.Collections, text = stringRes(R.string.add_media_to_gallery)) {
+                        M3ActionRow(icon = Icons.Outlined.Collections, text = stringResource(Res.string.add_media_to_gallery)) {
                             if (videoUri != null) {
                                 val n19 = Nip19Parser.uriToRoute(postNostrUri)?.entity as? NEvent
                                 if (n19 != null) {
@@ -819,7 +829,7 @@ fun ShareMediaAction(
                         is MediaUrlImage -> {
                             videoUri?.let {
                                 if (videoUri.isNotEmpty()) {
-                                    M3ActionRow(icon = Icons.Outlined.Share, text = stringRes(R.string.share_image)) {
+                                    M3ActionRow(icon = Icons.Outlined.Share, text = stringResource(Res.string.share_image)) {
                                         accountViewModel.viewModelScope.launch { shareImageFile(context, videoUri, mimeType) }
                                         onDismiss()
                                     }
@@ -832,7 +842,7 @@ fun ShareMediaAction(
                                 if (videoUri.isNotEmpty()) {
                                     M3ActionRow(
                                         icon = Icons.Outlined.Share,
-                                        text = stringRes(R.string.share_video),
+                                        text = stringResource(Res.string.share_video),
                                         enabled = !isDownloadingVideo.value,
                                     ) {
                                         isDownloadingVideo.value = true
@@ -861,7 +871,7 @@ fun ShareMediaAction(
 
                         is MediaLocalVideo -> {
                             content.localFile?.toJavaFile()?.let { localFile ->
-                                M3ActionRow(icon = Icons.Outlined.Share, text = stringRes(R.string.share_video)) {
+                                M3ActionRow(icon = Icons.Outlined.Share, text = stringResource(Res.string.share_video)) {
                                     accountViewModel.viewModelScope.launch { shareLocalVideoFile(context, localFile, mimeType) }
                                     onDismiss()
                                 }
@@ -1070,7 +1080,7 @@ private fun HashVerificationSymbol(verifiedHash: Boolean) {
         ) {
             Icon(
                 painter = painterRes(R.drawable.original, 1),
-                contentDescription = stringRes(id = R.string.hash_verification_passed),
+                contentDescription = stringResource(Res.string.hash_verification_passed),
                 modifier = Size30Modifier,
                 tint = Color.Unspecified,
             )
@@ -1084,7 +1094,7 @@ private fun HashVerificationSymbol(verifiedHash: Boolean) {
         ) {
             Icon(
                 imageVector = Icons.Default.Report,
-                contentDescription = stringRes(id = R.string.hash_verification_failed),
+                contentDescription = stringResource(Res.string.hash_verification_failed),
                 modifier = Size30Modifier,
                 tint = Color.Red,
             )

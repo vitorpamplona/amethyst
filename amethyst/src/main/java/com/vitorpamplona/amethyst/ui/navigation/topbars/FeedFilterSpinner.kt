@@ -78,6 +78,13 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.TopFilter
 import com.vitorpamplona.amethyst.commons.model.location.LocationResult
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.feed_filter_select_an_option
+import com.vitorpamplona.amethyst.commons.resources.feed_filter_selected
+import com.vitorpamplona.amethyst.commons.resources.lack_location_permissions
+import com.vitorpamplona.amethyst.commons.resources.loading_location
+import com.vitorpamplona.amethyst.commons.resources.open_dropdown_menu
+import com.vitorpamplona.amethyst.commons.resources.select_an_option
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.service.call.CallSessionBridge.accountViewModel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
@@ -101,6 +108,7 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import kotlinx.collections.immutable.ImmutableList
+import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
@@ -116,9 +124,7 @@ fun FeedFilterSpinner(
 
     val context = LocalContext.current
     val selectAnOption =
-        stringRes(
-            id = R.string.select_an_option,
-        )
+        stringResource(Res.string.select_an_option)
 
     var selected by
         remember(placeholderCode, options) {
@@ -136,12 +142,12 @@ fun FeedFilterSpinner(
 
     val accessibilityDescription =
         if (selected != null) {
-            stringRes(R.string.feed_filter_selected, currentText)
+            stringResource(Res.string.feed_filter_selected, currentText)
         } else {
-            stringRes(R.string.feed_filter_select_an_option, selectAnOption)
+            stringResource(Res.string.feed_filter_select_an_option, selectAnOption)
         }
 
-    val openDropdownLabel = stringRes(R.string.open_dropdown_menu)
+    val openDropdownLabel = stringResource(Res.string.open_dropdown_menu)
 
     Box(
         modifier = modifier,
@@ -175,7 +181,7 @@ fun FeedFilterSpinner(
                         LaunchedEffect(locationPermissionState) { locationPermissionState.launchPermissionRequest() }
 
                         Text(
-                            text = stringRes(R.string.lack_location_permissions),
+                            text = stringResource(Res.string.lack_location_permissions),
                             fontSize = Font12SP,
                             lineHeight = 12.sp,
                         )
@@ -209,7 +215,7 @@ fun FeedFilterSpinner(
 
                             LocationResult.LackPermission -> {
                                 Text(
-                                    text = stringRes(R.string.lack_location_permissions),
+                                    text = stringResource(Res.string.lack_location_permissions),
                                     fontSize = Font12SP,
                                     lineHeight = 12.sp,
                                 )
@@ -217,7 +223,7 @@ fun FeedFilterSpinner(
 
                             LocationResult.Loading -> {
                                 Text(
-                                    text = stringRes(R.string.loading_location),
+                                    text = stringResource(Res.string.loading_location),
                                     fontSize = Font12SP,
                                     lineHeight = 12.sp,
                                 )

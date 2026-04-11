@@ -66,6 +66,13 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.follow_pack_broadcast
+import com.vitorpamplona.amethyst.commons.resources.follow_pack_delete
+import com.vitorpamplona.amethyst.commons.resources.follow_pack_edit_list_metadata
+import com.vitorpamplona.amethyst.commons.resources.pack_actions_dialog_title
+import com.vitorpamplona.amethyst.commons.resources.quick_action_share
+import com.vitorpamplona.amethyst.commons.resources.search_and_add_a_user
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
@@ -95,6 +102,7 @@ import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.flow.MutableStateFlow
+import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -281,11 +289,11 @@ private fun ListActionsMenuButton(
     if (isActionListOpen.value) {
         val context = LocalContext.current
         M3ActionDialog(
-            title = stringRes(R.string.pack_actions_dialog_title),
+            title = stringResource(Res.string.pack_actions_dialog_title),
             onDismiss = { isActionListOpen.value = false },
         ) {
             M3ActionSection {
-                M3ActionRow(icon = Icons.Outlined.Share, text = stringRes(R.string.quick_action_share)) {
+                M3ActionRow(icon = Icons.Outlined.Share, text = stringResource(Res.string.quick_action_share)) {
                     val sendIntent =
                         Intent().apply {
                             action = Intent.ACTION_SEND
@@ -305,17 +313,17 @@ private fun ListActionsMenuButton(
                     context.startActivity(shareIntent)
                     isActionListOpen.value = false
                 }
-                M3ActionRow(icon = Icons.Outlined.Edit, text = stringRes(R.string.follow_pack_edit_list_metadata)) {
+                M3ActionRow(icon = Icons.Outlined.Edit, text = stringResource(Res.string.follow_pack_edit_list_metadata)) {
                     onEditList()
                     isActionListOpen.value = false
                 }
-                M3ActionRow(icon = Icons.Outlined.CellTower, text = stringRes(R.string.follow_pack_broadcast)) {
+                M3ActionRow(icon = Icons.Outlined.CellTower, text = stringResource(Res.string.follow_pack_broadcast)) {
                     onBroadcastList()
                     isActionListOpen.value = false
                 }
             }
             M3ActionSection {
-                M3ActionRow(icon = Icons.Outlined.Delete, text = stringRes(R.string.follow_pack_delete), isDestructive = true) {
+                M3ActionRow(icon = Icons.Outlined.Delete, text = stringResource(Res.string.follow_pack_delete), isDestructive = true) {
                     onDeleteList()
                     isActionListOpen.value = false
                 }
@@ -346,7 +354,7 @@ fun FollowPackViewPreview() {
 
             var userName by remember { mutableStateOf("") }
             OutlinedTextField(
-                label = { Text(text = stringRes(R.string.search_and_add_a_user)) },
+                label = { Text(text = stringResource(Res.string.search_and_add_a_user)) },
                 modifier =
                     Modifier
                         .padding(horizontal = Size10dp)

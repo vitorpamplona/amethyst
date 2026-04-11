@@ -53,7 +53,12 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.back
+import com.vitorpamplona.amethyst.commons.resources.conversations
+import com.vitorpamplona.amethyst.commons.resources.members
+import com.vitorpamplona.amethyst.commons.resources.new_threads
+import com.vitorpamplona.amethyst.commons.resources.preview_card_image_for
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
@@ -75,7 +80,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.feed.dal.Follow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.feed.dal.FollowPackFeedNewThreadFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.feed.dal.FollowPackMembersUserFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.feed.datasource.FollowPackFeedFilterAssemblerSubscription
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.HalfHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.Size18Modifier
 import com.vitorpamplona.amethyst.ui.theme.SpacedBy2dp
@@ -83,6 +87,7 @@ import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -233,7 +238,7 @@ private fun FollowPackFeedTopBar(
                         ) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = stringRes(R.string.back),
+                                contentDescription = stringResource(Res.string.back),
                             )
                         }
                     }
@@ -283,17 +288,17 @@ private fun FollowPackFeedTopBar(
             val coroutineScope = rememberCoroutineScope()
             Tab(
                 selected = pagerState.currentPage == 0,
-                text = { Text(text = stringRes(R.string.new_threads)) },
+                text = { Text(text = stringResource(Res.string.new_threads)) },
                 onClick = { coroutineScope.launch { pagerState.animateScrollToPage(0) } },
             )
             Tab(
                 selected = pagerState.currentPage == 1,
-                text = { Text(text = stringRes(R.string.conversations)) },
+                text = { Text(text = stringResource(Res.string.conversations)) },
                 onClick = { coroutineScope.launch { pagerState.animateScrollToPage(1) } },
             )
             Tab(
                 selected = pagerState.currentPage == 2,
-                text = { Text(text = stringRes(R.string.members)) },
+                text = { Text(text = stringResource(Res.string.members)) },
                 onClick = { coroutineScope.launch { pagerState.animateScrollToPage(2) } },
             )
         }
@@ -311,7 +316,7 @@ private fun DisplayBanner(
     noteEvent?.image()?.let {
         AsyncImage(
             model = it,
-            contentDescription = stringRes(R.string.preview_card_image_for, it),
+            contentDescription = stringResource(Res.string.preview_card_image_for, it),
             contentScale = ContentScale.Crop,
             modifier = Modifier,
         )

@@ -73,6 +73,13 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.hi_seller_is_this_still_available
+import com.vitorpamplona.amethyst.commons.resources.hi_there_is_this_still_available
+import com.vitorpamplona.amethyst.commons.resources.preview_card_image_for
+import com.vitorpamplona.amethyst.commons.resources.reply_here
+import com.vitorpamplona.amethyst.commons.resources.send_a_direct_message
+import com.vitorpamplona.amethyst.commons.resources.send_the_seller_a_message
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.ui.thread.drawReplyLevel
@@ -192,7 +199,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28P
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ThinSendButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.dal.LevelFeedViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.EditFieldBorder
@@ -292,6 +298,7 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun ThreadFeedView(
@@ -1026,14 +1033,14 @@ private fun RenderClassifiedsReaderForThread(
             ) {
                 Icon(
                     painter = painterRes(R.drawable.ic_dm, 5),
-                    stringRes(R.string.send_a_direct_message),
+                    stringResource(Res.string.send_a_direct_message),
                     modifier = Modifier.size(20.dp),
                     tint = MaterialTheme.colorScheme.primary,
                 )
 
                 Spacer(modifier = StdHorzSpacer)
 
-                Text(stringRes(id = R.string.send_the_seller_a_message))
+                Text(stringResource(Res.string.send_the_seller_a_message))
             }
 
             Row(
@@ -1054,12 +1061,9 @@ private fun RenderClassifiedsReaderForThread(
 
                 val msg =
                     if (sellerName != null) {
-                        stringRes(
-                            id = R.string.hi_seller_is_this_still_available,
-                            sellerName,
-                        )
+                        stringResource(Res.string.hi_seller_is_this_still_available, sellerName)
                     } else {
-                        stringRes(id = R.string.hi_there_is_this_still_available)
+                        stringResource(Res.string.hi_there_is_this_still_available)
                     }
 
                 var message by remember { mutableStateOf(TextFieldValue(msg)) }
@@ -1075,7 +1079,7 @@ private fun RenderClassifiedsReaderForThread(
                     modifier = Modifier.weight(1f, true),
                     placeholder = {
                         Text(
-                            text = stringRes(R.string.reply_here),
+                            text = stringResource(Res.string.reply_here),
                             color = MaterialTheme.colorScheme.placeholderText,
                         )
                     },
@@ -1118,10 +1122,7 @@ private fun RenderLongFormHeaderForThread(
             MyAsyncImage(
                 imageUrl = it,
                 contentDescription =
-                    stringRes(
-                        R.string.preview_card_image_for,
-                        it,
-                    ),
+                    stringResource(Res.string.preview_card_image_for, it),
                 contentScale = ContentScale.FillWidth,
                 mainImageModifier = Modifier,
                 loadedImageModifier = MaterialTheme.colorScheme.imageModifier,
@@ -1229,10 +1230,7 @@ private fun RenderWikiHeaderForThread(
                 AsyncImage(
                     model = it,
                     contentDescription =
-                        stringRes(
-                            R.string.preview_card_image_for,
-                            it,
-                        ),
+                        stringResource(Res.string.preview_card_image_for, it),
                     contentScale = ContentScale.FillWidth,
                     modifier = Modifier.fillMaxWidth(),
                 )

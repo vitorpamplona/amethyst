@@ -85,6 +85,16 @@ import com.halilibo.richtext.ui.RichTextStyle
 import com.halilibo.richtext.ui.material3.RichText
 import com.halilibo.richtext.ui.resolveDefaults
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.account_backup_tips2_md
+import com.vitorpamplona.amethyst.commons.resources.account_backup_tips3_md
+import com.vitorpamplona.amethyst.commons.resources.backup_keys
+import com.vitorpamplona.amethyst.commons.resources.copies_the_nsec_id_your_password_to_the_clipboard_for_backup
+import com.vitorpamplona.amethyst.commons.resources.copy_my_secret_key
+import com.vitorpamplona.amethyst.commons.resources.encrypt_and_copy_my_secret_key
+import com.vitorpamplona.amethyst.commons.resources.hide_password
+import com.vitorpamplona.amethyst.commons.resources.ncryptsec_password
+import com.vitorpamplona.amethyst.commons.resources.show_password
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -106,6 +116,7 @@ import com.vitorpamplona.quartz.nip19Bech32.toNsec
 import com.vitorpamplona.quartz.nip49PrivKeyEnc.Nip49
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun AccountBackupScreen(
@@ -134,7 +145,7 @@ private fun AccountBackupScreenContent(
     Scaffold(
         topBar = {
             TopBarWithBackButton(
-                stringRes(R.string.backup_keys),
+                stringResource(Res.string.backup_keys),
                 popBack = onClose,
             )
         },
@@ -147,7 +158,7 @@ private fun AccountBackupScreenContent(
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            val content1 = stringRes(R.string.account_backup_tips2_md)
+            val content1 = stringResource(Res.string.account_backup_tips2_md)
 
             val astNode1 =
                 remember {
@@ -175,7 +186,7 @@ private fun AccountBackupScreenContent(
 
             Spacer(modifier = Modifier.height(30.dp))
 
-            val content = stringRes(R.string.account_backup_tips3_md)
+            val content = stringResource(Res.string.account_backup_tips3_md)
 
             val astNode =
                 remember {
@@ -214,7 +225,7 @@ private fun AccountBackupScreenContent(
                     ),
                 placeholder = {
                     Text(
-                        text = stringRes(R.string.ncryptsec_password),
+                        text = stringResource(Res.string.ncryptsec_password),
                         color = MaterialTheme.colorScheme.placeholderText,
                     )
                 },
@@ -226,11 +237,9 @@ private fun AccountBackupScreenContent(
                                     if (showCharsPassword) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
                                 contentDescription =
                                     if (showCharsPassword) {
-                                        stringRes(R.string.show_password)
+                                        stringResource(Res.string.show_password)
                                     } else {
-                                        stringRes(
-                                            R.string.hide_password,
-                                        )
+                                        stringResource(Res.string.hide_password)
                                     },
                             )
                         }
@@ -290,11 +299,11 @@ private fun NSecCopyButton(accountViewModel: AccountViewModel) {
             tint = MaterialTheme.colorScheme.onPrimary,
             imageVector = Icons.Default.Key,
             contentDescription =
-                stringRes(R.string.copies_the_nsec_id_your_password_to_the_clipboard_for_backup),
+                stringResource(Res.string.copies_the_nsec_id_your_password_to_the_clipboard_for_backup),
             modifier = Modifier.padding(end = 5.dp),
         )
         Text(
-            stringRes(id = R.string.copy_my_secret_key),
+            stringResource(Res.string.copy_my_secret_key),
             color = MaterialTheme.colorScheme.onPrimary,
         )
     }
@@ -336,11 +345,11 @@ private fun EncryptNSecCopyButton(
                 Icon(
                     imageVector = Icons.Default.Key,
                     contentDescription =
-                        stringRes(R.string.copies_the_nsec_id_your_password_to_the_clipboard_for_backup),
+                        stringResource(Res.string.copies_the_nsec_id_your_password_to_the_clipboard_for_backup),
                     modifier = Modifier.padding(end = 5.dp),
                 )
                 Text(
-                    stringRes(id = R.string.encrypt_and_copy_my_secret_key),
+                    stringResource(Res.string.encrypt_and_copy_my_secret_key),
                 )
             }
         }

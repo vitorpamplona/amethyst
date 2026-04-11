@@ -55,6 +55,12 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.Nip05State
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.copy_nprofile_to_clipboard
+import com.vitorpamplona.amethyst.commons.resources.copy_npub_to_clipboard
+import com.vitorpamplona.amethyst.commons.resources.last_seen
+import com.vitorpamplona.amethyst.commons.resources.show_nprofile_as_a_qr_code
+import com.vitorpamplona.amethyst.commons.resources.website
 import com.vitorpamplona.amethyst.commons.util.toShortDisplay
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
@@ -93,6 +99,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 
 private const val IDENTITY_ICON_CACHE_KEY = 0
 
@@ -166,7 +173,7 @@ fun DrawAdditionalInfo(
             ) {
                 Icon(
                     imageVector = Icons.Default.ContentCopy,
-                    contentDescription = stringRes(id = R.string.copy_npub_to_clipboard),
+                    contentDescription = stringResource(Res.string.copy_npub_to_clipboard),
                     modifier = Size15Modifier,
                     tint = MaterialTheme.colorScheme.placeholderText,
                 )
@@ -190,7 +197,7 @@ fun DrawAdditionalInfo(
             ) {
                 Icon(
                     imageVector = Icons.Default.ContentCopy,
-                    contentDescription = stringRes(id = R.string.copy_nprofile_to_clipboard),
+                    contentDescription = stringResource(Res.string.copy_nprofile_to_clipboard),
                     modifier = Size15Modifier,
                     tint = MaterialTheme.colorScheme.placeholderText,
                 )
@@ -202,7 +209,7 @@ fun DrawAdditionalInfo(
             ) {
                 Icon(
                     painter = painterRes(R.drawable.ic_qrcode, 1),
-                    contentDescription = stringRes(id = R.string.show_nprofile_as_a_qr_code),
+                    contentDescription = stringResource(Res.string.show_nprofile_as_a_qr_code),
                     modifier = Size15Modifier,
                     tint = MaterialTheme.colorScheme.placeholderText,
                 )
@@ -228,7 +235,7 @@ fun DrawAdditionalInfo(
                 Icon(
                     tint = MaterialTheme.colorScheme.placeholderText,
                     imageVector = Icons.Default.Link,
-                    contentDescription = stringRes(R.string.website),
+                    contentDescription = stringResource(Res.string.website),
                     modifier = Modifier.size(18.dp),
                 )
 
@@ -313,7 +320,7 @@ fun DisplayLastSeen(
     lastSeen?.let { timestamp ->
         val context = LocalContext.current
         Text(
-            text = stringRes(R.string.last_seen, timeAgo(timestamp, context, prefix = "", seconds = R.string.seconds)),
+            text = stringResource(Res.string.last_seen, timeAgo(timestamp, context, prefix = "", seconds = R.string.seconds)),
             color = MaterialTheme.colorScheme.placeholderText,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,

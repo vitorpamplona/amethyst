@@ -47,12 +47,14 @@ import androidx.core.content.FileProvider
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.record_a_video
+import com.vitorpamplona.amethyst.commons.resources.take_a_picture
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -130,7 +132,7 @@ fun PictureButton(onClick: () -> Unit) {
     ) {
         Icon(
             imageVector = Icons.Default.CameraAlt,
-            contentDescription = stringRes(id = R.string.take_a_picture),
+            contentDescription = stringResource(Res.string.take_a_picture),
             modifier = Modifier.height(22.dp),
             tint = MaterialTheme.colorScheme.onBackground,
         )
@@ -217,7 +219,7 @@ fun VideoButton(onClick: () -> Unit) {
     ) {
         Icon(
             imageVector = Icons.Default.Videocam,
-            contentDescription = stringRes(id = R.string.record_a_video),
+            contentDescription = stringResource(Res.string.record_a_video),
             modifier = Modifier.height(22.dp),
             tint = MaterialTheme.colorScheme.onBackground,
         )

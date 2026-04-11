@@ -48,6 +48,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.migrate_bookmarks_button
+import com.vitorpamplona.amethyst.commons.resources.old_bookmarks_title
+import com.vitorpamplona.amethyst.commons.resources.private_bookmarks
+import com.vitorpamplona.amethyst.commons.resources.public_bookmarks
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -56,9 +61,9 @@ import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.old.dal.OldBookmarkPrivateFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.old.dal.OldBookmarkPublicFeedViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun OldBookmarkListScreen(
@@ -108,7 +113,7 @@ private fun RenderOldBookmarkScreen(
         isInvertedLayout = false,
         topBar = {
             Column {
-                TopBarWithBackButton(stringRes(id = R.string.old_bookmarks_title), nav::popBack)
+                TopBarWithBackButton(stringResource(Res.string.old_bookmarks_title), nav::popBack)
                 SecondaryTabRow(
                     containerColor = Color.Transparent,
                     contentColor = MaterialTheme.colorScheme.onBackground,
@@ -118,23 +123,23 @@ private fun RenderOldBookmarkScreen(
                     Tab(
                         selected = pagerState.currentPage == 0,
                         onClick = { coroutineScope.launch { pagerState.animateScrollToPage(0) } },
-                        text = { Text(text = stringRes(R.string.private_bookmarks)) },
+                        text = { Text(text = stringResource(Res.string.private_bookmarks)) },
                     )
                     Tab(
                         selected = pagerState.currentPage == 1,
                         onClick = { coroutineScope.launch { pagerState.animateScrollToPage(1) } },
-                        text = { Text(text = stringRes(R.string.public_bookmarks)) },
+                        text = { Text(text = stringResource(Res.string.public_bookmarks)) },
                     )
                 }
             }
         },
         floatingButton = {
             ExtendedFloatingActionButton(
-                text = { Text(stringRes(R.string.migrate_bookmarks_button)) },
+                text = { Text(stringResource(Res.string.migrate_bookmarks_button)) },
                 icon = {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.DriveFileMove,
-                        contentDescription = stringRes(R.string.migrate_bookmarks_button),
+                        contentDescription = stringResource(Res.string.migrate_bookmarks_button),
                     )
                 },
                 onClick = {

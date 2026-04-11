@@ -59,10 +59,16 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.back
+import com.vitorpamplona.amethyst.commons.resources.wallet_paste_invoice
+import com.vitorpamplona.amethyst.commons.resources.wallet_pay
+import com.vitorpamplona.amethyst.commons.resources.wallet_payment_sending
+import com.vitorpamplona.amethyst.commons.resources.wallet_payment_success
+import com.vitorpamplona.amethyst.commons.resources.wallet_send
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
+import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -87,12 +93,12 @@ fun WalletSendScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringRes(R.string.wallet_send)) },
+                title = { Text(stringResource(Res.string.wallet_send)) },
                 navigationIcon = {
                     IconButton(onClick = { nav.popBack() }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringRes(R.string.back),
+                            contentDescription = stringResource(Res.string.back),
                         )
                     }
                 },
@@ -114,7 +120,7 @@ fun WalletSendScreen(
                     OutlinedTextField(
                         value = invoiceText,
                         onValueChange = { invoiceText = it },
-                        label = { Text(stringRes(R.string.wallet_paste_invoice)) },
+                        label = { Text(stringResource(Res.string.wallet_paste_invoice)) },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
                         minLines = 3,
@@ -151,7 +157,7 @@ fun WalletSendScreen(
                         enabled = invoiceText.isNotBlank(),
                     ) {
                         Text(
-                            stringRes(R.string.wallet_pay),
+                            stringResource(Res.string.wallet_pay),
                             fontWeight = FontWeight.SemiBold,
                         )
                     }
@@ -162,7 +168,7 @@ fun WalletSendScreen(
                     CircularProgressIndicator(modifier = Modifier.size(48.dp))
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        stringRes(R.string.wallet_payment_sending),
+                        stringResource(Res.string.wallet_payment_sending),
                         style = MaterialTheme.typography.bodyLarge,
                     )
                     Spacer(modifier = Modifier.weight(1f))
@@ -178,7 +184,7 @@ fun WalletSendScreen(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        stringRes(R.string.wallet_payment_success),
+                        stringResource(Res.string.wallet_payment_success),
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
                     )
@@ -191,7 +197,7 @@ fun WalletSendScreen(
                                 .height(56.dp),
                         shape = RoundedCornerShape(16.dp),
                     ) {
-                        Text(stringRes(R.string.back))
+                        Text(stringResource(Res.string.back))
                     }
                     Spacer(modifier = Modifier.height(24.dp))
                 }
@@ -209,7 +215,7 @@ fun WalletSendScreen(
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(onClick = { walletViewModel.resetSendState() }) {
-                            Text(stringRes(R.string.back))
+                            Text(stringResource(Res.string.back))
                         }
                     }
                 }

@@ -73,6 +73,17 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.follow_set_broadcast
+import com.vitorpamplona.amethyst.commons.resources.follow_set_delete
+import com.vitorpamplona.amethyst.commons.resources.follow_set_edit_list_metadata
+import com.vitorpamplona.amethyst.commons.resources.list_actions_dialog_title
+import com.vitorpamplona.amethyst.commons.resources.private_members
+import com.vitorpamplona.amethyst.commons.resources.private_members_count
+import com.vitorpamplona.amethyst.commons.resources.public_members
+import com.vitorpamplona.amethyst.commons.resources.public_members_count
+import com.vitorpamplona.amethyst.commons.resources.quick_action_share
+import com.vitorpamplona.amethyst.commons.resources.search_and_add_a_user
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
@@ -104,6 +115,7 @@ import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -177,8 +189,8 @@ private fun TopAppTabs(
                 val list = viewModel.selectedList.collectAsStateWithLifecycle()
                 val labelPublic =
                     list.value?.let {
-                        stringRes(R.string.public_members_count, it.publicMembers.size)
-                    } ?: stringRes(R.string.public_members)
+                        stringResource(Res.string.public_members_count, it.publicMembers.size)
+                    } ?: stringResource(Res.string.public_members)
                 Text(labelPublic)
             },
         )
@@ -189,8 +201,8 @@ private fun TopAppTabs(
                 val list = viewModel.selectedList.collectAsStateWithLifecycle()
                 val labelPrivate =
                     list.value?.let {
-                        stringRes(R.string.private_members_count, it.privateMembersList.size)
-                    } ?: stringRes(R.string.private_members)
+                        stringResource(Res.string.private_members_count, it.privateMembersList.size)
+                    } ?: stringResource(Res.string.private_members)
                 Text(labelPrivate)
             },
         )
@@ -323,7 +335,7 @@ private fun PeopleListViewPreview() {
 
             var userName by remember { mutableStateOf("") }
             OutlinedTextField(
-                label = { Text(text = stringRes(R.string.search_and_add_a_user)) },
+                label = { Text(text = stringResource(Res.string.search_and_add_a_user)) },
                 modifier =
                     Modifier
                         .padding(horizontal = Size10dp)
@@ -426,11 +438,11 @@ private fun ListActionsMenuButton(
     if (isActionListOpen.value) {
         val context = LocalContext.current
         M3ActionDialog(
-            title = stringRes(R.string.list_actions_dialog_title),
+            title = stringResource(Res.string.list_actions_dialog_title),
             onDismiss = { isActionListOpen.value = false },
         ) {
             M3ActionSection {
-                M3ActionRow(icon = Icons.Outlined.Share, text = stringRes(R.string.quick_action_share)) {
+                M3ActionRow(icon = Icons.Outlined.Share, text = stringResource(Res.string.quick_action_share)) {
                     val sendIntent =
                         Intent().apply {
                             action = Intent.ACTION_SEND
@@ -450,17 +462,17 @@ private fun ListActionsMenuButton(
                     context.startActivity(shareIntent)
                     isActionListOpen.value = false
                 }
-                M3ActionRow(icon = Icons.Outlined.Edit, text = stringRes(R.string.follow_set_edit_list_metadata)) {
+                M3ActionRow(icon = Icons.Outlined.Edit, text = stringResource(Res.string.follow_set_edit_list_metadata)) {
                     onEditList()
                     isActionListOpen.value = false
                 }
-                M3ActionRow(icon = Icons.Outlined.CellTower, text = stringRes(R.string.follow_set_broadcast)) {
+                M3ActionRow(icon = Icons.Outlined.CellTower, text = stringResource(Res.string.follow_set_broadcast)) {
                     onBroadcastList()
                     isActionListOpen.value = false
                 }
             }
             M3ActionSection {
-                M3ActionRow(icon = Icons.Outlined.Delete, text = stringRes(R.string.follow_set_delete), isDestructive = true) {
+                M3ActionRow(icon = Icons.Outlined.Delete, text = stringResource(Res.string.follow_set_delete), isDestructive = true) {
                     onDeleteList()
                     isActionListOpen.value = false
                 }

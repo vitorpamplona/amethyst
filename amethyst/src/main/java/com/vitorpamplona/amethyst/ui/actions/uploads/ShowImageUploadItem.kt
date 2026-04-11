@@ -64,7 +64,15 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.uploading_state_compressing
+import com.vitorpamplona.amethyst.commons.resources.uploading_state_downloading
+import com.vitorpamplona.amethyst.commons.resources.uploading_state_error
+import com.vitorpamplona.amethyst.commons.resources.uploading_state_finished
+import com.vitorpamplona.amethyst.commons.resources.uploading_state_hashing
+import com.vitorpamplona.amethyst.commons.resources.uploading_state_ready
+import com.vitorpamplona.amethyst.commons.resources.uploading_state_server_processing
+import com.vitorpamplona.amethyst.commons.resources.uploading_state_uploading
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView
 import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
@@ -72,7 +80,6 @@ import com.vitorpamplona.amethyst.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.ui.components.AutoNonlazyGrid
 import com.vitorpamplona.amethyst.ui.note.CloseIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size40Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
@@ -80,6 +87,7 @@ import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun ShowImageUploadGallery(
@@ -257,14 +265,14 @@ fun UploadingState(
 
             val txt =
                 when (progressState) {
-                    is UploadingState.Ready -> stringRes(R.string.uploading_state_ready)
-                    is UploadingState.Compressing -> stringRes(R.string.uploading_state_compressing)
-                    is UploadingState.Uploading -> stringRes(R.string.uploading_state_uploading)
-                    is UploadingState.ServerProcessing -> stringRes(R.string.uploading_state_server_processing)
-                    is UploadingState.Downloading -> stringRes(R.string.uploading_state_downloading)
-                    is UploadingState.Hashing -> stringRes(R.string.uploading_state_hashing)
-                    is UploadingState.Finished -> stringRes(R.string.uploading_state_finished)
-                    is UploadingState.Error -> stringRes(R.string.uploading_state_error)
+                    is UploadingState.Ready -> stringResource(Res.string.uploading_state_ready)
+                    is UploadingState.Compressing -> stringResource(Res.string.uploading_state_compressing)
+                    is UploadingState.Uploading -> stringResource(Res.string.uploading_state_uploading)
+                    is UploadingState.ServerProcessing -> stringResource(Res.string.uploading_state_server_processing)
+                    is UploadingState.Downloading -> stringResource(Res.string.uploading_state_downloading)
+                    is UploadingState.Hashing -> stringResource(Res.string.uploading_state_hashing)
+                    is UploadingState.Finished -> stringResource(Res.string.uploading_state_finished)
+                    is UploadingState.Error -> stringResource(Res.string.uploading_state_error)
                 }
 
             Text(

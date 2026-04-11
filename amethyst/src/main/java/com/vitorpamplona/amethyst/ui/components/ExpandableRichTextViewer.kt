@@ -39,16 +39,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.show_more
 import com.vitorpamplona.amethyst.commons.richtext.ExpandableTextCutOffCalculator
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.getGradient
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
 import com.vitorpamplona.amethyst.ui.theme.StdTopPadding
+import org.jetbrains.compose.resources.stringResource
 
 object ShowFullTextCache {
     val cache = LruCache<String, Boolean>(10)
@@ -131,6 +132,6 @@ fun ShowMoreButton(onClick: () -> Unit) {
         shape = ButtonBorder,
         contentPadding = ButtonPadding,
     ) {
-        Text(text = stringRes(R.string.show_more))
+        Text(text = stringResource(Res.string.show_more))
     }
 }

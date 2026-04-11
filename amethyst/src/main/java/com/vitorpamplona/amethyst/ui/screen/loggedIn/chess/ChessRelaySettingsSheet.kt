@@ -47,13 +47,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.chess.ChessConfig
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.connected
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import kotlinx.coroutines.flow.map
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Bottom sheet showing relay settings and debug info for chess subscriptions
@@ -279,7 +280,7 @@ private fun RelayRow(
     ) {
         Icon(
             imageVector = Icons.Default.CheckCircle,
-            contentDescription = stringRes(R.string.connected),
+            contentDescription = stringResource(Res.string.connected),
             tint =
                 if (isPreferred) {
                     MaterialTheme.colorScheme.tertiary

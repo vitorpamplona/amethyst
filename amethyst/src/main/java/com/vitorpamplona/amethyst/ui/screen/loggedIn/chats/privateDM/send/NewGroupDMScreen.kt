@@ -74,6 +74,15 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.messages_new_message_subject
+import com.vitorpamplona.amethyst.commons.resources.messages_new_message_subject_caption
+import com.vitorpamplona.amethyst.commons.resources.messages_new_message_to
+import com.vitorpamplona.amethyst.commons.resources.messages_new_message_to_caption
+import com.vitorpamplona.amethyst.commons.resources.record_a_video
+import com.vitorpamplona.amethyst.commons.resources.take_a_picture
+import com.vitorpamplona.amethyst.commons.resources.upload_image
+import com.vitorpamplona.amethyst.commons.resources.zapraiser
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.EncryptedMediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.EncryptedMediaUrlVideo
@@ -116,7 +125,6 @@ import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.ForwardZapTo
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.ForwardZapToButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.upload.SuccessfulUploads
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
@@ -131,6 +139,7 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class, FlowPreview::class)
 @Composable
@@ -278,7 +287,7 @@ fun GroupDMScreenContent(
 
                 if (postViewModel.wantsZapraiser && postViewModel.hasLnAddress()) {
                     ZapRaiserRequest(
-                        stringRes(id = R.string.zapraiser),
+                        stringResource(Res.string.zapraiser),
                         postViewModel,
                     )
                 }
@@ -425,7 +434,7 @@ private fun BottomRowActions(
             ) {
                 Icon(
                     imageVector = Icons.Default.AddPhotoAlternate,
-                    contentDescription = stringRes(id = R.string.upload_image),
+                    contentDescription = stringResource(Res.string.upload_image),
                     modifier = Modifier.height(25.dp),
                     tint = MaterialTheme.colorScheme.placeholderText,
                 )
@@ -444,7 +453,7 @@ private fun BottomRowActions(
             ) {
                 Icon(
                     imageVector = Icons.Outlined.CameraAlt,
-                    contentDescription = stringRes(id = R.string.take_a_picture),
+                    contentDescription = stringResource(Res.string.take_a_picture),
                     modifier = Modifier.height(22.dp),
                     tint = MaterialTheme.colorScheme.placeholderText,
                 )
@@ -463,7 +472,7 @@ private fun BottomRowActions(
             ) {
                 Icon(
                     imageVector = Icons.Default.Videocam,
-                    contentDescription = stringRes(id = R.string.record_a_video),
+                    contentDescription = stringResource(Res.string.record_a_video),
                     modifier = Modifier.height(22.dp),
                     tint = MaterialTheme.colorScheme.placeholderText,
                 )
@@ -525,7 +534,7 @@ fun SendDirectMessageTo(
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(
-                text = stringRes(R.string.messages_new_message_to),
+                text = stringResource(Res.string.messages_new_message_to),
                 fontSize = Font14SP,
                 fontWeight = FontWeight.W500,
             )
@@ -544,7 +553,7 @@ fun SendDirectMessageTo(
                         },
                 placeholder = {
                     Text(
-                        text = stringRes(R.string.messages_new_message_to_caption),
+                        text = stringResource(Res.string.messages_new_message_to_caption),
                         color = MaterialTheme.colorScheme.placeholderText,
                     )
                 },
@@ -567,7 +576,7 @@ fun SendDirectMessageTo(
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(
-                text = stringRes(R.string.messages_new_message_subject),
+                text = stringResource(Res.string.messages_new_message_subject),
                 fontSize = Font14SP,
                 fontWeight = FontWeight.W500,
             )
@@ -578,7 +587,7 @@ fun SendDirectMessageTo(
                 modifier = Modifier.fillMaxWidth(),
                 placeholder = {
                     Text(
-                        text = stringRes(R.string.messages_new_message_subject_caption),
+                        text = stringResource(Res.string.messages_new_message_subject_caption),
                         color = MaterialTheme.colorScheme.placeholderText,
                     )
                 },

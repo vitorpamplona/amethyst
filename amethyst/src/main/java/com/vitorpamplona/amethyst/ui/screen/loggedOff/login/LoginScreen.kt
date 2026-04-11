@@ -70,9 +70,16 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.Amethyst
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.acceptance_of_terms_is_required
+import com.vitorpamplona.amethyst.commons.resources.app_logo
+import com.vitorpamplona.amethyst.commons.resources.don_t_have_an_account
+import com.vitorpamplona.amethyst.commons.resources.hide_password
+import com.vitorpamplona.amethyst.commons.resources.ncryptsec_password
+import com.vitorpamplona.amethyst.commons.resources.show_password
+import com.vitorpamplona.amethyst.commons.resources.temporary_account
 import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.AcceptTerms
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.TorSettingsSetup
@@ -86,6 +93,7 @@ import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
 import com.vitorpamplona.quartz.nip55AndroidSigner.client.isExternalSignerInstalled
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 
 @Preview(device = "spec:width=2160px,height=2340px,dpi=440")
 @Composable
@@ -138,7 +146,7 @@ fun LoginPage(
     ) {
         Image(
             imageVector = CustomHashTagIcons.Amethyst,
-            contentDescription = stringRes(R.string.app_logo),
+            contentDescription = stringResource(Res.string.app_logo),
             modifier = Modifier.size(150.dp),
             contentScale = ContentScale.Inside,
         )
@@ -206,7 +214,7 @@ fun LoginPage(
 
             if (loginViewModel.termsAcceptanceIsRequiredError) {
                 Text(
-                    text = stringRes(R.string.acceptance_of_terms_is_required),
+                    text = stringResource(Res.string.acceptance_of_terms_is_required),
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodySmall,
                 )
@@ -229,7 +237,7 @@ fun LoginPage(
 
         Spacer(modifier = Modifier.height(Size40dp))
 
-        Text(text = stringRes(R.string.don_t_have_an_account))
+        Text(text = stringResource(Res.string.don_t_have_an_account))
 
         Spacer(modifier = Modifier.height(Size20dp))
 
@@ -255,7 +263,7 @@ fun OfferTemporaryAccount(
             onCheckedChange = onCheckedChange,
         )
 
-        Text(stringRes(R.string.temporary_account))
+        Text(stringResource(Res.string.temporary_account))
     }
 }
 
@@ -303,7 +311,7 @@ fun PasswordField(
             ),
         placeholder = {
             Text(
-                text = stringRes(R.string.ncryptsec_password),
+                text = stringResource(Res.string.ncryptsec_password),
                 color = MaterialTheme.colorScheme.placeholderText,
             )
         },
@@ -315,11 +323,9 @@ fun PasswordField(
                             if (showCharsPassword) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
                         contentDescription =
                             if (showCharsPassword) {
-                                stringRes(R.string.show_password)
+                                stringResource(Res.string.show_password)
                             } else {
-                                stringRes(
-                                    R.string.hide_password,
-                                )
+                                stringResource(Res.string.hide_password)
                             },
                     )
                 }

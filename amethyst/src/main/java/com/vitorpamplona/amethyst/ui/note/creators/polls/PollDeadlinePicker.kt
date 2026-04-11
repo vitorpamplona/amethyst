@@ -53,10 +53,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.poll_closing_date_time
+import com.vitorpamplona.amethyst.commons.resources.poll_closing_in
 import com.vitorpamplona.amethyst.ui.note.timeAheadNoDot
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.ShortNotePostViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.utils.TimeUtils
+import org.jetbrains.compose.resources.stringResource
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZoneOffset
@@ -103,10 +106,10 @@ fun PollDeadlinePicker(model: ShortNotePostViewModel) {
             Spacer(Modifier.width(12.dp))
 
             if (model.closedAt < TimeUtils.oneMinuteFromNow()) {
-                Text(stringRes(R.string.poll_closing_date_time) + " " + model.closedAt, style = MaterialTheme.typography.bodyLarge)
+                Text(stringResource(Res.string.poll_closing_date_time) + " " + model.closedAt, style = MaterialTheme.typography.bodyLarge)
             } else {
                 Text(
-                    text = stringRes(R.string.poll_closing_in, timeAheadNoDot(model.closedAt, context)),
+                    text = stringResource(Res.string.poll_closing_in, timeAheadNoDot(model.closedAt, context)),
                     style = MaterialTheme.typography.bodyLarge,
                 )
             }

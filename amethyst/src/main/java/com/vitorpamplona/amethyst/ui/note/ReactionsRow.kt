@@ -103,6 +103,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.boost
+import com.vitorpamplona.amethyst.commons.resources.error_dialog_payment_error
+import com.vitorpamplona.amethyst.commons.resources.fork
+import com.vitorpamplona.amethyst.commons.resources.no_payment_targets_message
+import com.vitorpamplona.amethyst.commons.resources.payment_targets
+import com.vitorpamplona.amethyst.commons.resources.quote
+import com.vitorpamplona.amethyst.commons.resources.sats_to_complete
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.ReactionRowAction
 import com.vitorpamplona.amethyst.model.ReactionRowItem
@@ -188,6 +196,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
+import org.jetbrains.compose.resources.stringResource
 import kotlin.math.roundToInt
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -362,7 +371,7 @@ fun PayReaction(
         ) {
             Icon(
                 imageVector = Icons.Outlined.AccountBalanceWallet,
-                contentDescription = stringRes(R.string.payment_targets),
+                contentDescription = stringResource(Res.string.payment_targets),
                 tint = grayTint,
                 modifier = iconSizeModifier,
             )
@@ -370,14 +379,14 @@ fun PayReaction(
 
         if (expanded) {
             M3ActionDialog(
-                title = stringRes(R.string.payment_targets),
+                title = stringResource(Res.string.payment_targets),
                 onDismiss = { expanded = false },
             ) {
                 M3ActionSection {
                     if (targets.isEmpty()) {
                         M3ActionRow(
                             icon = Icons.Outlined.AccountBalanceWallet,
-                            text = stringRes(R.string.no_payment_targets_message),
+                            text = stringResource(Res.string.no_payment_targets_message),
                             enabled = false,
                             onClick = {},
                         )
@@ -406,7 +415,7 @@ fun PayReaction(
 
         errorMessage?.let { msg ->
             ErrorMessageDialog(
-                title = stringRes(R.string.error_dialog_payment_error),
+                title = stringResource(Res.string.error_dialog_payment_error),
                 textContent = msg,
                 onDismiss = { errorMessage = null },
             )
@@ -519,7 +528,7 @@ fun RenderZapRaiser(
 
             Text(
                 text =
-                    stringRes(id = R.string.sats_to_complete, totalPercentage, zapraiserStatus.left),
+                    stringResource(Res.string.sats_to_complete, totalPercentage, zapraiserStatus.left),
                 modifier = NoSoTinyBorders,
                 // color = MaterialTheme.colorScheme.placeholderText,
                 fontSize = Font14SP,
@@ -1510,7 +1519,7 @@ private fun BoostTypeChoicePopup(
                             containerColor = MaterialTheme.colorScheme.primary,
                         ),
                 ) {
-                    Text(stringRes(R.string.boost), color = Color.White, textAlign = TextAlign.Center)
+                    Text(stringResource(Res.string.boost), color = Color.White, textAlign = TextAlign.Center)
                 }
 
                 Button(
@@ -1522,7 +1531,7 @@ private fun BoostTypeChoicePopup(
                             containerColor = MaterialTheme.colorScheme.primary,
                         ),
                 ) {
-                    Text(stringRes(R.string.quote), color = Color.White, textAlign = TextAlign.Center)
+                    Text(stringResource(Res.string.quote), color = Color.White, textAlign = TextAlign.Center)
                 }
 
                 // removes the option to fork for now because we do not have screens for
@@ -1537,7 +1546,7 @@ private fun BoostTypeChoicePopup(
                                 containerColor = MaterialTheme.colorScheme.primary,
                             ),
                     ) {
-                        Text(stringRes(R.string.fork), color = Color.White, textAlign = TextAlign.Center)
+                        Text(stringResource(Res.string.fork), color = Color.White, textAlign = TextAlign.Center)
                     }
                 }
             }
