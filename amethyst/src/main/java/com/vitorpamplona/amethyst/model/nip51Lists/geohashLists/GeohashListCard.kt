@@ -20,8 +20,6 @@
  */
 package com.vitorpamplona.amethyst.model.nip51Lists.geohashLists
 
-data class GeohashListCard(
-    val relays: List<String>,
-)
+typealias GeohashListCard = com.vitorpamplona.amethyst.commons.model.nip51Lists.geohashLists.GeohashListCard
 
-val EmptyGeohashListCard = GeohashListCard(emptyList())
+val EmptyGeohashListCard = com.vitorpamplona.amethyst.commons.model.nip51Lists.geohashLists.EmptyGeohashListCard

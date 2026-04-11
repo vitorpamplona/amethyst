@@ -20,27 +20,4 @@
  */
 package com.vitorpamplona.amethyst.model.nip72Communities
 
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEventCache
-import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListEvent
-import com.vitorpamplona.quartz.nip72ModCommunities.follow.communities
-import com.vitorpamplona.quartz.nip72ModCommunities.follow.communityIdSet
-import com.vitorpamplona.quartz.nip72ModCommunities.follow.communityIds
-
-class CommunityListDecryptionCache(
-    val signer: NostrSigner,
-) {
-    val cachedPrivateLists = PrivateTagArrayEventCache<CommunityListEvent>(signer)
-
-    fun cachedCommunityIds(event: CommunityListEvent) = cachedPrivateLists.mergeTagListPrecached(event).communityIds()
-
-    fun cachedCommunityIdSet(event: CommunityListEvent) = cachedPrivateLists.mergeTagListPrecached(event).communityIdSet()
-
-    fun cachedCommunities(event: CommunityListEvent) = cachedPrivateLists.mergeTagListPrecached(event).communities()
-
-    suspend fun communityIds(event: CommunityListEvent) = cachedPrivateLists.mergeTagList(event).communityIds()
-
-    suspend fun communityIdSet(event: CommunityListEvent) = cachedPrivateLists.mergeTagList(event).communityIdSet()
-
-    suspend fun communities(event: CommunityListEvent) = cachedPrivateLists.mergeTagList(event).communities()
-}
+typealias CommunityListDecryptionCache = com.vitorpamplona.amethyst.commons.model.nip72Communities.CommunityListDecryptionCache

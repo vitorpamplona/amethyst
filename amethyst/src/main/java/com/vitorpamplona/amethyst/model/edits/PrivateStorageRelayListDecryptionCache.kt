@@ -20,10 +20,4 @@
  */
 package com.vitorpamplona.amethyst.model.edits
 
-import com.vitorpamplona.amethyst.model.nip51Lists.relayLists.GenericRelayListCache
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip37Drafts.privateOutbox.PrivateOutboxRelayListEvent
-
-class PrivateStorageRelayListDecryptionCache(
-    signer: NostrSigner,
-) : GenericRelayListCache<PrivateOutboxRelayListEvent>(signer)
+typealias PrivateStorageRelayListDecryptionCache = com.vitorpamplona.amethyst.commons.model.edits.PrivateStorageRelayListDecryptionCache

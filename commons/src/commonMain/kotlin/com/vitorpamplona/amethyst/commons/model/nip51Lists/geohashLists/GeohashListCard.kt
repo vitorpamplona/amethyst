@@ -18,6 +18,10 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.nip51Lists.blockedRelays
+package com.vitorpamplona.amethyst.commons.model.nip51Lists.geohashLists
 
-typealias BlockedRelayListDecryptionCache = com.vitorpamplona.amethyst.commons.model.nip51Lists.blockedRelays.BlockedRelayListDecryptionCache
+data class GeohashListCard(
+    val relays: List<String>,
+)
+
+val EmptyGeohashListCard = GeohashListCard(emptyList())

@@ -18,6 +18,19 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.nip51Lists.blockedRelays
+package com.vitorpamplona.amethyst.commons.model.nip51Lists.hashtagLists
 
-typealias BlockedRelayListDecryptionCache = com.vitorpamplona.amethyst.commons.model.nip51Lists.blockedRelays.BlockedRelayListDecryptionCache
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEventCache
+import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
+import com.vitorpamplona.quartz.nip51Lists.hashtagList.hashtagSet
+
+class HashtagListDecryptionCache(
+    val signer: NostrSigner,
+) {
+    val cachedPrivateLists = PrivateTagArrayEventCache<HashtagListEvent>(signer)
+
+    fun cachedHashtags(event: HashtagListEvent) = cachedPrivateLists.mergeTagListPrecached(event).hashtagSet()
+
+    suspend fun hashtags(event: HashtagListEvent) = cachedPrivateLists.mergeTagList(event).hashtagSet()
+}

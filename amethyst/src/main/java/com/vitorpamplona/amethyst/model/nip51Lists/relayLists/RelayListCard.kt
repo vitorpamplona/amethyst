@@ -20,12 +20,6 @@
  */
 package com.vitorpamplona.amethyst.model.nip51Lists.relayLists
 
-import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+typealias RelayListCard = com.vitorpamplona.amethyst.commons.model.nip51Lists.relayLists.RelayListCard
 
-@Immutable
-data class RelayListCard(
-    val relays: List<NormalizedRelayUrl>,
-)
-
-val EmptyRelayListCard = RelayListCard(emptyList())
+val EmptyRelayListCard = com.vitorpamplona.amethyst.commons.model.nip51Lists.relayLists.EmptyRelayListCard

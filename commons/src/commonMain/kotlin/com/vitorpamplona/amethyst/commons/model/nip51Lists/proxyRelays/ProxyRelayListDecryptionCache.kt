@@ -18,6 +18,12 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.nip51Lists.blockedRelays
+package com.vitorpamplona.amethyst.commons.model.nip51Lists.proxyRelays
 
-typealias BlockedRelayListDecryptionCache = com.vitorpamplona.amethyst.commons.model.nip51Lists.blockedRelays.BlockedRelayListDecryptionCache
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.relayLists.GenericRelayListCache
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip51Lists.relayLists.ProxyRelayListEvent
+
+class ProxyRelayListDecryptionCache(
+    signer: NostrSigner,
+) : GenericRelayListCache<ProxyRelayListEvent>(signer)

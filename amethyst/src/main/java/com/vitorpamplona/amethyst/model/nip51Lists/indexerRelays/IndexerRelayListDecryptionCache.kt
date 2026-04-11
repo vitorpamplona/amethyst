@@ -20,10 +20,4 @@
  */
 package com.vitorpamplona.amethyst.model.nip51Lists.indexerRelays
 
-import com.vitorpamplona.amethyst.model.nip51Lists.relayLists.GenericRelayListCache
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
-
-class IndexerRelayListDecryptionCache(
-    signer: NostrSigner,
-) : GenericRelayListCache<IndexerRelayListEvent>(signer)
+typealias IndexerRelayListDecryptionCache = com.vitorpamplona.amethyst.commons.model.nip51Lists.indexerRelays.IndexerRelayListDecryptionCache

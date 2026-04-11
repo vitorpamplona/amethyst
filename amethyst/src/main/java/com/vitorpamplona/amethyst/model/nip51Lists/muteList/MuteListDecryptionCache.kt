@@ -20,37 +20,4 @@
  */
 package com.vitorpamplona.amethyst.model.nip51Lists.muteList
 
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEventCache
-import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
-import com.vitorpamplona.quartz.nip51Lists.muteList.mutedUserIdSet
-import com.vitorpamplona.quartz.nip51Lists.muteList.mutedUsers
-import com.vitorpamplona.quartz.nip51Lists.muteList.mutedUsersAndWords
-import com.vitorpamplona.quartz.nip51Lists.muteList.mutedWordSet
-import com.vitorpamplona.quartz.nip51Lists.muteList.mutedWords
-
-class MuteListDecryptionCache(
-    val signer: NostrSigner,
-) {
-    val cachedPrivateLists = PrivateTagArrayEventCache<MuteListEvent>(signer)
-
-    fun cachedUsersAndWords(event: MuteListEvent) = cachedPrivateLists.mergeTagListPrecached(event).mutedUsersAndWords()
-
-    fun cachedUsers(event: MuteListEvent) = cachedPrivateLists.mergeTagListPrecached(event).mutedUsers()
-
-    fun cachedUserIdSet(event: MuteListEvent) = cachedPrivateLists.mergeTagListPrecached(event).mutedUserIdSet()
-
-    fun cachedWords(event: MuteListEvent) = cachedPrivateLists.mergeTagListPrecached(event).mutedWords()
-
-    fun cachedWordSet(event: MuteListEvent) = cachedPrivateLists.mergeTagListPrecached(event).mutedWordSet()
-
-    suspend fun mutedUsersAndWords(event: MuteListEvent) = cachedPrivateLists.mergeTagList(event).mutedUsersAndWords()
-
-    suspend fun mutedUsers(event: MuteListEvent) = cachedPrivateLists.mergeTagList(event).mutedUsers()
-
-    suspend fun mutedUserIdSet(event: MuteListEvent) = cachedPrivateLists.mergeTagList(event).mutedUserIdSet()
-
-    suspend fun mutedWords(event: MuteListEvent) = cachedPrivateLists.mergeTagList(event).mutedWords()
-
-    suspend fun mutedWordSet(event: MuteListEvent) = cachedPrivateLists.mergeTagList(event).mutedWordSet()
-}
+typealias MuteListDecryptionCache = com.vitorpamplona.amethyst.commons.model.nip51Lists.muteList.MuteListDecryptionCache
