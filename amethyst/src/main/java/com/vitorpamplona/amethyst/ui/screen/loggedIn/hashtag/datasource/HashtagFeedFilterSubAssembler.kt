@@ -20,22 +20,5 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.datasource
 
-import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEoseManager
-import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
-import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-
-class HashtagFeedFilterSubAssembler(
-    client: INostrClient,
-    allKeys: () -> Set<HashtagQueryState>,
-) : PerUniqueIdEoseManager<HashtagQueryState, String>(client, allKeys) {
-    override fun updateFilter(
-        key: HashtagQueryState,
-        since: SincePerRelayMap?,
-    ): List<RelayBasedFilter> = filterPostsByHashtags(key.hashtag, key.relays, since)
-
-    /**
-     * Only one key per hashtag.
-     */
-    override fun id(key: HashtagQueryState) = key.lowercaseHashtag
-}
+// Re-export from commons for backwards compatibility
+typealias HashtagFeedFilterSubAssembler = com.vitorpamplona.amethyst.commons.relayClient.assemblers.hashtag.HashtagFeedFilterSubAssembler

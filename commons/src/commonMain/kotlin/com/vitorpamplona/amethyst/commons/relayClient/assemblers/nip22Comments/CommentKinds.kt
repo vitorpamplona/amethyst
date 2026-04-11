@@ -18,8 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.datasource
+package com.vitorpamplona.amethyst.commons.relayClient.assemblers.nip22Comments
 
-// Re-export from commons for backwards compatibility
-typealias HashtagQueryState = com.vitorpamplona.amethyst.commons.relayClient.assemblers.hashtag.HashtagQueryState
-typealias HashtagFilterAssembler = com.vitorpamplona.amethyst.commons.relayClient.assemblers.hashtag.HashtagFilterAssembler
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+
+val CommentKinds = listOf(CommentEvent.KIND)

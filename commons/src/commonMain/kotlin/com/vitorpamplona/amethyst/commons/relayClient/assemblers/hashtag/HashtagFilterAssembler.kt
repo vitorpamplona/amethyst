@@ -18,8 +18,31 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.datasource
+package com.vitorpamplona.amethyst.commons.relayClient.assemblers.hashtag
 
-// Re-export from commons for backwards compatibility
-typealias HashtagQueryState = com.vitorpamplona.amethyst.commons.relayClient.assemblers.hashtag.HashtagQueryState
-typealias HashtagFilterAssembler = com.vitorpamplona.amethyst.commons.relayClient.assemblers.hashtag.HashtagFilterAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+
+// This allows multiple screen to be listening to tags, even the same tag
+class HashtagQueryState(
+    val hashtag: String,
+    val relays: Set<NormalizedRelayUrl>,
+) {
+    val lowercaseHashtag = hashtag.lowercase()
+}
+
+class HashtagFilterAssembler(
+    client: INostrClient,
+) : ComposeSubscriptionManager<HashtagQueryState>() {
+    val group =
+        listOf(
+            HashtagFeedFilterSubAssembler(client, ::allKeys),
+        )
+
+    override fun invalidateKeys() = invalidateFilters()
+
+    override fun invalidateFilters() = group.forEach { it.invalidateFilters() }
+
+    override fun destroy() = group.forEach { it.destroy() }
+}

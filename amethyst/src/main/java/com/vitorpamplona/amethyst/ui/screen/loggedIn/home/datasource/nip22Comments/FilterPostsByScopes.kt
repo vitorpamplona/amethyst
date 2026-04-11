@@ -23,9 +23,9 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip22Comme
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 
-val CommentKinds = listOf(CommentEvent.KIND)
+// Re-export from commons for backwards compatibility
+val CommentKinds = com.vitorpamplona.amethyst.commons.relayClient.assemblers.nip22Comments.CommentKinds
 
 fun filterHomePostsByScopes(
     relay: NormalizedRelayUrl,
