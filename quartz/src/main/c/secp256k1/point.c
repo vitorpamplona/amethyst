@@ -45,6 +45,32 @@ static secp256k1_ge g_odd_table[G_TABLE_SIZE];
 static secp256k1_ge g_lam_table[G_TABLE_SIZE];
 static int tables_initialized = 0;
 
+/* ==================== P-side wNAF Table Cache ==================== */
+/*
+ * Cache P-side affine wNAF tables keyed by pubkey x-coordinate.
+ * In Nostr, the same pubkeys are verified repeatedly (feed from one author).
+ * Building the P-side table costs ~437 field ops (~27% of verify). Caching
+ * skips this entirely on repeat verifications.
+ *
+ * 1024 entries × 16 AffinePoints × 64 bytes ≈ 1MB. Acceptable for mobile.
+ */
+#define P_TABLE_CACHE_SIZE 1024
+#define P_TABLE_CACHE_MASK (P_TABLE_CACHE_SIZE - 1)
+#define P_TABLE_ENTRIES 8 /* 2^(wP-2) for wP=5 */
+
+typedef struct {
+    secp256k1_fe px;                          /* cache key: x-coordinate */
+    secp256k1_ge p_odd[P_TABLE_ENTRIES];      /* affine odd-multiples of P */
+    secp256k1_ge p_lam_odd[P_TABLE_ENTRIES];  /* affine odd-multiples of lambda(P) */
+    int valid;
+} cached_p_table;
+
+static cached_p_table p_table_cache[P_TABLE_CACHE_SIZE];
+
+static int p_cache_slot(const secp256k1_fe *px) {
+    return ((int)(px->d[0] ^ (px->d[1] << 3))) & P_TABLE_CACHE_MASK;
+}
+
 /* ==================== Point Operations ==================== */
 
 void gej_set_infinity(secp256k1_gej *r) {
@@ -650,27 +676,43 @@ void ecmult_double_g(secp256k1_gej *r, const secp256k1_scalar *s_scalar,
     wnaf_encode(wnaf_e1, 145, &e_split.k1, wP);
     wnaf_encode(wnaf_e2, 145, &e_split.k2, wP);
 
-    /* Build P-side tables */
-    secp256k1_gej pj;
-    gej_set_ge(&pj, p);
-    secp256k1_gej p2j;
-    gej_double(&p2j, &pj);
+    /* P-side tables: check cache first, build only on miss */
+    const secp256k1_ge *p_odd;
+    const secp256k1_ge *p_lam_odd;
+    int slot = p_cache_slot(&p->x);
+    cached_p_table *cached = &p_table_cache[slot];
 
-    secp256k1_gej p_odd_jac[8], p_lam_jac[8];
-    p_odd_jac[0] = pj;
-    for (int i = 1; i < p_table_size; i++) {
-        gej_add(&p_odd_jac[i], &p_odd_jac[i-1], &p2j);
-    }
-    for (int i = 0; i < p_table_size; i++) {
-        fe_mul(&p_lam_jac[i].x, &p_odd_jac[i].x, &GLV_BETA);
-        p_lam_jac[i].y = p_odd_jac[i].y;
-        p_lam_jac[i].z = p_odd_jac[i].z;
-        p_lam_jac[i].infinity = 0;
-    }
+    if (cached->valid && fe_equal(&cached->px, &p->x)) {
+        /* Cache hit — use cached tables directly */
+        p_odd = cached->p_odd;
+        p_lam_odd = cached->p_lam_odd;
+    } else {
+        /* Cache miss — build tables and store in cache */
+        secp256k1_gej pj;
+        gej_set_ge(&pj, p);
+        secp256k1_gej p2j;
+        gej_double(&p2j, &pj);
 
-    secp256k1_ge p_odd[8], p_lam_odd[8];
-    batch_to_affine(p_odd, p_odd_jac, p_table_size);
-    batch_to_affine(p_lam_odd, p_lam_jac, p_table_size);
+        secp256k1_gej p_odd_jac[8], p_lam_jac[8];
+        p_odd_jac[0] = pj;
+        for (int i = 1; i < p_table_size; i++) {
+            gej_add(&p_odd_jac[i], &p_odd_jac[i-1], &p2j);
+        }
+        for (int i = 0; i < p_table_size; i++) {
+            fe_mul(&p_lam_jac[i].x, &p_odd_jac[i].x, &GLV_BETA);
+            p_lam_jac[i].y = p_odd_jac[i].y;
+            p_lam_jac[i].z = p_odd_jac[i].z;
+            p_lam_jac[i].infinity = 0;
+        }
+
+        batch_to_affine(cached->p_odd, p_odd_jac, p_table_size);
+        batch_to_affine(cached->p_lam_odd, p_lam_jac, p_table_size);
+        cached->px = p->x;
+        cached->valid = 1;
+
+        p_odd = cached->p_odd;
+        p_lam_odd = cached->p_lam_odd;
+    }
 
     /* G tables are pre-computed */
     const secp256k1_ge *g_odd = g_odd_table;
