@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.ui.actions.mediaServers
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.ui.actions.mediaServers.ServerName
+import com.vitorpamplona.amethyst.commons.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.utils.Log

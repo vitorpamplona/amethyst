@@ -21,6 +21,12 @@
 package com.vitorpamplona.amethyst.ui.components.toasts
 
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.ui.components.toasts.ActionableStringToastMsg
+import com.vitorpamplona.amethyst.commons.ui.components.toasts.ResourceToastMsg
+import com.vitorpamplona.amethyst.commons.ui.components.toasts.StringToastMsg
+import com.vitorpamplona.amethyst.commons.ui.components.toasts.ThrowableToastMsg
+import com.vitorpamplona.amethyst.commons.ui.components.toasts.ThrowableToastMsg2
+import com.vitorpamplona.amethyst.commons.ui.components.toasts.ToastMsg
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.toasts.multiline.MultiErrorToastMsg
 import com.vitorpamplona.amethyst.ui.components.toasts.multiline.UserBasedErrorMessage

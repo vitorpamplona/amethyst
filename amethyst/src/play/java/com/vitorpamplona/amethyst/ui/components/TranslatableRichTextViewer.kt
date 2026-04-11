@@ -52,6 +52,9 @@ import androidx.compose.ui.unit.dp
 import androidx.core.os.ConfigurationCompat
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.ui.components.TranslationConfig
+import com.vitorpamplona.amethyst.commons.ui.components.appendLink
+import com.vitorpamplona.amethyst.commons.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.service.lang.LanguageTranslatorService
 import com.vitorpamplona.amethyst.service.lang.TranslationsCache
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
@@ -59,7 +62,6 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
-import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.MaxWidthPaddingTop5dp
 import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import kotlinx.coroutines.Dispatchers
@@ -140,14 +142,16 @@ private fun RenderTextWithTranslateOptions(
     Column {
         displayText(toBeViewed)
 
+        val sl = translatedTextState.sourceLang
+        val tl = translatedTextState.targetLang
         if (
-            translatedTextState.sourceLang != null &&
-            translatedTextState.targetLang != null &&
-            translatedTextState.sourceLang != translatedTextState.targetLang
+            sl != null &&
+            tl != null &&
+            sl != tl
         ) {
             TranslationMessage(
-                translatedTextState.sourceLang,
-                translatedTextState.targetLang,
+                sl,
+                tl,
                 translationMessageModifier,
                 accountViewModel,
             ) {

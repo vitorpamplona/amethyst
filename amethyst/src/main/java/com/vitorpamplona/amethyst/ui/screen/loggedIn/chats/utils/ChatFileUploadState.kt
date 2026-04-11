@@ -26,9 +26,9 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.commons.ui.actions.mediaServers.ServerName
+import com.vitorpamplona.amethyst.commons.ui.actions.uploads.MediaUploadTracker
 import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
-import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
-import com.vitorpamplona.amethyst.ui.actions.uploads.MediaUploadTracker
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
 import kotlinx.collections.immutable.ImmutableList

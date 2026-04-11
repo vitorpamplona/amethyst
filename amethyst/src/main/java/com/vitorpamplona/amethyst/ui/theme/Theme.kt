@@ -61,6 +61,10 @@ import com.halilibo.richtext.ui.resolveDefaults
 import com.patrykandpatrick.vico.compose.common.VicoTheme
 import com.patrykandpatrick.vico.compose.common.VicoTheme.CandlestickCartesianLayerColors
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.ui.theme.DefaultHeadingStyle
+import com.vitorpamplona.amethyst.commons.ui.theme.DefaultParagraphSpacing
+import com.vitorpamplona.amethyst.commons.ui.theme.Font14SP
+import com.vitorpamplona.amethyst.commons.ui.theme.Typography
 import com.vitorpamplona.amethyst.model.ThemeType
 
 private val DarkColorPalette =

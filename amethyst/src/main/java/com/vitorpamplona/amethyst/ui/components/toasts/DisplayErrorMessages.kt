@@ -22,6 +22,11 @@ package com.vitorpamplona.amethyst.ui.components.toasts
 
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.ui.components.toasts.ActionableStringToastMsg
+import com.vitorpamplona.amethyst.commons.ui.components.toasts.ResourceToastMsg
+import com.vitorpamplona.amethyst.commons.ui.components.toasts.StringToastMsg
+import com.vitorpamplona.amethyst.commons.ui.components.toasts.ThrowableToastMsg
+import com.vitorpamplona.amethyst.commons.ui.components.toasts.ThrowableToastMsg2
 import com.vitorpamplona.amethyst.ui.actions.InformationDialog
 import com.vitorpamplona.amethyst.ui.components.toasts.multiline.MultiErrorToastMsg
 import com.vitorpamplona.amethyst.ui.components.toasts.multiline.MultiUserErrorMessageDialog
@@ -40,10 +45,11 @@ fun DisplayErrorMessages(
     openDialogMsg.value?.let { obj ->
         when (obj) {
             is ResourceToastMsg -> {
-                if (obj.params != null) {
+                val p = obj.params
+                if (p != null) {
                     InformationDialog(
                         stringRes(obj.titleResId),
-                        stringRes(obj.resourceId, *obj.params),
+                        stringRes(obj.resourceId, *p),
                     ) {
                         toastManager.clearToasts()
                     }

@@ -21,8 +21,8 @@
 package com.vitorpamplona.amethyst.ui.components.toasts.multiline
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.amethyst.commons.ui.components.toasts.ToastMsg
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.ui.components.toasts.ToastMsg
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 
