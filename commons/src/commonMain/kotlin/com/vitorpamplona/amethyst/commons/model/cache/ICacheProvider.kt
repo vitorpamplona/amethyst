@@ -29,6 +29,9 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.hints.HintIndexer
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 
 /**
  * Cache provider interface for accessing cached Notes, Users, and Channels.
@@ -184,4 +187,10 @@ interface ICacheProvider {
      * Returns null if the key cannot be parsed as an Address.
      */
     fun checkGetOrCreateAddressableNote(key: String): AddressableNote? = null
+
+    /**
+     * Observes notes matching a filter, returning a flow that emits updated lists.
+     * Used by VanishRequestsState and similar reactive consumers.
+     */
+    fun observeNotes(filter: Filter): Flow<List<Note>> = emptyFlow()
 }

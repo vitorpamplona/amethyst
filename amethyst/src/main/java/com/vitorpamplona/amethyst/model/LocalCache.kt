@@ -343,7 +343,7 @@ object LocalCache : ILocalCache, ICacheProvider {
         return limitedSet.toSortedSet(CreatedAtIdHexComparator)
     }
 
-    fun observeNotes(filter: Filter): Flow<List<Note>> =
+    override fun observeNotes(filter: Filter): Flow<List<Note>> =
         callbackFlow {
             val newFilter =
                 NoteListMatchingFilter(filter, this@LocalCache::filter) {
