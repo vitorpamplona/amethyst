@@ -20,10 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.components
 
-import androidx.compose.foundation.Image
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Face
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,13 +27,11 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.DefaultAlpha
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
-import coil3.compose.AsyncImage
-import com.vitorpamplona.amethyst.commons.robohash.CachedRobohash
-import com.vitorpamplona.amethyst.commons.ui.components.ProfilePictureUrl
-import com.vitorpamplona.amethyst.ui.theme.isLight
-import com.vitorpamplona.amethyst.ui.theme.onBackgroundColorFilter
+import com.vitorpamplona.amethyst.commons.ui.components.RobohashAsyncImage as CommonsRobohashAsyncImage
+import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage as CommonsRobohashFallbackAsyncImage
+
+// Backward-compat wrappers: RobohashAsyncImage moved to commons
 
 @Composable
 fun RobohashAsyncImage(
@@ -45,22 +39,7 @@ fun RobohashAsyncImage(
     modifier: Modifier = Modifier,
     contentDescription: String? = null,
     loadRobohash: Boolean,
-) {
-    if (loadRobohash) {
-        Image(
-            imageVector = CachedRobohash.get(robot, MaterialTheme.colorScheme.isLight),
-            contentDescription = contentDescription,
-            modifier = modifier,
-        )
-    } else {
-        Image(
-            imageVector = Icons.Default.Face,
-            contentDescription = contentDescription,
-            colorFilter = MaterialTheme.colorScheme.onBackgroundColorFilter,
-            modifier = modifier,
-        )
-    }
-}
+) = CommonsRobohashAsyncImage(robot, modifier, contentDescription, loadRobohash)
 
 @Composable
 fun RobohashFallbackAsyncImage(
@@ -75,55 +54,16 @@ fun RobohashFallbackAsyncImage(
     filterQuality: FilterQuality = DrawScope.DefaultFilterQuality,
     loadProfilePicture: Boolean,
     loadRobohash: Boolean,
-) {
-    if (model != null && loadProfilePicture) {
-        val painter =
-            if (loadRobohash) {
-                rememberVectorPainter(
-                    image = CachedRobohash.get(robot, MaterialTheme.colorScheme.isLight),
-                )
-            } else {
-                forwardingPainter(
-                    painter =
-                        rememberVectorPainter(
-                            image = Icons.Default.Face,
-                        ),
-                    colorFilter = MaterialTheme.colorScheme.onBackgroundColorFilter,
-                )
-            }
-
-        AsyncImage(
-            model = ProfilePictureUrl(model),
-            contentDescription = contentDescription,
-            modifier = modifier,
-            placeholder = painter,
-            fallback = painter,
-            error = painter,
-            alignment = alignment,
-            contentScale = contentScale,
-            alpha = alpha,
-            colorFilter = colorFilter,
-            filterQuality = filterQuality,
-        )
-    } else {
-        if (loadRobohash) {
-            Image(
-                imageVector = CachedRobohash.get(robot, MaterialTheme.colorScheme.isLight),
-                contentDescription = contentDescription,
-                modifier = modifier,
-                alignment = alignment,
-                contentScale = contentScale,
-                colorFilter = colorFilter,
-            )
-        } else {
-            Image(
-                imageVector = Icons.Default.Face,
-                contentDescription = contentDescription,
-                colorFilter = MaterialTheme.colorScheme.onBackgroundColorFilter,
-                modifier = modifier,
-                alignment = alignment,
-                contentScale = contentScale,
-            )
-        }
-    }
-}
+) = CommonsRobohashFallbackAsyncImage(
+    robot,
+    model,
+    contentDescription,
+    modifier,
+    alignment,
+    contentScale,
+    alpha,
+    colorFilter,
+    filterQuality,
+    loadProfilePicture,
+    loadRobohash,
+)

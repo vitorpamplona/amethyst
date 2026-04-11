@@ -20,66 +20,28 @@
  */
 package com.vitorpamplona.amethyst.ui.components
 
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.semantics.Role
-import com.vitorpamplona.amethyst.ui.theme.ripple24dp
+import com.vitorpamplona.amethyst.commons.ui.components.ClickableBox as CommonsClickableBox
+import com.vitorpamplona.amethyst.commons.ui.components.ToggleableBox as CommonsToggleableBox
+
+// Backward-compat wrappers: ClickableBox, ToggleableBox moved to commons
 
 @Composable
 fun ClickableBox(
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
     content: @Composable BoxScope.() -> Unit,
-) {
-    Box(
-        modifier.clickable(
-            role = Role.Button,
-            interactionSource = remember { MutableInteractionSource() },
-            indication = ripple24dp,
-            onClick = onClick,
-        ),
-        contentAlignment = Alignment.Center,
-        content = content,
-    )
-}
+) = CommonsClickableBox(modifier, onClick, content)
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ClickableBox(
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
     content: @Composable () -> Unit,
-) {
-    Box(
-        modifier.combinedClickable(
-            role = Role.Button,
-            interactionSource = remember { MutableInteractionSource() },
-            indication = ripple24dp,
-            onClick = onClick,
-            onLongClick = onLongClick,
-        ),
-        contentAlignment = Alignment.Center,
-    ) {
-        content()
-    }
-}
+) = CommonsClickableBox(modifier, onClick, onLongClick, content)
 
 @Composable
 fun ToggleableBox(
@@ -87,31 +49,4 @@ fun ToggleableBox(
     isActive: Boolean,
     onClick: () -> Unit,
     content: @Composable (Boolean) -> Unit,
-) {
-    // Animation for the button scale
-    val scale by animateFloatAsState(
-        targetValue = if (isActive) 1.5f else 1.0f,
-        animationSpec = tween(durationMillis = 150),
-    )
-
-    // Animation for the button color
-    val backgroundColor by animateColorAsState(
-        targetValue = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.background,
-        animationSpec = tween(durationMillis = 150),
-    )
-
-    Box(
-        modifier
-            .scale(scale)
-            .background(backgroundColor, CircleShape)
-            .clickable(
-                role = Role.Button,
-                interactionSource = remember { MutableInteractionSource() },
-                indication = ripple24dp,
-                onClick = onClick,
-            ),
-        contentAlignment = Alignment.Center,
-    ) {
-        content(isActive)
-    }
-}
+) = CommonsToggleableBox(modifier, isActive, onClick, content)

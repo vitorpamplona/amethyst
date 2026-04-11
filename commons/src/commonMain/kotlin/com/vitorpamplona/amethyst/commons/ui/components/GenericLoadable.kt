@@ -18,25 +18,21 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.components
+package com.vitorpamplona.amethyst.commons.ui.components
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.commons.preview.UrlInfoItem
-
-// Kept at original location for backward compatibility.
-// Canonical version: com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
 
 @Immutable
-sealed class UrlPreviewState {
-    @Immutable object Loading : UrlPreviewState()
+sealed class GenericLoadable<T> {
+    @Immutable class Loading<T> : GenericLoadable<T>()
 
-    @Immutable class Loaded(
-        val previewInfo: UrlInfoItem,
-    ) : UrlPreviewState()
+    @Immutable class Loaded<T>(
+        val loaded: T,
+    ) : GenericLoadable<T>()
 
-    @Immutable object Empty : UrlPreviewState()
+    @Immutable class Empty<T> : GenericLoadable<T>()
 
-    @Immutable class Error(
+    @Immutable class Error<T>(
         val errorMessage: String,
-    ) : UrlPreviewState()
+    ) : GenericLoadable<T>()
 }

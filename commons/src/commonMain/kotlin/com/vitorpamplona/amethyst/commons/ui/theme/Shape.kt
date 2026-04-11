@@ -23,7 +23,9 @@ package com.vitorpamplona.amethyst.commons.ui.theme
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ripple
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -33,3 +35,13 @@ val StdVertSpacer = Modifier.height(5.dp)
 val ButtonBorder = RoundedCornerShape(20.dp)
 val ButtonPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
 val Font14SP = 14.sp
+
+val QuoteBorder = RoundedCornerShape(15.dp)
+
+val Size20dp = 20.dp
+val Size24dp = 24.dp
+val Size55dp = 55.dp
+
+val Size20Modifier = Modifier.size(20.dp)
+
+val ripple24dp = ripple(bounded = false, radius = Size24dp)

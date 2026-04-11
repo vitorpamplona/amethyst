@@ -18,13 +18,10 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.components
+package com.vitorpamplona.amethyst.commons.ui.components
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.commons.preview.UrlInfoItem
-
-// Kept at original location for backward compatibility.
-// Canonical version: com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
 
 @Immutable
 sealed class UrlPreviewState {

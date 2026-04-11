@@ -22,6 +22,9 @@ package com.vitorpamplona.amethyst.ui.components
 
 import androidx.compose.runtime.Immutable
 
+// Kept at original location for backward compatibility.
+// Canonical version: com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
+
 @Immutable
 sealed class GenericLoadable<T> {
     @Immutable class Loading<T> : GenericLoadable<T>()
