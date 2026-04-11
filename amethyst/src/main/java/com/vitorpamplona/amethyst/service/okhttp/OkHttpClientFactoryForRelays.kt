@@ -37,6 +37,7 @@ class OkHttpClientFactoryForRelays(
         const val DEFAULT_IS_MOBILE: Boolean = false
         const val DEFAULT_TIMEOUT_ON_WIFI_SECS: Int = 10
         const val DEFAULT_TIMEOUT_ON_MOBILE_SECS: Int = 30
+        const val WEBSOCKET_PING_INTERVAL_SECS: Long = 120
 
         private fun isEmulator(): Boolean =
             Build.FINGERPRINT.startsWith("generic") ||
@@ -76,10 +77,16 @@ class OkHttpClientFactoryForRelays(
             .addInterceptor(DefaultContentTypeInterceptor(userAgent))
             .build()
 
+    private var lastProxy: Proxy? = null
+
     fun buildHttpClient(
         proxy: Proxy?,
         timeoutSeconds: Int,
     ): OkHttpClient {
+        if (proxy != lastProxy) {
+            rootClient.connectionPool.evictAll()
+            lastProxy = proxy
+        }
         val seconds = if (proxy != null) timeoutSeconds * 3 else timeoutSeconds
         return rootClient
             .newBuilder()
@@ -87,6 +94,7 @@ class OkHttpClientFactoryForRelays(
             .connectTimeout(Duration.ofSeconds(seconds.toLong()))
             .readTimeout(Duration.ofSeconds(seconds.toLong() * 3))
             .writeTimeout(Duration.ofSeconds(seconds.toLong() * 3))
+            .pingInterval(Duration.ofSeconds(WEBSOCKET_PING_INTERVAL_SECS))
             .build()
     }
 
