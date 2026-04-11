@@ -8,6 +8,7 @@
  */
 #include <jni.h>
 #include "secp256k1_c.h"
+#include "sha256.h"
 #include <string.h>
 #include <stdlib.h>
 
