@@ -18,14 +18,10 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.model.location
+package com.vitorpamplona.amethyst.commons.model.nwc
 
-sealed class LocationResult {
-    data class Success(
-        val geoHash: String,
-    ) : LocationResult()
-
-    data object LackPermission : LocationResult()
-
-    data object Loading : LocationResult()
-}
+/**
+ * Platform-agnostic marker interface for NWC payment filter assemblers.
+ * Used as a type parameter in Account's constructor lambda.
+ */
+interface INWCPaymentFilterAssembler

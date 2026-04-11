@@ -21,11 +21,11 @@
 package com.vitorpamplona.amethyst.model.accountsCache
 
 import android.content.ContentResolver
+import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.marmot.AndroidMlsGroupStateStore
-import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentFilterAssembler
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
@@ -47,7 +47,7 @@ import kotlinx.coroutines.flow.update
 import java.io.File
 
 class AccountCacheState(
-    val geolocationFlow: () -> StateFlow<LocationState.LocationResult>,
+    val geolocationFlow: () -> StateFlow<LocationResult>,
     val nwcFilterAssembler: () -> NWCPaymentFilterAssembler,
     val contentResolverFn: () -> ContentResolver,
     val otsResolverBuilder: () -> OtsResolver,
@@ -121,6 +121,7 @@ class AccountCacheState(
                         },
                 ),
             mlsGroupStateStore = mlsStore,
+            accountPersistence = com.vitorpamplona.amethyst.model.persistence.AndroidAccountPersistence,
         ).also { newAccount ->
             accounts.update { existingAccounts ->
                 existingAccounts.plus(Pair(signer.pubKey, newAccount))

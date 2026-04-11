@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
 import com.vitorpamplona.amethyst.commons.call.CallManager
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
+import com.vitorpamplona.amethyst.commons.model.processor.IEventProcessor
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -54,7 +55,7 @@ import kotlinx.coroutines.CancellationException
 class EventProcessor(
     private val account: Account,
     private val cache: LocalCache,
-) {
+) : IEventProcessor {
     private val chatHandler = ChatHandler(account.chatroomList)
     private val draftHandler = DraftEventHandler(account, cache)
 
@@ -130,7 +131,7 @@ class EventProcessor(
         }
     }
 
-    suspend fun runNew(newNotes: Set<Note>) {
+    override suspend fun runNew(newNotes: Set<Note>) {
         try {
             newNotes.forEach { consume(it) }
             handleDeletedDrafts(newNotes)
@@ -140,7 +141,7 @@ class EventProcessor(
         }
     }
 
-    suspend fun runDeleted(notes: Set<Note>) {
+    override suspend fun runDeleted(notes: Set<Note>) {
         try {
             notes.forEach { delete(it) }
         } catch (e: Exception) {

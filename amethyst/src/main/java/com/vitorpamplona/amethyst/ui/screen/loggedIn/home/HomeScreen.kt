@@ -57,11 +57,11 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.TopFilter
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
+import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.service.OnlineChecker
-import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.zonedDrawerSwipe
 import com.vitorpamplona.amethyst.ui.feeds.ChannelFeedContentState
@@ -247,13 +247,13 @@ fun HomeScreenFloatingButton(
                 .collectAsStateWithLifecycle()
 
             when (val myLocation = location) {
-                is LocationState.LocationResult.Success -> {
-                    NewGeoPostButton(myLocation.geoHash.toString(), accountViewModel, nav)
+                is LocationResult.Success -> {
+                    NewGeoPostButton(myLocation.geoHash, accountViewModel, nav)
                 }
 
-                is LocationState.LocationResult.LackPermission -> { }
+                is LocationResult.LackPermission -> { }
 
-                is LocationState.LocationResult.Loading -> { }
+                is LocationResult.Loading -> { }
             }
         }
 

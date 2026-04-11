@@ -20,11 +20,12 @@
  */
 package com.vitorpamplona.amethyst.ui.note.creators.location
 
+import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.service.location.LocationState
 import kotlinx.coroutines.flow.StateFlow
 
 interface ILocationGrabber {
     fun locationManager(): LocationState
 
-    fun locationFlow(): StateFlow<LocationState.LocationResult>
+    fun locationFlow(): StateFlow<LocationResult>
 }

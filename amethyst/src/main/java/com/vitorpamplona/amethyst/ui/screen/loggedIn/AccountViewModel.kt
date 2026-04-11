@@ -46,6 +46,7 @@ import com.vitorpamplona.amethyst.commons.compose.GenericBaseCache
 import com.vitorpamplona.amethyst.commons.compose.GenericBaseCacheAsync
 import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
+import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.commons.model.observables.CreatedAtComparator
@@ -71,7 +72,6 @@ import com.vitorpamplona.amethyst.service.cashu.CashuToken
 import com.vitorpamplona.amethyst.service.cashu.melt.MeltProcessor
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
-import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.RelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentFilterAssembler
 import com.vitorpamplona.amethyst.ui.actions.Dao
@@ -2010,7 +2010,7 @@ fun mockAccountViewModel(): AccountViewModel {
         Account(
             settings = AccountSettings(keyPair),
             signer = NostrSignerInternal(keyPair),
-            geolocationFlow = { MutableStateFlow<LocationState.LocationResult>(LocationState.LocationResult.Loading) },
+            geolocationFlow = { MutableStateFlow<LocationResult>(LocationResult.Loading) },
             nwcFilterAssembler = { nwcFilters },
             otsResolverBuilder = { EmptyOtsResolverBuilder.build() },
             cache = LocalCache,
@@ -2061,7 +2061,7 @@ fun mockVitorAccountViewModel(): AccountViewModel {
         Account(
             settings = AccountSettings(keyPair),
             signer = NostrSignerInternal(keyPair),
-            geolocationFlow = { MutableStateFlow<LocationState.LocationResult>(LocationState.LocationResult.Loading) },
+            geolocationFlow = { MutableStateFlow<LocationResult>(LocationResult.Loading) },
             nwcFilterAssembler = { nwcFilters },
             otsResolverBuilder = { EmptyOtsResolverBuilder.build() },
             cache = LocalCache,

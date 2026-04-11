@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.service.location
 
 import android.content.Context
+import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeohashPrecision
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
@@ -43,16 +44,6 @@ class LocationState(
         const val MIN_DISTANCE: Float = 100.0f
     }
 
-    sealed class LocationResult {
-        data class Success(
-            val geoHash: GeoHash,
-        ) : LocationResult()
-
-        object LackPermission : LocationResult()
-
-        object Loading : LocationResult()
-    }
-
     private var hasLocationPermission = MutableStateFlow(false)
     private var latestLocation: LocationResult = LocationResult.Loading
 
@@ -72,7 +63,7 @@ class LocationState(
                         LocationFlow(context)
                             .get(MIN_TIME, MIN_DISTANCE)
                             .map {
-                                LocationResult.Success(it.toGeoHash(GeohashPrecision.KM_5_X_5.digits)) as LocationResult
+                                LocationResult.Success(it.toGeoHash(GeohashPrecision.KM_5_X_5.digits).toString()) as LocationResult
                             }.onEach {
                                 latestLocation = it
                             }.catch { e ->

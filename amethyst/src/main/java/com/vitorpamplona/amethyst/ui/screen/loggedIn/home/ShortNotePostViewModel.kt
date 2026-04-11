@@ -39,6 +39,7 @@ import com.vitorpamplona.amethyst.commons.compose.currentWord
 import com.vitorpamplona.amethyst.commons.compose.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.compose.replaceCurrentWord
 import com.vitorpamplona.amethyst.commons.compose.setTextAndPlaceCursorAtBeginning
+import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState.EmojiMedia
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.BooleanType
@@ -293,7 +294,7 @@ open class ShortNotePostViewModel :
 
     // GeoHash
     var wantsToAddGeoHash by mutableStateOf(false)
-    var location: StateFlow<LocationState.LocationResult>? = null
+    var location: StateFlow<LocationResult>? = null
     var wantsExclusiveGeoPost by mutableStateOf(false)
 
     // ZapRaiser
@@ -926,7 +927,7 @@ open class ShortNotePostViewModel :
 
         val zapReceiver = if (wantsForwardZapTo) forwardZapTo.value.toZapSplitSetup() else null
 
-        val geoHash = if (wantsToAddGeoHash) (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString() else null
+        val geoHash = if (wantsToAddGeoHash) (location?.value as? LocationResult.Success)?.geoHash else null
         val localZapRaiserAmount = if (wantsZapRaiser) zapRaiserAmount.value else null
 
         val emojis = findEmoji(tagger.message, account.emoji.myEmojis.value)
@@ -1469,7 +1470,7 @@ open class ShortNotePostViewModel :
         }
     }
 
-    override fun locationFlow(): StateFlow<LocationState.LocationResult> {
+    override fun locationFlow(): StateFlow<LocationResult> {
         if (location == null) {
             location = locationManager().geohashStateFlow
         }

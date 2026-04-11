@@ -21,13 +21,13 @@
 package com.vitorpamplona.amethyst.model
 
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.BuildConfig
-import com.vitorpamplona.amethyst.LocalPreferences
+import com.vitorpamplona.amethyst.commons.debug.logTime
 import com.vitorpamplona.amethyst.commons.marmot.MarmotManager
 import com.vitorpamplona.amethyst.commons.model.IAccount
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatListState
+import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.model.nip18Reposts.RepostAction
 import com.vitorpamplona.amethyst.commons.model.nip25Reactions.ReactionAction
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
@@ -36,8 +36,10 @@ import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatListS
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.commons.model.nip38UserStatuses.UserStatusAction
 import com.vitorpamplona.amethyst.commons.model.nip56Reports.ReportAction
+import com.vitorpamplona.amethyst.commons.model.persistence.AccountPersistence
+import com.vitorpamplona.amethyst.commons.model.uploads.IFileHeader
+import com.vitorpamplona.amethyst.commons.platform.AppVersion
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
-import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.model.edits.PrivateStorageRelayListDecryptionCache
 import com.vitorpamplona.amethyst.model.edits.PrivateStorageRelayListState
 import com.vitorpamplona.amethyst.model.localRelays.ForwardKind0ToLocalRelayState
@@ -103,9 +105,7 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.OutboxLoaderState
 import com.vitorpamplona.amethyst.model.trustedAssertions.TrustProviderListDecryptionCache
 import com.vitorpamplona.amethyst.model.trustedAssertions.TrustProviderListState
-import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentFilterAssembler
-import com.vitorpamplona.amethyst.service.uploads.FileHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.EventProcessor
 import com.vitorpamplona.quartz.experimental.bounties.BountyAddValueEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
@@ -227,6 +227,7 @@ import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 import com.vitorpamplona.quartz.nipB0WebBookmarks.WebBookmarkEvent
+import com.vitorpamplona.quartz.utils.BigDecimal
 import com.vitorpamplona.quartz.utils.DualCase
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.containsAny
@@ -241,7 +242,6 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.math.BigDecimal
 import kotlin.coroutines.cancellation.CancellationException
 
 @OptIn(DelicateCoroutinesApi::class)
@@ -249,13 +249,14 @@ import kotlin.coroutines.cancellation.CancellationException
 class Account(
     val settings: AccountSettings = AccountSettings(KeyPair()),
     override val signer: NostrSigner,
-    val geolocationFlow: () -> StateFlow<LocationState.LocationResult>,
+    val geolocationFlow: () -> StateFlow<LocationResult>,
     val nwcFilterAssembler: () -> NWCPaymentFilterAssembler,
     val otsResolverBuilder: () -> OtsResolver,
     val cache: LocalCache,
     val client: INostrClient,
     val scope: CoroutineScope,
     val mlsGroupStateStore: MlsGroupStateStore? = null,
+    val accountPersistence: AccountPersistence? = null,
 ) : IAccount {
     private var userProfileCache: User? = null
 
@@ -1093,7 +1094,7 @@ class Account(
 
     suspend fun createNip95(
         byteArray: ByteArray,
-        headerInfo: FileHeader,
+        headerInfo: IFileHeader,
         alt: String?,
         contentWarningReason: String?,
     ): Pair<FileStorageEvent, FileStorageHeaderEvent> {
@@ -1106,7 +1107,7 @@ class Account(
 
                 headerInfo.mimeType?.let { mimeType(it) }
                 headerInfo.dim?.let { dimension(it) }
-                headerInfo.blurHash?.let { blurhash(it.blurhash) }
+                headerInfo.blurHashCode?.let { blurhash(it) }
 
                 contentWarningReason?.let { contentWarning(contentWarningReason) }
             }
@@ -1184,7 +1185,7 @@ class Account(
     }
 
     suspend fun sendAllAsOnePictureEvent(
-        urlHeaderInfo: Map<String, FileHeader>,
+        urlHeaderInfo: Map<String, IFileHeader>,
         caption: String?,
         contentWarningReason: String?,
     ) {
@@ -1193,7 +1194,7 @@ class Account(
                 PictureMeta(
                     it.key,
                     it.value.mimeType,
-                    it.value.blurHash?.blurhash,
+                    it.value.blurHashCode,
                     it.value.dim,
                     caption,
                     it.value.hash,
@@ -1224,7 +1225,7 @@ class Account(
     suspend fun sendHeader(
         url: String,
         magnetUri: String?,
-        headerInfo: FileHeader,
+        headerInfo: IFileHeader,
         alt: String?,
         contentWarningReason: String?,
         originalHash: String? = null,
@@ -1245,7 +1246,7 @@ class Account(
                     pictureIMeta(
                         url,
                         headerInfo.mimeType,
-                        headerInfo.blurHash?.blurhash,
+                        headerInfo.blurHashCode,
                         headerInfo.dim,
                         headerInfo.hash,
                         headerInfo.size,
@@ -1258,18 +1259,19 @@ class Account(
                     contentWarningReason?.let { contentWarning(contentWarningReason) }
                 }
             } else if (isVideo && headerInfo.dim != null) {
+                val dim = headerInfo.dim!!
                 val videoMeta =
                     VideoMeta(
                         url = url,
                         hash = headerInfo.hash,
                         size = headerInfo.size,
                         mimeType = headerInfo.mimeType,
-                        dimension = headerInfo.dim,
-                        blurhash = headerInfo.blurHash?.blurhash,
+                        dimension = dim,
+                        blurhash = headerInfo.blurHashCode,
                         alt = alt,
                     )
 
-                if (headerInfo.dim.height > headerInfo.dim.width) {
+                if (dim.height > dim.width) {
                     VideoShortEvent.build(videoMeta, alt ?: "") {
                         contentWarningReason?.let { contentWarning(contentWarningReason) }
                     }
@@ -1285,7 +1287,7 @@ class Account(
 
                     headerInfo.mimeType?.let { mimeType(it) }
                     headerInfo.dim?.let { dimension(it) }
-                    headerInfo.blurHash?.let { blurhash(it.blurhash) }
+                    headerInfo.blurHashCode?.let { blurhash(it) }
 
                     originalHash?.let { originalHash(it) }
                     magnetUri?.let { magnet(it) }
@@ -2373,15 +2375,15 @@ class Account(
 
     fun loadLastReadFlow(route: String) = settings.getLastReadFlow(route)
 
-    fun hasDonatedInThisVersion() = settings.hasDonatedInVersion(BuildConfig.VERSION_NAME)
+    fun hasDonatedInThisVersion() = settings.hasDonatedInVersion(AppVersion.name)
 
     fun observeDonatedInThisVersion() =
         settings
-            .observeDonatedInVersion(BuildConfig.VERSION_NAME)
+            .observeDonatedInVersion(AppVersion.name)
             .flowOn(Dispatchers.IO)
             .stateIn(scope, SharingStarted.Eagerly, hasDonatedInThisVersion())
 
-    fun markDonatedInThisVersion() = settings.markDonatedInThisVersion(BuildConfig.VERSION_NAME)
+    fun markDonatedInThisVersion() = settings.markDonatedInThisVersion(AppVersion.name)
 
     fun dismissPollNotification(noteId: String) = settings.dismissPollNotification(noteId)
 
@@ -2447,7 +2449,7 @@ class Account(
             settings.saveable.debounce(1000).collect {
                 val accountSettings = it.accountSettings
                 if (accountSettings != null) {
-                    LocalPreferences.saveToEncryptedStorage(accountSettings)
+                    accountPersistence?.saveToEncryptedStorage(accountSettings)
                 }
             }
         }

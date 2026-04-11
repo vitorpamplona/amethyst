@@ -77,9 +77,9 @@ import com.google.accompanist.permissions.rememberPermissionState
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.TopFilter
+import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.service.call.CallSessionBridge.accountViewModel
-import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.ui.note.creators.location.LoadCityName
@@ -184,9 +184,9 @@ fun FeedFilterSpinner(
                             .collectAsStateWithLifecycle()
 
                         when (val myLocation = location) {
-                            is LocationState.LocationResult.Success -> {
+                            is LocationResult.Success -> {
                                 LoadCityName(
-                                    geohashStr = myLocation.geoHash.toString(),
+                                    geohashStr = myLocation.geoHash,
                                     onLoading = {
                                         Row {
                                             Text(
@@ -207,7 +207,7 @@ fun FeedFilterSpinner(
                                 }
                             }
 
-                            LocationState.LocationResult.LackPermission -> {
+                            LocationResult.LackPermission -> {
                                 Text(
                                     text = stringRes(R.string.lack_location_permissions),
                                     fontSize = Font12SP,
@@ -215,7 +215,7 @@ fun FeedFilterSpinner(
                                 )
                             }
 
-                            LocationState.LocationResult.Loading -> {
+                            LocationResult.Loading -> {
                                 Text(
                                     text = stringRes(R.string.loading_location),
                                     fontSize = Font12SP,

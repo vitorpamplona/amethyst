@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.service.uploads
 
 import android.media.MediaDataSource
+import com.vitorpamplona.amethyst.commons.model.uploads.IFileHeader
 import com.vitorpamplona.amethyst.service.images.BlurhashWrapper
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
@@ -31,12 +32,14 @@ import okhttp3.OkHttpClient
 import java.io.IOException
 
 class FileHeader(
-    val mimeType: String?,
-    val hash: String,
-    val size: Int,
-    val dim: DimensionTag?,
+    override val mimeType: String?,
+    override val hash: String,
+    override val size: Int,
+    override val dim: DimensionTag?,
     val blurHash: BlurhashWrapper?,
-) {
+) : IFileHeader {
+    override val blurHashCode: String? get() = blurHash?.blurhash
+
     class UnableToDownload(
         val fileUrl: String,
     ) : Exception()

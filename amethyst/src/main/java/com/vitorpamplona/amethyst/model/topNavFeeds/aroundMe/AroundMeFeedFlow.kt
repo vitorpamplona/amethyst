@@ -20,28 +20,29 @@
  */
 package com.vitorpamplona.amethyst.model.topNavFeeds.aroundMe
 
+import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedFlowsType
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
-import com.vitorpamplona.amethyst.service.location.LocationState
+import com.vitorpamplona.amethyst.service.location.toGeoHash
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 
 class AroundMeFeedFlow(
-    val location: StateFlow<LocationState.LocationResult>,
+    val location: StateFlow<LocationResult>,
     val outboxRelays: StateFlow<Set<NormalizedRelayUrl>>,
     val proxyRelays: StateFlow<Set<NormalizedRelayUrl>>,
 ) : IFeedFlowsType {
     fun convert(
-        result: LocationState.LocationResult,
+        result: LocationResult,
         outboxRelays: Set<NormalizedRelayUrl>,
         proxyRelays: Set<NormalizedRelayUrl>,
     ): LocationTopNavFilter =
-        if (result is LocationState.LocationResult.Success) {
+        if (result is LocationResult.Success) {
             // 2 neighbors deep = 25x25km
             LocationTopNavFilter(
-                geotags = compute50kmRange(result.geoHash).toSet(),
+                geotags = result.geoHash.toGeoHash()?.let { compute50kmRange(it).toSet() } ?: emptySet(),
                 relayList = proxyRelays.ifEmpty { outboxRelays },
             )
         } else {

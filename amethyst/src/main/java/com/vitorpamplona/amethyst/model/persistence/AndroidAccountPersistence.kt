@@ -18,14 +18,17 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.model.location
+package com.vitorpamplona.amethyst.model.persistence
 
-sealed class LocationResult {
-    data class Success(
-        val geoHash: String,
-    ) : LocationResult()
+import com.vitorpamplona.amethyst.LocalPreferences
+import com.vitorpamplona.amethyst.commons.model.AccountSettings
+import com.vitorpamplona.amethyst.commons.model.persistence.AccountPersistence
 
-    data object LackPermission : LocationResult()
-
-    data object Loading : LocationResult()
+/**
+ * Android implementation of AccountPersistence that delegates to LocalPreferences.
+ */
+object AndroidAccountPersistence : AccountPersistence {
+    override suspend fun saveToEncryptedStorage(settings: AccountSettings) {
+        LocalPreferences.saveToEncryptedStorage(settings)
+    }
 }

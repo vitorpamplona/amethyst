@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc
 
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.model.nwc.INWCPaymentFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
@@ -38,7 +39,8 @@ class NWCPaymentQueryState(
 @Stable
 class NWCPaymentFilterAssembler(
     client: INostrClient,
-) : ComposeSubscriptionManager<NWCPaymentQueryState>() {
+) : ComposeSubscriptionManager<NWCPaymentQueryState>(),
+    INWCPaymentFilterAssembler {
     val group =
         listOf(
             NWCPaymentWatcherSubAssembler(client, ::allKeys),

@@ -39,6 +39,7 @@ class Amethyst : Application() {
     override fun onCreate() {
         super.onCreate()
         Log.d("AmethystApp") { "onCreate $this" }
+        com.vitorpamplona.amethyst.commons.platform.AppVersion.name = BuildConfig.VERSION_NAME
         instance = AppModules(this)
 
         if (isDebug) {
