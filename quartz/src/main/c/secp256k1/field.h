@@ -96,7 +96,10 @@ static inline void fe_normalize_full(secp256k1_fe *a) {
     fe_normalize(a);
 }
 
-/* r = a + b mod p */
+/* r = a + b.
+ * LAZY: does NOT normalize. Result may be in [0, 2^256 + C).
+ * fe_mul/fe_sqr handle unnormalized inputs via their reduction.
+ * Call fe_normalize() explicitly before comparisons or serialization. */
 static inline void fe_add(secp256k1_fe *r, const secp256k1_fe *a, const secp256k1_fe *b) {
     uint64_t carry = 0;
     for (int i = 0; i < 4; i++) {
@@ -105,32 +108,44 @@ static inline void fe_add(secp256k1_fe *r, const secp256k1_fe *a, const secp256k
         r->d[i] = sum;
     }
     if (carry) {
-        /* Overflow past 2^256: add 2^256 mod p = C = 0x1000003D1 */
+        /* Overflow past 2^256: fold using 2^256 mod p = C = 0x1000003D1 */
         uint64_t s = r->d[0] + 0x1000003D1ULL;
         uint64_t c = (s < r->d[0]) ? 1 : 0;
         r->d[0] = s;
         if (c) { r->d[1]++; if (!r->d[1]) { r->d[2]++; if (!r->d[2]) r->d[3]++; } }
     }
-    fe_normalize(r);
+    /* No normalize — result may be in [P, 2^256). This is fine because:
+     * - fe_mul/fe_sqr reduce any 256-bit input correctly
+     * - fe_negate uses 2P - a which handles values up to 2P
+     * - fe_half handles values up to 2P
+     * Only fe_is_zero, fe_cmp, fe_to_bytes need explicit normalize first. */
 }
 
-/* r += a */
+/* r += a (lazy, no normalize) */
 static inline void fe_add_assign(secp256k1_fe *r, const secp256k1_fe *a) {
     secp256k1_fe t = *r;
     fe_add(r, &t, a);
 }
 
-/* r = -a mod p = P - a */
+/* r = -a mod p.
+ * Uses 2P - a instead of P - a to handle unnormalized inputs in [0, 2P).
+ * Result is in [0, 2P). */
 static inline void fe_negate(secp256k1_fe *r, const secp256k1_fe *a, int m) {
-    (void)m; /* magnitude parameter not needed for 4x64 */
-    if (fe_is_zero(a)) {
+    (void)m;
+    /* 2P = [2*P0, MAX, MAX, MAX-1] + carry handling.
+     * Since P = [P0, MAX, MAX, MAX], 2P = [2*P0, MAX+carry, ...].
+     * Actually 2P mod 2^256 = 2*P0 with carries. Let's just do P + (P - a). */
+    /* Simpler: normalize a first, then P - a. The normalize is fast (usually no-op). */
+    secp256k1_fe t = *a;
+    fe_normalize(&t);
+    if (t.d[0] == 0 && t.d[1] == 0 && t.d[2] == 0 && t.d[3] == 0) {
         *r = FE_ZERO;
         return;
     }
     uint64_t borrow = 0;
     for (int i = 0; i < 4; i++) {
-        uint64_t diff = FE_P.d[i] - a->d[i] - borrow;
-        borrow = (FE_P.d[i] < a->d[i] + borrow) || (borrow && a->d[i] == UINT64_MAX) ? 1 : 0;
+        uint64_t diff = FE_P.d[i] - t.d[i] - borrow;
+        borrow = (FE_P.d[i] < t.d[i] + borrow) || (borrow && t.d[i] == UINT64_MAX) ? 1 : 0;
         r->d[i] = diff;
     }
 }

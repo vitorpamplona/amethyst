@@ -212,81 +212,142 @@ static inline void fe_mul_asm(secp256k1_fe *r, const secp256k1_fe *a, const secp
         : "memory"
     );
 
-    /* Row 0: a0 * b[0..3] with MUL+UMULH+ADDS/ADC chain */
+    /* Full 4x4 multiply + reduction in ARM64 ASM.
+     * Uses 20 registers: 4 inputs a, 4 inputs b, 8 product, 4 temps.
+     * All 31 ARM64 GPRs available — zero stack spills.
+     *
+     * Scheduling: interleave MUL/UMULH from adjacent columns so the
+     * 3-cycle multiply latency is hidden by independent additions.
+     *
+     *   Row 0: a0 * b[0..3] → r0..r4
+     *   Row 1: a1 * b[0..3] → accumulate into r1..r5
+     *   Row 2: a2 * b[0..3] → accumulate into r2..r6
+     *   Row 3: a3 * b[0..3] → accumulate into r3..r7
+     *   Reduce: r[0..3] + r[4..7] * C
+     */
+    __asm__ __volatile__(
+        /* === Row 0: a0 * b[0..3] === */
+        "mul   %[lo0], %[a0], %[b0]\n\t"
+        "umulh %[lo1], %[a0], %[b0]\n\t"   /* lo1 = hi(a0*b0) = carry */
+        "mul   x16, %[a0], %[b1]\n\t"
+        "umulh x17, %[a0], %[b1]\n\t"
+        "adds  %[lo1], %[lo1], x16\n\t"
+        "adc   %[lo2], x17, xzr\n\t"
+        "mul   x16, %[a0], %[b2]\n\t"
+        "umulh x17, %[a0], %[b2]\n\t"
+        "adds  %[lo2], %[lo2], x16\n\t"
+        "adc   %[lo3], x17, xzr\n\t"
+        "mul   x16, %[a0], %[b3]\n\t"
+        "umulh %[hi0], %[a0], %[b3]\n\t"
+        "adds  %[lo3], %[lo3], x16\n\t"
+        "adc   %[hi0], %[hi0], xzr\n\t"
+
+        /* === Row 1: a1 * b[0..3], accumulate === */
+        "mul   x16, %[a1], %[b0]\n\t"
+        "umulh x17, %[a1], %[b0]\n\t"
+        "adds  %[lo1], %[lo1], x16\n\t"
+        "adcs  %[lo2], %[lo2], x17\n\t"
+        "mul   x16, %[a1], %[b2]\n\t"      /* interleave: start b2 while b1 pending */
+        "umulh x17, %[a1], %[b2]\n\t"
+        "adcs  %[lo3], %[lo3], x16\n\t"
+        "adcs  %[hi0], %[hi0], x17\n\t"
+        "adc   %[hi1], xzr, xzr\n\t"
+        "mul   x16, %[a1], %[b1]\n\t"
+        "umulh x17, %[a1], %[b1]\n\t"
+        "adds  %[lo2], %[lo2], x16\n\t"
+        "adcs  %[lo3], %[lo3], x17\n\t"
+        "mul   x16, %[a1], %[b3]\n\t"
+        "umulh x17, %[a1], %[b3]\n\t"
+        "adcs  %[hi0], %[hi0], x16\n\t"
+        "adc   %[hi1], %[hi1], x17\n\t"
+
+        /* === Row 2: a2 * b[0..3] === */
+        "mul   x16, %[a2], %[b0]\n\t"
+        "umulh x17, %[a2], %[b0]\n\t"
+        "adds  %[lo2], %[lo2], x16\n\t"
+        "adcs  %[lo3], %[lo3], x17\n\t"
+        "mul   x16, %[a2], %[b2]\n\t"
+        "umulh x17, %[a2], %[b2]\n\t"
+        "adcs  %[hi0], %[hi0], x16\n\t"
+        "adcs  %[hi1], %[hi1], x17\n\t"
+        "adc   %[hi2], xzr, xzr\n\t"
+        "mul   x16, %[a2], %[b1]\n\t"
+        "umulh x17, %[a2], %[b1]\n\t"
+        "adds  %[lo3], %[lo3], x16\n\t"
+        "adcs  %[hi0], %[hi0], x17\n\t"
+        "mul   x16, %[a2], %[b3]\n\t"
+        "umulh x17, %[a2], %[b3]\n\t"
+        "adcs  %[hi1], %[hi1], x16\n\t"
+        "adc   %[hi2], %[hi2], x17\n\t"
+
+        /* === Row 3: a3 * b[0..3] === */
+        "mul   x16, %[a3], %[b0]\n\t"
+        "umulh x17, %[a3], %[b0]\n\t"
+        "adds  %[lo3], %[lo3], x16\n\t"
+        "adcs  %[hi0], %[hi0], x17\n\t"
+        "mul   x16, %[a3], %[b2]\n\t"
+        "umulh x17, %[a3], %[b2]\n\t"
+        "adcs  %[hi1], %[hi1], x16\n\t"
+        "adcs  %[hi2], %[hi2], x17\n\t"
+        "adc   %[hi3], xzr, xzr\n\t"
+        "mul   x16, %[a3], %[b1]\n\t"
+        "umulh x17, %[a3], %[b1]\n\t"
+        "adds  %[hi0], %[hi0], x16\n\t"
+        "adcs  %[hi1], %[hi1], x17\n\t"
+        "mul   x16, %[a3], %[b3]\n\t"
+        "umulh x17, %[a3], %[b3]\n\t"
+        "adcs  %[hi2], %[hi2], x16\n\t"
+        "adc   %[hi3], %[hi3], x17\n\t"
+
+        : [lo0]"=&r"(lo0), [lo1]"=&r"(lo1), [lo2]"=&r"(lo2), [lo3]"=&r"(lo3),
+          [hi0]"=&r"(hi0), [hi1]"=&r"(hi1), [hi2]"=&r"(hi2), [hi3]"=&r"(hi3)
+        : [a0]"r"(a0), [a1]"r"(a1), [a2]"r"(a2), [a3]"r"(a3),
+          [b0]"r"(b0), [b1]"r"(b1), [b2]"r"(b2), [b3]"r"(b3)
+        : "x16", "x17", "cc"
+    );
+
+    /* Reduction: lo + hi * C using MUL+UMULH+ADDS chain */
     {
-        uint64_t cy, tl, th;
+        uint64_t c = FIELD_C_ASM;
         __asm__ __volatile__(
-            "mul   %[lo0], %[a0], %[b0]\n\t"
-            "umulh %[cy],  %[a0], %[b0]\n\t"
-            "mul   %[tl],  %[a0], %[b1]\n\t"
-            "umulh %[th],  %[a0], %[b1]\n\t"
-            "adds  %[lo1], %[tl], %[cy]\n\t"
-            "adc   %[cy],  %[th], xzr\n\t"
-            "mul   %[tl],  %[a0], %[b2]\n\t"
-            "umulh %[th],  %[a0], %[b2]\n\t"
-            "adds  %[lo2], %[tl], %[cy]\n\t"
-            "adc   %[cy],  %[th], xzr\n\t"
-            "mul   %[tl],  %[a0], %[b3]\n\t"
-            "umulh %[hi0], %[a0], %[b3]\n\t"
-            "adds  %[lo3], %[tl], %[cy]\n\t"
-            "adc   %[hi0], %[hi0], xzr\n\t"
-            : [lo0]"=&r"(lo0), [lo1]"=&r"(lo1), [lo2]"=&r"(lo2), [lo3]"=&r"(lo3),
-              [hi0]"=&r"(hi0), [cy]"=&r"(cy), [tl]"=&r"(tl), [th]"=&r"(th)
-            : [a0]"r"(a0), [b0]"r"(b0), [b1]"r"(b1), [b2]"r"(b2), [b3]"r"(b3)
-            : "cc"
+            /* hi0 * C + lo0 */
+            "mul   x16, %[h0], %[c]\n\t"
+            "umulh x17, %[h0], %[c]\n\t"
+            "adds  %[r0], %[l0], x16\n\t"
+            "adc   x17, x17, xzr\n\t"
+            /* hi1 * C + lo1 + carry */
+            "mul   x16, %[h1], %[c]\n\t"
+            "adds  %[r1], %[l1], x17\n\t"
+            "umulh x17, %[h1], %[c]\n\t"
+            "adc   x17, x17, xzr\n\t"
+            "adds  %[r1], %[r1], x16\n\t"
+            "adc   x17, x17, xzr\n\t"
+            /* hi2 * C + lo2 + carry */
+            "mul   x16, %[h2], %[c]\n\t"
+            "adds  %[r2], %[l2], x17\n\t"
+            "umulh x17, %[h2], %[c]\n\t"
+            "adc   x17, x17, xzr\n\t"
+            "adds  %[r2], %[r2], x16\n\t"
+            "adc   x17, x17, xzr\n\t"
+            /* hi3 * C + lo3 + carry */
+            "mul   x16, %[h3], %[c]\n\t"
+            "adds  %[r3], %[l3], x17\n\t"
+            "umulh x17, %[h3], %[c]\n\t"
+            "adc   x17, x17, xzr\n\t"
+            "adds  %[r3], %[r3], x16\n\t"
+            "adc   x17, x17, xzr\n\t"
+            /* Final fold: carry * C */
+            "mul   x16, x17, %[c]\n\t"
+            "adds  %[r0], %[r0], x16\n\t"
+            "umulh x16, x17, %[c]\n\t"
+            "adcs  %[r1], %[r1], x16\n\t"
+            "adcs  %[r2], %[r2], xzr\n\t"
+            "adc   %[r3], %[r3], xzr\n\t"
+            : [r0]"=&r"(lo0), [r1]"=&r"(lo1), [r2]"=&r"(lo2), [r3]"=&r"(lo3)
+            : [l0]"r"(lo0), [l1]"r"(lo1), [l2]"r"(lo2), [l3]"r"(lo3),
+              [h0]"r"(hi0), [h1]"r"(hi1), [h2]"r"(hi2), [h3]"r"(hi3), [c]"r"(c)
+            : "x16", "x17", "cc"
         );
-    }
-
-    /* Rows 1-3 + reduction: __int128 C.
-     * ARM64 gcc with -O2 generates optimal MUL+UMULH+ADDS/ADCS from this.
-     * Attempting full ASM for rows 1-3 would exceed the 30-register limit
-     * and force spills, negating the benefit. */
-    {
-        typedef unsigned __int128 u128;
-        u128 acc;
-
-        acc = (u128)lo1 + (u128)a1*b0;
-        lo1 = (uint64_t)acc; acc >>= 64;
-        acc += (u128)lo2 + (u128)a1*b1;
-        lo2 = (uint64_t)acc; acc >>= 64;
-        acc += (u128)lo3 + (u128)a1*b2;
-        lo3 = (uint64_t)acc; acc >>= 64;
-        acc += (u128)hi0 + (u128)a1*b3;
-        hi0 = (uint64_t)acc; hi1 = (uint64_t)(acc>>64);
-
-        acc = (u128)lo2 + (u128)a2*b0;
-        lo2 = (uint64_t)acc; acc >>= 64;
-        acc += (u128)lo3 + (u128)a2*b1;
-        lo3 = (uint64_t)acc; acc >>= 64;
-        acc += (u128)hi0 + (u128)a2*b2;
-        hi0 = (uint64_t)acc; acc >>= 64;
-        acc += (u128)hi1 + (u128)a2*b3;
-        hi1 = (uint64_t)acc; hi2 = (uint64_t)(acc>>64);
-
-        acc = (u128)lo3 + (u128)a3*b0;
-        lo3 = (uint64_t)acc; acc >>= 64;
-        acc += (u128)hi0 + (u128)a3*b1;
-        hi0 = (uint64_t)acc; acc >>= 64;
-        acc += (u128)hi1 + (u128)a3*b2;
-        hi1 = (uint64_t)acc; acc >>= 64;
-        acc += (u128)hi2 + (u128)a3*b3;
-        hi2 = (uint64_t)acc; hi3 = (uint64_t)(acc>>64);
-
-        /* Reduce: lo + hi * C */
-        acc = (u128)lo0 + (u128)hi0 * FIELD_C_ASM;
-        lo0 = (uint64_t)acc; acc >>= 64;
-        acc += (u128)lo1 + (u128)hi1 * FIELD_C_ASM;
-        lo1 = (uint64_t)acc; acc >>= 64;
-        acc += (u128)lo2 + (u128)hi2 * FIELD_C_ASM;
-        lo2 = (uint64_t)acc; acc >>= 64;
-        acc += (u128)lo3 + (u128)hi3 * FIELD_C_ASM;
-        lo3 = (uint64_t)acc;
-        uint64_t carry = (uint64_t)(acc >> 64);
-        if (carry) {
-            acc = (u128)lo0 + (u128)carry * FIELD_C_ASM;
-            lo0 = (uint64_t)acc; carry = (uint64_t)(acc >> 64);
-            if (carry) { lo1 += carry; if (lo1 < carry) { lo2++; if (!lo2) lo3++; } }
-        }
     }
 
     /* Store result using STP (store pair) — 2 instructions vs 4 STR */
