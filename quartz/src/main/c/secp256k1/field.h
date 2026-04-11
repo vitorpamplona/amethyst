@@ -67,8 +67,21 @@ static inline int fe_is_odd(const secp256k1_fe *a) {
     return (int)(t.d[0] & 1);
 }
 
-/* Normalize: if a >= p, subtract p. Inline for hot path. */
+/* Normalize: if a >= p, subtract p.
+ * On ARM64: branchless (CSEL avoids misprediction on mobile SoCs).
+ * On x86_64: branching (>99.99% correct prediction, branch is cheaper). */
 static inline void fe_normalize(secp256k1_fe *a) {
+#if SECP_ARM64
+    /* Branchless for ARM64: compute mask, conditionally subtract */
+    uint64_t ge = (a->d[3] == UINT64_MAX) & (a->d[2] == UINT64_MAX) &
+                  (a->d[1] == UINT64_MAX) & (a->d[0] >= FE_P0);
+    uint64_t mask = -(uint64_t)ge;
+    a->d[0] -= FE_P0 & mask;
+    a->d[1] &= ~mask;
+    a->d[2] &= ~mask;
+    a->d[3] &= ~mask;
+#else
+    /* Branching for x86_64: branch predictor handles the >99.99% case */
     if (a->d[3] == UINT64_MAX && a->d[2] == UINT64_MAX &&
         a->d[1] == UINT64_MAX && a->d[0] >= FE_P0) {
         a->d[0] -= FE_P0;
@@ -76,6 +89,7 @@ static inline void fe_normalize(secp256k1_fe *a) {
         a->d[2] = 0;
         a->d[3] = 0;
     }
+#endif
 }
 
 static inline void fe_normalize_full(secp256k1_fe *a) {

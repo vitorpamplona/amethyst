@@ -178,44 +178,69 @@ static inline void fe_mul_asm(secp256k1_fe *r, const secp256k1_fe *a, const secp
 #elif SECP_ARM64 && defined(__GNUC__)
 
 /*
- * ARM64 field multiply using MUL + UMULH pairs.
- * MUL gives the low 64 bits, UMULH gives the high 64 bits of a 64x64->128 product.
- * ADDS/ADCS chain for carry propagation.
+ * ARM64 field multiply optimized for Cortex-A76+ (Android phones).
+ *
+ * Key ARM64 instructions used:
+ *   MUL Xd, Xn, Xm    → low 64 bits of 64×64 product (1 cycle throughput)
+ *   UMULH Xd, Xn, Xm   → high 64 bits of 64×64 product (1 cycle throughput)
+ *   ADDS/ADCS           → add with carry flag chain
+ *   LDP Xd1, Xd2, [Xn] → load pair (2 registers in 1 instruction)
+ *   CSEL                → conditional select (branchless normalize)
+ *
+ * Row 0 in full ASM with LDP for loading operands.
+ * Rows 1-3 + reduction in __int128 C (ARM64 gcc generates optimal code
+ * for __int128: MUL+UMULH pairs with ADDS/ADCS carry chains).
+ *
+ * The main ARM64-specific wins vs generic C:
+ * 1. LDP loads 2 limbs per instruction (vs 2 separate LDR)
+ * 2. Explicit ADDS/ADCS chain avoids compiler's carry tracking overhead
+ * 3. The compiler generates MADD (fused multiply-add) for acc += (u128)a*b
  */
 static inline void fe_mul_asm(secp256k1_fe *r, const secp256k1_fe *a, const secp256k1_fe *b) {
-    uint64_t a0 = a->d[0], a1 = a->d[1], a2 = a->d[2], a3 = a->d[3];
-    uint64_t b0 = b->d[0], b1 = b->d[1], b2 = b->d[2], b3 = b->d[3];
+    uint64_t a0, a1, a2, a3, b0, b1, b2, b3;
     uint64_t lo0, lo1, lo2, lo3, hi0, hi1, hi2, hi3;
-    uint64_t tmp_lo, tmp_hi;
 
-    /* Row 0: a0 * b[0..3] */
+    /* Load all 8 limbs using LDP (load pair) — 4 instructions vs 8 LDR */
     __asm__ __volatile__(
-        "mul   %[lo0], %[a0], %[b0]\n\t"
-        "umulh %[cy],  %[a0], %[b0]\n\t"
-
-        "mul   %[tl],  %[a0], %[b1]\n\t"
-        "umulh %[th],  %[a0], %[b1]\n\t"
-        "adds  %[lo1], %[tl], %[cy]\n\t"
-        "adc   %[cy],  %[th], xzr\n\t"
-
-        "mul   %[tl],  %[a0], %[b2]\n\t"
-        "umulh %[th],  %[a0], %[b2]\n\t"
-        "adds  %[lo2], %[tl], %[cy]\n\t"
-        "adc   %[cy],  %[th], xzr\n\t"
-
-        "mul   %[tl],  %[a0], %[b3]\n\t"
-        "umulh %[hi0], %[a0], %[b3]\n\t"
-        "adds  %[lo3], %[tl], %[cy]\n\t"
-        "adc   %[hi0], %[hi0], xzr\n\t"
-
-        : [lo0]"=&r"(lo0), [lo1]"=&r"(lo1), [lo2]"=&r"(lo2), [lo3]"=&r"(lo3),
-          [hi0]"=&r"(hi0), [cy]"=&r"(tmp_hi), [tl]"=&r"(tmp_lo), [th]"=&r"(tmp_hi)
-        : [a0]"r"(a0), [b0]"r"(b0), [b1]"r"(b1), [b2]"r"(b2), [b3]"r"(b3)
-        : "cc"
+        "ldp %[a0], %[a1], [%[ap]]\n\t"
+        "ldp %[a2], %[a3], [%[ap], #16]\n\t"
+        "ldp %[b0], %[b1], [%[bp]]\n\t"
+        "ldp %[b2], %[b3], [%[bp], #16]\n\t"
+        : [a0]"=&r"(a0), [a1]"=&r"(a1), [a2]"=&r"(a2), [a3]"=&r"(a3),
+          [b0]"=&r"(b0), [b1]"=&r"(b1), [b2]"=&r"(b2), [b3]"=&r"(b3)
+        : [ap]"r"(a->d), [bp]"r"(b->d)
+        : "memory"
     );
 
-    /* Rows 1-3: use C with __int128 for clarity (ARM64 gcc handles this well) */
-    /* The real win on ARM64 is in the reduction, not the product */
+    /* Row 0: a0 * b[0..3] with MUL+UMULH+ADDS/ADC chain */
+    {
+        uint64_t cy, tl, th;
+        __asm__ __volatile__(
+            "mul   %[lo0], %[a0], %[b0]\n\t"
+            "umulh %[cy],  %[a0], %[b0]\n\t"
+            "mul   %[tl],  %[a0], %[b1]\n\t"
+            "umulh %[th],  %[a0], %[b1]\n\t"
+            "adds  %[lo1], %[tl], %[cy]\n\t"
+            "adc   %[cy],  %[th], xzr\n\t"
+            "mul   %[tl],  %[a0], %[b2]\n\t"
+            "umulh %[th],  %[a0], %[b2]\n\t"
+            "adds  %[lo2], %[tl], %[cy]\n\t"
+            "adc   %[cy],  %[th], xzr\n\t"
+            "mul   %[tl],  %[a0], %[b3]\n\t"
+            "umulh %[hi0], %[a0], %[b3]\n\t"
+            "adds  %[lo3], %[tl], %[cy]\n\t"
+            "adc   %[hi0], %[hi0], xzr\n\t"
+            : [lo0]"=&r"(lo0), [lo1]"=&r"(lo1), [lo2]"=&r"(lo2), [lo3]"=&r"(lo3),
+              [hi0]"=&r"(hi0), [cy]"=&r"(cy), [tl]"=&r"(tl), [th]"=&r"(th)
+            : [a0]"r"(a0), [b0]"r"(b0), [b1]"r"(b1), [b2]"r"(b2), [b3]"r"(b3)
+            : "cc"
+        );
+    }
+
+    /* Rows 1-3 + reduction: __int128 C.
+     * ARM64 gcc with -O2 generates optimal MUL+UMULH+ADDS/ADCS from this.
+     * Attempting full ASM for rows 1-3 would exceed the 30-register limit
+     * and force spills, negating the benefit. */
     {
         typedef unsigned __int128 u128;
         u128 acc;
@@ -249,20 +274,28 @@ static inline void fe_mul_asm(secp256k1_fe *r, const secp256k1_fe *a, const secp
 
         /* Reduce: lo + hi * C */
         acc = (u128)lo0 + (u128)hi0 * FIELD_C_ASM;
-        r->d[0] = (uint64_t)acc; acc >>= 64;
+        lo0 = (uint64_t)acc; acc >>= 64;
         acc += (u128)lo1 + (u128)hi1 * FIELD_C_ASM;
-        r->d[1] = (uint64_t)acc; acc >>= 64;
+        lo1 = (uint64_t)acc; acc >>= 64;
         acc += (u128)lo2 + (u128)hi2 * FIELD_C_ASM;
-        r->d[2] = (uint64_t)acc; acc >>= 64;
+        lo2 = (uint64_t)acc; acc >>= 64;
         acc += (u128)lo3 + (u128)hi3 * FIELD_C_ASM;
-        r->d[3] = (uint64_t)acc;
+        lo3 = (uint64_t)acc;
         uint64_t carry = (uint64_t)(acc >> 64);
         if (carry) {
-            acc = (u128)r->d[0] + (u128)carry * FIELD_C_ASM;
-            r->d[0] = (uint64_t)acc; carry = (uint64_t)(acc >> 64);
-            if (carry) { r->d[1] += carry; if (r->d[1] < carry) { r->d[2]++; if (!r->d[2]) r->d[3]++; } }
+            acc = (u128)lo0 + (u128)carry * FIELD_C_ASM;
+            lo0 = (uint64_t)acc; carry = (uint64_t)(acc >> 64);
+            if (carry) { lo1 += carry; if (lo1 < carry) { lo2++; if (!lo2) lo3++; } }
         }
     }
+
+    /* Store result using STP (store pair) — 2 instructions vs 4 STR */
+    __asm__ __volatile__(
+        "stp %[lo0], %[lo1], [%[rp]]\n\t"
+        "stp %[lo2], %[lo3], [%[rp], #16]\n\t"
+        : : [rp]"r"(r->d), [lo0]"r"(lo0), [lo1]"r"(lo1), [lo2]"r"(lo2), [lo3]"r"(lo3)
+        : "memory"
+    );
     fe_normalize(r);
 }
 
