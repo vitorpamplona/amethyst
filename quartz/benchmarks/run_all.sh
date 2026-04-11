@@ -82,25 +82,22 @@ fi
 echo ""
 
 # ============================================================================
-# 2. Kotlin/Native benchmark
+# 2. Kotlin/Native benchmark (Linux and macOS)
 # ============================================================================
-# macosArm64 target is blocked until negentropy-kmp publishes a macosArm64
-# artifact. Once unblocked, add:  Darwin) KN_TARGET="macosArm64Test" ;;
-if [ "$OS_NAME" = "Linux" ]; then
-    echo "=== Running Kotlin/Native benchmark ==="
-    KN_TARGET="linuxX64Test"
+echo "=== Running Kotlin/Native benchmark ==="
+case "$OS_NAME" in
+    Linux)  KN_TARGET="linuxX64Test" ;;
+    Darwin) KN_TARGET="macosArm64Test" ;;
+esac
 
-    "$ROOT/gradlew" -p "$ROOT" ":quartz:$KN_TARGET" --tests "*.Secp256k1NativeBenchmark" \
-        2>/dev/null || true
+"$ROOT/gradlew" -p "$ROOT" ":quartz:$KN_TARGET" --tests "*.Secp256k1NativeBenchmark" \
+    2>/dev/null || true
 
-    KN_XML="$ROOT/quartz/build/test-results/$KN_TARGET/TEST-${KN_TARGET}.com.vitorpamplona.quartz.utils.secp256k1.Secp256k1NativeBenchmark.xml"
-    if [ -f "$KN_XML" ]; then
-        sed -n '/<!\[CDATA\[/,/\]\]>/p' "$KN_XML" | grep -v 'CDATA\|]]>'
-    else
-        echo "K/Native benchmark XML not found."
-    fi
+KN_XML="$ROOT/quartz/build/test-results/$KN_TARGET/TEST-${KN_TARGET}.com.vitorpamplona.quartz.utils.secp256k1.Secp256k1NativeBenchmark.xml"
+if [ -f "$KN_XML" ]; then
+    sed -n '/<!\[CDATA\[/,/\]\]>/p' "$KN_XML" | grep -v 'CDATA\|]]>'
 else
-    echo "=== Skipping Kotlin/Native benchmark (only linuxX64 target available) ==="
+    echo "K/Native benchmark XML not found."
 fi
 echo ""
 
