@@ -103,6 +103,8 @@ class CallController(
     private val cleanedUp = AtomicBoolean(false)
     private val videoSenders = ConcurrentHashMap<HexKey, org.webrtc.RtpSender>()
 
+    private val pendingRenegotiation = ConcurrentHashMap<HexKey, Boolean>()
+
     private val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
     private var networkCallbackRegistered = false
     private val networkCallback =
@@ -220,6 +222,7 @@ class CallController(
 
             callManager.beginOffering(callId, peerPubKeys, callType)
 
+            var successCount = 0
             for (peerPubKey in peerPubKeys) {
                 try {
                     val webRtcSession = withContext(Dispatchers.IO) { createWebRtcSession(peerPubKey) }
@@ -230,9 +233,15 @@ class CallController(
                             callManager.publishOfferToPeer(peerPubKey, peerPubKeys, callType, callId, sdp.description)
                         }
                     }
+                    successCount++
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to create PeerConnection for ${peerPubKey.take(8)}", e)
                 }
+            }
+            if (successCount == 0) {
+                Log.e(TAG, "All PeerConnection creations failed, hanging up")
+                _errorMessage.value = "Failed to start call: could not create any connections"
+                callManager.hangup()
             }
         }
     }
@@ -402,10 +411,19 @@ class CallController(
     }
 
     private fun performRenegotiation(peerPubKey: HexKey) {
-        val webRtcSession = webRtcSession(peerPubKey) ?: return
+        if (pendingRenegotiation.putIfAbsent(peerPubKey, true) != null) return
+        val webRtcSession =
+            webRtcSession(peerPubKey) ?: run {
+                pendingRenegotiation.remove(peerPubKey)
+                return
+            }
         val state = callManager.state.value
-        if (state !is CallState.Connected && state !is CallState.Connecting) return
+        if (state !is CallState.Connected && state !is CallState.Connecting) {
+            pendingRenegotiation.remove(peerPubKey)
+            return
+        }
         webRtcSession.createOffer { sdp ->
+            pendingRenegotiation.remove(peerPubKey)
             scope.launch { callManager.sendRenegotiation(sdp.description, peerPubKey) }
         }
     }
@@ -533,7 +551,9 @@ class CallController(
                     Log.d(TAG) { "Peer ${peerPubKey.take(8)} connected!" }
                     scope.launch {
                         callManager.onPeerConnected()
-                        ensureForegroundService()
+                        if (callManager.state.value is CallState.Connected) {
+                            ensureForegroundService()
+                        }
                     }
                 },
                 onRemoteVideoTrack = { track -> videoMonitor.onRemoteVideoTrack(peerPubKey, track) },
@@ -576,6 +596,7 @@ class CallController(
     // ---- Per-peer cleanup ----
 
     fun disposePeerSession(peerPubKey: HexKey) {
+        videoSenders.remove(peerPubKey)
         val entry = peerSessionMgr.removeSession(peerPubKey)
         if (entry != null) {
             try {
@@ -619,6 +640,7 @@ class CallController(
         _isAudioMuted.value = false
         videoPausedByProximity = false
         videoSenders.clear()
+        pendingRenegotiation.clear()
         cleanedUp.set(false)
     }
 

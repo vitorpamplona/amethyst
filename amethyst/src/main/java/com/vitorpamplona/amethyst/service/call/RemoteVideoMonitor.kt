@@ -85,46 +85,56 @@ class RemoteVideoMonitor(
     private val perPeerLastFrameTimeMs = ConcurrentHashMap<HexKey, AtomicLong>()
     private var groupVideoMonitorJob: Job? = null
 
+    /** Protects compound read-modify-write on [_remoteVideoTracks] and
+     *  [_remoteVideoTrack] which can be called from WebRTC callback threads. */
+    private val trackLock = Any()
+
     fun onRemoteVideoTrack(
         peerPubKey: HexKey,
         track: VideoTrack,
     ) {
         Log.d(TAG) { "Remote video track from ${peerPubKey.take(8)}" }
-        _remoteVideoTracks.value = _remoteVideoTracks.value + (peerPubKey to track)
-        if (_remoteVideoTrack.value == null) {
-            _remoteVideoTrack.value = track
-            startPrimaryMonitor(track)
+        synchronized(trackLock) {
+            _remoteVideoTracks.value = _remoteVideoTracks.value + (peerPubKey to track)
+            if (_remoteVideoTrack.value == null) {
+                _remoteVideoTrack.value = track
+                startPrimaryMonitor(track)
+            }
         }
         startPeerMonitor(peerPubKey, track)
     }
 
     fun onPeerRemoved(peerPubKey: HexKey) {
         stopPeerMonitor(peerPubKey)
-        val currentTracks = _remoteVideoTracks.value
-        if (peerPubKey in currentTracks) {
-            _remoteVideoTracks.value = currentTracks - peerPubKey
-            if (_remoteVideoTrack.value == currentTracks[peerPubKey]) {
-                stopPrimaryMonitor()
-                val nextTrack = _remoteVideoTracks.value.values.firstOrNull()
-                _remoteVideoTrack.value = nextTrack
-                if (nextTrack != null) {
-                    startPrimaryMonitor(nextTrack)
+        synchronized(trackLock) {
+            val currentTracks = _remoteVideoTracks.value
+            if (peerPubKey in currentTracks) {
+                _remoteVideoTracks.value = currentTracks - peerPubKey
+                if (_remoteVideoTrack.value == currentTracks[peerPubKey]) {
+                    stopPrimaryMonitor()
+                    val nextTrack = _remoteVideoTracks.value.values.firstOrNull()
+                    _remoteVideoTrack.value = nextTrack
+                    if (nextTrack != null) {
+                        startPrimaryMonitor(nextTrack)
+                    }
                 }
             }
         }
     }
 
     fun dispose() {
-        stopPrimaryMonitor()
-        stopGroupMonitor()
-        for (peerPubKey in perPeerFrameSinks.keys.toList()) {
-            stopPeerMonitor(peerPubKey)
+        synchronized(trackLock) {
+            stopPrimaryMonitor()
+            stopGroupMonitor()
+            for (peerPubKey in perPeerFrameSinks.keys.toList()) {
+                stopPeerMonitor(peerPubKey)
+            }
+            _remoteVideoTrack.value = null
+            _remoteVideoTracks.value = emptyMap()
+            _isRemoteVideoActive.value = false
+            _remoteVideoAspectRatio.value = null
+            _activePeerVideos.value = emptySet()
         }
-        _remoteVideoTrack.value = null
-        _remoteVideoTracks.value = emptyMap()
-        _isRemoteVideoActive.value = false
-        _remoteVideoAspectRatio.value = null
-        _activePeerVideos.value = emptySet()
     }
 
     private fun startPrimaryMonitor(track: VideoTrack) {
