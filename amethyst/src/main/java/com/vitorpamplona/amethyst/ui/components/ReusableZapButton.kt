@@ -45,6 +45,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.error_dialog_zap_error
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
@@ -136,7 +138,7 @@ fun ReusableZapButton(
                 onError = { _, message, toUser ->
                     scope.launch {
                         zappingProgress = 0f
-                        accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, message, toUser)
+                        accountViewModel.toastManager.toast(Res.string.error_dialog_zap_error, message, toUser)
                     }
                 },
                 onPayViaIntent = {
@@ -144,7 +146,7 @@ fun ReusableZapButton(
                         val payable = it.first()
                         payViaIntent(payable.invoice, context, { }) {
                             zappingProgress = 0f
-                            accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, UserBasedErrorMessage(it, payable.info.user))
+                            accountViewModel.toastManager.toast(Res.string.error_dialog_zap_error, UserBasedErrorMessage(it, payable.info.user))
                         }
                     } else {
                         val uid = Uuid.random().toString()
@@ -173,7 +175,7 @@ fun ReusableZapButton(
                 onError = { _, message, user ->
                     scope.launch {
                         zappingProgress = 0f
-                        accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, message, user)
+                        accountViewModel.toastManager.toast(Res.string.error_dialog_zap_error, message, user)
                     }
                 },
                 onProgress = {
@@ -184,7 +186,7 @@ fun ReusableZapButton(
                         val payable = it.first()
                         payViaIntent(payable.invoice, context, { }) {
                             zappingProgress = 0f
-                            accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, UserBasedErrorMessage(it, payable.info.user))
+                            accountViewModel.toastManager.toast(Res.string.error_dialog_zap_error, UserBasedErrorMessage(it, payable.info.user))
                         }
                     } else {
                         val uid = Uuid.random().toString()

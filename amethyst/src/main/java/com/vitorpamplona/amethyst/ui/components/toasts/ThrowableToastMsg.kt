@@ -21,17 +21,18 @@
 package com.vitorpamplona.amethyst.ui.components.toasts
 
 import androidx.compose.runtime.Immutable
+import org.jetbrains.compose.resources.StringResource
 
 @Immutable
 class ThrowableToastMsg(
-    val titleResId: Int,
+    val titleRes: StringResource,
     val msg: String? = null,
     val throwable: Throwable,
 ) : ToastMsg()
 
 @Immutable
 class ThrowableToastMsg2(
-    val titleResId: Int,
-    val description: Int,
+    val titleRes: StringResource,
+    val descriptionRes: StringResource,
     val throwable: Throwable,
 ) : ToastMsg()

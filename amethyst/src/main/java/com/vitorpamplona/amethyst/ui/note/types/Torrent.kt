@@ -48,7 +48,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.torrent_failure
+import com.vitorpamplona.amethyst.commons.resources.torrent_no_apps
+import com.vitorpamplona.amethyst.commons.resources.torrent_no_info
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.countToHumanReadableBytes
@@ -221,11 +224,11 @@ fun DisplayFileList(
                             intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                             context.startActivity(intent)
                         } else {
-                            accountViewModel.toastManager.toast(R.string.torrent_failure, R.string.torrent_no_info)
+                            accountViewModel.toastManager.toast(Res.string.torrent_failure, Res.string.torrent_no_info)
                         }
                     } catch (e: Exception) {
                         if (e is CancellationException) throw e
-                        accountViewModel.toastManager.toast(R.string.torrent_failure, R.string.torrent_no_apps)
+                        accountViewModel.toastManager.toast(Res.string.torrent_failure, Res.string.torrent_no_apps)
                     }
                 },
                 Modifier.size(Size30dp),

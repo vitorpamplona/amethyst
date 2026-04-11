@@ -42,8 +42,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.error_dialog_zap_error
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.ui.components.toasts.LegacyMultiErrorToastMsg
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeToMessage
@@ -81,7 +84,7 @@ fun ErrorListPreview() {
         }
     }
 
-    val model = MultiErrorToastMsg(R.string.error_dialog_zap_error)
+    val model = MultiErrorToastMsg(Res.string.error_dialog_zap_error)
     model.add("Could not fetch invoice from https://minibits.cash/.well-known/lnurlp/victorieeman: There are too many unpaid invoices for this name.", user1)
     model.add("No Wallets found to pay a lightning invoice. Please install a Lightning wallet to use zaps.", user2)
     model.add("Could not fetch invoice", user3)
@@ -152,6 +155,24 @@ fun ErrorRow(
         Row(Modifier.weight(1f)) {
             SelectionContainer {
                 Text(errorState.error)
+            }
+        }
+    }
+}
+
+@Suppress("DEPRECATION")
+@Composable
+fun LegacyErrorList(
+    model: LegacyMultiErrorToastMsg,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val errorState by model.errors.collectAsStateWithLifecycle()
+    LazyColumn {
+        itemsIndexed(errorState) { index, it ->
+            ErrorRow(it, accountViewModel, nav)
+            if (index < errorState.size - 1) {
+                HorizontalDivider(thickness = DividerThickness)
             }
         }
     }

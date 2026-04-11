@@ -21,10 +21,11 @@
 package com.vitorpamplona.amethyst.ui.components.toasts
 
 import androidx.compose.runtime.Immutable
+import org.jetbrains.compose.resources.StringResource
 
 @Immutable
 class ResourceToastMsg(
-    val titleResId: Int,
-    val resourceId: Int,
+    val titleRes: StringResource,
+    val descRes: StringResource,
     val params: Array<out String>? = null,
 ) : ToastMsg()

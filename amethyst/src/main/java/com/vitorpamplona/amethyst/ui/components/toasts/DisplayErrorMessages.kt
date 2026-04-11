@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.ui.components.toasts.multiline.MultiUserErrorM
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun DisplayErrorMessages(
@@ -39,40 +40,22 @@ fun DisplayErrorMessages(
 
     openDialogMsg.value?.let { obj ->
         when (obj) {
+            // New StringResource-based types
             is ResourceToastMsg -> {
                 if (obj.params != null) {
                     InformationDialog(
-                        stringRes(obj.titleResId),
-                        stringRes(obj.resourceId, *obj.params),
+                        stringResource(obj.titleRes),
+                        stringResource(obj.descRes, *obj.params),
                     ) {
                         toastManager.clearToasts()
                     }
                 } else {
                     InformationDialog(
-                        stringRes(obj.titleResId),
-                        stringRes(obj.resourceId),
+                        stringResource(obj.titleRes),
+                        stringResource(obj.descRes),
                     ) {
                         toastManager.clearToasts()
                     }
-                }
-            }
-
-            is StringToastMsg -> {
-                InformationDialog(
-                    obj.title,
-                    obj.msg,
-                ) {
-                    toastManager.clearToasts()
-                }
-            }
-
-            is ActionableStringToastMsg -> {
-                InformationDialog(
-                    obj.title,
-                    obj.msg,
-                ) {
-                    obj.action()
-                    toastManager.clearToasts()
                 }
             }
 
@@ -90,6 +73,65 @@ fun DisplayErrorMessages(
 
             is MultiErrorToastMsg -> {
                 MultiUserErrorMessageDialog(obj, accountViewModel, nav)
+            }
+
+            // Legacy Int-based types (will be removed after full migration)
+            is LegacyResourceToastMsg -> {
+                @Suppress("DEPRECATION")
+                if (obj.params != null) {
+                    InformationDialog(
+                        stringRes(obj.titleResId),
+                        stringRes(obj.resourceId, *obj.params),
+                    ) {
+                        toastManager.clearToasts()
+                    }
+                } else {
+                    InformationDialog(
+                        stringRes(obj.titleResId),
+                        stringRes(obj.resourceId),
+                    ) {
+                        toastManager.clearToasts()
+                    }
+                }
+            }
+
+            is LegacyThrowableToastMsg -> {
+                @Suppress("DEPRECATION")
+                InformationDialog(obj) {
+                    toastManager.clearToasts()
+                }
+            }
+
+            is LegacyThrowableToastMsg2 -> {
+                @Suppress("DEPRECATION")
+                InformationDialog(obj) {
+                    toastManager.clearToasts()
+                }
+            }
+
+            is LegacyMultiErrorToastMsg -> {
+                @Suppress("DEPRECATION")
+                MultiUserErrorMessageDialog(obj, accountViewModel, nav)
+            }
+
+            // String-based types
+            is StringToastMsg -> {
+                InformationDialog(
+                    obj.title,
+                    obj.msg,
+                ) {
+                    toastManager.clearToasts()
+                }
+            }
+
+            is ActionableStringToastMsg -> {
+                InformationDialog(
+                    obj.title,
+                    obj.msg,
+                ) {
+                    obj.action()
+                    toastManager.clearToasts()
+                }
             }
         }
     }

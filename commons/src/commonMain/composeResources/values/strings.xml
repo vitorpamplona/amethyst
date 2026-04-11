@@ -54,4 +54,15 @@
     <!-- Accessibility -->
     <string name="accessibility_user_avatar">User avatar</string>
     <string name="accessibility_navigate">Navigate</string>
+
+    <!-- Toast Messages -->
+    <string name="error_dialog_zap_error">Unable to send zap</string>
+    <string name="failed_to_save_the_video">Failed to save the video</string>
+    <string name="media_added">Media added</string>
+    <string name="media_added_to_profile_gallery">Media added to your Profile Gallery</string>
+    <string name="messages_cant_upload_explainer">Insert the destination of the message first</string>
+    <string name="messages_cant_upload_title">Can\'t Upload</string>
+    <string name="torrent_failure">Failed to open file</string>
+    <string name="torrent_no_apps">No torrent apps installed to open and download the file.</string>
+    <string name="torrent_no_info">Event doesn\'t have enough information to build a magnet link</string>
 </resources>

@@ -18,18 +18,46 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.components.toasts.multiline
+package com.vitorpamplona.amethyst.ui.components.toasts
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.ui.components.toasts.ToastMsg
+import com.vitorpamplona.amethyst.ui.components.toasts.multiline.UserBasedErrorMessage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
-import org.jetbrains.compose.resources.StringResource
 
+/**
+ * Legacy Int-based toast message classes.
+ * These will be removed once all callers are migrated to StringResource.
+ */
+@Deprecated("Use ResourceToastMsg with StringResource")
 @Immutable
-class MultiErrorToastMsg(
-    val titleRes: StringResource,
+class LegacyResourceToastMsg(
+    val titleResId: Int,
+    val resourceId: Int,
+    val params: Array<out String>? = null,
+) : ToastMsg()
+
+@Deprecated("Use ThrowableToastMsg with StringResource")
+@Immutable
+class LegacyThrowableToastMsg(
+    val titleResId: Int,
+    val msg: String? = null,
+    val throwable: Throwable,
+) : ToastMsg()
+
+@Deprecated("Use ThrowableToastMsg2 with StringResource")
+@Immutable
+class LegacyThrowableToastMsg2(
+    val titleResId: Int,
+    val description: Int,
+    val throwable: Throwable,
+) : ToastMsg()
+
+@Deprecated("Use MultiErrorToastMsg with StringResource")
+@Immutable
+class LegacyMultiErrorToastMsg(
+    val titleResId: Int,
 ) : ToastMsg() {
     val errors = MutableStateFlow<List<UserBasedErrorMessage>>(emptyList())
 
@@ -46,8 +74,3 @@ class MultiErrorToastMsg(
         }
     }
 }
-
-class UserBasedErrorMessage(
-    val error: String,
-    val user: User?,
-)

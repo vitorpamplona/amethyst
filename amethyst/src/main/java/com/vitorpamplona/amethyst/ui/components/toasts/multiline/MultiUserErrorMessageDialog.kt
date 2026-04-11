@@ -31,8 +31,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.error_dialog_zap_error
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.ui.components.toasts.LegacyMultiErrorToastMsg
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -44,6 +47,7 @@ import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 @Preview
@@ -63,7 +67,7 @@ fun MultiUserErrorMessageContentPreview() {
         }
     }
 
-    val model = MultiErrorToastMsg(R.string.error_dialog_zap_error)
+    val model = MultiErrorToastMsg(Res.string.error_dialog_zap_error)
     model.add("Could not fetch invoice from https://minibits.cash/.well-known/lnurlp/victorieeman: There are too many unpaid invoices for this name.", user1)
     model.add("No Wallets found to pay a lightning invoice. Please install a Lightning wallet to use zaps.", user2)
     model.add("Could not fetch invoice", user3)
@@ -85,9 +89,38 @@ fun MultiUserErrorMessageDialog(
 ) {
     AlertDialog(
         onDismissRequest = accountViewModel.toastManager::clearToasts,
-        title = { Text(stringRes(model.titleResId)) },
+        title = { Text(stringResource(model.titleRes)) },
         text = {
             ErrorList(model, accountViewModel, nav)
+        },
+        confirmButton = {
+            Button(
+                onClick = accountViewModel.toastManager::clearToasts,
+                contentPadding = PaddingValues(horizontal = Size16dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Done,
+                    contentDescription = null,
+                )
+                Spacer(StdHorzSpacer)
+                Text(stringRes(R.string.error_dialog_button_ok))
+            }
+        },
+    )
+}
+
+@Suppress("DEPRECATION")
+@Composable
+fun MultiUserErrorMessageDialog(
+    model: LegacyMultiErrorToastMsg,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    AlertDialog(
+        onDismissRequest = accountViewModel.toastManager::clearToasts,
+        title = { Text(stringRes(model.titleResId)) },
+        text = {
+            LegacyErrorList(model, accountViewModel, nav)
         },
         confirmButton = {
             Button(

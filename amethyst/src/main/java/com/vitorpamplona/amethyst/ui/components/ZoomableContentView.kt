@@ -77,6 +77,9 @@ import coil3.compose.SubcomposeAsyncImageContent
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.media_added
+import com.vitorpamplona.amethyst.commons.resources.media_added_to_profile_gallery
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaLocalImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaLocalVideo
@@ -796,7 +799,7 @@ fun ShareMediaAction(
                                 val n19 = Nip19Parser.uriToRoute(postNostrUri)?.entity as? NEvent
                                 if (n19 != null) {
                                     accountViewModel.addMediaToGallery(n19.hex, videoUri, n19.relay.getOrNull(0), blurhash, dim, hash, mimeType)
-                                    accountViewModel.toastManager.toast(R.string.media_added, R.string.media_added_to_profile_gallery)
+                                    accountViewModel.toastManager.toast(Res.string.media_added, Res.string.media_added_to_profile_gallery)
                                 }
                             }
                             onDismiss()

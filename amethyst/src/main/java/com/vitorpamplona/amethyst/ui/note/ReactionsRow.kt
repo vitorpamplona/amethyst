@@ -103,6 +103,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.error_dialog_zap_error
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.ReactionRowAction
 import com.vitorpamplona.amethyst.model.ReactionRowItem
@@ -1195,7 +1197,7 @@ fun ZapReaction(
                             onError = { _, message, user ->
                                 scope.launch {
                                     zappingProgress = 0f
-                                    accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, message, user)
+                                    accountViewModel.toastManager.toast(Res.string.error_dialog_zap_error, message, user)
                                 }
                             },
                             onPayViaIntent = {
@@ -1203,7 +1205,7 @@ fun ZapReaction(
                                     val payable = it.first()
                                     payViaIntent(payable.invoice, context, { }) { error ->
                                         zappingProgress = 0f
-                                        accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, UserBasedErrorMessage(error, payable.info.user))
+                                        accountViewModel.toastManager.toast(Res.string.error_dialog_zap_error, UserBasedErrorMessage(error, payable.info.user))
                                     }
                                 } else {
                                     val uid = Uuid.random().toString()
@@ -1240,7 +1242,7 @@ fun ZapReaction(
                 onError = { _, message, user ->
                     scope.launch {
                         zappingProgress = 0f
-                        accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, message, user)
+                        accountViewModel.toastManager.toast(Res.string.error_dialog_zap_error, message, user)
                     }
                 },
                 onProgress = { scope.launch(Dispatchers.Main) { zappingProgress = it } },
@@ -1249,7 +1251,7 @@ fun ZapReaction(
                         val payable = it.first()
                         payViaIntent(payable.invoice, context, { }) { error ->
                             zappingProgress = 0f
-                            accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, UserBasedErrorMessage(error, payable.info.user))
+                            accountViewModel.toastManager.toast(Res.string.error_dialog_zap_error, UserBasedErrorMessage(error, payable.info.user))
                         }
                     } else {
                         val uid = Uuid.random().toString()
@@ -1267,7 +1269,7 @@ fun ZapReaction(
                 onError = { _, message, user ->
                     scope.launch {
                         zappingProgress = 0f
-                        accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, message, user)
+                        accountViewModel.toastManager.toast(Res.string.error_dialog_zap_error, message, user)
                     }
                 },
                 onProgress = { scope.launch(Dispatchers.Main) { zappingProgress = it } },
@@ -1276,7 +1278,7 @@ fun ZapReaction(
                         val payable = it.first()
                         payViaIntent(payable.invoice, context, { }) { error ->
                             zappingProgress = 0f
-                            accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, UserBasedErrorMessage(error, payable.info.user))
+                            accountViewModel.toastManager.toast(Res.string.error_dialog_zap_error, UserBasedErrorMessage(error, payable.info.user))
                         }
                     } else {
                         val uid = Uuid.random().toString()

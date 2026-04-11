@@ -44,6 +44,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.components.toasts.LegacyThrowableToastMsg
+import com.vitorpamplona.amethyst.ui.components.toasts.LegacyThrowableToastMsg2
 import com.vitorpamplona.amethyst.ui.components.toasts.ThrowableToastMsg
 import com.vitorpamplona.amethyst.ui.components.toasts.ThrowableToastMsg2
 import com.vitorpamplona.amethyst.ui.components.util.setText
@@ -51,6 +53,7 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size16dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 import java.io.PrintWriter
 import java.io.StringWriter
 
@@ -72,12 +75,58 @@ fun InformationDialog(
             writer.toString()
         }
 
-    InformationDialog(title = stringRes(obj.titleResId), textContent = str, moreInfo = stack, buttonColors, onDismiss)
+    InformationDialog(title = stringResource(obj.titleRes), textContent = str, moreInfo = stack, buttonColors, onDismiss)
 }
 
 @Composable
 fun InformationDialog(
     obj: ThrowableToastMsg2,
+    buttonColors: ButtonColors = ButtonDefaults.buttonColors(),
+    onDismiss: () -> Unit,
+) {
+    val str = stringResource(obj.descriptionRes)
+
+    val stack =
+        remember(obj) {
+            val writer = StringWriter()
+            writer.append("\n")
+
+            obj.throwable.printStackTrace(PrintWriter(writer))
+
+            writer.toString()
+        }
+
+    InformationDialog(title = stringResource(obj.titleRes), textContent = str, moreInfo = stack, buttonColors, onDismiss)
+}
+
+// Legacy Int-based overloads (will be removed after full migration)
+
+@Suppress("DEPRECATION")
+@Composable
+fun InformationDialog(
+    obj: LegacyThrowableToastMsg,
+    buttonColors: ButtonColors = ButtonDefaults.buttonColors(),
+    onDismiss: () -> Unit,
+) {
+    val str = obj.msg ?: obj.throwable.localizedMessage ?: obj.throwable.message ?: obj.throwable.javaClass.simpleName
+
+    val stack =
+        remember(obj) {
+            val writer = StringWriter()
+            writer.append("\n")
+
+            obj.throwable.printStackTrace(PrintWriter(writer))
+
+            writer.toString()
+        }
+
+    InformationDialog(title = stringRes(obj.titleResId), textContent = str, moreInfo = stack, buttonColors, onDismiss)
+}
+
+@Suppress("DEPRECATION")
+@Composable
+fun InformationDialog(
+    obj: LegacyThrowableToastMsg2,
     buttonColors: ButtonColors = ButtonDefaults.buttonColors(),
     onDismiss: () -> Unit,
 ) {

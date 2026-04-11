@@ -74,6 +74,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.messages_cant_upload_explainer
+import com.vitorpamplona.amethyst.commons.resources.messages_cant_upload_title
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.EncryptedMediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.EncryptedMediaUrlVideo
@@ -421,7 +424,7 @@ private fun BottomRowActions(
             }
         } else {
             IconButton(
-                onClick = { accountViewModel.toastManager.toast(R.string.messages_cant_upload_title, R.string.messages_cant_upload_explainer) },
+                onClick = { accountViewModel.toastManager.toast(Res.string.messages_cant_upload_title, Res.string.messages_cant_upload_explainer) },
             ) {
                 Icon(
                     imageVector = Icons.Default.AddPhotoAlternate,
@@ -439,7 +442,7 @@ private fun BottomRowActions(
         } else {
             IconButton(
                 onClick = {
-                    accountViewModel.toastManager.toast(R.string.messages_cant_upload_title, R.string.messages_cant_upload_explainer)
+                    accountViewModel.toastManager.toast(Res.string.messages_cant_upload_title, Res.string.messages_cant_upload_explainer)
                 },
             ) {
                 Icon(
@@ -458,7 +461,7 @@ private fun BottomRowActions(
         } else {
             IconButton(
                 onClick = {
-                    accountViewModel.toastManager.toast(R.string.messages_cant_upload_title, R.string.messages_cant_upload_explainer)
+                    accountViewModel.toastManager.toast(Res.string.messages_cant_upload_title, Res.string.messages_cant_upload_explainer)
                 },
             ) {
                 Icon(

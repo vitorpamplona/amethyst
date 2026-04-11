@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.toasts.multiline.MultiErrorToastMsg
 import com.vitorpamplona.amethyst.ui.components.toasts.multiline.UserBasedErrorMessage
 import kotlinx.coroutines.flow.MutableStateFlow
+import org.jetbrains.compose.resources.StringResource
 
 @Stable
 class ToastManager {
@@ -49,59 +50,125 @@ class ToastManager {
         toasts.tryEmit(ActionableStringToastMsg(title, message, action))
     }
 
+    // --- StringResource-based overloads (KMP) ---
+
+    fun toast(
+        titleRes: StringResource,
+        descRes: StringResource,
+    ) {
+        toasts.tryEmit(ResourceToastMsg(titleRes, descRes))
+    }
+
+    fun toast(
+        titleRes: StringResource,
+        message: String?,
+        throwable: Throwable,
+    ) {
+        toasts.tryEmit(ThrowableToastMsg(titleRes, message, throwable))
+    }
+
+    fun toast(
+        titleRes: StringResource,
+        descriptionRes: StringResource,
+        throwable: Throwable,
+    ) {
+        toasts.tryEmit(ThrowableToastMsg2(titleRes, descriptionRes, throwable))
+    }
+
+    fun toast(
+        titleRes: StringResource,
+        descRes: StringResource,
+        vararg params: String,
+    ) {
+        toasts.tryEmit(ResourceToastMsg(titleRes, descRes, params))
+    }
+
+    fun toast(
+        titleRes: StringResource,
+        message: String,
+        user: User?,
+    ) {
+        val current = toasts.value
+        if (current is MultiErrorToastMsg && current.titleRes == titleRes) {
+            current.add(message, user)
+        } else {
+            toasts.tryEmit(MultiErrorToastMsg(titleRes).also { it.add(message, user) })
+        }
+    }
+
+    fun toast(
+        titleRes: StringResource,
+        data: UserBasedErrorMessage,
+    ) {
+        val current = toasts.value
+        if (current is MultiErrorToastMsg && current.titleRes == titleRes) {
+            current.add(data)
+        } else {
+            toasts.tryEmit(MultiErrorToastMsg(titleRes).also { it.add(data) })
+        }
+    }
+
+    // --- Deprecated Int-based overloads (will be removed after full migration) ---
+
+    @Deprecated("Use StringResource overload", ReplaceWith("toast(titleRes, descRes)"))
     fun toast(
         titleResId: Int,
         resourceId: Int,
     ) {
-        toasts.tryEmit(ResourceToastMsg(titleResId, resourceId))
+        toasts.tryEmit(LegacyResourceToastMsg(titleResId, resourceId))
     }
 
+    @Deprecated("Use StringResource overload", ReplaceWith("toast(titleRes, message, throwable)"))
     fun toast(
         titleResId: Int,
         message: String?,
         throwable: Throwable,
     ) {
-        toasts.tryEmit(ThrowableToastMsg(titleResId, message, throwable))
+        toasts.tryEmit(LegacyThrowableToastMsg(titleResId, message, throwable))
     }
 
+    @Deprecated("Use StringResource overload", ReplaceWith("toast(titleRes, descriptionRes, throwable)"))
     fun toast(
         titleResId: Int,
         description: Int,
         throwable: Throwable,
     ) {
-        toasts.tryEmit(ThrowableToastMsg2(titleResId, description, throwable))
+        toasts.tryEmit(LegacyThrowableToastMsg2(titleResId, description, throwable))
     }
 
+    @Deprecated("Use StringResource overload", ReplaceWith("toast(titleRes, descRes, *params)"))
     fun toast(
         titleResId: Int,
         resourceId: Int,
         vararg params: String,
     ) {
-        toasts.tryEmit(ResourceToastMsg(titleResId, resourceId, params))
+        toasts.tryEmit(LegacyResourceToastMsg(titleResId, resourceId, params))
     }
 
+    @Deprecated("Use StringResource overload", ReplaceWith("toast(titleRes, message, user)"))
     fun toast(
         titleResId: Int,
         message: String,
         user: User?,
     ) {
         val current = toasts.value
-        if (current is MultiErrorToastMsg && current.titleResId == titleResId) {
+        if (current is LegacyMultiErrorToastMsg && current.titleResId == titleResId) {
             current.add(message, user)
         } else {
-            toasts.tryEmit(MultiErrorToastMsg(titleResId).also { it.add(message, user) })
+            toasts.tryEmit(LegacyMultiErrorToastMsg(titleResId).also { it.add(message, user) })
         }
     }
 
+    @Deprecated("Use StringResource overload", ReplaceWith("toast(titleRes, data)"))
     fun toast(
         titleResId: Int,
         data: UserBasedErrorMessage,
     ) {
         val current = toasts.value
-        if (current is MultiErrorToastMsg && current.titleResId == titleResId) {
+        if (current is LegacyMultiErrorToastMsg && current.titleResId == titleResId) {
             current.add(data)
         } else {
-            toasts.tryEmit(MultiErrorToastMsg(titleResId).also { it.add(data) })
+            toasts.tryEmit(LegacyMultiErrorToastMsg(titleResId).also { it.add(data) })
         }
     }
 }
