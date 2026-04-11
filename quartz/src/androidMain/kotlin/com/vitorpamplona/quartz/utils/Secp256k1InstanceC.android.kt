@@ -20,10 +20,15 @@
  */
 package com.vitorpamplona.quartz.utils
 
-actual object Secp256k1InstanceC {
+/**
+ * Android actual: delegates to Secp256k1C JNI binding class.
+ * The native library is packaged as libsecp256k1_amethyst_jni.so
+ * in the APK's jniLibs (built via CMake in quartz/src/main/c/).
+ */
+object Secp256k1C {
     private var loaded = false
 
-    private fun ensureLoaded() {
+    fun ensureLoaded() {
         if (!loaded) {
             System.loadLibrary("secp256k1_amethyst_jni")
             nativeInit()
@@ -31,71 +36,73 @@ actual object Secp256k1InstanceC {
         }
     }
 
-    private external fun nativeInit()
+    @JvmStatic external fun nativeInit()
 
-    private external fun nativePubkeyCreate(seckey: ByteArray): ByteArray?
+    @JvmStatic external fun nativePubkeyCreate(seckey: ByteArray): ByteArray?
 
-    private external fun nativePubkeyCompress(pubkey: ByteArray): ByteArray?
+    @JvmStatic external fun nativePubkeyCompress(pubkey: ByteArray): ByteArray?
 
-    private external fun nativeSecKeyVerify(seckey: ByteArray): Boolean
+    @JvmStatic external fun nativeSecKeyVerify(seckey: ByteArray): Boolean
 
-    private external fun nativeSchnorrSign(
+    @JvmStatic external fun nativeSchnorrSign(
         msg: ByteArray,
         seckey: ByteArray,
         auxrand: ByteArray?,
     ): ByteArray?
 
-    private external fun nativeSchnorrSignXOnly(
+    @JvmStatic external fun nativeSchnorrSignXOnly(
         msg: ByteArray,
         seckey: ByteArray,
         xonlyPub: ByteArray,
         auxrand: ByteArray?,
     ): ByteArray?
 
-    private external fun nativeSchnorrVerify(
+    @JvmStatic external fun nativeSchnorrVerify(
         sig: ByteArray,
         msg: ByteArray,
         pub: ByteArray,
     ): Boolean
 
-    private external fun nativeSchnorrVerifyFast(
+    @JvmStatic external fun nativeSchnorrVerifyFast(
         sig: ByteArray,
         msg: ByteArray,
         pub: ByteArray,
     ): Boolean
 
-    private external fun nativeSchnorrVerifyBatch(
+    @JvmStatic external fun nativeSchnorrVerifyBatch(
         pub: ByteArray,
         sigs: Array<ByteArray>,
         msgs: Array<ByteArray>,
     ): Boolean
 
-    private external fun nativePrivKeyTweakAdd(
+    @JvmStatic external fun nativePrivKeyTweakAdd(
         seckey: ByteArray,
         tweak: ByteArray,
     ): ByteArray?
 
-    private external fun nativePubKeyTweakMul(
+    @JvmStatic external fun nativePubKeyTweakMul(
         pubkey: ByteArray,
         tweak: ByteArray,
     ): ByteArray?
 
-    private external fun nativeEcdhXOnly(
+    @JvmStatic external fun nativeEcdhXOnly(
         xonlyPub: ByteArray,
         scalar: ByteArray,
     ): ByteArray?
+}
 
-    actual fun init() = ensureLoaded()
+actual object Secp256k1InstanceC {
+    actual fun init() = Secp256k1C.ensureLoaded()
 
     actual fun compressedPubKeyFor(privKey: ByteArray): ByteArray {
-        ensureLoaded()
-        val pub65 = nativePubkeyCreate(privKey) ?: error("Invalid private key")
-        return nativePubkeyCompress(pub65) ?: error("Compression failed")
+        Secp256k1C.ensureLoaded()
+        val pub65 = Secp256k1C.nativePubkeyCreate(privKey) ?: error("Invalid private key")
+        return Secp256k1C.nativePubkeyCompress(pub65) ?: error("Compression failed")
     }
 
     actual fun isPrivateKeyValid(il: ByteArray): Boolean {
-        ensureLoaded()
-        return nativeSecKeyVerify(il)
+        Secp256k1C.ensureLoaded()
+        return Secp256k1C.nativeSecKeyVerify(il)
     }
 
     actual fun signSchnorr(
@@ -103,8 +110,8 @@ actual object Secp256k1InstanceC {
         privKey: ByteArray,
         nonce: ByteArray?,
     ): ByteArray {
-        ensureLoaded()
-        return nativeSchnorrSign(data, privKey, nonce) ?: error("Sign failed")
+        Secp256k1C.ensureLoaded()
+        return Secp256k1C.nativeSchnorrSign(data, privKey, nonce) ?: error("Sign failed")
     }
 
     actual fun signSchnorrWithXOnlyPubKey(
@@ -113,8 +120,8 @@ actual object Secp256k1InstanceC {
         xOnlyPubKey: ByteArray,
         nonce: ByteArray?,
     ): ByteArray {
-        ensureLoaded()
-        return nativeSchnorrSignXOnly(data, privKey, xOnlyPubKey, nonce) ?: error("Sign failed")
+        Secp256k1C.ensureLoaded()
+        return Secp256k1C.nativeSchnorrSignXOnly(data, privKey, xOnlyPubKey, nonce) ?: error("Sign failed")
     }
 
     actual fun verifySchnorr(
@@ -122,8 +129,8 @@ actual object Secp256k1InstanceC {
         hash: ByteArray,
         pubKey: ByteArray,
     ): Boolean {
-        ensureLoaded()
-        return nativeSchnorrVerify(signature, hash, pubKey)
+        Secp256k1C.ensureLoaded()
+        return Secp256k1C.nativeSchnorrVerify(signature, hash, pubKey)
     }
 
     actual fun verifySchnorrFast(
@@ -131,8 +138,8 @@ actual object Secp256k1InstanceC {
         hash: ByteArray,
         pubKey: ByteArray,
     ): Boolean {
-        ensureLoaded()
-        return nativeSchnorrVerifyFast(signature, hash, pubKey)
+        Secp256k1C.ensureLoaded()
+        return Secp256k1C.nativeSchnorrVerifyFast(signature, hash, pubKey)
     }
 
     actual fun verifySchnorrBatch(
@@ -140,8 +147,8 @@ actual object Secp256k1InstanceC {
         signatures: List<ByteArray>,
         messages: List<ByteArray>,
     ): Boolean {
-        ensureLoaded()
-        return nativeSchnorrVerifyBatch(
+        Secp256k1C.ensureLoaded()
+        return Secp256k1C.nativeSchnorrVerifyBatch(
             pubKey,
             signatures.toTypedArray(),
             messages.toTypedArray(),
@@ -152,19 +159,19 @@ actual object Secp256k1InstanceC {
         first: ByteArray,
         second: ByteArray,
     ): ByteArray {
-        ensureLoaded()
-        return nativePrivKeyTweakAdd(first, second) ?: error("Tweak add failed")
+        Secp256k1C.ensureLoaded()
+        return Secp256k1C.nativePrivKeyTweakAdd(first, second) ?: error("Tweak add failed")
     }
 
     actual fun pubKeyTweakMulCompact(
         pubKey: ByteArray,
         privateKey: ByteArray,
     ): ByteArray {
-        ensureLoaded()
+        Secp256k1C.ensureLoaded()
         val compressedPub = ByteArray(33)
         compressedPub[0] = 0x02
         pubKey.copyInto(compressedPub, 1, 0, 32)
-        val result = nativePubKeyTweakMul(compressedPub, privateKey) ?: error("Tweak mul failed")
+        val result = Secp256k1C.nativePubKeyTweakMul(compressedPub, privateKey) ?: error("Tweak mul failed")
         return result.copyOfRange(1, 33)
     }
 
@@ -172,7 +179,7 @@ actual object Secp256k1InstanceC {
         xOnlyPub: ByteArray,
         scalar: ByteArray,
     ): ByteArray {
-        ensureLoaded()
-        return nativeEcdhXOnly(xOnlyPub, scalar) ?: error("ECDH failed")
+        Secp256k1C.ensureLoaded()
+        return Secp256k1C.nativeEcdhXOnly(xOnlyPub, scalar) ?: error("ECDH failed")
     }
 }

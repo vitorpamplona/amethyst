@@ -39,23 +39,20 @@ target_include_directories(secp256k1_amethyst_jni PUBLIC ${CMAKE_CURRENT_SOURCE_
 
 # ==================== JNI bridge ====================
 
-if(JNI_INCLUDE_DIR)
+if(ANDROID)
+    # Android NDK: JNI headers are always available, build shared lib with JNI bridge
+    target_sources(secp256k1_amethyst_jni PRIVATE jni_bridge.c)
+    find_library(log-lib log)
+    if(log-lib)
+        target_link_libraries(secp256k1_amethyst_jni ${log-lib})
+    endif()
+elseif(JNI_INCLUDE_DIR)
+    # Desktop JVM: JNI headers provided externally
     target_sources(secp256k1_amethyst_jni PRIVATE jni_bridge.c)
     target_include_directories(secp256k1_amethyst_jni PRIVATE ${JNI_INCLUDE_DIR})
     if(JNI_INCLUDE_DIR_PLATFORM)
         target_include_directories(secp256k1_amethyst_jni PRIVATE ${JNI_INCLUDE_DIR_PLATFORM})
     endif()
-endif()
-
-# ==================== Android NDK build ====================
-
-if(ANDROID)
-    # Android-specific: build shared library for JNI
-    find_library(log-lib log)
-    target_link_libraries(secp256k1_amethyst_jni ${log-lib})
-
-    # Include JNI headers from NDK
-    target_sources(secp256k1_amethyst_jni PRIVATE jni_bridge.c)
 endif()
 
 # ==================== Standalone benchmark ====================
