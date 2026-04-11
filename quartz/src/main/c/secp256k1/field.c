@@ -8,6 +8,7 @@
  * the lazy reduction advantage of 5x52 on both JVM and native.
  */
 #include "field.h"
+#include "field_asm.h"
 #include <string.h>
 
 #define FIELD_C 0x1000003D1ULL
@@ -123,7 +124,10 @@ void reduce_wide(secp256k1_fe *r, const uint64_t w[8]) {
 }
 
 void fe_mul(secp256k1_fe *r, const secp256k1_fe *a, const secp256k1_fe *b) {
-#if HAVE_INT128
+#if FE_MUL_ASM
+    fe_mul_asm(r, a, b);
+    return;
+#elif HAVE_INT128
     /* Inline mul + reduce to avoid function call overhead and enable
      * the compiler to keep intermediates in registers. */
     uint64_t a0=a->d[0], a1=a->d[1], a2=a->d[2], a3=a->d[3];
