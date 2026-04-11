@@ -192,7 +192,7 @@ class MlsGroupLifecycleTest {
         // Alice adds Carol (Bob processes Alice's commit)
         val carolBundle = createStandaloneKeyPackage("carol")
         val addCarolResult = alice.addMember(carolBundle.keyPackage.toTlsBytes())
-        bob.processCommit(addCarolResult.commitBytes, alice.leafIndex)
+        bob.processCommit(addCarolResult.commitBytes, alice.leafIndex, ByteArray(0))
         val carol = MlsGroup.processWelcome(addCarolResult.welcomeBytes!!, carolBundle)
 
         assertEquals(2L, alice.epoch)
@@ -230,7 +230,7 @@ class MlsGroupLifecycleTest {
         val addCarolResult = bob.addMember(carolBundle.keyPackage.toTlsBytes())
 
         // Alice processes Bob's commit
-        alice.processCommit(addCarolResult.commitBytes, bob.leafIndex)
+        alice.processCommit(addCarolResult.commitBytes, bob.leafIndex, ByteArray(0))
 
         assertEquals(2L, alice.epoch)
         assertEquals(2L, bob.epoch)
@@ -254,7 +254,7 @@ class MlsGroupLifecycleTest {
         assertEquals(1L, zara.epoch)
 
         // Alice processes the external commit
-        alice.processCommit(commitBytes, zara.leafIndex)
+        alice.processCommit(commitBytes, zara.leafIndex, ByteArray(0))
         assertEquals(1L, alice.epoch)
         assertEquals(2, alice.memberCount)
 
@@ -273,7 +273,7 @@ class MlsGroupLifecycleTest {
         val groupInfoBytes = alice.groupInfo().toTlsBytes()
 
         val (zara, commitBytes) = MlsGroup.externalJoin(groupInfoBytes, "zara".encodeToByteArray())
-        alice.processCommit(commitBytes, zara.leafIndex)
+        alice.processCommit(commitBytes, zara.leafIndex, ByteArray(0))
 
         val aliceKey = alice.exporterSecret("marmot", "group-event".encodeToByteArray(), 32)
         val zaraKey = zara.exporterSecret("marmot", "group-event".encodeToByteArray(), 32)
@@ -327,7 +327,7 @@ class MlsGroupLifecycleTest {
         val commitResult = alice.commit()
 
         // Bob processes Alice's rotation commit
-        bob.processCommit(commitResult.commitBytes, alice.leafIndex)
+        bob.processCommit(commitResult.commitBytes, alice.leafIndex, ByteArray(0))
 
         assertEquals(2L, alice.epoch)
         assertEquals(2L, bob.epoch)
@@ -353,7 +353,7 @@ class MlsGroupLifecycleTest {
         // Alice rotates her signing key
         alice.proposeSigningKeyRotation()
         val commitResult = alice.commit()
-        bob.processCommit(commitResult.commitBytes, alice.leafIndex)
+        bob.processCommit(commitResult.commitBytes, alice.leafIndex, ByteArray(0))
 
         // Both directions should still work after rotation
         val msg1 = "After rotation from Alice".encodeToByteArray()
@@ -433,7 +433,7 @@ class MlsGroupLifecycleTest {
         val commitResult = alice.commit()
 
         // Bob processes the commit
-        bob.processCommit(commitResult.commitBytes, alice.leafIndex)
+        bob.processCommit(commitResult.commitBytes, alice.leafIndex, ByteArray(0))
 
         assertEquals(epochBefore + 1, alice.epoch)
         assertEquals(alice.epoch, bob.epoch)
@@ -464,7 +464,7 @@ class MlsGroupLifecycleTest {
         assertNotNull(alice.reInitPending, "ReInit should be pending after commit")
 
         // Bob processes and should also see reInit
-        bob.processCommit(commitResult.commitBytes, alice.leafIndex)
+        bob.processCommit(commitResult.commitBytes, alice.leafIndex, ByteArray(0))
         assertNotNull(bob.reInitPending, "Bob should also see ReInit pending")
     }
 
@@ -485,7 +485,7 @@ class MlsGroupLifecycleTest {
 
         // Alice commits with no proposals (purely for forward secrecy / UpdatePath)
         val commitResult = alice.commit()
-        bob.processCommit(commitResult.commitBytes, alice.leafIndex)
+        bob.processCommit(commitResult.commitBytes, alice.leafIndex, ByteArray(0))
 
         assertEquals(epochBefore + 1, alice.epoch)
         assertEquals(alice.epoch, bob.epoch)

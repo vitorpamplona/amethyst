@@ -264,7 +264,7 @@ class MlsGroupTest {
         assertEquals(1L, zara.epoch)
 
         // Alice processes Zara's external commit
-        alice.processCommit(commitBytes, zara.leafIndex)
+        alice.processCommit(commitBytes, zara.leafIndex, ByteArray(0))
         assertEquals(1L, alice.epoch)
         assertEquals(2, alice.memberCount)
     }
