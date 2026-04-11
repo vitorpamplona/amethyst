@@ -65,20 +65,12 @@
 
 /*
  * Field element modulo p = 2^256 - 2^32 - 977.
- * 5 limbs of 52 bits each, with 12 bits of headroom per limb.
- * This allows 3-8 chained additions without reduction (lazy reduction).
- *
- * Magnitude tracking: after N additions without reduction, each limb
- * can be up to N * 2^52. We reduce when magnitude exceeds safe limits.
+ * 4 limbs of 64 bits each, fully packed, little-endian.
+ * Same representation as the Kotlin Fe4 class.
  */
 typedef struct {
-    uint64_t d[5];
+    uint64_t d[4];
 } secp256k1_fe;
-
-/* Wide result of field multiplication (used internally) */
-typedef struct {
-    uint64_t d[10];
-} secp256k1_fe_wide;
 
 /* ==================== Scalar (mod n) ==================== */
 
