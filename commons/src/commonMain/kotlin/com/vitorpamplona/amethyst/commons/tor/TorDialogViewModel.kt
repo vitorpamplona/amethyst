@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.tor
+package com.vitorpamplona.amethyst.commons.tor
 
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.derivedStateOf
@@ -84,7 +84,7 @@ class TorDialogViewModel : ViewModel() {
     fun save(): TorSettings =
         TorSettings(
             torType = torType.value,
-            externalSocksPort = Integer.parseInt(socksPortStr.value),
+            externalSocksPort = socksPortStr.value.toInt(),
             onionRelaysViaTor = onionRelaysViaTor.value,
             dmRelaysViaTor = dmRelaysViaTor.value,
             newRelaysViaTor = newRelaysViaTor.value,
