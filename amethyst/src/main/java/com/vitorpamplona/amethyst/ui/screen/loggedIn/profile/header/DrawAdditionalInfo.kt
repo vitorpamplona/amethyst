@@ -56,7 +56,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.Nip05State
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.github
 import com.vitorpamplona.amethyst.commons.resources.ic_qrcode
+import com.vitorpamplona.amethyst.commons.resources.mastodon
+import com.vitorpamplona.amethyst.commons.resources.telegram
+import com.vitorpamplona.amethyst.commons.resources.x
 import com.vitorpamplona.amethyst.commons.util.toShortDisplay
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
@@ -95,6 +99,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.DrawableResource
 
 private const val IDENTITY_ICON_CACHE_KEY = 0
 
@@ -256,7 +261,7 @@ fun DrawAdditionalInfo(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         tint = Color.Unspecified,
-                        painter = painterRes(resourceId = getIdentityClaimIcon(identity), IDENTITY_ICON_CACHE_KEY),
+                        painter = painterRes(resource = getIdentityClaimIcon(identity), IDENTITY_ICON_CACHE_KEY),
                         contentDescription = stringRes(getIdentityClaimDescription(identity)),
                         modifier = Modifier.size(18.dp),
                     )
@@ -359,13 +364,13 @@ fun DisplayNip05ProfileStatus(
     }
 }
 
-fun getIdentityClaimIcon(identity: IdentityClaimTag): Int =
+fun getIdentityClaimIcon(identity: IdentityClaimTag): DrawableResource =
     when (identity) {
-        is TwitterIdentity -> R.drawable.x
-        is TelegramIdentity -> R.drawable.telegram
-        is MastodonIdentity -> R.drawable.mastodon
-        is GitHubIdentity -> R.drawable.github
-        else -> R.drawable.github
+        is TwitterIdentity -> Res.drawable.x
+        is TelegramIdentity -> Res.drawable.telegram
+        is MastodonIdentity -> Res.drawable.mastodon
+        is GitHubIdentity -> Res.drawable.github
+        else -> Res.drawable.github
     }
 
 fun getIdentityClaimDescription(identity: IdentityClaimTag): Int =

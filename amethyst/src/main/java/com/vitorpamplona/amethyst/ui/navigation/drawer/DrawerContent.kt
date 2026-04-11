@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.navigation.drawer
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -101,7 +102,10 @@ import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.ic_chess
+import com.vitorpamplona.amethyst.commons.resources.ic_poll
 import com.vitorpamplona.amethyst.commons.resources.ic_qrcode
+import com.vitorpamplona.amethyst.commons.resources.profile_banner
 import com.vitorpamplona.amethyst.commons.resources.relays
 import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.model.Account
@@ -139,6 +143,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import org.jetbrains.compose.resources.DrawableResource
 
 @Composable
 fun DrawerContent(
@@ -240,8 +245,8 @@ fun ProfileContentTemplate(
                 modifier = bannerModifier,
             )
         } else {
-            AsyncImage(
-                model = R.drawable.profile_banner,
+            Image(
+                painter = painterRes(Res.drawable.profile_banner, 0),
                 contentDescription = stringResource(R.string.profile_banner),
                 contentScale = ContentScale.FillWidth,
                 modifier = bannerModifier,
@@ -579,7 +584,7 @@ fun ListContent(
 
         NavigationRow(
             title = R.string.polls,
-            icon = R.drawable.ic_poll,
+            icon = Res.drawable.ic_poll,
             iconReference = 1,
             tint = MaterialTheme.colorScheme.onBackground,
             nav = nav,
@@ -621,7 +626,7 @@ fun ListContent(
         if (isDebug) {
             NavigationRow(
                 title = R.string.route_chess,
-                icon = R.drawable.ic_chess,
+                icon = Res.drawable.ic_chess,
                 iconReference = 1,
                 tint = MaterialTheme.colorScheme.onBackground,
                 nav = nav,
@@ -659,7 +664,7 @@ fun ListContent(
 @Composable
 fun NavigationRow(
     title: Int,
-    icon: Int,
+    icon: DrawableResource,
     iconReference: Int,
     tint: Color,
     nav: INav,
@@ -718,7 +723,7 @@ fun NavigationRow(
 @Composable
 fun IconRow(
     title: Int,
-    icon: Int,
+    icon: DrawableResource,
     iconReference: Int,
     tint: Color,
     onClick: () -> Unit,

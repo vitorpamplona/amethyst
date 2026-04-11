@@ -58,6 +58,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.ic_tor
+import com.vitorpamplona.amethyst.commons.resources.relays
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -67,6 +70,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
+import org.jetbrains.compose.resources.DrawableResource
 
 @Preview
 @Composable
@@ -95,7 +99,7 @@ fun AllSettingsScreen(
             SettingsSectionHeader(R.string.account_settings)
             SettingsNavigationRow(
                 title = R.string.relay_setup,
-                iconPainter = R.drawable.relays,
+                iconPainter = Res.drawable.relays,
                 iconPainterRef = 4,
                 tint = tint,
                 onClick = { nav.nav(Route.EditRelays) },
@@ -160,7 +164,7 @@ fun AllSettingsScreen(
             SettingsSectionHeader(R.string.app_settings)
             SettingsNavigationRow(
                 title = R.string.privacy_options,
-                iconPainter = R.drawable.ic_tor,
+                iconPainter = Res.drawable.ic_tor,
                 iconPainterRef = 1,
                 tint = tint,
                 onClick = { nav.nav(Route.PrivacyOptions) },
@@ -264,7 +268,7 @@ private fun SettingsNavigationRow(
 @Composable
 private fun SettingsNavigationRow(
     title: Int,
-    iconPainter: Int,
+    iconPainter: DrawableResource,
     iconPainterRef: Int,
     tint: Color,
     onClick: () -> Unit,
