@@ -59,6 +59,14 @@ internal object FieldP {
 
     // ==================== Core arithmetic ====================
 
+    /**
+     * out = a + b. LAZY: does NOT reduce the result.
+     * Values may be in [0, 2^256) after this call. This is safe because:
+     * - mul/sqr reduce any 256-bit input via reduceWide
+     * - neg normalizes its input before P - a
+     * - half normalizes its input before the conditional add
+     * Only explicit reduceSelf is needed before isZero/cmp/toBytes.
+     */
     fun add(
         out: Fe4,
         a: Fe4,
@@ -78,7 +86,9 @@ internal object FieldP {
                 }
             }
         }
-        reduceSelf(out)
+        // No reduceSelf — lazy addition for performance.
+        // Result may be in [P, 2^256) but this is handled by
+        // downstream mul/sqr/neg/half/reduceSelf.
     }
 
     /**
@@ -164,6 +174,8 @@ internal object FieldP {
         out: Fe4,
         a: Fe4,
     ) {
+        // Normalize input: P - a underflows if a > P (from lazy add)
+        reduceSelf(a)
         if (a.isZero()) {
             out.l0 = 0L
             out.l1 = 0L
@@ -190,6 +202,9 @@ internal object FieldP {
         out: Fe4,
         a: Fe4,
     ) {
+        // Normalize: half conditionally adds P; if a is in [P, 2^256) from lazy add,
+        // a+P could exceed 2^256. Normalize ensures a < P first.
+        reduceSelf(a)
         val mask = -(a.l0 and 1L) // all 1s if odd, all 0s if even
         val p0 = P0 and mask // P[0] masked; P[1..3] are -1, so P[i]&mask = mask
         var s1: Long
