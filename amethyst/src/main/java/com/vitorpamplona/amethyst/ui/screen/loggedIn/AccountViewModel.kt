@@ -176,7 +176,7 @@ import kotlinx.coroutines.withContext
 @Stable
 class AccountViewModel(
     override val account: Account,
-    val settings: UiSettingsState,
+    override val settings: UiSettingsState,
     val torSettings: TorSettingsFlow,
     val dataSources: RelaySubscriptionsCoordinator,
     val httpClientBuilder: IRoleBasedHttpClientBuilder,
@@ -186,7 +186,7 @@ class AccountViewModel(
     com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel {
     var firstRoute: Route? = null
 
-    val toastManager = ToastManager()
+    override val toastManager = ToastManager()
     val broadcastTracker = BroadcastTracker()
     val feedStates = AccountFeedContentStates(account, viewModelScope)
 

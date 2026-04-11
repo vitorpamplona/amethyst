@@ -26,6 +26,8 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
+import com.vitorpamplona.amethyst.commons.ui.components.toasts.IToastManager
+import com.vitorpamplona.amethyst.commons.ui.screen.IUiSettingsState
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -47,6 +49,12 @@ interface IAccountViewModel {
 
     /** The underlying account abstraction. */
     val account: IAccount
+
+    /** UI settings (connectivity-aware display preferences). 78 usages / 37 files. */
+    val settings: IUiSettingsState
+
+    /** Toast/snackbar manager. 119 usages / 48 files. */
+    val toastManager: IToastManager
 
     // ── identity helpers (50-20 usages) ───────────────────────────────
 
