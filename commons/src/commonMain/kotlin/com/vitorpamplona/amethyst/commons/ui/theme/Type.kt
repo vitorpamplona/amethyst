@@ -20,33 +20,34 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.theme
 
-import androidx.compose.material3.ColorScheme
-import androidx.compose.ui.graphics.Color
+import androidx.compose.material3.Typography
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.em
+import androidx.compose.ui.unit.sp
 
-// Chat-prefixed aliases for commons UI components that use these names.
-// The canonical definitions now live in Shape.kt.
-val ChatRowColSpacing5dp = RowColSpacing5dp
-val ChatHalfHalfVertPadding = HalfHalfVertPadding
-val ChatStdHorzSpacer = StdHorzSpacer
-val ChatStdPadding = StdPadding
-val ChatReactionRowHeight = ReactionRowHeightChat
-val ChatSize20dp = Size20dp
-val ChatSize34dp = Size34dp
+// Set of Material typography styles to start with
+val Typography =
+    Typography(
+        bodyLarge =
+            TextStyle(
+                fontFamily = FontFamily.Default,
+                fontWeight = FontWeight.Normal,
+                fontSize = 16.sp,
+            ),
+    )
 
-// Chat-prefixed aliases for PascalCase originals in Shape.kt
-val ChatAuthorBox = chatAuthorBox
-val ChatAuthorImage = chatAuthorImage
-val MessageBubbleLimits = messageBubbleLimits
+val Font4SP = 4.sp
+val Font6SP = 6.sp
+val Font8SP = 8.sp
+val Font10SP = 10.sp
+val Font12SP = 12.sp
+val Font14SP = 14.sp
+val Font17SP = 17.sp
+val Font18SP = 18.sp
 
-// Chat color extensions for ColorScheme
-val ColorScheme.chatBubbleBackground: Color
-    get() = if (isLight) onSurface.copy(alpha = 0.08f) else onSurface.copy(alpha = 0.12f)
+val MarkdownTextStyle = TextStyle(lineHeight = 1.50.em)
 
-val ColorScheme.chatBubbleDraftBackground: Color
-    get() = onSurface.copy(alpha = 0.15f)
-
-val ColorScheme.chatBubbleMeBackground: Color
-    get() = primary.copy(alpha = 0.32f)
-
-val ColorScheme.chatPlaceholderText: Color
-    get() = onSurface.copy(alpha = 0.42f)
+val DefaultParagraphSpacing: TextUnit = 20.sp

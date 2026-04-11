@@ -20,391 +20,492 @@
  */
 package com.vitorpamplona.amethyst.ui.theme
 
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.defaultMinSize
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.CornerSize
-import androidx.compose.foundation.shape.CutCornerShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Shapes
-import androidx.compose.material3.ripple
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.Placeholder
-import androidx.compose.ui.text.PlaceholderVerticalAlign
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.TextLinkStyles
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarSize
-
-val Shapes =
-    Shapes(
-        small = RoundedCornerShape(4.dp),
-        medium = RoundedCornerShape(4.dp),
-        large = RoundedCornerShape(0.dp),
-    )
-
-val RippleRadius45dp = 45.dp // Ripple should be +10.dp over the component size
-
-val BottomTopHeight = Modifier.height(50.dp)
-val TabRowHeight = Modifier
-
-val SmallestBorder = RoundedCornerShape(5.dp)
-val SmallBorder = RoundedCornerShape(7.dp)
-val SmallishBorder = RoundedCornerShape(9.dp)
-val QuoteBorder = RoundedCornerShape(15.dp)
-
-val ButtonBorder = RoundedCornerShape(20.dp)
-val LeftHalfCircleButtonBorder = ButtonBorder.copy(topEnd = CornerSize(0f), bottomEnd = CornerSize(0f))
-val EditFieldBorder = RoundedCornerShape(25.dp)
-
-val ChatBubbleShapeMe = RoundedCornerShape(15.dp, 15.dp, 3.dp, 15.dp)
-val ChatBubbleShapeThem = RoundedCornerShape(3.dp, 15.dp, 15.dp, 15.dp)
-
-val StdButtonSizeModifier = Modifier.size(19.dp)
-
-val HalfVertSpacer = Modifier.height(2.dp)
-
-val MinHorzSpacer = Modifier.width(1.dp)
-
-val HalfHorzSpacer = Modifier.width(3.dp)
-
-val StdHorzSpacer = Modifier.width(5.dp)
-val StdVertSpacer = Modifier.height(5.dp)
-
-val DoubleHorzSpacer = Modifier.width(10.dp)
-val DoubleVertSpacer = Modifier.height(10.dp)
-
-val Height100Modifier = Modifier.height(100.dp)
-
-val HalfDoubleVertSpacer = Modifier.height(7.dp)
-
-val Size0dp = 0.dp
-val Size2dp = 2.dp
-val Size3dp = 3.dp
-val Size5dp = 5.dp
-val Size6dp = 6.dp
-val Size8dp = 8.dp
-val Size10dp = 10.dp
-val Size12dp = 12.dp
-val Size13dp = 13.dp
-val Size14dp = 14.dp
-val Size15dp = 15.dp
-val Size16dp = 16.dp
-val Size17dp = 17.dp
-val Size18dp = 18.dp
-val Size19dp = 19.dp
-val Size20dp = 20.dp
-val Size22dp = 22.dp
-val Size23dp = 23.dp
-val Size24dp = 24.dp
-val Size25dp = 25.dp
-val Size30dp = 30.dp
-val Size34dp = 34.dp
-val Size35dp = 35.dp
-val Size40dp = 40.dp
-val Size50dp = 50.dp
-val Size55dp = 55.dp
-val Size75dp = 75.dp
-val Size100dp = 100.dp
-val Size110dp = 110.dp
-val Size165dp = 165.dp
-
-val StdEndPadding = Modifier.padding(end = 10.dp)
-val HalfEndPadding = Modifier.padding(end = 5.dp)
-val HalfStartPadding = Modifier.padding(start = 5.dp)
-val StdStartPadding = Modifier.padding(start = 10.dp)
-val StdTopPadding = Modifier.padding(top = 10.dp)
-val HalfTopPadding = Modifier.padding(top = 5.dp)
-val HalfHalfTopPadding = Modifier.padding(top = 3.dp)
-
-val HalfHalfVertPadding = Modifier.padding(vertical = 3.dp)
-val HalfHalfHorzModifier = Modifier.padding(horizontal = 3.dp)
-
-val HalfPadding = Modifier.padding(5.dp)
-val StdPadding = Modifier.padding(10.dp)
-val BigPadding = Modifier.padding(15.dp)
-
-val RowColSpacing = Arrangement.spacedBy(3.dp)
-val RowColSpacing5dp = Arrangement.spacedBy(5.dp)
-val RowColSpacing10dp = Arrangement.spacedBy(10.dp)
-
-val HalfHorzPadding = Modifier.padding(horizontal = 5.dp)
-val HalfVertPadding = Modifier.padding(vertical = 5.dp)
-
-val HorzPadding = Modifier.padding(horizontal = 10.dp)
-val VertPadding = Modifier.padding(vertical = 10.dp)
-
-val HorzHalfVertPadding = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
-
-val DoubleHorzPadding = Modifier.padding(horizontal = 20.dp)
-val DoubleVertPadding = Modifier.padding(vertical = 20.dp)
-
-val MaxWidthWithHorzPadding = Modifier.fillMaxWidth().padding(horizontal = 10.dp)
-
-val Size5Modifier = Modifier.size(5.dp)
-val Size10Modifier = Modifier.size(10.dp)
-val Size14Modifier = Modifier.size(14.dp)
-val Size15Modifier = Modifier.size(15.dp)
-val Size16Modifier = Modifier.size(16.dp)
-val Size17Modifier = Modifier.size(17.dp)
-val Size18Modifier = Modifier.size(18.dp)
-val Size19Modifier = Modifier.size(19.dp)
-val Size20Modifier = Modifier.size(20.dp)
-val Size22Modifier = Modifier.size(22.dp)
-val Size24Modifier = Modifier.size(24.dp)
-val Size25Modifier = Modifier.size(25.dp)
-val Size26Modifier = Modifier.size(26.dp)
-val Size28Modifier = Modifier.size(28.dp)
-val Size30Modifier = Modifier.size(30.dp)
-val Size35Modifier = Modifier.size(35.dp)
-val Size39Modifier = Modifier.size(39.dp)
-val Size40Modifier = Modifier.size(40.dp)
-val Size50Modifier = Modifier.size(50.dp)
-val Size55Modifier = Modifier.size(55.dp)
-val Size75Modifier = Modifier.size(75.dp)
-
-val TinyBorders = Modifier.padding(2.dp)
-val NoSoTinyBorders = Modifier.padding(start = 5.dp, end = 5.dp, top = 2.dp, bottom = 2.dp)
-val ReactionRowZapraiserWithPadding = Modifier.defaultMinSize(minHeight = 4.dp).padding(start = Size75dp).fillMaxWidth()
-val ReactionRowZapraiser = Modifier.defaultMinSize(minHeight = 4.dp).fillMaxWidth()
-
-val ReactionRowExpandButton = Modifier.width(65.dp).padding(start = 31.dp)
-
-val WidthAuthorPictureModifier = Modifier.width(55.dp)
-val WidthAuthorPictureModifierWithPadding = Modifier.width(65.dp)
-
-val VideoReactionColumnPadding = Modifier.padding(bottom = 75.dp)
-
-val DividerThickness = 0.25.dp
-
-val ReactionRowHeight = Modifier.padding(vertical = 7.dp).heightIn(min = 24.dp)
-val ReactionRowHeightWithPadding = Modifier.padding(vertical = 6.dp).heightIn(min = 24.dp).padding(horizontal = 10.dp)
-val ReactionRowHeightChat = Modifier.height(20.dp)
-val ReactionRowHeightChatMaxWidth = Modifier.height(25.dp).fillMaxWidth()
-val UserNameRowHeight = Modifier.fillMaxWidth()
-val UserNameMaxRowHeight = Modifier.fillMaxWidth()
-
-val Height24dpModifier = Modifier.height(24.dp)
-val Height4dpModifier = Modifier.height(4.dp)
-val Height25Modifier = Modifier.height(Size25dp)
-
-val Height24dpFilledModifier = Modifier.fillMaxWidth().height(24.dp)
-val Height4dpFilledModifier = Modifier.fillMaxWidth().height(4.dp)
-
-val AccountPictureModifier = Modifier.size(55.dp).clip(shape = CircleShape)
-val HeaderPictureModifier = Modifier.size(34.dp).clip(shape = CircleShape)
-
-val ShowMoreRelaysButtonIconButtonModifier = Modifier.size(15.dp)
-val ShowMoreRelaysButtonIconModifier = Modifier.size(20.dp)
-val ShowMoreRelaysButtonBoxModifer = Modifier.width(55.dp).height(17.dp)
-
-val ChatBubbleMaxSizeModifier = Modifier.fillMaxWidth(0.85f)
-
-val ModifierWidth3dp = Modifier.width(3.dp)
-
-val NotificationIconModifier = Modifier.width(55.dp).padding(end = 5.dp)
-val NotificationIconModifierSmaller = Modifier.width(55.dp).padding(end = 4.dp)
-
-val ZapPictureCommentModifier = Modifier.height(35.dp).widthIn(min = 35.dp)
-val ChatHeadlineBorders = StdPadding
-
-val VolumeBottomIconSize = Modifier.size(60.dp).padding(5.dp)
-val PinBottomIconSize = Modifier.size(60.dp).padding(5.dp)
-val PlayIconSize = Modifier.size(110.dp).padding(10.dp)
-val NIP05IconSize = Modifier.size(13.dp).padding(top = 1.dp, start = 1.dp, end = 1.dp)
-
-val CashuCardBorders = Modifier.fillMaxWidth().padding(10.dp).clip(shape = QuoteBorder)
-
-val EditFieldModifier =
-    Modifier.padding(start = 10.dp, end = 10.dp, bottom = 10.dp, top = 5.dp).fillMaxWidth()
-val EditFieldTrailingIconModifier = Modifier.padding(start = 5.dp, end = 0.dp)
-
-val ZeroPadding = PaddingValues(0.dp)
-val HalfFeedPadding = PaddingValues(5.dp)
-val FeedPadding = PaddingValues(top = 10.dp, bottom = 10.dp)
-val ButtonPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
-
-val ChatPaddingInnerQuoteModifier = Modifier
-val ChatPaddingModifier =
-    Modifier
-        .fillMaxWidth(1f)
-        .padding(
-            start = 12.dp,
-            end = 12.dp,
-            top = 3.dp,
-            bottom = 3.dp,
-        )
-
-val profileContentHeaderModifier =
-    Modifier.fillMaxWidth().padding(top = 70.dp, start = Size25dp, end = Size25dp)
-val bannerModifier = Modifier.fillMaxWidth().height(120.dp)
-val drawerSpacing = Modifier.padding(top = Size10dp, start = Size25dp, end = Size25dp)
-
-val IconRowTextModifier = Modifier.padding(start = 16.dp)
-val IconRowModifier = Modifier.fillMaxWidth().padding(vertical = 15.dp, horizontal = 25.dp)
-
-val Width16Space = Modifier.width(Size16dp)
-
-val emptyLineItemModifier = Modifier.height(Size75dp).fillMaxWidth()
-
-val imageHeaderBannerSize = Modifier.fillMaxWidth().height(150.dp)
-
-val authorNotePictureForImageHeader = Modifier.size(75.dp).padding(10.dp)
-
-val normalWithTopMarginNoteModifier =
-    Modifier
-        .fillMaxWidth()
-        .padding(
-            start = 12.dp,
-            end = 12.dp,
-            top = 10.dp,
-        )
-
-val boostedNoteModifier =
-    Modifier
-        .fillMaxWidth()
-        .padding(
-            start = 0.dp,
-            end = 0.dp,
-            top = 0.dp,
-        )
-
-val liveStreamTag =
-    Modifier
-        .clip(SmallBorder)
-        .background(Color.Black)
-        .padding(horizontal = Size5dp)
-
-val chatAuthorBox = Modifier.size(20.dp)
-val chatAuthorImage = Modifier.size(20.dp).clip(shape = CircleShape)
-val AuthorInfoVideoFeed = Modifier.width(75.dp).padding(end = 15.dp)
-
-val messageDetailsModifier = Modifier.height(Size25dp)
-val messageBubbleLimits = Modifier.padding(start = 10.dp, end = 10.dp, top = 7.dp, bottom = 6.dp)
-
-val inlinePlaceholder =
-    Placeholder(
-        width = Font17SP,
-        height = Font17SP,
-        placeholderVerticalAlign = PlaceholderVerticalAlign.Center,
-    )
-
-val IncognitoIconModifier = Modifier.padding(top = 1.dp).size(14.dp)
-val IncognitoIconButtonModifier = Modifier.padding(top = 2.dp).size(20.dp)
-
-val hashVerifierMark = Modifier.width(40.dp).height(40.dp).padding(10.dp)
-
-val noteComposeRelayBox = Modifier.width(55.dp).heightIn(min = 17.dp).padding(start = 2.dp, end = 1.dp)
-
-val previewCardImageModifier = Modifier.fillMaxWidth().heightIn(max = 200.dp).padding(bottom = 5.dp)
-
-val reactionBox =
-    Modifier
-        .padding(horizontal = 6.dp, vertical = 6.dp)
-        .size(Size40dp)
-        .padding(5.dp)
-
-val ripple24dp = ripple(bounded = false, radius = Size24dp)
-
-val defaultTweenDuration = 100
-val defaultTweenFloatSpec = tween<Float>(durationMillis = defaultTweenDuration)
-val defaultTweenIntOffsetSpec = tween<IntOffset>(durationMillis = defaultTweenDuration)
-
-val StreamingHeaderModifier =
-    Modifier
-        .fillMaxWidth()
-        .heightIn(min = 50.dp, max = 300.dp)
-
-val PostKeyboard =
-    KeyboardOptions.Default.copy(
-        autoCorrectEnabled = true,
-        capitalization = KeyboardCapitalization.Sentences,
-    )
-
-val SettingsCategoryFirstModifier = Modifier.padding(bottom = 8.dp)
-val SettingsCategorySpacingModifier = Modifier.padding(top = 24.dp, bottom = 8.dp)
-
-val SettingsCategoryFirstWithHorzBorderModifier = Modifier.padding(bottom = 8.dp, start = 10.dp, end = 10.dp)
-val SettingsCategorySpacingWithHorzBorderModifier = Modifier.padding(top = 24.dp, bottom = 8.dp, start = 10.dp, end = 10.dp)
-
-val SquaredQuoteBorderModifier = Modifier.aspectRatio(1f).clip(shape = QuoteBorder)
-val FillWidthQuoteBorderModifier = Modifier.fillMaxWidth().clip(shape = QuoteBorder)
-
-val MediumRelayIconModifier =
-    Modifier
-        .size(Size35dp)
-        .clip(shape = CircleShape)
-
-val LargeRelayIconModifier =
-    Modifier
-        .size(Size55dp)
-        .clip(shape = CircleShape)
-
-val FollowSetImageModifier =
-    Modifier
-        .fillMaxWidth()
-        .clip(QuoteBorder)
-        .aspectRatio(ratio = 21f / 9f)
-
-val SimpleImage75Modifier = Modifier.size(Size75dp).clip(QuoteBorder)
-val SimpleImage35Modifier = Modifier.size(Size34dp).clip(shape = CircleShape)
-
-val SimpleImageBorder = Modifier.fillMaxSize().clip(QuoteBorder)
-
-val SimpleHeaderImage = Modifier.fillMaxWidth().heightIn(max = 200.dp)
-
-val BadgePictureModifier = Modifier.size(35.dp).clip(shape = CutCornerShape(20))
-
-val MaxWidthPaddingTop5dp = Modifier.fillMaxWidth().padding(top = 5.dp)
-
-val VoiceHeightModifier = Modifier.fillMaxWidth().height(100.dp)
-
-val PaddingHorizontal12Modifier = Modifier.padding(horizontal = 12.dp)
-
-val QuickActionPopupShadow = Modifier.shadow(elevation = Size6dp, shape = SmallestBorder)
-
-val SpacedBy2dp = Arrangement.spacedBy(Size2dp)
-val SpacedBy3dp = Arrangement.spacedBy(Size3dp)
-val SpacedBy5dp = Arrangement.spacedBy(Size5dp)
-val SpacedBy10dp = Arrangement.spacedBy(Size10dp)
-val SpacedBy55dp = Arrangement.spacedBy(Size55dp)
-
-val PopupUpEffect = RoundedCornerShape(0.dp, 0.dp, 15.dp, 15.dp)
-
-val Size50ModifierOffset10 = Modifier.size(50.dp).offset(y = (-10).dp)
-
-val SuggestionListDefaultHeightChat = Modifier.heightIn(0.dp, 200.dp)
-val SuggestionListDefaultHeightPage = Modifier.heightIn(0.dp, 300.dp)
-
-val FollowPackHeaderModifier = Modifier.fillMaxWidth().height(TopBarSize)
-
-val Size22ModifierWith4Padding = Modifier.size(22.dp).padding(end = 4.dp)
-
-val TextStyleBottomNavBar =
-    TextLinkStyles(
-        SpanStyle(
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Bold,
-        ),
-    )
+// Backward-compatible re-exports — all shape/layout definitions live in commons
+import com.vitorpamplona.amethyst.commons.ui.theme.AccountPictureModifier as CommonsAccountPictureModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.AuthorInfoVideoFeed as CommonsAuthorInfoVideoFeed
+import com.vitorpamplona.amethyst.commons.ui.theme.BadgePictureModifier as CommonsBadgePictureModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.BigPadding as CommonsBigPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.BottomTopHeight as CommonsBottomTopHeight
+import com.vitorpamplona.amethyst.commons.ui.theme.ButtonBorder as CommonsButtonBorder
+import com.vitorpamplona.amethyst.commons.ui.theme.ButtonPadding as CommonsButtonPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.CashuCardBorders as CommonsCashuCardBorders
+import com.vitorpamplona.amethyst.commons.ui.theme.ChatBubbleMaxSizeModifier as CommonsChatBubbleMaxSizeModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.ChatBubbleShapeMe as CommonsChatBubbleShapeMe
+import com.vitorpamplona.amethyst.commons.ui.theme.ChatBubbleShapeThem as CommonsChatBubbleShapeThem
+import com.vitorpamplona.amethyst.commons.ui.theme.ChatHeadlineBorders as CommonsChatHeadlineBorders
+import com.vitorpamplona.amethyst.commons.ui.theme.ChatPaddingInnerQuoteModifier as CommonsChatPaddingInnerQuoteModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.ChatPaddingModifier as CommonsChatPaddingModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness as CommonsDividerThickness
+import com.vitorpamplona.amethyst.commons.ui.theme.DoubleHorzPadding as CommonsDoubleHorzPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.DoubleHorzSpacer as CommonsDoubleHorzSpacer
+import com.vitorpamplona.amethyst.commons.ui.theme.DoubleVertPadding as CommonsDoubleVertPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.DoubleVertSpacer as CommonsDoubleVertSpacer
+import com.vitorpamplona.amethyst.commons.ui.theme.EditFieldBorder as CommonsEditFieldBorder
+import com.vitorpamplona.amethyst.commons.ui.theme.EditFieldModifier as CommonsEditFieldModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.EditFieldTrailingIconModifier as CommonsEditFieldTrailingIconModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding as CommonsFeedPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.FillWidthQuoteBorderModifier as CommonsFillWidthQuoteBorderModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.FollowPackHeaderModifier as CommonsFollowPackHeaderModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.FollowSetImageModifier as CommonsFollowSetImageModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.HalfDoubleVertSpacer as CommonsHalfDoubleVertSpacer
+import com.vitorpamplona.amethyst.commons.ui.theme.HalfEndPadding as CommonsHalfEndPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.HalfFeedPadding as CommonsHalfFeedPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.HalfHalfHorzModifier as CommonsHalfHalfHorzModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.HalfHalfTopPadding as CommonsHalfHalfTopPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.HalfHalfVertPadding as CommonsHalfHalfVertPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.HalfHorzPadding as CommonsHalfHorzPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.HalfHorzSpacer as CommonsHalfHorzSpacer
+import com.vitorpamplona.amethyst.commons.ui.theme.HalfPadding as CommonsHalfPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.HalfStartPadding as CommonsHalfStartPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.HalfTopPadding as CommonsHalfTopPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.HalfVertPadding as CommonsHalfVertPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.HalfVertSpacer as CommonsHalfVertSpacer
+import com.vitorpamplona.amethyst.commons.ui.theme.HeaderPictureModifier as CommonsHeaderPictureModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.Height100Modifier as CommonsHeight100Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.Height24dpFilledModifier as CommonsHeight24dpFilledModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.Height24dpModifier as CommonsHeight24dpModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.Height25Modifier as CommonsHeight25Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.Height4dpFilledModifier as CommonsHeight4dpFilledModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.Height4dpModifier as CommonsHeight4dpModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.HorzHalfVertPadding as CommonsHorzHalfVertPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.HorzPadding as CommonsHorzPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.IconRowModifier as CommonsIconRowModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.IconRowTextModifier as CommonsIconRowTextModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.IncognitoIconButtonModifier as CommonsIncognitoIconButtonModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.IncognitoIconModifier as CommonsIncognitoIconModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.LargeRelayIconModifier as CommonsLargeRelayIconModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.LeftHalfCircleButtonBorder as CommonsLeftHalfCircleButtonBorder
+import com.vitorpamplona.amethyst.commons.ui.theme.MaxWidthPaddingTop5dp as CommonsMaxWidthPaddingTop5dp
+import com.vitorpamplona.amethyst.commons.ui.theme.MaxWidthWithHorzPadding as CommonsMaxWidthWithHorzPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.MediumRelayIconModifier as CommonsMediumRelayIconModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.MinHorzSpacer as CommonsMinHorzSpacer
+import com.vitorpamplona.amethyst.commons.ui.theme.ModifierWidth3dp as CommonsModifierWidth3dp
+import com.vitorpamplona.amethyst.commons.ui.theme.NIP05IconSize as CommonsNIP05IconSize
+import com.vitorpamplona.amethyst.commons.ui.theme.NoSoTinyBorders as CommonsNoSoTinyBorders
+import com.vitorpamplona.amethyst.commons.ui.theme.NotificationIconModifier as CommonsNotificationIconModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.NotificationIconModifierSmaller as CommonsNotificationIconModifierSmaller
+import com.vitorpamplona.amethyst.commons.ui.theme.PaddingHorizontal12Modifier as CommonsPaddingHorizontal12Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.PinBottomIconSize as CommonsPinBottomIconSize
+import com.vitorpamplona.amethyst.commons.ui.theme.PlayIconSize as CommonsPlayIconSize
+import com.vitorpamplona.amethyst.commons.ui.theme.PopupUpEffect as CommonsPopupUpEffect
+import com.vitorpamplona.amethyst.commons.ui.theme.PostKeyboard as CommonsPostKeyboard
+import com.vitorpamplona.amethyst.commons.ui.theme.QuickActionPopupShadow as CommonsQuickActionPopupShadow
+import com.vitorpamplona.amethyst.commons.ui.theme.QuoteBorder as CommonsQuoteBorder
+import com.vitorpamplona.amethyst.commons.ui.theme.ReactionRowExpandButton as CommonsReactionRowExpandButton
+import com.vitorpamplona.amethyst.commons.ui.theme.ReactionRowHeight as CommonsReactionRowHeight
+import com.vitorpamplona.amethyst.commons.ui.theme.ReactionRowHeightChat as CommonsReactionRowHeightChat
+import com.vitorpamplona.amethyst.commons.ui.theme.ReactionRowHeightChatMaxWidth as CommonsReactionRowHeightChatMaxWidth
+import com.vitorpamplona.amethyst.commons.ui.theme.ReactionRowHeightWithPadding as CommonsReactionRowHeightWithPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.ReactionRowZapraiser as CommonsReactionRowZapraiser
+import com.vitorpamplona.amethyst.commons.ui.theme.ReactionRowZapraiserWithPadding as CommonsReactionRowZapraiserWithPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.RippleRadius45dp as CommonsRippleRadius45dp
+import com.vitorpamplona.amethyst.commons.ui.theme.RowColSpacing as CommonsRowColSpacing
+import com.vitorpamplona.amethyst.commons.ui.theme.RowColSpacing10dp as CommonsRowColSpacing10dp
+import com.vitorpamplona.amethyst.commons.ui.theme.RowColSpacing5dp as CommonsRowColSpacing5dp
+import com.vitorpamplona.amethyst.commons.ui.theme.SettingsCategoryFirstModifier as CommonsSettingsCategoryFirstModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.SettingsCategoryFirstWithHorzBorderModifier as CommonsSettingsCategoryFirstWithHorzBorderModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.SettingsCategorySpacingModifier as CommonsSettingsCategorySpacingModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.SettingsCategorySpacingWithHorzBorderModifier as CommonsSettingsCategorySpacingWithHorzBorderModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.Shapes as CommonsShapes
+import com.vitorpamplona.amethyst.commons.ui.theme.ShowMoreRelaysButtonBoxModifer as CommonsShowMoreRelaysButtonBoxModifer
+import com.vitorpamplona.amethyst.commons.ui.theme.ShowMoreRelaysButtonIconButtonModifier as CommonsShowMoreRelaysButtonIconButtonModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.ShowMoreRelaysButtonIconModifier as CommonsShowMoreRelaysButtonIconModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.SimpleHeaderImage as CommonsSimpleHeaderImage
+import com.vitorpamplona.amethyst.commons.ui.theme.SimpleImage35Modifier as CommonsSimpleImage35Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.SimpleImage75Modifier as CommonsSimpleImage75Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.SimpleImageBorder as CommonsSimpleImageBorder
+import com.vitorpamplona.amethyst.commons.ui.theme.Size0dp as CommonsSize0dp
+import com.vitorpamplona.amethyst.commons.ui.theme.Size100dp as CommonsSize100dp
+import com.vitorpamplona.amethyst.commons.ui.theme.Size10Modifier as CommonsSize10Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.Size10dp as CommonsSize10dp
+import com.vitorpamplona.amethyst.commons.ui.theme.Size110dp as CommonsSize110dp
+import com.vitorpamplona.amethyst.commons.ui.theme.Size12dp as CommonsSize12dp
+import com.vitorpamplona.amethyst.commons.ui.theme.Size13dp as CommonsSize13dp
+import com.vitorpamplona.amethyst.commons.ui.theme.Size14Modifier as CommonsSize14Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.Size14dp as CommonsSize14dp
+import com.vitorpamplona.amethyst.commons.ui.theme.Size15Modifier as CommonsSize15Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.Size15dp as CommonsSize15dp
+import com.vitorpamplona.amethyst.commons.ui.theme.Size165dp as CommonsSize165dp
+import com.vitorpamplona.amethyst.commons.ui.theme.Size16Modifier as CommonsSize16Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.Size16dp as CommonsSize16dp
+import com.vitorpamplona.amethyst.commons.ui.theme.Size17Modifier as CommonsSize17Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.Size17dp as CommonsSize17dp
+import com.vitorpamplona.amethyst.commons.ui.theme.Size18Modifier as CommonsSize18Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.Size18dp as CommonsSize18dp
+import com.vitorpamplona.amethyst.commons.ui.theme.Size19Modifier as CommonsSize19Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.Size19dp as CommonsSize19dp
+import com.vitorpamplona.amethyst.commons.ui.theme.Size20Modifier as CommonsSize20Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.Size20dp as CommonsSize20dp
+import com.vitorpamplona.amethyst.commons.ui.theme.Size22Modifier as CommonsSize22Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.Size22ModifierWith4Padding as CommonsSize22ModifierWith4Padding
+import com.vitorpamplona.amethyst.commons.ui.theme.Size22dp as CommonsSize22dp
+import com.vitorpamplona.amethyst.commons.ui.theme.Size23dp as CommonsSize23dp
+import com.vitorpamplona.amethyst.commons.ui.theme.Size24Modifier as CommonsSize24Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.Size24dp as CommonsSize24dp
+import com.vitorpamplona.amethyst.commons.ui.theme.Size25Modifier as CommonsSize25Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.Size25dp as CommonsSize25dp
+import com.vitorpamplona.amethyst.commons.ui.theme.Size26Modifier as CommonsSize26Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.Size28Modifier as CommonsSize28Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.Size2dp as CommonsSize2dp
+import com.vitorpamplona.amethyst.commons.ui.theme.Size30Modifier as CommonsSize30Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.Size30dp as CommonsSize30dp
+import com.vitorpamplona.amethyst.commons.ui.theme.Size34dp as CommonsSize34dp
+import com.vitorpamplona.amethyst.commons.ui.theme.Size35Modifier as CommonsSize35Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.Size35dp as CommonsSize35dp
+import com.vitorpamplona.amethyst.commons.ui.theme.Size39Modifier as CommonsSize39Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.Size3dp as CommonsSize3dp
+import com.vitorpamplona.amethyst.commons.ui.theme.Size40Modifier as CommonsSize40Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.Size40dp as CommonsSize40dp
+import com.vitorpamplona.amethyst.commons.ui.theme.Size50Modifier as CommonsSize50Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.Size50ModifierOffset10 as CommonsSize50ModifierOffset10
+import com.vitorpamplona.amethyst.commons.ui.theme.Size50dp as CommonsSize50dp
+import com.vitorpamplona.amethyst.commons.ui.theme.Size55Modifier as CommonsSize55Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.Size55dp as CommonsSize55dp
+import com.vitorpamplona.amethyst.commons.ui.theme.Size5Modifier as CommonsSize5Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp as CommonsSize5dp
+import com.vitorpamplona.amethyst.commons.ui.theme.Size6dp as CommonsSize6dp
+import com.vitorpamplona.amethyst.commons.ui.theme.Size75Modifier as CommonsSize75Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.Size75dp as CommonsSize75dp
+import com.vitorpamplona.amethyst.commons.ui.theme.Size8dp as CommonsSize8dp
+import com.vitorpamplona.amethyst.commons.ui.theme.SmallBorder as CommonsSmallBorder
+import com.vitorpamplona.amethyst.commons.ui.theme.SmallestBorder as CommonsSmallestBorder
+import com.vitorpamplona.amethyst.commons.ui.theme.SmallishBorder as CommonsSmallishBorder
+import com.vitorpamplona.amethyst.commons.ui.theme.SpacedBy10dp as CommonsSpacedBy10dp
+import com.vitorpamplona.amethyst.commons.ui.theme.SpacedBy2dp as CommonsSpacedBy2dp
+import com.vitorpamplona.amethyst.commons.ui.theme.SpacedBy3dp as CommonsSpacedBy3dp
+import com.vitorpamplona.amethyst.commons.ui.theme.SpacedBy55dp as CommonsSpacedBy55dp
+import com.vitorpamplona.amethyst.commons.ui.theme.SpacedBy5dp as CommonsSpacedBy5dp
+import com.vitorpamplona.amethyst.commons.ui.theme.SquaredQuoteBorderModifier as CommonsSquaredQuoteBorderModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.StdButtonSizeModifier as CommonsStdButtonSizeModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.StdEndPadding as CommonsStdEndPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer as CommonsStdHorzSpacer
+import com.vitorpamplona.amethyst.commons.ui.theme.StdPadding as CommonsStdPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.StdStartPadding as CommonsStdStartPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.StdTopPadding as CommonsStdTopPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer as CommonsStdVertSpacer
+import com.vitorpamplona.amethyst.commons.ui.theme.StreamingHeaderModifier as CommonsStreamingHeaderModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.SuggestionListDefaultHeightChat as CommonsSuggestionListDefaultHeightChat
+import com.vitorpamplona.amethyst.commons.ui.theme.SuggestionListDefaultHeightPage as CommonsSuggestionListDefaultHeightPage
+import com.vitorpamplona.amethyst.commons.ui.theme.TabRowHeight as CommonsTabRowHeight
+import com.vitorpamplona.amethyst.commons.ui.theme.TextStyleBottomNavBar as CommonsTextStyleBottomNavBar
+import com.vitorpamplona.amethyst.commons.ui.theme.TinyBorders as CommonsTinyBorders
+import com.vitorpamplona.amethyst.commons.ui.theme.UserNameMaxRowHeight as CommonsUserNameMaxRowHeight
+import com.vitorpamplona.amethyst.commons.ui.theme.UserNameRowHeight as CommonsUserNameRowHeight
+import com.vitorpamplona.amethyst.commons.ui.theme.VertPadding as CommonsVertPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.VideoReactionColumnPadding as CommonsVideoReactionColumnPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.VoiceHeightModifier as CommonsVoiceHeightModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.VolumeBottomIconSize as CommonsVolumeBottomIconSize
+import com.vitorpamplona.amethyst.commons.ui.theme.Width16Space as CommonsWidth16Space
+import com.vitorpamplona.amethyst.commons.ui.theme.WidthAuthorPictureModifier as CommonsWidthAuthorPictureModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.WidthAuthorPictureModifierWithPadding as CommonsWidthAuthorPictureModifierWithPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.ZapPictureCommentModifier as CommonsZapPictureCommentModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.ZeroPadding as CommonsZeroPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.authorNotePictureForImageHeader as commonsAuthorNotePictureForImageHeader
+import com.vitorpamplona.amethyst.commons.ui.theme.bannerModifier as commonsBannerModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.boostedNoteModifier as commonsBoostedNoteModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.chatAuthorBox as commonsChatAuthorBox
+import com.vitorpamplona.amethyst.commons.ui.theme.chatAuthorImage as commonsChatAuthorImage
+import com.vitorpamplona.amethyst.commons.ui.theme.defaultTweenDuration as commonsDefaultTweenDuration
+import com.vitorpamplona.amethyst.commons.ui.theme.defaultTweenFloatSpec as commonsDefaultTweenFloatSpec
+import com.vitorpamplona.amethyst.commons.ui.theme.defaultTweenIntOffsetSpec as commonsDefaultTweenIntOffsetSpec
+import com.vitorpamplona.amethyst.commons.ui.theme.drawerSpacing as commonsDrawerSpacing
+import com.vitorpamplona.amethyst.commons.ui.theme.emptyLineItemModifier as commonsEmptyLineItemModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.hashVerifierMark as commonsHashVerifierMark
+import com.vitorpamplona.amethyst.commons.ui.theme.imageHeaderBannerSize as commonsImageHeaderBannerSize
+import com.vitorpamplona.amethyst.commons.ui.theme.inlinePlaceholder as commonsInlinePlaceholder
+import com.vitorpamplona.amethyst.commons.ui.theme.liveStreamTag as commonsLiveStreamTag
+import com.vitorpamplona.amethyst.commons.ui.theme.messageBubbleLimits as commonsMessageBubbleLimits
+import com.vitorpamplona.amethyst.commons.ui.theme.messageDetailsModifier as commonsMessageDetailsModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.normalWithTopMarginNoteModifier as commonsNormalWithTopMarginNoteModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.noteComposeRelayBox as commonsNoteComposeRelayBox
+import com.vitorpamplona.amethyst.commons.ui.theme.previewCardImageModifier as commonsPreviewCardImageModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.profileContentHeaderModifier as commonsProfileContentHeaderModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.reactionBox as commonsReactionBox
+import com.vitorpamplona.amethyst.commons.ui.theme.ripple24dp as commonsRipple24dp
+
+val Shapes = CommonsShapes
+
+val RippleRadius45dp = CommonsRippleRadius45dp
+
+val BottomTopHeight = CommonsBottomTopHeight
+val TabRowHeight = CommonsTabRowHeight
+
+val SmallestBorder = CommonsSmallestBorder
+val SmallBorder = CommonsSmallBorder
+val SmallishBorder = CommonsSmallishBorder
+val QuoteBorder = CommonsQuoteBorder
+
+val ButtonBorder = CommonsButtonBorder
+val LeftHalfCircleButtonBorder = CommonsLeftHalfCircleButtonBorder
+val EditFieldBorder = CommonsEditFieldBorder
+
+val ChatBubbleShapeMe = CommonsChatBubbleShapeMe
+val ChatBubbleShapeThem = CommonsChatBubbleShapeThem
+
+val StdButtonSizeModifier = CommonsStdButtonSizeModifier
+
+val HalfVertSpacer = CommonsHalfVertSpacer
+
+val MinHorzSpacer = CommonsMinHorzSpacer
+
+val HalfHorzSpacer = CommonsHalfHorzSpacer
+
+val StdHorzSpacer = CommonsStdHorzSpacer
+val StdVertSpacer = CommonsStdVertSpacer
+
+val DoubleHorzSpacer = CommonsDoubleHorzSpacer
+val DoubleVertSpacer = CommonsDoubleVertSpacer
+
+val Height100Modifier = CommonsHeight100Modifier
+
+val HalfDoubleVertSpacer = CommonsHalfDoubleVertSpacer
+
+val Size0dp = CommonsSize0dp
+val Size2dp = CommonsSize2dp
+val Size3dp = CommonsSize3dp
+val Size5dp = CommonsSize5dp
+val Size6dp = CommonsSize6dp
+val Size8dp = CommonsSize8dp
+val Size10dp = CommonsSize10dp
+val Size12dp = CommonsSize12dp
+val Size13dp = CommonsSize13dp
+val Size14dp = CommonsSize14dp
+val Size15dp = CommonsSize15dp
+val Size16dp = CommonsSize16dp
+val Size17dp = CommonsSize17dp
+val Size18dp = CommonsSize18dp
+val Size19dp = CommonsSize19dp
+val Size20dp = CommonsSize20dp
+val Size22dp = CommonsSize22dp
+val Size23dp = CommonsSize23dp
+val Size24dp = CommonsSize24dp
+val Size25dp = CommonsSize25dp
+val Size30dp = CommonsSize30dp
+val Size34dp = CommonsSize34dp
+val Size35dp = CommonsSize35dp
+val Size40dp = CommonsSize40dp
+val Size50dp = CommonsSize50dp
+val Size55dp = CommonsSize55dp
+val Size75dp = CommonsSize75dp
+val Size100dp = CommonsSize100dp
+val Size110dp = CommonsSize110dp
+val Size165dp = CommonsSize165dp
+
+val StdEndPadding = CommonsStdEndPadding
+val HalfEndPadding = CommonsHalfEndPadding
+val HalfStartPadding = CommonsHalfStartPadding
+val StdStartPadding = CommonsStdStartPadding
+val StdTopPadding = CommonsStdTopPadding
+val HalfTopPadding = CommonsHalfTopPadding
+val HalfHalfTopPadding = CommonsHalfHalfTopPadding
+
+val HalfHalfVertPadding = CommonsHalfHalfVertPadding
+val HalfHalfHorzModifier = CommonsHalfHalfHorzModifier
+
+val HalfPadding = CommonsHalfPadding
+val StdPadding = CommonsStdPadding
+val BigPadding = CommonsBigPadding
+
+val RowColSpacing = CommonsRowColSpacing
+val RowColSpacing5dp = CommonsRowColSpacing5dp
+val RowColSpacing10dp = CommonsRowColSpacing10dp
+
+val HalfHorzPadding = CommonsHalfHorzPadding
+val HalfVertPadding = CommonsHalfVertPadding
+
+val HorzPadding = CommonsHorzPadding
+val VertPadding = CommonsVertPadding
+
+val HorzHalfVertPadding = CommonsHorzHalfVertPadding
+
+val DoubleHorzPadding = CommonsDoubleHorzPadding
+val DoubleVertPadding = CommonsDoubleVertPadding
+
+val MaxWidthWithHorzPadding = CommonsMaxWidthWithHorzPadding
+
+val Size5Modifier = CommonsSize5Modifier
+val Size10Modifier = CommonsSize10Modifier
+val Size14Modifier = CommonsSize14Modifier
+val Size15Modifier = CommonsSize15Modifier
+val Size16Modifier = CommonsSize16Modifier
+val Size17Modifier = CommonsSize17Modifier
+val Size18Modifier = CommonsSize18Modifier
+val Size19Modifier = CommonsSize19Modifier
+val Size20Modifier = CommonsSize20Modifier
+val Size22Modifier = CommonsSize22Modifier
+val Size24Modifier = CommonsSize24Modifier
+val Size25Modifier = CommonsSize25Modifier
+val Size26Modifier = CommonsSize26Modifier
+val Size28Modifier = CommonsSize28Modifier
+val Size30Modifier = CommonsSize30Modifier
+val Size35Modifier = CommonsSize35Modifier
+val Size39Modifier = CommonsSize39Modifier
+val Size40Modifier = CommonsSize40Modifier
+val Size50Modifier = CommonsSize50Modifier
+val Size55Modifier = CommonsSize55Modifier
+val Size75Modifier = CommonsSize75Modifier
+
+val TinyBorders = CommonsTinyBorders
+val NoSoTinyBorders = CommonsNoSoTinyBorders
+val ReactionRowZapraiserWithPadding = CommonsReactionRowZapraiserWithPadding
+val ReactionRowZapraiser = CommonsReactionRowZapraiser
+
+val ReactionRowExpandButton = CommonsReactionRowExpandButton
+
+val WidthAuthorPictureModifier = CommonsWidthAuthorPictureModifier
+val WidthAuthorPictureModifierWithPadding = CommonsWidthAuthorPictureModifierWithPadding
+
+val VideoReactionColumnPadding = CommonsVideoReactionColumnPadding
+
+val DividerThickness = CommonsDividerThickness
+
+val ReactionRowHeight = CommonsReactionRowHeight
+val ReactionRowHeightWithPadding = CommonsReactionRowHeightWithPadding
+val ReactionRowHeightChat = CommonsReactionRowHeightChat
+val ReactionRowHeightChatMaxWidth = CommonsReactionRowHeightChatMaxWidth
+val UserNameRowHeight = CommonsUserNameRowHeight
+val UserNameMaxRowHeight = CommonsUserNameMaxRowHeight
+
+val Height24dpModifier = CommonsHeight24dpModifier
+val Height4dpModifier = CommonsHeight4dpModifier
+val Height25Modifier = CommonsHeight25Modifier
+
+val Height24dpFilledModifier = CommonsHeight24dpFilledModifier
+val Height4dpFilledModifier = CommonsHeight4dpFilledModifier
+
+val AccountPictureModifier = CommonsAccountPictureModifier
+val HeaderPictureModifier = CommonsHeaderPictureModifier
+
+val ShowMoreRelaysButtonIconButtonModifier = CommonsShowMoreRelaysButtonIconButtonModifier
+val ShowMoreRelaysButtonIconModifier = CommonsShowMoreRelaysButtonIconModifier
+val ShowMoreRelaysButtonBoxModifer = CommonsShowMoreRelaysButtonBoxModifer
+
+val ChatBubbleMaxSizeModifier = CommonsChatBubbleMaxSizeModifier
+
+val ModifierWidth3dp = CommonsModifierWidth3dp
+
+val NotificationIconModifier = CommonsNotificationIconModifier
+val NotificationIconModifierSmaller = CommonsNotificationIconModifierSmaller
+
+val ZapPictureCommentModifier = CommonsZapPictureCommentModifier
+val ChatHeadlineBorders = CommonsChatHeadlineBorders
+
+val VolumeBottomIconSize = CommonsVolumeBottomIconSize
+val PinBottomIconSize = CommonsPinBottomIconSize
+val PlayIconSize = CommonsPlayIconSize
+val NIP05IconSize = CommonsNIP05IconSize
+
+val CashuCardBorders = CommonsCashuCardBorders
+
+val EditFieldModifier = CommonsEditFieldModifier
+val EditFieldTrailingIconModifier = CommonsEditFieldTrailingIconModifier
+
+val ZeroPadding = CommonsZeroPadding
+val HalfFeedPadding = CommonsHalfFeedPadding
+val FeedPadding = CommonsFeedPadding
+val ButtonPadding = CommonsButtonPadding
+
+val ChatPaddingInnerQuoteModifier = CommonsChatPaddingInnerQuoteModifier
+val ChatPaddingModifier = CommonsChatPaddingModifier
+
+val profileContentHeaderModifier = commonsProfileContentHeaderModifier
+val bannerModifier = commonsBannerModifier
+val drawerSpacing = commonsDrawerSpacing
+
+val IconRowTextModifier = CommonsIconRowTextModifier
+val IconRowModifier = CommonsIconRowModifier
+
+val Width16Space = CommonsWidth16Space
+
+val emptyLineItemModifier = commonsEmptyLineItemModifier
+
+val imageHeaderBannerSize = commonsImageHeaderBannerSize
+
+val authorNotePictureForImageHeader = commonsAuthorNotePictureForImageHeader
+
+val normalWithTopMarginNoteModifier = commonsNormalWithTopMarginNoteModifier
+
+val boostedNoteModifier = commonsBoostedNoteModifier
+
+val liveStreamTag = commonsLiveStreamTag
+
+val chatAuthorBox = commonsChatAuthorBox
+val chatAuthorImage = commonsChatAuthorImage
+val AuthorInfoVideoFeed = CommonsAuthorInfoVideoFeed
+
+val messageDetailsModifier = commonsMessageDetailsModifier
+val messageBubbleLimits = commonsMessageBubbleLimits
+
+val inlinePlaceholder = commonsInlinePlaceholder
+
+val IncognitoIconModifier = CommonsIncognitoIconModifier
+val IncognitoIconButtonModifier = CommonsIncognitoIconButtonModifier
+
+val hashVerifierMark = commonsHashVerifierMark
+
+val noteComposeRelayBox = commonsNoteComposeRelayBox
+
+val previewCardImageModifier = commonsPreviewCardImageModifier
+
+val reactionBox = commonsReactionBox
+
+val ripple24dp = commonsRipple24dp
+
+val defaultTweenDuration = commonsDefaultTweenDuration
+val defaultTweenFloatSpec = commonsDefaultTweenFloatSpec
+val defaultTweenIntOffsetSpec = commonsDefaultTweenIntOffsetSpec
+
+val StreamingHeaderModifier = CommonsStreamingHeaderModifier
+
+val PostKeyboard = CommonsPostKeyboard
+
+val SettingsCategoryFirstModifier = CommonsSettingsCategoryFirstModifier
+val SettingsCategorySpacingModifier = CommonsSettingsCategorySpacingModifier
+
+val SettingsCategoryFirstWithHorzBorderModifier = CommonsSettingsCategoryFirstWithHorzBorderModifier
+val SettingsCategorySpacingWithHorzBorderModifier = CommonsSettingsCategorySpacingWithHorzBorderModifier
+
+val SquaredQuoteBorderModifier = CommonsSquaredQuoteBorderModifier
+val FillWidthQuoteBorderModifier = CommonsFillWidthQuoteBorderModifier
+
+val MediumRelayIconModifier = CommonsMediumRelayIconModifier
+
+val LargeRelayIconModifier = CommonsLargeRelayIconModifier
+
+val FollowSetImageModifier = CommonsFollowSetImageModifier
+
+val SimpleImage75Modifier = CommonsSimpleImage75Modifier
+val SimpleImage35Modifier = CommonsSimpleImage35Modifier
+
+val SimpleImageBorder = CommonsSimpleImageBorder
+
+val SimpleHeaderImage = CommonsSimpleHeaderImage
+
+val BadgePictureModifier = CommonsBadgePictureModifier
+
+val MaxWidthPaddingTop5dp = CommonsMaxWidthPaddingTop5dp
+
+val VoiceHeightModifier = CommonsVoiceHeightModifier
+
+val PaddingHorizontal12Modifier = CommonsPaddingHorizontal12Modifier
+
+val QuickActionPopupShadow = CommonsQuickActionPopupShadow
+
+val SpacedBy2dp = CommonsSpacedBy2dp
+val SpacedBy3dp = CommonsSpacedBy3dp
+val SpacedBy5dp = CommonsSpacedBy5dp
+val SpacedBy10dp = CommonsSpacedBy10dp
+val SpacedBy55dp = CommonsSpacedBy55dp
+
+val PopupUpEffect = CommonsPopupUpEffect
+
+val Size50ModifierOffset10 = CommonsSize50ModifierOffset10
+
+val SuggestionListDefaultHeightChat = CommonsSuggestionListDefaultHeightChat
+val SuggestionListDefaultHeightPage = CommonsSuggestionListDefaultHeightPage
+
+val FollowPackHeaderModifier = CommonsFollowPackHeaderModifier
+
+val Size22ModifierWith4Padding = CommonsSize22ModifierWith4Padding
+
+val TextStyleBottomNavBar = CommonsTextStyleBottomNavBar
