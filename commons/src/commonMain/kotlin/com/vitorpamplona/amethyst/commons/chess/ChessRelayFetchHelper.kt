@@ -97,7 +97,8 @@ class ChessRelayFetchHelper(
                     forFilters: List<Filter>?,
                 ) {
                     events[event.id] = event
-                    val count = relayEventCounts.compute(relay) { _, v -> (v ?: 0) + 1 } ?: 1
+                    val count = (relayEventCounts[relay] ?: 0) + 1
+                    relayEventCounts[relay] = count
                     onProgress?.invoke(RelayFetchProgress(relay, RelayFetchStatus.RECEIVING, count))
                 }
 

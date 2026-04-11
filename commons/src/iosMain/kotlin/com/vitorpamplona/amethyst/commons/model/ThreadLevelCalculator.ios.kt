@@ -18,26 +18,18 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.richtext
+package com.vitorpamplona.amethyst.commons.model
 
-import kotlin.io.encoding.Base64
-import kotlin.io.encoding.ExperimentalEncodingApi
+import platform.Foundation.NSDate
+import platform.Foundation.NSDateFormatter
+import platform.Foundation.dateWithTimeIntervalSince1970
 
-object Base64Image {
-    val pattern = Patterns.BASE64_IMAGE
-
-    fun isBase64(content: String): Boolean = Patterns.BASE64_IMAGE.matches(content)
-
-    fun parse(content: String): ByteArray {
-        val matcher = pattern.find(content)
-        if (matcher != null) {
-            val base64String = matcher.groups[2]?.value ?: throw Exception("Missing base64 data")
-
-            @OptIn(ExperimentalEncodingApi::class)
-            val byteArray = Base64.decode(base64String)
-            return byteArray
-        }
-
-        throw Exception("Unable to convert base64 to image $content")
+private val levelFormatter =
+    NSDateFormatter().apply {
+        dateFormat = "yyyy-MM-dd-HH:mm:ss"
     }
-}
+
+actual fun formattedDateTime(timestamp: Long): String =
+    levelFormatter.stringFromDate(
+        NSDate.dateWithTimeIntervalSince1970(timestamp.toDouble()),
+    )

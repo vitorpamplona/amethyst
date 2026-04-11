@@ -162,7 +162,7 @@ fun FeedErrorState(
     modifier: Modifier = Modifier,
     onRetry: (() -> Unit)? = null,
 ) {
-    val formattedMessage = stringResource(Res.string.error_loading_feed).format(errorMessage)
+    val formattedMessage = stringResource(Res.string.error_loading_feed).replace("%s", errorMessage)
 
     ErrorState(
         message = formattedMessage,

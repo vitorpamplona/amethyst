@@ -58,7 +58,6 @@ class Chatroom : NotesGatherer {
         removeMessageSync(note)
     }
 
-    @Synchronized
     fun addMessageSync(msg: Note): Boolean {
         if (msg !in messages) {
             messages = messages + msg
@@ -89,7 +88,6 @@ class Chatroom : NotesGatherer {
         return false
     }
 
-    @Synchronized
     fun removeMessageSync(msg: Note): Boolean {
         if (msg in messages) {
             messages = messages - msg

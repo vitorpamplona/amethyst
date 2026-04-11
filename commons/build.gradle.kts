@@ -19,6 +19,9 @@ kotlin {
         }
     }
 
+    iosArm64()
+    iosSimulatorArm64()
+
     android {
         namespace = "com.vitorpamplona.amethyst.commons"
         compileSdk =
@@ -56,13 +59,8 @@ kotlin {
                 implementation(libs.jetbrains.compose.material.icons.extended)
                 implementation(libs.jetbrains.compose.ui.tooling.preview)
 
-                // Lifecycle ViewModel (KMP since 2.8.0)
-                implementation(libs.androidx.lifecycle.viewmodel.compose)
-                implementation(libs.androidx.lifecycle.runtime.compose)
-
                 // Image loading (Coil 3 - KMP)
                 implementation(libs.coil.compose)
-                implementation(libs.coil.okhttp)
 
                 // LruCache (KMP-ready)
                 implementation(libs.androidx.collection)
@@ -75,11 +73,6 @@ kotlin {
 
                 // Compose Multiplatform Resources
                 implementation(libs.jetbrains.compose.components.resources)
-
-                // Markdown rendering (richtext-commonmark)
-                implementation(libs.markdown.commonmark)
-                implementation(libs.markdown.ui)
-                implementation(libs.markdown.ui.material3)
             }
         }
 
@@ -95,8 +88,32 @@ kotlin {
             create("jvmAndroid") {
                 dependsOn(commonMain.get())
                 dependencies {
+                    // AndroidX Lifecycle (no native/iOS variants)
+                    implementation(libs.androidx.lifecycle.viewmodel.compose)
+                    implementation(libs.androidx.lifecycle.runtime.compose)
+
+                    // JVM-only: OkHttp image loader
+                    implementation(libs.coil.okhttp)
+
+                    // JVM-only: Markdown rendering (richtext-commonmark)
+                    implementation(libs.markdown.commonmark)
+                    implementation(libs.markdown.ui)
+                    implementation(libs.markdown.ui.material3)
                 }
             }
+
+        val iosMain =
+            create("iosMain") {
+                dependsOn(commonMain.get())
+            }
+
+        val iosArm64Main by getting {
+            dependsOn(iosMain)
+        }
+
+        val iosSimulatorArm64Main by getting {
+            dependsOn(iosMain)
+        }
 
         jvmMain {
             dependsOn(jvmAndroid)

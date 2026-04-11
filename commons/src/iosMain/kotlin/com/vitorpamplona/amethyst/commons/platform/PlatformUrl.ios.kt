@@ -18,26 +18,26 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.richtext
+package com.vitorpamplona.amethyst.commons.platform
 
-import kotlin.io.encoding.Base64
-import kotlin.io.encoding.ExperimentalEncodingApi
+import platform.Foundation.NSURL
 
-object Base64Image {
-    val pattern = Patterns.BASE64_IMAGE
+actual class PlatformUrl actual constructor(
+    url: String,
+) {
+    private val rawUrl = url
+    private val nsUrl = NSURL(string = url)
 
-    fun isBase64(content: String): Boolean = Patterns.BASE64_IMAGE.matches(content)
+    actual val host: String?
+        get() = nsUrl.host
 
-    fun parse(content: String): ByteArray {
-        val matcher = pattern.find(content)
-        if (matcher != null) {
-            val base64String = matcher.groups[2]?.value ?: throw Exception("Missing base64 data")
+    actual fun resolve(path: String): String? = NSURL(string = path, relativeToURL = nsUrl).absoluteString
 
-            @OptIn(ExperimentalEncodingApi::class)
-            val byteArray = Base64.decode(base64String)
-            return byteArray
-        }
-
-        throw Exception("Unable to convert base64 to image $content")
-    }
+    actual override fun toString(): String = nsUrl.absoluteString ?: rawUrl
 }
+
+actual fun parseUrl(url: String): PlatformUrl? =
+    runCatching {
+        val nsUrl = NSURL(string = url)
+        if (nsUrl.scheme != null) PlatformUrl(url) else null
+    }.getOrNull()

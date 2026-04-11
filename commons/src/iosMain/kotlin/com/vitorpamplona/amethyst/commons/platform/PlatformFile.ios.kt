@@ -18,26 +18,12 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.richtext
+package com.vitorpamplona.amethyst.commons.platform
 
-import kotlin.io.encoding.Base64
-import kotlin.io.encoding.ExperimentalEncodingApi
+import platform.Foundation.NSFileManager
 
-object Base64Image {
-    val pattern = Patterns.BASE64_IMAGE
-
-    fun isBase64(content: String): Boolean = Patterns.BASE64_IMAGE.matches(content)
-
-    fun parse(content: String): ByteArray {
-        val matcher = pattern.find(content)
-        if (matcher != null) {
-            val base64String = matcher.groups[2]?.value ?: throw Exception("Missing base64 data")
-
-            @OptIn(ExperimentalEncodingApi::class)
-            val byteArray = Base64.decode(base64String)
-            return byteArray
-        }
-
-        throw Exception("Unable to convert base64 to image $content")
-    }
+actual class PlatformFile actual constructor(
+    actual val path: String,
+) {
+    actual fun exists(): Boolean = NSFileManager.defaultManager.fileExistsAtPath(path)
 }

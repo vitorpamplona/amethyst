@@ -51,11 +51,11 @@ val CreatedAtIdHexComparator: Comparator<Note> =
 
 object CreatedAtComparator : Comparator<Note> {
     override fun compare(
-        first: Note?,
-        second: Note?,
+        first: Note,
+        second: Note,
     ): Int {
-        val firstEvent = first?.event
-        val secondEvent = second?.event
+        val firstEvent = first.event
+        val secondEvent = second.event
 
         return if (firstEvent == null && secondEvent == null) {
             0
@@ -71,11 +71,11 @@ object CreatedAtComparator : Comparator<Note> {
 
 object CreatedAtComparatorAddresses : Comparator<AddressableNote> {
     override fun compare(
-        first: AddressableNote?,
-        second: AddressableNote?,
+        first: AddressableNote,
+        second: AddressableNote,
     ): Int {
-        val firstEvent = first?.event
-        val secondEvent = second?.event
+        val firstEvent = first.event
+        val secondEvent = second.event
 
         return if (firstEvent == null && secondEvent == null) {
             0

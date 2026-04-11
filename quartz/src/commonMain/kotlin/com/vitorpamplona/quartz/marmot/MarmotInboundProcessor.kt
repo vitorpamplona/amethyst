@@ -126,7 +126,7 @@ class MarmotInboundProcessor(
     private val keyPackageRotationManager: KeyPackageRotationManager,
 ) {
     private val commitTracker = CommitOrdering.EpochCommitTracker()
-    private val processedIdsLock = Any()
+    private val processedIdsLock = kotlinx.atomicfu.locks.SynchronizedObject()
     private val processedEventIds = LinkedHashSet<String>()
 
     companion object {
@@ -156,7 +156,7 @@ class MarmotInboundProcessor(
     suspend fun processGroupEvent(groupEvent: GroupEvent): GroupEventResult {
         // Deduplicate already-processed events (thread-safe)
         val eventId = groupEvent.id
-        synchronized(processedIdsLock) {
+        kotlinx.atomicfu.locks.synchronized(processedIdsLock) {
             if (eventId in processedEventIds) {
                 val gId = groupEvent.groupId()
                 return GroupEventResult.Duplicate(gId ?: "")
@@ -189,7 +189,7 @@ class MarmotInboundProcessor(
             }
 
         // Track ALL processed events for deduplication (including errors to prevent replay DoS)
-        synchronized(processedIdsLock) {
+        kotlinx.atomicfu.locks.synchronized(processedIdsLock) {
             processedEventIds.add(eventId)
             // Trim the set if it exceeds the max size
             if (processedEventIds.size > MAX_PROCESSED_IDS) {

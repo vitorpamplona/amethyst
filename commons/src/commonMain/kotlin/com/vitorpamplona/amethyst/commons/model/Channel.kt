@@ -65,17 +65,16 @@ abstract class Channel : NotesGatherer {
 
     open fun relays(): Set<NormalizedRelayUrl> =
         relays.keys
-            .toSortedSet { o1, o2 ->
+            .sortedWith { o1, o2 ->
                 val o1Count = relays[o1]?.number ?: 0
                 val o2Count = relays[o2]?.number ?: 0
                 o2Count.compareTo(o1Count) // descending
-            }
+            }.toSet()
 
     fun updateChannelInfo() {
         flowSet?.metadata?.invalidateData()
     }
 
-    @Synchronized
     fun addRelaySync(briefInfo: NormalizedRelayUrl) {
         if (briefInfo !in relays) {
             relays = relays + Pair(briefInfo, Counter(1))
@@ -165,7 +164,6 @@ abstract class Channel : NotesGatherer {
 
     var flowSet: ChannelFlowSet? = null
 
-    @Synchronized
     fun createOrDestroyFlowSync(create: Boolean) {
         if (create) {
             if (flowSet == null) {

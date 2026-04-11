@@ -18,26 +18,18 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.richtext
+package com.vitorpamplona.amethyst.commons.concurrency
 
-import kotlin.io.encoding.Base64
-import kotlin.io.encoding.ExperimentalEncodingApi
+actual fun <K, V> concurrentMutableMapOf(): MutableMap<K, V> = mutableMapOf()
 
-object Base64Image {
-    val pattern = Patterns.BASE64_IMAGE
+actual fun <T> concurrentMutableSetOf(): MutableSet<T> = mutableSetOf()
 
-    fun isBase64(content: String): Boolean = Patterns.BASE64_IMAGE.matches(content)
-
-    fun parse(content: String): ByteArray {
-        val matcher = pattern.find(content)
-        if (matcher != null) {
-            val base64String = matcher.groups[2]?.value ?: throw Exception("Missing base64 data")
-
-            @OptIn(ExperimentalEncodingApi::class)
-            val byteArray = Base64.decode(base64String)
-            return byteArray
-        }
-
-        throw Exception("Unable to convert base64 to image $content")
-    }
+actual fun <T> concurrentSortedSetOf(comparator: Comparator<T>): MutableSet<T> {
+    // K/N doesn't have sortedSetOf; use a plain mutable set
+    // Sorting is maintained by callers using the comparator
+    return mutableSetOf()
 }
+
+actual fun <T> synchronizedMutableSetOf(): MutableSet<T> = mutableSetOf()
+
+actual fun <T> synchronizedMutableSetOf(elements: MutableSet<T>): MutableSet<T> = elements.toMutableSet()

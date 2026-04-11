@@ -154,7 +154,8 @@ class ChessEventCollector(
         if (!event.isMoveEvent()) return false
         if (event.startEventId() != startEventId) return false
 
-        if (moves.putIfAbsent(event.id, event) == null) {
+        if (event.id !in moves) {
+            moves[event.id] = event
             processedEventIds.add(event.id)
             incrementEventCount()
             Log.d("chessdebug") { "[Collector] MOVE event added: id=${event.id.take(8)}, pubkey=${event.pubKey.take(8)}, move=${event.move()}, historySize=${event.history().size}, fen=${event.fen()?.take(30)}, result=${event.result()}, totalMoves=${moves.size}" }

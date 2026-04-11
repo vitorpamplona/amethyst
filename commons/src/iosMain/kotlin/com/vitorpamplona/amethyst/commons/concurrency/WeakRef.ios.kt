@@ -18,26 +18,15 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.richtext
+package com.vitorpamplona.amethyst.commons.concurrency
 
-import kotlin.io.encoding.Base64
-import kotlin.io.encoding.ExperimentalEncodingApi
+import kotlin.experimental.ExperimentalNativeApi
 
-object Base64Image {
-    val pattern = Patterns.BASE64_IMAGE
+@OptIn(ExperimentalNativeApi::class)
+actual class WeakRef<T : Any> actual constructor(
+    value: T,
+) {
+    private val ref = kotlin.native.ref.WeakReference(value)
 
-    fun isBase64(content: String): Boolean = Patterns.BASE64_IMAGE.matches(content)
-
-    fun parse(content: String): ByteArray {
-        val matcher = pattern.find(content)
-        if (matcher != null) {
-            val base64String = matcher.groups[2]?.value ?: throw Exception("Missing base64 data")
-
-            @OptIn(ExperimentalEncodingApi::class)
-            val byteArray = Base64.decode(base64String)
-            return byteArray
-        }
-
-        throw Exception("Unable to convert base64 to image $content")
-    }
+    actual fun get(): T? = ref.get()
 }

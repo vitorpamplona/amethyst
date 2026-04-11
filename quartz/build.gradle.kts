@@ -123,6 +123,7 @@ kotlin {
             dependencies {
                 implementation(libs.kotlin.stdlib)
                 implementation(libs.kotlinx.coroutines.core)
+                implementation(libs.kotlinx.atomicfu)
 
                 // For LruCache
                 implementation(libs.androidx.collection)

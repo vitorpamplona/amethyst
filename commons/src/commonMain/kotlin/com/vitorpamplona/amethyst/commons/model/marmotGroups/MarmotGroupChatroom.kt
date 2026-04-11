@@ -63,7 +63,6 @@ class MarmotGroupChatroom(
         removeMessageSync(note)
     }
 
-    @Synchronized
     fun addMessageSync(msg: Note): Boolean {
         if (msg !in messages) {
             messages = messages + msg
@@ -81,7 +80,6 @@ class MarmotGroupChatroom(
         return false
     }
 
-    @Synchronized
     fun removeMessageSync(msg: Note): Boolean {
         if (msg in messages) {
             messages = messages - msg

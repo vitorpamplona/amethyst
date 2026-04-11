@@ -18,26 +18,29 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.richtext
+package com.vitorpamplona.amethyst.commons.chess
 
-import kotlin.io.encoding.Base64
-import kotlin.io.encoding.ExperimentalEncodingApi
+import platform.Foundation.NSUserDefaults
 
-object Base64Image {
-    val pattern = Patterns.BASE64_IMAGE
+private const val KEY_PREFIX = "chess_dismissed_"
 
-    fun isBase64(content: String): Boolean = Patterns.BASE64_IMAGE.matches(content)
+actual class ChessDismissedGamesStorage private actual constructor() {
+    actual companion object {
+        actual fun create(context: Any?): ChessDismissedGamesStorage = ChessDismissedGamesStorage()
+    }
 
-    fun parse(content: String): ByteArray {
-        val matcher = pattern.find(content)
-        if (matcher != null) {
-            val base64String = matcher.groups[2]?.value ?: throw Exception("Missing base64 data")
+    @Suppress("UNCHECKED_CAST")
+    actual fun load(userPubkey: String): Set<String> {
+        val key = KEY_PREFIX + userPubkey
+        val array = NSUserDefaults.standardUserDefaults.stringArrayForKey(key)
+        return (array as? List<String>)?.toSet() ?: emptySet()
+    }
 
-            @OptIn(ExperimentalEncodingApi::class)
-            val byteArray = Base64.decode(base64String)
-            return byteArray
-        }
-
-        throw Exception("Unable to convert base64 to image $content")
+    actual fun save(
+        userPubkey: String,
+        ids: Set<String>,
+    ) {
+        val key = KEY_PREFIX + userPubkey
+        NSUserDefaults.standardUserDefaults.setObject(ids.toList(), forKey = key)
     }
 }

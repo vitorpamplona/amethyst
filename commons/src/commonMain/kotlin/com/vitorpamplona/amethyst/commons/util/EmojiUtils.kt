@@ -23,7 +23,33 @@ package com.vitorpamplona.amethyst.commons.util
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 
-fun String.isUTF16Char(pos: Int): Boolean = Character.charCount(this.codePointAt(pos)) == 2
+// KMP-compatible codePoint helpers
+private fun String.kmpCodePointAt(index: Int): Int {
+    val high = this[index]
+    if (high.isHighSurrogate() && index + 1 < length) {
+        val low = this[index + 1]
+        if (low.isLowSurrogate()) {
+            return 0x10000 + ((high.code - 0xD800) shl 10) + (low.code - 0xDC00)
+        }
+    }
+    return high.code
+}
+
+private fun charCountForCodePoint(codePoint: Int): Int = if (codePoint >= 0x10000) 2 else 1
+
+private fun String.kmpOffsetByCodePoints(
+    index: Int,
+    count: Int,
+): Int {
+    var i = index
+    repeat(count) {
+        if (i >= length) return i
+        i += charCountForCodePoint(kmpCodePointAt(i))
+    }
+    return i
+}
+
+fun String.isUTF16Char(pos: Int): Boolean = charCountForCodePoint(this.kmpCodePointAt(pos)) == 2
 
 fun String.firstFullCharOld(): String {
     return when (this.length) {
@@ -64,11 +90,11 @@ fun String.firstFullChar(): String {
     var i = 0
 
     while (i < this.length) {
-        codePoint = codePointAt(i)
+        codePoint = kmpCodePointAt(i)
 
         // Skips if it starts with the join char 0x200D
         if (codePoint == 0x200D && previousCharLength == 0) {
-            next = offsetByCodePoints(i, 1)
+            next = kmpOffsetByCodePoints(i, 1)
             start = next
         } else {
             // If join, searches for the next char
@@ -78,7 +104,7 @@ fun String.firstFullChar(): String {
             } else {
                 // stops when two chars are not joined together
                 if (previousCharLength > 0 && !isInJoin) {
-                    if (Character.charCount(codePoint) == 1 || hasHadSecondChance) {
+                    if (charCountForCodePoint(codePoint) == 1 || hasHadSecondChance) {
                         break
                     } else {
                         hasHadSecondChance = true
@@ -91,14 +117,14 @@ fun String.firstFullChar(): String {
             }
 
             // next char to evaluate
-            next = offsetByCodePoints(i, 1)
+            next = kmpOffsetByCodePoints(i, 1)
             previousCharLength += (next - i)
         }
 
         i = next
     }
 
-    // if ends in join, then seachers backwards until a char is found.
+    // if ends in join, then searches backwards until a char is found.
     if (isInJoin) {
         i = previousCharLength - 1
         while (i > 0) {
