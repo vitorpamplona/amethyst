@@ -29,13 +29,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 
 class AllUserFollowsFeedFlow(
-    val allFollows: StateFlow<MergedFollowListsState.AllFollows?>,
+    val allFollows: StateFlow<com.vitorpamplona.amethyst.commons.model.serverList.MergedFollowListsState.AllFollows?>,
     val followsRelays: StateFlow<Set<NormalizedRelayUrl>>,
     val blockedRelays: StateFlow<Set<NormalizedRelayUrl>>,
     val proxyRelays: StateFlow<Set<NormalizedRelayUrl>>,
 ) : IFeedFlowsType {
     fun convert(
-        allFollows: MergedFollowListsState.AllFollows?,
+        allFollows: com.vitorpamplona.amethyst.commons.model.serverList.MergedFollowListsState.AllFollows?,
         proxyRelays: Set<NormalizedRelayUrl>,
     ): IFeedTopNavFilter =
         if (allFollows != null) {

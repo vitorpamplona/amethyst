@@ -1056,13 +1056,13 @@ class Account(
         client.publish(signedEvent, computeRelayListToBroadcast(signedEvent))
     }
 
-    fun sendMyPublicAndPrivateOutbox(event: Event?) {
+    override fun sendMyPublicAndPrivateOutbox(event: Event?) {
         if (event == null) return
         cache.justConsumeMyOwnEvent(event)
         client.publish(event, outboxRelays.flow.value)
     }
 
-    fun sendMyPublicAndPrivateOutbox(events: List<Event>) {
+    override fun sendMyPublicAndPrivateOutbox(events: List<Event>) {
         events.forEach {
             client.publish(it, outboxRelays.flow.value)
             cache.justConsumeMyOwnEvent(it)

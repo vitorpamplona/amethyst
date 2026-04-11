@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.model
 
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupList
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
@@ -119,4 +120,10 @@ interface IAccount {
 
     /** Broadcast pre-created gift wraps (e.g. reactions within group DMs) */
     suspend fun sendGiftWraps(wraps: List<GiftWrapEvent>)
+
+    /** Send event via public and private outbox relays */
+    fun sendMyPublicAndPrivateOutbox(event: Event?)
+
+    /** Send multiple events via public and private outbox relays */
+    fun sendMyPublicAndPrivateOutbox(events: List<Event>)
 }

@@ -195,4 +195,18 @@ interface ICacheProvider {
      * Used by VanishRequestsState and similar reactive consumers.
      */
     fun observeNotes(filter: Filter): Flow<List<Note>> = emptyFlow()
+
+    /**
+     * Filters addressable notes by kind and pubKey.
+     * Used by list state classes (FollowListsState, PeopleListsState, etc.)
+     */
+    fun filterAddressables(
+        kind: Int,
+        pubKey: HexKey,
+    ): List<AddressableNote> = emptyList()
+
+    /**
+     * Loads a set of Users from their hex public keys.
+     */
+    fun loadUsers(keys: Set<String>): Set<User> = emptySet()
 }

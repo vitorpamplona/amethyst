@@ -386,6 +386,13 @@ object LocalCache : ILocalCache, ICacheProvider {
 
     fun load(keys: Set<String>): Set<User> = keys.mapNotNullTo(mutableSetOf(), ::checkGetOrCreateUser)
 
+    override fun loadUsers(keys: Set<String>): Set<User> = load(keys)
+
+    override fun filterAddressables(
+        kind: Int,
+        pubKey: HexKey,
+    ): List<AddressableNote> = addressables.filter(kind, pubKey)
+
     override fun getOrCreateUser(pubkey: HexKey): User {
         require(isValidHex(key = pubkey)) { "$pubkey is not a valid hex" }
 

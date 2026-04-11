@@ -268,6 +268,14 @@ class DesktopIAccount(
         chatroomList.addMessage(roomKey, note)
     }
 
+    override fun sendMyPublicAndPrivateOutbox(event: com.vitorpamplona.quartz.nip01Core.core.Event?) {
+        // Desktop stub - no relay publishing
+    }
+
+    override fun sendMyPublicAndPrivateOutbox(events: List<com.vitorpamplona.quartz.nip01Core.core.Event>) {
+        // Desktop stub - no relay publishing
+    }
+
     companion object {
         const val CLIENT_TAG_NAME = "Amethyst"
     }
