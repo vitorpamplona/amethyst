@@ -39,9 +39,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.git_clone_address
+import com.vitorpamplona.amethyst.commons.resources.git_repository
+import com.vitorpamplona.amethyst.commons.resources.git_web_address
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
@@ -53,7 +56,6 @@ import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.note.LoadDecryptedContent
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
@@ -69,6 +71,7 @@ import com.vitorpamplona.quartz.nip14Subject.subject
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun RenderGitPatchEvent(
@@ -107,7 +110,7 @@ private fun RenderShortRepositoryHeader(
     ) {
         val title = noteEvent?.name() ?: baseNote.dTag()
         Text(
-            text = stringRes(id = R.string.git_repository, title),
+            text = stringResource(Res.string.git_repository, title),
             style = MaterialTheme.typography.titleLarge,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -343,7 +346,7 @@ private fun RenderGitRepositoryEvent(
     ) {
         Column {
             Text(
-                text = stringRes(id = R.string.git_repository, title),
+                text = stringResource(Res.string.git_repository, title),
                 style = MaterialTheme.typography.titleMedium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -364,7 +367,7 @@ private fun RenderGitRepositoryEvent(
             web?.let {
                 Row(Modifier.fillMaxWidth().padding(top = Size5dp)) {
                     Text(
-                        text = stringRes(id = R.string.git_web_address),
+                        text = stringResource(Res.string.git_web_address),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -379,7 +382,7 @@ private fun RenderGitRepositoryEvent(
             clone?.let {
                 Row(Modifier.fillMaxWidth().padding(top = Size5dp)) {
                     Text(
-                        text = stringRes(id = R.string.git_clone_address),
+                        text = stringResource(Res.string.git_clone_address),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )

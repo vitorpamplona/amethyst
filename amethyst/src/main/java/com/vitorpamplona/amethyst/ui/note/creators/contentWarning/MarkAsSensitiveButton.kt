@@ -36,8 +36,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.add_content_warning
+import com.vitorpamplona.amethyst.commons.resources.remove_content_warning
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun MarkAsSensitiveButton(
@@ -55,7 +57,7 @@ fun MarkAsSensitiveButton(
             if (!isActive) {
                 Icon(
                     imageVector = Icons.Default.Visibility,
-                    contentDescription = stringRes(R.string.add_content_warning),
+                    contentDescription = stringResource(Res.string.add_content_warning),
                     modifier =
                         Modifier
                             .size(18.dp)
@@ -64,7 +66,7 @@ fun MarkAsSensitiveButton(
                 )
                 Icon(
                     imageVector = Icons.Rounded.Warning,
-                    contentDescription = stringRes(R.string.add_content_warning),
+                    contentDescription = stringResource(Res.string.add_content_warning),
                     modifier =
                         Modifier
                             .size(10.dp)
@@ -74,7 +76,7 @@ fun MarkAsSensitiveButton(
             } else {
                 Icon(
                     imageVector = Icons.Default.VisibilityOff,
-                    contentDescription = stringRes(id = R.string.remove_content_warning),
+                    contentDescription = stringResource(Res.string.remove_content_warning),
                     modifier =
                         Modifier
                             .size(18.dp)
@@ -83,7 +85,7 @@ fun MarkAsSensitiveButton(
                 )
                 Icon(
                     imageVector = Icons.Rounded.Warning,
-                    contentDescription = stringRes(id = R.string.remove_content_warning),
+                    contentDescription = stringResource(Res.string.remove_content_warning),
                     modifier =
                         Modifier
                             .size(10.dp)

@@ -57,7 +57,11 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntSize
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.gallery
+import com.vitorpamplona.amethyst.commons.resources.mutual
+import com.vitorpamplona.amethyst.commons.resources.notes
+import com.vitorpamplona.amethyst.commons.resources.replies
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.observeAccountIsHiddenUser
@@ -96,10 +100,10 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.reports.dal.UserPro
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps.TabReceivedZaps
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps.ZapTabHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps.dal.UserProfileZapsViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Size8dp
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun ProfileScreen(
@@ -530,10 +534,10 @@ private fun CreateAndRenderTabs(
 
     val tabs =
         listOf<@Composable (() -> Unit)?>(
-            { Text(text = stringRes(R.string.notes)) },
-            { Text(text = stringRes(R.string.replies)) },
-            { Text(text = stringRes(R.string.mutual)) },
-            { Text(text = stringRes(R.string.gallery)) },
+            { Text(text = stringResource(Res.string.notes)) },
+            { Text(text = stringResource(Res.string.replies)) },
+            { Text(text = stringResource(Res.string.mutual)) },
+            { Text(text = stringResource(Res.string.gallery)) },
             { FollowTabHeader(followsFeedViewModel, accountViewModel) },
             { FollowersTabHeader(baseUser, followersFeedViewModel, accountViewModel) },
             { ZapTabHeader(zapFeedViewModel, accountViewModel) },

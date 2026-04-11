@@ -42,7 +42,8 @@ import androidx.media3.common.util.UnstableApi
 import coil3.compose.AsyncImagePainter
 import coil3.compose.SubcomposeAsyncImage
 import coil3.compose.SubcomposeAsyncImageContent
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.play
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
@@ -58,12 +59,12 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.WatchAuthor
 import com.vitorpamplona.amethyst.ui.note.elements.BannerImage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size50Modifier
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip71Video.VideoEvent
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun GalleryThumbnail(
@@ -228,7 +229,7 @@ fun UrlImageView(
                         Box(defaultModifier, contentAlignment = Alignment.Center) {
                             Icon(
                                 imageVector = Icons.Default.PlayCircleOutline,
-                                contentDescription = stringRes(id = R.string.play),
+                                contentDescription = stringResource(Res.string.play),
                                 modifier = Size50Modifier,
                                 tint = MaterialTheme.colorScheme.onBackground,
                             )
@@ -252,14 +253,14 @@ fun UrlImageView(
                 )
                 Icon(
                     imageVector = Icons.Default.PlayCircleOutline,
-                    contentDescription = stringRes(id = R.string.play),
+                    contentDescription = stringResource(Res.string.play),
                     modifier = Size50Modifier,
                     tint = Color.White,
                 )
             } else {
                 Icon(
                     imageVector = Icons.Default.PlayCircleOutline,
-                    contentDescription = stringRes(id = R.string.play),
+                    contentDescription = stringResource(Res.string.play),
                     modifier = Size50Modifier,
                     tint = Color.White,
                 )

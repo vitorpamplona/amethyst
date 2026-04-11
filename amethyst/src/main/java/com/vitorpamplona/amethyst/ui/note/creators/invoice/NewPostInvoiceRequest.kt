@@ -22,10 +22,12 @@ package com.vitorpamplona.amethyst.ui.note.creators.invoice
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.lightning_create_and_add_invoice
+import com.vitorpamplona.amethyst.commons.resources.lightning_invoice
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun NewPostInvoiceRequest(
@@ -41,8 +43,8 @@ fun NewPostInvoiceRequest(
             lud16 = lnAddress,
             user = accountViewModel.account.userProfile(),
             accountViewModel = accountViewModel,
-            titleText = stringRes(id = R.string.lightning_invoice),
-            buttonText = stringRes(id = R.string.lightning_create_and_add_invoice),
+            titleText = stringResource(Res.string.lightning_invoice),
+            buttonText = stringResource(Res.string.lightning_create_and_add_invoice),
             onNewInvoice = onSuccess,
             onError = accountViewModel.toastManager::toast,
         )

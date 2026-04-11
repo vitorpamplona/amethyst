@@ -43,7 +43,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.feed
+import com.vitorpamplona.amethyst.commons.resources.mod_queue
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.feeds.rememberForeverPagerState
@@ -61,12 +63,12 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.dal.CommunityFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.dal.CommunityModerationFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.datasource.CommunityFilterAssemblerSubscription
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
 import com.vitorpamplona.amethyst.ui.theme.isLight
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun CommunityScreen(
@@ -176,12 +178,12 @@ fun CommunityScreen(
                 val coroutineScope = rememberCoroutineScope()
                 Tab(
                     selected = pagerState.currentPage == 0,
-                    text = { Text(text = stringRes(R.string.feed)) },
+                    text = { Text(text = stringResource(Res.string.feed)) },
                     onClick = { coroutineScope.launch { pagerState.animateScrollToPage(0) } },
                 )
                 Tab(
                     selected = pagerState.currentPage == 1,
-                    text = { Text(text = stringRes(R.string.mod_queue)) },
+                    text = { Text(text = stringResource(Res.string.mod_queue)) },
                     onClick = { coroutineScope.launch { pagerState.animateScrollToPage(1) } },
                 )
             }

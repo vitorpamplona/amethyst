@@ -31,8 +31,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.add_expiration_date
+import com.vitorpamplona.amethyst.commons.resources.remove_expiration_date
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun ExpirationDateButton(
@@ -45,14 +47,14 @@ fun ExpirationDateButton(
         if (!isActive) {
             Icon(
                 imageVector = Icons.Outlined.Timer,
-                contentDescription = stringRes(R.string.add_expiration_date),
+                contentDescription = stringResource(Res.string.add_expiration_date),
                 modifier = Modifier.size(20.dp),
                 tint = MaterialTheme.colorScheme.onBackground,
             )
         } else {
             Icon(
                 imageVector = Icons.Outlined.TimerOff,
-                contentDescription = stringRes(R.string.remove_expiration_date),
+                contentDescription = stringResource(Res.string.remove_expiration_date),
                 modifier = Modifier.size(20.dp),
                 tint = Color(0xFFFF6600),
             )

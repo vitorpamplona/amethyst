@@ -43,7 +43,10 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.goal_closed
+import com.vitorpamplona.amethyst.commons.resources.goal_progress
+import com.vitorpamplona.amethyst.commons.resources.preview_card_image_for
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteZaps
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
@@ -53,12 +56,12 @@ import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeader
 import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeaderBackground
 import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.fundraiserProgressColor
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.quartz.nip75ZapGoals.GoalEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
+import org.jetbrains.compose.resources.stringResource
 import java.math.BigDecimal
 import kotlin.math.roundToInt
 
@@ -95,7 +98,7 @@ fun GoalHeader(
             Box {
                 MyAsyncImage(
                     imageUrl = it,
-                    contentDescription = stringRes(R.string.preview_card_image_for, it),
+                    contentDescription = stringResource(Res.string.preview_card_image_for, it),
                     contentScale = ContentScale.FillWidth,
                     mainImageModifier = Modifier.fillMaxWidth(),
                     loadedImageModifier = Modifier,
@@ -128,7 +131,7 @@ fun GoalHeader(
             if (isClosed) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = stringRes(R.string.goal_closed),
+                    text = stringResource(Res.string.goal_closed),
                     style = MaterialTheme.typography.bodySmall,
                     color = Color.Gray,
                 )
@@ -187,8 +190,8 @@ fun GoalProgressBar(
 
             Text(
                 text =
-                    stringRes(
-                        R.string.goal_progress,
+                    stringResource(
+                        Res.string.goal_progress,
                         totalPercentage,
                         showAmount(goalAmountSats.toBigDecimal()),
                     ),

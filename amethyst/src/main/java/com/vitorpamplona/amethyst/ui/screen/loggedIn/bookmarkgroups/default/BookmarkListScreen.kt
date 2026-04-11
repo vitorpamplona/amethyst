@@ -41,7 +41,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.bookmarks_title
+import com.vitorpamplona.amethyst.commons.resources.pinned_notes
+import com.vitorpamplona.amethyst.commons.resources.private_bookmarks
+import com.vitorpamplona.amethyst.commons.resources.public_bookmarks
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -51,9 +55,9 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.default.dal.BookmarkPrivateFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.default.dal.BookmarkPublicFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.default.dal.PinnedNotesFeedViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun BookmarkListScreen(
@@ -115,7 +119,7 @@ private fun RenderBookmarkScreen(
         isInvertedLayout = false,
         topBar = {
             Column {
-                TopBarWithBackButton(stringRes(id = R.string.bookmarks_title), nav::popBack)
+                TopBarWithBackButton(stringResource(Res.string.bookmarks_title), nav::popBack)
                 SecondaryScrollableTabRow(
                     containerColor = Color.Transparent,
                     contentColor = MaterialTheme.colorScheme.onBackground,
@@ -126,17 +130,17 @@ private fun RenderBookmarkScreen(
                     Tab(
                         selected = pagerState.currentPage == 0,
                         onClick = { coroutineScope.launch { pagerState.animateScrollToPage(0) } },
-                        text = { Text(text = stringRes(R.string.private_bookmarks)) },
+                        text = { Text(text = stringResource(Res.string.private_bookmarks)) },
                     )
                     Tab(
                         selected = pagerState.currentPage == 1,
                         onClick = { coroutineScope.launch { pagerState.animateScrollToPage(1) } },
-                        text = { Text(text = stringRes(R.string.public_bookmarks)) },
+                        text = { Text(text = stringResource(Res.string.public_bookmarks)) },
                     )
                     Tab(
                         selected = pagerState.currentPage == 2,
                         onClick = { coroutineScope.launch { pagerState.animateScrollToPage(2) } },
-                        text = { Text(text = stringRes(R.string.pinned_notes)) },
+                        text = { Text(text = stringResource(Res.string.pinned_notes)) },
                     )
                 }
             }

@@ -40,8 +40,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.channel_image
+import com.vitorpamplona.amethyst.commons.resources.created_at
+import com.vitorpamplona.amethyst.commons.resources.groups_no_descriptor
+import com.vitorpamplona.amethyst.commons.resources.owner
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserIsFollowingChannel
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
@@ -59,11 +63,11 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28P
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.header.actions.LinkChatButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.header.actions.OpenChatButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.header.actions.ShareChatButton
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.largeProfilePictureModifier
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun LongPublicChatChannelHeader(
@@ -85,7 +89,7 @@ fun LongPublicChatChannelHeader(
             RobohashFallbackAsyncImage(
                 robot = baseChannel.idHex,
                 model = it,
-                contentDescription = stringRes(R.string.channel_image),
+                contentDescription = stringResource(Res.string.channel_image),
                 modifier = MaterialTheme.colorScheme.largeProfilePictureModifier,
                 loadProfilePicture = accountViewModel.settings.showProfilePictures(),
                 loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
@@ -120,7 +124,7 @@ fun LongPublicChatChannelHeader(
                 val background = remember { mutableStateOf(defaultBackground) }
 
                 TranslatableRichTextViewer(
-                    content = summary ?: stringRes(id = R.string.groups_no_descriptor),
+                    content = summary ?: stringResource(Res.string.groups_no_descriptor),
                     canPreview = false,
                     quotesLeft = 1,
                     tags = channel.infoTags,
@@ -140,7 +144,7 @@ fun LongPublicChatChannelHeader(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = stringRes(id = R.string.owner),
+                    text = stringResource(Res.string.owner),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.width(75.dp),
@@ -156,7 +160,7 @@ fun LongPublicChatChannelHeader(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = stringRes(id = R.string.created_at),
+                    text = stringResource(Res.string.created_at),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.width(75.dp),

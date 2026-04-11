@@ -22,12 +22,14 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.never
+import com.vitorpamplona.amethyst.commons.resources.today
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.note.dateFormatter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.ChatDivisor
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip14Subject.subject
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun NewDateOrSubjectDivisor(
@@ -36,8 +38,8 @@ fun NewDateOrSubjectDivisor(
 ) {
     if (previous == null) return
 
-    val never = stringRes(R.string.never)
-    val today = stringRes(R.string.today)
+    val never = stringResource(Res.string.never)
+    val today = stringResource(Res.string.today)
 
     val prevDate = remember(previous) { dateFormatter(previous.event?.createdAt, never, today) }
     val date = remember(note) { dateFormatter(note.event?.createdAt, never, today) }

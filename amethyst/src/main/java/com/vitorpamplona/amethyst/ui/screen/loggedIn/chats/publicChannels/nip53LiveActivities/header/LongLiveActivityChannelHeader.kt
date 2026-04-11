@@ -39,9 +39,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.created_at
+import com.vitorpamplona.amethyst.commons.resources.groups_no_descriptor
+import com.vitorpamplona.amethyst.commons.resources.owner
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
@@ -58,7 +61,6 @@ import com.vitorpamplona.amethyst.ui.note.elements.MoreOptionsButton
 import com.vitorpamplona.amethyst.ui.note.elements.NormalTimeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
@@ -69,6 +71,7 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 import java.util.Locale
 
 @Composable
@@ -94,7 +97,7 @@ fun LongLiveActivityChannelHeader(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = stringRes(id = R.string.owner),
+                    text = stringResource(Res.string.owner),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.width(75.dp),
@@ -110,7 +113,7 @@ fun LongLiveActivityChannelHeader(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = stringRes(id = R.string.created_at),
+                    text = stringResource(Res.string.created_at),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.width(75.dp),
@@ -176,7 +179,7 @@ private fun RowScope.RenderSummary(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val summary = activity.summary() ?: stringRes(id = R.string.groups_no_descriptor)
+    val summary = activity.summary() ?: stringResource(Res.string.groups_no_descriptor)
 
     Column(Modifier.weight(1f)) {
         Row(verticalAlignment = Alignment.CenterVertically) {

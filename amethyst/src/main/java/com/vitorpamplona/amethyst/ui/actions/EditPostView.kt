@@ -73,7 +73,12 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.add_bitcoin_invoice
+import com.vitorpamplona.amethyst.commons.resources.cancel_bitcoin_invoice
+import com.vitorpamplona.amethyst.commons.resources.lightning_create_and_add_invoice
+import com.vitorpamplona.amethyst.commons.resources.lightning_invoice
+import com.vitorpamplona.amethyst.commons.resources.what_s_on_your_mind
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView
@@ -91,7 +96,6 @@ import com.vitorpamplona.amethyst.ui.note.creators.uploads.ImageVideoDescription
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.ui.note.types.ReplyRenderType
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
@@ -103,6 +107,7 @@ import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -292,8 +297,8 @@ fun EditPostView(
                                                 lud16,
                                                 user,
                                                 accountViewModel,
-                                                stringRes(id = R.string.lightning_invoice),
-                                                stringRes(id = R.string.lightning_create_and_add_invoice),
+                                                stringResource(Res.string.lightning_invoice),
+                                                stringResource(Res.string.lightning_create_and_add_invoice),
                                                 onNewInvoice = {
                                                     postViewModel.message =
                                                         TextFieldValue(postViewModel.message.text + "\n\n" + it)
@@ -312,7 +317,7 @@ fun EditPostView(
                                 ) {
                                     Column {
                                         Text(
-                                            text = stringRes(R.string.message_to_author),
+                                            text = stringResource(Res.string.message_to_author),
                                             fontSize = 18.sp,
                                             fontWeight = FontWeight.W500,
                                         )
@@ -325,7 +330,7 @@ fun EditPostView(
                                             modifier = Modifier.fillMaxWidth(),
                                             placeholder = {
                                                 Text(
-                                                    text = stringRes(R.string.message_to_author_placeholder),
+                                                    text = stringResource(Res.string.message_to_author_placeholder),
                                                     color = MaterialTheme.colorScheme.placeholderText,
                                                 )
                                             },
@@ -433,7 +438,7 @@ private fun MessageField(postViewModel: EditPostViewModel) {
                 },
         placeholder = {
             Text(
-                text = stringRes(R.string.what_s_on_your_mind),
+                text = stringResource(Res.string.what_s_on_your_mind),
                 color = MaterialTheme.colorScheme.placeholderText,
             )
         },
@@ -458,14 +463,14 @@ private fun AddLnInvoiceButton(
         if (!isLnInvoiceActive) {
             Icon(
                 imageVector = Icons.Default.CurrencyBitcoin,
-                contentDescription = stringRes(id = R.string.add_bitcoin_invoice),
+                contentDescription = stringResource(Res.string.add_bitcoin_invoice),
                 modifier = Modifier.size(20.dp),
                 tint = MaterialTheme.colorScheme.onBackground,
             )
         } else {
             Icon(
                 imageVector = Icons.Default.CurrencyBitcoin,
-                contentDescription = stringRes(id = R.string.cancel_bitcoin_invoice),
+                contentDescription = stringResource(Res.string.cancel_bitcoin_invoice),
                 modifier = Modifier.size(20.dp),
                 tint = BitcoinOrange,
             )

@@ -41,15 +41,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.today
+import com.vitorpamplona.amethyst.commons.resources.zaps
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NotificationSummaryState
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.RoyalBlue
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size24Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun UserReactionsRow(
@@ -65,7 +67,7 @@ fun UserReactionsRow(
     ) {
         Row(verticalAlignment = CenterVertically, modifier = Modifier.width(68.dp)) {
             Text(
-                text = stringRes(id = R.string.today),
+                text = stringResource(Res.string.today),
                 fontWeight = FontWeight.Bold,
             )
 
@@ -99,7 +101,7 @@ fun UserReactionsRow(
 private fun UserZapModel(model: NotificationSummaryState) {
     Icon(
         imageVector = Icons.Default.Bolt,
-        contentDescription = stringRes(R.string.zaps),
+        contentDescription = stringResource(Res.string.zaps),
         modifier = Size24Modifier,
         tint = BitcoinOrange,
     )

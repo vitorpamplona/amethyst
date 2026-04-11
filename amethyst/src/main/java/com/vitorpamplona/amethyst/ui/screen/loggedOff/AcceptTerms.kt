@@ -28,9 +28,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.buildAnnotatedString
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.i_accept_the
+import com.vitorpamplona.amethyst.commons.resources.terms_of_use
 import com.vitorpamplona.amethyst.ui.components.appendLink
-import com.vitorpamplona.amethyst.ui.stringRes
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun AcceptTerms(
@@ -48,8 +50,8 @@ fun AcceptTerms(
 
         Text(
             buildAnnotatedString {
-                append(stringRes(R.string.i_accept_the))
-                appendLink(stringRes(R.string.terms_of_use), primary) {
+                append(stringResource(Res.string.i_accept_the))
+                appendLink(stringResource(Res.string.terms_of_use), primary) {
                     runCatching {
                         uri.openUri("https://github.com/vitorpamplona/amethyst/blob/main/PRIVACY.md")
                     }

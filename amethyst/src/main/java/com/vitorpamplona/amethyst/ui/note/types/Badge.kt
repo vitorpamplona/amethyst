@@ -43,18 +43,21 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.award_granted_to
+import com.vitorpamplona.amethyst.commons.resources.badge_and_n_others
+import com.vitorpamplona.amethyst.commons.resources.badge_award_image_for
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
 import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun BadgeDisplay(
@@ -106,10 +109,7 @@ private fun RenderBadge(
                 AsyncImage(
                     model = it,
                     contentDescription =
-                        stringRes(
-                            R.string.badge_award_image_for,
-                            name ?: "",
-                        ),
+                        stringResource(Res.string.badge_award_image_for, name ?: ""),
                     modifier = Modifier.fillMaxWidth().background(backgroundForRow),
                     contentScale = ContentScale.FillWidth,
                 )
@@ -157,7 +157,7 @@ fun RenderBadgeAward(
     val noteEvent = note.event as? BadgeAwardEvent ?: return
     var awardees by remember { mutableStateOf<List<User>>(listOf()) }
 
-    Text(text = stringRes(R.string.award_granted_to))
+    Text(text = stringResource(Res.string.award_granted_to))
 
     LaunchedEffect(key1 = note) { accountViewModel.loadUsers(noteEvent.awardeeIds()) { awardees = it } }
 
@@ -172,7 +172,7 @@ fun RenderBadgeAward(
         }
 
         if (awardees.size > 100) {
-            Text(stringRes(R.string.badge_and_n_others, awardees.size - 100), maxLines = 1)
+            Text(stringResource(Res.string.badge_and_n_others, awardees.size - 100), maxLines = 1)
         }
     }
 

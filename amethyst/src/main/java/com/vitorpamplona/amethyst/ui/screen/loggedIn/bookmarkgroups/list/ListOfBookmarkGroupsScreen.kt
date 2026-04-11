@@ -33,7 +33,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.bookmark_lists
+import com.vitorpamplona.amethyst.commons.resources.follow_set_create_btn_label
 import com.vitorpamplona.amethyst.model.nip51Lists.BookmarkListState
 import com.vitorpamplona.amethyst.model.nip51Lists.OldBookmarkListState
 import com.vitorpamplona.amethyst.model.nip51Lists.labeledBookmarkLists.LabeledBookmarkList
@@ -42,8 +44,8 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.BookmarkType
-import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.coroutines.flow.StateFlow
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun ListOfBookmarkGroupsScreen(
@@ -105,7 +107,7 @@ fun ListOfBookmarkGroupsFeed(
 ) {
     Scaffold(
         topBar = {
-            TopBarWithBackButton(caption = stringRes(R.string.bookmark_lists), nav::popBack)
+            TopBarWithBackButton(caption = stringResource(Res.string.bookmark_lists), nav::popBack)
         },
         floatingActionButton = {
             BookmarkGroupFab(onAddGroup = addBookmarkGroup)
@@ -138,7 +140,7 @@ fun ListOfBookmarkGroupsFeed(
 fun BookmarkGroupFab(onAddGroup: () -> Unit) {
     ExtendedFloatingActionButton(
         text = {
-            Text(text = stringRes(R.string.follow_set_create_btn_label))
+            Text(text = stringResource(Res.string.follow_set_create_btn_label))
         },
         icon = {
             Icon(

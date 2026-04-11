@@ -46,13 +46,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.secret_add_to_text
+import com.vitorpamplona.amethyst.commons.resources.secret_emoji_maker
+import com.vitorpamplona.amethyst.commons.resources.secret_note_to_receiver
+import com.vitorpamplona.amethyst.commons.resources.secret_note_to_receiver_placeholder
+import com.vitorpamplona.amethyst.commons.resources.secret_visible_text
+import com.vitorpamplona.amethyst.commons.resources.secret_visible_text_placeholder
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun SecretEmojiRequest(onSuccess: (String) -> Unit) {
@@ -69,7 +75,7 @@ fun SecretEmojiRequest(onSuccess: (String) -> Unit) {
             )
 
             Text(
-                text = stringRes(R.string.secret_emoji_maker),
+                text = stringResource(Res.string.secret_emoji_maker),
                 fontSize = 20.sp,
                 fontWeight = FontWeight.W500,
                 modifier = Modifier.padding(start = 10.dp),
@@ -82,13 +88,13 @@ fun SecretEmojiRequest(onSuccess: (String) -> Unit) {
         var publicPrefix by remember { mutableStateOf("") }
 
         OutlinedTextField(
-            label = { Text(text = stringRes(R.string.secret_note_to_receiver)) },
+            label = { Text(text = stringResource(Res.string.secret_note_to_receiver)) },
             modifier = Modifier.fillMaxWidth(),
             value = secretMessage,
             onValueChange = { secretMessage = it },
             placeholder = {
                 Text(
-                    text = stringRes(R.string.secret_note_to_receiver_placeholder),
+                    text = stringResource(Res.string.secret_note_to_receiver_placeholder),
                     color = MaterialTheme.colorScheme.placeholderText,
                 )
             },
@@ -100,13 +106,13 @@ fun SecretEmojiRequest(onSuccess: (String) -> Unit) {
         )
 
         OutlinedTextField(
-            label = { Text(text = stringRes(R.string.secret_visible_text)) },
+            label = { Text(text = stringResource(Res.string.secret_visible_text)) },
             modifier = Modifier.fillMaxWidth(),
             value = publicPrefix,
             onValueChange = { publicPrefix = it },
             placeholder = {
                 Text(
-                    text = stringRes(R.string.secret_visible_text_placeholder),
+                    text = stringResource(Res.string.secret_visible_text_placeholder),
                     color = MaterialTheme.colorScheme.placeholderText,
                 )
             },
@@ -125,7 +131,7 @@ fun SecretEmojiRequest(onSuccess: (String) -> Unit) {
                 ),
         ) {
             Text(
-                text = stringRes(R.string.secret_add_to_text),
+                text = stringResource(Res.string.secret_add_to_text),
                 color = Color.White,
                 fontSize = 20.sp,
             )

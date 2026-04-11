@@ -49,7 +49,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.expand_relay_list
+import com.vitorpamplona.amethyst.commons.resources.relay_info
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
@@ -58,7 +60,6 @@ import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.LargeRelayIconModifier
 import com.vitorpamplona.amethyst.ui.theme.RelayIconFilter
 import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
@@ -73,6 +74,7 @@ import com.vitorpamplona.amethyst.ui.theme.ripple24dp
 import com.vitorpamplona.amethyst.ui.theme.warningColorOnSecondSurface
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 
 private const val DAMUS_RELAY_URL = "wss://relay.damus.io"
 
@@ -115,7 +117,7 @@ fun ChatRelayExpandButton(onClick: () -> Unit) {
     ) {
         Icon(
             imageVector = Icons.Default.ChevronRight,
-            contentDescription = stringRes(id = R.string.expand_relay_list),
+            contentDescription = stringResource(Res.string.expand_relay_list),
             modifier = Size15Modifier,
             tint = MaterialTheme.colorScheme.placeholderText,
         )
@@ -214,7 +216,7 @@ fun RenderRelayIcon(
         RobohashFallbackAsyncImage(
             robot = displayUrl,
             model = iconUrl,
-            contentDescription = stringRes(id = R.string.relay_info, displayUrl),
+            contentDescription = stringResource(Res.string.relay_info, displayUrl),
             colorFilter = RelayIconFilter,
             modifier = iconModifier,
             loadProfilePicture = loadProfilePicture,

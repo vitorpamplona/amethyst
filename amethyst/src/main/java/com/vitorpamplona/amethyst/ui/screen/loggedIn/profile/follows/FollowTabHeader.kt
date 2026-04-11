@@ -24,10 +24,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.number_following
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.follows.dal.UserProfileFollowsUserFeedViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun FollowTabHeader(
@@ -38,9 +39,9 @@ fun FollowTabHeader(
 
     val text =
         if (followCount > 0) {
-            stringRes(R.string.number_following, followCount)
+            stringResource(Res.string.number_following, followCount)
         } else {
-            stringRes(R.string.number_following, "--")
+            stringResource(Res.string.number_following, "--")
         }
 
     Text(text = text)

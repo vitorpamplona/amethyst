@@ -27,9 +27,10 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.post_anonymously
 import com.vitorpamplona.amethyst.ui.theme.Size19Modifier
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun AnonymousPostButton(
@@ -42,14 +43,14 @@ fun AnonymousPostButton(
         if (!isActive) {
             Icon(
                 imageVector = Icons.Default.PersonOff,
-                contentDescription = stringRes(R.string.post_anonymously),
+                contentDescription = stringResource(Res.string.post_anonymously),
                 modifier = Size19Modifier,
                 tint = MaterialTheme.colorScheme.onBackground,
             )
         } else {
             Icon(
                 imageVector = Icons.Default.PersonOff,
-                contentDescription = stringRes(R.string.post_anonymously),
+                contentDescription = stringResource(Res.string.post_anonymously),
                 modifier = Size19Modifier,
                 tint = Color.Red,
             )

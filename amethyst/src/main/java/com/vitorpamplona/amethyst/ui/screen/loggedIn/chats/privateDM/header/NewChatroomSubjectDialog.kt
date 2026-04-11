@@ -46,16 +46,20 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.messages_new_message_subject
+import com.vitorpamplona.amethyst.commons.resources.messages_new_message_subject_caption
+import com.vitorpamplona.amethyst.commons.resources.messages_new_subject_message
+import com.vitorpamplona.amethyst.commons.resources.messages_new_subject_message_placeholder
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.note.buttons.CloseButton
 import com.vitorpamplona.amethyst.ui.note.buttons.PostButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.changeSubject
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun NewChatroomSubjectDialog(
@@ -119,13 +123,13 @@ fun NewChatroomSubjectDialog(
                 Spacer(modifier = Modifier.height(15.dp))
 
                 OutlinedTextField(
-                    label = { Text(text = stringRes(R.string.messages_new_message_subject)) },
+                    label = { Text(text = stringResource(Res.string.messages_new_message_subject)) },
                     modifier = Modifier.fillMaxWidth(),
                     value = groupName.value,
                     onValueChange = { groupName.value = it },
                     placeholder = {
                         Text(
-                            text = stringRes(R.string.messages_new_message_subject_caption),
+                            text = stringResource(Res.string.messages_new_message_subject_caption),
                             color = MaterialTheme.colorScheme.placeholderText,
                         )
                     },
@@ -139,7 +143,7 @@ fun NewChatroomSubjectDialog(
                 Spacer(modifier = Modifier.height(15.dp))
 
                 OutlinedTextField(
-                    label = { Text(text = stringRes(R.string.messages_new_subject_message)) },
+                    label = { Text(text = stringResource(Res.string.messages_new_subject_message)) },
                     modifier =
                         Modifier
                             .fillMaxWidth()
@@ -148,7 +152,7 @@ fun NewChatroomSubjectDialog(
                     onValueChange = { message.value = it },
                     placeholder = {
                         Text(
-                            text = stringRes(R.string.messages_new_subject_message_placeholder),
+                            text = stringResource(Res.string.messages_new_subject_message_placeholder),
                             color = MaterialTheme.colorScheme.placeholderText,
                         )
                     },

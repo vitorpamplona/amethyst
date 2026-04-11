@@ -43,8 +43,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.accept_the_suggestion
+import com.vitorpamplona.amethyst.commons.resources.proposal_to_edit
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.ui.actions.EditPostView
@@ -56,13 +58,13 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.NoteBody
 import com.vitorpamplona.amethyst.ui.note.observeEdits
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
 import com.vitorpamplona.amethyst.ui.theme.innerPostModifier
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import kotlinx.collections.immutable.persistentListOf
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun RenderTextModificationEvent(
@@ -102,7 +104,7 @@ fun RenderTextModificationEvent(
     ) {
         Column(Modifier.fillMaxWidth().padding(Size10dp)) {
             Text(
-                text = stringRes(id = R.string.proposal_to_edit),
+                text = stringResource(Res.string.proposal_to_edit),
                 style =
                     TextStyle(
                         fontSize = 18.sp,
@@ -218,7 +220,7 @@ fun RenderTextModificationEvent(
                     onClick = { wantsToEditPost.value = true },
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text(text = stringRes(id = R.string.accept_the_suggestion))
+                    Text(text = stringResource(Res.string.accept_the_suggestion))
                 }
             }
         }

@@ -39,10 +39,18 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.uploading_state_compressing
+import com.vitorpamplona.amethyst.commons.resources.uploading_state_downloading
+import com.vitorpamplona.amethyst.commons.resources.uploading_state_error
+import com.vitorpamplona.amethyst.commons.resources.uploading_state_finished
+import com.vitorpamplona.amethyst.commons.resources.uploading_state_hashing
+import com.vitorpamplona.amethyst.commons.resources.uploading_state_ready
+import com.vitorpamplona.amethyst.commons.resources.uploading_state_server_processing
+import com.vitorpamplona.amethyst.commons.resources.uploading_state_uploading
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun UploadProgressIndicator(
@@ -80,14 +88,14 @@ fun UploadProgressIndicator(
 
             val txt =
                 when (progressStatusValue) {
-                    is com.vitorpamplona.amethyst.service.uploads.UploadingState.Ready -> stringRes(R.string.uploading_state_ready)
-                    is com.vitorpamplona.amethyst.service.uploads.UploadingState.Compressing -> stringRes(R.string.uploading_state_compressing)
-                    is com.vitorpamplona.amethyst.service.uploads.UploadingState.Uploading -> stringRes(R.string.uploading_state_uploading)
-                    is com.vitorpamplona.amethyst.service.uploads.UploadingState.ServerProcessing -> stringRes(R.string.uploading_state_server_processing)
-                    is com.vitorpamplona.amethyst.service.uploads.UploadingState.Downloading -> stringRes(R.string.uploading_state_downloading)
-                    is com.vitorpamplona.amethyst.service.uploads.UploadingState.Hashing -> stringRes(R.string.uploading_state_hashing)
-                    is com.vitorpamplona.amethyst.service.uploads.UploadingState.Finished -> stringRes(R.string.uploading_state_finished)
-                    is com.vitorpamplona.amethyst.service.uploads.UploadingState.Error -> stringRes(R.string.uploading_state_error)
+                    is com.vitorpamplona.amethyst.service.uploads.UploadingState.Ready -> stringResource(Res.string.uploading_state_ready)
+                    is com.vitorpamplona.amethyst.service.uploads.UploadingState.Compressing -> stringResource(Res.string.uploading_state_compressing)
+                    is com.vitorpamplona.amethyst.service.uploads.UploadingState.Uploading -> stringResource(Res.string.uploading_state_uploading)
+                    is com.vitorpamplona.amethyst.service.uploads.UploadingState.ServerProcessing -> stringResource(Res.string.uploading_state_server_processing)
+                    is com.vitorpamplona.amethyst.service.uploads.UploadingState.Downloading -> stringResource(Res.string.uploading_state_downloading)
+                    is com.vitorpamplona.amethyst.service.uploads.UploadingState.Hashing -> stringResource(Res.string.uploading_state_hashing)
+                    is com.vitorpamplona.amethyst.service.uploads.UploadingState.Finished -> stringResource(Res.string.uploading_state_finished)
+                    is com.vitorpamplona.amethyst.service.uploads.UploadingState.Error -> stringResource(Res.string.uploading_state_error)
                 }
 
             Text(

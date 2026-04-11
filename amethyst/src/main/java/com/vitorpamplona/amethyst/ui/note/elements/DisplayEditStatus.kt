@@ -27,11 +27,14 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.edited
+import com.vitorpamplona.amethyst.commons.resources.edited_number
+import com.vitorpamplona.amethyst.commons.resources.original
 import com.vitorpamplona.amethyst.ui.note.types.EditState
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun DisplayEditStatus(editState: EditState) {
@@ -39,11 +42,11 @@ fun DisplayEditStatus(editState: EditState) {
         text =
             buildAnnotatedString {
                 if (editState.showingVersion.value == editState.originalVersionId()) {
-                    append(stringRes(id = R.string.original))
+                    append(stringResource(Res.string.original))
                 } else if (editState.showingVersion.value == editState.lastVersionId()) {
-                    append(stringRes(id = R.string.edited))
+                    append(stringResource(Res.string.edited))
                 } else {
-                    append(stringRes(id = R.string.edited_number, editState.versionId()))
+                    append(stringResource(Res.string.edited_number, editState.versionId()))
                 }
             },
         style =

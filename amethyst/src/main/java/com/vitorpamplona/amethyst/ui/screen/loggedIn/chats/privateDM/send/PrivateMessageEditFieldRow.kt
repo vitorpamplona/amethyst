@@ -50,7 +50,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.resources.recipient_missing_dm_relays
+import com.vitorpamplona.amethyst.commons.resources.reply_here
+import com.vitorpamplona.amethyst.commons.resources.retry_without_encryption
+import com.vitorpamplona.amethyst.commons.resources.this_message_will_disappear_in
+import com.vitorpamplona.amethyst.commons.resources.upload_without_encryption_warning
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
@@ -70,7 +76,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.upload
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.DisplayReplyingToNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ThinSendButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.EditFieldBorder
 import com.vitorpamplona.amethyst.ui.theme.EditFieldModifier
 import com.vitorpamplona.amethyst.ui.theme.EditFieldTrailingIconModifier
@@ -83,6 +88,7 @@ import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
+import org.jetbrains.compose.resources.stringResource
 
 @Preview
 @Composable
@@ -173,10 +179,7 @@ fun PrivateMessageEditFieldRow(
             Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), horizontalArrangement = Arrangement.Center) {
                 val context = LocalContext.current
                 Text(
-                    stringRes(
-                        R.string.this_message_will_disappear_in,
-                        timeAheadNoDot(channelScreenModel.expirationDate, context),
-                    ),
+                    stringResource(Res.string.this_message_will_disappear_in, timeAheadNoDot(channelScreenModel.expirationDate, context)),
                     fontSize = Font12SP,
                     color = MaterialTheme.colorScheme.placeholderText,
                     maxLines = 1,
@@ -208,7 +211,7 @@ fun EditField(
         modifier = Modifier.fillMaxWidth(),
         placeholder = {
             Text(
-                text = stringRes(R.string.reply_here),
+                text = stringResource(Res.string.reply_here),
                 color = MaterialTheme.colorScheme.placeholderText,
             )
         },
@@ -276,7 +279,7 @@ fun RecipientMissingRelaysWarning(
         }
 
         Text(
-            text = stringRes(R.string.recipient_missing_dm_relays),
+            text = stringResource(Res.string.recipient_missing_dm_relays),
             color = MaterialTheme.colorScheme.error,
             fontSize = Font12SP,
             maxLines = 2,
@@ -351,7 +354,7 @@ fun EncryptedUploadErrorDialog(
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(message)
                 Text(
-                    stringRes(R.string.upload_without_encryption_warning),
+                    stringResource(Res.string.upload_without_encryption_warning),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                 )
@@ -359,12 +362,12 @@ fun EncryptedUploadErrorDialog(
         },
         confirmButton = {
             TextButton(onClick = onRetryWithoutEncryption) {
-                Text(stringRes(R.string.retry_without_encryption))
+                Text(stringResource(Res.string.retry_without_encryption))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringRes(R.string.cancel))
+                Text(stringResource(Res.string.cancel))
             }
         },
     )

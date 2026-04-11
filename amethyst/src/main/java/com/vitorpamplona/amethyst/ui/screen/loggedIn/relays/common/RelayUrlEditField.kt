@@ -45,13 +45,14 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.add
+import com.vitorpamplona.amethyst.commons.resources.add_a_relay
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.HalfHorzPadding
 import com.vitorpamplona.amethyst.ui.theme.PopupUpEffect
@@ -64,6 +65,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import org.jetbrains.compose.resources.stringResource
 
 @Preview
 @Composable
@@ -177,7 +179,7 @@ fun RelayUrlEditField(
 
     Column(modifier) {
         OutlinedTextField(
-            label = { Text(text = stringRes(R.string.add_a_relay)) },
+            label = { Text(text = stringResource(Res.string.add_a_relay)) },
             modifier = Modifier.fillMaxWidth(),
             value = url,
             onValueChange = {
@@ -218,7 +220,7 @@ fun RelayUrlEditField(
                         ),
                     modifier = StdEndPadding,
                 ) {
-                    Text(text = stringRes(id = R.string.add), color = Color.White)
+                    Text(text = stringResource(Res.string.add), color = Color.White)
                 }
             },
         )

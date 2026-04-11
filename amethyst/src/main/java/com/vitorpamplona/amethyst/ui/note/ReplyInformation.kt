@@ -33,7 +33,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.sp
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.and
+import com.vitorpamplona.amethyst.commons.resources.replying_to
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
@@ -41,12 +43,12 @@ import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun ReplyInformationChannel(
@@ -89,7 +91,7 @@ fun ReplyInformationChannel(
         if (!mentions.isNullOrEmpty()) {
             if (!replyTo.isNullOrEmpty()) {
                 Text(
-                    stringRes(id = R.string.replying_to),
+                    stringResource(Res.string.replying_to),
                     fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.placeholderText,
                 )
@@ -105,7 +107,7 @@ fun ReplyInformationChannel(
                         )
                     } else if (idx < mentions.size - 1) {
                         Text(
-                            " ${stringRes(id = R.string.and)} ",
+                            " ${stringResource(Res.string.and)} ",
                             fontSize = 13.sp,
                             color = MaterialTheme.colorScheme.placeholderText,
                         )
@@ -127,7 +129,7 @@ fun ReplyToLabel(
 
     FlowRow {
         Text(
-            stringRes(id = R.string.replying_to),
+            stringResource(Res.string.replying_to),
             fontSize = 13.sp,
             color = MaterialTheme.colorScheme.placeholderText,
         )

@@ -44,7 +44,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.live_stream_has_ended
+import com.vitorpamplona.amethyst.commons.resources.live_stream_is_offline
+import com.vitorpamplona.amethyst.commons.resources.preview_card_image_for
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -67,7 +70,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.CheckIfVideoIsOnline
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.CrossfadeCheckIfVideoIsOnline
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
@@ -82,6 +84,7 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import org.jetbrains.compose.resources.stringResource
 import java.util.Locale
 
 @Composable
@@ -210,7 +213,7 @@ fun RenderLiveActivityEventInner(
                                 .height(100.dp),
                     ) {
                         Text(
-                            text = stringRes(id = R.string.live_stream_is_offline),
+                            text = stringResource(Res.string.live_stream_is_offline),
                             color = MaterialTheme.colorScheme.onBackground,
                             fontWeight = FontWeight.Bold,
                         )
@@ -233,10 +236,7 @@ fun RenderLiveActivityEventInner(
                             MyAsyncImage(
                                 imageUrl = it,
                                 contentDescription =
-                                    stringRes(
-                                        R.string.preview_card_image_for,
-                                        it,
-                                    ),
+                                    stringResource(Res.string.preview_card_image_for, it),
                                 contentScale = ContentScale.FillWidth,
                                 mainImageModifier = Modifier.fillMaxWidth(),
                                 loadedImageModifier = MaterialTheme.colorScheme.imageModifier,
@@ -248,7 +248,7 @@ fun RenderLiveActivityEventInner(
                     } ?: run { DisplayAuthorBanner(baseNote, accountViewModel, MaterialTheme.colorScheme.imageModifier) }
 
                     Text(
-                        text = stringRes(id = R.string.live_stream_has_ended),
+                        text = stringResource(Res.string.live_stream_has_ended),
                         color = MaterialTheme.colorScheme.onBackground,
                         fontWeight = FontWeight.Bold,
                     )

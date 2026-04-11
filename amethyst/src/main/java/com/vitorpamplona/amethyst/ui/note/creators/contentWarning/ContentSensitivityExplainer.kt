@@ -43,10 +43,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.add_sensitive_content_description_placeholder
+import com.vitorpamplona.amethyst.commons.resources.add_sensitive_content_explainer
+import com.vitorpamplona.amethyst.commons.resources.add_sensitive_content_label
+import com.vitorpamplona.amethyst.commons.resources.content_warning
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun ContentSensitivityExplainer(
@@ -68,7 +72,7 @@ fun ContentSensitivityExplainer(
             ) {
                 Icon(
                     imageVector = Icons.Default.VisibilityOff,
-                    contentDescription = stringRes(id = R.string.content_warning),
+                    contentDescription = stringResource(Res.string.content_warning),
                     modifier =
                         Modifier
                             .size(18.dp)
@@ -77,7 +81,7 @@ fun ContentSensitivityExplainer(
                 )
                 Icon(
                     imageVector = Icons.Rounded.Warning,
-                    contentDescription = stringRes(id = R.string.content_warning),
+                    contentDescription = stringResource(Res.string.content_warning),
                     modifier =
                         Modifier
                             .size(10.dp)
@@ -87,7 +91,7 @@ fun ContentSensitivityExplainer(
             }
 
             Text(
-                text = stringRes(R.string.add_sensitive_content_label),
+                text = stringResource(Res.string.add_sensitive_content_label),
                 fontSize = 20.sp,
                 fontWeight = FontWeight.W500,
                 modifier = Modifier.padding(start = 10.dp),
@@ -97,7 +101,7 @@ fun ContentSensitivityExplainer(
         HorizontalDivider(thickness = DividerThickness)
 
         Text(
-            text = stringRes(R.string.add_sensitive_content_explainer),
+            text = stringResource(Res.string.add_sensitive_content_explainer),
             color = MaterialTheme.colorScheme.placeholderText,
             modifier = Modifier.padding(vertical = 10.dp),
         )
@@ -108,7 +112,7 @@ fun ContentSensitivityExplainer(
             modifier = Modifier.fillMaxWidth(),
             placeholder = {
                 Text(
-                    text = stringRes(R.string.add_sensitive_content_description_placeholder),
+                    text = stringResource(Res.string.add_sensitive_content_description_placeholder),
                     color = MaterialTheme.colorScheme.placeholderText,
                 )
             },

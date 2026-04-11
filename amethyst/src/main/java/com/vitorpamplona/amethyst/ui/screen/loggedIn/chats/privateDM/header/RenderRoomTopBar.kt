@@ -51,7 +51,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.call_video
+import com.vitorpamplona.amethyst.commons.resources.call_voice
+import com.vitorpamplona.amethyst.commons.resources.edits_the_channel_metadata
+import com.vitorpamplona.amethyst.commons.resources.messages_group_descriptor
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
@@ -60,7 +64,6 @@ import com.vitorpamplona.amethyst.ui.note.UserCompose
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.Size34dp
@@ -68,6 +71,7 @@ import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import kotlinx.collections.immutable.toPersistentList
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun RenderRoomTopBar(
@@ -99,7 +103,7 @@ fun RenderRoomTopBar(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Videocam,
-                                    contentDescription = stringRes(R.string.call_video),
+                                    contentDescription = stringResource(Res.string.call_video),
                                     tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(20.dp),
                                 )
@@ -113,7 +117,7 @@ fun RenderRoomTopBar(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Call,
-                                    contentDescription = stringRes(R.string.call_voice),
+                                    contentDescription = stringResource(Res.string.call_voice),
                                     tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(20.dp),
                                 )
@@ -154,7 +158,7 @@ fun RenderRoomTopBar(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Videocam,
-                                contentDescription = stringRes(R.string.call_video),
+                                contentDescription = stringResource(Res.string.call_video),
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(20.dp),
                             )
@@ -168,7 +172,7 @@ fun RenderRoomTopBar(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Call,
-                                contentDescription = stringRes(R.string.call_voice),
+                                contentDescription = stringResource(Res.string.call_voice),
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(20.dp),
                             )
@@ -199,7 +203,7 @@ fun GroupMembersHeader(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = stringRes(id = R.string.messages_group_descriptor),
+            text = stringResource(Res.string.messages_group_descriptor),
             fontWeight = FontWeight.Bold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -253,7 +257,7 @@ private fun EditRoomSubjectButton(
     ) {
         Icon(
             imageVector = Icons.Default.EditNote,
-            contentDescription = stringRes(R.string.edits_the_channel_metadata),
+            contentDescription = stringResource(Res.string.edits_the_channel_metadata),
         )
     }
 }

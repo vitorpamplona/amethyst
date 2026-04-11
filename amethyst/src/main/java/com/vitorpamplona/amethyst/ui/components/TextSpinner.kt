@@ -57,10 +57,12 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.open_dropdown_menu
+import com.vitorpamplona.amethyst.commons.resources.option_of
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import kotlinx.collections.immutable.ImmutableList
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun TextSpinner(
@@ -124,7 +126,7 @@ private fun BaseTextSpinner(
             "Dropdown menu, $currentText selected"
         }
 
-    val openDropdownLabel = stringRes(R.string.open_dropdown_menu)
+    val openDropdownLabel = stringResource(Res.string.open_dropdown_menu)
 
     Box(
         modifier = modifier,
@@ -225,7 +227,7 @@ fun <T> SpinnerSelectionDialog(
                     }
                 }
                 itemsIndexed(options) { index, item ->
-                    val optionsOfLabel = stringRes(R.string.option_of, index + 1, options.size)
+                    val optionsOfLabel = stringResource(Res.string.option_of, index + 1, options.size)
                     Row(
                         modifier =
                             Modifier

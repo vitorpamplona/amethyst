@@ -34,9 +34,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.add_zapraiser
+import com.vitorpamplona.amethyst.commons.resources.cancel_zapraiser
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun AddZapraiserButton(
@@ -63,7 +65,7 @@ fun AddZapraiserButton(
                 )
                 Icon(
                     imageVector = Icons.Default.Bolt,
-                    contentDescription = stringRes(R.string.add_zapraiser),
+                    contentDescription = stringResource(Res.string.add_zapraiser),
                     modifier =
                         Modifier
                             .size(13.dp)
@@ -82,7 +84,7 @@ fun AddZapraiserButton(
                 )
                 Icon(
                     imageVector = Icons.Default.Bolt,
-                    contentDescription = stringRes(R.string.cancel_zapraiser),
+                    contentDescription = stringResource(Res.string.cancel_zapraiser),
                     modifier =
                         Modifier
                             .size(13.dp)

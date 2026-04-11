@@ -38,18 +38,21 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.dm_relays_not_found_create_now
+import com.vitorpamplona.amethyst.commons.resources.outbox_relays_not_found
+import com.vitorpamplona.amethyst.commons.resources.outbox_relays_not_found_description
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.AddInboxRelayCard
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BigPadding
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
+import org.jetbrains.compose.resources.stringResource
 
 @Preview
 @Composable
@@ -92,7 +95,7 @@ fun AddOutboxRelayCard(
             ) {
                 // Title
                 Text(
-                    text = stringRes(id = R.string.outbox_relays_not_found),
+                    text = stringResource(Res.string.outbox_relays_not_found),
                     style =
                         TextStyle(
                             fontSize = 20.sp,
@@ -103,7 +106,7 @@ fun AddOutboxRelayCard(
                 Spacer(modifier = StdVertSpacer)
 
                 Text(
-                    text = stringRes(id = R.string.outbox_relays_not_found_description),
+                    text = stringResource(Res.string.outbox_relays_not_found_description),
                 )
 
                 Spacer(modifier = StdVertSpacer)
@@ -123,7 +126,7 @@ fun AddOutboxRelayCard(
                     },
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text(text = stringRes(id = R.string.dm_relays_not_found_create_now))
+                    Text(text = stringResource(Res.string.dm_relays_not_found_create_now))
                 }
             }
         }

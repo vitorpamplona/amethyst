@@ -54,13 +54,23 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.relay_discovery_accepted_kinds
+import com.vitorpamplona.amethyst.commons.resources.relay_discovery_geohash
+import com.vitorpamplona.amethyst.commons.resources.relay_monitor_ms
+import com.vitorpamplona.amethyst.commons.resources.relay_monitor_network
+import com.vitorpamplona.amethyst.commons.resources.relay_monitor_relay_type
+import com.vitorpamplona.amethyst.commons.resources.relay_monitor_requirements
+import com.vitorpamplona.amethyst.commons.resources.relay_monitor_rtt_open
+import com.vitorpamplona.amethyst.commons.resources.relay_monitor_rtt_read
+import com.vitorpamplona.amethyst.commons.resources.relay_monitor_rtt_write
+import com.vitorpamplona.amethyst.commons.resources.relay_monitor_supported_nips
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.RelayDiscoveryEvent
+import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -107,13 +117,13 @@ fun RenderRelayDiscovery(
                 horizontalArrangement = Arrangement.SpaceEvenly,
             ) {
                 rttOpen?.let {
-                    RttMetricChip(stringRes(R.string.relay_monitor_rtt_open), it)
+                    RttMetricChip(stringResource(Res.string.relay_monitor_rtt_open), it)
                 }
                 rttRead?.let {
-                    RttMetricChip(stringRes(R.string.relay_monitor_rtt_read), it)
+                    RttMetricChip(stringResource(Res.string.relay_monitor_rtt_read), it)
                 }
                 rttWrite?.let {
-                    RttMetricChip(stringRes(R.string.relay_monitor_rtt_write), it)
+                    RttMetricChip(stringResource(Res.string.relay_monitor_rtt_write), it)
                 }
             }
         }
@@ -122,7 +132,7 @@ fun RenderRelayDiscovery(
         if (networkTypes.isNotEmpty()) {
             DiscoveryInfoRow(
                 icon = Icons.Default.Language,
-                label = stringRes(R.string.relay_monitor_network),
+                label = stringResource(Res.string.relay_monitor_network),
                 value = networkTypes.joinToString { it.code },
             )
         }
@@ -131,7 +141,7 @@ fun RenderRelayDiscovery(
         if (relayTypes.isNotEmpty()) {
             DiscoveryInfoRow(
                 icon = Icons.Default.Dns,
-                label = stringRes(R.string.relay_monitor_relay_type),
+                label = stringResource(Res.string.relay_monitor_relay_type),
                 value = relayTypes.joinToString(),
             )
         }
@@ -140,7 +150,7 @@ fun RenderRelayDiscovery(
         if (requirements.isNotEmpty()) {
             DiscoveryInfoRow(
                 icon = if (requirements.any { !it.negated }) Icons.Default.Lock else Icons.Default.LockOpen,
-                label = stringRes(R.string.relay_monitor_requirements),
+                label = stringResource(Res.string.relay_monitor_requirements),
                 value =
                     requirements.joinToString { req ->
                         if (req.negated) "!${req.value}" else req.value
@@ -152,7 +162,7 @@ fun RenderRelayDiscovery(
         if (supportedNips.isNotEmpty()) {
             DiscoveryInfoRow(
                 icon = Icons.Default.Numbers,
-                label = stringRes(R.string.relay_monitor_supported_nips),
+                label = stringResource(Res.string.relay_monitor_supported_nips),
                 value = supportedNips.sorted().joinToString(),
             )
         }
@@ -161,7 +171,7 @@ fun RenderRelayDiscovery(
         if (acceptedKinds.isNotEmpty()) {
             DiscoveryInfoRow(
                 icon = Icons.Default.Dns,
-                label = stringRes(R.string.relay_discovery_accepted_kinds),
+                label = stringResource(Res.string.relay_discovery_accepted_kinds),
                 value =
                     acceptedKinds.joinToString { kind ->
                         if (kind.negated) "!${kind.kind}" else "${kind.kind}"
@@ -197,7 +207,7 @@ fun RenderRelayDiscovery(
         if (geohashes.isNotEmpty()) {
             DiscoveryInfoRow(
                 icon = Icons.Default.TravelExplore,
-                label = stringRes(R.string.relay_discovery_geohash),
+                label = stringResource(Res.string.relay_discovery_geohash),
                 value = geohashes.joinToString(),
             )
         }
@@ -237,7 +247,7 @@ private fun RttMetricChip(
             color = color.copy(alpha = 0.15f),
         ) {
             Text(
-                text = stringRes(R.string.relay_monitor_ms, ms.toInt()),
+                text = stringResource(Res.string.relay_monitor_ms, ms.toInt()),
                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold,

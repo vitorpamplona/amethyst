@@ -62,7 +62,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.in_the_list
+import com.vitorpamplona.amethyst.commons.resources.remove
+import com.vitorpamplona.amethyst.commons.resources.search_and_add_a_user
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.UserSearchDataSourceSubscription
@@ -73,7 +76,6 @@ import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.AnimateOnNewSearch
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.HalfVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.LightRedColor
@@ -85,6 +87,7 @@ import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun RenderAddUserFieldAndSuggestions(
@@ -115,7 +118,7 @@ fun RenderAddUserFieldAndSuggestions(
     val focusManager = LocalFocusManager.current
 
     OutlinedTextField(
-        label = { Text(text = stringRes(R.string.search_and_add_a_user)) },
+        label = { Text(text = stringResource(Res.string.search_and_add_a_user)) },
         modifier = Modifier.padding(horizontal = Size10dp).fillMaxWidth(),
         value = userName,
         onValueChange = {
@@ -251,7 +254,7 @@ private fun RowScope.HasUserTag(
     if (hasUserState) {
         Spacer(StdHorzSpacer)
         Text(
-            text = stringRes(id = R.string.in_the_list),
+            text = stringResource(Res.string.in_the_list),
             color = Color.White,
             fontSize = 12.sp,
             fontWeight = FontWeight.Bold,
@@ -272,7 +275,7 @@ private fun RowScope.HasUserTag(
         ) {
             Icon(
                 imageVector = Icons.Default.Cancel,
-                contentDescription = stringRes(id = R.string.remove),
+                contentDescription = stringResource(Res.string.remove),
                 modifier = Modifier.size(15.dp),
                 tint = LightRedColor,
             )

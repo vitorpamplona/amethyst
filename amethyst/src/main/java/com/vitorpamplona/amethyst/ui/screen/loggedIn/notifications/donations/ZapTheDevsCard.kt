@@ -44,7 +44,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.BuildConfig
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.brought_to_you_by
+import com.vitorpamplona.amethyst.commons.resources.this_version_brought_to_you_by
+import com.vitorpamplona.amethyst.commons.resources.version_name
+import com.vitorpamplona.amethyst.commons.resources.zap_the_devs_description
+import com.vitorpamplona.amethyst.commons.resources.zap_the_devs_title
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
@@ -60,7 +65,6 @@ import com.vitorpamplona.amethyst.ui.note.CloseIcon
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.DisplayZapSplits
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
@@ -69,6 +73,7 @@ import com.vitorpamplona.amethyst.ui.theme.imageModifier
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
+import org.jetbrains.compose.resources.stringResource
 
 @Preview
 @Composable
@@ -138,7 +143,7 @@ fun ZapTheDevsCard(
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     Text(
-                        text = stringRes(id = R.string.zap_the_devs_title),
+                        text = stringResource(Res.string.zap_the_devs_title),
                         style =
                             TextStyle(
                                 fontSize = 20.sp,
@@ -158,7 +163,7 @@ fun ZapTheDevsCard(
 
                 Text(
                     buildAnnotatedString {
-                        append(stringRes(id = R.string.zap_the_devs_description, BuildConfig.VERSION_NAME))
+                        append(stringResource(Res.string.zap_the_devs_description, BuildConfig.VERSION_NAME))
                         append(" ")
                         appendLink("#value4value", MaterialTheme.colorScheme.primary) { nav.nav(Route.Hashtag("value4value")) }
                     },
@@ -180,13 +185,13 @@ fun ZapTheDevsCard(
                                     withLink(
                                         LinkAnnotation.Clickable("clickable") { nav.nav(route) },
                                     ) {
-                                        append(stringRes(id = R.string.version_name, BuildConfig.VERSION_NAME.substringBefore("-")))
+                                        append(stringResource(Res.string.version_name, BuildConfig.VERSION_NAME.substringBefore("-")))
                                     }
-                                    append(" " + stringRes(id = R.string.brought_to_you_by))
+                                    append(" " + stringResource(Res.string.brought_to_you_by))
                                 },
                         )
                     } else {
-                        Text(stringRes(id = R.string.this_version_brought_to_you_by))
+                        Text(stringResource(Res.string.this_version_brought_to_you_by))
                     }
 
                     Spacer(modifier = StdVertSpacer)

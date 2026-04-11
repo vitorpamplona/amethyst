@@ -40,16 +40,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.add
+import com.vitorpamplona.amethyst.commons.resources.posts_received
+import com.vitorpamplona.amethyst.commons.resources.remove
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.relays.MyRelayInfo
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
+import org.jetbrains.compose.resources.stringResource
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -92,7 +95,7 @@ fun RelayCompose(
             }
 
             Text(
-                "${relay.counter} ${stringRes(R.string.posts_received)}",
+                "${relay.counter} ${stringResource(Res.string.posts_received)}",
                 color = MaterialTheme.colorScheme.placeholderText,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -130,7 +133,7 @@ fun AddRelayButton(onClick: () -> Unit) {
         shape = ButtonBorder,
         contentPadding = ButtonPadding,
     ) {
-        Text(text = stringRes(id = R.string.add))
+        Text(text = stringResource(Res.string.add))
     }
 }
 
@@ -142,7 +145,7 @@ fun RemoveRelayButton(onClick: () -> Unit) {
         shape = ButtonBorder,
         contentPadding = ButtonPadding,
     ) {
-        Text(text = stringRes(R.string.remove))
+        Text(text = stringResource(Res.string.remove))
     }
 }
 
