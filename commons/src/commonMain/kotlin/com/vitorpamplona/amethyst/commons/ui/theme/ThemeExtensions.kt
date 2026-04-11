@@ -49,3 +49,45 @@ val ColorScheme.placeholderText: Color
  */
 val ColorScheme.lessImportantLink: Color
     get() = primary.copy(alpha = 0.52f)
+
+/**
+ * Medium importance link color (primary with reduced alpha).
+ */
+val ColorScheme.mediumImportanceLink: Color
+    get() = primary.copy(alpha = 0.32f)
+
+/**
+ * Gray text color (onSurface with reduced alpha).
+ */
+val ColorScheme.grayText: Color
+    get() = onSurface.copy(alpha = 0.52f)
+
+/**
+ * Subtle border color (onSurface with low alpha).
+ */
+val ColorScheme.subtleBorder: Color
+    get() = if (isLight) onSurface.copy(alpha = 0.05f) else onSurface.copy(alpha = 0.12f)
+
+/**
+ * Subtle button color (onSurface with reduced alpha).
+ */
+val ColorScheme.subtleButton: Color
+    get() = onSurface.copy(alpha = 0.22f)
+
+/**
+ * NIP-05 email color.
+ */
+val ColorScheme.nip05: Color
+    get() = if (isLight) Color(0xFFa770f3) else Color(0xFF6e5490)
+
+/**
+ * Over-picture background color (background with reduced alpha).
+ */
+val ColorScheme.overPictureBackground: Color
+    get() = background.copy(alpha = 0.62f)
+
+/**
+ * Bitcoin color (orange, light/dark variant).
+ */
+val ColorScheme.bitcoinColor: Color
+    get() = if (isLight) Color(0xFFB66605) else Color(0xFFF7931A)
