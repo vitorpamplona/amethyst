@@ -36,9 +36,7 @@ import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
 import com.vitorpamplona.quartz.nip28PublicChat.list.tags.ChannelTag
-import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip37Drafts.privateOutbox.PrivateOutboxRelayListEvent
-import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
@@ -48,8 +46,6 @@ import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayFeedsListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
-import com.vitorpamplona.quartz.nip55AndroidSigner.api.CommandType
-import com.vitorpamplona.quartz.nip55AndroidSigner.api.permission.Permission
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayInfo
@@ -89,17 +85,6 @@ val DefaultDMRelayList = listOf(Constants.auth, Constants.oxchat, Constants.nos)
 val DefaultSearchRelayList = setOf(Constants.wine, Constants.where, Constants.nostoday, Constants.antiprimal, Constants.ditto)
 
 val DefaultIndexerRelayList = setOf(Constants.purplepages, Constants.coracle, Constants.userkinds, Constants.yabu, Constants.nostr1)
-
-val DefaultSignerPermissions =
-    listOf(
-        Permission(CommandType.SIGN_EVENT, RelayAuthEvent.KIND),
-        Permission(CommandType.SIGN_EVENT, DraftWrapEvent.KIND),
-        Permission(CommandType.NIP04_ENCRYPT),
-        Permission(CommandType.NIP04_DECRYPT),
-        Permission(CommandType.NIP44_DECRYPT),
-        Permission(CommandType.NIP44_DECRYPT),
-        Permission(CommandType.DECRYPT_ZAP_EVENT),
-    )
 
 @Serializable
 sealed class TopFilter(
