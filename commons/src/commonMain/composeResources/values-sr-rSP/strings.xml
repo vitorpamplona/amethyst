@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="point_to_the_qr_code">Покажите на КР код</string>
+    <string name="show_qr">Прикажи КР</string>
+    <string name="profile_image">слика профила</string>
+    <string name="scan_qr">Скенирај QR</string>
+    <string name="show_anyway">Схов Аниваи</string>
+    <string name="post_was_flagged_as_inappropriate_by">Објаву је игнорисао или је пријавио</string>
+    <string name="post_not_found">Догађај се учитава или се не може пронаћи на вашој листи релеја</string>
+    <string name="channel_image">Слика канала</string>
+    <string name="referenced_event_not_found">Референтни догађај није пронађен</string>
+    <string name="could_not_decrypt_the_message">Није могуће дешифровати поруку</string>
+    <string name="group_picture">Групна слика</string>
+    <string name="explicit_content">Експлицитни садржај</string>
+    <string name="spam">Спам</string>
+    <string name="impersonation">лажно представљање</string>
+    <string name="illegal_behavior">Незаконито понашање</string>
+    <string name="unknown">Непознат</string>
+    <string name="relay_icon">Икона релеја</string>
+    <string name="unknown_author">Непознати аутор</string>
+    <string name="copy_text">Копирај текст</string>
+    <string name="copy_user_pubkey">Копирај ИД аутора</string>
+    <string name="copy_note_id">Копирај ИД белешке</string>
+    <string name="broadcast">Емитовања</string>
+    <string name="request_deletion">Захтевај брисање</string>
+    <string name="block_report">Блокирај / Пријави</string>
+    <string name="block_hide_user"><![CDATA[Блокирај и сакриј корисника]]></string>
+    <string name="report_spam_scam">Пријави нежељену пошту/превару</string>
+    <string name="report_impersonation">Пријавите лажно представљање</string>
+    <string name="report_explicit_content">Пријавите експлицитни садржај</string>
+    <string name="report_illegal_behaviour">Пријавите незаконито понашање</string>
+    <string name="login_with_a_private_key_to_be_able_to_reply">Користите јавни кључ и јавни кључеви су само за читање. Пријавите се са приватним кључем да бисте могли да одговорите</string>
+    <string name="login_with_a_private_key_to_be_able_to_boost_posts">Користите јавни кључ и јавни кључеви су само за читање. Пријавите се са приватним кључем да бисте могли да појачате постове</string>
+    <string name="login_with_a_private_key_to_like_posts">Користите јавни кључ и јавни кључеви су само за читање. Пријавите се са приватним кључем да бисте лајковали постове</string>
+    <string name="no_zap_amount_setup_long_press_to_change">Нема подешавања износа Зап. Дуго притисните да бисте променили</string>
+    <!-- Call notifications and UI -->
+    <!-- Kind display names for relay subscription filter chips -->
+    <!-- M3 Action Dialog titles -->
+    <!-- NIP-75 Zap Goals -->
+    <!-- NIP-86 Relay Management -->
+</resources>
