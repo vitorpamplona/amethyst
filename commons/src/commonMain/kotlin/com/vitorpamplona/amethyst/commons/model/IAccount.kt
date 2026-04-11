@@ -23,11 +23,13 @@ package com.vitorpamplona.amethyst.commons.model
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupList
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentRequestEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Request
@@ -46,6 +48,25 @@ interface INwcSignerState {
     suspend fun decryptRequest(event: LnZapPaymentRequestEvent): Request?
 
     fun isNIP47Author(pubKey: String?): Boolean
+
+    fun hasWalletConnectSetup(): Boolean
+
+    suspend fun sendNwcRequest(
+        request: Request,
+        onResponse: (Response?) -> Unit,
+    ): Pair<LnZapPaymentRequestEvent, NormalizedRelayUrl>
+
+    suspend fun sendNwcRequestToWallet(
+        walletUri: Nip47WalletConnect.Nip47URINorm?,
+        request: Request,
+        onResponse: (Response?) -> Unit,
+    ): Pair<LnZapPaymentRequestEvent, NormalizedRelayUrl>
+
+    suspend fun sendZapPaymentRequestFor(
+        bolt11: String,
+        zappedNote: Note?,
+        onResponse: (Response?) -> Unit,
+    ): Pair<LnZapPaymentRequestEvent, NormalizedRelayUrl>
 }
 
 /**

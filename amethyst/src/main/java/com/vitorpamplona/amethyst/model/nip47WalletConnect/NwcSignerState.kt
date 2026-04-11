@@ -107,7 +107,7 @@ class NwcSignerState(
             NostrSignerInternal(KeyPair(it))
         }
 
-    fun hasWalletConnectSetup(): Boolean = settings.nwcWallets.value.isNotEmpty()
+    override fun hasWalletConnectSetup(): Boolean = settings.nwcWallets.value.isNotEmpty()
 
     override fun isNIP47Author(pubKey: HexKey?): Boolean = nip47Signer.value.pubKey == pubKey
 
@@ -124,7 +124,7 @@ class NwcSignerState(
     /**
      * Sends a generic NIP-47 request to the default wallet.
      */
-    suspend fun sendNwcRequest(
+    override suspend fun sendNwcRequest(
         request: Request,
         onResponse: (Response?) -> Unit,
     ): Pair<LnZapPaymentRequestEvent, NormalizedRelayUrl> = sendNwcRequestToWallet(defaultWalletUri.value, request, onResponse)
@@ -132,7 +132,7 @@ class NwcSignerState(
     /**
      * Sends a generic NIP-47 request to a specific wallet.
      */
-    suspend fun sendNwcRequestToWallet(
+    override suspend fun sendNwcRequestToWallet(
         walletUri: Nip47WalletConnect.Nip47URINorm?,
         request: Request,
         onResponse: (Response?) -> Unit,
@@ -170,7 +170,7 @@ class NwcSignerState(
     /**
      * Sends a zap payment request to the default wallet.
      */
-    suspend fun sendZapPaymentRequestFor(
+    override suspend fun sendZapPaymentRequestFor(
         bolt11: String,
         zappedNote: Note?,
         onResponse: (Response?) -> Unit,

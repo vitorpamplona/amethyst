@@ -32,6 +32,7 @@ import com.vitorpamplona.quartz.nip01Core.hints.HintIndexer
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.map
 
 /**
  * Cache provider interface for accessing cached Notes, Users, and Channels.
@@ -54,6 +55,8 @@ interface ICacheProvider {
      * @return The channel if found, null otherwise
      */
     fun getAnyChannel(note: Note): Channel?
+
+    fun getAnyChannel(event: Event): Channel? = null
 
     /**
      * Gets a User by public key hex.
@@ -137,7 +140,7 @@ interface ICacheProvider {
      * @param pubkey The user's public key in hex format
      * @return The User (existing or newly created)
      */
-    fun getOrCreateUser(pubkey: HexKey): User?
+    fun getOrCreateUser(pubkey: HexKey): User
 
     fun checkGetOrCreateUser(key: HexKey): User? = runCatching { getOrCreateUser(key) }.getOrNull()
 
@@ -159,7 +162,7 @@ interface ICacheProvider {
     /**
      * Gets or creates a Note from an Event (addressable or regular).
      */
-    fun getOrCreateNote(event: Event): Note = getOrCreateNote(event.id) ?: error("Failed to create note for event ${event.id}")
+    fun getOrCreateNote(event: Event): Note = getOrCreateNote(event.id)
 
     /**
      * Gets an AddressableNote if it exists, by string key.
@@ -195,6 +198,10 @@ interface ICacheProvider {
      * Used by VanishRequestsState and similar reactive consumers.
      */
     fun observeNotes(filter: Filter): Flow<List<Note>> = emptyFlow()
+
+    fun <T : Event> observeEvents(filter: Filter): Flow<List<T>> = emptyFlow()
+
+    fun <T : Event> observeLatestEvent(filter: Filter): Flow<T?> = observeEvents<T>(filter).map { it.firstOrNull() }
 
     /**
      * Filters addressable notes by kind and pubKey.

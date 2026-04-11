@@ -359,7 +359,7 @@ object LocalCache : ILocalCache, ICacheProvider {
             }
         }.buffer(kotlinx.coroutines.channels.Channel.CONFLATED)
 
-    fun <T : Event> observeEvents(filter: Filter): Flow<List<T>> =
+    override fun <T : Event> observeEvents(filter: Filter): Flow<List<T>> =
         callbackFlow {
             val cachedFilter =
                 EventListMatchingFilter<T>(filter, this@LocalCache::filter) {
@@ -376,7 +376,7 @@ object LocalCache : ILocalCache, ICacheProvider {
         }.buffer(kotlinx.coroutines.channels.Channel.CONFLATED)
 
     @Suppress("UNCHECKED_CAST")
-    fun <T : Event> observeLatestEvent(filter: Filter) = observeEvents<T>(filter).map { it.firstOrNull() }
+    override fun <T : Event> observeLatestEvent(filter: Filter) = observeEvents<T>(filter).map { it.firstOrNull() }
 
     fun observeLatestNote(filter: Filter) = observeNotes(filter).map { it.firstOrNull() }
 
@@ -1144,7 +1144,7 @@ object LocalCache : ILocalCache, ICacheProvider {
 
     override fun getAnyChannel(note: Note): Channel? = note.event?.let { getAnyChannel(it) }
 
-    fun getAnyChannel(noteEvent: Event): Channel? =
+    override fun getAnyChannel(noteEvent: Event): Channel? =
         when (noteEvent) {
             is ChannelCreateEvent -> getPublicChatChannelIfExists(noteEvent.id)
             is ChannelMetadataEvent -> noteEvent.channelId()?.let { getPublicChatChannelIfExists(it) }

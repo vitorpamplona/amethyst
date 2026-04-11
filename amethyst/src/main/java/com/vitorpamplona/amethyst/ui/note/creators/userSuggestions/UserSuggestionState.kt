@@ -150,7 +150,7 @@ class UserSuggestionState(
             }
             if (prefix != null) {
                 logTime("UserSuggestionState Search $prefix version $version") {
-                    account.cache.findUsersStartingWith(prefix, account)
+                    (account.cache as com.vitorpamplona.amethyst.model.LocalCache).findUsersStartingWith(prefix, account)
                 }
             } else {
                 emptyList()

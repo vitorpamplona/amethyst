@@ -26,7 +26,11 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.marmot.AndroidMlsGroupStateStore
+import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcSignerState
+import com.vitorpamplona.amethyst.model.topNavFeeds.FeedTopNavFilterState
+import com.vitorpamplona.amethyst.model.trustedAssertions.TrustProviderListState
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.EventProcessor
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
@@ -44,6 +48,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import java.io.File
 
 class AccountCacheState(
@@ -104,6 +109,15 @@ class AccountCacheState(
                 null
             }
 
+        val accountScope =
+            CoroutineScope(
+                Dispatchers.IO +
+                    SupervisorJob() +
+                    CoroutineExceptionHandler { _, throwable ->
+                        Log.e("AccountCacheState", "Account ${signer.pubKey} caught exception: ${throwable.message}", throwable)
+                    },
+            )
+
         return Account(
             settings = accountSettings,
             signer = signerWithClientTag,
@@ -112,17 +126,44 @@ class AccountCacheState(
             otsResolverBuilder = otsResolverBuilder,
             cache = cache,
             client = client,
-            scope =
-                CoroutineScope(
-                    Dispatchers.IO +
-                        SupervisorJob() +
-                        CoroutineExceptionHandler { _, throwable ->
-                            Log.e("AccountCacheState", "Account ${signer.pubKey} caught exception: ${throwable.message}", throwable)
-                        },
-                ),
+            scope = accountScope,
             mlsGroupStateStore = mlsStore,
             accountPersistence = com.vitorpamplona.amethyst.model.persistence.AndroidAccountPersistence,
+            antiSpamMonitor = null,
+            eventProcessorFactory = { account, cacheProvider -> EventProcessor(account as Account, cacheProvider as LocalCache) },
+            nwcSignerStateFactory = { s, nwcFilter, c, sc, settings ->
+                @Suppress("UNCHECKED_CAST")
+                NwcSignerState(s, nwcFilter as () -> NWCPaymentFilterAssembler, c as LocalCache, sc, settings)
+            },
+            trustProviderListStateFactory = { s, c, dc, sc, settings -> TrustProviderListState(s, c as LocalCache, dc, sc, settings) },
+            feedTopNavFilterStateFactory = { listName, kind3, allFollows, locFlow, followsRelays, blockedRelays, proxyRelays, relayFeeds, caches, s, sc ->
+                FeedTopNavFilterState(
+                    feedFilterListName = listName,
+                    kind3Follows = kind3,
+                    allFollows = allFollows,
+                    locationFlow = locFlow,
+                    followsRelays = followsRelays,
+                    blockedRelays = blockedRelays,
+                    proxyRelays = proxyRelays,
+                    relayFeeds = relayFeeds,
+                    caches = caches,
+                    signer = s,
+                    scope = sc,
+                ).flow
+            },
         ).also { newAccount ->
+            // Set up anti-spam monitoring from the platform side
+            accountScope.launch {
+                cache.antiSpam.flowSpam.collect {
+                    it.cache.spamMessages.snapshot().values.forEach { spammer ->
+                        if (!newAccount.hiddenUsers.isHidden(spammer.pubkeyHex) && spammer.shouldHide()) {
+                            if (spammer.pubkeyHex != newAccount.userProfile().pubkeyHex && spammer.pubkeyHex !in newAccount.followingKeySet()) {
+                                newAccount.hiddenUsers.hideUser(spammer.pubkeyHex)
+                            }
+                        }
+                    }
+                }
+            }
             accounts.update { existingAccounts ->
                 existingAccounts.plus(Pair(signer.pubKey, newAccount))
             }

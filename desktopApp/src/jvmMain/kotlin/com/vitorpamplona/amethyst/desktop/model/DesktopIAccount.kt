@@ -129,6 +129,25 @@ class DesktopIAccount(
             override suspend fun decryptRequest(event: LnZapPaymentRequestEvent): Request? = null
 
             override fun isNIP47Author(pubKey: String?): Boolean = false
+
+            override fun hasWalletConnectSetup(): Boolean = false
+
+            override suspend fun sendNwcRequest(
+                request: Request,
+                onResponse: (Response?) -> Unit,
+            ): Pair<LnZapPaymentRequestEvent, com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl> = throw UnsupportedOperationException("NWC not supported on desktop")
+
+            override suspend fun sendNwcRequestToWallet(
+                walletUri: com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect.Nip47URINorm?,
+                request: Request,
+                onResponse: (Response?) -> Unit,
+            ): Pair<LnZapPaymentRequestEvent, com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl> = throw UnsupportedOperationException("NWC not supported on desktop")
+
+            override suspend fun sendZapPaymentRequestFor(
+                bolt11: String,
+                zappedNote: com.vitorpamplona.amethyst.commons.model.Note?,
+                onResponse: (Response?) -> Unit,
+            ): Pair<LnZapPaymentRequestEvent, com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl> = throw UnsupportedOperationException("NWC not supported on desktop")
         }
 
     override val privateZapsDecryptionCache: IPrivateZapsDecryptionCache =
