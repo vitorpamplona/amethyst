@@ -40,6 +40,8 @@ import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.ic_tor
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -89,7 +91,7 @@ fun RelayNameAndRemoveButton(
 
             if (item.forcesTor) {
                 Icon(
-                    painter = painterRes(R.drawable.ic_tor, 2),
+                    painter = painterRes(Res.drawable.ic_tor, 2),
                     contentDescription = stringRes(id = R.string.tor_relay),
                     modifier =
                         Modifier

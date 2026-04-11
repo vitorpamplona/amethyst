@@ -28,6 +28,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.incognito
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.IncognitoIconButtonModifier
@@ -40,7 +42,7 @@ fun Nip17Indicator(channelScreenModel: ChatNewMessageViewModel) {
         enabled = false,
     ) {
         Icon(
-            painter = painterRes(R.drawable.incognito, 2),
+            painter = painterRes(Res.drawable.incognito, 2),
             contentDescription = stringRes(id = R.string.accessibility_turn_off_sealed_message),
             modifier = IncognitoIconButtonModifier,
             tint = MaterialTheme.colorScheme.primary,

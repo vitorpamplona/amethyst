@@ -55,6 +55,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.Nip05State
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.ic_qrcode
 import com.vitorpamplona.amethyst.commons.util.toShortDisplay
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
@@ -201,7 +203,7 @@ fun DrawAdditionalInfo(
                 onClick = { nav.nav(Route.QRDisplay(baseUser.pubkeyHex)) },
             ) {
                 Icon(
-                    painter = painterRes(R.drawable.ic_qrcode, 1),
+                    painter = painterRes(Res.drawable.ic_qrcode, 1),
                     contentDescription = stringRes(id = R.string.show_nprofile_as_a_qr_code),
                     modifier = Size15Modifier,
                     tint = MaterialTheme.colorScheme.placeholderText,

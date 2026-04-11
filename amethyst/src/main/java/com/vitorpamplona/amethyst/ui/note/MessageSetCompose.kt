@@ -39,7 +39,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.ic_dm
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.elements.NoteDropDownMenu
@@ -121,7 +122,7 @@ fun MessageSetCompose(
 fun MessageIconBox() {
     Box(Modifier.width(55.dp).padding(top = 5.dp, end = 5.dp)) {
         Icon(
-            painter = painterRes(R.drawable.ic_dm, 4),
+            painter = painterRes(Res.drawable.ic_dm, 4),
             null,
             modifier = Modifier.size(16.dp).align(Alignment.TopEnd),
             tint = MaterialTheme.colorScheme.primary,

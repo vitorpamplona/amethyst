@@ -27,6 +27,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.ic_compose
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.painterRes
@@ -43,7 +45,7 @@ fun NewPollButton(nav: INav) {
         containerColor = MaterialTheme.colorScheme.primary,
     ) {
         Icon(
-            painter = painterRes(R.drawable.ic_compose, 4),
+            painter = painterRes(Res.drawable.ic_compose, 4),
             contentDescription = stringRes(id = R.string.new_poll),
             modifier = Size26Modifier,
             tint = Color.White,

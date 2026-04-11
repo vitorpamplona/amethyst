@@ -51,6 +51,8 @@ import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.hashtags.Tunestr
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.Nip05State
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.Nip05VerifState
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.nip_05
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -479,7 +481,7 @@ fun RenderNIP05VerifiedSymbol(
 
             is Nip05VerifState.Verified -> {
                 Icon(
-                    painter = painterRes(R.drawable.nip_05, compositionSizeReference),
+                    painter = painterRes(Res.drawable.nip_05, compositionSizeReference),
                     contentDescription = stringRes(id = R.string.nip05_verified),
                     modifier = modifier,
                     tint = Color.Unspecified,

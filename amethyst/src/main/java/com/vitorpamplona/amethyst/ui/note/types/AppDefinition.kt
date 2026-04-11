@@ -57,6 +57,8 @@ import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.profile_banner
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.ClickableTextPrimary
@@ -131,7 +133,7 @@ fun RenderAppDefinition(
                 }
             } else {
                 Image(
-                    painter = painterRes(R.drawable.profile_banner, 6),
+                    painter = painterRes(Res.drawable.profile_banner, 6),
                     contentDescription = stringRes(id = R.string.profile_banner),
                     contentScale = ContentScale.FillWidth,
                     modifier =

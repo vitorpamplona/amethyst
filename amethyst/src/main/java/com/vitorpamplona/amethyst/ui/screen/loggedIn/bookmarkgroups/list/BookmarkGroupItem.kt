@@ -50,13 +50,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.post
 import com.vitorpamplona.amethyst.model.nip51Lists.labeledBookmarkLists.LabeledBookmarkList
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
@@ -74,6 +75,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.SpacedBy2dp
 import com.vitorpamplona.amethyst.ui.theme.SpacedBy5dp
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
+import org.jetbrains.compose.resources.painterResource
 
 @Composable
 fun BookmarkGroupItem(
@@ -177,7 +179,7 @@ private fun BookmarkGroupActions(
             onClick = openPostBookmarks,
         ) {
             Icon(
-                painter = painterResource(R.drawable.post),
+                painter = painterResource(Res.drawable.post),
                 contentDescription = null,
             )
             Text(stringRes(R.string.bookmark_list_posts_btn_label))
@@ -217,7 +219,7 @@ fun BookmarkMembershipStatusAndNumberDisplay(
                     horizontalArrangement = SpacedBy2dp,
                 ) {
                     Icon(
-                        painter = painterResource(R.drawable.post),
+                        painter = painterResource(Res.drawable.post),
                         modifier = Size10Modifier,
                         contentDescription = null,
                     )

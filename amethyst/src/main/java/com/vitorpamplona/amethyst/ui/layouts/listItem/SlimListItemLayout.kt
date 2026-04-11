@@ -63,6 +63,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.offset
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.github
 import com.vitorpamplona.amethyst.ui.layouts.ChatHeaderLayout
 import com.vitorpamplona.amethyst.ui.layouts.listItem.ListTokens.ListItemContainerElevation
 import com.vitorpamplona.amethyst.ui.note.elements.TimeAgo
@@ -91,7 +93,7 @@ fun ChannelNamePreview() {
             ChatHeaderLayout(
                 channelPicture = {
                     Image(
-                        painter = painterRes(R.drawable.github, 1),
+                        painter = painterRes(Res.drawable.github, 1),
                         contentDescription = stringRes(id = R.string.profile_banner),
                         contentScale = ContentScale.FillWidth,
                     )
@@ -125,7 +127,7 @@ fun ChannelNamePreview() {
                 },
                 leadingContent = {
                     Image(
-                        painter = painterRes(R.drawable.github, 2),
+                        painter = painterRes(Res.drawable.github, 2),
                         contentDescription = stringRes(id = R.string.profile_banner),
                         contentScale = ContentScale.FillWidth,
                         modifier = Size55Modifier,
@@ -151,7 +153,7 @@ fun ChannelNamePreview() {
                 },
                 leadingContent = {
                     Image(
-                        painter = painterRes(R.drawable.github, 2),
+                        painter = painterRes(Res.drawable.github, 2),
                         contentDescription = stringRes(id = R.string.profile_banner),
                         contentScale = ContentScale.FillWidth,
                         modifier = Size55Modifier,

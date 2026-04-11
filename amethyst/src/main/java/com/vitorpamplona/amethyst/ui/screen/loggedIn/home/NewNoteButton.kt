@@ -36,6 +36,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.ic_compose
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingFloatingButton
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -80,7 +82,7 @@ fun NewNoteButton(nav: INav) {
         containerColor = MaterialTheme.colorScheme.primary,
     ) {
         Icon(
-            painter = painterRes(R.drawable.ic_compose, 4),
+            painter = painterRes(Res.drawable.ic_compose, 4),
             contentDescription = stringRes(R.string.new_post),
             modifier = Size26Modifier,
             tint = Color.White,

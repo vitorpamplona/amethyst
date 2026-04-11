@@ -29,6 +29,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import org.jetbrains.compose.resources.DrawableResource
 
 /**
  * Cache for stringResource because it seems to be > 1ms function in some phones
@@ -159,3 +160,11 @@ fun painterRes(
 
     return loaded
 }
+
+@Composable
+fun painterRes(
+    resource: DrawableResource,
+    sizeReference: Int,
+): Painter =
+    org.jetbrains.compose.resources
+        .painterResource(resource)

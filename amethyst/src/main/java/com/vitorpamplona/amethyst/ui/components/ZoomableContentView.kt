@@ -77,6 +77,8 @@ import coil3.compose.SubcomposeAsyncImageContent
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.original
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaLocalImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaLocalVideo
@@ -1064,7 +1066,7 @@ private fun HashVerificationSymbol(verifiedHash: Boolean) {
             },
         ) {
             Icon(
-                painter = painterRes(R.drawable.original, 1),
+                painter = painterRes(Res.drawable.original, 1),
                 contentDescription = stringRes(id = R.string.hash_verification_passed),
                 modifier = Size30Modifier,
                 tint = Color.Unspecified,

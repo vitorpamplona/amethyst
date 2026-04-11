@@ -73,6 +73,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.ic_dm
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.ui.thread.drawReplyLevel
@@ -1025,7 +1027,7 @@ private fun RenderClassifiedsReaderForThread(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(
-                    painter = painterRes(R.drawable.ic_dm, 5),
+                    painter = painterRes(Res.drawable.ic_dm, 5),
                     stringRes(R.string.send_a_direct_message),
                     modifier = Modifier.size(20.dp),
                     tint = MaterialTheme.colorScheme.primary,

@@ -42,6 +42,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.ic_dm
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
@@ -140,7 +142,7 @@ fun ErrorRow(
                         } ?: stringRes(R.string.error_dialog_talk_to_user)
 
                     Icon(
-                        painter = painterRes(R.drawable.ic_dm, 2),
+                        painter = painterRes(Res.drawable.ic_dm, 2),
                         contentDescription = descriptor,
                         modifier = Size20Modifier,
                         tint = MaterialTheme.colorScheme.primary,

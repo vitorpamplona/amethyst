@@ -29,6 +29,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.layout.ContentScale
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.profile_banner
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserBanner
@@ -130,7 +132,7 @@ fun BannerImage(
             accountViewModel = accountViewModel,
             onLoadingBackground = {
                 Image(
-                    painter = painterRes(R.drawable.profile_banner, 4),
+                    painter = painterRes(Res.drawable.profile_banner, 4),
                     contentDescription = stringRes(R.string.profile_banner),
                     contentScale = ContentScale.Crop,
                     modifier = modifier,
@@ -138,7 +140,7 @@ fun BannerImage(
             },
             onError = {
                 Image(
-                    painter = painterRes(R.drawable.profile_banner, 4),
+                    painter = painterRes(Res.drawable.profile_banner, 4),
                     contentDescription = stringRes(R.string.profile_banner),
                     contentScale = ContentScale.Crop,
                     modifier = modifier,
@@ -147,7 +149,7 @@ fun BannerImage(
         )
     } else {
         Image(
-            painter = painterRes(R.drawable.profile_banner, 5),
+            painter = painterRes(Res.drawable.profile_banner, 5),
             contentDescription = stringRes(R.string.profile_banner),
             contentScale = ContentScale.Crop,
             modifier = modifier,

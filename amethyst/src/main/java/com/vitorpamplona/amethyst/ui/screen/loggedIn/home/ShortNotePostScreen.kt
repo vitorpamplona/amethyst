@@ -65,6 +65,8 @@ import androidx.core.net.toUri
 import androidx.core.util.Consumer
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.incognito
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.FileServerSelectionRow
 import com.vitorpamplona.amethyst.ui.actions.uploads.MAX_VOICE_RECORD_SECONDS
@@ -307,7 +309,7 @@ private fun NewPostScreenBody(
                                 onClick = { postViewModel.wantsAnonymousPost = false },
                             ) {
                                 Icon(
-                                    painter = painterRes(resourceId = R.drawable.incognito, 1),
+                                    painter = painterRes(resource = Res.drawable.incognito, 1),
                                     contentDescription = stringRes(R.string.post_anonymously),
                                     modifier = Size30Modifier,
                                     tint = MaterialTheme.colorScheme.onBackground,

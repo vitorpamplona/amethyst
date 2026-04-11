@@ -51,6 +51,8 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.incognito
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromFiles
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
@@ -255,7 +257,7 @@ private fun GenericCommentPostBody(
                             onClick = { postViewModel.wantsAnonymousPost = false },
                         ) {
                             Icon(
-                                painter = painterRes(resourceId = R.drawable.incognito, 1),
+                                painter = painterRes(resource = Res.drawable.incognito, 1),
                                 contentDescription = stringRes(R.string.post_anonymously),
                                 modifier = Size30Modifier,
                                 tint = MaterialTheme.colorScheme.onBackground,

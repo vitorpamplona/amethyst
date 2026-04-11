@@ -56,6 +56,8 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.ic_qrcode
 import com.vitorpamplona.amethyst.ui.components.util.getText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.painterRes
@@ -177,7 +179,7 @@ fun AddWalletScreen(
                 // QR code scanner
                 IconButton(onClick = { qrScanning = true }) {
                     Icon(
-                        painter = painterRes(R.drawable.ic_qrcode, 3),
+                        painter = painterRes(Res.drawable.ic_qrcode, 3),
                         contentDescription = stringRes(id = R.string.accessibility_scan_qr_code),
                         modifier = Modifier.size(24.dp),
                         tint = MaterialTheme.colorScheme.primary,

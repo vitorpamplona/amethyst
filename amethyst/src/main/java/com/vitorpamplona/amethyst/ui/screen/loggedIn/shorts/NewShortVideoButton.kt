@@ -48,6 +48,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.ic_compose
 import com.vitorpamplona.amethyst.ui.actions.NewMediaModel
 import com.vitorpamplona.amethyst.ui.actions.NewMediaView
 import com.vitorpamplona.amethyst.ui.actions.uploads.GallerySelect
@@ -184,7 +186,7 @@ fun NewShortVideoButton(
                 exit = fadeOut(),
             ) {
                 Icon(
-                    painter = painterRes(R.drawable.ic_compose, 5),
+                    painter = painterRes(Res.drawable.ic_compose, 5),
                     contentDescription = stringRes(id = R.string.new_short_video),
                     modifier = Size26Modifier,
                     tint = Color.White,

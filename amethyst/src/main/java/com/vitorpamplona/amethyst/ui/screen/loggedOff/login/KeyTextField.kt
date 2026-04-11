@@ -48,6 +48,8 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.ic_qrcode
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.SimpleQrCodeScanner
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -110,7 +112,7 @@ fun KeyTextField(
             }
             IconButton(onClick = { dialogOpen = true }) {
                 Icon(
-                    painter = painterRes(R.drawable.ic_qrcode, 5),
+                    painter = painterRes(Res.drawable.ic_qrcode, 5),
                     contentDescription = stringRes(R.string.login_with_qr_code),
                     modifier = Modifier.size(24.dp),
                     tint = MaterialTheme.colorScheme.primary,

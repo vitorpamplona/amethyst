@@ -100,6 +100,9 @@ import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.ic_qrcode
+import com.vitorpamplona.amethyst.commons.resources.relays
 import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.User
@@ -789,7 +792,7 @@ fun IconRowRelays(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
-            painter = painterRes(R.drawable.relays, 4),
+            painter = painterRes(Res.drawable.relays, 4),
             contentDescription = stringRes(R.string.relay_setup),
             modifier = Size22Modifier,
             tint = MaterialTheme.colorScheme.onSurface,
@@ -886,7 +889,7 @@ fun BottomContent(
                 },
             ) {
                 Icon(
-                    painter = painterRes(R.drawable.ic_qrcode, 2),
+                    painter = painterRes(Res.drawable.ic_qrcode, 2),
                     contentDescription = stringRes(id = R.string.show_npub_as_a_qr_code),
                     modifier = Size24Modifier,
                     tint = MaterialTheme.colorScheme.primary,
