@@ -24,12 +24,12 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 import java.text.DecimalFormat
 
-private val TenGiga = BigDecimal(10_000_000_000)
-private val OneGiga = BigDecimal(1_000_000_000)
-private val TenMega = BigDecimal(10_000_000)
-private val OneMega = BigDecimal(1_000_000)
-private val TenKilo = BigDecimal(10_000)
-private val OneKilo = BigDecimal(1_000)
+internal val TenGiga = BigDecimal(10_000_000_000)
+internal val OneGiga = BigDecimal(1_000_000_000)
+internal val TenMega = BigDecimal(10_000_000)
+internal val OneMega = BigDecimal(1_000_000)
+internal val TenKilo = BigDecimal(10_000)
+internal val OneKilo = BigDecimal(1_000)
 
 private val dfGBig = ThreadLocal.withInitial { DecimalFormat("#.#G") }
 private val dfGSmall = ThreadLocal.withInitial { DecimalFormat("#.0G") }
