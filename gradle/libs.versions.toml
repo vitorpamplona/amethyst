@@ -44,6 +44,7 @@ mockk = "1.14.9"
 kotlinx-coroutines-test = "1.10.2"
 negentropyKmp = "v1.0.2"
 netUrlencoderLibVersion = "1.6.0"
+jetbrainsNavigationCompose = "2.9.2"
 navigationCompose = "2.9.7"
 okhttp = "5.3.2"
 runner = "1.7.0"
@@ -137,6 +138,7 @@ jetbrains-compose-runtime = { module = "org.jetbrains.compose.runtime:runtime", 
 jetbrains-compose-ui = { module = "org.jetbrains.compose.ui:ui", version.ref = "jetbrainsCompose" }
 jetbrains-compose-ui-tooling = { module = "org.jetbrains.compose.ui:ui-tooling", version.ref = "jetbrainsCompose" }
 jetbrains-compose-ui-tooling-preview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "jetbrainsCompose" }
+jetbrains-compose-navigation = { module = "org.jetbrains.androidx.navigation:navigation-compose", version.ref = "jetbrainsNavigationCompose" }
 google-mlkit-genai-proofreading = { group = "com.google.mlkit", name = "genai-proofreading", version.ref = "genaiProofreading" }
 google-mlkit-genai-prompt = { group = "com.google.mlkit", name = "genai-prompt", version.ref = "genaiPrompt" }
 google-mlkit-genai-rewriting = { group = "com.google.mlkit", name = "genai-rewriting", version.ref = "genaiRewriting" }

@@ -56,6 +56,9 @@ kotlin {
                 implementation(libs.jetbrains.compose.material.icons.extended)
                 implementation(libs.jetbrains.compose.ui.tooling.preview)
 
+                // Navigation (KMP - JetBrains Compose Multiplatform)
+                implementation(libs.jetbrains.compose.navigation)
+
                 // Lifecycle ViewModel (KMP since 2.8.0)
                 implementation(libs.androidx.lifecycle.viewmodel.compose)
                 implementation(libs.androidx.lifecycle.runtime.compose)
