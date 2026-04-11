@@ -65,7 +65,7 @@ import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcSignerState
 import com.vitorpamplona.amethyst.model.privacyOptions.EmptyRoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.model.privacyOptions.IRoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.model.privacyOptions.RoleBasedHttpClientBuilder
-import com.vitorpamplona.amethyst.model.topNavFeeds.FeedTopNavFilterState
+import com.vitorpamplona.amethyst.model.topNavFeeds.buildLoadFlowsFor
 import com.vitorpamplona.amethyst.model.trustedAssertions.TrustProviderListState
 import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
@@ -2027,20 +2027,8 @@ fun mockAccountViewModel(): AccountViewModel {
                 NwcSignerState(s, nwcFilter as () -> NWCPaymentFilterAssembler, c as com.vitorpamplona.amethyst.model.LocalCache, sc, settings)
             },
             trustProviderListStateFactory = { s, c, dc, sc, settings -> TrustProviderListState(s, c as com.vitorpamplona.amethyst.model.LocalCache, dc, sc, settings) },
-            feedTopNavFilterStateFactory = { listName, kind3, allFollows, locFlow, followsRelays, blockedRelays, proxyRelays, relayFeeds, caches, s, sc ->
-                FeedTopNavFilterState(
-                    feedFilterListName = listName,
-                    kind3Follows = kind3,
-                    allFollows = allFollows,
-                    locationFlow = locFlow,
-                    followsRelays = followsRelays,
-                    blockedRelays = blockedRelays,
-                    proxyRelays = proxyRelays,
-                    relayFeeds = relayFeeds,
-                    caches = caches,
-                    signer = s,
-                    scope = sc,
-                ).flow
+            feedTopNavFilterLoadFlowsFactory = { kind3, allFollows, locFlow, followsRelays, blockedRelays, proxyRelays, relayFeeds, caches, s ->
+                buildLoadFlowsFor(kind3, allFollows, locFlow, followsRelays, blockedRelays, proxyRelays, relayFeeds, caches, s, LocalCache)
             },
         )
 
@@ -2100,20 +2088,8 @@ fun mockVitorAccountViewModel(): AccountViewModel {
                 NwcSignerState(s, nwcFilter as () -> NWCPaymentFilterAssembler, c as com.vitorpamplona.amethyst.model.LocalCache, sc, settings)
             },
             trustProviderListStateFactory = { s, c, dc, sc, settings -> TrustProviderListState(s, c as com.vitorpamplona.amethyst.model.LocalCache, dc, sc, settings) },
-            feedTopNavFilterStateFactory = { listName, kind3, allFollows, locFlow, followsRelays, blockedRelays, proxyRelays, relayFeeds, caches, s, sc ->
-                FeedTopNavFilterState(
-                    feedFilterListName = listName,
-                    kind3Follows = kind3,
-                    allFollows = allFollows,
-                    locationFlow = locFlow,
-                    followsRelays = followsRelays,
-                    blockedRelays = blockedRelays,
-                    proxyRelays = proxyRelays,
-                    relayFeeds = relayFeeds,
-                    caches = caches,
-                    signer = s,
-                    scope = sc,
-                ).flow
+            feedTopNavFilterLoadFlowsFactory = { kind3, allFollows, locFlow, followsRelays, blockedRelays, proxyRelays, relayFeeds, caches, s ->
+                buildLoadFlowsFor(kind3, allFollows, locFlow, followsRelays, blockedRelays, proxyRelays, relayFeeds, caches, s, LocalCache)
             },
         )
 

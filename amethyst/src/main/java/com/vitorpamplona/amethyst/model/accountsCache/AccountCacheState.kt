@@ -27,7 +27,7 @@ import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.marmot.AndroidMlsGroupStateStore
 import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcSignerState
-import com.vitorpamplona.amethyst.model.topNavFeeds.FeedTopNavFilterState
+import com.vitorpamplona.amethyst.model.topNavFeeds.buildLoadFlowsFor
 import com.vitorpamplona.amethyst.model.trustedAssertions.TrustProviderListState
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.EventProcessor
@@ -136,20 +136,8 @@ class AccountCacheState(
                 NwcSignerState(s, nwcFilter as () -> NWCPaymentFilterAssembler, c as LocalCache, sc, settings)
             },
             trustProviderListStateFactory = { s, c, dc, sc, settings -> TrustProviderListState(s, c as LocalCache, dc, sc, settings) },
-            feedTopNavFilterStateFactory = { listName, kind3, allFollows, locFlow, followsRelays, blockedRelays, proxyRelays, relayFeeds, caches, s, sc ->
-                FeedTopNavFilterState(
-                    feedFilterListName = listName,
-                    kind3Follows = kind3,
-                    allFollows = allFollows,
-                    locationFlow = locFlow,
-                    followsRelays = followsRelays,
-                    blockedRelays = blockedRelays,
-                    proxyRelays = proxyRelays,
-                    relayFeeds = relayFeeds,
-                    caches = caches,
-                    signer = s,
-                    scope = sc,
-                ).flow
+            feedTopNavFilterLoadFlowsFactory = { kind3, allFollows, locFlow, followsRelays, blockedRelays, proxyRelays, relayFeeds, caches, s ->
+                buildLoadFlowsFor(kind3, allFollows, locFlow, followsRelays, blockedRelays, proxyRelays, relayFeeds, caches, s, cache)
             },
         ).also { newAccount ->
             // Set up anti-spam monitoring from the platform side

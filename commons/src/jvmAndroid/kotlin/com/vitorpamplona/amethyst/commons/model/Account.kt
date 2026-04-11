@@ -100,6 +100,8 @@ import com.vitorpamplona.amethyst.commons.model.serverList.MergedFollowPlusMineW
 import com.vitorpamplona.amethyst.commons.model.serverList.MergedFollowPlusMineWithSearchRelayListsState
 import com.vitorpamplona.amethyst.commons.model.serverList.TrustedRelayListsState
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.FeedDecryptionCaches
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.FeedTopNavFilterState
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedFlowsType
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.OutboxLoaderState
 import com.vitorpamplona.amethyst.commons.model.trustedAssertions.TrustProviderListDecryptionCache
@@ -260,7 +262,7 @@ class Account(
     val eventProcessorFactory: (IAccount, ICacheProvider) -> IEventProcessor,
     val nwcSignerStateFactory: (NostrSigner, () -> INWCPaymentFilterAssembler, ICacheProvider, CoroutineScope, AccountSettings) -> INwcSignerState,
     val trustProviderListStateFactory: (NostrSigner, ICacheProvider, TrustProviderListDecryptionCache, CoroutineScope, AccountSettings) -> ITrustProviderListState,
-    val feedTopNavFilterStateFactory: (MutableStateFlow<TopFilter>, StateFlow<Kind3FollowListState.Kind3Follows>, StateFlow<MergedFollowListsState.AllFollows>, () -> StateFlow<LocationResult>, StateFlow<Set<NormalizedRelayUrl>>, StateFlow<Set<NormalizedRelayUrl>>, StateFlow<Set<NormalizedRelayUrl>>, StateFlow<Set<NormalizedRelayUrl>>, FeedDecryptionCaches, NostrSigner, CoroutineScope) -> StateFlow<IFeedTopNavFilter>,
+    val feedTopNavFilterLoadFlowsFactory: (StateFlow<Kind3FollowListState.Kind3Follows>, StateFlow<MergedFollowListsState.AllFollows>, () -> StateFlow<LocationResult>, StateFlow<Set<NormalizedRelayUrl>>, StateFlow<Set<NormalizedRelayUrl>>, StateFlow<Set<NormalizedRelayUrl>>, StateFlow<Set<NormalizedRelayUrl>>, FeedDecryptionCaches, NostrSigner) -> (TopFilter) -> IFeedFlowsType,
 ) : IAccount {
     private var userProfileCache: User? = null
 
@@ -405,19 +407,22 @@ class Account(
         )
 
     fun topNavFilterFlow(listName: MutableStateFlow<TopFilter>) =
-        feedTopNavFilterStateFactory(
-            listName,
-            kind3FollowList.flow,
-            allFollows.flow,
-            geolocationFlow,
-            defaultGlobalRelays.flow,
-            blockedRelayList.flow,
-            proxyRelayList.flow,
-            relayFeedsList.flow,
-            feedDecryptionCaches,
-            signer,
-            scope,
-        )
+        FeedTopNavFilterState(
+            feedFilterListName = listName,
+            loadFlowsFor =
+                feedTopNavFilterLoadFlowsFactory(
+                    kind3FollowList.flow,
+                    allFollows.flow,
+                    geolocationFlow,
+                    defaultGlobalRelays.flow,
+                    blockedRelayList.flow,
+                    proxyRelayList.flow,
+                    relayFeedsList.flow,
+                    feedDecryptionCaches,
+                    signer,
+                ),
+            scope = scope,
+        ).flow
 
     // App-ready Feeds
     val liveHomeFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultHomeFollowList)
