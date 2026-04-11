@@ -46,20 +46,9 @@ import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.TextLinkStyles
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.em
-import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.halilibo.richtext.ui.BlockQuoteGutter.BarGutter
-import com.halilibo.richtext.ui.RichTextStyle
-import com.halilibo.richtext.ui.resolveDefaults
-import com.patrykandpatrick.vico.compose.common.VicoTheme
-import com.patrykandpatrick.vico.compose.common.VicoTheme.CandlestickCartesianLayerColors
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.model.ThemeType
 
@@ -287,121 +276,7 @@ val lightBlackTagModifier =
         .background(LightColorPalette.onBackground)
         .padding(horizontal = 5.dp)
 
-val RichTextDefaults = RichTextStyle().resolveDefaults()
-
-val MarkDownStyleOnDark =
-    RichTextDefaults.copy(
-        paragraphSpacing = DefaultParagraphSpacing,
-        headingStyle = DefaultHeadingStyle,
-        listStyle =
-            RichTextDefaults.listStyle?.copy(
-                itemSpacing = 10.sp,
-            ),
-        blockQuoteGutter =
-            BarGutter(
-                startMargin = 4.sp,
-                barWidth = 3.sp,
-                endMargin = 8.sp,
-                color = { DarkColorPalette.primary.copy(alpha = 0.45f) },
-            ),
-        codeBlockStyle =
-            RichTextDefaults.codeBlockStyle?.copy(
-                textStyle =
-                    TextStyle(
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = Font14SP,
-                        lineHeight = 1.45.em,
-                    ),
-                modifier =
-                    Modifier
-                        .padding(vertical = 4.dp)
-                        .fillMaxWidth()
-                        .clip(shape = QuoteBorder)
-                        .border(1.dp, DarkSubtleBorder, QuoteBorder)
-                        .background(DarkColorPalette.onSurface.copy(alpha = 0.05f))
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-            ),
-        tableStyle =
-            RichTextDefaults.tableStyle?.copy(
-                borderColor = DarkSubtleBorder,
-                borderStrokeWidth = 1f,
-                cellPadding = 10.sp,
-            ),
-        stringStyle =
-            RichTextDefaults.stringStyle?.copy(
-                linkStyle =
-                    TextLinkStyles(
-                        style =
-                            SpanStyle(
-                                color = DarkColorPalette.primary,
-                            ),
-                    ),
-                codeStyle =
-                    SpanStyle(
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = Font14SP,
-                        background = DarkColorPalette.onSurface.copy(alpha = 0.22f),
-                        letterSpacing = 0.3.sp,
-                    ),
-            ),
-    )
-
-val MarkDownStyleOnLight =
-    RichTextDefaults.copy(
-        paragraphSpacing = DefaultParagraphSpacing,
-        headingStyle = DefaultHeadingStyle,
-        listStyle =
-            RichTextDefaults.listStyle?.copy(
-                itemSpacing = 10.sp,
-            ),
-        blockQuoteGutter =
-            BarGutter(
-                startMargin = 4.sp,
-                barWidth = 3.sp,
-                endMargin = 8.sp,
-                color = { LightColorPalette.primary.copy(alpha = 0.45f) },
-            ),
-        codeBlockStyle =
-            RichTextDefaults.codeBlockStyle?.copy(
-                textStyle =
-                    TextStyle(
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = Font14SP,
-                        lineHeight = 1.45.em,
-                    ),
-                modifier =
-                    Modifier
-                        .padding(vertical = 4.dp)
-                        .fillMaxWidth()
-                        .clip(shape = QuoteBorder)
-                        .border(1.dp, LightSubtleBorder, QuoteBorder)
-                        .background(LightColorPalette.onSurface.copy(alpha = 0.05f))
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-            ),
-        tableStyle =
-            RichTextDefaults.tableStyle?.copy(
-                borderColor = LightSubtleBorder,
-                borderStrokeWidth = 1f,
-                cellPadding = 10.sp,
-            ),
-        stringStyle =
-            RichTextDefaults.stringStyle?.copy(
-                linkStyle =
-                    TextLinkStyles(
-                        style =
-                            SpanStyle(
-                                color = LightColorPalette.primary,
-                            ),
-                    ),
-                codeStyle =
-                    SpanStyle(
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = Font14SP,
-                        background = LightColorPalette.onSurface.copy(alpha = 0.12f),
-                        letterSpacing = 0.3.sp,
-                    ),
-            ),
-    )
+// markdownStyle is now provided by commons ThemeExtensions
 
 val ColorScheme.isLight: Boolean
     get() = primary == Purple500
@@ -469,8 +344,7 @@ val ColorScheme.allGoodColor: Color
 val ColorScheme.fundraiserProgressColor: Color
     get() = if (isLight) LightFundraiserProgressColor else DarkFundraiserProgressColor
 
-val ColorScheme.markdownStyle: RichTextStyle
-    get() = if (isLight) MarkDownStyleOnLight else MarkDownStyleOnDark
+// markdownStyle is now provided by commons ThemeExtensions
 
 @Suppress("ModifierFactoryExtensionFunction")
 val ColorScheme.imageModifier: Modifier
@@ -524,34 +398,7 @@ val ColorScheme.newItemBubbleModifier: Modifier
 val ColorScheme.blackTagModifier: Modifier
     get() = if (isLight) lightBlackTagModifier else darkBlackTagModifier
 
-val chartLightColors =
-    VicoTheme(
-        candlestickCartesianLayerColors =
-            CandlestickCartesianLayerColors(
-                Color(0xff0ac285),
-                Color(0xff000000),
-                Color(0xffe8304f),
-            ),
-        columnCartesianLayerColors = listOf(Color(0xff3287ff), Color(0xff0ac285), Color(0xffffab02)),
-        lineColor = Color(0xffbcbfc2),
-        textColor = Color(0xff000000),
-    )
-
-val chartDarkColors =
-    VicoTheme(
-        candlestickCartesianLayerColors =
-            CandlestickCartesianLayerColors(
-                Color(0xff0ac285),
-                Color(0xffffffff),
-                Color(0xffe8304f),
-            ),
-        columnCartesianLayerColors = listOf(Color(0xff3287ff), Color(0xff0ac285), Color(0xffffab02)),
-        lineColor = Color(0xff494c50),
-        textColor = Color(0xffffffff),
-    )
-
-val ColorScheme.chartStyle: VicoTheme
-    get() = if (isLight) chartLightColors else chartDarkColors
+// chartStyle is now provided by commons ThemeExtensions
 
 @Composable
 fun AmethystTheme(content: @Composable () -> Unit) {

@@ -38,9 +38,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.patrykandpatrick.vico.compose.common.ProvideVicoTheme
+import com.vitorpamplona.amethyst.commons.ui.theme.chartStyle
 import com.vitorpamplona.amethyst.ui.note.UserReactionsRow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.chart.ShowChart
-import com.vitorpamplona.amethyst.ui.theme.chartStyle
 
 @Composable
 fun SummaryBar(state: NotificationSummaryState) {

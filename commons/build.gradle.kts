@@ -77,6 +77,10 @@ kotlin {
                 implementation(libs.markdown.commonmark)
                 implementation(libs.markdown.ui)
                 implementation(libs.markdown.ui.material3)
+
+                // Charting (Vico - Compose Multiplatform)
+                implementation(libs.vico.charts.compose)
+                implementation(libs.vico.charts.m3)
             }
         }
 
