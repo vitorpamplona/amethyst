@@ -69,10 +69,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.net.toUri
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
@@ -93,24 +91,7 @@ import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.CancellationException
 
-class ZapOptionViewModel : ViewModel() {
-    private var account: Account? = null
-
-    var customAmount by mutableStateOf(TextFieldValue("21"))
-    var customMessage by mutableStateOf(TextFieldValue(""))
-
-    fun load(account: Account) {
-        this.account = account
-    }
-
-    fun canSend(): Boolean = value() != null
-
-    fun value(): Long? = customAmount.text.trim().toLongOrNull()
-
-    fun cancel() {
-        // No cleanup needed; dialog state is reset on close
-    }
-}
+typealias ZapOptionViewModel = com.vitorpamplona.amethyst.commons.viewmodels.ZapOptionViewModel
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
