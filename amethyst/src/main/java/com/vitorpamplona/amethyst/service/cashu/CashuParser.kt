@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.amethyst.service.cashu
 
+import com.vitorpamplona.amethyst.commons.threading.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.cashu.v3.V3Parser
 import com.vitorpamplona.amethyst.service.cashu.v4.V4Parser
-import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import kotlinx.collections.immutable.ImmutableList
 
