@@ -25,12 +25,11 @@ import androidx.lifecycle.ViewModelProvider
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.dal.ListChangeFeedViewModel
 
 class ChannelFeedViewModel(
-    val channel: Channel,
-    val account: Account,
-) : ListChangeFeedViewModel(ChannelFeedFilter(channel, account), LocalCache) {
+    channel: Channel,
+    account: Account,
+) : com.vitorpamplona.amethyst.commons.viewmodels.ChannelFeedViewModel(channel, account, LocalCache) {
     class Factory(
         val channel: Channel,
         val account: Account,

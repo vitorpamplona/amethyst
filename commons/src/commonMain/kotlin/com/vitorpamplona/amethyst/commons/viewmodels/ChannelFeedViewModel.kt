@@ -18,7 +18,15 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.dal
+package com.vitorpamplona.amethyst.commons.viewmodels
 
-// Re-export from commons for backwards compatibility
-typealias ChannelFeedFilter = com.vitorpamplona.amethyst.commons.ui.feeds.ChannelFeedFilter
+import com.vitorpamplona.amethyst.commons.model.Channel
+import com.vitorpamplona.amethyst.commons.model.IAccount
+import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
+import com.vitorpamplona.amethyst.commons.ui.feeds.ChannelFeedFilter
+
+open class ChannelFeedViewModel(
+    val channel: Channel,
+    val account: IAccount,
+    cacheProvider: ICacheProvider,
+) : ListChangeFeedViewModel(ChannelFeedFilter(channel, account), cacheProvider)
