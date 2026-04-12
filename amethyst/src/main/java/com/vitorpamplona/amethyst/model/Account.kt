@@ -253,7 +253,7 @@ class Account(
     val nwcFilterAssembler: () -> NWCPaymentFilterAssembler,
     val otsResolverBuilder: () -> OtsResolver,
     val cache: LocalCache,
-    val client: INostrClient,
+    override val client: INostrClient,
     val scope: CoroutineScope,
     val mlsGroupStateStore: MlsGroupStateStore? = null,
 ) : IAccount {
@@ -267,6 +267,9 @@ class Account(
     override val hiddenWordsCase: List<DualCase> get() = hiddenUsers.flow.value.hiddenWordsCase
     override val hiddenUsersHashCodes: Set<Int> get() = hiddenUsers.flow.value.hiddenUsersHashCodes
     override val spammersHashCodes: Set<Int> get() = hiddenUsers.flow.value.spammersHashCodes
+
+    override val hiddenUsersFlow get() = hiddenUsers.flow
+    override val transientHiddenUsers get() = hiddenUsers.transientHiddenUsers
 
     val userMetadata = UserMetadataState(signer, cache, scope, settings)
 
@@ -309,7 +312,7 @@ class Account(
     val ephemeralChatList = EphemeralChatListState(signer, cache, ephemeralChatListDecryptionCache, scope, settings)
 
     val publicChatListDecryptionCache = PublicChatListDecryptionCache(signer)
-    val publicChatList = PublicChatListState(signer, cache, publicChatListDecryptionCache, scope, settings)
+    override val publicChatList = PublicChatListState(signer, cache, publicChatListDecryptionCache, scope, settings)
 
     val communityListDecryptionCache = CommunityListDecryptionCache(signer)
     val communityList = CommunityListState(signer, cache, communityListDecryptionCache, scope, settings)
@@ -362,6 +365,7 @@ class Account(
     val followPlusAllMineWithIndex = MergedFollowPlusMineWithIndexRelayListsState(followOutboxesOrProxy, nip65RelayList, privateStorageRelayList, localRelayList, indexerRelayList, scope)
     val followPlusAllMineWithSearch = MergedFollowPlusMineWithSearchRelayListsState(followOutboxesOrProxy, nip65RelayList, privateStorageRelayList, localRelayList, searchRelayList, scope)
     val defaultGlobalRelays = MergedFollowPlusMineRelayListsState(followOutboxesOrProxy, nip65RelayList, privateStorageRelayList, localRelayList, scope)
+    override val defaultGlobalRelaysFlow get() = defaultGlobalRelays.flow
 
     // keeps a cache of the declared outbox relays for each author
     val declaredFollowsPerOutboxRelay = DeclaredFollowsPerOutboxRelay(kind3FollowList, cache, scope).flow
@@ -2215,11 +2219,13 @@ class Account(
 
     suspend fun decryptZapOrNull(event: LnZapRequestEvent): LnZapPrivateEvent? = if (event.isPrivateZap() && isWriteable()) privateZapsDecryptionCache.decryptPrivateZap(event) else null
 
-    fun isAllHidden(users: Set<HexKey>): Boolean = users.all { isHidden(it) }
-
     override fun isHidden(user: User) = isHidden(user.pubkeyHex)
 
     fun isHidden(userHex: String): Boolean = hiddenUsers.flow.value.isUserHidden(userHex)
+
+    override fun isAllHidden(users: Set<HexKey>): Boolean = users.all { isHidden(it) }
+
+    override fun isFollowing(user: HexKey): Boolean = user in followingKeySet()
 
     override fun followingKeySet(): Set<HexKey> = kind3FollowList.flow.value.authors
 
@@ -2270,8 +2276,6 @@ class Account(
         }
 
     fun isFollowing(user: User): Boolean = user.pubkeyHex in followingKeySet()
-
-    fun isFollowing(user: HexKey): Boolean = user in followingKeySet()
 
     fun isKnown(user: User): Boolean = user.pubkeyHex in allFollows.flow.value.authors
 

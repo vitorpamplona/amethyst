@@ -21,7 +21,11 @@
 package com.vitorpamplona.amethyst.commons.model
 
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupList
+import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatListState
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
@@ -34,6 +38,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import com.vitorpamplona.quartz.nip57Zaps.IPrivateZapsDecryptionCache
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.utils.DualCase
+import kotlinx.coroutines.flow.StateFlow
 
 /**
  * Interface for NIP-47 wallet connect signer state.
@@ -119,4 +124,25 @@ interface IAccount {
 
     /** Broadcast pre-created gift wraps (e.g. reactions within group DMs) */
     suspend fun sendGiftWraps(wraps: List<GiftWrapEvent>)
+
+    /** Combined hidden users state as a reactive flow (mutes + blocks + transient) */
+    val hiddenUsersFlow: StateFlow<LiveHiddenUsers>
+
+    /** Transient (session-only) hidden users, e.g. detected spammers */
+    val transientHiddenUsers: StateFlow<Set<String>>
+
+    /** True if every user in the set is hidden (muted, blocked, or transient) */
+    fun isAllHidden(users: Set<HexKey>): Boolean
+
+    /** Whether the given pubkey is in the follow list */
+    fun isFollowing(user: HexKey): Boolean
+
+    /** NIP-28 public chat channel list state */
+    val publicChatList: PublicChatListState
+
+    /** Nostr relay client for network operations */
+    val client: INostrClient
+
+    /** Merged default global relay set (outbox + NIP-65 + private + local) */
+    val defaultGlobalRelaysFlow: StateFlow<Set<NormalizedRelayUrl>>
 }
