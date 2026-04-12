@@ -18,11 +18,18 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-@file:Suppress("unused")
+package com.vitorpamplona.amethyst.commons.model
 
-package com.vitorpamplona.amethyst.model.nip51Lists.relayLists
+import kotlinx.coroutines.flow.StateFlow
 
-// Re-export from commons for backward compatibility
-typealias RelayListCard = com.vitorpamplona.amethyst.commons.model.RelayListCard
+/**
+ * Interface for pin list state.
+ * Used by composables to check whether a note is pinned.
+ */
+interface IPinListState {
+    /** Set of pinned event IDs, as a StateFlow for reactive observation */
+    val pinnedEventIdSet: StateFlow<Set<String>>
 
-val EmptyRelayListCard = com.vitorpamplona.amethyst.commons.model.EmptyRelayListCard
+    /** Checks whether the given note is currently pinned */
+    fun isPinned(note: Note): Boolean
+}

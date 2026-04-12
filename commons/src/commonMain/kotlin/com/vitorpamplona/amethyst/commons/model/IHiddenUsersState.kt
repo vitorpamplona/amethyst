@@ -18,11 +18,19 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-@file:Suppress("unused")
+package com.vitorpamplona.amethyst.commons.model
 
-package com.vitorpamplona.amethyst.model.nip51Lists.relayLists
+import kotlinx.coroutines.flow.StateFlow
 
-// Re-export from commons for backward compatibility
-typealias RelayListCard = com.vitorpamplona.amethyst.commons.model.RelayListCard
+/**
+ * Interface for hidden-users state.
+ * Provides a reactive flow of the combined hidden/muted user lists and
+ * a separate flow of transiently-hidden (spammer) users.
+ */
+interface IHiddenUsersState {
+    /** Combined hidden-user and mute-list state */
+    val flow: StateFlow<LiveHiddenUsers>
 
-val EmptyRelayListCard = com.vitorpamplona.amethyst.commons.model.EmptyRelayListCard
+    /** Set of transiently hidden (spammer) user pubkeys */
+    val transientHiddenUsers: StateFlow<Set<String>>
+}

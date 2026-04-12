@@ -20,6 +20,9 @@
  */
 package com.vitorpamplona.amethyst.model.nip51Lists.relayLists
 
+import com.vitorpamplona.amethyst.commons.model.EmptyRelayListCard
+import com.vitorpamplona.amethyst.commons.model.IRelayListDecryptionCache
+import com.vitorpamplona.amethyst.commons.model.RelayListCard
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
@@ -35,7 +38,7 @@ import kotlinx.coroutines.flow.onStart
 
 open class GenericRelayListCache<T : PrivateTagArrayEvent>(
     val signer: NostrSigner,
-) {
+) : IRelayListDecryptionCache {
     val cachedPrivateLists = PrivateTagArrayEventCache<T>(signer)
 
     fun cachedRelays(event: T) = cachedPrivateLists.mergeTagListPrecached(event).relaySet()
@@ -43,7 +46,7 @@ open class GenericRelayListCache<T : PrivateTagArrayEvent>(
     suspend fun relays(event: T) = cachedPrivateLists.mergeTagList(event).relaySet()
 
     @Suppress("UNCHECKED_CAST")
-    fun fastStartValueForRelayList(note: Note): RelayListCard {
+    override fun fastStartValueForRelayList(note: Note): RelayListCard {
         val noteEvent = note.event as? T
         return if (noteEvent != null) {
             RelayListCard(cachedRelays(noteEvent).toList())
@@ -54,7 +57,7 @@ open class GenericRelayListCache<T : PrivateTagArrayEvent>(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     @Suppress("UNCHECKED_CAST")
-    fun observeDecryptedRelayList(note: Note): Flow<RelayListCard> =
+    override fun observeDecryptedRelayList(note: Note): Flow<RelayListCard> =
         note
             .flow()
             .metadata.stateFlow

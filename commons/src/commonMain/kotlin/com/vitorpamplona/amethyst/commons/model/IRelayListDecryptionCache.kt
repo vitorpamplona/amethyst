@@ -18,11 +18,16 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-@file:Suppress("unused")
+package com.vitorpamplona.amethyst.commons.model
 
-package com.vitorpamplona.amethyst.model.nip51Lists.relayLists
+import kotlinx.coroutines.flow.Flow
 
-// Re-export from commons for backward compatibility
-typealias RelayListCard = com.vitorpamplona.amethyst.commons.model.RelayListCard
+/**
+ * Interface for relay-list decryption caches.
+ * Used by composables to observe decrypted relay lists from encrypted NIP-51 events.
+ */
+interface IRelayListDecryptionCache {
+    fun observeDecryptedRelayList(note: Note): Flow<RelayListCard>
 
-val EmptyRelayListCard = com.vitorpamplona.amethyst.commons.model.EmptyRelayListCard
+    fun fastStartValueForRelayList(note: Note): RelayListCard
+}

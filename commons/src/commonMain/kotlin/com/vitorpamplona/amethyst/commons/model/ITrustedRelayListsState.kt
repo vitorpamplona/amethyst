@@ -18,11 +18,16 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-@file:Suppress("unused")
+package com.vitorpamplona.amethyst.commons.model
 
-package com.vitorpamplona.amethyst.model.nip51Lists.relayLists
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import kotlinx.coroutines.flow.StateFlow
 
-// Re-export from commons for backward compatibility
-typealias RelayListCard = com.vitorpamplona.amethyst.commons.model.RelayListCard
-
-val EmptyRelayListCard = com.vitorpamplona.amethyst.commons.model.EmptyRelayListCard
+/**
+ * Interface for the trusted relay lists state.
+ * Merges all relay lists the user has configured into a single set
+ * of trusted relay URLs.
+ */
+interface ITrustedRelayListsState {
+    val flow: StateFlow<Set<NormalizedRelayUrl>>
+}

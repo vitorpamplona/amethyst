@@ -253,7 +253,7 @@ class Account(
     val nwcFilterAssembler: () -> NWCPaymentFilterAssembler,
     val otsResolverBuilder: () -> OtsResolver,
     val cache: LocalCache,
-    val client: INostrClient,
+    override val client: INostrClient,
     val scope: CoroutineScope,
     val mlsGroupStateStore: MlsGroupStateStore? = null,
 ) : IAccount {
@@ -282,25 +282,25 @@ class Account(
     val privateStorageDecryptionCache = PrivateStorageRelayListDecryptionCache(signer)
     val privateStorageRelayList = PrivateStorageRelayListState(signer, cache, privateStorageDecryptionCache, scope, settings)
 
-    val searchRelayListDecryptionCache = SearchRelayListDecryptionCache(signer)
+    override val searchRelayListDecryptionCache = SearchRelayListDecryptionCache(signer)
     val searchRelayList = SearchRelayListState(signer, cache, searchRelayListDecryptionCache, scope, settings)
 
-    val trustedRelayListDecryptionCache = TrustedRelayListDecryptionCache(signer)
+    override val trustedRelayListDecryptionCache = TrustedRelayListDecryptionCache(signer)
     val trustedRelayList = TrustedRelayListState(signer, cache, trustedRelayListDecryptionCache, scope, settings)
 
-    val proxyRelayListDecryptionCache = ProxyRelayListDecryptionCache(signer)
+    override val proxyRelayListDecryptionCache = ProxyRelayListDecryptionCache(signer)
     val proxyRelayList = ProxyRelayListState(signer, cache, proxyRelayListDecryptionCache, scope, settings)
 
-    val broadcastRelayListDecryptionCache = BroadcastRelayListDecryptionCache(signer)
+    override val broadcastRelayListDecryptionCache = BroadcastRelayListDecryptionCache(signer)
     val broadcastRelayList = BroadcastRelayListState(signer, cache, broadcastRelayListDecryptionCache, scope, settings)
 
-    val indexerRelayListDecryptionCache = IndexerRelayListDecryptionCache(signer)
+    override val indexerRelayListDecryptionCache = IndexerRelayListDecryptionCache(signer)
     val indexerRelayList = IndexerRelayListState(signer, cache, indexerRelayListDecryptionCache, scope, settings)
 
-    val relayFeedsListDecryptionCache = RelayFeedsListDecryptionCache(signer)
+    override val relayFeedsListDecryptionCache = RelayFeedsListDecryptionCache(signer)
     val relayFeedsList = RelayFeedListState(signer, cache, relayFeedsListDecryptionCache, scope, settings)
 
-    val blockedRelayListDecryptionCache = BlockedRelayListDecryptionCache(signer)
+    override val blockedRelayListDecryptionCache = BlockedRelayListDecryptionCache(signer)
     val blockedRelayList = BlockedRelayListState(signer, cache, blockedRelayListDecryptionCache, scope, settings)
 
     val kind3FollowList = Kind3FollowListState(signer, cache, scope, settings)
@@ -331,12 +331,12 @@ class Account(
     val peopleLists = PeopleListsState(signer, cache, peopleListDecryptionCache, scope)
     val followLists = FollowListsState(signer, cache, scope)
 
-    val hiddenUsers = HiddenUsersState(muteList.flow, blockPeopleList.flow, scope, settings)
+    override val hiddenUsers = HiddenUsersState(muteList.flow, blockPeopleList.flow, scope, settings)
 
     val labeledBookmarkLists = LabeledBookmarkListsState(signer, cache, scope)
     val oldBookmarkState = OldBookmarkListState(signer, cache, scope)
-    val bookmarkState = BookmarkListState(signer, cache, scope)
-    val pinState = PinListState(signer, cache, scope)
+    override val bookmarkState = BookmarkListState(signer, cache, scope)
+    override val pinState = PinListState(signer, cache, scope)
     val emoji = EmojiPackState(signer, cache, scope)
 
     val vanish = VanishRequestsState(signer, cache, client, scope)
@@ -351,7 +351,7 @@ class Account(
     val dmRelays = DmInboxRelayState(dmRelayList, nip65RelayList, privateStorageRelayList, localRelayList, scope)
     val notificationRelays = NotificationInboxRelayState(nip65RelayList, localRelayList, scope)
 
-    val trustedRelays = TrustedRelayListsState(nip65RelayList, privateStorageRelayList, localRelayList, dmRelayList, searchRelayList, trustedRelayList, broadcastRelayList, scope)
+    override val trustedRelays = TrustedRelayListsState(nip65RelayList, privateStorageRelayList, localRelayList, dmRelayList, searchRelayList, trustedRelayList, broadcastRelayList, scope)
 
     // Follows Relays
     val followOutboxesOrProxy = FollowListOutboxOrProxyRelays(kind3FollowList, blockedRelayList, proxyRelayList, cache, scope)
@@ -371,7 +371,7 @@ class Account(
     val followsPerRelay = FollowsPerOutboxRelay(kind3FollowList, blockedRelayList, proxyRelayList, cache, scope).flow
 
     // Merges all follow lists to create a single All Follows feed.
-    val allFollows = MergedFollowListsState(kind3FollowList, peopleLists, followLists, hashtagList, geohashList, communityList, scope)
+    override val allFollows = MergedFollowListsState(kind3FollowList, peopleLists, followLists, hashtagList, geohashList, communityList, scope)
 
     val privateDMDecryptionCache = PrivateDMCache(signer)
     override val privateZapsDecryptionCache = PrivateZapCache(signer)
@@ -2269,9 +2269,9 @@ class Account(
             false
         }
 
-    fun isFollowing(user: User): Boolean = user.pubkeyHex in followingKeySet()
+    override fun isFollowing(user: User): Boolean = user.pubkeyHex in followingKeySet()
 
-    fun isFollowing(user: HexKey): Boolean = user in followingKeySet()
+    override fun isFollowing(hex: HexKey): Boolean = hex in followingKeySet()
 
     fun isKnown(user: User): Boolean = user.pubkeyHex in allFollows.flow.value.authors
 

@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.model.serverList
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.amethyst.commons.model.IAllFollowsState
 import com.vitorpamplona.amethyst.model.nip02FollowLists.Kind3FollowListState
 import com.vitorpamplona.amethyst.model.nip51Lists.geohashLists.GeohashListState
 import com.vitorpamplona.amethyst.model.nip51Lists.hashtagLists.HashtagListState
@@ -50,17 +51,17 @@ class MergedFollowListsState(
     val geohashList: GeohashListState,
     val communityList: CommunityListState,
     val scope: CoroutineScope,
-) {
+) : IAllFollowsState {
     /**
      This contains a big OR of everything the user wants to see in the a single feed.
      */
     @Immutable
     class AllFollows(
-        val authors: Set<String> = emptySet(),
-        val hashtags: Set<String> = emptySet(),
-        val geotags: Set<String> = emptySet(),
-        val communities: Set<String> = emptySet(),
-    ) {
+        override val authors: Set<String> = emptySet(),
+        override val hashtags: Set<String> = emptySet(),
+        override val geotags: Set<String> = emptySet(),
+        override val communities: Set<String> = emptySet(),
+    ) : IAllFollowsState.AllFollows(authors, hashtags, geotags, communities) {
         val geotagScopes: Set<String> = geotags.mapTo(mutableSetOf()) { GeohashId.toScope(it) }
         val hashtagScopes: Set<String> = hashtags.mapTo(mutableSetOf()) { HashtagId.toScope(it) }
     }
@@ -81,7 +82,7 @@ class MergedFollowListsState(
         )
 
     @OptIn(kotlinx.coroutines.FlowPreview::class)
-    val flow: StateFlow<AllFollows> =
+    override val flow: StateFlow<AllFollows> =
         combine(
             listOf(
                 kind3List.flow,

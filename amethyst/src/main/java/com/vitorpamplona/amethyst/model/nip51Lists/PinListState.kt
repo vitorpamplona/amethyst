@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.model.nip51Lists
 
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.model.IPinListState
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.NoteState
@@ -43,7 +44,7 @@ class PinListState(
     val signer: NostrSigner,
     val cache: LocalCache,
     val scope: CoroutineScope,
-) {
+) : IPinListState {
     val pinList = cache.getOrCreateAddressableNote(PinListEvent.createPinAddress(signer.pubKey))
 
     fun getPinListFlow(): StateFlow<NoteState> = pinList.flow().metadata.stateFlow
@@ -70,7 +71,7 @@ class PinListState(
                 emptyList(),
             )
 
-    val pinnedEventIdSet: StateFlow<Set<String>> =
+    override val pinnedEventIdSet: StateFlow<Set<String>> =
         pinnedNotes
             .map { pins ->
                 pins.map { it.eventId }.toSet()
@@ -97,7 +98,7 @@ class PinListState(
                 emptyList(),
             )
 
-    fun isPinned(note: Note): Boolean = pinnedEventIdSet.value.contains(note.idHex)
+    override fun isPinned(note: Note): Boolean = pinnedEventIdSet.value.contains(note.idHex)
 
     suspend fun addPin(note: Note): PinListEvent {
         val currentList = getPinList()

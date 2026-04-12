@@ -21,7 +21,10 @@
 package com.vitorpamplona.amethyst.commons.model
 
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupList
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.BookmarkListState
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
@@ -119,4 +122,61 @@ interface IAccount {
 
     /** Broadcast pre-created gift wraps (e.g. reactions within group DMs) */
     suspend fun sendGiftWraps(wraps: List<GiftWrapEvent>)
+
+    // ── Follow / relationship queries ──────────────────────────────
+
+    /** Whether the account follows the given user */
+    fun isFollowing(user: User): Boolean
+
+    /** Whether the account follows the user identified by hex pubkey */
+    fun isFollowing(hex: HexKey): Boolean
+
+    // ── Bookmark & pin state ──────────────────────────────────────
+
+    /** Bookmark list state (NIP-51 bookmarks) */
+    val bookmarkState: BookmarkListState
+
+    /** Pin list state (NIP-51 pin lists) */
+    val pinState: IPinListState
+
+    // ── Follow / content lists ───────────────────────────────────
+
+    /** Merged state of all follow lists (kind-3 + people + hashtag + geohash + community) */
+    val allFollows: IAllFollowsState
+
+    /** Merged set of all trusted relay URLs */
+    val trustedRelays: ITrustedRelayListsState
+
+    // ── Hidden users ─────────────────────────────────────────────
+
+    /** Reactive hidden-users state (mute lists + transient spammers) */
+    val hiddenUsers: IHiddenUsersState
+
+    // ── Relay list decryption caches ─────────────────────────────
+
+    /** Decryption cache for search relay lists */
+    val searchRelayListDecryptionCache: IRelayListDecryptionCache
+
+    /** Decryption cache for trusted relay lists */
+    val trustedRelayListDecryptionCache: IRelayListDecryptionCache
+
+    /** Decryption cache for proxy relay lists */
+    val proxyRelayListDecryptionCache: IRelayListDecryptionCache
+
+    /** Decryption cache for broadcast relay lists */
+    val broadcastRelayListDecryptionCache: IRelayListDecryptionCache
+
+    /** Decryption cache for indexer relay lists */
+    val indexerRelayListDecryptionCache: IRelayListDecryptionCache
+
+    /** Decryption cache for relay feed lists */
+    val relayFeedsListDecryptionCache: IRelayListDecryptionCache
+
+    /** Decryption cache for blocked relay lists */
+    val blockedRelayListDecryptionCache: IRelayListDecryptionCache
+
+    // ── Nostr client ─────────────────────────────────────────────
+
+    /** Nostr relay client for broadcasting events */
+    val client: INostrClient
 }

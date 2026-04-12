@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.model.serverList
 
+import com.vitorpamplona.amethyst.commons.model.ITrustedRelayListsState
 import com.vitorpamplona.amethyst.model.edits.PrivateStorageRelayListState
 import com.vitorpamplona.amethyst.model.localRelays.LocalRelayListState
 import com.vitorpamplona.amethyst.model.nip17Dms.DmRelayListState
@@ -46,10 +47,10 @@ class TrustedRelayListsState(
     val trustedRelayList: TrustedRelayListState,
     val broadcastRelayList: BroadcastRelayListState,
     val scope: CoroutineScope,
-) {
+) : ITrustedRelayListsState {
     fun mergeLists(lists: Array<Set<NormalizedRelayUrl>>): Set<NormalizedRelayUrl> = lists.reduce { acc, set -> acc + set }
 
-    val flow: StateFlow<Set<NormalizedRelayUrl>> =
+    override val flow: StateFlow<Set<NormalizedRelayUrl>> =
         combine(
             listOf(
                 nip65RelayList.allFlowNoDefaults,

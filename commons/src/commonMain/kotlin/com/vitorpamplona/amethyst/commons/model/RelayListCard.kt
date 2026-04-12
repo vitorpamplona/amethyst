@@ -18,11 +18,14 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-@file:Suppress("unused")
+package com.vitorpamplona.amethyst.commons.model
 
-package com.vitorpamplona.amethyst.model.nip51Lists.relayLists
+import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
-// Re-export from commons for backward compatibility
-typealias RelayListCard = com.vitorpamplona.amethyst.commons.model.RelayListCard
+@Immutable
+data class RelayListCard(
+    val relays: List<NormalizedRelayUrl>,
+)
 
-val EmptyRelayListCard = com.vitorpamplona.amethyst.commons.model.EmptyRelayListCard
+val EmptyRelayListCard = RelayListCard(emptyList())

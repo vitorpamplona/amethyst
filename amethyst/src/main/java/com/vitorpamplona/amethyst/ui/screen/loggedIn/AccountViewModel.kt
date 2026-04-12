@@ -175,14 +175,15 @@ import kotlinx.coroutines.withContext
 
 @Stable
 class AccountViewModel(
-    val account: Account,
+    override val account: Account,
     val settings: UiSettingsState,
     val torSettings: TorSettingsFlow,
     val dataSources: RelaySubscriptionsCoordinator,
     val httpClientBuilder: IRoleBasedHttpClientBuilder,
-    val nip05ClientBuilder: () -> INip05Client,
+    override val nip05ClientBuilder: () -> INip05Client,
 ) : ViewModel(),
-    Dao {
+    Dao,
+    com.vitorpamplona.amethyst.commons.model.IAccountViewModel {
     var firstRoute: Route? = null
 
     val toastManager = ToastManager()
@@ -418,9 +419,9 @@ class AccountViewModel(
             Route.Notification() to notificationHasNewItemsFlow,
         )
 
-    fun isWriteable(): Boolean = account.isWriteable()
+    override fun isWriteable(): Boolean = account.isWriteable()
 
-    fun userProfile(): User = account.userProfile()
+    override fun userProfile(): User = account.userProfile()
 
     fun reactToOrDelete(
         note: Note,
@@ -536,7 +537,7 @@ class AccountViewModel(
 
     private val noteMustShowExpandButtonFlows = LruCache<Note, StateFlow<Boolean>>(300)
 
-    fun createMustShowExpandButtonFlows(note: Note): StateFlow<Boolean> =
+    override fun createMustShowExpandButtonFlows(note: Note): StateFlow<Boolean> =
         noteMustShowExpandButtonFlows.get(note)
             ?: note
                 .flow()
@@ -1013,7 +1014,7 @@ class AccountViewModel(
 
     fun delete(notes: List<Note>) = launchSigner { account.delete(notes) }
 
-    fun delete(note: Note) = launchSigner { account.delete(note) }
+    override fun delete(note: Note) = launchSigner { account.delete(note) }
 
     fun requestToVanish(
         relays: List<NormalizedRelayUrl>,
@@ -1028,14 +1029,14 @@ class AccountViewModel(
 
     fun cachedDecrypt(note: Note): String? = account.cachedDecryptContent(note)
 
-    fun decrypt(
+    override fun decrypt(
         note: Note,
         onReady: (String) -> Unit,
     ) = launchSigner {
         account.decryptContent(note)?.let { onReady(it) }
     }
 
-    inline fun launchSigner(crossinline action: suspend () -> Unit) {
+    override fun launchSigner(action: suspend () -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 action()
@@ -1095,9 +1096,9 @@ class AccountViewModel(
 
     fun follow(users: List<User>) = launchSigner { account.follow(users) }
 
-    fun follow(user: User) = launchSigner { account.follow(user) }
+    override fun follow(user: User) = launchSigner { account.follow(user) }
 
-    fun unfollow(user: User) = launchSigner { account.unfollow(user) }
+    override fun unfollow(user: User) = launchSigner { account.unfollow(user) }
 
     fun followGeohash(tag: String) = launchSigner { account.followGeohash(tag) }
 
@@ -1115,16 +1116,16 @@ class AccountViewModel(
 
     fun hideWord(word: String) = launchSigner { account.hideWord(word) }
 
-    fun isLoggedUser(pubkeyHex: HexKey?): Boolean = account.signer.pubKey == pubkeyHex
+    override fun isLoggedUser(pubkeyHex: HexKey?): Boolean = account.signer.pubKey == pubkeyHex
 
-    fun isLoggedUser(user: User?): Boolean = isLoggedUser(user?.pubkeyHex)
+    override fun isLoggedUser(user: User?): Boolean = isLoggedUser(user?.pubkeyHex)
 
-    fun isFollowing(user: User?): Boolean {
+    override fun isFollowing(user: User?): Boolean {
         if (user == null) return false
         return account.isFollowing(user)
     }
 
-    fun isFollowing(user: HexKey): Boolean = account.isFollowing(user)
+    override fun isFollowing(hex: HexKey): Boolean = account.isFollowing(hex)
 
     fun markDonatedInThisVersion() = account.markDonatedInThisVersion()
 
@@ -1207,9 +1208,9 @@ class AccountViewModel(
 
     fun show(user: User) = launchSigner { account.showUser(user.pubkeyHex) }
 
-    fun hide(user: User) = launchSigner { account.hideUser(user.pubkeyHex) }
+    override fun hide(user: User) = launchSigner { account.hideUser(user.pubkeyHex) }
 
-    fun hide(word: String) = launchSigner { account.hideWord(word) }
+    override fun hide(word: String) = launchSigner { account.hideWord(word) }
 
     fun showUser(pubkeyHex: String) = launchSigner { account.showUser(pubkeyHex) }
 
@@ -1242,17 +1243,17 @@ class AccountViewModel(
         return note.getReactionBy(userProfile())
     }
 
-    fun runOnIO(runOnIO: suspend () -> Unit) {
-        viewModelScope.launch(Dispatchers.IO) { runOnIO() }
+    override fun runOnIO(block: suspend () -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) { block() }
     }
 
-    fun checkGetOrCreateUser(key: HexKey): User? = LocalCache.checkGetOrCreateUser(key)
+    override fun checkGetOrCreateUser(key: HexKey): User? = LocalCache.checkGetOrCreateUser(key)
 
     override suspend fun getOrCreateUser(hex: HexKey): User = LocalCache.getOrCreateUser(hex)
 
     fun getUserIfExists(hex: HexKey): User? = LocalCache.getUserIfExists(hex)
 
-    fun checkGetOrCreateNote(key: HexKey): Note? = LocalCache.checkGetOrCreateNote(key)
+    override fun checkGetOrCreateNote(key: HexKey): Note? = LocalCache.checkGetOrCreateNote(key)
 
     override suspend fun getOrCreateNote(hex: HexKey): Note = LocalCache.getOrCreateNote(hex)
 
@@ -1267,7 +1268,7 @@ class AccountViewModel(
         return note
     }
 
-    fun getNoteIfExists(hex: HexKey): Note? = LocalCache.getNoteIfExists(hex)
+    override fun getNoteIfExists(hex: HexKey): Note? = LocalCache.getNoteIfExists(hex)
 
     /**
      * Fixes author and relay hints in MarkedETag list by looking up notes from cache.
@@ -1297,7 +1298,7 @@ class AccountViewModel(
 
     override fun getOrCreateAddressableNote(address: Address): AddressableNote = LocalCache.getOrCreateAddressableNote(address)
 
-    fun getAddressableNoteIfExists(key: String): AddressableNote? = LocalCache.getAddressableNoteIfExists(key)
+    override fun getAddressableNoteIfExists(key: String): AddressableNote? = LocalCache.getAddressableNoteIfExists(key)
 
     fun getAddressableNoteIfExists(key: Address): AddressableNote? = LocalCache.getAddressableNoteIfExists(key)
 
