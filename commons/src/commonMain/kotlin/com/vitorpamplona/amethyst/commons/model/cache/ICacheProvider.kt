@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.utils.cache.ICacheOperations
 
 /**
  * Cache provider interface for accessing cached Notes, Users, and Channels.
@@ -135,4 +136,16 @@ interface ICacheProvider {
     fun getOrCreateUser(pubkey: HexKey): User?
 
     fun justConsumeMyOwnEvent(event: Event): Boolean
+
+    /**
+     * Access to the notes cache for bulk filtering operations.
+     * Used by DAL FeedFilter subclasses for filterIntoSet/mapFlattenIntoSet queries.
+     */
+    val notes: ICacheOperations<HexKey, Note>
+
+    /**
+     * Access to the addressable notes cache for bulk filtering operations.
+     * Used by DAL FeedFilter subclasses for filterIntoSet/mapFlattenIntoSet queries by kind.
+     */
+    val addressables: ICacheOperations<Address, AddressableNote>
 }
