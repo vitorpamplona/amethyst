@@ -28,6 +28,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -40,9 +41,11 @@ import kotlinx.collections.immutable.persistentSetOf
 fun ChatroomByAuthorScreen(
     authorPubKeyHex: String?,
     draftMessage: String? = null,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     if (authorPubKeyHex == null) return
 
     DisappearingScaffold(
@@ -61,9 +64,11 @@ fun ChatroomByAuthorScreen(
 @Composable
 fun LoadRoomByAuthor(
     authorPubKeyHex: String,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     content: @Composable (ChatroomKey?) -> Unit,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val room by remember(authorPubKeyHex) {
         mutableStateOf<ChatroomKey?>(ChatroomKey(persistentSetOf(authorPubKeyHex)))
     }
@@ -74,9 +79,11 @@ fun LoadRoomByAuthor(
 @Composable
 private fun RoomByAuthorTopBar(
     authorPubKeyHex: String,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     LoadRoomByAuthor(authorPubKeyHex = authorPubKeyHex, accountViewModel) { room ->
         if (room != null) {
             RenderRoomTopBar(room, accountViewModel, nav)
@@ -90,9 +97,11 @@ private fun RoomByAuthorTopBar(
 fun ChatroomByAuthor(
     authorPubKeyHex: String?,
     draftMessage: String? = null,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     if (authorPubKeyHex == null) return
 
     LoadRoomByAuthor(authorPubKeyHex, accountViewModel) {

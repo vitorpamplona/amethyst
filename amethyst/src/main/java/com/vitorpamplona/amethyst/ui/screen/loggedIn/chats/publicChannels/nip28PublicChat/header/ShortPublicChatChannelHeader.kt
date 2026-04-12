@@ -38,6 +38,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserIsFollowingChannel
 import com.vitorpamplona.amethyst.ui.components.LoadNote
@@ -56,9 +57,11 @@ import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 @Composable
 fun ShortPublicChatChannelHeader(
     baseChannel: PublicChatChannel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val channelState by observeChannel(baseChannel, accountViewModel)
     val channel = channelState?.channel as? PublicChatChannel ?: return
 
@@ -106,9 +109,11 @@ fun ShortPublicChatChannelHeader(
 @Composable
 fun ShortChannelActionOptions(
     channel: PublicChatChannel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     LoadNote(baseNoteHex = channel.idHex, accountViewModel) {
         it?.let {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = RowColSpacing) {
@@ -135,9 +140,11 @@ fun ShortChannelActionOptions(
 @Composable
 fun JoinChatButtonIfNotAlreadyJoined(
     channel: PublicChatChannel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val isFollowing by observeUserIsFollowingChannel(accountViewModel.account, channel, accountViewModel)
 
     if (!isFollowing) {

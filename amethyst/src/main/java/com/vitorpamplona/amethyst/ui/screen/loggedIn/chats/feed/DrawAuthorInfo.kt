@@ -26,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
@@ -43,9 +44,11 @@ import com.vitorpamplona.amethyst.ui.theme.Size5Modifier
 @Composable
 fun DrawAuthorInfo(
     baseNote: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     baseNote.author?.let {
         WatchAndDisplayUser(it, accountViewModel, nav)
     }
@@ -54,9 +57,11 @@ fun DrawAuthorInfo(
 @Composable
 private fun WatchAndDisplayUser(
     author: User,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val userState by observeUserInfo(author, accountViewModel)
 
     UserDisplayNameLayout(

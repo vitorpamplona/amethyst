@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.uploads.ShowImageUploadGallery
 import com.vitorpamplona.amethyst.ui.components.SetDialogToEdgeToEdge
@@ -79,10 +80,12 @@ fun ChatFileUploadDialog(
     title: @Composable () -> Unit,
     upload: () -> Unit,
     onCancel: () -> Unit,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
     isNip17: Boolean = false,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val scrollState = rememberScrollState()
 
     Dialog(
@@ -144,9 +147,11 @@ fun ChatFileUploadDialog(
 @Composable
 private fun ImageVideoPostChat(
     fileUploadState: ChatFileUploadState,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     isNip17: Boolean = false,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val fileServers by accountViewModel.account.blossomServers.hostNameFlow
         .collectAsState()
 

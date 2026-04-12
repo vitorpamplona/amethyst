@@ -42,6 +42,7 @@ import androidx.compose.ui.Alignment.Companion.CenterStart
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -91,7 +92,7 @@ fun ChatroomMessageCompose(
     routeForLastRead: String?,
     innerQuote: Boolean = false,
     parentBackgroundColor: MutableState<Color>? = null,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
     onWantsToReply: (Note) -> Unit,
     onWantsToEditDraft: (Note) -> Unit,
@@ -99,6 +100,8 @@ fun ChatroomMessageCompose(
     shouldHighlight: Boolean = false,
     onHighlightFinished: (() -> Unit)? = null,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     WatchNoteEvent(baseNote = baseNote, accountViewModel = accountViewModel, nav) {
         WatchBlockAndReport(
             note = baseNote,
@@ -132,7 +135,7 @@ fun NormalChatNote(
     innerQuote: Boolean = false,
     canPreview: Boolean = true,
     parentBackgroundColor: MutableState<Color>? = null,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
     onWantsToReply: (Note) -> Unit,
     onWantsToEditDraft: (Note) -> Unit,
@@ -140,6 +143,8 @@ fun NormalChatNote(
     shouldHighlight: Boolean = false,
     onHighlightFinished: (() -> Unit)? = null,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val isLoggedInUser =
         remember(note.author) {
             accountViewModel.isLoggedUser(note.author)
@@ -275,8 +280,10 @@ fun NormalChatNote(
 @Composable
 fun LoadAndDisplayClickableZapraiser(
     baseNote: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val zapraiserAmount = baseNote.event?.zapraiserAmount() ?: 0
     if (zapraiserAmount > 0) {
         val wantsToSeeReactions = rememberSaveable(baseNote) { mutableStateOf(false) }
@@ -301,10 +308,12 @@ private fun MessageBubbleLines(
     onWantsToReply: (Note) -> Unit,
     onWantsToEditDraft: (Note) -> Unit,
     canPreview: Boolean,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
     onScrollToNote: ((Note) -> Unit)? = null,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     if (baseNote.event !is DraftWrapEvent) {
         RenderReplyRow(
             note = baseNote,
@@ -347,12 +356,14 @@ fun RenderReplyRow(
     note: Note,
     innerQuote: Boolean,
     bgColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
     onWantsToReply: (Note) -> Unit,
     onWantsToEditDraft: (Note) -> Unit,
     onScrollToNote: ((Note) -> Unit)? = null,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     if (!innerQuote && note.replyTo?.lastOrNull() != null) {
         RenderReply(note, bgColor, accountViewModel, nav, onWantsToReply, onWantsToEditDraft, onScrollToNote)
     }
@@ -362,12 +373,14 @@ fun RenderReplyRow(
 private fun RenderReply(
     note: Note,
     bgColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
     onWantsToReply: (Note) -> Unit,
     onWantsToEditDraft: (Note) -> Unit,
     onScrollToNote: ((Note) -> Unit)? = null,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Row(verticalAlignment = Alignment.CenterVertically) {
         @Suppress("ProduceStateDoesNotAssignValue")
         val replyTo =
@@ -401,9 +414,11 @@ fun NoteRow(
     onWantsToReply: (Note) -> Unit,
     onWantsToEditDraft: (Note) -> Unit,
     bgColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Row(verticalAlignment = Alignment.CenterVertically) {
         when (note.event) {
             is ChannelCreateEvent -> RenderCreateChannelNote(note, bgColor, accountViewModel, nav)

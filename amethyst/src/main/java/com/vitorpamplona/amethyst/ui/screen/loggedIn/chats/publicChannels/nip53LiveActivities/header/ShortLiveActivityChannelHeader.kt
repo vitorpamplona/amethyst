@@ -37,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
@@ -58,9 +59,11 @@ import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEven
 fun ShortLiveActivityChannelHeader(
     baseChannel: LiveActivitiesChannel,
     showFlag: Boolean,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val channelState by observeChannel(baseChannel, accountViewModel)
     val channel = channelState?.channel as? LiveActivitiesChannel ?: return
 
@@ -80,9 +83,11 @@ fun ShortLiveActivityChannelHeader(
     creator: User?,
     liveActivitiesEvent: LiveActivitiesEvent?,
     showFlag: Boolean,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Row(verticalAlignment = Alignment.CenterVertically) {
         creator?.let {
             UserPicture(
@@ -128,9 +133,11 @@ fun ShortLiveActivityChannelHeader(
 fun LiveChannelActionOptions(
     activity: LiveActivitiesEvent,
     showFlag: Boolean = true,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val isLive by remember(activity) { derivedStateOf { activity.isLive() } }
     val url = activity.streaming()
 

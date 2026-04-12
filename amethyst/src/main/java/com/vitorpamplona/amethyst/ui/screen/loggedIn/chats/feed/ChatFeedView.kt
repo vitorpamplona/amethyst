@@ -35,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.feeds.FeedEmpty
@@ -51,7 +52,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun RefreshingChatroomFeedView(
     feedContentState: FeedContentState,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
     routeForLastRead: String,
     onWantsToReply: (Note) -> Unit,
@@ -59,6 +60,8 @@ fun RefreshingChatroomFeedView(
     avoidDraft: DraftTagState? = null,
     scrollStateKey: String? = null,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     SaveableFeedState(feedContentState, scrollStateKey) { listState ->
         RenderChatFeedView(
             feedContentState,
@@ -76,7 +79,7 @@ fun RefreshingChatroomFeedView(
 @Composable
 fun RenderChatFeedView(
     feed: FeedContentState,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     listState: LazyListState,
     nav: INav,
     routeForLastRead: String,
@@ -84,6 +87,8 @@ fun RenderChatFeedView(
     onWantsToEditDraft: (Note) -> Unit,
     avoidDraft: DraftTagState? = null,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val feedState by feed.feedContent.collectAsStateWithLifecycle()
 
     CrossfadeIfEnabled(targetState = feedState, animationSpec = tween(durationMillis = 100), accountViewModel = accountViewModel) { state ->
@@ -119,7 +124,7 @@ fun RenderChatFeedView(
 @Composable
 fun ChatFeedLoaded(
     loaded: FeedState.Loaded,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     listState: LazyListState,
     nav: INav,
     routeForLastRead: String,
@@ -127,6 +132,8 @@ fun ChatFeedLoaded(
     onWantsToEditDraft: (Note) -> Unit,
     avoidDraft: DraftTagState? = null,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val items by loaded.feed.collectAsStateWithLifecycle()
 
     LaunchedEffect(items.list.firstOrNull()) {

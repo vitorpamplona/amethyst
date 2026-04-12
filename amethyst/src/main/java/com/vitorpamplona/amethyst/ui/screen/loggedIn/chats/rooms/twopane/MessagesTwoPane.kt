@@ -37,6 +37,7 @@ import com.google.accompanist.adaptive.HorizontalTwoPaneStrategy
 import com.google.accompanist.adaptive.TwoPane
 import com.google.accompanist.adaptive.calculateDisplayFeatures
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
@@ -55,9 +56,12 @@ fun MessagesTwoPane(
     knownFeedContentState: FeedContentState,
     newFeedContentState: FeedContentState,
     widthSizeClass: WindowWidthSizeClass,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
+
     /** The index of the currently selected word, or `null` if none is selected */
     val scope = rememberCoroutineScope()
     val twoPaneNav = remember { TwoPaneNav(nav, scope) }

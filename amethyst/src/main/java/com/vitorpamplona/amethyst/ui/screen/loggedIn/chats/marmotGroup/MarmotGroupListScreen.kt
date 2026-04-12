@@ -61,6 +61,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -69,9 +70,11 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MarmotGroupListScreen(
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     var groupList by remember { mutableStateOf(listOf<Pair<HexKey, MarmotGroupChatroom>>()) }
 
     // Load group list
@@ -155,9 +158,11 @@ fun MarmotGroupListScreen(
 }
 
 private fun loadGroupList(
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     onUpdate: (List<Pair<HexKey, MarmotGroupChatroom>>) -> Unit,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val groups = mutableListOf<Pair<HexKey, MarmotGroupChatroom>>()
     accountViewModel.account.marmotGroupList.rooms.forEach { key, chatroom ->
         groups.add(key to chatroom)

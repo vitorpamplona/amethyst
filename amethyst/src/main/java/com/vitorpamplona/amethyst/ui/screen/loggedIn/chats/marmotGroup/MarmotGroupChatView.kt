@@ -41,6 +41,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -60,9 +61,11 @@ import kotlinx.coroutines.launch
 @Composable
 fun MarmotGroupChatView(
     nostrGroupId: HexKey,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val feedViewModel: MarmotGroupFeedViewModel =
         viewModel(
             key = nostrGroupId + "MarmotGroupFeedViewModel",
@@ -117,9 +120,11 @@ fun MarmotGroupChatView(
 @Composable
 fun MarmotGroupMessageComposer(
     nostrGroupId: HexKey,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     onMessageSent: suspend () -> Unit,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val scope = rememberCoroutineScope()
     val messageState = remember { TextFieldState() }
     val canPost by remember { derivedStateOf { messageState.text.isNotBlank() } }

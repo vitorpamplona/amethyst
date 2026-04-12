@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
@@ -75,9 +76,11 @@ import java.util.Locale
 fun LongLiveActivityChannelHeader(
     baseChannel: LiveActivitiesChannel,
     lineModifier: Modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val channelState by observeChannel(baseChannel, accountViewModel)
     val channel = channelState?.channel as? LiveActivitiesChannel ?: return
     val activity = channel.info ?: return
@@ -173,9 +176,11 @@ fun LongLiveActivityChannelHeader(
 private fun RowScope.RenderSummary(
     activity: LiveActivitiesEvent,
     callbackUri: String,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val summary = activity.summary() ?: stringRes(id = R.string.groups_no_descriptor)
 
     Column(Modifier.weight(1f)) {

@@ -23,10 +23,13 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.datasource
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.KeyDataSourceSubscription
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
-fun ChatroomListFilterAssemblerSubscription(accountViewModel: AccountViewModel) {
+fun ChatroomListFilterAssemblerSubscription(accountViewModel: IAccountViewModel) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     ChatroomListFilterAssemblerSubscription(
         accountViewModel.dataSources().chatroomList,
         accountViewModel,
@@ -36,8 +39,10 @@ fun ChatroomListFilterAssemblerSubscription(accountViewModel: AccountViewModel) 
 @Composable
 fun ChatroomListFilterAssemblerSubscription(
     dataSource: ChatroomListFilterAssembler,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     // different screens get different states
     // even if they are tracking the same tag.
     val state =

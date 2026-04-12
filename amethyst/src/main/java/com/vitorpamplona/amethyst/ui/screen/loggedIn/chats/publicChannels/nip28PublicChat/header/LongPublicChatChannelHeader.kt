@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserIsFollowingChannel
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
@@ -69,9 +70,11 @@ import com.vitorpamplona.amethyst.ui.theme.largeProfilePictureModifier
 fun LongPublicChatChannelHeader(
     baseChannel: PublicChatChannel,
     lineModifier: Modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 5.dp),
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val channelState by observeChannel(baseChannel, accountViewModel)
     val channel = channelState?.channel as? PublicChatChannel ?: return
 
@@ -174,9 +177,11 @@ fun LongPublicChatChannelHeader(
 @Composable
 fun LongChannelActionOptions(
     channel: PublicChatChannel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     OpenChatButton(channel, accountViewModel, nav)
 
     LinkChatButton(channel, accountViewModel, nav)
@@ -191,9 +196,11 @@ fun LongChannelActionOptions(
 @Composable
 fun EditButtonIfIamCreator(
     channel: PublicChatChannel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val isMe by
         remember(accountViewModel) {
             derivedStateOf { channel.creator == accountViewModel.account.userProfile() }
@@ -207,9 +214,11 @@ fun EditButtonIfIamCreator(
 @Composable
 fun LeaveButtonIfFollowing(
     channel: PublicChatChannel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val isFollowing by observeUserIsFollowingChannel(accountViewModel.account, channel, accountViewModel)
 
     if (isFollowing) {

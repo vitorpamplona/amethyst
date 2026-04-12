@@ -30,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -48,9 +49,11 @@ fun LiveActivityChannelView(
     channelId: Address?,
     draft: Note? = null,
     replyTo: Note? = null,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     if (channelId == null) return
 
     LoadLiveActivityChannel(channelId, accountViewModel) {
@@ -69,9 +72,11 @@ fun PrepareChannelViewModels(
     baseChannel: LiveActivitiesChannel,
     draft: Note? = null,
     replyTo: Note? = null,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val feedViewModel: ChannelFeedViewModel =
         viewModel(
             key = baseChannel.address.toValue() + "ChannelFeedViewModel",
@@ -112,9 +117,11 @@ fun LiveActivityChannelView(
     channel: LiveActivitiesChannel,
     feedViewModel: ChannelFeedViewModel,
     newPostModel: ChannelNewMessageViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     WatchLifecycleAndUpdateModel(feedViewModel)
     ChannelFilterAssemblerSubscription(channel, accountViewModel.dataSources().channel, accountViewModel)
 

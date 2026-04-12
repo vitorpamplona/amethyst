@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.LoadPublicChatChannel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -37,9 +38,11 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 fun RenderPublicChatChannelHeader(
     channelId: HexKey,
     sendToChannel: Boolean,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     PublicChatChannelHeader(
         channelHex = channelId,
         sendToChannel = sendToChannel,
@@ -54,9 +57,11 @@ fun PublicChatChannelHeader(
     channelHex: String,
     sendToChannel: Boolean = false,
     modifier: Modifier = StdPadding,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     LoadPublicChatChannel(channelHex, accountViewModel) {
         PublicChatChannelHeader(
             it,

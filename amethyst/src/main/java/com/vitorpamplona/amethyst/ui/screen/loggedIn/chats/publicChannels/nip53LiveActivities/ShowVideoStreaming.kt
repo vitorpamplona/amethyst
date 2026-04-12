@@ -29,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.layout.ContentScale
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannelInfo
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
@@ -39,8 +40,10 @@ import com.vitorpamplona.amethyst.ui.theme.StreamingHeaderModifier
 @Composable
 fun ShowVideoStreaming(
     baseChannel: LiveActivitiesChannel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     baseChannel.info?.let {
         val streamingInfoEvent by observeChannelInfo(baseChannel, accountViewModel)
         streamingInfoEvent?.let { event ->
@@ -70,8 +73,10 @@ fun ShowVideoStreaming(
 @Composable
 private fun RenderStreaming(
     media: MediaUrlVideo,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     CrossfadeCheckIfVideoIsOnline(media.url, accountViewModel) {
         Row(
             verticalAlignment = Alignment.CenterVertically,

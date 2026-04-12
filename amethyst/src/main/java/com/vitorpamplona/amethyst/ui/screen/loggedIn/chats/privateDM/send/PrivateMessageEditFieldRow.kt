@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
@@ -104,10 +105,12 @@ fun PrivateMessageEditFieldRowPreview() {
 @Composable
 fun PrivateMessageEditFieldRow(
     channelScreenModel: ChatNewMessageViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     onSendNewMessage: () -> Unit,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     BackHandler {
         if (channelScreenModel.message.text.isNotBlank()) {
             accountViewModel.launchSigner {
@@ -198,8 +201,10 @@ fun PrivateMessageEditFieldRow(
 fun EditField(
     channelScreenModel: ChatNewMessageViewModel,
     onSendNewMessage: () -> Unit,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     ThinPaddingTextField(
         state = channelScreenModel.message,
         onTextChanged = { channelScreenModel.onMessageChanged() },
@@ -253,9 +258,11 @@ fun RecipientMissingRelaysWarningPreview() {
 @Composable
 fun RecipientMissingRelaysWarning(
     users: ImmutableList<User>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Row(
         modifier =
             Modifier
@@ -322,8 +329,10 @@ fun UserGallery(
 @Composable
 fun KeyboardLeadingIcon(
     channelScreenModel: ChatNewMessageViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.padding(start = 4.dp, end = 4.dp),

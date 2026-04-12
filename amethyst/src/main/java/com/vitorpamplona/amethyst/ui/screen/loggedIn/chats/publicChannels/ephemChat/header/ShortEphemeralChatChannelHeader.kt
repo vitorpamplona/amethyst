@@ -36,6 +36,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserIsFollowingChannel
@@ -51,9 +52,11 @@ import com.vitorpamplona.amethyst.ui.theme.Size35dp
 @Composable
 fun ShortEphemeralChatChannelHeader(
     baseChannel: EphemeralChatChannel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val channelState by observeChannel(baseChannel, accountViewModel)
     val channel = channelState?.channel as? EphemeralChatChannel ?: return
 
@@ -91,8 +94,10 @@ fun ShortEphemeralChatChannelHeader(
 @Composable
 private fun DrawRelayIcon(
     channel: EphemeralChatChannel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val relayInfo by loadRelayInfo(channel.roomId.relayUrl)
 
     RobohashFallbackAsyncImage(
@@ -109,18 +114,22 @@ private fun DrawRelayIcon(
 @Composable
 fun ShortEphemeralChatActionOptions(
     channel: EphemeralChatChannel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     JoinEphemeralChatButtonIfNotAlreadyJoined(channel, accountViewModel, nav)
 }
 
 @Composable
 fun JoinEphemeralChatButtonIfNotAlreadyJoined(
     channel: EphemeralChatChannel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val isFollowing by observeUserIsFollowingChannel(accountViewModel.account, channel, accountViewModel)
 
     if (!isFollowing) {

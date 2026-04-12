@@ -43,6 +43,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.ActionTopBar
@@ -58,9 +59,11 @@ import kotlinx.coroutines.launch
 @Composable
 fun AddMemberScreen(
     nostrGroupId: HexKey,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     var searchInput by remember { mutableStateOf("") }
     var selectedUser by remember { mutableStateOf<User?>(null) }
     var statusMessage by remember { mutableStateOf<String?>(null) }
@@ -195,10 +198,12 @@ fun AddMemberScreen(
 @Composable
 private fun SelectedUserRow(
     user: User,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
     onClear: () -> Unit,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Row(
         modifier =
             Modifier

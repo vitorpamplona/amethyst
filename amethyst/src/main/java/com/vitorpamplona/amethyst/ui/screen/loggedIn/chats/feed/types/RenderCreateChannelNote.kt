@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.Constants
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
@@ -81,9 +82,11 @@ import kotlinx.coroutines.launch
 fun RenderCreateChannelNote(
     note: Note,
     bgColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val noteEvent = note.event as? ChannelCreateEvent ?: return
     val channelInfo = remember(noteEvent) { noteEvent.channelInfo() }
     val tags =
@@ -131,9 +134,11 @@ fun RenderChannelData(
     channelInfo: ChannelDataNorm,
     tags: ImmutableListOfLists<String>,
     bgColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Column {
         Row {
             TranslatableRichTextViewer(
@@ -234,9 +239,12 @@ fun RenderRelayLinePreview() {
 @Composable
 fun RenderRelayLinePublicChat(
     relay: NormalizedRelayUrl,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
+
     @Suppress("ProduceStateDoesNotAssignValue")
     val relayInfo by loadRelayInfo(relay)
 

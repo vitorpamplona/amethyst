@@ -32,6 +32,7 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
@@ -77,7 +78,9 @@ class ChannelMetadataViewModel : ViewModel() {
         channelName.value.text.isNotBlank()
     }
 
-    fun init(accountViewModel: AccountViewModel) {
+    fun init(accountViewModel: IAccountViewModel) {
+        @Suppress("NAME_SHADOWING")
+        val accountViewModel = accountViewModel as AccountViewModel
         this.accountViewModel = accountViewModel
         this.account = accountViewModel.account
     }

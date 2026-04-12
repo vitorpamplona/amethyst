@@ -32,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.NonClickableUserPictures
@@ -46,9 +47,11 @@ import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 fun ChatroomHeader(
     room: ChatroomKey,
     modifier: Modifier = StdPadding,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     onClick: () -> Unit,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     if (room.users.size == 1) {
         LoadUser(baseUserHex = room.users.first(), accountViewModel) { baseUser ->
             if (baseUser != null) {
@@ -74,9 +77,11 @@ fun ChatroomHeader(
 fun UserChatroomHeader(
     baseUser: User,
     modifier: Modifier = StdPadding,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     onClick: () -> Unit,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Column(
         Modifier
             .fillMaxWidth()
@@ -109,9 +114,11 @@ fun UserChatroomHeader(
 fun GroupChatroomHeader(
     room: ChatroomKey,
     modifier: Modifier = StdPadding,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     onClick: () -> Unit,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Column(
         modifier =
             Modifier

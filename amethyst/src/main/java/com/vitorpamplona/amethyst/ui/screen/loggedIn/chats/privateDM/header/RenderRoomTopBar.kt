@@ -52,6 +52,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
@@ -72,11 +73,13 @@ import kotlinx.collections.immutable.toPersistentList
 @Composable
 fun RenderRoomTopBar(
     room: ChatroomKey,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
     onCallClick: ((String) -> Unit)? = null,
     onVideoCallClick: ((String) -> Unit)? = null,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     if (room.users.size == 1) {
         TopBarExtensibleWithBackButton(
             title = {
@@ -188,9 +191,11 @@ fun RenderRoomTopBar(
 fun GroupMembersHeader(
     room: ChatroomKey,
     lineModifier: Modifier = StdPadding,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val list = remember(room) { room.users.toPersistentList() }
 
     Row(
@@ -235,8 +240,10 @@ fun GroupMembersHeader(
 @Composable
 private fun EditRoomSubjectButton(
     room: ChatroomKey,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     var wantsToPost by remember { mutableStateOf(false) }
 
     if (wantsToPost) {

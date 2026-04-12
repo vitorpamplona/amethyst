@@ -43,6 +43,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
@@ -81,9 +82,11 @@ import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 @Composable
 fun ChatroomHeaderCompose(
     baseNote: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     if (baseNote.event != null) {
         ChatroomComposeChannelOrUser(baseNote, accountViewModel, nav)
     } else {
@@ -99,9 +102,11 @@ fun ChatroomHeaderCompose(
 @Composable
 fun ChatroomComposeChannelOrUser(
     baseNote: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val baseNoteEvent = baseNote.event
     if (baseNoteEvent is DraftWrapEvent) {
         ObserveDraftEvent(baseNote, accountViewModel) { innerNote ->
@@ -115,9 +120,11 @@ fun ChatroomComposeChannelOrUser(
 @Composable
 private fun ChatroomEntry(
     lastMessage: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val baseNoteEvent = lastMessage.event
     when (baseNoteEvent) {
         is ChannelMessageEvent -> {
@@ -165,9 +172,11 @@ private fun ChatroomEntry(
 private fun ChannelRoomCompose(
     lastMessage: Note,
     channel: PublicChatChannel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val authorName by observeUserName(lastMessage.author!!, accountViewModel)
     val channelState by observeChannel(channel, accountViewModel)
 
@@ -206,9 +215,11 @@ private fun ChannelRoomCompose(
 private fun ChannelRoomCompose(
     lastMessage: Note,
     channel: EphemeralChatChannel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val authorName by observeUserName(lastMessage.author!!, accountViewModel)
     val channelState by observeChannel(channel, accountViewModel)
 
@@ -278,9 +289,11 @@ private fun ChannelTitleWithLabelInfo(
 private fun UserRoomCompose(
     room: ChatroomKey,
     lastMessage: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     ChatHeaderLayout(
         channelPicture = {
             NonClickableUserPictures(
@@ -328,9 +341,11 @@ private fun UserRoomCompose(
 @Composable
 fun LoadUser(
     baseUserHex: String,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     content: @Composable (User?) -> Unit,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     var user by
         remember(baseUserHex) { mutableStateOf(accountViewModel.getUserIfExists(baseUserHex)) }
 

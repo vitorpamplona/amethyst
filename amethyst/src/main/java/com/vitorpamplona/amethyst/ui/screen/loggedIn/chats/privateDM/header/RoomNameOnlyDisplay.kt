@@ -29,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
@@ -45,8 +46,10 @@ fun RoomNameOnlyDisplay(
     room: ChatroomKey,
     modifier: Modifier,
     fontWeight: FontWeight = FontWeight.Bold,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     // Subscribe in the LocalCache for changes that arrive in the device
     val roomSubject by accountViewModel.account.chatroomList
         .getOrCreatePrivateChatroom(room)
@@ -65,9 +68,11 @@ fun RoomNameOnlyDisplay(
 @Composable
 fun DisplayUserSetAsSubject(
     room: ChatroomKey,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     fontWeight: FontWeight = FontWeight.Bold,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val userList = remember(room) { room.users.toList() }
 
     if (userList.size == 1) {
@@ -100,8 +105,10 @@ fun DisplayUserSetAsSubject(
 fun RoomNameDisplay(
     room: ChatroomKey,
     modifier: Modifier,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val roomSubject by accountViewModel.account.chatroomList
         .getOrCreatePrivateChatroom(room)
         .subject
@@ -138,8 +145,10 @@ fun DisplayRoomSubject(
 private fun DisplayUserAndSubject(
     user: HexKey,
     subject: String,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Row {
         Text(
             text = subject,
@@ -163,8 +172,10 @@ fun ShortUsernameDisplay(
     baseUser: User,
     weight: Modifier = Modifier,
     fontWeight: FontWeight = FontWeight.Bold,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val userInfo by observeUserInfo(baseUser, accountViewModel)
 
     val firstName =

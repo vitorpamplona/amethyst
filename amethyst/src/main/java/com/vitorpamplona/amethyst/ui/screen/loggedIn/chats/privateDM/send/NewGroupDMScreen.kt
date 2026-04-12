@@ -80,6 +80,7 @@ import com.vitorpamplona.amethyst.commons.richtext.EncryptedMediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromFiles
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
@@ -137,9 +138,11 @@ import kotlinx.coroutines.withContext
 fun NewGroupDMScreen(
     message: String? = null,
     attachment: String? = null,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: Nav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     NewGroupDMScreen(message, attachment?.ifBlank { null }?.toUri(), accountViewModel, nav)
 }
 
@@ -148,9 +151,11 @@ fun NewGroupDMScreen(
 fun NewGroupDMScreen(
     message: String? = null,
     attachment: Uri? = null,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: Nav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val postViewModel: ChatNewMessageViewModel = viewModel()
     postViewModel.init(accountViewModel)
 
@@ -222,9 +227,11 @@ fun NewGroupDMScreen(
 @Composable
 fun GroupDMScreenContent(
     postViewModel: ChatNewMessageViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val scrollState = rememberScrollState()
     val context = LocalContext.current
 
@@ -345,9 +352,11 @@ fun GroupDMScreenContent(
 @Composable
 fun MessageFieldRow(
     postViewModel: IMessageField,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     requestFocus: Boolean = false,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Row {
         BaseUserPicture(
             accountViewModel.userProfile(),
@@ -361,9 +370,11 @@ fun MessageFieldRow(
 @Composable
 fun DisplayPreviews(
     postViewModel: ChatNewMessageViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val urlPreviews by postViewModel.urlPreviews.results.collectAsStateWithLifecycle(emptyList())
 
     if (postViewModel.uploadsWaitingToBeSent.isNotEmpty() || urlPreviews.isNotEmpty()) {
@@ -388,8 +399,10 @@ fun DisplayPreviews(
 @Composable
 private fun BottomRowActions(
     postViewModel: ChatNewMessageViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val scrollState = rememberScrollState()
     Row(
         modifier =
@@ -507,8 +520,10 @@ private fun BottomRowActions(
 @Composable
 fun SendDirectMessageTo(
     postViewModel: ChatNewMessageViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
 
@@ -601,8 +616,10 @@ fun SendDirectMessageTo(
 @Composable
 fun ShowImageUploadGallery(
     data: SuccessfulUploads,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val isImage = data.result.mimeTypeBeforeEncryption?.startsWith("image/") == true || RichTextParser.isImageUrl(data.result.url)
 
     if (data.cipher != null) {

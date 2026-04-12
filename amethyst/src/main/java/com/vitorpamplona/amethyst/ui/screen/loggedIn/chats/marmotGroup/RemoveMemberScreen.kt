@@ -56,6 +56,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.marmot.GroupMemberInfo
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -68,9 +69,11 @@ import kotlinx.coroutines.launch
 @Composable
 fun RemoveMemberScreen(
     nostrGroupId: HexKey,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     var members by remember { mutableStateOf(emptyList<GroupMemberInfo>()) }
     var memberToRemove by remember { mutableStateOf<GroupMemberInfo?>(null) }
     var isRemoving by remember { mutableStateOf(false) }
@@ -184,10 +187,12 @@ fun RemoveMemberScreen(
 @Composable
 private fun RemovableMemberRow(
     member: GroupMemberInfo,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
     onRemoveClick: () -> Unit,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Row(
         modifier =
             Modifier
@@ -224,10 +229,12 @@ private fun RemovableMemberRow(
 @Composable
 private fun ConfirmRemoveMemberDialog(
     memberPubkey: HexKey,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Remove Member") },
