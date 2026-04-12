@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
@@ -322,7 +323,7 @@ fun UserGallery(
 @Composable
 fun KeyboardLeadingIcon(
     channelScreenModel: ChatNewMessageViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,

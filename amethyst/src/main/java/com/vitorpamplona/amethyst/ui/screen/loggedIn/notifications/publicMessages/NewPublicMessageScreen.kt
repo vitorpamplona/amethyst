@@ -55,6 +55,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromFiles
@@ -311,7 +312,7 @@ fun PublicMessageScreenContent(
 @Composable
 private fun BottomRowActions(
     postViewModel: NewPublicMessageViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
     val scrollState = rememberScrollState()
     Row(
@@ -389,7 +390,7 @@ private fun BottomRowActions(
 @Composable
 fun SendDirectMessageTo(
     postViewModel: NewPublicMessageViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current

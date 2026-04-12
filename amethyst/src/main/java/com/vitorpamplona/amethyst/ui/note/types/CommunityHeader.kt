@@ -61,6 +61,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -494,7 +495,7 @@ fun LeaveCommunityButton(
 
 @Composable
 fun ShareCommunityButton(
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     note: AddressableNote,
     nav: INav,
 ) {
