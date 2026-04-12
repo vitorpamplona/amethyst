@@ -47,15 +47,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteReplies
 import com.vitorpamplona.amethyst.ui.components.ClickableTextColor
@@ -155,45 +151,7 @@ private fun RenderPledgeAmount(
     )
 }
 
-class AddBountyAmountViewModel : ViewModel() {
-    private var account: Account? = null
-    private var bounty: Note? = null
-
-    var nextAmount by mutableStateOf(TextFieldValue(""))
-
-    fun load(
-        account: Account,
-        bounty: Note?,
-    ) {
-        this.account = account
-        this.bounty = bounty
-    }
-
-    fun sendPost() {
-        val newValue = nextAmount.text.trim().toBigDecimalOrNull()
-
-        if (newValue != null) {
-            viewModelScope.launch(Dispatchers.IO) {
-                account?.let { myAccount ->
-                    bounty?.let { bountyInner ->
-                        myAccount.sendAddBounty(
-                            newValue,
-                            bountyInner,
-                        )
-                    }
-                }
-
-                nextAmount = TextFieldValue("")
-            }
-        }
-    }
-
-    fun cancel() {
-        nextAmount = TextFieldValue("")
-    }
-
-    fun hasChanged(): Boolean = nextAmount.text.trim().toLongOrNull() != null
-}
+typealias AddBountyAmountViewModel = com.vitorpamplona.amethyst.commons.viewmodels.AddBountyAmountViewModel
 
 @Composable
 fun AddBountyAmountDialog(
@@ -202,7 +160,7 @@ fun AddBountyAmountDialog(
     onClose: () -> Unit,
 ) {
     val postViewModel: AddBountyAmountViewModel = viewModel()
-    postViewModel.load(accountViewModel.account, bounty)
+    postViewModel.load(bounty) { amount, note -> accountViewModel.account.sendAddBounty(amount, note) }
     val scope = rememberCoroutineScope()
 
     Dialog(
