@@ -18,7 +18,11 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.creators.zapsplits
+package com.vitorpamplona.amethyst.commons.ui.feeds
 
-// Re-export from commons for backwards compatibility
-typealias IZapField = com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.IZapField
+abstract class AdditiveComplexFeedFilter<T, U> : FeedFilter<T>() {
+    abstract fun updateListWith(
+        oldList: List<T>,
+        newItems: Set<U>,
+    ): List<T>
+}

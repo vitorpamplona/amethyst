@@ -18,7 +18,24 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.creators.zapsplits
+package com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits
 
-// Re-export from commons for backwards compatibility
-typealias IZapField = com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.IZapField
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.Stable
+import androidx.compose.ui.text.input.TextFieldValue
+import com.vitorpamplona.amethyst.commons.model.User
+
+@Stable
+interface IZapField {
+    val forwardZapTo: MutableState<SplitBuilder<User>>
+    val forwardZapToEditting: MutableState<TextFieldValue>
+
+    fun updateZapFromText()
+
+    fun updateZapPercentage(
+        index: Int,
+        sliderValue: Float,
+    )
+
+    fun updateZapForwardTo(newZapForwardTo: TextFieldValue)
+}

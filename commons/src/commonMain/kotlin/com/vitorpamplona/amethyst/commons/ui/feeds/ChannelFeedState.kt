@@ -18,7 +18,23 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.creators.zapsplits
+package com.vitorpamplona.amethyst.commons.ui.feeds
 
-// Re-export from commons for backwards compatibility
-typealias IZapField = com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.IZapField
+import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.model.Channel
+import kotlinx.coroutines.flow.MutableStateFlow
+
+@Stable
+sealed class ChannelFeedState {
+    object Loading : ChannelFeedState()
+
+    class Loaded(
+        val feed: MutableStateFlow<LoadedFeedState<Channel>>,
+    ) : ChannelFeedState()
+
+    object Empty : ChannelFeedState()
+
+    class FeedError(
+        val errorMessage: String,
+    ) : ChannelFeedState()
+}

@@ -20,33 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.components.toasts.multiline
 
-import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.ui.components.toasts.ToastMsg
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.update
-
-@Immutable
-class MultiErrorToastMsg(
-    val titleResId: Int,
-) : ToastMsg() {
-    val errors = MutableStateFlow<List<UserBasedErrorMessage>>(emptyList())
-
-    fun add(
-        message: String,
-        user: User?,
-    ) {
-        add(UserBasedErrorMessage(message, user))
-    }
-
-    fun add(newError: UserBasedErrorMessage) {
-        errors.update {
-            it + newError
-        }
-    }
-}
-
-class UserBasedErrorMessage(
-    val error: String,
-    val user: User?,
-)
+// Re-export from commons for backwards compatibility
+typealias MultiErrorToastMsg = com.vitorpamplona.amethyst.commons.ui.components.toasts.multiline.MultiErrorToastMsg
+typealias UserBasedErrorMessage = com.vitorpamplona.amethyst.commons.ui.components.toasts.multiline.UserBasedErrorMessage

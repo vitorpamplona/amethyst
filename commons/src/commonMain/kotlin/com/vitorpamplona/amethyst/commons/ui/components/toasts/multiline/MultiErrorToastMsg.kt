@@ -18,7 +18,35 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.creators.zapsplits
+package com.vitorpamplona.amethyst.commons.ui.components.toasts.multiline
 
-// Re-export from commons for backwards compatibility
-typealias IZapField = com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.IZapField
+import androidx.compose.runtime.Immutable
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.ui.components.toasts.ToastMsg
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.update
+
+@Immutable
+class MultiErrorToastMsg(
+    val titleResId: Int,
+) : ToastMsg() {
+    val errors = MutableStateFlow<List<UserBasedErrorMessage>>(emptyList())
+
+    fun add(
+        message: String,
+        user: User?,
+    ) {
+        add(UserBasedErrorMessage(message, user))
+    }
+
+    fun add(newError: UserBasedErrorMessage) {
+        errors.update {
+            it + newError
+        }
+    }
+}
+
+class UserBasedErrorMessage(
+    val error: String,
+    val user: User?,
+)

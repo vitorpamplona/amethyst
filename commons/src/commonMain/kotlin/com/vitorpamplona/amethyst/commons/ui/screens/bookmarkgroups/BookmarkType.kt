@@ -18,7 +18,10 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.creators.zapsplits
+package com.vitorpamplona.amethyst.commons.ui.screens.bookmarkgroups
 
-// Re-export from commons for backwards compatibility
-typealias IZapField = com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.IZapField
+enum class BookmarkType {
+    PostBookmark,
+
+    ArticleBookmark,
+}
