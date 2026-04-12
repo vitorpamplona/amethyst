@@ -125,11 +125,13 @@ void reduce_wide(secp256k1_fe *r, const uint64_t w[8]) {
      * Only neg/half/isZero/cmp/toBytes need explicit normalize. */
 }
 
-void fe_mul(secp256k1_fe *r, const secp256k1_fe *a, const secp256k1_fe *b) {
 #if FE_MUL_ASM
-    fe_mul_asm(r, a, b);
-    return;
-#elif HAVE_INT128
+/* fe_mul and fe_sqr are static inline in field.h when ASM is available.
+ * They get inlined directly into gej_double/gej_add_ge callers,
+ * eliminating ~9 function call boundaries per doublePoint. */
+#else
+void fe_mul(secp256k1_fe *r, const secp256k1_fe *a, const secp256k1_fe *b) {
+#if HAVE_INT128
     /* Inline mul + reduce to avoid function call overhead and enable
      * the compiler to keep intermediates in registers. */
     uint64_t a0=a->d[0], a1=a->d[1], a2=a->d[2], a3=a->d[3];
@@ -209,8 +211,9 @@ void fe_mul(secp256k1_fe *r, const secp256k1_fe *a, const secp256k1_fe *b) {
 void fe_sqr(secp256k1_fe *r, const secp256k1_fe *a) {
     fe_mul(r, a, a);
 }
+#endif /* !FE_MUL_ASM */
 
-#else /* Portable fallback */
+#else /* Portable fallback (no HAVE_INT128) */
 
 static inline void mul64(uint64_t *hi, uint64_t *lo, uint64_t a, uint64_t b) {
     uint64_t a_lo = a & 0xFFFFFFFF, a_hi = a >> 32;
