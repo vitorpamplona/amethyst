@@ -20,24 +20,7 @@
  */
 package com.vitorpamplona.amethyst.model.topNavFeeds.relay
 
-import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
-import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flowOf
-
-@Immutable
-class RelayTopNavFilter(
-    val relayUrl: NormalizedRelayUrl,
-) : IFeedTopNavFilter {
-    override fun matchAuthor(pubkey: HexKey): Boolean = true
-
-    override fun match(noteEvent: Event) = true
-
-    override fun toPerRelayFlow(cache: LocalCache): Flow<RelayTopNavPerRelayFilterSet> = flowOf(RelayTopNavPerRelayFilterSet(relayUrl))
-
-    override fun startValue(cache: LocalCache): RelayTopNavPerRelayFilterSet = RelayTopNavPerRelayFilterSet(relayUrl)
-}
+// Re-export from commons for backward compatibility
+typealias RelayTopNavFilter = com.vitorpamplona.amethyst.commons.model.topNavFeeds.relay.RelayTopNavFilter
+typealias RelayTopNavPerRelayFilter = com.vitorpamplona.amethyst.commons.model.topNavFeeds.relay.RelayTopNavPerRelayFilter
+typealias RelayTopNavPerRelayFilterSet = com.vitorpamplona.amethyst.commons.model.topNavFeeds.relay.RelayTopNavPerRelayFilterSet

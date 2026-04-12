@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.allcommunities
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.model.topNavFeeds.CommunityRelayLoader
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -46,7 +46,7 @@ class AllCommunitiesTopNavFilter(
             map.mapValues { AllCommunitiesTopNavPerRelayFilter(it.value) },
         )
 
-    override fun toPerRelayFlow(cache: LocalCache): Flow<AllCommunitiesTopNavPerRelayFilterSet> {
+    override fun toPerRelayFlow(cache: ICacheProvider): Flow<AllCommunitiesTopNavPerRelayFilterSet> {
         val communitiesPerRelay = CommunityRelayLoader.toCommunitiesPerRelayFlow(communities, cache) { it }
 
         return combine(communitiesPerRelay, blockedRelays) { communitiesPerRelay, blockedRelays ->
@@ -54,7 +54,7 @@ class AllCommunitiesTopNavFilter(
         }
     }
 
-    override fun startValue(cache: LocalCache): AllCommunitiesTopNavPerRelayFilterSet {
+    override fun startValue(cache: ICacheProvider): AllCommunitiesTopNavPerRelayFilterSet {
         val communitiesPerRelay = CommunityRelayLoader.communitiesPerRelaySnapshot(communities, cache) { it }
 
         return convert(communitiesPerRelay.minus(blockedRelays.value))

@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.community
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.OutboxRelayLoader
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -53,7 +53,7 @@ class SingleCommunityTopNavFilter(
             (authors != null && noteEvent.pubKey in authors) || noteEvent.isTaggedAddressableNote(community)
         }
 
-    override fun toPerRelayFlow(cache: LocalCache): Flow<SingleCommunityTopNavPerRelayFilterSet> {
+    override fun toPerRelayFlow(cache: ICacheProvider): Flow<SingleCommunityTopNavPerRelayFilterSet> {
         // relay field takes priority
         if (relays.isNotEmpty()) {
             return blockedRelays.map { blocked ->
@@ -88,7 +88,7 @@ class SingleCommunityTopNavFilter(
         }
     }
 
-    override fun startValue(cache: LocalCache): SingleCommunityTopNavPerRelayFilterSet {
+    override fun startValue(cache: ICacheProvider): SingleCommunityTopNavPerRelayFilterSet {
         // relay field takes priority
         if (relays.isNotEmpty()) {
             return SingleCommunityTopNavPerRelayFilterSet(

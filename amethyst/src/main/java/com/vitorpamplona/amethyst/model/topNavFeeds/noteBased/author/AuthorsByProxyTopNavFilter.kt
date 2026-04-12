@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -44,14 +44,14 @@ class AuthorsByProxyTopNavFilter(
             noteEvent.pubKey in authors
         }
 
-    override fun toPerRelayFlow(cache: LocalCache): Flow<AuthorsTopNavPerRelayFilterSet> =
+    override fun toPerRelayFlow(cache: ICacheProvider): Flow<AuthorsTopNavPerRelayFilterSet> =
         MutableStateFlow(
             AuthorsTopNavPerRelayFilterSet(
                 proxyRelays.associateWith { AuthorsTopNavPerRelayFilter(authors) },
             ),
         )
 
-    override fun startValue(cache: LocalCache): AuthorsTopNavPerRelayFilterSet =
+    override fun startValue(cache: ICacheProvider): AuthorsTopNavPerRelayFilterSet =
         AuthorsTopNavPerRelayFilterSet(
             proxyRelays.associateWith { AuthorsTopNavPerRelayFilter(authors) },
         )

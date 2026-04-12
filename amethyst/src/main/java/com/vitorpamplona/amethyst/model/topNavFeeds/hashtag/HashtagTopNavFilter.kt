@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.model.topNavFeeds.hashtag
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -48,14 +48,14 @@ class HashtagTopNavFilter(
             noteEvent.isTaggedHashes(hashtags)
         }
 
-    override fun toPerRelayFlow(cache: LocalCache): Flow<HashtagTopNavPerRelayFilterSet> =
+    override fun toPerRelayFlow(cache: ICacheProvider): Flow<HashtagTopNavPerRelayFilterSet> =
         MutableStateFlow(
             HashtagTopNavPerRelayFilterSet(
                 relayList.associateWith { HashtagTopNavPerRelayFilter(hashtags) },
             ),
         )
 
-    override fun startValue(cache: LocalCache): HashtagTopNavPerRelayFilterSet =
+    override fun startValue(cache: ICacheProvider): HashtagTopNavPerRelayFilterSet =
         HashtagTopNavPerRelayFilterSet(
             relayList.associateWith { HashtagTopNavPerRelayFilter(hashtags) },
         )

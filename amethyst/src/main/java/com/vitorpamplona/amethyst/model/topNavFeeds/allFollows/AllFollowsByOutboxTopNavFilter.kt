@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.model.topNavFeeds.allFollows
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.model.topNavFeeds.CommunityRelayLoader
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.OutboxRelayLoader
@@ -78,7 +78,7 @@ class AllFollowsByOutboxTopNavFilter(
                 (communities != null && noteEvent.isTaggedAddressableNotes(communities))
         }
 
-    override fun toPerRelayFlow(cache: LocalCache): Flow<AllFollowsTopNavPerRelayFilterSet> {
+    override fun toPerRelayFlow(cache: ICacheProvider): Flow<AllFollowsTopNavPerRelayFilterSet> {
         val authorsPerRelay =
             if (authors != null) {
                 OutboxRelayLoader().toAuthorsPerRelayFlow(authors, cache) { it }
@@ -109,7 +109,7 @@ class AllFollowsByOutboxTopNavFilter(
         }
     }
 
-    override fun startValue(cache: LocalCache): AllFollowsTopNavPerRelayFilterSet {
+    override fun startValue(cache: ICacheProvider): AllFollowsTopNavPerRelayFilterSet {
         val authorsPerRelay =
             if (authors != null) {
                 OutboxRelayLoader().authorsPerRelaySnapshot(authors, cache) { it }

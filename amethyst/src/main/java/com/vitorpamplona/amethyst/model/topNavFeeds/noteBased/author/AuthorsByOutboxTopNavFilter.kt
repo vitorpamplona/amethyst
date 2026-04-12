@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.OutboxRelayLoader
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -51,7 +51,7 @@ class AuthorsByOutboxTopNavFilter(
             map.mapValues { AuthorsTopNavPerRelayFilter(it.value) },
         )
 
-    override fun toPerRelayFlow(cache: LocalCache): Flow<AuthorsTopNavPerRelayFilterSet> {
+    override fun toPerRelayFlow(cache: ICacheProvider): Flow<AuthorsTopNavPerRelayFilterSet> {
         val authorsPerRelay = OutboxRelayLoader().toAuthorsPerRelayFlow(authors, cache) { it }
 
         return combine(authorsPerRelay, blockedRelays) { authors, blocked ->
@@ -59,7 +59,7 @@ class AuthorsByOutboxTopNavFilter(
         }
     }
 
-    override fun startValue(cache: LocalCache): AuthorsTopNavPerRelayFilterSet {
+    override fun startValue(cache: ICacheProvider): AuthorsTopNavPerRelayFilterSet {
         val authorsPerRelay = OutboxRelayLoader().authorsPerRelaySnapshot(authors, cache) { it }
 
         return convert(authorsPerRelay.minus(blockedRelays.value))

@@ -20,39 +20,7 @@
  */
 package com.vitorpamplona.amethyst.model.topNavFeeds.global
 
-import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
-import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
-
-@Immutable
-class GlobalTopNavFilter(
-    val outboxRelays: StateFlow<Set<NormalizedRelayUrl>>,
-    val proxyRelays: StateFlow<Set<NormalizedRelayUrl>>,
-    val relayFeeds: StateFlow<Set<NormalizedRelayUrl>>,
-) : IFeedTopNavFilter {
-    override fun matchAuthor(pubkey: HexKey): Boolean = true
-
-    override fun match(noteEvent: Event) = true
-
-    override fun toPerRelayFlow(cache: LocalCache): Flow<GlobalTopNavPerRelayFilterSet> =
-        combine(outboxRelays, proxyRelays, relayFeeds) { outboxRelays, proxyRelays, relayFeeds ->
-            if (proxyRelays.isNotEmpty()) {
-                GlobalTopNavPerRelayFilterSet(proxyRelays.associateWith { GlobalTopNavPerRelayFilter })
-            } else {
-                GlobalTopNavPerRelayFilterSet((relayFeeds + outboxRelays).associateWith { GlobalTopNavPerRelayFilter })
-            }
-        }
-
-    override fun startValue(cache: LocalCache): GlobalTopNavPerRelayFilterSet =
-        if (proxyRelays.value.isNotEmpty()) {
-            GlobalTopNavPerRelayFilterSet(proxyRelays.value.associateWith { GlobalTopNavPerRelayFilter })
-        } else {
-            GlobalTopNavPerRelayFilterSet((relayFeeds.value + outboxRelays.value).associateWith { GlobalTopNavPerRelayFilter })
-        }
-}
+// Re-export from commons for backward compatibility
+typealias GlobalTopNavFilter = com.vitorpamplona.amethyst.commons.model.topNavFeeds.global.GlobalTopNavFilter
+typealias GlobalTopNavPerRelayFilter = com.vitorpamplona.amethyst.commons.model.topNavFeeds.global.GlobalTopNavPerRelayFilter
+typealias GlobalTopNavPerRelayFilterSet = com.vitorpamplona.amethyst.commons.model.topNavFeeds.global.GlobalTopNavPerRelayFilterSet

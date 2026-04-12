@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.amethyst.model.topNavFeeds
 
-import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.NoteState
+import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.model.Constants
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
@@ -37,7 +37,7 @@ class OutboxRelayLoader(
 ) {
     fun authorsPerRelay(
         outboxRelayNotes: Array<NoteState>,
-        cache: LocalCache,
+        cache: ICacheProvider,
     ): Map<NormalizedRelayUrl, Set<HexKey>> =
         mapOfSet {
             outboxRelayNotes.forEach { outboxNote ->
@@ -75,7 +75,7 @@ class OutboxRelayLoader(
 
     fun <T> authorsPerRelaySnapshot(
         authors: Set<HexKey>,
-        cache: LocalCache,
+        cache: ICacheProvider,
         transformation: (Map<NormalizedRelayUrl, Set<HexKey>>) -> T,
     ): T {
         val noteMetadata =
@@ -91,7 +91,7 @@ class OutboxRelayLoader(
 
     fun <T> toAuthorsPerRelayFlow(
         authors: Set<HexKey>,
-        cache: LocalCache,
+        cache: ICacheProvider,
         transformation: (Map<NormalizedRelayUrl, Set<HexKey>>) -> T,
     ): Flow<T> {
         val noteMetadataFlows =

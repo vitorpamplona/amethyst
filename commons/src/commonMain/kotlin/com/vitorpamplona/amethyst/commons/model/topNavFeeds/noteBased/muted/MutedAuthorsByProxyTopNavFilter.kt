@@ -18,24 +18,22 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted
+package com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
-import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
-import com.vitorpamplona.amethyst.model.topNavFeeds.OutboxRelayLoader
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.MutableStateFlow
 
 @Immutable
-class MutedAuthorsByOutboxTopNavFilter(
+class MutedAuthorsByProxyTopNavFilter(
     val authors: Set<String>,
-    val blockedRelays: StateFlow<Set<NormalizedRelayUrl>>,
+    val proxyRelays: Set<NormalizedRelayUrl>,
 ) : IFeedTopNavFilter {
     override fun matchAuthor(pubkey: HexKey) = pubkey in authors
 
@@ -46,22 +44,15 @@ class MutedAuthorsByOutboxTopNavFilter(
             noteEvent.pubKey in authors
         }
 
-    fun convert(map: Map<NormalizedRelayUrl, Set<HexKey>>) =
-        MutedAuthorsTopNavPerRelayFilterSet(
-            map.mapValues { MutedAuthorsTopNavPerRelayFilter(it.value) },
+    override fun toPerRelayFlow(cache: ICacheProvider): Flow<MutedAuthorsTopNavPerRelayFilterSet> =
+        MutableStateFlow(
+            MutedAuthorsTopNavPerRelayFilterSet(
+                proxyRelays.associateWith { MutedAuthorsTopNavPerRelayFilter(authors) },
+            ),
         )
 
-    override fun toPerRelayFlow(cache: ICacheProvider): Flow<MutedAuthorsTopNavPerRelayFilterSet> {
-        val authorsPerRelay = OutboxRelayLoader().toAuthorsPerRelayFlow(authors, cache) { it }
-
-        return combine(authorsPerRelay, blockedRelays) { authors, blocked ->
-            convert(authors.minus(blocked))
-        }
-    }
-
-    override fun startValue(cache: ICacheProvider): MutedAuthorsTopNavPerRelayFilterSet {
-        val authorsPerRelay = OutboxRelayLoader().authorsPerRelaySnapshot(authors, cache) { it }
-
-        return convert(authorsPerRelay.minus(blockedRelays.value))
-    }
+    override fun startValue(cache: ICacheProvider): MutedAuthorsTopNavPerRelayFilterSet =
+        MutedAuthorsTopNavPerRelayFilterSet(
+            proxyRelays.associateWith { MutedAuthorsTopNavPerRelayFilter(authors) },
+        )
 }

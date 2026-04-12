@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.hints.HintIndexer
 
 /**
  * Cache provider interface for accessing cached Notes, Users, and Channels.
@@ -135,4 +136,22 @@ interface ICacheProvider {
     fun getOrCreateUser(pubkey: HexKey): User?
 
     fun justConsumeMyOwnEvent(event: Event): Boolean
+
+    /**
+     * Gets or creates an AddressableNote from a string address key.
+     * Parses the string to Address, returns null if invalid.
+     *
+     * @param key The address string to parse and look up
+     * @return The AddressableNote if valid, null otherwise
+     */
+    fun checkGetOrCreateAddressableNote(key: String): AddressableNote? {
+        val addr = Address.parse(key) ?: return null
+        return getOrCreateAddressableNote(addr)
+    }
+
+    /**
+     * Gets the relay hint indexer for looking up relay hints by pubkey or address.
+     * Used by OutboxRelayLoader and CommunityRelayLoader to find relay hints.
+     */
+    val relayHints: HintIndexer
 }

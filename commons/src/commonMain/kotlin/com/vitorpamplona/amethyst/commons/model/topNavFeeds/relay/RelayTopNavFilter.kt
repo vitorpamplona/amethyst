@@ -18,11 +18,26 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted
+package com.vitorpamplona.amethyst.commons.model.topNavFeeds.relay
 
-import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavPerRelayFilterSet
+import androidx.compose.runtime.Immutable
+import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavFilter
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 
-class MutedAuthorsTopNavPerRelayFilterSet(
-    val set: Map<NormalizedRelayUrl, MutedAuthorsTopNavPerRelayFilter>,
-) : IFeedTopNavPerRelayFilterSet
+@Immutable
+class RelayTopNavFilter(
+    val relayUrl: NormalizedRelayUrl,
+) : IFeedTopNavFilter {
+    override fun matchAuthor(pubkey: HexKey): Boolean = true
+
+    override fun match(noteEvent: Event) = true
+
+    override fun toPerRelayFlow(cache: ICacheProvider): Flow<RelayTopNavPerRelayFilterSet> = flowOf(RelayTopNavPerRelayFilterSet(relayUrl))
+
+    override fun startValue(cache: ICacheProvider): RelayTopNavPerRelayFilterSet = RelayTopNavPerRelayFilterSet(relayUrl)
+}

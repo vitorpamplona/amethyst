@@ -20,17 +20,5 @@
  */
 package com.vitorpamplona.amethyst.model.topNavFeeds
 
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import kotlinx.coroutines.flow.Flow
-
-interface IFeedTopNavFilter {
-    fun matchAuthor(pubkey: HexKey): Boolean
-
-    fun match(noteEvent: Event): Boolean
-
-    fun toPerRelayFlow(cache: LocalCache): Flow<IFeedTopNavPerRelayFilterSet>
-
-    fun startValue(cache: LocalCache): IFeedTopNavPerRelayFilterSet
-}
+// Re-export from commons for backward compatibility
+typealias IFeedTopNavFilter = com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavFilter

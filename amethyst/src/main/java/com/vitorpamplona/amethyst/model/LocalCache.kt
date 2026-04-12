@@ -277,7 +277,7 @@ object LocalCache : ILocalCache, ICacheProvider {
 
     val paymentTracker = NwcPaymentTracker()
 
-    val relayHints = HintIndexer()
+    override val relayHints = HintIndexer()
 
     val deletionIndex = DeletionIndex()
 
@@ -530,7 +530,7 @@ object LocalCache : ILocalCache, ICacheProvider {
         return Hex.isHex64(key)
     }
 
-    fun checkGetOrCreateAddressableNote(key: String): AddressableNote? =
+    override fun checkGetOrCreateAddressableNote(key: String): AddressableNote? =
         try {
             val addr = Address.parse(key)
             if (addr != null) {

@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.model.topNavFeeds
 
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.NoteState
+import com.vitorpamplona.amethyst.commons.model.NoteState
+import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
@@ -34,7 +34,7 @@ class CommunityRelayLoader {
     companion object {
         fun communitiesPerRelay(
             communityNotes: Array<NoteState>,
-            cache: LocalCache,
+            cache: ICacheProvider,
         ): Map<NormalizedRelayUrl, Set<HexKey>> =
             mapOfSet {
                 communityNotes.forEach { communityNote ->
@@ -52,7 +52,7 @@ class CommunityRelayLoader {
 
         fun <T> communitiesPerRelaySnapshot(
             communities: Set<HexKey>,
-            cache: LocalCache,
+            cache: ICacheProvider,
             transformation: (Map<NormalizedRelayUrl, Set<HexKey>>) -> T,
         ): T {
             val noteMetadata =
@@ -70,7 +70,7 @@ class CommunityRelayLoader {
 
         fun <T> toCommunitiesPerRelayFlow(
             communities: Set<HexKey>,
-            cache: LocalCache,
+            cache: ICacheProvider,
             transformation: (Map<NormalizedRelayUrl, Set<HexKey>>) -> T,
         ): Flow<T> {
             val noteMetadataFlows =
