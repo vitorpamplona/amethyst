@@ -40,10 +40,11 @@ fun DisplayErrorMessages(
     openDialogMsg.value?.let { obj ->
         when (obj) {
             is ResourceToastMsg -> {
-                if (obj.params != null) {
+                val params = obj.params
+                if (params != null) {
                     InformationDialog(
                         stringRes(obj.titleResId),
-                        stringRes(obj.resourceId, *obj.params),
+                        stringRes(obj.resourceId, *params),
                     ) {
                         toastManager.clearToasts()
                     }

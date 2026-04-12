@@ -20,24 +20,15 @@
  */
 package com.vitorpamplona.amethyst.service
 
-import kotlin.math.roundToInt
+// Re-export from commons for backwards compatibility
+import com.vitorpamplona.amethyst.commons.service.countToHumanReadable as commonsCountToHumanReadable
 
 fun countToHumanReadable(
     counter: Int,
     str: String,
-) = when {
-    counter >= 1000000000 -> "${(counter / 1000000000f).roundToInt()}G $str"
-    counter >= 1000000 -> "${(counter / 1000000f).roundToInt()}M $str"
-    counter >= 1000 -> "${(counter / 1000f).roundToInt()}K $str"
-    else -> "$counter $str"
-}
+) = commonsCountToHumanReadable(counter, str)
 
 fun countToHumanReadable(
     counter: Long,
     str: String,
-) = when {
-    counter >= 1000000000 -> "${(counter / 1000000000f).roundToInt()}G $str"
-    counter >= 1000000 -> "${(counter / 1000000f).roundToInt()}M $str"
-    counter >= 1000 -> "${(counter / 1000f).roundToInt()}K $str"
-    else -> "$counter $str"
-}
+) = commonsCountToHumanReadable(counter, str)

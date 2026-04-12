@@ -20,20 +20,9 @@
  */
 package com.vitorpamplona.amethyst.service
 
-import kotlin.math.roundToInt
+// Re-export from commons for backwards compatibility
+import com.vitorpamplona.amethyst.commons.service.countToHumanReadableBytes as commonsCountToHumanReadableBytes
 
-fun countToHumanReadableBytes(counter: Int) =
-    when {
-        counter >= 1000000000 -> "${(counter / 1000000000f).roundToInt()} GB"
-        counter >= 1000000 -> "${(counter / 1000000f).roundToInt()} MB"
-        counter >= 1000 -> "${(counter / 1000f).roundToInt()} KB"
-        else -> "$counter"
-    }
+fun countToHumanReadableBytes(counter: Int) = commonsCountToHumanReadableBytes(counter)
 
-fun countToHumanReadableBytes(counter: Long) =
-    when {
-        counter >= 1000000000 -> "${(counter / 1000000000f).roundToInt()} GB"
-        counter >= 1000000 -> "${(counter / 1000000f).roundToInt()} MB"
-        counter >= 1000 -> "${(counter / 1000f).roundToInt()} KB"
-        else -> "$counter"
-    }
+fun countToHumanReadableBytes(counter: Long) = commonsCountToHumanReadableBytes(counter)

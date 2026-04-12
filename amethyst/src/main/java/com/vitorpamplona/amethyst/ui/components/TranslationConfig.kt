@@ -20,12 +20,5 @@
  */
 package com.vitorpamplona.amethyst.ui.components
 
-import androidx.compose.runtime.Immutable
-
-@Immutable
-data class TranslationConfig(
-    val result: String?,
-    val sourceLang: String?,
-    val targetLang: String?,
-    val showOriginal: Boolean,
-)
+// Re-export from commons for backwards compatibility
+typealias TranslationConfig = com.vitorpamplona.amethyst.commons.ui.components.TranslationConfig

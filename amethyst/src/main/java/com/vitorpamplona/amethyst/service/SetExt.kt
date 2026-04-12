@@ -20,4 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service
 
-fun <T> Set<T>.togglePresenceInSet(item: T): Set<T> = if (contains(item)) minus(item) else plus(item)
+// Re-export from commons for backwards compatibility
+import com.vitorpamplona.amethyst.commons.service.togglePresenceInSet as commonsTogglePresenceInSet
+
+fun <T> Set<T>.togglePresenceInSet(item: T): Set<T> = commonsTogglePresenceInSet(item)
