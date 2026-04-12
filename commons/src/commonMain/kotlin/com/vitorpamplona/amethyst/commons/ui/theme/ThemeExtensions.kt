@@ -20,9 +20,15 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.theme
 
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ColorScheme
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 /**
  * Determines if the color scheme is light mode.
@@ -36,3 +42,27 @@ val ColorScheme.isLight: Boolean
  */
 val ColorScheme.onBackgroundColorFilter: ColorFilter
     get() = ColorFilter.tint(onBackground)
+
+/**
+ * Placeholder text color (42% alpha onSurface).
+ */
+val ColorScheme.placeholderText: Color
+    get() = onSurface.copy(alpha = 0.42f)
+
+/**
+ * Less important link color (52% alpha primary).
+ */
+val ColorScheme.lessImportantLink: Color
+    get() = primary.copy(alpha = 0.52f)
+
+/** Standard font size for secondary text. */
+val Font14SP = 14.sp
+
+/** Half-width start padding modifier. */
+val HalfStartPadding = Modifier.padding(start = 5.dp)
+
+/** Half-width top padding modifier. */
+val HalfTopPadding = Modifier.padding(top = 5.dp)
+
+/** Standard button border shape. */
+val ButtonBorder = RoundedCornerShape(20.dp)

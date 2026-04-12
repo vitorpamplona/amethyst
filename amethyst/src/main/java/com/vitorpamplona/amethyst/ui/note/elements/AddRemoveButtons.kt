@@ -21,19 +21,15 @@
 package com.vitorpamplona.amethyst.ui.note.elements
 
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
+import com.vitorpamplona.amethyst.commons.ui.components.AddButton as CommonsAddButton
+import com.vitorpamplona.amethyst.commons.ui.components.RemoveButton as CommonsRemoveButton
 
 @Composable
 @Preview
@@ -60,15 +56,12 @@ fun AddButton(
     isActive: Boolean = true,
     onClick: () -> Unit,
 ) {
-    OutlinedButton(
-        modifier = modifier,
-        enabled = isActive,
+    CommonsAddButton(
         onClick = onClick,
-        shape = ButtonBorder,
-        contentPadding = PaddingValues(vertical = 0.dp, horizontal = 16.dp),
-    ) {
-        Text(text = stringRes(text), textAlign = TextAlign.Center)
-    }
+        modifier = modifier,
+        text = stringRes(text),
+        enabled = isActive,
+    )
 }
 
 @Composable
@@ -78,13 +71,10 @@ fun RemoveButton(
     isActive: Boolean = true,
     onClick: () -> Unit,
 ) {
-    OutlinedButton(
-        modifier = modifier,
+    CommonsRemoveButton(
         onClick = onClick,
-        shape = ButtonBorder,
+        modifier = modifier,
+        text = stringRes(text),
         enabled = isActive,
-        contentPadding = PaddingValues(vertical = 0.dp, horizontal = 16.dp),
-    ) {
-        Text(text = stringRes(text))
-    }
+    )
 }

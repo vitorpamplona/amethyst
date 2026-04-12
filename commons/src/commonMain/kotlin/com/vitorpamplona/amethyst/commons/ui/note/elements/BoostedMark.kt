@@ -18,14 +18,27 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.elements
+package com.vitorpamplona.amethyst.commons.ui.note.elements
 
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.commons.ui.note.elements.BoostedMark as CommonsBoostedMark
+import androidx.compose.ui.text.font.FontWeight
+import com.vitorpamplona.amethyst.commons.ui.theme.HalfStartPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 
+/**
+ * Displays a "Boosted" label for reposted notes.
+ *
+ * @param text The localized "boosted" text to display.
+ */
 @Composable
-fun BoostedMark() {
-    CommonsBoostedMark(text = stringRes(id = R.string.boosted))
+fun BoostedMark(text: String) {
+    Text(
+        text,
+        fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.placeholderText,
+        maxLines = 1,
+        modifier = HalfStartPadding,
+    )
 }

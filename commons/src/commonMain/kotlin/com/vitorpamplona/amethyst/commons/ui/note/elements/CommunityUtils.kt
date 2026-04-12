@@ -18,14 +18,21 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.elements
+package com.vitorpamplona.amethyst.commons.ui.note.elements
 
-import androidx.compose.runtime.Composable
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.commons.ui.note.elements.BoostedMark as CommonsBoostedMark
+import com.vitorpamplona.quartz.nip01Core.core.Address
 
-@Composable
-fun BoostedMark() {
-    CommonsBoostedMark(text = stringRes(id = R.string.boosted))
+/**
+ * Returns a short display name for a community address.
+ * Truncates the dTag to 10 characters if needed.
+ */
+fun getCommunityShortName(communityAddress: Address): String {
+    val name =
+        if (communityAddress.dTag.length > 10) {
+            communityAddress.dTag.take(10) + "..."
+        } else {
+            communityAddress.dTag.take(10)
+        }
+
+    return "/n/$name"
 }

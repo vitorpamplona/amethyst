@@ -26,13 +26,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.text.style.TextOverflow
+import com.vitorpamplona.amethyst.commons.ui.note.elements.getCommunityShortName
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.ClickableTextColor
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
-import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip72ModCommunities.communityAddress
 
 @Composable
@@ -67,13 +67,5 @@ private fun DisplayCommunity(
     }
 }
 
-fun getCommunityShortName(communityAddress: Address): String {
-    val name =
-        if (communityAddress.dTag.length > 10) {
-            communityAddress.dTag.take(10) + "..."
-        } else {
-            communityAddress.dTag.take(10)
-        }
-
-    return "/n/$name"
-}
+// getCommunityShortName moved to commons:
+// com.vitorpamplona.amethyst.commons.ui.note.elements.getCommunityShortName

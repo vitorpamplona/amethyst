@@ -18,14 +18,22 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.elements
+package com.vitorpamplona.amethyst.commons.ui.note.elements
 
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.commons.ui.note.elements.BoostedMark as CommonsBoostedMark
+import androidx.compose.ui.text.font.FontWeight
+import com.vitorpamplona.amethyst.commons.ui.theme.Font14SP
+import com.vitorpamplona.amethyst.commons.ui.theme.lessImportantLink
 
 @Composable
-fun BoostedMark() {
-    CommonsBoostedMark(text = stringRes(id = R.string.boosted))
+fun DisplayPoW(pow: Int) {
+    Text(
+        "PoW-$pow",
+        color = MaterialTheme.colorScheme.lessImportantLink,
+        fontSize = Font14SP,
+        fontWeight = FontWeight.Bold,
+        maxLines = 1,
+    )
 }
