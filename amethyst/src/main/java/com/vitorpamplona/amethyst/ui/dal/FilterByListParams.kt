@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.dal
 
 import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
+import com.vitorpamplona.amethyst.commons.ui.feeds.IFilterByListParams
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.global.GlobalTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsByOutboxTopNavFilter
@@ -36,11 +37,11 @@ import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 class FilterByListParams(
-    val isHiddenList: Boolean,
+    override val isHiddenList: Boolean,
     val followLists: IFeedTopNavFilter?,
     val hiddenLists: LiveHiddenUsers,
     val now: Long = TimeUtils.oneMinuteFromNow(),
-) {
+) : IFilterByListParams {
     fun isNotHidden(userHex: String) = !(hiddenLists.hiddenUsers.contains(userHex) || hiddenLists.spammers.contains(userHex))
 
     fun isNotInTheFuture(noteEvent: Event) = noteEvent.createdAt <= now
@@ -79,7 +80,7 @@ class FilterByListParams(
         }
     }
 
-    fun match(
+    override fun match(
         noteEvent: Event,
         comingFrom: List<NormalizedRelayUrl>,
     ) = (applyTopFilter(comingFrom, noteEvent)) &&

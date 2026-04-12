@@ -18,13 +18,17 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model
+package com.vitorpamplona.amethyst.commons.ui.feeds
 
 /**
- * Convenience constructor that creates a ParticipantListBuilder
- * backed by [LocalCache] for backward compatibility.
+ * Interface for checking whether a streaming URL is online.
+ * Used by DiscoverLiveFeedFilter for sorting live activities.
+ * Platform-specific implementations handle the actual HTTP checks.
  */
-@Suppress("ktlint:standard:function-naming")
-fun ParticipantListBuilder() =
-    com.vitorpamplona.amethyst.commons.ui.feeds
-        .ParticipantListBuilder(LocalCache)
+interface IOnlineChecker {
+    /**
+     * Returns true if the URL has been checked and found offline.
+     * Returns false if the URL is online, unchecked, or null.
+     */
+    fun isCachedAndOffline(url: String?): Boolean
+}

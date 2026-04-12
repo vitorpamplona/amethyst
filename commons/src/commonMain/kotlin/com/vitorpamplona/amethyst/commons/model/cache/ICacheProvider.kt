@@ -24,9 +24,12 @@ import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
+import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.utils.cache.ICacheOperations
 
 /**
  * Cache provider interface for accessing cached Notes, Users, and Channels.
@@ -135,4 +138,32 @@ interface ICacheProvider {
     fun getOrCreateUser(pubkey: HexKey): User?
 
     fun justConsumeMyOwnEvent(event: Event): Boolean
+
+    /**
+     * Public chat channels cache.
+     * Used by discover feed filters to iterate over channels.
+     */
+    val publicChatChannels: ICacheOperations<HexKey, PublicChatChannel>
+
+    /**
+     * Live activity channels cache.
+     * Used by discover feed filters to iterate over channels.
+     */
+    val liveChatChannels: ICacheOperations<Address, LiveActivitiesChannel>
+
+    /**
+     * Gets a PublicChatChannel if it exists in cache.
+     *
+     * @param key The channel's ID in hex format
+     * @return The PublicChatChannel if exists, null otherwise
+     */
+    fun getPublicChatChannelIfExists(key: String): PublicChatChannel?
+
+    /**
+     * Gets an AddressableNote if it exists in cache.
+     *
+     * @param address The addressable note's address
+     * @return The AddressableNote if exists, null otherwise
+     */
+    fun getAddressableNoteIfExists(address: Address): AddressableNote?
 }

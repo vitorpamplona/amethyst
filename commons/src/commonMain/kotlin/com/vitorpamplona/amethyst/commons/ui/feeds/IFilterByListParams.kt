@@ -18,13 +18,29 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model
+package com.vitorpamplona.amethyst.commons.ui.feeds
+
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 /**
- * Convenience constructor that creates a ParticipantListBuilder
- * backed by [LocalCache] for backward compatibility.
+ * Interface for filter parameters used by feed filters.
+ * Abstracts the filtering logic so feed filters in commons
+ * don't depend on app-specific TopNavFilter implementations.
  */
-@Suppress("ktlint:standard:function-naming")
-fun ParticipantListBuilder() =
-    com.vitorpamplona.amethyst.commons.ui.feeds
-        .ParticipantListBuilder(LocalCache)
+interface IFilterByListParams {
+    /** Whether this is a hidden/mute list (affects visibility logic) */
+    val isHiddenList: Boolean
+
+    /**
+     * Matches an event against the filter criteria.
+     *
+     * @param noteEvent The event to match
+     * @param comingFrom The relay URLs the event came from
+     * @return true if the event matches the filter
+     */
+    fun match(
+        noteEvent: Event,
+        comingFrom: List<NormalizedRelayUrl>,
+    ): Boolean
+}

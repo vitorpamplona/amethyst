@@ -22,110 +22,28 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip28Chats
 
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.TopFilter
-import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
-import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
-import com.vitorpamplona.quartz.nip28PublicChat.base.IsInPublicChatChannel
 
-open class DiscoverChatFeedFilter(
-    val account: Account,
-) : AdditiveFeedFilter<Note>() {
-    override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + followList().code
-
-    override fun limit() = 100
-
-    open fun followList(): TopFilter = account.settings.defaultDiscoveryFollowList.value
-
-    fun TopFilter.isMuteList() = this is TopFilter.MuteList
-
-    fun TopFilter.isBlockList() = this is TopFilter.PeopleList && this.address == account.blockPeopleList.getBlockListAddress()
-
-    fun TopFilter.wantsToSeeNegativeStuff() = isMuteList() || isBlockList()
-
-    override fun showHiddenKey(): Boolean = followList().wantsToSeeNegativeStuff()
-
-    override fun feed(): List<Note> {
-        val params = buildFilterParams(account)
-
-        val allChannelNotes =
-            LocalCache.publicChatChannels.mapNotNullIntoSet { _, channel ->
-                val note = LocalCache.getNoteIfExists(channel.idHex)
-                val noteEvent = note?.event
-
-                if (noteEvent == null || params.match(noteEvent, note.relays)) {
-                    note
-                } else {
-                    null
-                }
-            }
-
-        return sort(allChannelNotes)
-    }
-
-    override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)
-
-    fun buildFilterParams(account: Account): FilterByListParams =
-        FilterByListParams.create(
-            followLists = account.liveDiscoveryFollowLists.value,
-            hiddenUsers = account.hiddenUsers.flow.value,
-        )
-
-    protected open fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
-        val params = buildFilterParams(account)
-
-        return collection.mapNotNullTo(HashSet()) { note ->
-            // note event here will never be null
-            val noteEvent = note.event
-            if (noteEvent is ChannelCreateEvent && params.match(noteEvent, note.relays)) {
-                if ((LocalCache.getPublicChatChannelIfExists(noteEvent.id)?.notes?.size() ?: 0) > 0) {
-                    note
-                } else {
-                    null
-                }
-            } else if (noteEvent is IsInPublicChatChannel) {
-                val channel = noteEvent.channelId()?.let { LocalCache.checkGetOrCreateNote(it) }
-                val channelEvent = channel?.event
-
-                if (channel != null &&
-                    (channelEvent == null || (channelEvent is ChannelCreateEvent && params.match(channelEvent, note.relays)))
-                ) {
-                    if ((LocalCache.getPublicChatChannelIfExists(channel.idHex)?.notes?.size() ?: 0) > 0) {
-                        channel
-                    } else {
-                        null
-                    }
-                } else {
-                    null
-                }
-            } else {
-                null
-            }
-        }
-    }
-
-    override fun sort(items: Set<Note>): List<Note> {
-        // precache to avoid breaking the contract
-        val lastNote =
-            items.associateWith { note ->
-                LocalCache.getPublicChatChannelIfExists(note.idHex)?.lastNote?.createdAt() ?: 0L
-            }
-
-        val createdNote =
-            items.associateWith { note ->
-                note.createdAt() ?: 0L
-            }
-
-        val comparator: Comparator<Note> =
-            compareByDescending<Note> {
-                lastNote[it]
-            }.thenByDescending {
-                createdNote[it]
-            }.thenBy {
-                it.idHex
-            }
-
-        return items.sortedWith(comparator)
-    }
-}
+/**
+ * App-specific wrapper that creates a [DiscoverChatFeedFilter][com.vitorpamplona.amethyst.commons.ui.feeds.DiscoverChatFeedFilter]
+ * with Account-specific configuration.
+ */
+@Suppress("ktlint:standard:function-naming")
+fun DiscoverChatFeedFilter(account: Account) =
+    com.vitorpamplona.amethyst.commons.ui.feeds.DiscoverChatFeedFilter(
+        userPubkeyHex = account.userProfile().pubkeyHex,
+        followListCode = { account.settings.defaultDiscoveryFollowList.value.code },
+        showHidden = {
+            val fl = account.settings.defaultDiscoveryFollowList.value
+            fl is TopFilter.MuteList ||
+                (fl is TopFilter.PeopleList && fl.address == account.blockPeopleList.getBlockListAddress())
+        },
+        filterParamsFactory = {
+            FilterByListParams.create(
+                followLists = account.liveDiscoveryFollowLists.value,
+                hiddenUsers = account.hiddenUsers.flow.value,
+            )
+        },
+        cacheProvider = LocalCache,
+    )

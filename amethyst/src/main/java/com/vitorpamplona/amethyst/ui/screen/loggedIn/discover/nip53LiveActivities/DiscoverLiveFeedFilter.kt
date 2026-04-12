@@ -20,10 +20,9 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip53LiveActivities
 
+import com.vitorpamplona.amethyst.commons.ui.feeds.IOnlineChecker
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.ParticipantListBuilder
 import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsByOutboxTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsByProxyTopNavFilter
@@ -33,142 +32,54 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.community.SingleCo
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsByOutboxTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsByProxyTopNavFilter
 import com.vitorpamplona.amethyst.service.OnlineChecker
-import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
-import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.StatusTag
 
-open class DiscoverLiveFeedFilter(
-    val account: Account,
-) : AdditiveFeedFilter<Note>() {
-    override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + followList().code
+/**
+ * Adapter that makes [OnlineChecker] available as [IOnlineChecker] for commons.
+ */
+private object OnlineCheckerAdapter : IOnlineChecker {
+    override fun isCachedAndOffline(url: String?): Boolean = OnlineChecker.isCachedAndOffline(url)
+}
 
-    override fun limit() = 50
-
-    open fun followList(): TopFilter = account.settings.defaultDiscoveryFollowList.value
-
-    fun TopFilter.isMuteList() = this is TopFilter.MuteList
-
-    fun TopFilter.isBlockList() = this is TopFilter.PeopleList && this.address == account.blockPeopleList.getBlockListAddress()
-
-    fun TopFilter.wantsToSeeNegativeStuff() = isMuteList() || isBlockList()
-
-    override fun showHiddenKey(): Boolean = followList().wantsToSeeNegativeStuff()
-
-    override fun feed(): List<Note> {
-        val allChannelNotes = LocalCache.liveChatChannels.mapNotNull { _, channel -> LocalCache.getAddressableNoteIfExists(channel.address) }
-        val allMessageNotes = LocalCache.liveChatChannels.map { _, channel -> channel.notes.filter { key, it -> it.event is LiveActivitiesEvent } }.flatten()
-
-        val notes = innerApplyFilter(allChannelNotes + allMessageNotes)
-
-        return sort(notes)
+/**
+ * Extracts the authors set from the discovery top filter, if available.
+ */
+private fun extractDiscoveryAuthors(account: Account): Set<String>? {
+    val topFilter = account.liveDiscoveryFollowLists.value
+    return when (topFilter) {
+        is AuthorsByOutboxTopNavFilter -> topFilter.authors
+        is MutedAuthorsByOutboxTopNavFilter -> topFilter.authors
+        is AllFollowsByOutboxTopNavFilter -> topFilter.authors
+        is SingleCommunityTopNavFilter -> topFilter.authors
+        is AuthorsByProxyTopNavFilter -> topFilter.authors
+        is MutedAuthorsByProxyTopNavFilter -> topFilter.authors
+        is AllFollowsByProxyTopNavFilter -> topFilter.authors
+        else -> null
     }
+}
 
-    override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)
-
-    protected open fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
-        val filterParams =
+/**
+ * App-specific wrapper that creates a [DiscoverLiveFeedFilter][com.vitorpamplona.amethyst.commons.ui.feeds.DiscoverLiveFeedFilter]
+ * with Account-specific configuration.
+ */
+@Suppress("ktlint:standard:function-naming")
+fun DiscoverLiveFeedFilter(account: Account) =
+    com.vitorpamplona.amethyst.commons.ui.feeds.DiscoverLiveFeedFilter(
+        userPubkeyHex = account.userProfile().pubkeyHex,
+        followListCode = { account.settings.defaultDiscoveryFollowList.value.code },
+        showHidden = {
+            val fl = account.settings.defaultDiscoveryFollowList.value
+            fl is TopFilter.MuteList ||
+                (fl is TopFilter.PeopleList && fl.address == account.blockPeopleList.getBlockListAddress())
+        },
+        filterParamsFactory = {
             FilterByListParams.create(
                 followLists = account.liveDiscoveryFollowLists.value,
                 hiddenUsers = account.hiddenUsers.flow.value,
             )
-
-        return collection.filterTo(HashSet()) {
-            val noteEvent = it.event
-            (noteEvent is LiveActivitiesEvent || noteEvent is MeetingSpaceEvent || noteEvent is MeetingRoomEvent) &&
-                filterParams.match(noteEvent, it.relays)
-        }
-    }
-
-    override fun sort(items: Set<Note>): List<Note> {
-        val topFilter = account.liveDiscoveryFollowLists.value
-        val discoveryTopFilterAuthors =
-            when (topFilter) {
-                is AuthorsByOutboxTopNavFilter -> topFilter.authors
-                is MutedAuthorsByOutboxTopNavFilter -> topFilter.authors
-                is AllFollowsByOutboxTopNavFilter -> topFilter.authors
-                is SingleCommunityTopNavFilter -> topFilter.authors
-                is AuthorsByProxyTopNavFilter -> topFilter.authors
-                is MutedAuthorsByProxyTopNavFilter -> topFilter.authors
-                is AllFollowsByProxyTopNavFilter -> topFilter.authors
-                else -> null
-            }
-
-        val followingKeySet =
-            discoveryTopFilterAuthors ?: account.kind3FollowList.flow.value.authors
-
-        val counter = ParticipantListBuilder()
-        val participantCounts =
-            items.associate { it to counter.countFollowsThatParticipateOn(it, followingKeySet) }
-
-        val allParticipants =
-            items.associate { it to counter.countFollowsThatParticipateOn(it, null) }
-
-        return items
-            .sortedWith(
-                compareBy(
-                    { convertStatusToOrder(it.event) },
-                    { participantCounts[it] },
-                    { allParticipants[it] },
-                    {
-                        when (val e = it.event) {
-                            is LiveActivitiesEvent -> e.starts() ?: it.createdAt()
-                            is MeetingRoomEvent -> e.starts() ?: it.createdAt()
-                            else -> it.createdAt()
-                        }
-                    },
-                    { it.idHex },
-                ),
-            ).reversed()
-    }
-
-    fun convertStatusToOrder(event: com.vitorpamplona.quartz.nip01Core.core.Event?): Int {
-        if (event == null) return 0
-        return when (event) {
-            is LiveActivitiesEvent -> {
-                val url = event.streaming() ?: return 0
-                when (event.status()) {
-                    StatusTag.STATUS.LIVE -> {
-                        if (OnlineChecker.isCachedAndOffline(url)) 0 else 2
-                    }
-
-                    StatusTag.STATUS.PLANNED -> {
-                        1
-                    }
-
-                    StatusTag.STATUS.ENDED -> {
-                        0
-                    }
-
-                    else -> {
-                        0
-                    }
-                }
-            }
-
-            is MeetingRoomEvent -> {
-                when (event.status()) {
-                    StatusTag.STATUS.LIVE -> 2
-                    StatusTag.STATUS.PLANNED -> 1
-                    StatusTag.STATUS.ENDED -> 0
-                    else -> 0
-                }
-            }
-
-            is MeetingSpaceEvent -> {
-                when (event.status()) {
-                    com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.StatusTag.STATUS.OPEN -> 2
-                    com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.StatusTag.STATUS.PRIVATE -> 1
-                    com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.StatusTag.STATUS.CLOSED -> 0
-                    else -> 0
-                }
-            }
-
-            else -> {
-                0
-            }
-        }
-    }
-}
+        },
+        followingKeySet = { account.kind3FollowList.flow.value.authors },
+        discoveryAuthors = { extractDiscoveryAuthors(account) },
+        onlineChecker = OnlineCheckerAdapter,
+        cacheProvider = LocalCache,
+    )

@@ -271,8 +271,8 @@ object LocalCache : ILocalCache, ICacheProvider {
     val addressables = LargeSoftCache<Address, AddressableNote>()
 
     val chatroomList = LargeCache<HexKey, ChatroomList>()
-    val publicChatChannels = LargeCache<HexKey, PublicChatChannel>()
-    val liveChatChannels = LargeCache<Address, LiveActivitiesChannel>()
+    override val publicChatChannels = LargeCache<HexKey, PublicChatChannel>()
+    override val liveChatChannels = LargeCache<Address, LiveActivitiesChannel>()
     val ephemeralChannels = LargeCache<RoomId, EphemeralChatChannel>()
 
     val paymentTracker = NwcPaymentTracker()
@@ -420,13 +420,13 @@ object LocalCache : ILocalCache, ICacheProvider {
 
     fun getAddressableNoteIfExists(key: String): AddressableNote? = Address.parse(key)?.let { addressables.get(it) }
 
-    fun getAddressableNoteIfExists(address: Address): AddressableNote? = addressables.get(address)
+    override fun getAddressableNoteIfExists(address: Address): AddressableNote? = addressables.get(address)
 
     override fun getNoteIfExists(hexKey: String): Note? = if (hexKey.length == 64) notes.get(hexKey) else Address.parse(hexKey)?.let { addressables.get(it) }
 
     fun getNoteIfExists(key: ETag): Note? = notes.get(key.eventId)
 
-    fun getPublicChatChannelIfExists(key: String): PublicChatChannel? = publicChatChannels.get(key)
+    override fun getPublicChatChannelIfExists(key: String): PublicChatChannel? = publicChatChannels.get(key)
 
     fun getEphemeralChatChannelIfExists(key: RoomId): EphemeralChatChannel? = ephemeralChannels.get(key)
 
