@@ -42,6 +42,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.playback.composable.LoadThumbAndThenVideoView
@@ -64,9 +65,11 @@ import com.vitorpamplona.quartz.nip14Subject.subject
 fun RenderAudioTrack(
     note: Note,
     contentScale: ContentScale,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val noteEvent = note.event as? AudioTrackEvent ?: return
 
     AudioTrackHeader(noteEvent, note, contentScale, accountViewModel, nav)
@@ -77,9 +80,11 @@ fun AudioTrackHeader(
     noteEvent: AudioTrackEvent,
     note: Note,
     contentScale: ContentScale,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val media = remember { noteEvent.media() }
     val cover = remember { noteEvent.cover() }
     val subject = remember { noteEvent.subject() }
@@ -167,9 +172,11 @@ fun AudioTrackHeader(
 fun RenderAudioHeader(
     note: Note,
     contentScale: ContentScale,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val noteEvent = note.event as? AudioHeaderEvent ?: return
 
     AudioHeader(noteEvent, note, contentScale, accountViewModel, nav)
@@ -180,9 +187,11 @@ fun AudioHeader(
     noteEvent: AudioHeaderEvent,
     note: Note,
     contentScale: ContentScale,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val media = remember { noteEvent.stream() ?: noteEvent.download() }
     val waveform = remember { noteEvent.wavefrom()?.let { WaveformData(it.wave) } }
     val content = remember { noteEvent.content.ifBlank { null } }

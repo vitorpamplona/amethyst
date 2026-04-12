@@ -61,6 +61,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -106,9 +107,11 @@ import kotlinx.collections.immutable.toImmutableList
 @Composable
 fun RenderCommunity(
     baseNote: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     if (baseNote is AddressableNote) {
         Row(
             MaterialTheme.colorScheme.innerPostModifier
@@ -139,9 +142,11 @@ fun Title(title: String) {
 fun LongCommunityHeader(
     baseNote: AddressableNote,
     lineModifier: Modifier = Modifier.padding(horizontal = Size10dp, vertical = Size5dp),
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val noteEvent by observeNoteEvent<CommunityDefinitionEvent>(baseNote, accountViewModel)
     val callbackUri = baseNote.toNostrUri()
 
@@ -312,9 +317,11 @@ fun LongCommunityHeader(
 @Composable
 fun ShortCommunityHeader(
     baseNote: AddressableNote,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val noteEvent by observeNoteEvent<CommunityDefinitionEvent>(baseNote, accountViewModel)
 
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -362,9 +369,11 @@ fun ShortCommunityHeader(
 @Composable
 fun ShortCommunityHeaderNoActions(
     baseNote: AddressableNote,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val noteEvent by observeNoteEvent<CommunityDefinitionEvent>(baseNote, accountViewModel)
 
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -402,9 +411,11 @@ fun ShortCommunityHeaderNoActions(
 @Composable
 fun ShortCommunityActionOptions(
     note: AddressableNote,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Spacer(modifier = StdHorzSpacer)
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -435,9 +446,11 @@ fun ShortCommunityActionOptions(
 @Composable
 private fun LongCommunityActionOptions(
     note: AddressableNote,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Row {
         ShareCommunityButton(accountViewModel, note, nav)
         WatchAddressableNoteFollows(note, accountViewModel) { isFollowing ->
@@ -451,9 +464,11 @@ private fun LongCommunityActionOptions(
 @Composable
 fun WatchAddressableNoteFollows(
     note: AddressableNote,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     onFollowChanges: @Composable (Boolean) -> Unit,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val state by accountViewModel.account.communityList.flowSet
         .collectAsStateWithLifecycle()
 
@@ -462,10 +477,12 @@ fun WatchAddressableNoteFollows(
 
 @Composable
 fun JoinCommunityButton(
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     note: AddressableNote,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Button(
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = { accountViewModel.follow(note) },
@@ -479,10 +496,12 @@ fun JoinCommunityButton(
 
 @Composable
 fun LeaveCommunityButton(
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     note: AddressableNote,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     FilledTonalButton(
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = { accountViewModel.unfollow(note) },
@@ -494,10 +513,12 @@ fun LeaveCommunityButton(
 
 @Composable
 fun ShareCommunityButton(
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     note: AddressableNote,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val actContext = LocalContext.current
 
     FilledTonalIconButton(

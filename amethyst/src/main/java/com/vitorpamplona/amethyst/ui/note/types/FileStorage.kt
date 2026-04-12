@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaLocalImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaLocalVideo
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
@@ -45,8 +46,10 @@ fun FileStorageHeaderDisplay(
     baseNote: Note,
     roundedCorner: Boolean,
     contentScale: ContentScale,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val eventHeader = (baseNote.event as? FileStorageHeaderEvent) ?: return
     val dataEventId = eventHeader.dataEventId() ?: return
 
@@ -63,8 +66,10 @@ private fun ObserverAndRenderNIP95(
     content: Note,
     roundedCorner: Boolean,
     contentScale: ContentScale,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val eventHeader = (header.event as? FileStorageHeaderEvent) ?: return
 
     val noteState by observeNote(content, accountViewModel)

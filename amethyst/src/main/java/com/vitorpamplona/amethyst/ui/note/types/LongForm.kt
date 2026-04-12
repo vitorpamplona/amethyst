@@ -36,6 +36,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -54,9 +55,11 @@ import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 @Composable
 fun RenderLongFormContent(
     note: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val noteEvent = note.event as? LongTextNoteEvent ?: return
 
     LongFormHeader(noteEvent, note, accountViewModel)
@@ -66,8 +69,10 @@ fun RenderLongFormContent(
 fun LongFormHeader(
     noteEvent: LongTextNoteEvent,
     note: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val image = noteEvent.image()
     val title = noteEvent.title()
     val summary =

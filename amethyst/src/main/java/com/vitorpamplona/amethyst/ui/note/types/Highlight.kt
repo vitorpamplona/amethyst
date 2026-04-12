@@ -39,6 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
@@ -74,9 +75,11 @@ fun RenderHighlight(
     canPreview: Boolean,
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val noteEvent = note.event as? HighlightEvent ?: return
 
     DisplayHighlight(
@@ -158,9 +161,11 @@ fun DisplayHighlight(
     canPreview: Boolean,
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     comment?.let {
         TranslatableRichTextViewer(
             content = it,
@@ -235,9 +240,11 @@ private fun DisplayQuoteAuthor(
     baseUrl: String?,
     postAddress: Address?,
     postVersion: ETag?,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     var userBase by remember { mutableStateOf(authorHex?.let { accountViewModel.getUserIfExists(it) }) }
 
     if (userBase == null && authorHex != null) {
@@ -300,9 +307,11 @@ private fun DisplayQuoteAuthor(
 @Composable
 fun DisplayEntryForUser(
     baseUser: User,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val userMetadata by observeUserInfo(baseUser, accountViewModel)
 
     CreateClickableTextWithEmoji(
@@ -318,9 +327,11 @@ fun DisplayEntryForUser(
 fun DisplayEntryForNote(
     note: Note,
     userBase: User?,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val noteState by observeNote(note, accountViewModel)
 
     val author = userBase ?: noteState.note.author
@@ -349,9 +360,11 @@ fun DisplayEntryForNote(
 fun DisplayEntryForAUrl(
     url: String,
     userBase: User?,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     if (userBase != null) {
         DisplayEntryForUser(userBase, accountViewModel, nav)
     }

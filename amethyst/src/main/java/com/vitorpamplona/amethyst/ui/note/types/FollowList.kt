@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEventAndMap
@@ -72,9 +73,11 @@ import kotlinx.collections.immutable.toImmutableList
 fun DisplayFollowList(
     baseNote: Note,
     makeItShort: Boolean,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val card =
         observeNoteEventAndMap(baseNote, accountViewModel) { event: FollowListEvent? ->
             if (event == null) {
@@ -108,9 +111,11 @@ fun RenderFollowSetThumbEmbed(
     card: FollowSetCard,
     baseNote: Note,
     makeItShort: Boolean,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Column(
         modifier =
             Modifier.fillMaxWidth().clickable {

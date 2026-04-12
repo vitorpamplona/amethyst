@@ -46,6 +46,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.chess.ChessChallenge
 import com.vitorpamplona.amethyst.commons.chess.ChessGameViewer
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
@@ -79,9 +80,11 @@ import com.vitorpamplona.quartz.nip64Chess.Color as ChessColor
 fun RenderChessGame(
     note: Note,
     backgroundColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val event = (note.event as? ChessGameEvent) ?: return
 
     SensitivityWarning(note = note, accountViewModel = accountViewModel) {
@@ -114,9 +117,11 @@ fun RenderChessGame(
 fun RenderLiveChessChallenge(
     note: Note,
     backgroundColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val event = (note.event as? LiveChessGameChallengeEvent) ?: return
     val gameId = event.gameId()
     val activity = LocalActivity.current as androidx.fragment.app.FragmentActivity
@@ -272,9 +277,11 @@ fun RenderLiveChessChallenge(
 fun RenderLiveChessGameEnd(
     note: Note,
     backgroundColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val event = (note.event as? LiveChessGameEndEvent) ?: return
 
     SensitivityWarning(note = note, accountViewModel = accountViewModel) {
@@ -361,9 +368,11 @@ fun RenderLiveChessGameEnd(
 @Composable
 private fun UserChip(
     user: User,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp),

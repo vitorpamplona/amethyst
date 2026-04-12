@@ -44,6 +44,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
@@ -59,8 +60,10 @@ import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
 @Composable
 fun BadgeDisplay(
     baseNote: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val badgeData by observeNoteEvent<BadgeDefinitionEvent>(baseNote, accountViewModel)
 
     badgeData?.let {
@@ -149,9 +152,11 @@ private fun RenderBadge(
 fun RenderBadgeAward(
     note: Note,
     backgroundColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     if (note.replyTo.isNullOrEmpty()) return
 
     val noteEvent = note.event as? BadgeAwardEvent ?: return

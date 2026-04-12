@@ -44,6 +44,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteZaps
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
@@ -65,9 +66,11 @@ import kotlin.math.roundToInt
 @Composable
 fun RenderGoal(
     note: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val noteEvent = note.event as? GoalEvent ?: return
 
     GoalHeader(noteEvent, note, accountViewModel, nav)
@@ -77,9 +80,11 @@ fun RenderGoal(
 fun GoalHeader(
     noteEvent: GoalEvent,
     note: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val image = noteEvent.image()
     val summary =
         remember(noteEvent) {
@@ -141,8 +146,10 @@ fun GoalHeader(
 fun GoalProgressBar(
     note: Note,
     goalAmountSats: Long,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val zapsState by observeNoteZaps(note, accountViewModel)
 
     var zapraiserStatus by

@@ -29,6 +29,7 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -47,9 +48,11 @@ fun RenderLiveActivityChatMessage(
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     editState: State<GenericLoadable<EditState>>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val noteEvent = note.event
     val showChannelInfo =
         remember(noteEvent) {

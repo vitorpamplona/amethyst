@@ -62,6 +62,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.LoadNote
@@ -128,9 +129,11 @@ fun RenderAttestation(
     baseNote: Note,
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val noteState by baseNote
         .flow()
         .metadata.stateFlow
@@ -153,9 +156,11 @@ fun RenderAttestation(
     noteEvent: AttestationEvent,
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val status = remember(noteEvent) { noteEvent.status() }
     val validFrom = remember(noteEvent) { noteEvent.validFrom() }
     val validTo = remember(noteEvent) { noteEvent.validTo() }
@@ -276,9 +281,11 @@ fun RenderAttestationRequest(
     note: Note,
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val noteState by note
         .flow()
         .metadata.stateFlow
@@ -405,9 +412,11 @@ fun RenderAttestorRecommendation(
     note: Note,
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val noteState by note
         .flow()
         .metadata.stateFlow
@@ -498,9 +507,11 @@ fun RenderAttestorProficiency(
     note: Note,
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val noteState by note
         .flow()
         .metadata.stateFlow

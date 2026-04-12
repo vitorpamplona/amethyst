@@ -37,6 +37,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
@@ -59,9 +60,11 @@ import java.util.Date
 @Composable
 fun RenderCalendarTimeSlotEvent(
     note: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val noteEvent = note.event as? CalendarTimeSlotEvent ?: return
 
     val title = noteEvent.title()
@@ -92,9 +95,11 @@ fun RenderCalendarTimeSlotEvent(
 @Composable
 fun RenderCalendarDateSlotEvent(
     note: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val noteEvent = note.event as? CalendarDateSlotEvent ?: return
 
     val title = noteEvent.title()
@@ -130,8 +135,10 @@ private fun CalendarHeader(
     location: String?,
     dateRange: String?,
     note: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Column(MaterialTheme.colorScheme.replyModifier) {
         image?.let {
             MyAsyncImage(

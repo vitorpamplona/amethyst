@@ -45,6 +45,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -111,9 +112,11 @@ fun RenderLiveActivityEventPreview() {
 @Composable
 fun RenderLiveActivityEvent(
     baseNote: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Row(modifier = Modifier.padding(top = 5.dp)) {
         Column(
             modifier = Modifier.fillMaxWidth(),
@@ -127,9 +130,11 @@ fun RenderLiveActivityEvent(
 @Composable
 fun RenderLiveActivityEventInner(
     baseNote: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val noteEvent = baseNote.event as? LiveActivitiesEvent ?: return
 
     val eventUpdates by observeNote(baseNote, accountViewModel)

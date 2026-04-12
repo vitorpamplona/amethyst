@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
@@ -77,9 +78,11 @@ fun RenderGitPatchEvent(
     canPreview: Boolean,
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val event = baseNote.event as? GitPatchEvent ?: return
 
     RenderGitPatchEvent(
@@ -97,9 +100,11 @@ fun RenderGitPatchEvent(
 @Composable
 private fun RenderShortRepositoryHeader(
     baseNote: AddressableNote,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val noteEvent by observeNoteEvent<GitRepositoryEvent>(baseNote, accountViewModel)
 
     Column(
@@ -133,9 +138,11 @@ private fun RenderGitPatchEvent(
     canPreview: Boolean,
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val repository = remember(noteEvent) { noteEvent.repositoryAddress() }
 
     if (repository != null) {
@@ -214,9 +221,11 @@ fun RenderGitIssueEvent(
     canPreview: Boolean,
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val event = baseNote.event as? GitIssueEvent ?: return
 
     RenderGitIssueEvent(
@@ -239,9 +248,11 @@ private fun RenderGitIssueEvent(
     canPreview: Boolean,
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val repository = remember(noteEvent) { noteEvent.repositoryAddress() }
 
     if (repository != null) {
@@ -311,9 +322,11 @@ private fun RenderGitIssueEvent(
 @Composable
 fun RenderGitRepositoryEvent(
     baseNote: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val event = baseNote.event as? GitRepositoryEvent ?: return
 
     RenderGitRepositoryEvent(event, baseNote, accountViewModel, nav)
@@ -323,9 +336,11 @@ fun RenderGitRepositoryEvent(
 private fun RenderGitRepositoryEvent(
     noteEvent: GitRepositoryEvent,
     note: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val title = noteEvent.name() ?: noteEvent.dTag()
     val summary = noteEvent.description()
     val web = noteEvent.web()

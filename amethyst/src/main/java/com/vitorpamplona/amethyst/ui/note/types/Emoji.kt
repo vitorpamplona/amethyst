@@ -46,6 +46,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteAndMap
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
@@ -67,9 +68,11 @@ fun RenderEmojiPack(
     baseNote: Note,
     actionable: Boolean,
     backgroundColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     onClick: ((EmojiUrlTag) -> Unit)? = null,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val noteEvent by observeNoteEvent<EmojiPackEvent>(baseNote, accountViewModel)
 
     noteEvent?.let {
@@ -91,9 +94,11 @@ fun RenderEmojiPack(
     baseNote: Note,
     actionable: Boolean,
     backgroundColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     onClick: ((EmojiUrlTag) -> Unit)? = null,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     var expanded by remember { mutableStateOf(false) }
 
     val allEmojis = remember(noteEvent) { noteEvent.taggedEmojis() }
@@ -171,9 +176,11 @@ fun RenderEmojiPack(
 
 @Composable
 private fun EmojiListOptions(
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     emojiPackNote: Note,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     LoadAddressableNote(
         accountViewModel.account.emoji.getEmojiPackSelectionAddress(),
         accountViewModel,
