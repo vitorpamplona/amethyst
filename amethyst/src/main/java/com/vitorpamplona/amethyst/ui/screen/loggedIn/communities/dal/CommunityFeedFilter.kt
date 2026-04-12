@@ -24,23 +24,11 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
-import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import com.vitorpamplona.quartz.nip22Comments.CommentEvent
-import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
-import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
-import com.vitorpamplona.quartz.nip72ModCommunities.isForCommunity
 
 class CommunityFeedFilter(
-    val communityDefNote: AddressableNote,
-    val account: Account,
-) : AdditiveFeedFilter<Note>() {
-    val communityDefEvent = communityDefNote.event as? CommunityDefinitionEvent
-    val moderators = communityDefEvent?.moderatorKeys()?.toSet() ?: emptySet()
-
-    override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + communityDefNote.idHex
-
+    communityDefNote: AddressableNote,
+    account: Account,
+) : com.vitorpamplona.amethyst.commons.ui.feeds.communities.CommunityFeedFilter(communityDefNote, account) {
     override fun feed(): List<Note> {
         if (communityDefEvent == null) return emptyList()
 
@@ -51,43 +39,4 @@ class CommunityFeedFilter(
 
         return sort(result)
     }
-
-    override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)
-
-    private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
-        if (communityDefEvent == null) return emptySet()
-
-        return collection
-            .mapNotNull {
-                filterMap(it)
-            }.flatten()
-            .toSet()
-    }
-
-    private fun filterMap(note: Note): List<Note>? {
-        val noteEvent = note.event ?: return null
-
-        return if (
-            // Only Approvals
-            (noteEvent is TextNoteEvent || noteEvent is CommentEvent || noteEvent is CommunityPostApprovalEvent) &&
-            noteEvent.pubKey in moderators &&
-            noteEvent.isForCommunity(this.communityDefNote.idHex)
-        ) {
-            if (noteEvent is CommunityPostApprovalEvent) {
-                note.replyTo?.filter {
-                    it.isNewThread()
-                }
-            } else {
-                if (note.isNewThread()) {
-                    listOf(note)
-                } else {
-                    null
-                }
-            }
-        } else {
-            null
-        }
-    }
-
-    override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder)
 }
