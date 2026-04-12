@@ -227,7 +227,7 @@ private fun MyLoadUrlPreviewDirect(
                         )
 
                         Text(
-                            text = state.previewInfo.verifiedUrl?.host ?: state.previewInfo.title,
+                            text = state.previewInfo.verifiedUrlHost ?: state.previewInfo.title,
                             style = MaterialTheme.typography.bodyMedium,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,

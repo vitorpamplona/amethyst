@@ -21,10 +21,10 @@
 package com.vitorpamplona.amethyst.commons.model.nip01Core
 
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.platformcompat.PlatformWeakReference
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isLocalHost
 import kotlinx.coroutines.flow.MutableStateFlow
-import java.lang.ref.WeakReference
 
 @Stable
 data class RelayInfo(
@@ -52,11 +52,11 @@ val DefaultOrder =
 @Stable
 class UserRelaysCache {
     var data: Map<NormalizedRelayUrl, RelayInfo> = mapOf()
-    private var flow: WeakReference<MutableStateFlow<Wrapper>>? = null
+    private var flow: PlatformWeakReference<MutableStateFlow<Wrapper>>? = null
 
     fun flow() =
         flow?.get() ?: synchronized(this) {
-            flow?.get() ?: MutableStateFlow(Wrapper(data)).also { flow = WeakReference(it) }
+            flow?.get() ?: MutableStateFlow(Wrapper(data)).also { flow = PlatformWeakReference(it) }
         }
 
     fun add(

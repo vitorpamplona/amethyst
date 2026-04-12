@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.chess
 
+import com.vitorpamplona.amethyst.commons.platformcompat.PlatformConcurrentHashMap
+import com.vitorpamplona.amethyst.commons.platformcompat.platformConcurrentKeySet
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
@@ -28,7 +30,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.withTimeoutOrNull
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Progress callback for relay fetch operations
@@ -74,10 +75,10 @@ class ChessRelayFetchHelper(
     ): List<Event> {
         if (filters.isEmpty()) return emptyList()
 
-        val events = ConcurrentHashMap<String, Event>()
+        val events = PlatformConcurrentHashMap<String, Event>()
         val relayCount = filters.keys.size
-        val eoseReceived = ConcurrentHashMap.newKeySet<NormalizedRelayUrl>()
-        val relayEventCounts = ConcurrentHashMap<NormalizedRelayUrl, Int>()
+        val eoseReceived = platformConcurrentKeySet<NormalizedRelayUrl>()
+        val relayEventCounts = PlatformConcurrentHashMap<NormalizedRelayUrl, Int>()
         val allEose = CompletableDeferred<Unit>()
         val subId = newSubId()
 

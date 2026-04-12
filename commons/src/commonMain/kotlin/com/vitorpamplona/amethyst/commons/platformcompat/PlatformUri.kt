@@ -18,23 +18,15 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.richtext
+package com.vitorpamplona.amethyst.commons.platformcompat
 
-import com.vitorpamplona.amethyst.commons.platformcompat.base64Decode
+/**
+ * Validates a URL string by attempting to parse it.
+ * Returns true if the URL is well-formed, false otherwise.
+ */
+expect fun isValidUrl(url: String): Boolean
 
-object Base64Image {
-    val pattern = Patterns.BASE64_IMAGE
-
-    fun isBase64(content: String): Boolean = Patterns.BASE64_IMAGE.matches(content)
-
-    fun parse(content: String): ByteArray {
-        val matcher = pattern.find(content)
-        if (matcher != null) {
-            val base64String = matcher.groups[2]?.value
-            val byteArray = base64Decode(base64String ?: throw Exception("Unable to extract base64 from $content"))
-            return byteArray
-        }
-
-        throw Exception("Unable to convert base64 to image $content")
-    }
-}
+/**
+ * Returns the host from a URL string, or null if invalid.
+ */
+expect fun getUrlHost(url: String): String?

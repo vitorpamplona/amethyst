@@ -61,6 +61,7 @@ import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
+import com.vitorpamplona.quartz.utils.BigDecimal
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.anyAsync
 import com.vitorpamplona.quartz.utils.containsAny
@@ -71,7 +72,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
-import java.math.BigDecimal
 
 interface NotesGatherer {
     fun removeNote(note: Note)
@@ -153,7 +153,7 @@ open class Note(
     var zaps = mapOf<Note, Note?>()
         private set
 
-    var zapsAmount: BigDecimal = BigDecimal.ZERO
+    var zapsAmount: BigDecimal = BigDecimal(0)
 
     var zapPayments = mapOf<Note, Note?>()
         private set
@@ -318,7 +318,7 @@ open class Note(
         reports = mapOf()
         zaps = mapOf()
         zapPayments = mapOf()
-        zapsAmount = BigDecimal.ZERO
+        zapsAmount = BigDecimal(0)
         relays = listOf()
 
         if (repliesChanged) flowSet?.replies?.invalidateData()
@@ -618,13 +618,13 @@ open class Note(
             }.flatten()
 
     private fun updateZapTotal() {
-        var sumOfAmounts = BigDecimal.ZERO
+        var sumOfAmounts = BigDecimal(0)
 
         // Regular Zap Receipts
         zaps.forEach {
             val noteEvent = it.value?.event
             if (noteEvent is LnZapEvent) {
-                sumOfAmounts += noteEvent.amount ?: BigDecimal.ZERO
+                sumOfAmounts = sumOfAmounts.add(noteEvent.amount ?: BigDecimal(0))
             }
         }
 
@@ -701,7 +701,7 @@ open class Note(
                     val amount =
                         try {
                             LnInvoiceUtil.getAmountInSats(invoice)
-                        } catch (e: java.lang.Exception) {
+                        } catch (e: Exception) {
                             if (e is CancellationException) throw e
                             null
                         }
@@ -762,7 +762,7 @@ open class Note(
                 pledgeValue != null && it.author == user
             }
 
-    fun pledgedAmountByOthers(): BigDecimal = replies.sumOf { it.event?.addedRewardValue() ?: BigDecimal.ZERO }
+    fun pledgedAmountByOthers(): BigDecimal = replies.fold(BigDecimal(0)) { acc, note -> acc.add(note.event?.addedRewardValue() ?: BigDecimal(0)) }
 
     fun hasAnyReports(): Boolean {
         val dayAgo = TimeUtils.oneDayAgo()
@@ -846,7 +846,7 @@ open class Note(
         boosts = emptyList()
         reports = emptyMap()
         zaps = emptyMap()
-        zapsAmount = BigDecimal.ZERO
+        zapsAmount = BigDecimal(0)
     }
 
     fun isHiddenFor(accountChoices: LiveHiddenUsers): Boolean {

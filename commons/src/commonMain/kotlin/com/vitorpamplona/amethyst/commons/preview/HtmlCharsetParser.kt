@@ -20,7 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.preview
 
-import java.nio.charset.Charset
+import com.vitorpamplona.amethyst.commons.platformcompat.PlatformCharset
+import com.vitorpamplona.amethyst.commons.platformcompat.decodeBytes
 
 object HtmlCharsetParser {
     val ATTRIBUTE_VALUE_CHARSET = "charset"
@@ -29,14 +30,14 @@ object HtmlCharsetParser {
 
     private val RE_CONTENT_TYPE_CHARSET = Regex("""charset=([^;]+)""")
 
-    fun detectCharset(bodyBytes: ByteArray): Charset {
+    fun detectCharset(bodyBytes: ByteArray): PlatformCharset {
         // try to detect charset from meta tags parsed from first 1024 bytes of body
-        val firstPart = String(bodyBytes, 0, 1024, Charset.forName("utf-8"))
+        val firstPart = decodeBytes(bodyBytes, 0, minOf(bodyBytes.size, 1024), PlatformCharset.forName("utf-8"))
         val metaTags = MetaTagsParser.parse(firstPart)
         metaTags.forEach { meta ->
             val charsetAttr = meta.attr(ATTRIBUTE_VALUE_CHARSET)
             if (charsetAttr.isNotEmpty()) {
-                runCatching { Charset.forName(charsetAttr) }.getOrNull()?.let {
+                runCatching { PlatformCharset.forName(charsetAttr) }.getOrNull()?.let {
                     return it
                 }
             }
@@ -44,13 +45,13 @@ object HtmlCharsetParser {
                 RE_CONTENT_TYPE_CHARSET
                     .find(meta.attr(CONTENT))
                     ?.let {
-                        runCatching { Charset.forName(it.groupValues[1]) }.getOrNull()
+                        runCatching { PlatformCharset.forName(it.groupValues[1]) }.getOrNull()
                     }?.let {
                         return it
                     }
             }
         }
         // defaults to UTF-8
-        return Charset.forName("utf-8")
+        return PlatformCharset.forName("utf-8")
     }
 }

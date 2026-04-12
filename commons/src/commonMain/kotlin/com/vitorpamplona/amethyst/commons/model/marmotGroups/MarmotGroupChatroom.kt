@@ -25,11 +25,11 @@ import com.vitorpamplona.amethyst.commons.model.Channel.Companion.DefaultFeedOrd
 import com.vitorpamplona.amethyst.commons.model.ListChange
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.NotesGatherer
+import com.vitorpamplona.amethyst.commons.platformcompat.PlatformWeakReference
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import java.lang.ref.WeakReference
 
 /**
  * Represents a Marmot MLS group chat room.
@@ -49,13 +49,13 @@ class MarmotGroupChatroom(
     var newestMessage: Note? = null
     val unreadCount = MutableStateFlow(0)
 
-    private var changesFlow: WeakReference<MutableSharedFlow<ListChange<Note>>> = WeakReference(null)
+    private var changesFlow: PlatformWeakReference<MutableSharedFlow<ListChange<Note>>> = PlatformWeakReference(null)
 
     fun changesFlow(): MutableSharedFlow<ListChange<Note>> {
         val current = changesFlow.get()
         if (current != null) return current
         val new = MutableSharedFlow<ListChange<Note>>(0, 100, BufferOverflow.DROP_OLDEST)
-        changesFlow = WeakReference(new)
+        changesFlow = PlatformWeakReference(new)
         return new
     }
 

@@ -21,13 +21,13 @@
 package com.vitorpamplona.amethyst.commons.model
 
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.platformcompat.PlatformWeakReference
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import java.lang.ref.WeakReference
 
 @Stable
 abstract class Channel : NotesGatherer {
@@ -41,13 +41,13 @@ abstract class Channel : NotesGatherer {
 
     private var relays = mapOf<NormalizedRelayUrl, Counter>()
 
-    private var changesFlow: WeakReference<MutableSharedFlow<ListChange<Note>>> = WeakReference(null)
+    private var changesFlow: PlatformWeakReference<MutableSharedFlow<ListChange<Note>>> = PlatformWeakReference(null)
 
     fun changesFlow(): MutableSharedFlow<ListChange<Note>> {
         val current = changesFlow.get()
         if (current != null) return current
         val new = MutableSharedFlow<ListChange<Note>>(0, 10, BufferOverflow.DROP_OLDEST)
-        changesFlow = WeakReference(new)
+        changesFlow = PlatformWeakReference(new)
         return new
     }
 

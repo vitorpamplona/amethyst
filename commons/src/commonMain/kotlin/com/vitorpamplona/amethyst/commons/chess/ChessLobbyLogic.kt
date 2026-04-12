@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.chess
 
+import com.vitorpamplona.amethyst.commons.platformcompat.PlatformConcurrentHashMap
+import com.vitorpamplona.amethyst.commons.platformcompat.platformSynchronizedSet
 import com.vitorpamplona.quartz.nip64Chess.ChessGameEnd
 import com.vitorpamplona.quartz.nip64Chess.ChessMoveEvent
 import com.vitorpamplona.quartz.nip64Chess.Color
@@ -130,17 +132,17 @@ class ChessLobbyLogic(
     val state = ChessLobbyState(userPubkey, scope)
 
     private val dismissedGameIds: MutableSet<String> =
-        java.util.Collections.synchronizedSet(
+        platformSynchronizedSet(
             dismissedStorage?.load(userPubkey)?.toMutableSet() ?: mutableSetOf(),
         )
 
     // Track when games were last loaded to prevent duplicate fetches
     // (e.g., discoverUserGames loads a game, then polling immediately re-fetches it)
-    private val recentlyLoadedGames = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    private val recentlyLoadedGames = PlatformConcurrentHashMap<String, Long>()
 
     // Dedup incoming events (same event delivered by multiple relays)
     // Bounded LRU: evict oldest when exceeding capacity
-    private val seenEventIds = java.util.Collections.synchronizedSet(LinkedHashSet<String>())
+    private val seenEventIds = platformSynchronizedSet(LinkedHashSet<String>())
     private val seenEventIdsMax = 500
 
     private val pollingDelegate =

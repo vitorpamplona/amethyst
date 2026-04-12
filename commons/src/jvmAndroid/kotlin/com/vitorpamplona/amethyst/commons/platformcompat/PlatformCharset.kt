@@ -18,23 +18,26 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.richtext
+package com.vitorpamplona.amethyst.commons.platformcompat
 
-import com.vitorpamplona.amethyst.commons.platformcompat.base64Decode
+actual class PlatformCharset(
+    val javaCharset: java.nio.charset.Charset,
+) {
+    actual fun name(): String = javaCharset.name()
 
-object Base64Image {
-    val pattern = Patterns.BASE64_IMAGE
-
-    fun isBase64(content: String): Boolean = Patterns.BASE64_IMAGE.matches(content)
-
-    fun parse(content: String): ByteArray {
-        val matcher = pattern.find(content)
-        if (matcher != null) {
-            val base64String = matcher.groups[2]?.value
-            val byteArray = base64Decode(base64String ?: throw Exception("Unable to extract base64 from $content"))
-            return byteArray
-        }
-
-        throw Exception("Unable to convert base64 to image $content")
+    actual companion object {
+        actual fun forName(charsetName: String): PlatformCharset =
+            PlatformCharset(
+                java.nio.charset.Charset
+                    .forName(charsetName),
+            )
     }
 }
+
+@Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
+actual fun decodeBytes(
+    bytes: ByteArray,
+    offset: Int,
+    length: Int,
+    charset: PlatformCharset,
+): String = java.lang.String(bytes, offset, length, charset.javaCharset) as String

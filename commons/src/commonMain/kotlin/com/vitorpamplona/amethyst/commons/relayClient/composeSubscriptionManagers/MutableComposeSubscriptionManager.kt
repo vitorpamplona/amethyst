@@ -21,12 +21,12 @@
 package com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers
 
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.platformcompat.PlatformConcurrentHashMap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  *  This allows composables to directly register their queries
@@ -41,7 +41,7 @@ import java.util.concurrent.ConcurrentHashMap
 abstract class MutableComposeSubscriptionManager<T : MutableQueryState>(
     val scope: CoroutineScope,
 ) : ComposeSubscriptionManagerControls {
-    private var composeSubscriptions: ConcurrentHashMap<T, Job?> = ConcurrentHashMap()
+    private var composeSubscriptions: PlatformConcurrentHashMap<T, Job?> = PlatformConcurrentHashMap()
 
     // This is called by main. Keep it really fast.
     fun subscribe(query: T?) {

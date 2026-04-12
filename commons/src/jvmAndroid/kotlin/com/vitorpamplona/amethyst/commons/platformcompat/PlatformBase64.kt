@@ -18,23 +18,9 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.richtext
+package com.vitorpamplona.amethyst.commons.platformcompat
 
-import com.vitorpamplona.amethyst.commons.platformcompat.base64Decode
-
-object Base64Image {
-    val pattern = Patterns.BASE64_IMAGE
-
-    fun isBase64(content: String): Boolean = Patterns.BASE64_IMAGE.matches(content)
-
-    fun parse(content: String): ByteArray {
-        val matcher = pattern.find(content)
-        if (matcher != null) {
-            val base64String = matcher.groups[2]?.value
-            val byteArray = base64Decode(base64String ?: throw Exception("Unable to extract base64 from $content"))
-            return byteArray
-        }
-
-        throw Exception("Unable to convert base64 to image $content")
-    }
-}
+actual fun base64Decode(input: String): ByteArray =
+    java.util.Base64
+        .getDecoder()
+        .decode(input)

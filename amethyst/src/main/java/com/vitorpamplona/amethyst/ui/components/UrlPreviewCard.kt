@@ -101,7 +101,7 @@ fun UrlPreviewCard(
         )
 
         Text(
-            text = previewInfo.verifiedUrl?.host ?: previewInfo.url,
+            text = previewInfo.verifiedUrlHost ?: previewInfo.url,
             style = MaterialTheme.typography.bodySmall,
             modifier = MaxWidthWithHorzPadding,
             color = Color.Gray,

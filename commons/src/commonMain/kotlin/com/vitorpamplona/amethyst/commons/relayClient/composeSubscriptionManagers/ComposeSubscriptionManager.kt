@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers
 
 import androidx.compose.runtime.Stable
-import java.util.concurrent.ConcurrentHashMap
+import com.vitorpamplona.amethyst.commons.platformcompat.PlatformConcurrentHashMap
 
 /**
  *  This allows composables to directly register their queries
@@ -32,7 +32,7 @@ import java.util.concurrent.ConcurrentHashMap
 abstract class ComposeSubscriptionManager<T> :
     ComposeSubscriptionManagerControls,
     Subscribable<T> {
-    private var composeSubscriptions: ConcurrentHashMap<T, T> = ConcurrentHashMap()
+    private var composeSubscriptions: PlatformConcurrentHashMap<T, T> = PlatformConcurrentHashMap()
 
     // This is called by main. Keep it really fast.
     override fun subscribe(query: T?) {
