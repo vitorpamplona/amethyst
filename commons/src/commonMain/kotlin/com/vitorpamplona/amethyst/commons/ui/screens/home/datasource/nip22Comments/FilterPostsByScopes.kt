@@ -18,18 +18,32 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip22Comments
+package com.vitorpamplona.amethyst.commons.ui.screens.home.datasource.nip22Comments
 
-// Re-export from commons for backwards compatibility
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.amethyst.commons.ui.screens.home.datasource.nip22Comments.CommentKinds as CommonsCommentKinds
-import com.vitorpamplona.amethyst.commons.ui.screens.home.datasource.nip22Comments.filterHomePostsByScopes as commonsFilterHomePostsByScopes
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 
-val CommentKinds = CommonsCommentKinds
+val CommentKinds = listOf(CommentEvent.KIND)
 
 fun filterHomePostsByScopes(
     relay: NormalizedRelayUrl,
     scopesToLoad: Set<String>,
     since: Long?,
-): List<RelayBasedFilter> = commonsFilterHomePostsByScopes(relay, scopesToLoad, since)
+): List<RelayBasedFilter> {
+    if (scopesToLoad.isEmpty()) return emptyList()
+
+    return listOf(
+        RelayBasedFilter(
+            relay = relay,
+            filter =
+                Filter(
+                    kinds = CommentKinds,
+                    tags = mapOf("I" to scopesToLoad.toList()),
+                    limit = 100,
+                    since = since,
+                ),
+        ),
+    )
+}
