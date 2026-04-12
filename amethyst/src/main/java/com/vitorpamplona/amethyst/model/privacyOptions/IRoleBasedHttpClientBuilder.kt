@@ -20,11 +20,10 @@
  */
 package com.vitorpamplona.amethyst.model.privacyOptions
 
+import com.vitorpamplona.amethyst.commons.network.IHttpClientBuilder
 import okhttp3.OkHttpClient
 
-interface IRoleBasedHttpClientBuilder {
-    fun proxyPortForVideo(url: String): Int?
-
+interface IRoleBasedHttpClientBuilder : IHttpClientBuilder {
     fun okHttpClientForNip05(url: String): OkHttpClient
 
     fun okHttpClientForUploads(url: String): OkHttpClient
@@ -38,4 +37,19 @@ interface IRoleBasedHttpClientBuilder {
     fun okHttpClientForPreview(url: String): OkHttpClient
 
     fun okHttpClientForPushRegistration(url: String): OkHttpClient
+
+    // Bridge to IHttpClientBuilder (PlatformHttpClient = OkHttpClient on JVM)
+    override fun httpClientForNip05(url: String) = okHttpClientForNip05(url)
+
+    override fun httpClientForUploads(url: String) = okHttpClientForUploads(url)
+
+    override fun httpClientForImage(url: String) = okHttpClientForImage(url)
+
+    override fun httpClientForVideo(url: String) = okHttpClientForVideo(url)
+
+    override fun httpClientForMoney(url: String) = okHttpClientForMoney(url)
+
+    override fun httpClientForPreview(url: String) = okHttpClientForPreview(url)
+
+    override fun httpClientForPushRegistration(url: String) = okHttpClientForPushRegistration(url)
 }

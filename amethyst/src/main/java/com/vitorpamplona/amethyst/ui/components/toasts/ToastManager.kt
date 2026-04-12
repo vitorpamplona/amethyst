@@ -21,27 +21,28 @@
 package com.vitorpamplona.amethyst.ui.components.toasts
 
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.ui.components.toasts.IToastManager
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.toasts.multiline.MultiErrorToastMsg
 import com.vitorpamplona.amethyst.ui.components.toasts.multiline.UserBasedErrorMessage
 import kotlinx.coroutines.flow.MutableStateFlow
 
 @Stable
-class ToastManager {
+class ToastManager : IToastManager {
     val toasts = MutableStateFlow<ToastMsg?>(null)
 
-    fun clearToasts() {
+    override fun clearToasts() {
         toasts.tryEmit(null)
     }
 
-    fun toast(
+    override fun toast(
         title: String,
         message: String,
     ) {
         toasts.tryEmit(StringToastMsg(title, message))
     }
 
-    fun toast(
+    override fun toast(
         title: String,
         message: String,
         action: () -> Unit,
@@ -49,14 +50,14 @@ class ToastManager {
         toasts.tryEmit(ActionableStringToastMsg(title, message, action))
     }
 
-    fun toast(
+    override fun toast(
         titleResId: Int,
         resourceId: Int,
     ) {
         toasts.tryEmit(ResourceToastMsg(titleResId, resourceId))
     }
 
-    fun toast(
+    override fun toast(
         titleResId: Int,
         message: String?,
         throwable: Throwable,
@@ -64,7 +65,7 @@ class ToastManager {
         toasts.tryEmit(ThrowableToastMsg(titleResId, message, throwable))
     }
 
-    fun toast(
+    override fun toast(
         titleResId: Int,
         description: Int,
         throwable: Throwable,
@@ -72,7 +73,7 @@ class ToastManager {
         toasts.tryEmit(ThrowableToastMsg2(titleResId, description, throwable))
     }
 
-    fun toast(
+    override fun toast(
         titleResId: Int,
         resourceId: Int,
         vararg params: String,

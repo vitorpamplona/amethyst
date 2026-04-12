@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen
 
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.ui.screen.IUiSettingsState
 import com.vitorpamplona.amethyst.model.BooleanType
 import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.model.FeatureSetType
@@ -35,10 +36,10 @@ import kotlinx.coroutines.flow.stateIn
 @Stable
 class UiSettingsState(
     val uiSettingsFlow: UiSettingsFlow,
-    val isMobileOrMeteredConnection: StateFlow<Boolean>,
+    override val isMobileOrMeteredConnection: StateFlow<Boolean>,
     val scope: CoroutineScope,
-) {
-    val showProfilePictures =
+) : IUiSettingsState {
+    override val showProfilePictures =
         combine(
             uiSettingsFlow.automaticallyShowProfilePictures,
             isMobileOrMeteredConnection,
@@ -58,7 +59,7 @@ class UiSettingsState(
             },
         )
 
-    val showUrlPreview =
+    override val showUrlPreview =
         combine(
             uiSettingsFlow.automaticallyShowUrlPreview,
             isMobileOrMeteredConnection,
@@ -78,7 +79,7 @@ class UiSettingsState(
             },
         )
 
-    val startVideoPlayback =
+    override val startVideoPlayback =
         combine(
             uiSettingsFlow.automaticallyStartPlayback,
             isMobileOrMeteredConnection,
@@ -98,7 +99,7 @@ class UiSettingsState(
             },
         )
 
-    val showImages =
+    override val showImages =
         combine(
             uiSettingsFlow.automaticallyShowImages,
             isMobileOrMeteredConnection,
@@ -118,25 +119,25 @@ class UiSettingsState(
             },
         )
 
-    fun modernGalleryStyle() =
+    override fun modernGalleryStyle() =
         when (uiSettingsFlow.gallerySet.value) {
             ProfileGalleryType.CLASSIC -> false
             ProfileGalleryType.MODERN -> true
         }
 
-    fun isPerformanceMode() = uiSettingsFlow.featureSet.value == FeatureSetType.PERFORMANCE
+    override fun isPerformanceMode() = uiSettingsFlow.featureSet.value == FeatureSetType.PERFORMANCE
 
-    fun isNotPerformanceMode() = uiSettingsFlow.featureSet.value != FeatureSetType.PERFORMANCE
+    override fun isNotPerformanceMode() = uiSettingsFlow.featureSet.value != FeatureSetType.PERFORMANCE
 
-    fun isCompleteUIMode() = uiSettingsFlow.featureSet.value == FeatureSetType.COMPLETE
+    override fun isCompleteUIMode() = uiSettingsFlow.featureSet.value == FeatureSetType.COMPLETE
 
-    fun isImmersiveScrollingActive() = uiSettingsFlow.automaticallyHideNavigationBars.value == BooleanType.ALWAYS
+    override fun isImmersiveScrollingActive() = uiSettingsFlow.automaticallyHideNavigationBars.value == BooleanType.ALWAYS
 
-    fun showProfilePictures() = showProfilePictures.value
+    override fun showProfilePictures() = showProfilePictures.value
 
-    fun showUrlPreview() = showUrlPreview.value
+    override fun showUrlPreview() = showUrlPreview.value
 
-    fun startVideoPlayback() = startVideoPlayback.value
+    override fun startVideoPlayback() = startVideoPlayback.value
 
-    fun showImages() = showImages.value
+    override fun showImages() = showImages.value
 }
