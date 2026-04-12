@@ -18,26 +18,43 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.cashu
+package com.vitorpamplona.amethyst.commons.ui.note.creators.draftTags
 
-import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
-import com.vitorpamplona.amethyst.service.cashu.v3.V3Parser
-import com.vitorpamplona.amethyst.service.cashu.v4.V4Parser
-import com.vitorpamplona.amethyst.service.checkNotInMainThread
-import kotlinx.collections.immutable.ImmutableList
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.update
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
-class CashuParser {
-    fun parse(cashuToken: String): GenericLoadable<ImmutableList<CashuToken>> {
-        checkNotInMainThread()
+@Stable
+class DraftTagState {
+    var current: String by mutableStateOf(newTag())
+    var usedDraftTags by mutableStateOf(setOf(current))
 
-        if (cashuToken.startsWith("cashuA")) {
-            return V3Parser.parseCashuA(cashuToken)
-        }
+    private val _versions = MutableStateFlow(0)
 
-        if (cashuToken.startsWith("cashuB")) {
-            return V4Parser.parseCashuB(cashuToken)
-        }
+    @OptIn(FlowPreview::class)
+    val versions = _versions.debounce(1000)
 
-        return GenericLoadable.Error("Could not parse this cashu token")
+    @OptIn(ExperimentalUuidApi::class)
+    fun newTag() = Uuid.random().toString()
+
+    fun rotate() {
+        set(newTag())
+        _versions.update { 0 }
+    }
+
+    fun set(existingTag: String) {
+        current = existingTag
+        usedDraftTags += existingTag
+    }
+
+    fun newVersion() {
+        _versions.update { it + 1 }
     }
 }

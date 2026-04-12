@@ -18,26 +18,12 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.cashu
+package com.vitorpamplona.amethyst.commons.ui.note.creators.messagefield
 
-import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
-import com.vitorpamplona.amethyst.service.cashu.v3.V3Parser
-import com.vitorpamplona.amethyst.service.cashu.v4.V4Parser
-import com.vitorpamplona.amethyst.service.checkNotInMainThread
-import kotlinx.collections.immutable.ImmutableList
+import androidx.compose.foundation.text.input.TextFieldState
 
-class CashuParser {
-    fun parse(cashuToken: String): GenericLoadable<ImmutableList<CashuToken>> {
-        checkNotInMainThread()
+interface IMessageField {
+    val message: TextFieldState
 
-        if (cashuToken.startsWith("cashuA")) {
-            return V3Parser.parseCashuA(cashuToken)
-        }
-
-        if (cashuToken.startsWith("cashuB")) {
-            return V4Parser.parseCashuB(cashuToken)
-        }
-
-        return GenericLoadable.Error("Could not parse this cashu token")
-    }
+    fun onMessageChanged()
 }

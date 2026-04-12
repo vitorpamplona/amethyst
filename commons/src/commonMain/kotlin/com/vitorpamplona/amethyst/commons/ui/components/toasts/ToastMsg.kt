@@ -18,26 +18,9 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.cashu
+package com.vitorpamplona.amethyst.commons.ui.components.toasts
 
-import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
-import com.vitorpamplona.amethyst.service.cashu.v3.V3Parser
-import com.vitorpamplona.amethyst.service.cashu.v4.V4Parser
-import com.vitorpamplona.amethyst.service.checkNotInMainThread
-import kotlinx.collections.immutable.ImmutableList
+import androidx.compose.runtime.Immutable
 
-class CashuParser {
-    fun parse(cashuToken: String): GenericLoadable<ImmutableList<CashuToken>> {
-        checkNotInMainThread()
-
-        if (cashuToken.startsWith("cashuA")) {
-            return V3Parser.parseCashuA(cashuToken)
-        }
-
-        if (cashuToken.startsWith("cashuB")) {
-            return V4Parser.parseCashuB(cashuToken)
-        }
-
-        return GenericLoadable.Error("Could not parse this cashu token")
-    }
-}
+@Immutable
+open class ToastMsg

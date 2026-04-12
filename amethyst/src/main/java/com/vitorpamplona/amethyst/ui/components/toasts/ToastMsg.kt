@@ -20,7 +20,5 @@
  */
 package com.vitorpamplona.amethyst.ui.components.toasts
 
-import androidx.compose.runtime.Immutable
-
-@Immutable
-open class ToastMsg
+// Re-export from commons for backwards compatibility
+typealias ToastMsg = com.vitorpamplona.amethyst.commons.ui.components.toasts.ToastMsg

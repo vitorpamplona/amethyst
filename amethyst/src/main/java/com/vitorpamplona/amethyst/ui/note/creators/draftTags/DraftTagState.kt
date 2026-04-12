@@ -20,41 +20,5 @@
  */
 package com.vitorpamplona.amethyst.ui.note.creators.draftTags
 
-import androidx.compose.runtime.Stable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.update
-import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
-
-@Stable
-class DraftTagState {
-    var current: String by mutableStateOf(newTag())
-    var usedDraftTags by mutableStateOf(setOf(current))
-
-    private val _versions = MutableStateFlow(0)
-
-    @OptIn(FlowPreview::class)
-    val versions = _versions.debounce(1000)
-
-    @OptIn(ExperimentalUuidApi::class)
-    fun newTag() = Uuid.random().toString()
-
-    fun rotate() {
-        set(newTag())
-        _versions.update { 0 }
-    }
-
-    fun set(existingTag: String) {
-        current = existingTag
-        usedDraftTags += existingTag
-    }
-
-    fun newVersion() {
-        _versions.update { it + 1 }
-    }
-}
+// Re-export from commons for backwards compatibility
+typealias DraftTagState = com.vitorpamplona.amethyst.commons.ui.note.creators.draftTags.DraftTagState
