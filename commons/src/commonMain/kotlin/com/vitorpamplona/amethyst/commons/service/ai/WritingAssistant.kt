@@ -18,9 +18,44 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.ai
+package com.vitorpamplona.amethyst.commons.service.ai
 
-typealias WritingAssistant = com.vitorpamplona.amethyst.commons.service.ai.WritingAssistant
-typealias WritingTone = com.vitorpamplona.amethyst.commons.service.ai.WritingTone
-typealias WritingAssistantStatus = com.vitorpamplona.amethyst.commons.service.ai.WritingAssistantStatus
-typealias WritingResult = com.vitorpamplona.amethyst.commons.service.ai.WritingResult
+import androidx.compose.runtime.Immutable
+
+interface WritingAssistant {
+    suspend fun checkAvailability(): WritingAssistantStatus
+
+    suspend fun transform(
+        text: String,
+        tone: WritingTone,
+    ): WritingResult
+
+    fun close()
+}
+
+enum class WritingTone {
+    CORRECT,
+    REPHRASE,
+    SHORTER,
+    ELABORATE,
+    FRIENDLY,
+    PROFESSIONAL,
+    MORE_DIRECT,
+    PUNCHY,
+    EMOJIFY,
+}
+
+sealed class WritingAssistantStatus {
+    data object Available : WritingAssistantStatus()
+
+    data object Unavailable : WritingAssistantStatus()
+
+    data object Downloading : WritingAssistantStatus()
+}
+
+@Immutable
+data class WritingResult(
+    val originalText: String,
+    val transformedText: String,
+    val tone: WritingTone,
+)

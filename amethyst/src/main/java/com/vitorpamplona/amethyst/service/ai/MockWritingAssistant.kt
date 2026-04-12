@@ -20,6 +20,10 @@
  */
 package com.vitorpamplona.amethyst.service.ai
 
+import com.vitorpamplona.amethyst.commons.service.ai.WritingAssistant
+import com.vitorpamplona.amethyst.commons.service.ai.WritingAssistantStatus
+import com.vitorpamplona.amethyst.commons.service.ai.WritingResult
+import com.vitorpamplona.amethyst.commons.service.ai.WritingTone
 import kotlinx.coroutines.delay
 
 /**

@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.service.ai
 
 import android.content.Context
+import com.vitorpamplona.amethyst.commons.service.ai.WritingAssistant
 
 object WritingAssistantFactory {
     @Suppress("UNUSED_PARAMETER")

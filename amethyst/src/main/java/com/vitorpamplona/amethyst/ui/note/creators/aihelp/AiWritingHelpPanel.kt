@@ -44,8 +44,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.service.ai.WritingResult
-import com.vitorpamplona.amethyst.service.ai.WritingTone
+import com.vitorpamplona.amethyst.commons.service.ai.WritingResult
+import com.vitorpamplona.amethyst.commons.service.ai.WritingTone
 import com.vitorpamplona.amethyst.ui.stringRes
 
 @Composable
