@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.ui.wallet.ReceiveState
+import com.vitorpamplona.amethyst.commons.ui.wallet.SendState
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcWalletEntryNorm
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -48,35 +50,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-
-sealed class SendState {
-    data object Idle : SendState()
-
-    data object Sending : SendState()
-
-    data class Success(
-        val preimage: String?,
-    ) : SendState()
-
-    data class Error(
-        val message: String,
-    ) : SendState()
-}
-
-sealed class ReceiveState {
-    data object Idle : ReceiveState()
-
-    data object Creating : ReceiveState()
-
-    data class Created(
-        val invoice: String,
-        val amount: Long,
-    ) : ReceiveState()
-
-    data class Error(
-        val message: String,
-    ) : ReceiveState()
-}
 
 enum class TransactionFilter {
     ALL,
