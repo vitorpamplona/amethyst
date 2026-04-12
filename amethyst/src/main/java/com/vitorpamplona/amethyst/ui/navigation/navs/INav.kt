@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.ui.navigation.navs
 
 import androidx.compose.material3.DrawerState
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.commons.navigation.routes.Route
 import kotlinx.coroutines.CoroutineScope
 import kotlin.reflect.KClass
 

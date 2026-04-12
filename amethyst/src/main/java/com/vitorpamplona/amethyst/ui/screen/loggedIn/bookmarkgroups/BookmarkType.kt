@@ -20,8 +20,4 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups
 
-enum class BookmarkType {
-    PostBookmark,
-
-    ArticleBookmark,
-}
+typealias BookmarkType = com.vitorpamplona.amethyst.commons.navigation.bookmarkgroups.BookmarkType

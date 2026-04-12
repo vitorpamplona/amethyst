@@ -18,27 +18,10 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.datasource
+package com.vitorpamplona.amethyst.commons.navigation.bookmarkgroups
 
-import android.annotation.SuppressLint
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import com.vitorpamplona.amethyst.commons.navigation.routes.Route
-import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.KeyDataSourceSubscription
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+enum class BookmarkType {
+    PostBookmark,
 
-@SuppressLint("StateFlowValueCalledInComposition")
-@Composable
-fun GeoHashFilterAssemblerSubscription(
-    tag: Route.Geohash,
-    accountViewModel: AccountViewModel,
-) {
-    // different screens get different states
-    // even if they are tracking the same tag.
-    val state =
-        remember(tag) {
-            GeohashQueryState(tag.geohash, accountViewModel.account.followOutboxesOrProxy.flow.value)
-        }
-
-    KeyDataSourceSubscription(state, accountViewModel.dataSources().geohashes)
+    ArticleBookmark,
 }
