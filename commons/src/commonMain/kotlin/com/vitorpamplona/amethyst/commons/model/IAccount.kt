@@ -21,7 +21,11 @@
 package com.vitorpamplona.amethyst.commons.model
 
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupList
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.BookmarkListState
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.OldBookmarkListState
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
+import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
@@ -34,6 +38,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import com.vitorpamplona.quartz.nip57Zaps.IPrivateZapsDecryptionCache
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.utils.DualCase
+import kotlinx.coroutines.flow.StateFlow
 
 /**
  * Interface for NIP-47 wallet connect signer state.
@@ -107,6 +112,36 @@ interface IAccount {
 
     /** Whether a note is acceptable (not hidden, not blocked, etc.) */
     fun isAcceptable(note: Note): Boolean
+
+    // ---- Reactive state flows for DAL filter migration ----
+
+    /** Live hidden users state (from HiddenUsersState.flow) */
+    val liveHiddenUsersFlow: StateFlow<LiveHiddenUsers>
+
+    /** Top navigation follow list filters per feed type (from topNavFilterFlow) */
+    val liveHomeFollowLists: StateFlow<ITopNavFilter>
+    val liveStoriesFollowLists: StateFlow<ITopNavFilter>
+    val liveDiscoveryFollowLists: StateFlow<ITopNavFilter>
+    val liveNotificationFollowLists: StateFlow<ITopNavFilter>
+    val livePollsFollowLists: StateFlow<ITopNavFilter>
+    val livePicturesFollowLists: StateFlow<ITopNavFilter>
+    val liveShortsFollowLists: StateFlow<ITopNavFilter>
+    val liveLongsFollowLists: StateFlow<ITopNavFilter>
+
+    /** Block list address for the current user */
+    fun getBlockListAddress(): Address
+
+    /** Bookmark list flow (from BookmarkListState.bookmarks) */
+    val liveBookmarks: StateFlow<BookmarkListState.BookmarkList>
+
+    /** Old bookmark list flow (from OldBookmarkListState.bookmarks) */
+    val liveOldBookmarks: StateFlow<OldBookmarkListState.BookmarkList>
+
+    /** Proxy relay list flow (from ProxyRelayListState.flow) */
+    val liveProxyRelayList: StateFlow<Set<NormalizedRelayUrl>>
+
+    /** Default home follow list name for feed key generation */
+    val defaultHomeFollowListFlow: StateFlow<String>
 
     /** Send a NIP-04 encrypted direct message */
     suspend fun sendNip04PrivateMessage(eventTemplate: EventTemplate<PrivateDmEvent>)

@@ -18,14 +18,20 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.topNavFeeds
+package com.vitorpamplona.amethyst.commons.model
 
-import com.vitorpamplona.amethyst.commons.model.ITopNavFilter
-import com.vitorpamplona.amethyst.model.LocalCache
-import kotlinx.coroutines.flow.Flow
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
-interface IFeedTopNavFilter : ITopNavFilter {
-    fun toPerRelayFlow(cache: LocalCache): Flow<IFeedTopNavPerRelayFilterSet>
+/**
+ * Commons-level interface for top navigation feed filters.
+ * Provides the core filtering methods needed by DAL filter classes.
+ *
+ * The amethyst module's IFeedTopNavFilter extends this with additional
+ * relay-specific methods that depend on LocalCache.
+ */
+interface ITopNavFilter {
+    fun matchAuthor(pubkey: HexKey): Boolean
 
-    fun startValue(cache: LocalCache): IFeedTopNavPerRelayFilterSet
+    fun match(noteEvent: Event): Boolean
 }
