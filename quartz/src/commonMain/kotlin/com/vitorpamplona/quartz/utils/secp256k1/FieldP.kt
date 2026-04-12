@@ -495,7 +495,9 @@ internal object FieldP {
             }
         }
 
-        reduceSelf(out)
+        // No reduceSelf — lazy mul. Output is in [0, 2^256), possibly [P, P+C).
+        // Safe: mul/add/sub all handle unreduced inputs.
+        // Only neg/half/isZero/cmp/toBytes need explicit reduceSelf.
     }
 
     // ==================== Convenience wrappers ====================

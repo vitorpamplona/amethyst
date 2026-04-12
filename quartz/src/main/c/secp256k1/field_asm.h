@@ -170,7 +170,7 @@ static inline void fe_mul_asm(secp256k1_fe *r, const secp256k1_fe *a, const secp
     );
 
     r->d[0] = r0; r->d[1] = r1; r->d[2] = r2; r->d[3] = r3;
-    fe_normalize(r);
+    /* No normalize — lazy mul. Result in [0, 2^256). */
 }
 
 #define FE_MUL_ASM 1
@@ -357,7 +357,7 @@ static inline void fe_mul_asm(secp256k1_fe *r, const secp256k1_fe *a, const secp
         : : [rp]"r"(r->d), [lo0]"r"(lo0), [lo1]"r"(lo1), [lo2]"r"(lo2), [lo3]"r"(lo3)
         : "memory"
     );
-    fe_normalize(r);
+    /* No normalize — lazy mul. Result in [0, 2^256). */
 }
 
 #define FE_MUL_ASM 1

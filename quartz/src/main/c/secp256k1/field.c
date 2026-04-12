@@ -120,7 +120,9 @@ void reduce_wide(secp256k1_fe *r, const uint64_t w[8]) {
         }
     }
 
-    fe_normalize(r);
+    /* No fe_normalize — lazy. Output is in [0, 2^256), possibly in [P, P+C).
+     * This is safe: mul/add/sub all handle unreduced inputs.
+     * Only neg/half/isZero/cmp/toBytes need explicit normalize. */
 }
 
 void fe_mul(secp256k1_fe *r, const secp256k1_fe *a, const secp256k1_fe *b) {
@@ -187,7 +189,9 @@ void fe_mul(secp256k1_fe *r, const secp256k1_fe *a, const secp256k1_fe *b) {
         r->d[0] = (uint64_t)acc; carry = (uint64_t)(acc >> 64);
         if (carry) { r->d[1] += carry; if (r->d[1] < carry) { r->d[2]++; if (!r->d[2]) r->d[3]++; } }
     }
-    fe_normalize(r);
+    /* No fe_normalize — lazy. Output is in [0, 2^256), possibly in [P, P+C).
+     * This is safe: mul/add/sub all handle unreduced inputs.
+     * Only neg/half/isZero/cmp/toBytes need explicit normalize. */
 #else
     uint64_t w[8];
     mul_wide(w, a->d, b->d);
@@ -267,7 +271,9 @@ void fe_mul(secp256k1_fe *r, const secp256k1_fe *a, const secp256k1_fe *b) {
         r->d[0] = sum;
         if (sum < c_lo) { r->d[1]++; if (!r->d[1]) { r->d[2]++; if (!r->d[2]) r->d[3]++; } }
     }
-    fe_normalize(r);
+    /* No fe_normalize — lazy. Output is in [0, 2^256), possibly in [P, P+C).
+     * This is safe: mul/add/sub all handle unreduced inputs.
+     * Only neg/half/isZero/cmp/toBytes need explicit normalize. */
 }
 
 void fe_sqr(secp256k1_fe *r, const secp256k1_fe *a) { fe_mul(r, a, a); }
