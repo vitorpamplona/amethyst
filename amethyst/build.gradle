@@ -142,6 +142,16 @@ android {
         ]
     }
 
+    sourceSets {
+        main {
+            java.srcDirs = ['src/androidMain/kotlin', 'src/commonMain/kotlin']
+            kotlin.srcDirs = ['src/androidMain/kotlin', 'src/commonMain/kotlin']
+            res.srcDirs = ['src/androidMain/res']
+            jniLibs.srcDirs = ['src/androidMain/jniLibs']
+            manifest.srcFile 'src/androidMain/AndroidManifest.xml'
+        }
+    }
+
     buildTypes {
         release {
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), 'proguard-rules.pro'
