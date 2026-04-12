@@ -20,35 +20,21 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource
 
-import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
-import com.vitorpamplona.quartz.nip68Picture.PictureEvent
-import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
-import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
-import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
-import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
-import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
+// Re-export from commons for backwards compatibility
+import com.vitorpamplona.amethyst.commons.ui.screens.video.datasource.LegacyMimeTypeMap as CommonsLegacyMimeTypeMap
+import com.vitorpamplona.amethyst.commons.ui.screens.video.datasource.LegacyMimeTypes as CommonsLegacyMimeTypes
+import com.vitorpamplona.amethyst.commons.ui.screens.video.datasource.PictureAndVideoKTags as CommonsPictureAndVideoKTags
+import com.vitorpamplona.amethyst.commons.ui.screens.video.datasource.PictureAndVideoKinds as CommonsPictureAndVideoKinds
+import com.vitorpamplona.amethyst.commons.ui.screens.video.datasource.PictureAndVideoLegacyKTags as CommonsPictureAndVideoLegacyKTags
+import com.vitorpamplona.amethyst.commons.ui.screens.video.datasource.PictureAndVideoLegacyKinds as CommonsPictureAndVideoLegacyKinds
+import com.vitorpamplona.amethyst.commons.ui.screens.video.datasource.SUPPORTED_VIDEO_FEED_MIME_TYPES as CommonsSUPPORTED_VIDEO_FEED_MIME_TYPES
+import com.vitorpamplona.amethyst.commons.ui.screens.video.datasource.SUPPORTED_VIDEO_FEED_MIME_TYPES_SET as CommonsSUPPORTED_VIDEO_FEED_MIME_TYPES_SET
 
-val SUPPORTED_VIDEO_FEED_MIME_TYPES = listOf("image/jpeg", "image/gif", "image/png", "image/webp", "video/mp4", "video/mpeg", "video/webm", "audio/aac", "audio/mpeg", "audio/webm", "audio/wav", "image/avif")
-val SUPPORTED_VIDEO_FEED_MIME_TYPES_SET = SUPPORTED_VIDEO_FEED_MIME_TYPES.toSet()
-
-val PictureAndVideoKinds =
-    listOf(
-        PictureEvent.KIND,
-        VideoHorizontalEvent.KIND,
-        VideoVerticalEvent.KIND,
-        VideoNormalEvent.KIND,
-        VideoShortEvent.KIND,
-    )
-
-val PictureAndVideoKTags =
-    listOf(
-        PictureEvent.KIND.toString(),
-        VideoHorizontalEvent.KIND.toString(),
-        VideoVerticalEvent.KIND.toString(),
-        VideoNormalEvent.KIND.toString(),
-        VideoShortEvent.KIND.toString(),
-    )
-val PictureAndVideoLegacyKinds = listOf(FileHeaderEvent.KIND, FileStorageHeaderEvent.KIND)
-val PictureAndVideoLegacyKTags = listOf(FileHeaderEvent.KIND.toString(), FileStorageHeaderEvent.KIND.toString())
-val LegacyMimeTypes = SUPPORTED_VIDEO_FEED_MIME_TYPES
-val LegacyMimeTypeMap = mapOf("m" to LegacyMimeTypes)
+val SUPPORTED_VIDEO_FEED_MIME_TYPES = CommonsSUPPORTED_VIDEO_FEED_MIME_TYPES
+val SUPPORTED_VIDEO_FEED_MIME_TYPES_SET = CommonsSUPPORTED_VIDEO_FEED_MIME_TYPES_SET
+val PictureAndVideoKinds = CommonsPictureAndVideoKinds
+val PictureAndVideoKTags = CommonsPictureAndVideoKTags
+val PictureAndVideoLegacyKinds = CommonsPictureAndVideoLegacyKinds
+val PictureAndVideoLegacyKTags = CommonsPictureAndVideoLegacyKTags
+val LegacyMimeTypes = CommonsLegacyMimeTypes
+val LegacyMimeTypeMap = CommonsLegacyMimeTypeMap
