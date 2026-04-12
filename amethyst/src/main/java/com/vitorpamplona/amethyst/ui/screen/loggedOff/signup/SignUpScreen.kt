@@ -53,10 +53,10 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.Amethyst
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
+import com.vitorpamplona.amethyst.commons.ui.screens.loggedOff.login.LoginErrorManager
 import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.AcceptTerms
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.TorSettingsSetup
-import com.vitorpamplona.amethyst.ui.screen.loggedOff.login.LoginErrorManager
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
@@ -160,8 +160,9 @@ fun SignUpPage(
                 }
 
                 is LoginErrorManager.ParamsErrorMsg -> {
+                    val params = error.params
                     Text(
-                        text = stringRes(error.errorResId, *error.params),
+                        text = stringRes(error.errorResId, *params),
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodySmall,
                     )

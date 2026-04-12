@@ -18,7 +18,38 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.components
+package com.vitorpamplona.amethyst.commons.ui.screens.loggedOff.login
 
-// Re-export from commons for backwards compatibility
-typealias TranslationConfig = com.vitorpamplona.amethyst.commons.ui.components.TranslationConfig
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+
+class LoginErrorManager {
+    interface IErrorMsg
+
+    class SingleErrorMsg(
+        val errorResId: Int,
+    ) : IErrorMsg
+
+    class ParamsErrorMsg(
+        val errorResId: Int,
+        val params: Array<out String>,
+    ) : IErrorMsg
+
+    var error by mutableStateOf<IErrorMsg?>(null)
+
+    fun clearErrors() {
+        error = null
+    }
+
+    fun error(resourceId: Int) {
+        error = SingleErrorMsg(resourceId)
+    }
+
+    fun error(
+        resourceId: Int,
+        vararg params: String,
+    ) {
+        error = ParamsErrorMsg(resourceId, params)
+    }
+}
