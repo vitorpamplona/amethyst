@@ -20,47 +20,5 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.identity
 
-import androidx.compose.runtime.Stable
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.viewModelScope
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.quartz.nip39ExtIdentities.ExternalIdentitiesEvent
-import com.vitorpamplona.quartz.nip39ExtIdentities.identityClaims
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
-
-@Stable
-class UserExternalIdentitiesViewModel(
-    val user: User,
-) : ViewModel() {
-    private val note =
-        LocalCache.getOrCreateAddressableNote(
-            ExternalIdentitiesEvent.createAddress(user.pubkeyHex),
-        )
-
-    val identities =
-        note
-            .flow()
-            .metadata.stateFlow
-            .map { state ->
-                val event = state.note.event as? ExternalIdentitiesEvent
-                event?.identityClaims() ?: emptyList()
-            }.flowOn(Dispatchers.IO)
-            .stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.WhileSubscribed(5000),
-                initialValue = emptyList(),
-            )
-
-    class Factory(
-        val user: User,
-    ) : ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = UserExternalIdentitiesViewModel(user) as T
-    }
-}
+// Re-export from commons for backwards compatibility
+typealias UserExternalIdentitiesViewModel = com.vitorpamplona.amethyst.commons.viewmodels.UserExternalIdentitiesViewModel

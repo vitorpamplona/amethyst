@@ -174,7 +174,11 @@ fun PrepareViewModels(
     val externalIdentities: UserExternalIdentitiesViewModel =
         viewModel(
             key = baseUser.pubkeyHex + "UserExternalIdentitiesViewModel",
-            factory = UserExternalIdentitiesViewModel.Factory(baseUser),
+            factory =
+                com.vitorpamplona.amethyst.commons.viewmodels.UserExternalIdentitiesViewModel.Factory(
+                    baseUser,
+                    com.vitorpamplona.amethyst.model.LocalCache,
+                ),
         )
 
     val zapFeedViewModel: UserProfileZapsViewModel =
