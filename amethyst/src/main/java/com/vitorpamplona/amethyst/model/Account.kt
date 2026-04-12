@@ -541,7 +541,7 @@ class Account(
 
     private suspend fun sendNewAppSpecificData() = sendMyPublicAndPrivateOutbox(appSpecific.saveNewAppSpecificData())
 
-    suspend fun reactTo(
+    override suspend fun reactTo(
         note: Note,
         reaction: String,
     ) = ReactionAction.reactTo(
@@ -652,21 +652,21 @@ class Account(
         return zapRequest
     }
 
-    suspend fun report(
+    override suspend fun report(
         note: Note,
         type: ReportType,
-        content: String = "",
+        content: String,
     ) = sendMyPublicAndPrivateOutbox(ReportAction.report(note, type, content, userProfile(), signer))
 
-    suspend fun report(
+    override suspend fun report(
         user: User,
         type: ReportType,
-        content: String = "",
+        content: String,
     ) = sendMyPublicAndPrivateOutbox(ReportAction.report(user, type, content, userProfile(), signer))
 
-    suspend fun delete(note: Note) = delete(listOf(note))
+    override suspend fun delete(note: Note) = delete(listOf(note))
 
-    suspend fun delete(notes: List<Note>) {
+    override suspend fun delete(notes: List<Note>) {
         if (!isWriteable()) return
 
         val myNotes = notes.filter { it.author == userProfile() && it.event != null }
@@ -715,7 +715,7 @@ class Account(
         alt: String,
     ) = blossomServers.createBlossomDeleteAuth(hash, alt)
 
-    suspend fun boost(note: Note) {
+    override suspend fun boost(note: Note) {
         RepostAction.repost(note, signer)?.let { event ->
             client.publish(event, computeMyReactionToNote(note, event))
             cache.justConsumeMyOwnEvent(event)
@@ -949,7 +949,7 @@ class Account(
         }
     }
 
-    suspend fun broadcast(note: Note) {
+    override suspend fun broadcast(note: Note) {
         note.event?.let { noteEvent ->
             if (noteEvent is WrappedEvent && noteEvent.host != null) {
                 // download the event and send it.
@@ -979,31 +979,31 @@ class Account(
 
     fun upgradeAttestations() = otsState.upgradeAttestationsIfNeeded(::sendAutomatic)
 
-    suspend fun follow(users: List<User>) = sendMyPublicAndPrivateOutbox(kind3FollowList.follow(users))
+    override suspend fun follow(users: List<User>) = sendMyPublicAndPrivateOutbox(kind3FollowList.follow(users))
 
-    suspend fun follow(user: User) = sendMyPublicAndPrivateOutbox(kind3FollowList.follow(user))
+    override suspend fun follow(user: User) = sendMyPublicAndPrivateOutbox(kind3FollowList.follow(user))
 
-    suspend fun unfollow(user: User) = sendMyPublicAndPrivateOutbox(kind3FollowList.unfollow(user))
+    override suspend fun unfollow(user: User) = sendMyPublicAndPrivateOutbox(kind3FollowList.unfollow(user))
 
-    suspend fun follow(channel: PublicChatChannel) = sendMyPublicAndPrivateOutbox(publicChatList.follow(channel))
+    override suspend fun follow(channel: PublicChatChannel) = sendMyPublicAndPrivateOutbox(publicChatList.follow(channel))
 
-    suspend fun unfollow(channel: PublicChatChannel) = sendMyPublicAndPrivateOutbox(publicChatList.unfollow(channel))
+    override suspend fun unfollow(channel: PublicChatChannel) = sendMyPublicAndPrivateOutbox(publicChatList.unfollow(channel))
 
-    suspend fun follow(channel: EphemeralChatChannel) = sendMyPublicAndPrivateOutbox(ephemeralChatList.follow(channel))
+    override suspend fun follow(channel: EphemeralChatChannel) = sendMyPublicAndPrivateOutbox(ephemeralChatList.follow(channel))
 
-    suspend fun unfollow(channel: EphemeralChatChannel) = sendMyPublicAndPrivateOutbox(ephemeralChatList.unfollow(channel))
+    override suspend fun unfollow(channel: EphemeralChatChannel) = sendMyPublicAndPrivateOutbox(ephemeralChatList.unfollow(channel))
 
-    suspend fun follow(community: AddressableNote) = sendMyPublicAndPrivateOutbox(communityList.follow(community))
+    override suspend fun follow(community: AddressableNote) = sendMyPublicAndPrivateOutbox(communityList.follow(community))
 
-    suspend fun unfollow(community: AddressableNote) = sendMyPublicAndPrivateOutbox(communityList.unfollow(community))
+    override suspend fun unfollow(community: AddressableNote) = sendMyPublicAndPrivateOutbox(communityList.unfollow(community))
 
-    suspend fun followHashtag(tag: String) = sendMyPublicAndPrivateOutbox(hashtagList.follow(tag))
+    override suspend fun followHashtag(tag: String) = sendMyPublicAndPrivateOutbox(hashtagList.follow(tag))
 
-    suspend fun unfollowHashtag(tag: String) = sendMyPublicAndPrivateOutbox(hashtagList.unfollow(tag))
+    override suspend fun unfollowHashtag(tag: String) = sendMyPublicAndPrivateOutbox(hashtagList.unfollow(tag))
 
-    suspend fun followGeohash(geohash: String) = sendMyPublicAndPrivateOutbox(geohashList.follow(geohash))
+    override suspend fun followGeohash(geohash: String) = sendMyPublicAndPrivateOutbox(geohashList.follow(geohash))
 
-    suspend fun unfollowGeohash(geohash: String) = sendMyPublicAndPrivateOutbox(geohashList.unfollow(geohash))
+    override suspend fun unfollowGeohash(geohash: String) = sendMyPublicAndPrivateOutbox(geohashList.unfollow(geohash))
 
     suspend fun approveCommunityPost(
         post: Note,
@@ -1981,7 +1981,7 @@ class Account(
         delete(note)
     }
 
-    suspend fun addBookmark(
+    override suspend fun addBookmark(
         note: Note,
         isPrivate: Boolean,
     ) {
@@ -1990,7 +1990,7 @@ class Account(
         sendMyPublicAndPrivateOutbox(bookmarkState.addBookmark(note, isPrivate))
     }
 
-    suspend fun removeBookmark(
+    override suspend fun removeBookmark(
         note: Note,
         isPrivate: Boolean,
     ) {
@@ -2002,7 +2002,7 @@ class Account(
         }
     }
 
-    suspend fun removeBookmark(note: Note) {
+    override suspend fun removeBookmark(note: Note) {
         if (!isWriteable() || note.isDraft()) return
 
         val event = bookmarkState.removeBookmark(note)
@@ -2094,13 +2094,13 @@ class Account(
         sendMyPublicAndPrivateOutbox(newEvent)
     }
 
-    suspend fun addPin(note: Note) {
+    override suspend fun addPin(note: Note) {
         if (!isWriteable() || note.isDraft()) return
 
         sendMyPublicAndPrivateOutbox(pinState.addPin(note))
     }
 
-    suspend fun removePin(note: Note) {
+    override suspend fun removePin(note: Note) {
         if (!isWriteable() || note.isDraft()) return
 
         val event = pinState.removePin(note)
@@ -2136,20 +2136,20 @@ class Account(
         challenge: String,
     ): RelayAuthEvent = RelayAuthEvent.create(relay, challenge, signer)
 
-    suspend fun hideWord(word: String) {
+    override suspend fun hideWord(word: String) {
         sendMyPublicAndPrivateOutbox(muteList.hideWord(word))
     }
 
-    suspend fun showWord(word: String) {
+    override suspend fun showWord(word: String) {
         sendMyPublicAndPrivateOutbox(blockPeopleList.showWord(word))
         sendMyPublicAndPrivateOutbox(muteList.showWord(word))
     }
 
-    suspend fun hideUser(pubkeyHex: HexKey) {
+    override suspend fun hideUser(pubkeyHex: HexKey) {
         sendMyPublicAndPrivateOutbox(muteList.hideUser(pubkeyHex))
     }
 
-    suspend fun showUser(pubkeyHex: HexKey) {
+    override suspend fun showUser(pubkeyHex: HexKey) {
         sendMyPublicAndPrivateOutbox(blockPeopleList.showUser(pubkeyHex))
         sendMyPublicAndPrivateOutbox(muteList.showUser(pubkeyHex))
         hiddenUsers.showUser(pubkeyHex)
@@ -2327,9 +2327,9 @@ class Account(
 
     suspend fun saveRelayFeedsList(trustedRelays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(relayFeedsList.saveRelayList(trustedRelays))
 
-    suspend fun followRelayFeed(url: NormalizedRelayUrl) = sendMyPublicAndPrivateOutbox(relayFeedsList.addRelay(url))
+    override suspend fun followRelayFeed(url: NormalizedRelayUrl) = sendMyPublicAndPrivateOutbox(relayFeedsList.addRelay(url))
 
-    suspend fun unfollowRelayFeed(url: NormalizedRelayUrl) = sendMyPublicAndPrivateOutbox(relayFeedsList.removeRelay(url))
+    override suspend fun unfollowRelayFeed(url: NormalizedRelayUrl) = sendMyPublicAndPrivateOutbox(relayFeedsList.removeRelay(url))
 
     suspend fun saveBlockedRelayList(blockedRelays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(blockedRelayList.saveRelayList(blockedRelays))
 
