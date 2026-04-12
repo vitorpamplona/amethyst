@@ -24,9 +24,13 @@ import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
+import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
+import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.utils.cache.ICacheOperations
 
 /**
  * Cache provider interface for accessing cached Notes, Users, and Channels.
@@ -41,6 +45,44 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
  * - Platform-agnostic model layer
  */
 interface ICacheProvider {
+    // ---------------------------------------------------------------
+    // Collection-level access (for filterIntoSet, mapFlattenIntoSet, etc.)
+    // ---------------------------------------------------------------
+
+    /**
+     * The notes cache, keyed by hex ID.
+     * Exposes collection-scanning operations (filterIntoSet, mapFlattenIntoSet, etc.)
+     * used extensively by feed filters.
+     */
+    val notes: ICacheOperations<HexKey, Note>
+
+    /**
+     * The addressable notes cache, keyed by Address.
+     * Exposes collection-scanning operations with optional kind-based sub-map filtering
+     * used by discovery, drafts, bookmarks, and other feed filters.
+     */
+    val addressables: ICacheOperations<Address, AddressableNote>
+
+    /**
+     * The users cache, keyed by public key hex.
+     * Exposes collection-scanning operations for user enumeration.
+     */
+    val users: ICacheOperations<HexKey, User>
+
+    /**
+     * The public chat channels cache, keyed by hex ID.
+     */
+    val publicChatChannels: ICacheOperations<HexKey, PublicChatChannel>
+
+    /**
+     * The live activity channels cache, keyed by Address.
+     */
+    val liveChatChannels: ICacheOperations<Address, LiveActivitiesChannel>
+
+    // ---------------------------------------------------------------
+    // Single-item lookups
+    // ---------------------------------------------------------------
+
     /**
      * Gets a channel by Note reference.
      * Used for resolving relay hints for channel messages.
@@ -133,6 +175,91 @@ interface ICacheProvider {
      * @return The User (existing or newly created)
      */
     fun getOrCreateUser(pubkey: HexKey): User?
+
+    /**
+     * Gets or creates a User by public key hex, catching exceptions.
+     * Returns null if the key is invalid.
+     *
+     * @param pubkey The user's public key in hex format
+     * @return The User if valid, null otherwise
+     */
+    fun checkGetOrCreateUser(pubkey: HexKey): User? = runCatching { getOrCreateUser(pubkey) }.getOrNull()
+
+    /**
+     * Gets an AddressableNote if it exists in cache, by string key.
+     *
+     * @param key The addressable note key as a string (parsed into Address)
+     * @return The AddressableNote if found, null otherwise
+     */
+    fun getAddressableNoteIfExists(key: String): AddressableNote? = Address.parse(key)?.let { getAddressableNoteIfExists(it) }
+
+    /**
+     * Gets an AddressableNote if it exists in cache, by Address.
+     *
+     * @param address The note's Address
+     * @return The AddressableNote if found, null otherwise
+     */
+    fun getAddressableNoteIfExists(address: Address): AddressableNote?
+
+    /**
+     * Gets a PublicChatChannel if it exists in cache.
+     *
+     * @param key The channel's hex key
+     * @return The PublicChatChannel if found, null otherwise
+     */
+    fun getPublicChatChannelIfExists(key: HexKey): PublicChatChannel?
+
+    /**
+     * Gets a LiveActivitiesChannel if it exists in cache.
+     *
+     * @param key The channel's Address
+     * @return The LiveActivitiesChannel if found, null otherwise
+     */
+    fun getLiveActivityChannelIfExists(key: Address): LiveActivitiesChannel?
+
+    /**
+     * Gets or creates a PublicChatChannel.
+     *
+     * @param key The channel's hex key
+     * @return The PublicChatChannel (existing or newly created)
+     */
+    fun getOrCreatePublicChatChannel(key: HexKey): PublicChatChannel
+
+    /**
+     * Gets or creates a LiveActivitiesChannel.
+     *
+     * @param key The channel's Address
+     * @return The LiveActivitiesChannel (existing or newly created)
+     */
+    fun getOrCreateLiveChannel(key: Address): LiveActivitiesChannel
+
+    // ---------------------------------------------------------------
+    // Search methods
+    // ---------------------------------------------------------------
+
+    /**
+     * Finds public chat channels whose name starts with the given prefix.
+     *
+     * @param text The search prefix
+     * @return List of matching PublicChatChannels
+     */
+    fun findPublicChatChannelsStartingWith(text: String): List<PublicChatChannel> = emptyList()
+
+    /**
+     * Finds live activity channels whose name starts with the given prefix.
+     *
+     * @param text The search prefix
+     * @return List of matching LiveActivitiesChannels
+     */
+    fun findLiveActivityChannelsStartingWith(text: String): List<LiveActivitiesChannel> = emptyList()
+
+    /**
+     * Finds ephemeral chat channels whose name starts with the given prefix.
+     *
+     * @param text The search prefix
+     * @return List of matching EphemeralChatChannels
+     */
+    fun findEphemeralChatChannelsStartingWith(text: String): List<EphemeralChatChannel> = emptyList()
 
     fun justConsumeMyOwnEvent(event: Event): Boolean
 }

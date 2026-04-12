@@ -266,13 +266,13 @@ interface ILocalCache {
 object LocalCache : ILocalCache, ICacheProvider {
     val antiSpam = AntiSpamFilter()
 
-    val users = LargeSoftCache<HexKey, User>()
-    val notes = LargeSoftCache<HexKey, Note>()
-    val addressables = LargeSoftCache<Address, AddressableNote>()
+    override val users = LargeSoftCache<HexKey, User>()
+    override val notes = LargeSoftCache<HexKey, Note>()
+    override val addressables = LargeSoftCache<Address, AddressableNote>()
 
     val chatroomList = LargeCache<HexKey, ChatroomList>()
-    val publicChatChannels = LargeCache<HexKey, PublicChatChannel>()
-    val liveChatChannels = LargeCache<Address, LiveActivitiesChannel>()
+    override val publicChatChannels = LargeCache<HexKey, PublicChatChannel>()
+    override val liveChatChannels = LargeCache<Address, LiveActivitiesChannel>()
     val ephemeralChannels = LargeCache<RoomId, EphemeralChatChannel>()
 
     val paymentTracker = NwcPaymentTracker()
@@ -380,7 +380,7 @@ object LocalCache : ILocalCache, ICacheProvider {
 
     fun observeLatestNote(filter: Filter) = observeNotes(filter).map { it.firstOrNull() }
 
-    fun checkGetOrCreateUser(key: String): User? = runCatching { getOrCreateUser(key) }.getOrNull()
+    override fun checkGetOrCreateUser(key: String): User? = runCatching { getOrCreateUser(key) }.getOrNull()
 
     fun load(keys: List<String>): List<User> = keys.mapNotNull(::checkGetOrCreateUser)
 
@@ -418,19 +418,19 @@ object LocalCache : ILocalCache, ICacheProvider {
         return count
     }
 
-    fun getAddressableNoteIfExists(key: String): AddressableNote? = Address.parse(key)?.let { addressables.get(it) }
+    override fun getAddressableNoteIfExists(key: String): AddressableNote? = Address.parse(key)?.let { addressables.get(it) }
 
-    fun getAddressableNoteIfExists(address: Address): AddressableNote? = addressables.get(address)
+    override fun getAddressableNoteIfExists(address: Address): AddressableNote? = addressables.get(address)
 
     override fun getNoteIfExists(hexKey: String): Note? = if (hexKey.length == 64) notes.get(hexKey) else Address.parse(hexKey)?.let { addressables.get(it) }
 
     fun getNoteIfExists(key: ETag): Note? = notes.get(key.eventId)
 
-    fun getPublicChatChannelIfExists(key: String): PublicChatChannel? = publicChatChannels.get(key)
+    override fun getPublicChatChannelIfExists(key: String): PublicChatChannel? = publicChatChannels.get(key)
 
     fun getEphemeralChatChannelIfExists(key: RoomId): EphemeralChatChannel? = ephemeralChannels.get(key)
 
-    fun getLiveActivityChannelIfExists(key: Address): LiveActivitiesChannel? = liveChatChannels.get(key)
+    override fun getLiveActivityChannelIfExists(key: Address): LiveActivitiesChannel? = liveChatChannels.get(key)
 
     fun getNoteIfExists(event: Event): Note? =
         if (event is AddressableEvent) {
@@ -512,9 +512,9 @@ object LocalCache : ILocalCache, ICacheProvider {
 
     fun getOrCreateChatroomList(key: HexKey): ChatroomList = chatroomList.getOrCreate(key) { ChatroomList(key) }
 
-    fun getOrCreatePublicChatChannel(key: HexKey): PublicChatChannel = publicChatChannels.getOrCreate(key) { PublicChatChannel(key) }
+    override fun getOrCreatePublicChatChannel(key: HexKey): PublicChatChannel = publicChatChannels.getOrCreate(key) { PublicChatChannel(key) }
 
-    fun getOrCreateLiveChannel(key: Address): LiveActivitiesChannel = liveChatChannels.getOrCreate(key) { LiveActivitiesChannel(key) }
+    override fun getOrCreateLiveChannel(key: Address): LiveActivitiesChannel = liveChatChannels.getOrCreate(key) { LiveActivitiesChannel(key) }
 
     fun getOrCreateEphemeralChannel(key: RoomId): EphemeralChatChannel = ephemeralChannels.getOrCreate(key) { EphemeralChatChannel(key) }
 
@@ -1906,7 +1906,7 @@ object LocalCache : ILocalCache, ICacheProvider {
             }
     }
 
-    fun findPublicChatChannelsStartingWith(text: String): List<PublicChatChannel> {
+    override fun findPublicChatChannelsStartingWith(text: String): List<PublicChatChannel> {
         if (text.isBlank()) return emptyList()
 
         val key = decodeEventIdAsHexOrNull(text)
@@ -1921,7 +1921,7 @@ object LocalCache : ILocalCache, ICacheProvider {
         }
     }
 
-    fun findEphemeralChatChannelsStartingWith(text: String): List<EphemeralChatChannel> {
+    override fun findEphemeralChatChannelsStartingWith(text: String): List<EphemeralChatChannel> {
         if (text.isBlank()) return emptyList()
 
         return ephemeralChannels.filter { _, channel ->
@@ -1929,7 +1929,7 @@ object LocalCache : ILocalCache, ICacheProvider {
         }
     }
 
-    fun findLiveActivityChannelsStartingWith(text: String): List<LiveActivitiesChannel> {
+    override fun findLiveActivityChannelsStartingWith(text: String): List<LiveActivitiesChannel> {
         if (text.isBlank()) return emptyList()
 
         try {
