@@ -27,6 +27,7 @@ import androidx.compose.runtime.produceState
 import androidx.compose.ui.layout.ContentScale
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
+import com.vitorpamplona.amethyst.commons.ui.UrlPreviewState
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel

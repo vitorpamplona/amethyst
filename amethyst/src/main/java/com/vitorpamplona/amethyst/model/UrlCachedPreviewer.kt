@@ -22,8 +22,8 @@ package com.vitorpamplona.amethyst.model
 
 import android.util.LruCache
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.ui.UrlPreviewState
 import com.vitorpamplona.amethyst.service.previews.UrlPreview
-import com.vitorpamplona.amethyst.ui.components.UrlPreviewState
 import okhttp3.OkHttpClient
 
 @Stable

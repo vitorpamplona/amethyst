@@ -18,7 +18,21 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.components
+package com.vitorpamplona.amethyst.commons.ui
 
-// Re-export from commons for backwards compatibility
-typealias GenericLoadable<T> = com.vitorpamplona.amethyst.commons.ui.GenericLoadable<T>
+import androidx.compose.runtime.Immutable
+
+@Immutable
+sealed class GenericLoadable<T> {
+    @Immutable class Loading<T> : GenericLoadable<T>()
+
+    @Immutable class Loaded<T>(
+        val loaded: T,
+    ) : GenericLoadable<T>()
+
+    @Immutable class Empty<T> : GenericLoadable<T>()
+
+    @Immutable class Error<T>(
+        val errorMessage: String,
+    ) : GenericLoadable<T>()
+}

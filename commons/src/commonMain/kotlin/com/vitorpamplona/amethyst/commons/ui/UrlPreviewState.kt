@@ -18,7 +18,22 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.components
+package com.vitorpamplona.amethyst.commons.ui
 
-// Re-export from commons for backwards compatibility
-typealias GenericLoadable<T> = com.vitorpamplona.amethyst.commons.ui.GenericLoadable<T>
+import androidx.compose.runtime.Immutable
+import com.vitorpamplona.amethyst.commons.preview.UrlInfoItem
+
+@Immutable
+sealed class UrlPreviewState {
+    @Immutable object Loading : UrlPreviewState()
+
+    @Immutable class Loaded(
+        val previewInfo: UrlInfoItem,
+    ) : UrlPreviewState()
+
+    @Immutable object Empty : UrlPreviewState()
+
+    @Immutable class Error(
+        val errorMessage: String,
+    ) : UrlPreviewState()
+}

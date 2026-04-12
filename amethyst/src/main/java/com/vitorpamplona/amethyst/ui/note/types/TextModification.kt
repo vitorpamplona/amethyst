@@ -45,10 +45,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
+import com.vitorpamplona.amethyst.commons.ui.GenericLoadable
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.ui.actions.EditPostView
-import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
