@@ -20,9 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.note.creators.expiration
 
-import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.ui.note.creators.expiration.IExpiration as CommonsIExpiration
 
-@Stable
-interface IExpiration {
-    var expirationDate: Long
-}
+typealias IExpiration = CommonsIExpiration

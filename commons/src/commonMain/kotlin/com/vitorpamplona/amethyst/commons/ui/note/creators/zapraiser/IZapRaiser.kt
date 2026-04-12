@@ -18,8 +18,14 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.creators.draftTags
+package com.vitorpamplona.amethyst.commons.ui.note.creators.zapraiser
 
-import com.vitorpamplona.amethyst.commons.ui.note.creators.draftTags.DraftTagState as CommonsDraftTagState
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.Stable
 
-typealias DraftTagState = CommonsDraftTagState
+@Stable
+interface IZapRaiser {
+    val zapRaiserAmount: MutableState<Long?>
+
+    fun updateZapRaiserAmount(newAmount: Long?)
+}

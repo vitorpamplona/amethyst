@@ -18,8 +18,12 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.creators.draftTags
+package com.vitorpamplona.amethyst.commons.ui.note.creators.messagefield
 
-import com.vitorpamplona.amethyst.commons.ui.note.creators.draftTags.DraftTagState as CommonsDraftTagState
+import androidx.compose.foundation.text.input.TextFieldState
 
-typealias DraftTagState = CommonsDraftTagState
+interface IMessageField {
+    val message: TextFieldState
+
+    fun onMessageChanged()
+}

@@ -20,12 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.note.creators.zapraiser
 
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.ui.note.creators.zapraiser.IZapRaiser as CommonsIZapRaiser
 
-@Stable
-interface IZapRaiser {
-    val zapRaiserAmount: MutableState<Long?>
-
-    fun updateZapRaiserAmount(newAmount: Long?)
-}
+typealias IZapRaiser = CommonsIZapRaiser
