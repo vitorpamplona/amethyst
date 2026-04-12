@@ -135,4 +135,22 @@ interface ICacheProvider {
     fun getOrCreateUser(pubkey: HexKey): User?
 
     fun justConsumeMyOwnEvent(event: Event): Boolean
+
+    /**
+     * Filters all notes in the cache using the given predicate.
+     * Used by feed filters that need to scan the entire note cache.
+     *
+     * @param predicate Filter function receiving the note's hex key and the Note
+     * @return Set of notes matching the predicate
+     */
+    fun filterNotes(predicate: (String, Note) -> Boolean): Set<Note>
+
+    /**
+     * Filters addressable notes in the cache using the given predicate.
+     * Used by feed filters that need to scan addressable notes.
+     *
+     * @param predicate Filter function receiving the address and the AddressableNote
+     * @return Set of addressable notes matching the predicate
+     */
+    fun filterAddressableNotes(predicate: (AddressableNote) -> Boolean): Set<AddressableNote>
 }

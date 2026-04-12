@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.commons.marmot.MarmotManager
 import com.vitorpamplona.amethyst.commons.model.IAccount
+import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatListState
@@ -2281,6 +2282,8 @@ class Account(
         val limit = settings.syncedSettings.security.maxHashtagLimit.value
         return limit > 0 && (note.event?.countHashtags() ?: 0) > limit
     }
+
+    override fun liveHiddenUsers(): LiveHiddenUsers = hiddenUsers.flow.value
 
     override fun isAcceptable(note: Note): Boolean {
         return note.author?.let { isAcceptable(it) } ?: true &&

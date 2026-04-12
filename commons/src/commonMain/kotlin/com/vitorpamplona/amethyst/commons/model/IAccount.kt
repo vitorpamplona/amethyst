@@ -105,6 +105,12 @@ interface IAccount {
     /** Marmot MLS group chat list */
     val marmotGroupList: MarmotGroupList
 
+    /**
+     * Current hidden users settings snapshot.
+     * Used by feed filters to check if notes should be hidden.
+     */
+    fun liveHiddenUsers(): LiveHiddenUsers
+
     /** Whether a note is acceptable (not hidden, not blocked, etc.) */
     fun isAcceptable(note: Note): Boolean
 
