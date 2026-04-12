@@ -97,6 +97,9 @@ interface IAccount {
     val hiddenUsersHashCodes: Set<Int>
     val spammersHashCodes: Set<Int>
 
+    /** Live hidden users state for feed filtering */
+    val liveHiddenUsers: LiveHiddenUsers
+
     /** Set of followed user pubkeys (for feed ordering/highlighting) */
     fun followingKeySet(): Set<String>
 

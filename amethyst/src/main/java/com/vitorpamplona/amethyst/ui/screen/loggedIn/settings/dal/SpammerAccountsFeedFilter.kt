@@ -20,19 +20,5 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.dal
 
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.ui.dal.FeedFilter
-
-class SpammerAccountsFeedFilter(
-    val account: Account,
-) : FeedFilter<User>() {
-    override fun feedKey(): String = account.userProfile().pubkeyHex
-
-    override fun showHiddenKey(): Boolean = true
-
-    override fun feed(): List<User> =
-        account.hiddenUsers.transientHiddenUsers.value
-            .map { LocalCache.getOrCreateUser(it) }
-}
+// Re-export from commons for backwards compatibility
+typealias SpammerAccountsFeedFilter = com.vitorpamplona.amethyst.commons.ui.feeds.SpammerAccountsFeedFilter

@@ -18,21 +18,21 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.dal
+package com.vitorpamplona.amethyst.commons.ui.feeds
 
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.ui.screen.UserFeedViewModel
+import com.vitorpamplona.amethyst.commons.model.IAccount
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 
-class SpammerAccountsFeedViewModel(
-    val account: Account,
-) : UserFeedViewModel(SpammerAccountsFeedFilter(account, LocalCache)) {
-    class Factory(
-        val account: Account,
-    ) : ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = SpammerAccountsFeedViewModel(account) as T
-    }
+class SpammerAccountsFeedFilter(
+    val account: IAccount,
+    val cache: ICacheProvider,
+) : FeedFilter<User>() {
+    override fun feedKey(): String = account.userProfile().pubkeyHex
+
+    override fun showHiddenKey(): Boolean = true
+
+    override fun feed(): List<User> =
+        account.liveHiddenUsers.spammers
+            .mapNotNull { cache.getOrCreateUser(it) }
 }

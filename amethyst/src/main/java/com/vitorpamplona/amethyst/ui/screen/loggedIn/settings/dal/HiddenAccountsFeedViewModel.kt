@@ -23,11 +23,12 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.dal
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.screen.UserFeedViewModel
 
 class HiddenAccountsFeedViewModel(
     val account: Account,
-) : UserFeedViewModel(HiddenAccountsFeedFilter(account)) {
+) : UserFeedViewModel(HiddenAccountsFeedFilter(account, LocalCache)) {
     class Factory(
         val account: Account,
     ) : ViewModelProvider.Factory {
