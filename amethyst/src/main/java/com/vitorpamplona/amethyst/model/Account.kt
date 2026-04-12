@@ -338,7 +338,7 @@ class Account(
     val labeledBookmarkLists = LabeledBookmarkListsState(signer, cache, scope)
     override val oldBookmarkState = OldBookmarkListState(signer, cache, scope)
     override val bookmarkState = BookmarkListState(signer, cache, scope)
-    val pinState = PinListState(signer, cache, scope)
+    override val pinState = PinListState(signer, cache, scope)
     val emoji = EmojiPackState(signer, cache, scope)
 
     val vanish = VanishRequestsState(signer, cache, client, scope)

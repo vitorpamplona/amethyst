@@ -20,17 +20,5 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.default.dal
 
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.dal.FeedFilter
-
-class PinnedNotesFeedFilter(
-    val account: Account,
-) : FeedFilter<Note>() {
-    override fun feedKey(): String =
-        account.pinState.pinnedNotesList.value
-            .hashCode()
-            .toString()
-
-    override fun feed(): List<Note> = account.pinState.pinnedNotesList.value
-}
+// Re-export from commons for backwards compatibility
+typealias PinnedNotesFeedFilter = com.vitorpamplona.amethyst.commons.ui.feeds.PinnedNotesFeedFilter

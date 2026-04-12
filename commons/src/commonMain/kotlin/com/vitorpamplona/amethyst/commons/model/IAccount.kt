@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.model
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupList
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.BookmarkListState
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.OldBookmarkListState
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.PinListState
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
@@ -116,6 +117,9 @@ interface IAccount {
 
     /** Old-style bookmark list state (deprecated) */
     val oldBookmarkState: OldBookmarkListState
+
+    /** Pin list state for pinned notes */
+    val pinState: PinListState
 
     /** Check if all users in a set are hidden */
     fun isAllHidden(users: Set<HexKey>): Boolean
