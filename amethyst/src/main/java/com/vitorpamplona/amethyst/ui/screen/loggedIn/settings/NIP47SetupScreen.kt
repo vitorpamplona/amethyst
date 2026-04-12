@@ -51,6 +51,8 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
 import com.vitorpamplona.amethyst.ui.note.UpdateZapAmountContent
 import com.vitorpamplona.amethyst.ui.note.UpdateZapAmountViewModel
+import com.vitorpamplona.amethyst.ui.note.init
+import com.vitorpamplona.amethyst.ui.note.load
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.SettingsCategory
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.WalletViewModel
@@ -76,7 +78,7 @@ fun NIP47SetupScreen(
     paymentTargetsViewModel.init(accountViewModel)
 
     LaunchedEffect(accountViewModel, postViewModel) {
-        postViewModel.load()
+        postViewModel.load(accountViewModel)
         walletViewModel.loadLnAddress()
         paymentTargetsViewModel.load()
     }

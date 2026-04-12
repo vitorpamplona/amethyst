@@ -33,6 +33,8 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
 import com.vitorpamplona.amethyst.ui.note.UpdateZapAmountContent
 import com.vitorpamplona.amethyst.ui.note.UpdateZapAmountViewModel
+import com.vitorpamplona.amethyst.ui.note.init
+import com.vitorpamplona.amethyst.ui.note.load
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
@@ -45,7 +47,7 @@ fun UpdateZapAmountScreen(
     postViewModel.init(accountViewModel)
 
     LaunchedEffect(accountViewModel, postViewModel) {
-        postViewModel.load()
+        postViewModel.load(accountViewModel)
     }
 
     UpdateZapAmountScreen(postViewModel, accountViewModel, nav, nip47)
