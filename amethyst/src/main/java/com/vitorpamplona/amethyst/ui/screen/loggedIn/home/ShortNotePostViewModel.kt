@@ -40,6 +40,8 @@ import com.vitorpamplona.amethyst.commons.compose.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.compose.replaceCurrentWord
 import com.vitorpamplona.amethyst.commons.compose.setTextAndPlaceCursorAtBeginning
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState.EmojiMedia
+import com.vitorpamplona.amethyst.commons.viewmodels.posting.LongFormPostState
+import com.vitorpamplona.amethyst.commons.viewmodels.posting.PostOptions
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.BooleanType
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -92,7 +94,6 @@ import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
-import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohash
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.getGeoHash
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTags
@@ -109,10 +110,7 @@ import com.vitorpamplona.quartz.nip10Notes.tags.prepareETagsAsReplyTo
 import com.vitorpamplona.quartz.nip18Reposts.quotes.quotes
 import com.vitorpamplona.quartz.nip18Reposts.quotes.taggedQuoteIds
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
-import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
-import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
-import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarningReason
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitive
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitiveOrNSFW
@@ -121,8 +119,6 @@ import com.vitorpamplona.quartz.nip40Expiration.expiration
 import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetup
 import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetupLnAddress
 import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitSetup
-import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplits
-import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiser
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
@@ -173,6 +169,7 @@ open class ShortNotePostViewModel :
     IZapRaiser,
     IExpiration {
     val draftTag = DraftTagState()
+    val postOptions = PostOptions()
 
     lateinit var accountViewModel: AccountViewModel
     lateinit var account: Account
@@ -924,17 +921,16 @@ open class ShortNotePostViewModel :
             )
         tagger.run()
 
-        val zapReceiver = if (wantsForwardZapTo) forwardZapTo.value.toZapSplitSetup() else null
+        syncPostOptions()
 
-        val geoHash = if (wantsToAddGeoHash) (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString() else null
-        val localZapRaiserAmount = if (wantsZapRaiser) zapRaiserAmount.value else null
-
-        val emojis = findEmoji(tagger.message, account.emoji.myEmojis.value)
+        val emojiMedia = account.emoji.myEmojis.value
+        val emojis =
+            LongFormPostState.findEmoji(
+                tagger.message,
+                emojiMedia?.map { Pair(it.code, it.link) },
+            )
         val urls = findURLs(tagger.message)
         val usedAttachments = iMetaAttachments.filterIsIn(urls.toSet())
-
-        val contentWarningReason = if (wantsToMarkAsSensitive) contentWarningDescription else null
-        val localExpirationDate = if (wantsExpirationDate) expirationDate else null
 
         return if (wantsPoll) {
             val options = pollOptions.map { it.value }
@@ -951,11 +947,7 @@ open class ShortNotePostViewModel :
                 quotes(quotes)
                 hashtags(findHashtags(tagger.message))
 
-                geoHash?.let { geohash(it) }
-                localZapRaiserAmount?.let { zapraiser(it) }
-                zapReceiver?.let { zapSplits(it) }
-                contentWarningReason?.let { contentWarning(it) }
-                localExpirationDate?.let { expiration(it) }
+                postOptions.applyTo(this)
 
                 emojis(emojis)
                 imetas(usedAttachments)
@@ -974,11 +966,7 @@ open class ShortNotePostViewModel :
                 quotes(findNostrUris(tagger.message))
                 hashtags(findHashtags(tagger.message))
 
-                geoHash?.let { geohash(it) }
-                localZapRaiserAmount?.let { zapraiser(it) }
-                zapReceiver?.let { zapSplits(it) }
-                contentWarningReason?.let { contentWarning(it) }
-                localExpirationDate?.let { expiration(it) }
+                postOptions.applyTo(this)
 
                 emojis(emojis)
                 imetas(usedAttachments)
@@ -1030,11 +1018,7 @@ open class ShortNotePostViewModel :
                 references(findURLs(tagger.message))
                 quotes(findNostrUris(tagger.message))
 
-                geoHash?.let { geohash(it) }
-                localZapRaiserAmount?.let { zapraiser(it) }
-                zapReceiver?.let { zapSplits(it) }
-                contentWarningReason?.let { contentWarning(it) }
-                localExpirationDate?.let { expiration(it) }
+                postOptions.applyTo(this)
 
                 emojis(emojis)
                 imetas(usedAttachments)
@@ -1042,14 +1026,14 @@ open class ShortNotePostViewModel :
         }
     }
 
-    fun findEmoji(
-        message: String,
-        myEmojiSet: List<EmojiMedia>?,
-    ): List<EmojiUrlTag> {
-        if (myEmojiSet == null) return emptyList()
-        return CustomEmoji.findAllEmojiCodes(message).mapNotNull { possibleEmoji ->
-            myEmojiSet.firstOrNull { it.code == possibleEmoji }?.let { EmojiUrlTag(it.code, it.link) }
-        }
+    /** Push Compose mutable state into the platform-independent PostOptions. */
+    private fun syncPostOptions() {
+        val geoHash = if (wantsToAddGeoHash) (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString() else null
+        postOptions.updateGeoHash(wantsToAddGeoHash, geoHash)
+        postOptions.updateZapRaiser(wantsZapRaiser, zapRaiserAmount.value)
+        postOptions.updateZapSplits(if (wantsForwardZapTo) forwardZapTo.value.toZapSplitSetup() else null)
+        postOptions.updateContentWarning(wantsToMarkAsSensitive, contentWarningDescription)
+        postOptions.updateExpiration(wantsExpirationDate, expirationDate)
     }
 
     fun upload(
