@@ -18,7 +18,29 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.bookmarks.dal
+package com.vitorpamplona.amethyst.commons.ui.feeds
 
-// Re-export from commons for backwards compatibility
-typealias UserProfileBookmarksFeedFilter = com.vitorpamplona.amethyst.commons.ui.feeds.UserProfileBookmarksFeedFilter
+import com.vitorpamplona.amethyst.commons.model.IAccount
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
+import com.vitorpamplona.quartz.nip51Lists.PinListEvent
+
+class UserProfilePinnedNotesFeedFilter(
+    val user: User,
+    val account: IAccount,
+    val cache: ICacheProvider,
+) : FeedFilter<Note>() {
+    override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + user.pubkeyHex
+
+    override fun feed(): List<Note> {
+        val note = cache.getOrCreateAddressableNote(PinListEvent.createPinAddress(user.pubkeyHex))
+        val noteEvent = note.event as? PinListEvent ?: return emptyList()
+
+        return noteEvent
+            .pinnedEvents()
+            .mapNotNull {
+                cache.checkGetOrCreateNote(it.eventId)
+            }.reversed()
+    }
+}
