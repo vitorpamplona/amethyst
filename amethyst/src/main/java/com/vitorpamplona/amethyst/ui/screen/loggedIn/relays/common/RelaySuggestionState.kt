@@ -21,10 +21,10 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common
 
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.common.IRelaySuggestionState
 import com.vitorpamplona.amethyst.model.LocalCache
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -60,13 +60,4 @@ class RelaySuggestionState : IRelaySuggestionState {
     override fun reset() {
         currentInput.tryEmit("")
     }
-}
-
-@Stable
-interface IRelaySuggestionState {
-    val results: Flow<List<BasicRelaySetupInfo>>
-
-    fun processInput(input: String)
-
-    fun reset()
 }
