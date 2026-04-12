@@ -67,17 +67,17 @@ class AccountFeedContentStates(
 
     val videoFeed = FeedContentState(VideoFeedFilter(account), scope, LocalCache)
 
-    val discoverFollowSets = FeedContentState(DiscoverFollowSetsFeedFilter(account), scope, LocalCache)
-    val discoverReads = FeedContentState(DiscoverLongFormFeedFilter(account), scope, LocalCache)
-    val discoverMarketplace = FeedContentState(DiscoverMarketplaceFeedFilter(account), scope, LocalCache)
+    val discoverFollowSets = FeedContentState(DiscoverFollowSetsFeedFilter(account, LocalCache), scope, LocalCache)
+    val discoverReads = FeedContentState(DiscoverLongFormFeedFilter(account, LocalCache), scope, LocalCache)
+    val discoverMarketplace = FeedContentState(DiscoverMarketplaceFeedFilter(account, LocalCache), scope, LocalCache)
     val discoverDVMs = FeedContentState(DiscoverNIP89FeedFilter(account), scope, LocalCache)
     val discoverLive = FeedContentState(DiscoverLiveFeedFilter(account), scope, LocalCache)
     val discoverCommunities = FeedContentState(DiscoverCommunityFeedFilter(account), scope, LocalCache)
     val discoverPublicChats = FeedContentState(DiscoverChatFeedFilter(account), scope, LocalCache)
 
-    val pollsFeed = FeedContentState(PollsFeedFilter(account), scope, LocalCache)
-    val openPollsFeed = FeedContentState(OpenPollsFeedFilter(account), scope, LocalCache)
-    val closedPollsFeed = FeedContentState(ClosedPollsFeedFilter(account), scope, LocalCache)
+    val pollsFeed = FeedContentState(PollsFeedFilter(account, LocalCache), scope, LocalCache)
+    val openPollsFeed = FeedContentState(OpenPollsFeedFilter(account, LocalCache), scope, LocalCache)
+    val closedPollsFeed = FeedContentState(ClosedPollsFeedFilter(account, LocalCache), scope, LocalCache)
 
     val picturesFeed = FeedContentState(PictureFeedFilter(account, LocalCache), scope, LocalCache)
     val shortsFeed = FeedContentState(ShortsFeedFilter(account), scope, LocalCache)
