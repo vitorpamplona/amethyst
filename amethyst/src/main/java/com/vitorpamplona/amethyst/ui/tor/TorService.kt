@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.tor
 
 import android.content.Context
+import com.vitorpamplona.amethyst.commons.tor.TorServiceStatus
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow

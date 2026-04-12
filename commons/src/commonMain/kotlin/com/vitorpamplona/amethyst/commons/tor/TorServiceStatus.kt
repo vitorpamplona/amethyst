@@ -18,14 +18,14 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.tor
+package com.vitorpamplona.amethyst.commons.tor
 
 sealed class TorServiceStatus {
     data class Active(
         val port: Int,
     ) : TorServiceStatus()
 
-    object Off : TorServiceStatus()
+    data object Off : TorServiceStatus()
 
-    object Connecting : TorServiceStatus()
+    data object Connecting : TorServiceStatus()
 }
