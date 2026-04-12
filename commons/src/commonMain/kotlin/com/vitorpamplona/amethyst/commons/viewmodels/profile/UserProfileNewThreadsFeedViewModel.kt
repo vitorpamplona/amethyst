@@ -18,29 +18,20 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.conversations.dal
+package com.vitorpamplona.amethyst.commons.viewmodels.profile
 
 import androidx.compose.runtime.Stable
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.commons.model.IAccount
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
+import com.vitorpamplona.amethyst.commons.viewmodels.FeedViewModel
 
 @Stable
-class UserProfileConversationsFeedViewModel(
-    user: User,
-    account: Account,
-) : com.vitorpamplona.amethyst.commons.viewmodels.profile.UserProfileConversationsFeedViewModel(
-        user,
-        account,
-        LocalCache,
-    ) {
-    class Factory(
-        val user: User,
-        val account: Account,
-    ) : ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = UserProfileConversationsFeedViewModel(user, account) as T
-    }
-}
+open class UserProfileNewThreadsFeedViewModel(
+    val user: User,
+    val account: IAccount,
+    cacheProvider: ICacheProvider,
+) : FeedViewModel(
+        UserProfileNewThreadFeedFilter(user, account, cacheProvider),
+        cacheProvider,
+    )
