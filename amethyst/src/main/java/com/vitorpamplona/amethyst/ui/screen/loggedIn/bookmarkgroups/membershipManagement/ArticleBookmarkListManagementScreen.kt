@@ -128,14 +128,10 @@ private fun ListManagementViewBody(
                     nav.nav(Route.Bookmarks)
                 },
                 onAddBookmarkToGroup = { shouldBePrivate ->
-                    accountViewModel.launchSigner {
-                        accountViewModel.account.addBookmark(note, shouldBePrivate)
-                    }
+                    accountViewModel.addBookmark(note, shouldBePrivate)
                 },
                 onRemoveBookmarkFromGroup = {
-                    accountViewModel.launchSigner {
-                        accountViewModel.account.removeBookmark(note)
-                    }
+                    accountViewModel.removeBookmark(note)
                 },
             )
         }
@@ -152,24 +148,18 @@ private fun ListManagementViewBody(
                 totalArticleBookmarkSize = bookmarkList.publicArticleBookmarks.size + bookmarkList.privateArticleBookmarks.size,
                 onClick = { nav.nav(Route.BookmarkGroupView(bookmarkList.identifier, BookmarkType.ArticleBookmark)) },
                 onAddBookmarkToGroup = { shouldBePrivate ->
-                    accountViewModel.launchSigner {
-                        accountViewModel.account.labeledBookmarkLists.addBookmarkToList(
-                            bookmark = AddressBookmark(address = note.address, relayHint = note.relayHintUrl()),
-                            bookmarkListIdentifier = bookmarkList.identifier,
-                            isBookmarkPrivate = shouldBePrivate,
-                            account = accountViewModel.account,
-                        )
-                    }
+                    accountViewModel.addBookmarkToList(
+                        bookmark = AddressBookmark(address = note.address, relayHint = note.relayHintUrl()),
+                        bookmarkListIdentifier = bookmarkList.identifier,
+                        isBookmarkPrivate = shouldBePrivate,
+                    )
                 },
                 onRemoveBookmarkFromGroup = {
-                    accountViewModel.launchSigner {
-                        accountViewModel.account.labeledBookmarkLists.removeBookmarkFromList(
-                            bookmark = AddressBookmark(address = note.address),
-                            bookmarkListIdentifier = bookmarkList.identifier,
-                            isBookmarkPrivate = maybePrivateBookmark != null,
-                            account = accountViewModel.account,
-                        )
-                    }
+                    accountViewModel.removeBookmarkFromList(
+                        bookmark = AddressBookmark(address = note.address),
+                        groupIdentifier = bookmarkList.identifier,
+                        isPrivate = maybePrivateBookmark != null,
+                    )
                 },
             )
         }

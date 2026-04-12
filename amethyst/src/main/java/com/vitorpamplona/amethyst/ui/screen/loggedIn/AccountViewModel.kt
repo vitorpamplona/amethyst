@@ -148,8 +148,10 @@ import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
+import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.NIP90ContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
+import com.vitorpamplona.quartz.nipB0WebBookmarks.WebBookmarkEvent
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -1064,6 +1066,39 @@ class AccountViewModel(
         customCloneDescription: String?,
     ) = launchSigner {
         account.labeledBookmarkLists.cloneBookmarkList(currentBookmarkList, customCloneName, customCloneDescription, account)
+    }
+
+    fun addBookmarkToList(
+        bookmark: BookmarkIdTag,
+        bookmarkListIdentifier: String,
+        isBookmarkPrivate: Boolean,
+    ) = launchSigner {
+        account.labeledBookmarkLists.addBookmarkToList(bookmark, bookmarkListIdentifier, isBookmarkPrivate, account)
+    }
+
+    fun addBookmark(
+        note: Note,
+        isPrivate: Boolean,
+    ) = launchSigner { account.addBookmark(note, isPrivate) }
+
+    fun removeBookmark(note: Note) = launchSigner { account.removeBookmark(note) }
+
+    fun sendWebBookmark(
+        url: String,
+        title: String?,
+        description: String,
+        hashtags: List<String> = emptyList(),
+    ) = launchSigner {
+        account.sendWebBookmark(url, title, description, hashtags)
+    }
+
+    fun deleteWebBookmark(event: WebBookmarkEvent) = launchSigner { account.deleteWebBookmark(event) }
+
+    fun pollRespond(
+        event: PollEvent,
+        responses: Set<String>,
+    ) = launchSigner {
+        account.pollRespond(event, responses)
     }
 
     fun requestToVanish(
