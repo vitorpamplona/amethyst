@@ -24,6 +24,9 @@ import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
+import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
+import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -135,4 +138,41 @@ interface ICacheProvider {
     fun getOrCreateUser(pubkey: HexKey): User?
 
     fun justConsumeMyOwnEvent(event: Event): Boolean
+
+    /**
+     * Finds notes whose content or tags match the given text.
+     * Used by search functionality to find notes.
+     *
+     * @param text The search text to match against note content and tags
+     * @param limit Maximum number of results to return
+     * @return List of Notes matching the text
+     */
+    fun findNotesStartingWith(
+        text: String,
+        limit: Int = 50,
+    ): List<Note> = emptyList()
+
+    /**
+     * Finds public chat channels whose name matches the given text.
+     *
+     * @param text The search text to match against channel names
+     * @return List of matching PublicChatChannels
+     */
+    fun findPublicChatChannelsStartingWith(text: String): List<PublicChatChannel> = emptyList()
+
+    /**
+     * Finds ephemeral chat channels whose name matches the given text.
+     *
+     * @param text The search text to match against channel names
+     * @return List of matching EphemeralChatChannels
+     */
+    fun findEphemeralChatChannelsStartingWith(text: String): List<EphemeralChatChannel> = emptyList()
+
+    /**
+     * Finds live activity channels whose name matches the given text.
+     *
+     * @param text The search text to match against channel names
+     * @return List of matching LiveActivitiesChannels
+     */
+    fun findLiveActivityChannelsStartingWith(text: String): List<LiveActivitiesChannel> = emptyList()
 }

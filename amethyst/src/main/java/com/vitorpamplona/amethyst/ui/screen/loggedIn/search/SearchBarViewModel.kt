@@ -31,29 +31,16 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.ui.feeds.InvalidatableContent
+import com.vitorpamplona.amethyst.commons.viewmodels.SearchBarState
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.SearchQueryState
-import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
-import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.userUriPrefixes
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
-import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrlOrNull
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.INip05Client
-import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Id
-import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
-import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
-import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
-import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
-import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
-import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Rfc3986
-import com.vitorpamplona.quartz.utils.startsWithAny
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.SharingStarted.Companion.WhileSubscribed
@@ -61,10 +48,8 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
 
 @Stable
 @OptIn(FlowPreview::class)
@@ -73,10 +58,20 @@ class SearchBarViewModel(
     val nip05Client: INip05Client,
 ) : ViewModel(),
     InvalidatableContent {
+    /**
+     * Core search state shared with commons (KMP).
+     * Handles search text, debounce, NIP-05 resolution, and cache-based searches.
+     */
+    val searchState =
+        SearchBarState(
+            cache = LocalCache,
+            scope = viewModelScope,
+            nip05Client = nip05Client,
+        )
+
     val focusRequester = FocusRequester()
     var searchValue by mutableStateOf("")
 
-    val invalidations = MutableStateFlow(0)
     val searchValueFlow = MutableStateFlow("")
 
     val searchTerm =
@@ -90,138 +85,24 @@ class SearchBarViewModel(
 
     val listState: LazyListState = LazyListState(0, 0)
 
-    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-    val directNip05Resolver: Flow<User?> =
-        searchTerm
-            .debounce(400)
-            .mapLatest { term ->
-                // NIP-05 resolution: user@domain or bare .bit domain
-                val nip05 =
-                    if (term.contains('@')) {
-                        Nip05Id.parse(term)
-                    } else if (term.endsWith(".bit", ignoreCase = true)) {
-                        // Bare .bit domain → synthesize _@domain.bit
-                        Nip05Id("_", term.lowercase())
-                    } else {
-                        null
-                    }
-                if (nip05 != null) {
-                    runCatching {
-                        nip05Client.get(nip05)?.let { info ->
-                            val user = account.cache.checkGetOrCreateUser(info.pubkey)
-                            if (user != null) {
-                                info.relays.forEach {
-                                    it.normalizeRelayUrlOrNull()?.let { relay ->
-                                        account.cache.relayHints.addKey(user.pubkey(), relay)
-                                    }
-                                }
-                            }
-                            user
-                        }
-                    }.getOrNull()
-                } else if (term.startsWithAny(userUriPrefixes)) {
-                    runCatching {
-                        Nip19Parser.uriToRoute(term)?.entity?.let { parsed ->
-                            when (parsed) {
-                                is NSec -> {
-                                    account.cache.getOrCreateUser(parsed.toPubKey().toHexKey())
-                                }
+    // Delegate search result flows to SearchBarState
+    val searchResultsUsers = searchState.searchResultsUsers
+    val searchResultsNotes = searchState.searchResultsNotes
+    val searchResultsPublicChatChannels = searchState.searchResultsPublicChatChannels
+    val searchResultsEphemeralChannels = searchState.searchResultsEphemeralChannels
+    val searchResultsLiveActivityChannels = searchState.searchResultsLiveActivityChannels
+    val hashtagResults = searchState.hashtagResults
+    val directNip05Resolver = searchState.directNip05Resolver
 
-                                is NPub -> {
-                                    account.cache.getOrCreateUser(parsed.hex)
-                                }
-
-                                is NProfile -> {
-                                    val user = account.cache.getOrCreateUser(parsed.hex)
-                                    parsed.relay.forEach { relay ->
-                                        account.cache.relayHints.addKey(user.pubkey(), relay)
-                                    }
-                                    user
-                                }
-
-                                else -> {
-                                    null
-                                }
-                            }
-                        }
-                    }.getOrNull()
-                } else if (term.length == 64 && Hex.isHex64(term)) {
-                    account.cache.getOrCreateUser(term)
-                } else {
-                    null
-                }
-            }.flowOn(Dispatchers.IO)
-
-    val searchResultsUsers =
-        combine(
-            searchValueFlow.debounce(100),
-            invalidations.debounce(100),
-            directNip05Resolver,
-        ) { term, version, nip05Resolver ->
-            if (nip05Resolver != null) {
-                return@combine listOf(nip05Resolver)
-            }
-
-            if (term.isNotBlank()) {
-                LocalCache.findUsersStartingWith(term, account)
-            } else {
-                emptyList()
-            }
-        }.flowOn(Dispatchers.IO)
-            .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
-
-    val searchResultsNotes =
-        combine(
-            searchValueFlow.debounce(100),
-            invalidations,
-        ) { term, version ->
-            LocalCache
-                .findNotesStartingWith(term, account.hiddenUsers)
-                .sortedWith(DefaultFeedOrder)
-        }.flowOn(Dispatchers.IO)
-            .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
-
-    val searchResultsPublicChatChannels =
-        combine(
-            searchValueFlow.debounce(100),
-            invalidations,
-        ) { term, version ->
-            LocalCache.findPublicChatChannelsStartingWith(term)
-        }.flowOn(Dispatchers.IO)
-            .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
-
-    val searchResultsEphemeralChannels =
-        combine(
-            searchValueFlow.debounce(100),
-            invalidations,
-        ) { term, version ->
-            LocalCache.findEphemeralChatChannelsStartingWith(term)
-        }.flowOn(Dispatchers.IO)
-            .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
-
-    val searchResultsLiveActivityChannels =
-        combine(
-            searchValueFlow.debounce(100),
-            invalidations,
-        ) { term, version ->
-            LocalCache.findLiveActivityChannelsStartingWith(term)
-        }.flowOn(Dispatchers.IO)
-            .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
-
-    val hashtagResults =
-        combine(
-            searchValueFlow.debounce(100),
-            invalidations,
-        ) { term, version ->
-            findHashtags(term)
-        }.flowOn(Dispatchers.IO)
-            .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
-
+    /**
+     * Relay search results — kept in the ViewModel because they depend on
+     * Android-specific relay stats and the LocalCache relay hints database.
+     */
     val relayResults =
         combine(
             searchValueFlow.debounce(100),
-            invalidations,
-        ) { term, version ->
+            searchState.invalidations,
+        ) { term, _ ->
             if (term.length > 1) {
                 val isTypingRelay = term.length > 7 && (term.startsWith("wss://") || term.startsWith("ws://"))
                 val relayUrl =
@@ -243,21 +124,21 @@ class SearchBarViewModel(
                     .sortedByDescending { it.relayStat.receivedBytes }
                     .take(20)
             } else {
-                emptyList()
+                emptyList<BasicRelaySetupInfo>()
             }
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(kotlinx.coroutines.Dispatchers.IO)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
 
     override val isRefreshing = derivedStateOf { searchValue.isNotBlank() }
 
     override fun invalidateData(ignoreIfDoing: Boolean) {
-        // force new query
-        invalidations.update { it + 1 }
+        searchState.invalidateData()
     }
 
     fun updateSearchValue(newValue: String) {
         searchValue = newValue
         searchValueFlow.tryEmit(newValue)
+        searchState.updateSearchText(newValue)
     }
 
     fun clear() = updateSearchValue("")
