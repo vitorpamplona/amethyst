@@ -700,6 +700,7 @@
     <string name="call_unmute">Włącz dźwięk</string>
     <string name="call_camera_on">Kamera włączona</string>
     <string name="call_camera_off">Kamera wyłączona</string>
+    <string name="call_switch_camera">Przełącz kamerę</string>
     <string name="call_speaker">Głośnik</string>
     <string name="call_earpiece">Słuchawka</string>
     <string name="call_bluetooth">Bluetooth</string>
@@ -711,6 +712,19 @@
     <string name="call_failed_start">Nie udało się nawiązać połączenia</string>
     <string name="call_failed_accept">Nie udało się przyjąć połączenia</string>
     <string name="call_failed_session">Nie udało się utworzyć sesji połączenia</string>
+    <string name="call_settings">Ustawienia połączeń</string>
+    <string name="call_settings_video_quality">Jakość Wideo</string>
+    <string name="call_settings_max_bitrate">Maks. przepływność wideo</string>
+    <string name="call_settings_turn_servers">Serwery TURN / STUN</string>
+    <string name="call_settings_turn_description">Domyślne serwery STUN i TURN są zawsze uwzględnione. W przypadku sieci o ograniczonym dostępie dodaj własne serwery TURN.</string>
+    <string name="call_settings_default_servers">Domyślne serwery (zawsze aktywne)</string>
+    <string name="call_settings_custom_turn">Własne serwery TURN</string>
+    <string name="call_settings_no_custom_turn">Nie skonfigurowano własnych serwerów TURN.</string>
+    <string name="call_settings_add_turn">Dodaj serwer TURN</string>
+    <string name="call_settings_remove_turn">Usuń</string>
+    <string name="call_settings_turn_url">Adres URL serwera</string>
+    <string name="call_settings_turn_username">Nazwa użytkownika</string>
+    <string name="call_settings_turn_credential">Uwierzytelnienie</string>
     <string name="reply_notify">Powiadom: </string>
     <string name="channel_list_join_conversation">Dołącz do dyskusji</string>
     <string name="channel_list_user_or_group_id">ID Użytkownika lub Grupy</string>
