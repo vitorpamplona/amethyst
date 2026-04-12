@@ -30,6 +30,10 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import com.vitorpamplona.amethyst.commons.compose.layouts.DisappearingBottomBar
+import com.vitorpamplona.amethyst.commons.compose.layouts.DisappearingFloatingButton
+import com.vitorpamplona.amethyst.commons.compose.layouts.DisappearingTopBar
+import com.vitorpamplona.amethyst.commons.compose.layouts.enterAlwaysScrollBehavior
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 

@@ -64,13 +64,13 @@ import androidx.compose.ui.window.PopupProperties
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
+import com.vitorpamplona.amethyst.commons.ui.components.AnimatedBorderTextCornerRadius
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.CachedRichTextParser
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserContactCardsScore
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserPicture
-import com.vitorpamplona.amethyst.ui.components.AnimatedBorderTextCornerRadius
 import com.vitorpamplona.amethyst.ui.components.CoreSecretMessage
 import com.vitorpamplona.amethyst.ui.components.ExpandableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
