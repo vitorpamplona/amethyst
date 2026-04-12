@@ -622,11 +622,11 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="follow_set_rename_dialog_indicator_first_part">Preimenuješ iz </string>
     <string name="follow_set_rename_dialog_indicator_second_part"> v..</string>
     <string name="connect_through_your_orbot_setup_short">Prevzeta vrata so 9050</string>
-    <string name="connect_through_your_orbot_setup_markdown">        ## Poveži se preko Tor omrežja z Orbot aplikacijo
-        \n\n1. Namesti [Orbot aplikacijo](https://play.google.com/store/apps/details?id=org.torproject.android)
+    <string name="connect_through_your_orbot_setup_markdown">        ## Poveži se preko Tor omrežja z Orbot
+        \n\n1. Namesti [Orbot](https://play.google.com/store/apps/details?id=org.torproject.android)
         \n2. Zaženi Orbot aplikacijo
         \n3. V Orbot aplikaciji, preveri \"Socks port\". Pradnastavitev uporablja vrata 9050
-        \n4. Po potrebi spremenite vrata v Orbot aplikaciji
+        \n4. Po potrebi spremenite vrata v Orbot 
         \n5. Prilagodi vrata na tem zaslonu
         \n6. Pritisni gumb aktiviraj za uporabo Orbot aplikacije kot proxy
     </string>
@@ -714,6 +714,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="call_unmute">Vklopi zvok</string>
     <string name="call_camera_on">Vklopljena kamera</string>
     <string name="call_camera_off">Izklopljena kamera</string>
+    <string name="call_switch_camera">Zamenjaj kamero</string>
     <string name="call_speaker">Zvočnik</string>
     <string name="call_earpiece">Slušalka</string>
     <string name="call_bluetooth">Bluetooth</string>
@@ -725,6 +726,19 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="call_failed_start">Klic ni uspel</string>
     <string name="call_failed_accept">Sprejem klica ni uspel</string>
     <string name="call_failed_session">Vzpostavitev klicne seje ni uspela</string>
+    <string name="call_settings">Klicne nastavitve</string>
+    <string name="call_settings_video_quality">Kakovost videa</string>
+    <string name="call_settings_max_bitrate">Najvišja bitna hitrost videa</string>
+    <string name="call_settings_turn_servers">Strežniki TURN / STUN</string>
+    <string name="call_settings_turn_description">Privzeti strežniki STUN in TURN so vedno vključeni. Za omejena omrežja dodajte strežnike TURN po meri.</string>
+    <string name="call_settings_default_servers">Privzeti strežniki (vedno aktivni)</string>
+    <string name="call_settings_custom_turn">Strežniki TURN po meri</string>
+    <string name="call_settings_no_custom_turn">Ni nastavljenih strežnikov TURN po meri.</string>
+    <string name="call_settings_add_turn">Dodaj TURN strežnik</string>
+    <string name="call_settings_remove_turn">Odstrani</string>
+    <string name="call_settings_turn_url">URL strežnika</string>
+    <string name="call_settings_turn_username">Uporabniško ime</string>
+    <string name="call_settings_turn_credential">Akreditivi</string>
     <string name="reply_notify">Obvesti: </string>
     <string name="channel_list_join_conversation">Pridruži se pogovoru</string>
     <string name="channel_list_user_or_group_id">ID uporabnika ali skupine</string>
