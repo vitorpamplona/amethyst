@@ -28,11 +28,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.richtext.HashTagSegment
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.service.CachedRichTextParser
 import com.vitorpamplona.amethyst.ui.components.ClickableTextColor
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.HalfTopPadding
 import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -42,7 +42,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 fun DisplayUncitedHashtags(
     event: Event,
     callbackUri: String? = null,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
     DisplayUncitedHashtags(event, event.content, callbackUri, accountViewModel, nav)
@@ -54,7 +54,7 @@ fun DisplayUncitedHashtags(
     event: Event,
     content: String,
     callbackUri: String? = null,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
     val unusedHashtags by
