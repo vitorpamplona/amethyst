@@ -18,6 +18,10 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.connectivity
+package com.vitorpamplona.amethyst.commons.model.nip51Lists.geohashLists
 
-typealias ConnectivityStatus = com.vitorpamplona.amethyst.commons.service.connectivity.ConnectivityStatus
+data class GeohashListCard(
+    val relays: List<String>,
+)
+
+val EmptyGeohashListCard = GeohashListCard(emptyList())

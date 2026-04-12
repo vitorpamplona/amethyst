@@ -18,6 +18,14 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.connectivity
+package com.vitorpamplona.amethyst.commons.model.nip51Lists.relayLists
 
-typealias ConnectivityStatus = com.vitorpamplona.amethyst.commons.service.connectivity.ConnectivityStatus
+import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+
+@Immutable
+data class RelayListCard(
+    val relays: List<NormalizedRelayUrl>,
+)
+
+val EmptyRelayListCard = RelayListCard(emptyList())
