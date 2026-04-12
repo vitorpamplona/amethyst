@@ -18,24 +18,30 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.feed.dal
+package com.vitorpamplona.amethyst.commons.model
 
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.ui.screen.AndroidFeedViewModel
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
-class FollowPackFeedConversationsFeedViewModel(
-    val note: AddressableNote,
-    val account: Account,
-) : AndroidFeedViewModel(FollowPackFeedConversationsFeedFilter(note, account, LocalCache)) {
-    class Factory(
-        val note: AddressableNote,
-        val account: Account,
-    ) : ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = FollowPackFeedConversationsFeedViewModel(note, account) as T
-    }
+/**
+ * Platform-agnostic interface for feed top-nav filters.
+ * Abstracts the Android-specific IFeedTopNavFilter for use in commons.
+ */
+interface IFeedTopNavFilter {
+    fun matchAuthor(pubkey: HexKey): Boolean
+
+    fun match(noteEvent: Event): Boolean
+
+    /** Whether this is a global (unfiltered) feed */
+    fun isGlobal(): Boolean = false
+
+    /** Whether this is a relay-based filter */
+    fun isRelayFilter(): Boolean = false
+
+    /** Whether this is a muted-authors filter (shows hidden content) */
+    fun isMutedFilter(): Boolean = false
+
+    /** The relay URL if this is a relay filter, null otherwise */
+    fun relayUrl(): NormalizedRelayUrl? = null
 }

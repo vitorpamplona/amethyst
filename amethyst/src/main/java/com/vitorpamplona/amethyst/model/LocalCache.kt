@@ -420,7 +420,7 @@ object LocalCache : ILocalCache, ICacheProvider {
 
     fun getAddressableNoteIfExists(key: String): AddressableNote? = Address.parse(key)?.let { addressables.get(it) }
 
-    fun getAddressableNoteIfExists(address: Address): AddressableNote? = addressables.get(address)
+    override fun getAddressableNoteIfExists(address: Address): AddressableNote? = addressables.get(address)
 
     override fun getNoteIfExists(hexKey: String): Note? = if (hexKey.length == 64) notes.get(hexKey) else Address.parse(hexKey)?.let { addressables.get(it) }
 
@@ -2736,6 +2736,24 @@ object LocalCache : ILocalCache, ICacheProvider {
             toNote.addRelay(it)
         }
     }
+
+    override fun filterNotesIntoSet(predicate: (HexKey, Note) -> Boolean): Set<Note> = notes.filterIntoSet { key, note -> predicate(key, note) }
+
+    override fun filterAddressablesIntoSet(
+        kind: Int,
+        predicate: (Any, AddressableNote) -> Boolean,
+    ): Set<AddressableNote> = addressables.filterIntoSet(kind) { key, note -> predicate(key, note) }
+
+    override fun filterAddressablesIntoSet(
+        kinds: List<Int>,
+        predicate: (Any, AddressableNote) -> Boolean,
+    ): Set<AddressableNote> = addressables.filterIntoSet(kinds) { key, note -> predicate(key, note) }
+
+    override fun filterAddressables(
+        kinds: List<Int>,
+        pubKey: HexKey,
+        predicate: (Any, AddressableNote) -> Boolean,
+    ): Set<AddressableNote> = addressables.filter(kinds, pubKey) { key, note -> predicate(key, note) }
 }
 
 @Stable

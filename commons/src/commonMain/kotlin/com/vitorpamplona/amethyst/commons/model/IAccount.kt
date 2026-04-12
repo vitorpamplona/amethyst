@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.model
 
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupList
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
@@ -107,6 +108,43 @@ interface IAccount {
 
     /** Whether a note is acceptable (not hidden, not blocked, etc.) */
     fun isAcceptable(note: Note): Boolean
+
+    /** Whether a specific pubkey is hidden */
+    fun isHidden(pubkeyHex: String): Boolean
+
+    /** Whether decrypted DM content should be hidden */
+    fun isDecryptedContentHidden(event: PrivateDmEvent): Boolean = false
+
+    /** The block list address for this account */
+    fun getBlockListAddress(): Address?
+
+    /** Live hidden users state for filter params */
+    val liveHiddenUsers: LiveHiddenUsers
+
+    /**
+     * Live follow list filters, keyed by feed type.
+     * Feed types: "notification", "shorts", "longs", "stories", "home"
+     * Returns the IFeedTopNavFilter for building FilterByListParams.
+     */
+    fun getLiveFollowLists(feedType: String): IFeedTopNavFilter? = null
+
+    /**
+     * Default follow list code for the given feed type.
+     * Used for feedKey() generation.
+     */
+    fun getDefaultFollowListCode(feedType: String): String = ""
+
+    /**
+     * Whether the current follow list selection for the given feed type
+     * represents a mute/block list (showing hidden content).
+     */
+    fun isFollowListShowingHidden(feedType: String): Boolean = false
+
+    /**
+     * Creates an IFeedTopNavFilter for a custom set of followed authors.
+     * Used by FollowPack filters to build filter params for arbitrary follow sets.
+     */
+    fun createFollowListFilter(authors: Set<String>): IFeedTopNavFilter? = null
 
     /** Send a NIP-04 encrypted direct message */
     suspend fun sendNip04PrivateMessage(eventTemplate: EventTemplate<PrivateDmEvent>)

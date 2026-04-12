@@ -135,4 +135,65 @@ interface ICacheProvider {
     fun getOrCreateUser(pubkey: HexKey): User?
 
     fun justConsumeMyOwnEvent(event: Event): Boolean
+
+    /**
+     * Filters all notes in cache into a set using a predicate.
+     * Used by feed filters that scan all cached notes.
+     *
+     * @param predicate Filter function applied to each (key, note) pair
+     * @return Set of notes matching the predicate
+     */
+    fun filterNotesIntoSet(predicate: (HexKey, Note) -> Boolean): Set<Note> = emptySet()
+
+    /**
+     * Filters addressable notes by event kind into a set using a predicate.
+     *
+     * @param kind The event kind to filter by
+     * @param predicate Filter function applied to each matching note
+     * @return Set of addressable notes matching the kind and predicate
+     */
+    fun filterAddressablesIntoSet(
+        kind: Int,
+        predicate: (Any, AddressableNote) -> Boolean,
+    ): Set<AddressableNote> = emptySet()
+
+    /**
+     * Filters addressable notes by multiple event kinds into a set using a predicate.
+     *
+     * @param kinds The event kinds to filter by
+     * @param predicate Filter function applied to each matching note
+     * @return Set of addressable notes matching any of the kinds and predicate
+     */
+    fun filterAddressablesIntoSet(
+        kinds: List<Int>,
+        predicate: (Any, AddressableNote) -> Boolean,
+    ): Set<AddressableNote> {
+        val result = mutableSetOf<AddressableNote>()
+        kinds.forEach { kind ->
+            result.addAll(filterAddressablesIntoSet(kind, predicate))
+        }
+        return result
+    }
+
+    /**
+     * Filters addressable notes by multiple event kinds and author into a set.
+     *
+     * @param kinds The event kinds to filter by
+     * @param pubKey The author's public key hex
+     * @param predicate Filter function applied to each matching note
+     * @return Set of addressable notes matching
+     */
+    fun filterAddressables(
+        kinds: List<Int>,
+        pubKey: HexKey,
+        predicate: (Any, AddressableNote) -> Boolean,
+    ): Set<AddressableNote> = emptySet()
+
+    /**
+     * Gets an AddressableNote if it exists in cache.
+     *
+     * @param address The addressable note's address
+     * @return The AddressableNote if exists, null otherwise
+     */
+    fun getAddressableNoteIfExists(address: Address): AddressableNote? = null
 }
