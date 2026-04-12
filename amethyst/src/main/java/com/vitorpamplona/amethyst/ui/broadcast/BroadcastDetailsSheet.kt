@@ -77,10 +77,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.service.broadcast.BroadcastStatus
+import com.vitorpamplona.amethyst.commons.service.broadcast.RelayResult
 import com.vitorpamplona.amethyst.model.Constants
 import com.vitorpamplona.amethyst.service.broadcast.BroadcastEvent
-import com.vitorpamplona.amethyst.service.broadcast.BroadcastStatus
-import com.vitorpamplona.amethyst.service.broadcast.RelayResult
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl

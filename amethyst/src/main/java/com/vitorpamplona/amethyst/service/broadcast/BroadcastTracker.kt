@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.service.broadcast
 
+import com.vitorpamplona.amethyst.commons.service.broadcast.BroadcastStatus
+import com.vitorpamplona.amethyst.commons.service.broadcast.RelayResult
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
