@@ -699,6 +699,7 @@
     <string name="call_unmute">Ativar som</string>
     <string name="call_camera_on">Câmera ligada</string>
     <string name="call_camera_off">Câmera desligada</string>
+    <string name="call_switch_camera">Trocar câmera</string>
     <string name="call_speaker">Alto-falante</string>
     <string name="call_earpiece">Auricular</string>
     <string name="call_bluetooth">Bluetooth</string>
@@ -710,6 +711,19 @@
     <string name="call_failed_start">Falha ao iniciar chamada</string>
     <string name="call_failed_accept">Falha ao aceitar chamada</string>
     <string name="call_failed_session">Falha ao criar sessão de chamada</string>
+    <string name="call_settings">Configurações de Chamada</string>
+    <string name="call_settings_video_quality">Qualidade do Vídeo</string>
+    <string name="call_settings_max_bitrate">Taxa de Bits Máxima de Vídeo</string>
+    <string name="call_settings_turn_servers">Servidores TURN / STUN</string>
+    <string name="call_settings_turn_description">Servidores STUN e TURN padrão estão sempre incluídos. Adicione servidores TURN personalizados para redes restritivas.</string>
+    <string name="call_settings_default_servers">Servidores padrão (sempre ativos)</string>
+    <string name="call_settings_custom_turn">Servidores TURN Personalizados</string>
+    <string name="call_settings_no_custom_turn">Nenhum servidor TURN personalizado configurado.</string>
+    <string name="call_settings_add_turn">Adicionar servidor TURN</string>
+    <string name="call_settings_remove_turn">Remover</string>
+    <string name="call_settings_turn_url">URL do Servidor</string>
+    <string name="call_settings_turn_username">Nome de Usuário</string>
+    <string name="call_settings_turn_credential">Credencial</string>
     <string name="reply_notify">Notificar: </string>
     <string name="channel_list_join_conversation">Entrar na conversa</string>
     <string name="channel_list_user_or_group_id">ID do usuário ou grupo</string>
@@ -1975,18 +1989,4 @@
     <string name="ai_tone_more_direct">Mais direto</string>
     <string name="ai_tone_punchy">Impactante</string>
     <string name="ai_tone_emojify">+ Emoji</string>
-    <string name="call_settings">Configurações de Chamada</string>
-    <string name="call_settings_add_turn">Adicionar servidor TURN</string>
-    <string name="call_settings_custom_turn">Servidores TURN Personalizados</string>
-    <string name="call_settings_default_servers">Servidores padrão (sempre ativos)</string>
-    <string name="call_settings_max_bitrate">Taxa de Bits Máxima de Vídeo</string>
-    <string name="call_settings_no_custom_turn">Nenhum servidor TURN personalizado configurado.</string>
-    <string name="call_settings_remove_turn">Remover</string>
-    <string name="call_settings_turn_credential">Credencial</string>
-    <string name="call_settings_turn_description">Servidores STUN e TURN padrão estão sempre incluídos. Adicione servidores TURN personalizados para redes restritivas.</string>
-    <string name="call_settings_turn_servers">Servidores TURN / STUN</string>
-    <string name="call_settings_turn_url">URL do Servidor</string>
-    <string name="call_settings_turn_username">Nome de Usuário</string>
-    <string name="call_settings_video_quality">Qualidade do Vídeo</string>
-    <string name="call_switch_camera">Trocar câmera</string>
 </resources>
