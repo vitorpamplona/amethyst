@@ -43,9 +43,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.quartz.nip43RelayMembers.addMember.RelayAddMemberEvent
@@ -55,7 +55,7 @@ import com.vitorpamplona.quartz.nip43RelayMembers.removeMember.RelayRemoveMember
 @Composable
 fun RenderRelayMembershipList(
     baseNote: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
     val noteEvent = baseNote.event as? RelayMembershipListEvent ?: return
@@ -73,7 +73,7 @@ fun RenderRelayMembershipList(
 @Composable
 fun RenderRelayAddMember(
     baseNote: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
     val noteEvent = baseNote.event as? RelayAddMemberEvent ?: return
@@ -97,7 +97,7 @@ fun RenderRelayAddMember(
 @Composable
 fun RenderRelayRemoveMember(
     baseNote: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
     val noteEvent = baseNote.event as? RelayRemoveMemberEvent ?: return
@@ -121,7 +121,7 @@ fun RenderRelayRemoveMember(
 @Composable
 fun RenderRelayJoinRequest(
     baseNote: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
     RelayMemberEventCard(
@@ -136,7 +136,7 @@ fun RenderRelayJoinRequest(
 @Composable
 fun RenderRelayLeaveRequest(
     baseNote: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
     RelayMemberEventCard(
