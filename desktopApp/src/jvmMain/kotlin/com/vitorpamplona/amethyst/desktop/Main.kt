@@ -70,6 +70,9 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
+import com.vitorpamplona.amethyst.commons.platform.LocalPlatformClipboard
+import com.vitorpamplona.amethyst.commons.platform.LocalPlatformShare
+import com.vitorpamplona.amethyst.commons.platform.LocalPlatformToast
 import com.vitorpamplona.amethyst.desktop.account.AccountManager
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
@@ -77,6 +80,9 @@ import com.vitorpamplona.amethyst.desktop.model.DesktopDmRelayState
 import com.vitorpamplona.amethyst.desktop.model.DesktopIAccount
 import com.vitorpamplona.amethyst.desktop.network.DefaultRelays
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
+import com.vitorpamplona.amethyst.desktop.platform.DesktopClipboard
+import com.vitorpamplona.amethyst.desktop.platform.DesktopShare
+import com.vitorpamplona.amethyst.desktop.platform.DesktopToast
 import com.vitorpamplona.amethyst.desktop.service.highlights.DesktopHighlightStore
 import com.vitorpamplona.amethyst.desktop.service.images.DesktopImageLoaderSetup
 import com.vitorpamplona.amethyst.desktop.service.media.VlcjPlayerPool
@@ -399,10 +405,16 @@ fun main() {
             }
 
             val immersiveFullscreenState = remember { mutableStateOf(false) }
+            val desktopClipboard = remember { DesktopClipboard() }
+            val desktopShare = remember { DesktopShare() }
+            val desktopToast = remember { DesktopToast() }
             CompositionLocalProvider(
                 LocalWindowState provides windowState,
                 LocalAwtWindow provides window,
                 LocalIsImmersiveFullscreen provides immersiveFullscreenState,
+                LocalPlatformClipboard provides desktopClipboard,
+                LocalPlatformShare provides desktopShare,
+                LocalPlatformToast provides desktopToast,
             ) {
                 App(
                     layoutMode = layoutMode,
