@@ -247,12 +247,12 @@ import kotlin.coroutines.cancellation.CancellationException
 @OptIn(DelicateCoroutinesApi::class)
 @Stable
 class Account(
-    val settings: AccountSettings = AccountSettings(KeyPair()),
+    override val settings: AccountSettings = AccountSettings(KeyPair()),
     override val signer: NostrSigner,
     val geolocationFlow: () -> StateFlow<LocationState.LocationResult>,
     val nwcFilterAssembler: () -> NWCPaymentFilterAssembler,
     val otsResolverBuilder: () -> OtsResolver,
-    val cache: LocalCache,
+    override val cache: LocalCache,
     val client: INostrClient,
     val scope: CoroutineScope,
     val mlsGroupStateStore: MlsGroupStateStore? = null,
@@ -272,8 +272,8 @@ class Account(
 
     override val nip47SignerState = NwcSignerState(signer, nwcFilterAssembler, cache, scope, settings)
 
-    val nip65RelayList = Nip65RelayListState(signer, cache, scope, settings)
-    val localRelayList = LocalRelayListState(signer, cache, scope, settings)
+    override val nip65RelayList = Nip65RelayListState(signer, cache, scope, settings)
+    override val localRelayList = LocalRelayListState(signer, cache, scope, settings)
 
     val forwardKind0ToLocalRelay = ForwardKind0ToLocalRelayState(client, localRelayList, settings)
 
@@ -283,7 +283,7 @@ class Account(
     val privateStorageRelayList = PrivateStorageRelayListState(signer, cache, privateStorageDecryptionCache, scope, settings)
 
     val searchRelayListDecryptionCache = SearchRelayListDecryptionCache(signer)
-    val searchRelayList = SearchRelayListState(signer, cache, searchRelayListDecryptionCache, scope, settings)
+    override val searchRelayList = SearchRelayListState(signer, cache, searchRelayListDecryptionCache, scope, settings)
 
     val trustedRelayListDecryptionCache = TrustedRelayListDecryptionCache(signer)
     val trustedRelayList = TrustedRelayListState(signer, cache, trustedRelayListDecryptionCache, scope, settings)
@@ -328,12 +328,12 @@ class Account(
 
     val peopleListDecryptionCache = PeopleListDecryptionCache(signer)
     val blockPeopleList = BlockPeopleListState(signer, cache, peopleListDecryptionCache, scope)
-    val peopleLists = PeopleListsState(signer, cache, peopleListDecryptionCache, scope)
-    val followLists = FollowListsState(signer, cache, scope)
+    override val peopleLists = PeopleListsState(signer, cache, peopleListDecryptionCache, scope)
+    override val followLists = FollowListsState(signer, cache, scope)
 
-    val hiddenUsers = HiddenUsersState(muteList.flow, blockPeopleList.flow, scope, settings)
+    override val hiddenUsers = HiddenUsersState(muteList.flow, blockPeopleList.flow, scope, settings)
 
-    val labeledBookmarkLists = LabeledBookmarkListsState(signer, cache, scope)
+    override val labeledBookmarkLists = LabeledBookmarkListsState(signer, cache, scope)
     val oldBookmarkState = OldBookmarkListState(signer, cache, scope)
     val bookmarkState = BookmarkListState(signer, cache, scope)
     val pinState = PinListState(signer, cache, scope)
@@ -343,7 +343,7 @@ class Account(
 
     val appSpecific = AppSpecificState(signer, cache, scope, settings)
 
-    val blossomServers = BlossomServerListState(signer, cache, scope, settings)
+    override val blossomServers = BlossomServerListState(signer, cache, scope, settings)
 
     // Relay settings
     val homeRelays = AccountHomeRelayState(nip65RelayList, privateStorageRelayList, localRelayList, scope)

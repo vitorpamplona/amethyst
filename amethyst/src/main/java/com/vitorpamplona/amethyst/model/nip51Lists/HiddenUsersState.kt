@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.model.nip51Lists
 
+import com.vitorpamplona.amethyst.commons.model.IHiddenUsersFlow
 import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
@@ -44,8 +45,8 @@ class HiddenUsersState(
     val blockList: StateFlow<List<MuteTag>>,
     val scope: CoroutineScope,
     val settings: AccountSettings,
-) {
-    var transientHiddenUsers: MutableStateFlow<Set<String>> = MutableStateFlow(setOf())
+) : IHiddenUsersFlow {
+    override var transientHiddenUsers: MutableStateFlow<Set<String>> = MutableStateFlow(setOf())
 
     fun assembleLiveHiddenUsers(
         blockList: List<MuteTag>,
@@ -69,7 +70,7 @@ class HiddenUsersState(
         )
     }
 
-    val flow: StateFlow<LiveHiddenUsers> =
+    override val flow: StateFlow<LiveHiddenUsers> =
         combineTransform(
             blockList,
             muteList,
@@ -110,13 +111,13 @@ class HiddenUsersState(
         }
     }
 
-    fun showUser(pubkeyHex: HexKey) {
+    override fun showUser(pubkeyHex: HexKey) {
         transientHiddenUsers.update { it - pubkeyHex }
     }
 
-    fun hideUser(pubkeyHex: HexKey) {
+    override fun hideUser(pubkeyHex: HexKey) {
         transientHiddenUsers.update { it + pubkeyHex }
     }
 
-    fun isHidden(pubkeyHex: HexKey) = pubkeyHex in transientHiddenUsers.value
+    override fun isHidden(pubkeyHex: HexKey) = pubkeyHex in transientHiddenUsers.value
 }

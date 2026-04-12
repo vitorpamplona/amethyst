@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.model
 
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.model.IAccountSettings
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatRepository
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatListRepository
 import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcWalletEntryNorm
@@ -162,7 +163,7 @@ class AccountSettings(
     var externalSignerPackageName: String? = null,
     var localRelayServers: MutableStateFlow<Set<String>> = MutableStateFlow(setOf()),
     var defaultFileServer: ServerName = DEFAULT_MEDIA_SERVERS[0],
-    var stripLocationOnUpload: Boolean = true,
+    override var stripLocationOnUpload: Boolean = true,
     val defaultHomeFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.AllFollows),
     val defaultStoriesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultNotificationFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
@@ -203,7 +204,8 @@ class AccountSettings(
     var callTurnServers: List<CallTurnServer> = emptyList(),
     var callVideoResolution: CallVideoResolution = CallVideoResolution.HD_720,
     var callMaxBitrateBps: Int = 1_500_000,
-) : EphemeralChatRepository,
+) : IAccountSettings,
+    EphemeralChatRepository,
     PublicChatListRepository {
     val saveable = MutableStateFlow(AccountSettingsUpdater(null))
     val syncedSettings: AccountSyncedSettings = AccountSyncedSettings(AccountSyncedSettingsInternal())
@@ -216,7 +218,7 @@ class AccountSettings(
         saveable.update { AccountSettingsUpdater(this) }
     }
 
-    fun isWriteable(): Boolean = keyPair.privKey != null || externalSignerPackageName != null
+    override fun isWriteable(): Boolean = keyPair.privKey != null || externalSignerPackageName != null
 
     // ---
     // Zaps and Reactions

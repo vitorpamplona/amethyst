@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.model.nip51Lists.searchRelays
 
+import com.vitorpamplona.amethyst.commons.model.ISearchRelayListState
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.DefaultSearchRelayList
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -46,7 +47,7 @@ class SearchRelayListState(
     val decryptionCache: SearchRelayListDecryptionCache,
     val scope: CoroutineScope,
     val settings: AccountSettings,
-) {
+) : ISearchRelayListState {
     // Creates a long-term reference for this note so that the GC doesn't collect the note it self
     val searchListNote = cache.getOrCreateAddressableNote(getSearchRelayListAddress())
 
@@ -62,7 +63,7 @@ class SearchRelayListState(
 
     suspend fun normalizeSearchRelayListWithBackupNoDefaults(note: Note): Set<NormalizedRelayUrl> = searchListEvent(note)?.let { decryptionCache.relays(it) } ?: emptySet()
 
-    val flow =
+    override val flow =
         getSearchRelayListFlow()
             .map { normalizeSearchRelayListWithBackup(it.note) }
             .onStart { emit(normalizeSearchRelayListWithBackup(searchListNote)) }
@@ -73,7 +74,7 @@ class SearchRelayListState(
                 emptySet(),
             )
 
-    val flowNoDefaults =
+    override val flowNoDefaults =
         getSearchRelayListFlow()
             .map { normalizeSearchRelayListWithBackupNoDefaults(it.note) }
             .onStart { emit(normalizeSearchRelayListWithBackupNoDefaults(searchListNote)) }

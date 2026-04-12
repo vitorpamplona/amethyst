@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.model.nip51Lists.peopleList
 
+import com.vitorpamplona.amethyst.commons.model.IFollowListsState
 import com.vitorpamplona.amethyst.commons.model.anyNotNullEvent
 import com.vitorpamplona.amethyst.commons.model.eventIdSet
 import com.vitorpamplona.amethyst.commons.model.events
@@ -68,14 +69,14 @@ class FollowListsState(
     val signer: NostrSigner,
     val cache: LocalCache,
     val scope: CoroutineScope,
-) {
+) : IFollowListsState {
     val user = cache.getOrCreateUser(signer.pubKey)
 
     fun existingPeopleListNotes() = cache.addressables.filter(FollowListEvent.KIND, user.pubkeyHex)
 
     val followListVersions = MutableStateFlow(0)
 
-    val followListNotes =
+    override val followListNotes =
         followListVersions
             .map { existingPeopleListNotes() }
             .onStart { emit(existingPeopleListNotes()) }

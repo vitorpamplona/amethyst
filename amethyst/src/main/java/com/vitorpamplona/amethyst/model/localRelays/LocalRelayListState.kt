@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.model.localRelays
 
+import com.vitorpamplona.amethyst.commons.model.ILocalRelayListState
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -37,10 +38,10 @@ class LocalRelayListState(
     val cache: LocalCache,
     val scope: CoroutineScope,
     val settings: AccountSettings,
-) {
+) : ILocalRelayListState {
     fun normalizeLocalRelayListWithBackup(relayList: Set<String>): Set<NormalizedRelayUrl> = relayList.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }.toSet()
 
-    val flow =
+    override val flow =
         settings.localRelayServers
             .map { normalizeLocalRelayListWithBackup(it) }
             .flowOn(Dispatchers.IO)

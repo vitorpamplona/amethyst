@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.model.nip51Lists.peopleList
 
+import com.vitorpamplona.amethyst.commons.model.IPeopleListsState
 import com.vitorpamplona.amethyst.commons.model.anyNotNullEvent
 import com.vitorpamplona.amethyst.commons.model.eventIdSet
 import com.vitorpamplona.amethyst.commons.model.events
@@ -65,7 +66,7 @@ class PeopleListsState(
     val cache: LocalCache,
     val decryptionCache: PeopleListDecryptionCache,
     val scope: CoroutineScope,
-) {
+) : IPeopleListsState {
     val user = cache.getOrCreateUser(signer.pubKey)
 
     fun existingPeopleListNotes() =
@@ -75,7 +76,7 @@ class PeopleListsState(
 
     val peopleListVersions = MutableStateFlow(0)
 
-    val peopleListNotes =
+    override val peopleListNotes =
         peopleListVersions
             .map { existingPeopleListNotes() }
             .onStart { emit(existingPeopleListNotes()) }
@@ -111,7 +112,7 @@ class PeopleListsState(
                 }
             }.flattenToSet()
 
-    val allGoodPeopleListProfiles: StateFlow<Set<HexKey>> =
+    override val allGoodPeopleListProfiles: StateFlow<Set<HexKey>> =
         latestLists
             .map { it.mapGoodUsersToIdSet() }
             .onStart { emit(latestLists.value.mapGoodUsersToIdSet()) }

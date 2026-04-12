@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.model.nip65RelayList
 
+import com.vitorpamplona.amethyst.commons.model.INip65RelayListState
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.Constants
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -46,7 +47,7 @@ class Nip65RelayListState(
     val cache: LocalCache,
     val scope: CoroutineScope,
     val settings: AccountSettings,
-) {
+) : INip65RelayListState {
     // Creates a long-term reference for this note so that the GC doesn't collect the note it self
     val nip65ListNote = cache.getOrCreateAddressableNote(getNIP65RelayListAddress())
 
@@ -70,7 +71,7 @@ class Nip65RelayListState(
 
     fun normalizeNIP65AllRelayListWithBackupNoDefaults(note: Note): Set<NormalizedRelayUrl> = nip65Event(note)?.relays()?.map { it.relayUrl }?.toSet() ?: emptySet()
 
-    val outboxFlow =
+    override val outboxFlow =
         getNIP65RelayListFlow()
             .map { normalizeNIP65WriteRelayListWithBackup(it.note) }
             .onStart { emit(normalizeNIP65WriteRelayListWithBackup(nip65ListNote)) }
@@ -81,7 +82,7 @@ class Nip65RelayListState(
                 emptySet(),
             )
 
-    val inboxFlow =
+    override val inboxFlow =
         getNIP65RelayListFlow()
             .map { normalizeNIP65ReadRelayListWithBackup(it.note) }
             .onStart { emit(normalizeNIP65ReadRelayListWithBackup(nip65ListNote)) }

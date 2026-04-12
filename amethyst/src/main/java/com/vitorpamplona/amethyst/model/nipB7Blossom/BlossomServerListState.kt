@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.model.nipB7Blossom
 
+import com.vitorpamplona.amethyst.commons.model.IBlossomServerListState
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.Note
@@ -47,7 +48,7 @@ class BlossomServerListState(
     val cache: ICacheProvider,
     val scope: CoroutineScope,
     val settings: AccountSettings,
-) {
+) : IBlossomServerListState {
     // Creates a long-term reference for this note so that the GC doesn't collect the note it self
     val blossomListNote = cache.getOrCreateAddressableNote(getBlossomServersAddress())
 
@@ -69,7 +70,7 @@ class BlossomServerListState(
             url.removePrefix("cdn.").removePrefix("blossom.")
         }
 
-    val flow =
+    override val flow =
         getBlossomServersListFlow()
             .map {
                 normalizeServers(it.note)
@@ -116,13 +117,13 @@ class BlossomServerListState(
         }
     }
 
-    suspend fun createBlossomUploadAuth(
+    override suspend fun createBlossomUploadAuth(
         hash: HexKey,
         size: Long,
         alt: String,
     ): BlossomAuthorizationEvent = BlossomAuthorizationEvent.createUploadAuth(hash, size, alt, signer)
 
-    suspend fun createBlossomDeleteAuth(
+    override suspend fun createBlossomDeleteAuth(
         hash: HexKey,
         alt: String,
     ): BlossomAuthorizationEvent = BlossomAuthorizationEvent.createDeleteAuth(hash, alt, signer)

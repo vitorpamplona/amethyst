@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.model.nip51Lists.labeledBookmarkLists
 
+import com.vitorpamplona.amethyst.commons.model.ILabeledBookmarkListsState
 import com.vitorpamplona.amethyst.commons.model.anyNotNullEvent
 import com.vitorpamplona.amethyst.commons.model.eventIdSet
 import com.vitorpamplona.amethyst.commons.model.events
@@ -55,14 +56,14 @@ class LabeledBookmarkListsState(
     val signer: NostrSigner,
     val cache: LocalCache,
     val scope: CoroutineScope,
-) {
+) : ILabeledBookmarkListsState {
     val user = cache.getOrCreateUser(signer.pubKey)
 
     fun existingLabeledBookmarkNotes() = cache.addressables.filter(LabeledBookmarkListEvent.KIND, user.pubkeyHex)
 
     val labeledBookmarkListVersions = MutableStateFlow(0)
 
-    val labeledBookmarkListNotes =
+    override val labeledBookmarkListNotes =
         labeledBookmarkListVersions
             .map { existingLabeledBookmarkNotes() }
             .onStart { emit(existingLabeledBookmarkNotes()) }

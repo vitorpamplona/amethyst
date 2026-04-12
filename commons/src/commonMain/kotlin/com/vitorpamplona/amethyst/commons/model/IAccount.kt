@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.model
 
+import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupList
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
@@ -119,4 +120,34 @@ interface IAccount {
 
     /** Broadcast pre-created gift wraps (e.g. reactions within group DMs) */
     suspend fun sendGiftWraps(wraps: List<GiftWrapEvent>)
+
+    /** Reference to the cache provider */
+    val cache: ICacheProvider
+
+    /** Hidden users state (muted, blocked, transient) */
+    val hiddenUsers: IHiddenUsersFlow
+
+    /** Account settings */
+    val settings: IAccountSettings
+
+    /** Blossom media server list state */
+    val blossomServers: IBlossomServerListState
+
+    /** NIP-65 relay list state (inbox/outbox) */
+    val nip65RelayList: INip65RelayListState
+
+    /** Search relay list state */
+    val searchRelayList: ISearchRelayListState
+
+    /** People lists state */
+    val peopleLists: IPeopleListsState
+
+    /** Follow lists state */
+    val followLists: IFollowListsState
+
+    /** Labeled bookmark lists state */
+    val labeledBookmarkLists: ILabeledBookmarkListsState
+
+    /** Local relay list state */
+    val localRelayList: ILocalRelayListState
 }
