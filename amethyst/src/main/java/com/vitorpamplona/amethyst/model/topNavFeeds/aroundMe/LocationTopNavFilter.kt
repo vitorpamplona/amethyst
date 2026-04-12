@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.model.topNavFeeds.aroundMe
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -52,12 +52,12 @@ class LocationTopNavFilter(
         }
     }
 
-    override fun toPerRelayFlow(cache: LocalCache): Flow<LocationTopNavPerRelayFilterSet> =
+    override fun toPerRelayFlow(cache: ICacheProvider): Flow<LocationTopNavPerRelayFilterSet> =
         MutableStateFlow(
             LocationTopNavPerRelayFilterSet(relayList.associateWith { LocationTopNavPerRelayFilter(geotags) }),
         )
 
-    override fun startValue(cache: LocalCache): LocationTopNavPerRelayFilterSet =
+    override fun startValue(cache: ICacheProvider): LocationTopNavPerRelayFilterSet =
         LocationTopNavPerRelayFilterSet(
             relayList.associateWith { LocationTopNavPerRelayFilter(geotags) },
         )

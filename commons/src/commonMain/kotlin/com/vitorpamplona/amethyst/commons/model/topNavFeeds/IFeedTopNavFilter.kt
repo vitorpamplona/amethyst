@@ -18,41 +18,19 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author
+package com.vitorpamplona.amethyst.commons.model.topNavFeeds
 
-import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
-import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 
-@Immutable
-class AuthorsByProxyTopNavFilter(
-    val authors: Set<String>,
-    val proxyRelays: Set<NormalizedRelayUrl>,
-) : IFeedTopNavFilter {
-    override fun matchAuthor(pubkey: HexKey) = pubkey in authors
+interface IFeedTopNavFilter {
+    fun matchAuthor(pubkey: HexKey): Boolean
 
-    override fun match(noteEvent: Event): Boolean =
-        if (noteEvent is LiveActivitiesEvent) {
-            noteEvent.participantsIntersect(authors)
-        } else {
-            noteEvent.pubKey in authors
-        }
+    fun match(noteEvent: Event): Boolean
 
-    override fun toPerRelayFlow(cache: ICacheProvider): Flow<AuthorsTopNavPerRelayFilterSet> =
-        MutableStateFlow(
-            AuthorsTopNavPerRelayFilterSet(
-                proxyRelays.associateWith { AuthorsTopNavPerRelayFilter(authors) },
-            ),
-        )
+    fun toPerRelayFlow(cache: ICacheProvider): Flow<IFeedTopNavPerRelayFilterSet>
 
-    override fun startValue(cache: ICacheProvider): AuthorsTopNavPerRelayFilterSet =
-        AuthorsTopNavPerRelayFilterSet(
-            proxyRelays.associateWith { AuthorsTopNavPerRelayFilter(authors) },
-        )
+    fun startValue(cache: ICacheProvider): IFeedTopNavPerRelayFilterSet
 }

@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.model.topNavFeeds.allUserFollows
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.OutboxRelayLoader
@@ -62,8 +63,8 @@ class AllUserFollowsByOutboxTopNavFilter(
             }
         }
 
-    override fun toPerRelayFlow(cache: LocalCache): Flow<AuthorsTopNavPerRelayFilterSet> {
-        val authorsPerRelay = OutboxRelayLoader().toAuthorsPerRelayFlow(authors, cache) { it }
+    override fun toPerRelayFlow(cache: ICacheProvider): Flow<AuthorsTopNavPerRelayFilterSet> {
+        val authorsPerRelay = OutboxRelayLoader().toAuthorsPerRelayFlow(authors, cache as LocalCache) { it }
 
         return combine(authorsPerRelay, defaultRelays, blockedRelays) { perRelayAuthors, default, blockedRelays ->
             val allRelays = perRelayAuthors.keys.filter { it !in blockedRelays }.ifEmpty { default }
@@ -78,8 +79,8 @@ class AllUserFollowsByOutboxTopNavFilter(
         }
     }
 
-    override fun startValue(cache: LocalCache): AuthorsTopNavPerRelayFilterSet {
-        val authorsPerRelay = OutboxRelayLoader().authorsPerRelaySnapshot(authors, cache) { it }
+    override fun startValue(cache: ICacheProvider): AuthorsTopNavPerRelayFilterSet {
+        val authorsPerRelay = OutboxRelayLoader().authorsPerRelaySnapshot(authors, cache as LocalCache) { it }
 
         val allRelays = authorsPerRelay.keys.filter { it !in blockedRelays.value }.ifEmpty { defaultRelays.value }
 

@@ -18,6 +18,23 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.topNavFeeds
+package com.vitorpamplona.amethyst.commons.model
 
-typealias IFeedTopNavFilter = com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavFilter
+import kotlinx.coroutines.flow.StateFlow
+
+/**
+ * Interface for account settings needed by DAL feed filters in commons.
+ * Abstracts Android-specific AccountSettings for use in KMP modules.
+ *
+ * DAL filters access settings.defaultXxxFollowList.value to determine
+ * which follow list to use for each feed type.
+ */
+interface IAccountSettings {
+    val defaultHomeFollowList: StateFlow<TopFilter>
+    val defaultStoriesFollowList: StateFlow<TopFilter>
+    val defaultNotificationFollowList: StateFlow<TopFilter>
+    val defaultPollsFollowList: StateFlow<TopFilter>
+    val defaultPicturesFollowList: StateFlow<TopFilter>
+    val defaultShortsFollowList: StateFlow<TopFilter>
+    val defaultLongsFollowList: StateFlow<TopFilter>
+}

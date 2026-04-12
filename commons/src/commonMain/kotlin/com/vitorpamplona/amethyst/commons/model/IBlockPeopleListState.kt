@@ -18,6 +18,16 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.topNavFeeds
+package com.vitorpamplona.amethyst.commons.model
 
-typealias IFeedTopNavFilter = com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavFilter
+import com.vitorpamplona.quartz.nip01Core.core.Address
+
+/**
+ * Interface for block people list state, abstracting Android-specific BlockPeopleListState
+ * for use in commons DAL filters.
+ *
+ * DAL filters use [getBlockListAddress] to compare against TopFilter selections.
+ */
+interface IBlockPeopleListState {
+    fun getBlockListAddress(): Address
+}

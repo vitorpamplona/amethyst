@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.model.nip51Lists
 
+import com.vitorpamplona.amethyst.commons.model.IHiddenUsersState
 import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
@@ -44,7 +45,7 @@ class HiddenUsersState(
     val blockList: StateFlow<List<MuteTag>>,
     val scope: CoroutineScope,
     val settings: AccountSettings,
-) {
+) : IHiddenUsersState {
     var transientHiddenUsers: MutableStateFlow<Set<String>> = MutableStateFlow(setOf())
 
     fun assembleLiveHiddenUsers(
@@ -69,7 +70,7 @@ class HiddenUsersState(
         )
     }
 
-    val flow: StateFlow<LiveHiddenUsers> =
+    override val flow: StateFlow<LiveHiddenUsers> =
         combineTransform(
             blockList,
             muteList,

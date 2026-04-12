@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.model
 
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.model.IAccountSettings
+import com.vitorpamplona.amethyst.commons.model.TopFilter
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatRepository
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatListRepository
 import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcWalletEntryNorm
@@ -29,7 +31,6 @@ import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.screen.FeedDefinition
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
-import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
@@ -102,59 +103,6 @@ val DefaultSignerPermissions =
         Permission(CommandType.DECRYPT_ZAP_EVENT),
     )
 
-@Serializable
-sealed class TopFilter(
-    val code: String,
-) {
-    @Serializable
-    object Global : TopFilter(" Global ")
-
-    @Serializable
-    object AllFollows : TopFilter(" All Follows ")
-
-    @Serializable
-    object AllUserFollows : TopFilter(" All User Follows ")
-
-    @Serializable
-    object DefaultFollows : TopFilter(" Main User Follows ")
-
-    @Serializable
-    object AroundMe : TopFilter(" Around Me ")
-
-    @Serializable
-    object Chess : TopFilter(" Chess ")
-
-    @Serializable
-    class PeopleList(
-        val address: Address,
-    ) : TopFilter(address.toValue())
-
-    @Serializable
-    class MuteList(
-        val address: Address,
-    ) : TopFilter(address.toValue())
-
-    @Serializable
-    class Community(
-        val address: Address,
-    ) : TopFilter("Community/${address.toValue()}")
-
-    @Serializable
-    class Hashtag(
-        val tag: String,
-    ) : TopFilter("Hashtag/$tag")
-
-    @Serializable
-    class Geohash(
-        val tag: String,
-    ) : TopFilter("Geohash/$tag")
-
-    @Serializable
-    class Relay(
-        val url: String,
-    ) : TopFilter("Relay/$url")
-}
-
 @Stable
 class AccountSettings(
     val keyPair: KeyPair,
@@ -163,14 +111,14 @@ class AccountSettings(
     var localRelayServers: MutableStateFlow<Set<String>> = MutableStateFlow(setOf()),
     var defaultFileServer: ServerName = DEFAULT_MEDIA_SERVERS[0],
     var stripLocationOnUpload: Boolean = true,
-    val defaultHomeFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.AllFollows),
-    val defaultStoriesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
-    val defaultNotificationFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
+    override val defaultHomeFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.AllFollows),
+    override val defaultStoriesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
+    override val defaultNotificationFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultDiscoveryFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
-    val defaultPollsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
-    val defaultPicturesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
-    val defaultShortsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
-    val defaultLongsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
+    override val defaultPollsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
+    override val defaultPicturesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
+    override val defaultShortsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
+    override val defaultLongsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val nwcWallets: MutableStateFlow<List<NwcWalletEntryNorm>> = MutableStateFlow(emptyList()),
     val defaultNwcWalletId: MutableStateFlow<String?> = MutableStateFlow(null),
     var hideDeleteRequestDialog: Boolean = false,
@@ -203,7 +151,8 @@ class AccountSettings(
     var callTurnServers: List<CallTurnServer> = emptyList(),
     var callVideoResolution: CallVideoResolution = CallVideoResolution.HD_720,
     var callMaxBitrateBps: Int = 1_500_000,
-) : EphemeralChatRepository,
+) : IAccountSettings,
+    EphemeralChatRepository,
     PublicChatListRepository {
     val saveable = MutableStateFlow(AccountSettingsUpdater(null))
     val syncedSettings: AccountSyncedSettings = AccountSyncedSettings(AccountSyncedSettingsInternal())

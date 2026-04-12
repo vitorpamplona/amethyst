@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.model.topNavFeeds.allFollows
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -74,7 +74,7 @@ class AllFollowsByProxyTopNavFilter(
         }
 
     // forces the use of the Proxy on all connections, replacing the outbox model.
-    override fun toPerRelayFlow(cache: LocalCache): Flow<AllFollowsTopNavPerRelayFilterSet> =
+    override fun toPerRelayFlow(cache: ICacheProvider): Flow<AllFollowsTopNavPerRelayFilterSet> =
         MutableStateFlow(
             AllFollowsTopNavPerRelayFilterSet(
                 proxyRelays.associateWith {
@@ -88,7 +88,7 @@ class AllFollowsByProxyTopNavFilter(
             ),
         )
 
-    override fun startValue(cache: LocalCache): AllFollowsTopNavPerRelayFilterSet {
+    override fun startValue(cache: ICacheProvider): AllFollowsTopNavPerRelayFilterSet {
         // forces the use of the Proxy on all connections, replacing the outbox model.
         return AllFollowsTopNavPerRelayFilterSet(
             proxyRelays.associateWith {

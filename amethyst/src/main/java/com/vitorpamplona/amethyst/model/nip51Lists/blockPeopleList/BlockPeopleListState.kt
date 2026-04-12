@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.model.nip51Lists.blockPeopleList
 
+import com.vitorpamplona.amethyst.commons.model.IBlockPeopleListState
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.NoteState
@@ -43,11 +44,11 @@ class BlockPeopleListState(
     val cache: LocalCache,
     val decryptionCache: PeopleListDecryptionCache,
     val scope: CoroutineScope,
-) {
+) : IBlockPeopleListState {
     // Creates a long-term reference for this note so that the GC doesn't collect the note it self
     val blockListNote = cache.getOrCreateAddressableNote(getBlockListAddress())
 
-    fun getBlockListAddress() = PeopleListEvent.createBlockAddress(signer.pubKey)
+    override fun getBlockListAddress() = PeopleListEvent.createBlockAddress(signer.pubKey)
 
     fun getBlockListFlow(): StateFlow<NoteState> = blockListNote.flow().metadata.stateFlow
 

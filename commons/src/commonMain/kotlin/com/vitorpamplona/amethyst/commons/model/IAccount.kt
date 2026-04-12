@@ -75,6 +75,9 @@ data class LiveHiddenUsers(
  * Abstracts Android-specific Account class for use in commons.
  */
 interface IAccount {
+    /** Account settings (follow list defaults, etc.) */
+    val settings: IAccountSettings
+
     /** NIP-47 wallet connect state for payment verification */
     val nip47SignerState: INwcSignerState
 
@@ -98,6 +101,12 @@ interface IAccount {
     val hiddenWordsCase: List<DualCase>
     val hiddenUsersHashCodes: Set<Int>
     val spammersHashCodes: Set<Int>
+
+    /** Hidden users state for DAL content filtering */
+    val hiddenUsers: IHiddenUsersState
+
+    /** Block people list state for DAL filter comparisons */
+    val blockPeopleList: IBlockPeopleListState
 
     /** Set of followed user pubkeys (for feed ordering/highlighting) */
     fun followingKeySet(): Set<String>
