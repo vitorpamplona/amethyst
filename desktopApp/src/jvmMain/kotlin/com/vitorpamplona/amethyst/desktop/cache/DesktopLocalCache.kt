@@ -68,8 +68,9 @@ import java.util.concurrent.ConcurrentHashMap
  */
 class DesktopLocalCache : ICacheProvider {
     val users = LargeSoftCache<HexKey, User>()
-    val notes = LargeSoftCache<HexKey, Note>()
+    override val notes = LargeSoftCache<HexKey, Note>()
     val addressableNotes = LargeSoftCache<String, AddressableNote>()
+    override val addressables = LargeSoftCache<Address, AddressableNote>()
     private val deletedEvents = ConcurrentHashMap.newKeySet<HexKey>()
 
     val eventStream = DesktopCacheEventStream()
