@@ -20,11 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.components.toasts
 
-import androidx.compose.runtime.Immutable
+import com.vitorpamplona.amethyst.commons.ui.components.toasts.ResourceToastMsg as CommonsResourceToastMsg
 
-@Immutable
-class ResourceToastMsg(
-    val titleResId: Int,
-    val resourceId: Int,
-    val params: Array<out String>? = null,
-) : ToastMsg()
+typealias ResourceToastMsg = CommonsResourceToastMsg

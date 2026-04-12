@@ -43,7 +43,7 @@ fun DisplayErrorMessages(
                 if (obj.params != null) {
                     InformationDialog(
                         stringRes(obj.titleResId),
-                        stringRes(obj.resourceId, *obj.params),
+                        stringRes(obj.resourceId, *obj.params!!),
                     ) {
                         toastManager.clearToasts()
                     }

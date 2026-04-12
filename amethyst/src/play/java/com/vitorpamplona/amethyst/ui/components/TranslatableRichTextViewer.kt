@@ -140,14 +140,16 @@ private fun RenderTextWithTranslateOptions(
     Column {
         displayText(toBeViewed)
 
+        val srcLang = translatedTextState.sourceLang
+        val tgtLang = translatedTextState.targetLang
         if (
-            translatedTextState.sourceLang != null &&
-            translatedTextState.targetLang != null &&
-            translatedTextState.sourceLang != translatedTextState.targetLang
+            srcLang != null &&
+            tgtLang != null &&
+            srcLang != tgtLang
         ) {
             TranslationMessage(
-                translatedTextState.sourceLang,
-                translatedTextState.targetLang,
+                srcLang,
+                tgtLang,
                 translationMessageModifier,
                 accountViewModel,
             ) {
