@@ -1885,14 +1885,7 @@ fun ZapAmountChoicePopup(
     }
 }
 
-fun showCount(count: Int?): String {
-    if (count == null) return ""
-    if (count == 0) return ""
-
-    return when {
-        count >= 1000000000 -> "${(count / 1000000000f).roundToInt()}G"
-        count >= 1000000 -> "${(count / 1000000f).roundToInt()}M"
-        count >= 10000 -> "${(count / 1000f).roundToInt()}k"
-        else -> "$count"
-    }
-}
+// Re-export from commons for backwards compatibility
+fun showCount(count: Int?): String =
+    com.vitorpamplona.amethyst.commons.util
+        .showCount(count)

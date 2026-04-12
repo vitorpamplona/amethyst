@@ -38,6 +38,12 @@ private val dfMSmall = ThreadLocal.withInitial { DecimalFormat("#.0M") }
 private val dfK = ThreadLocal.withInitial { DecimalFormat("#.#k") }
 private val dfN = ThreadLocal.withInitial { DecimalFormat("#") }
 
+// No-decimal formatters for integer display
+private val dfGInt = ThreadLocal.withInitial { DecimalFormat("#G") }
+private val dfMInt = ThreadLocal.withInitial { DecimalFormat("#M") }
+private val dfKInt = ThreadLocal.withInitial { DecimalFormat("#k") }
+private val dfNInt = ThreadLocal.withInitial { DecimalFormat("#") }
+
 /**
  * Formats a BigDecimal amount to human-readable format with G/M/K suffixes.
  * Returns empty string for null or very small amounts.
@@ -69,6 +75,46 @@ fun showAmountWithZero(amount: BigDecimal?): String {
     if (amount == null) return "0"
     if (amount.abs() < BigDecimal(0.01)) return "0"
     return showAmount(amount)
+}
+
+/**
+ * Formats a BigDecimal amount to human-readable format without decimals.
+ * Returns empty string for null or very small amounts.
+ *
+ * Examples:
+ * - 1500 -> "2k"
+ * - 2500000 -> "3M"
+ * - 10000000000 -> "10G"
+ */
+fun showAmountInteger(amount: BigDecimal?): String {
+    if (amount == null) return ""
+    if (amount.abs() < BigDecimal(0.01)) return ""
+
+    return when {
+        amount >= OneGiga -> dfGInt.get()!!.format(amount.div(OneGiga).setScale(0, RoundingMode.HALF_UP))
+        amount >= OneMega -> dfMInt.get()!!.format(amount.div(OneMega).setScale(0, RoundingMode.HALF_UP))
+        amount >= TenKilo -> dfKInt.get()!!.format(amount.div(OneKilo).setScale(0, RoundingMode.HALF_UP))
+        else -> dfNInt.get()!!.format(amount)
+    }
+}
+
+/**
+ * Formats an Int amount using the integer formatter.
+ * Returns "0" for null values.
+ */
+fun showAmountInteger(amount: Int?): String {
+    if (amount == null) return "0"
+    return showAmountIntegerWithZero(BigDecimal.valueOf(amount.toLong()))
+}
+
+/**
+ * Formats a BigDecimal amount without decimals.
+ * Returns "0" for null or very small amounts instead of empty string.
+ */
+fun showAmountIntegerWithZero(amount: BigDecimal?): String {
+    if (amount == null) return "0"
+    if (amount.abs() < BigDecimal(0.01)) return "0"
+    return showAmountInteger(amount)
 }
 
 /**

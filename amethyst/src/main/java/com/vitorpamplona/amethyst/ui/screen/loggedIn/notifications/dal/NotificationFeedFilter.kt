@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.dal
 
+import com.vitorpamplona.amethyst.commons.ui.notifications.NotificationKinds
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -29,97 +30,33 @@ import com.vitorpamplona.amethyst.model.filterIntoSet
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
-import com.vitorpamplona.quartz.experimental.attestations.request.AttestationRequestEvent
-import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.forks.IForkableEvent
-import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
-import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip10Notes.BaseNoteEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
-import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
-import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
-import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
-import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
-import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
-import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
 import com.vitorpamplona.quartz.nip64Chess.challenge.accept.LiveChessGameAcceptEvent
 import com.vitorpamplona.quartz.nip64Chess.move.LiveChessMoveEvent
-import com.vitorpamplona.quartz.nip68Picture.PictureEvent
-import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
-import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
-import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
-import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.communityAddress
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
-import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
-import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
-import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
-import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
-import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
 
 class NotificationFeedFilter(
     val account: Account,
 ) : AdditiveFeedFilter<Note>() {
     companion object {
-        val ADDRESSABLE_KINDS =
-            listOf(
-                AudioTrackEvent.KIND,
-                CalendarTimeSlotEvent.KIND,
-                CalendarDateSlotEvent.KIND,
-                CalendarRSVPEvent.KIND,
-                ClassifiedsEvent.KIND,
-                LiveActivitiesEvent.KIND,
-                LiveChessGameAcceptEvent.KIND,
-                LiveChessMoveEvent.KIND,
-                LongTextNoteEvent.KIND,
-                NipTextEvent.KIND,
-                VideoVerticalEvent.KIND,
-                VideoHorizontalEvent.KIND,
-                WikiNoteEvent.KIND,
-                AttestationRequestEvent.KIND,
-            )
+        val ADDRESSABLE_KINDS = NotificationKinds.ADDRESSABLE_KINDS
 
-        val NOTIFICATION_KINDS =
-            setOf(
-                BadgeAwardEvent.KIND,
-                ChatMessageEvent.KIND,
-                ChatMessageEncryptedFileHeaderEvent.KIND,
-                CommentEvent.KIND,
-                GenericRepostEvent.KIND,
-                GitIssueEvent.KIND,
-                GitPatchEvent.KIND,
-                HighlightEvent.KIND,
-                TextNoteEvent.KIND,
-                ReactionEvent.KIND,
-                RepostEvent.KIND,
-                LnZapEvent.KIND,
-                LiveActivitiesChatMessageEvent.KIND,
-                PictureEvent.KIND,
-                PollEvent.KIND,
-                ZapPollEvent.KIND,
-                PrivateDmEvent.KIND,
-                PublicMessageEvent.KIND,
-                VideoNormalEvent.KIND,
-                VideoShortEvent.KIND,
-                VoiceEvent.KIND,
-                VoiceReplyEvent.KIND,
-            ) + ADDRESSABLE_KINDS
+        val NOTIFICATION_KINDS = NotificationKinds.NOTIFICATION_KINDS
     }
 
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + followList().code

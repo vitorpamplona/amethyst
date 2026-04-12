@@ -18,21 +18,29 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
+package com.vitorpamplona.amethyst.commons.util
 
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlin.math.roundToInt
 
-sealed class StringFeedState {
-    object Loading : StringFeedState()
+/**
+ * Formats an integer count to a human-readable abbreviated string.
+ *
+ * Examples:
+ * - null -> ""
+ * - 0 -> ""
+ * - 999 -> "999"
+ * - 10000 -> "10k"
+ * - 1500000 -> "2M"
+ * - 2000000000 -> "2G"
+ */
+fun showCount(count: Int?): String {
+    if (count == null) return ""
+    if (count == 0) return ""
 
-    class Loaded(
-        val feed: MutableStateFlow<ImmutableList<String>>,
-    ) : StringFeedState()
-
-    object Empty : StringFeedState()
-
-    class FeedError(
-        val errorMessage: String,
-    ) : StringFeedState()
+    return when {
+        count >= 1_000_000_000 -> "${(count / 1_000_000_000f).roundToInt()}G"
+        count >= 1_000_000 -> "${(count / 1_000_000f).roundToInt()}M"
+        count >= 10_000 -> "${(count / 1_000f).roundToInt()}k"
+        else -> "$count"
+    }
 }

@@ -18,19 +18,34 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note
+package com.vitorpamplona.amethyst.commons.ui.settings
 
-import java.math.BigDecimal
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.Stable
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.coroutines.flow.MutableStateFlow
 
-// Re-export from commons for backwards compatibility
-fun showAmountInteger(amount: BigDecimal?): String =
-    com.vitorpamplona.amethyst.commons.util
-        .showAmountInteger(amount)
+/**
+ * Feed state for string-based feeds (e.g., hidden words lists).
+ *
+ * Follows the same pattern as FeedState and CardFeedState but for
+ * simple string content used in settings screens.
+ */
+@Stable
+sealed class StringFeedState {
+    @Immutable
+    object Loading : StringFeedState()
 
-fun showAmountInteger(amount: Int?): String =
-    com.vitorpamplona.amethyst.commons.util
-        .showAmountInteger(amount)
+    @Stable
+    class Loaded(
+        val feed: MutableStateFlow<ImmutableList<String>>,
+    ) : StringFeedState()
 
-fun showAmountIntegerWithZero(amount: BigDecimal?): String =
-    com.vitorpamplona.amethyst.commons.util
-        .showAmountIntegerWithZero(amount)
+    @Immutable
+    object Empty : StringFeedState()
+
+    @Immutable
+    class FeedError(
+        val errorMessage: String,
+    ) : StringFeedState()
+}
