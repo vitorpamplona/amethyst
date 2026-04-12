@@ -20,9 +20,16 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.theme
 
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ColorScheme
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.unit.dp
 
 /**
  * Determines if the color scheme is light mode.
@@ -36,3 +43,24 @@ val ColorScheme.isLight: Boolean
  */
 val ColorScheme.onBackgroundColorFilter: ColorFilter
     get() = ColorFilter.tint(onBackground)
+
+/**
+ * Subtle border color for cards and containers.
+ * Uses different alpha for light vs dark to maintain visual contrast.
+ */
+val ColorScheme.subtleBorder: Color
+    get() = if (isLight) onSurface.copy(alpha = 0.05f) else onSurface.copy(alpha = 0.12f)
+
+/**
+ * Reply/quote border modifier for embedded note content.
+ */
+@Suppress("ModifierFactoryExtensionFunction")
+val ColorScheme.replyModifier: Modifier
+    get() {
+        val borderColor = subtleBorder
+        return Modifier
+            .padding(top = 5.dp)
+            .fillMaxWidth()
+            .clip(shape = QuoteBorder)
+            .border(1.dp, borderColor, QuoteBorder)
+    }

@@ -18,20 +18,20 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.types
+package com.vitorpamplona.amethyst.commons.ui.note.types
 
-// Re-export from commons for backwards compatibility
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderNIP90Status as CommonsRenderNIP90Status
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
+import com.vitorpamplona.quartz.nip90Dvms.status.NIP90StatusEvent
 
 @Composable
 fun RenderNIP90Status(
     note: Note,
-    accountViewModel: AccountViewModel,
-    nav: INav,
+    accountViewModel: IAccountViewModel,
 ) {
-    CommonsRenderNIP90Status(note, accountViewModel)
+    val noteEvent = note.event as? NIP90StatusEvent ?: return
+
+    Text(text = noteEvent.content)
 }
