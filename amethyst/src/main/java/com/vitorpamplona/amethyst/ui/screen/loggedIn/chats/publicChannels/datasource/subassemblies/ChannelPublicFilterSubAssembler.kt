@@ -24,8 +24,8 @@ import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
-import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEoseManager
-import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerKeyEoseManager
+import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.datasource.ChannelQueryState
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
@@ -33,17 +33,17 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 class ChannelPublicFilterSubAssembler(
     client: INostrClient,
     allKeys: () -> Set<ChannelQueryState>,
-) : PerUniqueIdEoseManager<ChannelQueryState, Channel>(client, allKeys) {
+) : PerKeyEoseManager<ChannelQueryState, Channel>(client, allKeys) {
     override fun updateFilter(
-        key: ChannelQueryState,
+        queryState: ChannelQueryState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter>? =
-        when (val channel = key.channel) {
+        when (val channel = queryState.channel) {
             is EphemeralChatChannel -> filterMessagesToEphemeralChat(channel, since)
             is PublicChatChannel -> filterMessagesToPublicChat(channel, since)
             is LiveActivitiesChannel -> filterMessagesToLiveActivities(channel, since)
             else -> null
         }
 
-    override fun id(key: ChannelQueryState) = key.channel
+    override fun extractKey(queryState: ChannelQueryState) = queryState.channel
 }

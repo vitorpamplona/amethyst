@@ -22,9 +22,9 @@ package com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.nip53L
 
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
-import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEoseManager
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerKeyEoseManager
+import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.ChannelFinderQueryState
-import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 
@@ -35,21 +35,21 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 class LiveActivityWatcherSubAssembly(
     client: INostrClient,
     allKeys: () -> Set<ChannelFinderQueryState>,
-) : PerUniqueIdEoseManager<ChannelFinderQueryState, Channel>(client, allKeys) {
+) : PerKeyEoseManager<ChannelFinderQueryState, Channel>(client, allKeys) {
     override fun updateFilter(
-        key: ChannelFinderQueryState,
+        queryState: ChannelFinderQueryState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter> =
-        if (key.channel is LiveActivitiesChannel) {
-            key.channel.relays().flatMap {
-                filterLiveStreamUpdatesByAddress(it, listOf(key.channel), since?.get(it)?.time)
+        if (queryState.channel is LiveActivitiesChannel) {
+            queryState.channel.relays().flatMap {
+                filterLiveStreamUpdatesByAddress(it, listOf(queryState.channel), since?.get(it)?.time)
             }
         } else {
             emptyList()
         }
 
     /**
-     * Only one key per channel.
+     * Only one queryState per channel.
      */
-    override fun id(key: ChannelFinderQueryState) = key.channel
+    override fun extractKey(queryState: ChannelFinderQueryState) = queryState.channel
 }

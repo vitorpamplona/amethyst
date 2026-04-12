@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.searchCommand.subassemblies
 
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerKeyEoseManager
+import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.SearchQueryState
-import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
@@ -46,16 +46,16 @@ class SearchPostWatcherSubAssembler(
     val cache: LocalCache,
     client: INostrClient,
     allKeys: () -> Set<SearchQueryState>,
-) : PerUniqueIdEoseManager<SearchQueryState, Int>(client, allKeys) {
+) : PerKeyEoseManager<SearchQueryState, Int>(client, allKeys) {
     override fun updateFilter(
-        key: SearchQueryState,
+        queryState: SearchQueryState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter>? {
-        val mySearchString = key.searchQuery.value
+        val mySearchString = queryState.searchQuery.value
 
         if (mySearchString.isBlank()) return null
 
-        val defaultRelaysWithSearch = key.account.followPlusAllMineWithSearch.flow.value
+        val defaultRelaysWithSearch = queryState.account.followPlusAllMineWithSearch.flow.value
 
         val directFilters =
             runCatching {
@@ -85,12 +85,12 @@ class SearchPostWatcherSubAssembler(
             }.getOrDefault(emptyList())
 
         val searchFilters =
-            key.account.searchRelayList.flow.value.flatMap {
+            queryState.account.searchRelayList.flow.value.flatMap {
                 searchPostsByText(mySearchString, it)
             }
 
         return directFilters + searchFilters
     }
 
-    override fun id(key: SearchQueryState) = key.searchQuery.hashCode()
+    override fun extractKey(queryState: SearchQueryState) = queryState.searchQuery.hashCode()
 }

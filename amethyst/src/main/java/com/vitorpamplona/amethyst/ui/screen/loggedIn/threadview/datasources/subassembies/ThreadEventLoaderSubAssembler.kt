@@ -21,9 +21,9 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.datasources.subassembies
 
 import com.vitorpamplona.amethyst.commons.model.ThreadAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerKeyEoseManager
+import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEoseManager
-import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.datasources.ThreadQueryState
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
@@ -41,15 +41,15 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 class ThreadEventLoaderSubAssembler(
     client: INostrClient,
     allKeys: () -> Set<ThreadQueryState>,
-) : PerUniqueIdEoseManager<ThreadQueryState, HexKey>(client, allKeys, invalidateAfterEose = true) {
+) : PerKeyEoseManager<ThreadQueryState, HexKey>(client, allKeys, invalidateAfterEose = true) {
     override fun updateFilter(
-        key: ThreadQueryState,
+        queryState: ThreadQueryState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter>? {
-        val branches = ThreadAssembler(LocalCache).findThreadFor(key.eventId) ?: return null
-        val defaultRelays = key.account.followPlusAllMineWithSearch.flow.value
+        val branches = ThreadAssembler(LocalCache).findThreadFor(queryState.eventId) ?: return null
+        val defaultRelays = queryState.account.followPlusAllMineWithSearch.flow.value
         return filterMissingEventsForThread(branches, defaultRelays)
     }
 
-    override fun id(key: ThreadQueryState) = key.eventId
+    override fun extractKey(queryState: ThreadQueryState) = queryState.eventId
 }

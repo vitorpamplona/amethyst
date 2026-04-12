@@ -20,22 +20,22 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relay.datasource
 
-import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEoseManager
-import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerKeyEoseManager
+import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 
 class RelayFeedFilterSubAssembler(
     client: INostrClient,
     allKeys: () -> Set<RelayFeedQueryState>,
-) : PerUniqueIdEoseManager<RelayFeedQueryState, String>(client, allKeys) {
+) : PerKeyEoseManager<RelayFeedQueryState, String>(client, allKeys) {
     override fun updateFilter(
-        key: RelayFeedQueryState,
+        queryState: RelayFeedQueryState,
         since: SincePerRelayMap?,
-    ): List<RelayBasedFilter> = filterPostsByRelay(key.relayUrl, since)
+    ): List<RelayBasedFilter> = filterPostsByRelay(queryState.relayUrl, since)
 
     /**
-     * One key per relay URL.
+     * One queryState per relay URL.
      */
-    override fun id(key: RelayFeedQueryState) = key.relayUrl.url
+    override fun extractKey(queryState: RelayFeedQueryState) = queryState.relayUrl.url
 }

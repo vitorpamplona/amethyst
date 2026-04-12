@@ -22,30 +22,30 @@ package com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.nip28P
 
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
-import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEoseManager
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerKeyEoseManager
+import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.ChannelFinderQueryState
-import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 
 class ChannelMetadataWatcherSubAssembler(
     client: INostrClient,
     allKeys: () -> Set<ChannelFinderQueryState>,
-) : PerUniqueIdEoseManager<ChannelFinderQueryState, Channel>(client, allKeys) {
+) : PerKeyEoseManager<ChannelFinderQueryState, Channel>(client, allKeys) {
     override fun updateFilter(
-        key: ChannelFinderQueryState,
+        queryState: ChannelFinderQueryState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter> =
-        if (key.channel is PublicChatChannel) {
-            key.channel.relays().flatMap {
-                filterChannelMetadataUpdatesById(it, listOf(key.channel), since?.get(it)?.time)
+        if (queryState.channel is PublicChatChannel) {
+            queryState.channel.relays().flatMap {
+                filterChannelMetadataUpdatesById(it, listOf(queryState.channel), since?.get(it)?.time)
             }
         } else {
             emptyList()
         }
 
     /**
-     * Only one key per channel.
+     * Only one queryState per channel.
      */
-    override fun id(key: ChannelFinderQueryState) = key.channel
+    override fun extractKey(queryState: ChannelFinderQueryState) = queryState.channel
 }

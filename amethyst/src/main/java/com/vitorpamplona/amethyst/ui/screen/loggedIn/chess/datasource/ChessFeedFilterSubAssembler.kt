@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.datasource
 
-import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEoseManager
-import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerKeyEoseManager
+import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
@@ -50,24 +50,24 @@ data class ChessQueryState(
 class ChessFeedFilterSubAssembler(
     client: INostrClient,
     allKeys: () -> Set<ChessQueryState>,
-) : PerUniqueIdEoseManager<ChessQueryState, String>(client, allKeys) {
+) : PerKeyEoseManager<ChessQueryState, String>(client, allKeys) {
     var onChessEvent: ((Event) -> Unit)? = null
 
     override fun updateFilter(
-        key: ChessQueryState,
+        queryState: ChessQueryState,
         since: SincePerRelayMap?,
-    ): List<RelayBasedFilter> = filterChessEvents(key, since)
+    ): List<RelayBasedFilter> = filterChessEvents(queryState, since)
 
-    override fun id(key: ChessQueryState): String = key.userPubkey
+    override fun extractKey(queryState: ChessQueryState): String = queryState.userPubkey
 
-    override fun newSub(key: ChessQueryState): Subscription =
+    override fun newSub(queryState: ChessQueryState): Subscription =
         requestNewSubscription(
             object : SubscriptionListener {
                 override fun onEose(
                     relay: NormalizedRelayUrl,
                     forFilters: List<Filter>?,
                 ) {
-                    newEose(key, relay, TimeUtils.now(), forFilters)
+                    newEose(queryState, relay, TimeUtils.now(), forFilters)
                 }
 
                 override fun onEvent(
@@ -77,7 +77,7 @@ class ChessFeedFilterSubAssembler(
                     forFilters: List<Filter>?,
                 ) {
                     if (isLive) {
-                        newEose(key, relay, TimeUtils.now(), forFilters)
+                        newEose(queryState, relay, TimeUtils.now(), forFilters)
                     }
                     onChessEvent?.invoke(event)
                 }

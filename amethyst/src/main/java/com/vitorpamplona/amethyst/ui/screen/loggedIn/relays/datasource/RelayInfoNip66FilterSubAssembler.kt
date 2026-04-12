@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.datasource
 
-import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEoseManager
-import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerKeyEoseManager
+import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -30,14 +30,14 @@ import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.RelayDiscoveryEvent
 class RelayInfoNip66FilterSubAssembler(
     client: INostrClient,
     allKeys: () -> Set<RelayInfoNip66QueryState>,
-) : PerUniqueIdEoseManager<RelayInfoNip66QueryState, String>(client, allKeys) {
+) : PerKeyEoseManager<RelayInfoNip66QueryState, String>(client, allKeys) {
     override fun updateFilter(
-        key: RelayInfoNip66QueryState,
+        queryState: RelayInfoNip66QueryState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter> {
-        val relayUrl = key.relayUrl.url
+        val relayUrl = queryState.relayUrl.url
 
-        return key.relays.map { relay ->
+        return queryState.relays.map { relay ->
             RelayBasedFilter(
                 relay = relay,
                 filter =
@@ -51,5 +51,5 @@ class RelayInfoNip66FilterSubAssembler(
         }
     }
 
-    override fun id(key: RelayInfoNip66QueryState) = key.relayUrl.url
+    override fun extractKey(queryState: RelayInfoNip66QueryState) = queryState.relayUrl.url
 }
