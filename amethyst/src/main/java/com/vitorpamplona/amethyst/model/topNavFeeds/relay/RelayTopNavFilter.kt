@@ -33,6 +33,8 @@ import kotlinx.coroutines.flow.flowOf
 class RelayTopNavFilter(
     val relayUrl: NormalizedRelayUrl,
 ) : IFeedTopNavFilter {
+    override fun relayUrl(): NormalizedRelayUrl = relayUrl
+
     override fun matchAuthor(pubkey: HexKey): Boolean = true
 
     override fun match(noteEvent: Event) = true

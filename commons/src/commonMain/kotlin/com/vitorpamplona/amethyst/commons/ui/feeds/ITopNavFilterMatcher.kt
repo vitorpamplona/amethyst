@@ -18,20 +18,27 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.topNavFeeds
+package com.vitorpamplona.amethyst.commons.ui.feeds
 
-import com.vitorpamplona.amethyst.commons.ui.feeds.ITopNavFilterMatcher
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import kotlinx.coroutines.flow.Flow
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
-interface IFeedTopNavFilter : ITopNavFilterMatcher {
-    override fun matchAuthor(pubkey: HexKey): Boolean
+/**
+ * Minimal interface for top-nav filter matching, used by [FilterByListParams].
+ * This decouples filter matching logic from Android-specific dependencies like LocalCache.
+ */
+interface ITopNavFilterMatcher {
+    fun matchAuthor(pubkey: HexKey): Boolean
 
-    override fun match(noteEvent: Event): Boolean
+    fun match(noteEvent: Event): Boolean
 
-    fun toPerRelayFlow(cache: LocalCache): Flow<IFeedTopNavPerRelayFilterSet>
+    /** Returns the relay URL if this is a relay-based filter, null otherwise. */
+    fun relayUrl(): NormalizedRelayUrl? = null
 
-    fun startValue(cache: LocalCache): IFeedTopNavPerRelayFilterSet
+    /** Returns true if this filter represents a global/unfiltered view. */
+    fun isGlobal(): Boolean = false
+
+    /** Returns true if this filter is for viewing hidden/muted content. */
+    fun isHiddenList(): Boolean = false
 }

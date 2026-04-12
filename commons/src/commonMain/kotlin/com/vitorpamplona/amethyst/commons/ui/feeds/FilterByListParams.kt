@@ -18,14 +18,9 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.dal
+package com.vitorpamplona.amethyst.commons.ui.feeds
 
 import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
-import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
-import com.vitorpamplona.amethyst.model.topNavFeeds.global.GlobalTopNavFilter
-import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsByOutboxTopNavFilter
-import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsByProxyTopNavFilter
-import com.vitorpamplona.amethyst.model.topNavFeeds.relay.RelayTopNavFilter
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -37,7 +32,7 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 
 class FilterByListParams(
     val isHiddenList: Boolean,
-    val followLists: IFeedTopNavFilter?,
+    val followLists: ITopNavFilterMatcher?,
     val hiddenLists: LiveHiddenUsers,
     val now: Long = TimeUtils.oneMinuteFromNow(),
 ) {
@@ -53,7 +48,7 @@ class FilterByListParams(
         return followLists.matchAuthor(author)
     }
 
-    fun isGlobal() = followLists is GlobalTopNavFilter
+    fun isGlobal() = followLists?.isGlobal() ?: false
 
     private fun applyTopFilter(
         comingFrom: List<NormalizedRelayUrl>,
@@ -61,9 +56,11 @@ class FilterByListParams(
     ): Boolean {
         if (followLists == null) return false
 
-        return when (followLists) {
-            is RelayTopNavFilter -> comingFrom.contains(followLists.relayUrl)
-            else -> followLists.match(noteEvent)
+        val relay = followLists.relayUrl()
+        return if (relay != null) {
+            comingFrom.contains(relay)
+        } else {
+            followLists.match(noteEvent)
         }
     }
 
@@ -73,9 +70,11 @@ class FilterByListParams(
     ): Boolean {
         if (followLists == null) return false
 
-        return when (followLists) {
-            is RelayTopNavFilter -> comingFrom.contains(followLists.relayUrl)
-            else -> followLists.matchAuthor(address.pubKeyHex)
+        val relay = followLists.relayUrl()
+        return if (relay != null) {
+            comingFrom.contains(relay)
+        } else {
+            followLists.matchAuthor(address.pubKeyHex)
         }
     }
 
@@ -101,11 +100,11 @@ class FilterByListParams(
         ) = selectedListName == PeopleListEvent.blockListFor(userHex) || selectedListName == MuteListEvent.blockListFor(userHex)
 
         fun create(
-            followLists: IFeedTopNavFilter?,
+            followLists: ITopNavFilterMatcher?,
             hiddenUsers: LiveHiddenUsers,
         ): FilterByListParams =
             FilterByListParams(
-                isHiddenList = followLists is MutedAuthorsByOutboxTopNavFilter || followLists is MutedAuthorsByProxyTopNavFilter,
+                isHiddenList = followLists?.isHiddenList() ?: false,
                 followLists = followLists,
                 hiddenLists = hiddenUsers,
             )
