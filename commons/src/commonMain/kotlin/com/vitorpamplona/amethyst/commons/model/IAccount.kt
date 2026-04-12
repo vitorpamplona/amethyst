@@ -21,6 +21,9 @@
 package com.vitorpamplona.amethyst.commons.model
 
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupList
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.BookmarkListState
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.OldBookmarkListState
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.PinListState
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
@@ -104,6 +107,15 @@ interface IAccount {
 
     /** Marmot MLS group chat list */
     val marmotGroupList: MarmotGroupList
+
+    /** Bookmark list state (NIP-51 kind 10003) */
+    val bookmarkState: BookmarkListState
+
+    /** Old bookmark list state (NIP-51 kind 30001) */
+    val oldBookmarkState: OldBookmarkListState
+
+    /** Pin list state (NIP-51) */
+    val pinState: PinListState
 
     /** Whether a note is acceptable (not hidden, not blocked, etc.) */
     fun isAcceptable(note: Note): Boolean
