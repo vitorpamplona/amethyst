@@ -20,11 +20,18 @@
  */
 package com.vitorpamplona.amethyst.model.privacyOptions
 
+import com.vitorpamplona.amethyst.commons.network.IHttpClientBuilder
 import okhttp3.OkHttpClient
 
-interface IRoleBasedHttpClientBuilder {
-    fun proxyPortForVideo(url: String): Int?
-
+/**
+ * Android/JVM-specific extension of [IHttpClientBuilder] that exposes
+ * [OkHttpClient] return types for backward compatibility.
+ *
+ * The [IHttpClientBuilder] methods are implemented by delegating to the
+ * `okHttpClientFor*` methods, since [PlatformHttpClient] is a typealias
+ * for [OkHttpClient] on JVM/Android.
+ */
+interface IRoleBasedHttpClientBuilder : IHttpClientBuilder {
     fun okHttpClientForNip05(url: String): OkHttpClient
 
     fun okHttpClientForUploads(url: String): OkHttpClient
@@ -38,4 +45,19 @@ interface IRoleBasedHttpClientBuilder {
     fun okHttpClientForPreview(url: String): OkHttpClient
 
     fun okHttpClientForPushRegistration(url: String): OkHttpClient
+
+    // Default implementations bridge IHttpClientBuilder to the okHttp-specific methods
+    override fun httpClientForNip05(url: String): OkHttpClient = okHttpClientForNip05(url)
+
+    override fun httpClientForUploads(url: String): OkHttpClient = okHttpClientForUploads(url)
+
+    override fun httpClientForImage(url: String): OkHttpClient = okHttpClientForImage(url)
+
+    override fun httpClientForVideo(url: String): OkHttpClient = okHttpClientForVideo(url)
+
+    override fun httpClientForMoney(url: String): OkHttpClient = okHttpClientForMoney(url)
+
+    override fun httpClientForPreview(url: String): OkHttpClient = okHttpClientForPreview(url)
+
+    override fun httpClientForPushRegistration(url: String): OkHttpClient = okHttpClientForPushRegistration(url)
 }
