@@ -18,25 +18,15 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.bookmarks.dal
+package com.vitorpamplona.amethyst.commons.viewmodels
 
-import androidx.compose.runtime.Stable
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.commons.model.IAccount
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
+import com.vitorpamplona.amethyst.commons.ui.feeds.UserProfileBookmarksFeedFilter
 
-@Stable
-class UserProfileBookmarksFeedViewModel(
-    user: User,
-    account: Account,
-) : com.vitorpamplona.amethyst.commons.viewmodels.UserProfileBookmarksFeedViewModel(user, account, LocalCache) {
-    class Factory(
-        val user: User,
-        val account: Account,
-    ) : ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = UserProfileBookmarksFeedViewModel(user, account) as T
-    }
-}
+open class UserProfileBookmarksFeedViewModel(
+    val user: User,
+    val account: IAccount,
+    cacheProvider: ICacheProvider,
+) : FeedViewModel(UserProfileBookmarksFeedFilter(user, account, cacheProvider), cacheProvider)

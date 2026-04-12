@@ -18,13 +18,12 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.bookmarks.dal
+package com.vitorpamplona.amethyst.commons.ui.feeds
 
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.ui.dal.FeedFilter
+import com.vitorpamplona.amethyst.commons.model.IAccount
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
@@ -33,7 +32,8 @@ import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.EventBookmark
 
 class UserProfileBookmarksFeedFilter(
     val user: User,
-    val account: Account,
+    val account: IAccount,
+    val cache: ICacheProvider,
 ) : FeedFilter<Note>() {
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + user.pubkeyHex
 
@@ -45,13 +45,13 @@ class UserProfileBookmarksFeedFilter(
     }
 
     private fun getBookmarksFromNew(): List<Note> {
-        val note = LocalCache.getOrCreateAddressableNote(BookmarkListEvent.createBookmarkAddress(user.pubkeyHex))
+        val note = cache.getOrCreateAddressableNote(BookmarkListEvent.createBookmarkAddress(user.pubkeyHex))
         val noteEvent = note.event as? BookmarkListEvent ?: return emptyList()
         return resolveBookmarks(noteEvent.publicBookmarks())
     }
 
     private fun getBookmarksFromOld(): List<Note> {
-        val note = LocalCache.getOrCreateAddressableNote(OldBookmarkListEvent.createBookmarkAddress(user.pubkeyHex))
+        val note = cache.getOrCreateAddressableNote(OldBookmarkListEvent.createBookmarkAddress(user.pubkeyHex))
         val noteEvent = note.event as? OldBookmarkListEvent ?: return emptyList()
         return resolveBookmarks(noteEvent.publicBookmarks())
     }
@@ -59,8 +59,8 @@ class UserProfileBookmarksFeedFilter(
     private fun resolveBookmarks(bookmarks: List<BookmarkIdTag>): List<Note> =
         bookmarks.mapNotNull {
             when (it) {
-                is AddressBookmark -> LocalCache.getOrCreateAddressableNote(it.address)
-                is EventBookmark -> LocalCache.checkGetOrCreateNote(it.eventId)
+                is AddressBookmark -> cache.getOrCreateAddressableNote(it.address)
+                is EventBookmark -> cache.checkGetOrCreateNote(it.eventId)
             }
         }
 }
