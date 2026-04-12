@@ -18,20 +18,21 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.topNavFeeds
+package com.vitorpamplona.amethyst.commons.model
 
-import com.vitorpamplona.amethyst.commons.ui.dal.IFilterByListTopNavFilter
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 
-interface IFeedTopNavFilter : IFilterByListTopNavFilter {
-    override fun matchAuthor(pubkey: HexKey): Boolean
+/**
+ * Minimal interface for account settings needed by commons feed filters.
+ * Provides follow-list selection codes used for feed keys.
+ */
+interface IAccountSettings {
+    /** Code identifying the selected home follow list (e.g. " Global ", " All Follows ", or an address) */
+    val defaultHomeFollowListCode: StateFlow<String>
 
-    override fun match(noteEvent: Event): Boolean
+    /** Code identifying the selected stories/video follow list */
+    val defaultStoriesFollowListCode: StateFlow<String>
 
-    fun toPerRelayFlow(cache: LocalCache): Flow<IFeedTopNavPerRelayFilterSet>
-
-    fun startValue(cache: LocalCache): IFeedTopNavPerRelayFilterSet
+    /** Code identifying the selected discovery follow list */
+    val defaultDiscoveryFollowListCode: StateFlow<String>
 }
