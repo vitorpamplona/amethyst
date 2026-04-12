@@ -21,7 +21,12 @@
 package com.vitorpamplona.amethyst.commons.model
 
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupList
+import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatListState
+import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.BookmarkListState
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
@@ -34,6 +39,8 @@ import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import com.vitorpamplona.quartz.nip57Zaps.IPrivateZapsDecryptionCache
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.utils.DualCase
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.StateFlow
 
 /**
  * Interface for NIP-47 wallet connect signer state.
@@ -119,4 +126,44 @@ interface IAccount {
 
     /** Broadcast pre-created gift wraps (e.g. reactions within group DMs) */
     suspend fun sendGiftWraps(wraps: List<GiftWrapEvent>)
+
+    /** Nostr relay client for publishing events */
+    val client: INostrClient
+
+    /** Coroutine scope for account-scoped operations */
+    val scope: CoroutineScope
+
+    /** Bookmark list state (NIP-51) */
+    val bookmarkState: BookmarkListState
+
+    /** Custom emoji pack state (NIP-30) */
+    val emoji: EmojiPackState
+
+    /** Public chat channel list state (NIP-28) */
+    val publicChatList: PublicChatListState
+
+    /** Get a flow of the last-read timestamp for a given route */
+    fun loadLastReadFlow(route: String): StateFlow<Long>
+
+    /** Sign an event and broadcast it with computed relay list */
+    suspend fun <T : Event> signAndComputeBroadcast(
+        template: EventTemplate<T>,
+        broadcast: List<Event> = emptyList(),
+    ): T
+
+    /** Sign an event anonymously and broadcast it */
+    suspend fun <T : Event> signAnonymouslyAndBroadcast(
+        template: EventTemplate<T>,
+        broadcast: List<Event> = emptyList(),
+    ): T
+
+    /** Create and send a draft event, ignoring errors */
+    suspend fun createAndSendDraftIgnoreErrors(
+        draftTag: String,
+        template: EventTemplate<out Event>,
+        broadcast: Set<Event> = emptySet(),
+    )
+
+    /** Delete a draft event by tag, ignoring errors */
+    suspend fun deleteDraftIgnoreErrors(draftTag: String)
 }

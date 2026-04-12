@@ -253,8 +253,8 @@ class Account(
     val nwcFilterAssembler: () -> NWCPaymentFilterAssembler,
     val otsResolverBuilder: () -> OtsResolver,
     val cache: LocalCache,
-    val client: INostrClient,
-    val scope: CoroutineScope,
+    override val client: INostrClient,
+    override val scope: CoroutineScope,
     val mlsGroupStateStore: MlsGroupStateStore? = null,
 ) : IAccount {
     private var userProfileCache: User? = null
@@ -309,7 +309,7 @@ class Account(
     val ephemeralChatList = EphemeralChatListState(signer, cache, ephemeralChatListDecryptionCache, scope, settings)
 
     val publicChatListDecryptionCache = PublicChatListDecryptionCache(signer)
-    val publicChatList = PublicChatListState(signer, cache, publicChatListDecryptionCache, scope, settings)
+    override val publicChatList = PublicChatListState(signer, cache, publicChatListDecryptionCache, scope, settings)
 
     val communityListDecryptionCache = CommunityListDecryptionCache(signer)
     val communityList = CommunityListState(signer, cache, communityListDecryptionCache, scope, settings)
@@ -335,9 +335,9 @@ class Account(
 
     val labeledBookmarkLists = LabeledBookmarkListsState(signer, cache, scope)
     val oldBookmarkState = OldBookmarkListState(signer, cache, scope)
-    val bookmarkState = BookmarkListState(signer, cache, scope)
+    override val bookmarkState = BookmarkListState(signer, cache, scope)
     val pinState = PinListState(signer, cache, scope)
-    val emoji = EmojiPackState(signer, cache, scope)
+    override val emoji = EmojiPackState(signer, cache, scope)
 
     val vanish = VanishRequestsState(signer, cache, client, scope)
 
@@ -1321,9 +1321,9 @@ class Account(
         return event
     }
 
-    suspend fun <T : Event> signAndComputeBroadcast(
+    override suspend fun <T : Event> signAndComputeBroadcast(
         template: EventTemplate<T>,
-        broadcast: List<Event> = emptyList(),
+        broadcast: List<Event>,
     ): T {
         val event = signer.sign(template)
         cache.justConsumeMyOwnEvent(event)
@@ -1343,9 +1343,9 @@ class Account(
         return event
     }
 
-    suspend fun <T : Event> signAnonymouslyAndBroadcast(
+    override suspend fun <T : Event> signAnonymouslyAndBroadcast(
         template: EventTemplate<T>,
-        broadcast: List<Event> = emptyList(),
+        broadcast: List<Event>,
     ): T {
         val anonymousSigner = NostrSignerInternal(KeyPair())
         val event = anonymousSigner.sign(template)
@@ -1397,10 +1397,10 @@ class Account(
         extraNotesToBroadcast.forEach { client.publish(it, relays) }
     }
 
-    suspend fun createAndSendDraftIgnoreErrors(
+    override suspend fun createAndSendDraftIgnoreErrors(
         draftTag: String,
         template: EventTemplate<out Event>,
-        broadcast: Set<Event> = emptySet(),
+        broadcast: Set<Event>,
     ) {
         try {
             createAndSendDraftInner(draftTag, template, broadcast)
@@ -1433,7 +1433,7 @@ class Account(
         }
     }
 
-    suspend fun deleteDraftIgnoreErrors(draftTag: String) {
+    override suspend fun deleteDraftIgnoreErrors(draftTag: String) {
         try {
             deleteDraftInner(draftTag)
         } catch (e: Exception) {
@@ -2371,7 +2371,7 @@ class Account(
 
     fun loadLastRead(route: String): Long = settings.lastReadPerRoute.value[route]?.value ?: 0
 
-    fun loadLastReadFlow(route: String) = settings.getLastReadFlow(route)
+    override fun loadLastReadFlow(route: String) = settings.getLastReadFlow(route)
 
     fun hasDonatedInThisVersion() = settings.hasDonatedInVersion(BuildConfig.VERSION_NAME)
 
