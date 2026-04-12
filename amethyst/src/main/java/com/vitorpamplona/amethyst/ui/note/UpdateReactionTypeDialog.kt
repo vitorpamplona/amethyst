@@ -54,7 +54,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -66,16 +65,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.service.firstFullChar
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEventAndMapNotNull
 import com.vitorpamplona.amethyst.ui.components.AnimatedBorderTextCornerRadius
 import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
@@ -97,56 +92,16 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
 
-@Stable
-class UpdateReactionTypeViewModel : ViewModel() {
-    lateinit var accountViewModel: AccountViewModel
-    lateinit var account: Account
-    var nextChoice by mutableStateOf(TextFieldValue(""))
-    var reactionSet by mutableStateOf(listOf<String>())
+typealias UpdateReactionTypeViewModel = com.vitorpamplona.amethyst.commons.viewmodels.UpdateReactionTypeViewModel
 
-    fun init(accountViewModel: AccountViewModel) {
-        this.accountViewModel = accountViewModel
-        this.account = accountViewModel.account
+fun UpdateReactionTypeViewModel.init(accountViewModel: AccountViewModel) {
+    init { reactionTypes, onDone ->
+        accountViewModel.changeReactionTypes(reactionTypes, onDone)
     }
+}
 
-    fun load() {
-        this.reactionSet = account.settings.syncedSettings.reactions.reactionChoices.value
-    }
-
-    fun toListOfChoices(commaSeparatedAmounts: String): List<Long> = commaSeparatedAmounts.split(",").map { it.trim().toLongOrNull() ?: 0 }
-
-    fun addChoice() {
-        val newValue =
-            if (EmojiCoder.isCoded(nextChoice.text)) {
-                EmojiCoder.cropToFirstMessage(nextChoice.text)
-            } else {
-                nextChoice.text.trim().firstFullChar()
-            }
-
-        reactionSet = reactionSet + newValue
-
-        nextChoice = TextFieldValue("")
-    }
-
-    fun addChoice(customEmoji: EmojiUrlTag) {
-        reactionSet = reactionSet + (customEmoji.encode())
-    }
-
-    fun removeChoice(reaction: String) {
-        reactionSet = reactionSet - reaction
-    }
-
-    fun sendPost() {
-        accountViewModel.changeReactionTypes(reactionSet) {
-            nextChoice = TextFieldValue("")
-        }
-    }
-
-    fun cancel() {
-        nextChoice = TextFieldValue("")
-    }
-
-    fun hasChanged(): Boolean = reactionSet != account.settings.syncedSettings.reactions.reactionChoices.value
+fun UpdateReactionTypeViewModel.load(accountViewModel: AccountViewModel) {
+    load(accountViewModel.account.settings.syncedSettings.reactions.reactionChoices.value)
 }
 
 @Composable
@@ -158,7 +113,7 @@ fun UpdateReactionTypeScreen(
     postViewModel.init(accountViewModel)
 
     LaunchedEffect(postViewModel, accountViewModel) {
-        postViewModel.load()
+        postViewModel.load(accountViewModel)
     }
 
     UpdateReactionTypeScreen(postViewModel, accountViewModel, nav)
