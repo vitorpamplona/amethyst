@@ -703,6 +703,7 @@
     <string name="call_unmute">Némítás megszüntetése</string>
     <string name="call_camera_on">Kamera bekapcsolása</string>
     <string name="call_camera_off">Kamera kikapcsolása</string>
+    <string name="call_switch_camera">Kameraváltás</string>
     <string name="call_speaker">Hangszóró</string>
     <string name="call_earpiece">Fülhallgató</string>
     <string name="call_bluetooth">Bluetooth</string>
@@ -714,6 +715,19 @@
     <string name="call_failed_start">Nem sikerült hívást kezdeményezni</string>
     <string name="call_failed_accept">Nem sikerült elfogadni a hívást</string>
     <string name="call_failed_session">Nem sikerült létrehozni a hívási munkamenetet</string>
+    <string name="call_settings">Hívásbeállítások</string>
+    <string name="call_settings_video_quality">Videóminőség</string>
+    <string name="call_settings_max_bitrate">Legmagasabb videó-bitsebesség</string>
+    <string name="call_settings_turn_servers">TURN-/ STUN-kiszolgálók</string>
+    <string name="call_settings_turn_description">Az alapértelmezett STUN- és TURN-kiszolgálók minden esetben biztosítottak. Korlátozó hálózatok esetén adjon hozzá egyéni TURN kiszolgálókat.</string>
+    <string name="call_settings_default_servers">Alapértelmezett kiszolgálók (mindíg aktívak)</string>
+    <string name="call_settings_custom_turn">Egyéni TURN-kiszolgálók</string>
+    <string name="call_settings_no_custom_turn">Nincsenek egyéni TURN-kiszolgálók beállítva.</string>
+    <string name="call_settings_add_turn">TURN-kiszolgáló hozzáadása</string>
+    <string name="call_settings_remove_turn">Eltávolítás</string>
+    <string name="call_settings_turn_url">Kiszolgáló webcíme</string>
+    <string name="call_settings_turn_username">Felhasználónév</string>
+    <string name="call_settings_turn_credential">Hitelesítési adatok</string>
     <string name="reply_notify">Értesítés: </string>
     <string name="channel_list_join_conversation">Csatlakozás a beszélgetéshez</string>
     <string name="channel_list_user_or_group_id">Felhasználó- vagy csoport-azonosító</string>
