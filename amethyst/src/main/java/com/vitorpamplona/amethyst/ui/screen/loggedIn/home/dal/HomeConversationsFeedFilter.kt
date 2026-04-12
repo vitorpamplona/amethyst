@@ -22,79 +22,15 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.home.dal
 
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsByOutboxTopNavFilter
-import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsByProxyTopNavFilter
-import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
-import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
-import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
-import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import com.vitorpamplona.quartz.nip22Comments.CommentEvent
-import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
-import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
-import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
-import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
 
+/**
+ * Android-specific convenience constructor that wires Account + LocalCache.
+ * The actual filter logic lives in commons:
+ * [com.vitorpamplona.amethyst.commons.ui.screen.home.dal.HomeConversationsFeedFilter]
+ */
 class HomeConversationsFeedFilter(
-    val account: Account,
-) : AdditiveFeedFilter<Note>() {
-    override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + account.settings.defaultHomeFollowList.value
-
-    override fun showHiddenKey(): Boolean =
-        account.liveHomeFollowLists.value is MutedAuthorsByOutboxTopNavFilter ||
-            account.liveHomeFollowLists.value is MutedAuthorsByProxyTopNavFilter
-
-    override fun feed(): List<Note> {
-        val filterParams = buildFilterParams(account)
-
-        return sort(
-            LocalCache.notes.filterIntoSet { _, it ->
-                acceptableEvent(it, filterParams)
-            },
-        )
-    }
-
-    override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)
-
-    fun buildFilterParams(account: Account): FilterByListParams =
-        FilterByListParams.create(
-            followLists = account.liveHomeFollowLists.value,
-            hiddenUsers = account.hiddenUsers.flow.value,
-        )
-
-    private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
-        val filterParams = buildFilterParams(account)
-
-        return collection.filterTo(HashSet()) {
-            acceptableEvent(it, filterParams)
-        }
-    }
-
-    fun acceptableEvent(
-        event: Event?,
-        relays: List<NormalizedRelayUrl>,
-        filterParams: FilterByListParams,
-    ): Boolean =
-        (
-            event is TextNoteEvent ||
-                event is ZapPollEvent ||
-                event is PollResponseEvent ||
-                event is ChannelMessageEvent ||
-                event is CommentEvent ||
-                event is VoiceReplyEvent ||
-                event is PublicMessageEvent ||
-                event is LiveActivitiesChatMessageEvent
-        ) &&
-            filterParams.match(event, relays)
-
-    fun acceptableEvent(
-        note: Note,
-        filterParams: FilterByListParams,
-    ): Boolean = acceptableEvent(note.event, note.relays, filterParams) && !note.isNewThread()
-
-    override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder)
-}
+    account: Account,
+) : com.vitorpamplona.amethyst.commons.ui.screen.home.dal.HomeConversationsFeedFilter(
+        account = account,
+        cache = LocalCache,
+    )
