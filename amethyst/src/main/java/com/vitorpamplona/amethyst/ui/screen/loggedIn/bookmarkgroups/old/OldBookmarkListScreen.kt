@@ -138,8 +138,7 @@ private fun RenderOldBookmarkScreen(
                     )
                 },
                 onClick = {
-                    accountViewModel.launchSigner {
-                        accountViewModel.account.migrateOldBookmarksToNew()
+                    accountViewModel.migrateOldBookmarksToNew {
                         coroutineScope.launch {
                             Toast
                                 .makeText(

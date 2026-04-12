@@ -105,11 +105,9 @@ fun NIP47SetupScreen(
                     nav.popBack()
                 },
                 onPost = {
-                    accountViewModel.launchSigner {
-                        postViewModel.sendPostSuspend()
-                        walletViewModel.saveLnAddressSuspend()
-                        paymentTargetsViewModel.savePaymentTargetsSuspend()
-                    }
+                    postViewModel.sendPost()
+                    walletViewModel.saveLnAddress()
+                    paymentTargetsViewModel.savePaymentTargets()
                     nav.popBack()
                 },
             )

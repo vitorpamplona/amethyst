@@ -98,17 +98,15 @@ fun NewChatroomSubjectDialog(
 
                     PostButton(
                         onPost = {
-                            accountViewModel.launchSigner {
-                                val template =
-                                    ChatMessageEvent.build(
-                                        message.value,
-                                        room.users.map { LocalCache.getOrCreateUser(it).toPTag() },
-                                    ) {
-                                        groupName.value.ifBlank { null }?.let { changeSubject(it) }
-                                    }
+                            val template =
+                                ChatMessageEvent.build(
+                                    message.value,
+                                    room.users.map { LocalCache.getOrCreateUser(it).toPTag() },
+                                ) {
+                                    groupName.value.ifBlank { null }?.let { changeSubject(it) }
+                                }
 
-                                accountViewModel.account.sendNip17PrivateMessage(template)
-                            }
+                            accountViewModel.sendNip17PrivateMessage(template)
 
                             onClose()
                         },

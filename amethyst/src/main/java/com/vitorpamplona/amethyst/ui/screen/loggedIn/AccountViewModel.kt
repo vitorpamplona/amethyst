@@ -105,6 +105,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineT
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.EmptyIAuthStatus
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.RelayAuthenticator
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.tags.people.PubKeyReferenceTag
@@ -118,6 +119,7 @@ import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Client
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip17Dm.base.NIP17Group
+import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
@@ -1016,6 +1018,14 @@ class AccountViewModel(
     fun delete(note: Note) = launchSigner { account.delete(note) }
 
     fun deleteDraftIgnoreErrors(draftTag: String) = launchSigner { account.deleteDraftIgnoreErrors(draftTag) }
+
+    fun migrateOldBookmarksToNew(onDone: (() -> Unit)? = null) =
+        launchSigner {
+            account.migrateOldBookmarksToNew()
+            onDone?.invoke()
+        }
+
+    fun sendNip17PrivateMessage(template: EventTemplate<ChatMessageEvent>) = launchSigner { account.sendNip17PrivateMessage(template) }
 
     fun requestToVanish(
         relays: List<NormalizedRelayUrl>,
