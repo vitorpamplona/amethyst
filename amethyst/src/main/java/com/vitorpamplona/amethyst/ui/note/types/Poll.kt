@@ -267,9 +267,7 @@ fun RenderPollCard(
         card = card,
         noteId = event.id,
         onRespond = { responses ->
-            accountViewModel.launchSigner {
-                accountViewModel.account.pollRespond(event, responses)
-            }
+            accountViewModel.pollRespond(event, responses)
         },
         onViewResults = { accountViewModel.markPollResultsViewed(event.id, event.endsAt()) },
         hasViewedResults = { accountViewModel.hasViewedPollResults(event.id) },

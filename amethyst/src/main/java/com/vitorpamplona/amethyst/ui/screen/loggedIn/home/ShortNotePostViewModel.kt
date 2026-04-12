@@ -850,9 +850,7 @@ open class ShortNotePostViewModel :
             accountViewModel.account.signAndComputeBroadcast(template, extraNotesToBroadcast)
         }
 
-        accountViewModel.launchSigner {
-            accountViewModel.account.deleteDraftIgnoreErrors(version)
-        }
+        accountViewModel.deleteDraftIgnoreErrors(version)
     }
 
     suspend fun sendDraftSync() {

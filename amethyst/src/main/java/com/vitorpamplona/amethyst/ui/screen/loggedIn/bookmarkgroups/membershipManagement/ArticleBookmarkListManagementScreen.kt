@@ -128,14 +128,10 @@ private fun ListManagementViewBody(
                     nav.nav(Route.Bookmarks)
                 },
                 onAddBookmarkToGroup = { shouldBePrivate ->
-                    accountViewModel.launchSigner {
-                        accountViewModel.account.addBookmark(note, shouldBePrivate)
-                    }
+                    accountViewModel.addBookmark(note, shouldBePrivate)
                 },
                 onRemoveBookmarkFromGroup = {
-                    accountViewModel.launchSigner {
-                        accountViewModel.account.removeBookmark(note)
-                    }
+                    accountViewModel.removeBookmark(note)
                 },
             )
         }
