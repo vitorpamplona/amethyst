@@ -25,12 +25,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextOverflow
 import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.openBlossomUriAsIntent
+import org.jetbrains.compose.resources.StringResource
 
 @Composable
 fun ClickableUrl(
     urlText: String,
     url: String,
-    onError: (Int, Int) -> Unit = { _, _ -> },
+    onError: (StringResource, StringResource) -> Unit = { _, _ -> },
 ) {
     val uri = LocalUriHandler.current
     val context = LocalContext.current

@@ -40,7 +40,9 @@ import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.error_opening_external_signer
+import com.vitorpamplona.amethyst.commons.resources.error_opening_external_signer_description
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.notifications.PushNotificationUtils
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.compose.RelayAuthSubscription
@@ -203,8 +205,8 @@ private fun ListenToExternalSignerIfNeeded(accountViewModel: AccountViewModel) {
                     launcher.launch(intent)
                 } catch (e: ActivityNotFoundException) {
                     accountViewModel.toastManager.toast(
-                        R.string.error_opening_external_signer,
-                        R.string.error_opening_external_signer_description,
+                        Res.string.error_opening_external_signer,
+                        Res.string.error_opening_external_signer_description,
                     )
                     throw e
                 }

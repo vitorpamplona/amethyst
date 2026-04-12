@@ -78,6 +78,13 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_send_zaps
+import com.vitorpamplona.amethyst.commons.resources.one_vote_per_user_on_atomic_votes
+import com.vitorpamplona.amethyst.commons.resources.poll_author_no_vote
+import com.vitorpamplona.amethyst.commons.resources.poll_is_closed_explainer
+import com.vitorpamplona.amethyst.commons.resources.poll_unable_to_vote
+import com.vitorpamplona.amethyst.commons.resources.read_only_user
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -550,24 +557,24 @@ fun ZapVote(
                 onClick = {
                     if (!accountViewModel.isWriteable()) {
                         accountViewModel.toastManager.toast(
-                            R.string.read_only_user,
-                            R.string.login_with_a_private_key_to_be_able_to_send_zaps,
+                            Res.string.read_only_user,
+                            Res.string.login_with_a_private_key_to_be_able_to_send_zaps,
                         )
                     } else if (pollViewModel.isPollClosed()) {
                         accountViewModel.toastManager.toast(
-                            R.string.poll_unable_to_vote,
-                            R.string.poll_is_closed_explainer,
+                            Res.string.poll_unable_to_vote,
+                            Res.string.poll_is_closed_explainer,
                         )
                     } else if (isLoggedUser) {
                         accountViewModel.toastManager.toast(
-                            R.string.poll_unable_to_vote,
-                            R.string.poll_author_no_vote,
+                            Res.string.poll_unable_to_vote,
+                            Res.string.poll_author_no_vote,
                         )
                     } else if (pollViewModel.isVoteAmountAtomic() && poolOption.zappedByLoggedIn.value) {
                         // only allow one vote per option when min==max, i.e. atomic vote amount specified
                         accountViewModel.toastManager.toast(
-                            R.string.poll_unable_to_vote,
-                            R.string.one_vote_per_user_on_atomic_votes,
+                            Res.string.poll_unable_to_vote,
+                            Res.string.one_vote_per_user_on_atomic_votes,
                         )
                         return@combinedClickable
                     } else if (

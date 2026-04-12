@@ -23,6 +23,10 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_follow
+import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_unfollow
+import com.vitorpamplona.amethyst.commons.resources.read_only_user
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserIsFollowing
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -41,8 +45,8 @@ fun DisplayFollowUnfollowButton(
         UnfollowButton(isInProfileActions = true) {
             if (!accountViewModel.isWriteable()) {
                 accountViewModel.toastManager.toast(
-                    R.string.read_only_user,
-                    R.string.login_with_a_private_key_to_be_able_to_unfollow,
+                    Res.string.read_only_user,
+                    Res.string.login_with_a_private_key_to_be_able_to_unfollow,
                 )
             } else {
                 accountViewModel.unfollow(baseUser)
@@ -53,8 +57,8 @@ fun DisplayFollowUnfollowButton(
             FollowButton(R.string.follow_back, isInProfileActions = true) {
                 if (!accountViewModel.isWriteable()) {
                     accountViewModel.toastManager.toast(
-                        R.string.read_only_user,
-                        R.string.login_with_a_private_key_to_be_able_to_follow,
+                        Res.string.read_only_user,
+                        Res.string.login_with_a_private_key_to_be_able_to_follow,
                     )
                 } else {
                     accountViewModel.follow(baseUser)
@@ -64,8 +68,8 @@ fun DisplayFollowUnfollowButton(
             FollowButton(R.string.follow, isInProfileActions = true) {
                 if (!accountViewModel.isWriteable()) {
                     accountViewModel.toastManager.toast(
-                        R.string.read_only_user,
-                        R.string.login_with_a_private_key_to_be_able_to_follow,
+                        Res.string.read_only_user,
+                        Res.string.login_with_a_private_key_to_be_able_to_follow,
                     )
                 } else {
                     accountViewModel.follow(baseUser)

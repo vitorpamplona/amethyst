@@ -104,7 +104,17 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.draft_note
 import com.vitorpamplona.amethyst.commons.resources.error_dialog_zap_error
+import com.vitorpamplona.amethyst.commons.resources.it_s_not_possible_to_react_to_a_draft_note
+import com.vitorpamplona.amethyst.commons.resources.it_s_not_possible_to_reply_to_a_draft_note
+import com.vitorpamplona.amethyst.commons.resources.it_s_not_possible_to_zap_to_a_draft_note
+import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_reply
+import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_send_zaps
+import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_like_posts
+import com.vitorpamplona.amethyst.commons.resources.no_reaction_type_setup_long_press_to_change
+import com.vitorpamplona.amethyst.commons.resources.no_reactions_setup
+import com.vitorpamplona.amethyst.commons.resources.read_only_user
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.ReactionRowAction
 import com.vitorpamplona.amethyst.model.ReactionRowItem
@@ -810,16 +820,16 @@ fun ReplyReaction(
         onClick = {
             if (baseNote.isDraft()) {
                 accountViewModel.toastManager.toast(
-                    R.string.draft_note,
-                    R.string.it_s_not_possible_to_reply_to_a_draft_note,
+                    Res.string.draft_note,
+                    Res.string.it_s_not_possible_to_reply_to_a_draft_note,
                 )
             } else {
                 if (accountViewModel.isWriteable()) {
                     onPress()
                 } else {
                     accountViewModel.toastManager.toast(
-                        R.string.read_only_user,
-                        R.string.login_with_a_private_key_to_be_able_to_reply,
+                        Res.string.read_only_user,
+                        Res.string.login_with_a_private_key_to_be_able_to_reply,
                     )
                 }
             }
@@ -1129,8 +1139,8 @@ private fun likeClick(
 ) {
     if (baseNote.isDraft()) {
         accountViewModel.toastManager.toast(
-            R.string.draft_note,
-            R.string.it_s_not_possible_to_react_to_a_draft_note,
+            Res.string.draft_note,
+            Res.string.it_s_not_possible_to_react_to_a_draft_note,
         )
         return
     }
@@ -1138,13 +1148,13 @@ private fun likeClick(
     val choices = accountViewModel.reactionChoices()
     if (choices.isEmpty()) {
         accountViewModel.toastManager.toast(
-            R.string.no_reactions_setup,
-            R.string.no_reaction_type_setup_long_press_to_change,
+            Res.string.no_reactions_setup,
+            Res.string.no_reaction_type_setup_long_press_to_change,
         )
     } else if (!accountViewModel.isWriteable()) {
         accountViewModel.toastManager.toast(
-            R.string.read_only_user,
-            R.string.login_with_a_private_key_to_like_posts,
+            Res.string.read_only_user,
+            Res.string.login_with_a_private_key_to_like_posts,
         )
     } else if (choices.size == 1) {
         onWantsToSignReaction()
@@ -1353,8 +1363,8 @@ fun zapClick(
 ) {
     if (baseNote.isDraft()) {
         accountViewModel.toastManager.toast(
-            R.string.draft_note,
-            R.string.it_s_not_possible_to_zap_to_a_draft_note,
+            Res.string.draft_note,
+            Res.string.it_s_not_possible_to_zap_to_a_draft_note,
         )
         return
     }
@@ -1365,8 +1375,8 @@ fun zapClick(
         onCustomAmount()
     } else if (!accountViewModel.isWriteable()) {
         accountViewModel.toastManager.toast(
-            R.string.error_dialog_zap_error,
-            R.string.login_with_a_private_key_to_be_able_to_send_zaps,
+            Res.string.error_dialog_zap_error,
+            Res.string.login_with_a_private_key_to_be_able_to_send_zaps,
         )
     } else if (choices.size == 1) {
         onZapStarts()

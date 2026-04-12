@@ -65,4 +65,81 @@
     <string name="torrent_failure">Failed to open file</string>
     <string name="torrent_no_apps">No torrent apps installed to open and download the file.</string>
     <string name="torrent_no_info">Event doesn\'t have enough information to build a magnet link</string>
+
+    <!-- Toast Messages - Draft Notes -->
+    <string name="draft_note">Draft Note</string>
+    <string name="it_s_not_possible_to_quote_to_a_draft_note">It\'s not possible to quote a draft note</string>
+    <string name="it_s_not_possible_to_react_to_a_draft_note">It\'s not possible to react a draft note</string>
+    <string name="it_s_not_possible_to_reply_to_a_draft_note">It\'s not possible to reply a draft note</string>
+    <string name="it_s_not_possible_to_zap_to_a_draft_note">It\'s not possible to zap a draft note</string>
+
+    <!-- Toast Messages - Read Only User -->
+    <string name="read_only_user">Read-only user</string>
+    <string name="login_with_a_private_key_to_be_able_to_boost_posts">You are using a public key and public keys are read-only. Login with a Private key to be able to boost posts</string>
+    <string name="login_with_a_private_key_to_be_able_to_follow">You are using a public key and public keys are read-only. Login with a Private key to be able to follow</string>
+    <string name="login_with_a_private_key_to_be_able_to_hide_word">You are using a public key and public keys are read-only. Login with a Private key to be able to hide a word or sentence</string>
+    <string name="login_with_a_private_key_to_be_able_to_reply">You are using a public key and public keys are read-only. Login with a Private key to be able to reply</string>
+    <string name="login_with_a_private_key_to_be_able_to_send_zaps">You are using a public key and public keys are read-only. Login with a Private key to be able to send zaps</string>
+    <string name="login_with_a_private_key_to_be_able_to_show_word">You are using a public key and public keys are read-only. Login with a Private key to be able to show a word or sentence</string>
+    <string name="login_with_a_private_key_to_be_able_to_sign_events">You are using a public key and public keys are read-only. Login with a Private key to be able to sign for events</string>
+    <string name="login_with_a_private_key_to_be_able_to_unfollow">You are using a public key and public keys are read-only. Login with a Private key to be able to unfollow</string>
+    <string name="login_with_a_private_key_to_like_posts">You are using a public key and public keys are read-only. Login with a Private key to like posts</string>
+
+    <!-- Toast Messages - Poll -->
+    <string name="poll_unable_to_vote">Unable to vote</string>
+    <string name="poll_is_closed_explainer">Poll is closed to new votes</string>
+    <string name="poll_author_no_vote">Poll authors can\'t vote in their own polls.</string>
+    <string name="one_vote_per_user_on_atomic_votes">Only one vote per user is allowed on this type of poll</string>
+
+    <!-- Toast Messages - Reactions -->
+    <string name="no_reactions_setup">No reactions setup</string>
+    <string name="no_reaction_type_setup_long_press_to_change">No reaction types pre-selected for this user. Long press on the heart button to change</string>
+
+    <!-- Toast Messages - Relay -->
+    <string name="read_from_relay">Read from Relay</string>
+    <string name="read_from_relay_description">The amount in bytes that was received from this relay, including filters and events</string>
+    <string name="write_to_relay">Write to Relay</string>
+    <string name="write_to_relay_description">The amount in bytes that was sent to this relay, including filters and events</string>
+    <string name="errors">Errors</string>
+    <string name="connection_success_rate_description">Percentage of successful connections to the relay</string>
+    <string name="spam">Spam</string>
+    <string name="spam_description">The number of spamming events coming from this relay</string>
+
+    <!-- Toast Messages - Signer -->
+    <string name="error_opening_external_signer">Error opening signer app</string>
+    <string name="error_opening_external_signer_description">The signer app could not be found. Check if the app hasn\'t been uninstalled</string>
+    <string name="signer_not_found_exception">Signer not found</string>
+    <string name="signer_not_found_exception_description">Was the Signer app uninstalled? Check if the signer is installed and has this account. Log off and Log in again of the signer app has changed.</string>
+    <string name="signer_illegal_state_exception_description">External signer returned a payload that is strange for the request. There might be a bug on either Amethyst or the Signer.</string>
+    <string name="unauthorized_exception">Unauthorized Decryption</string>
+    <string name="unauthorized_exception_description">The signer did not authorize a decryption that is required to make this operation. Activate NIP-44 decryptions in your signer app and try again</string>
+
+    <!-- Toast Messages - Wallet -->
+    <string name="couldnt_find_nwc_wallets">Wallet not found</string>
+    <string name="couldnt_find_nwc_wallets_description">Amethyst couldn\'t find any wallet apps that support Nostr Wallet Connect (NWC).</string>
+    <string name="invalid_nip47_uri_title">Invalid NIP-47 URI</string>
+    <string name="invalid_nip47_uri_description">The URI %1$s is not a valid NIP-47 login URI.</string>
+    <string name="error_parsing_nip47_title">Could not setup Wallet Connect</string>
+
+    <!-- Toast Messages - Navigation -->
+    <string name="invalid_nip19_uri">Invalid address</string>
+    <string name="invalid_nip19_uri_description">Amethyst received a URI to open but that uri was invalid: %1$s</string>
+
+    <!-- Toast Messages - OTS -->
+    <string name="ots_info_title">Timestamp Proof</string>
+    <string name="ots_info_description">There\'s proof this post was signed sometime before %1$s. The proof was stamped in the Bitcoin blockchain at that date and time.</string>
+
+    <!-- Toast Messages - Vanish -->
+    <string name="request_to_vanish">Request to Vanish</string>
+    <string name="vanish_request_sent">Vanish request sent</string>
+
+    <!-- Toast Messages - Error -->
+    <string name="error">Error</string>
+
+    <!-- Toast Messages - Media -->
+    <string name="failed_to_save_the_image">Failed to save the image</string>
+
+    <!-- Toast Messages - Blossom -->
+    <string name="no_blossom_apps_found_title">Can\'t open Blossom links</string>
+    <string name="no_blossom_apps_found_description">Blossom apps were not found. Please install a local Blossom app to see this file</string>
 </resources>

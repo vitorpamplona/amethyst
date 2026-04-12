@@ -50,7 +50,17 @@ import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChann
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.commons.model.observables.CreatedAtComparator
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.draft_note
 import com.vitorpamplona.amethyst.commons.resources.failed_to_save_the_video
+import com.vitorpamplona.amethyst.commons.resources.it_s_not_possible_to_quote_to_a_draft_note
+import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_boost_posts
+import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_sign_events
+import com.vitorpamplona.amethyst.commons.resources.read_only_user
+import com.vitorpamplona.amethyst.commons.resources.signer_illegal_state_exception_description
+import com.vitorpamplona.amethyst.commons.resources.signer_not_found_exception
+import com.vitorpamplona.amethyst.commons.resources.signer_not_found_exception_description
+import com.vitorpamplona.amethyst.commons.resources.unauthorized_exception
+import com.vitorpamplona.amethyst.commons.resources.unauthorized_exception_description
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.ui.notifications.CardFeedState
 import com.vitorpamplona.amethyst.logTime
@@ -1043,18 +1053,18 @@ class AccountViewModel(
                 action()
             } catch (_: SignerExceptions.ReadOnlyException) {
                 toastManager.toast(
-                    R.string.read_only_user,
-                    R.string.login_with_a_private_key_to_be_able_to_sign_events,
+                    Res.string.read_only_user,
+                    Res.string.login_with_a_private_key_to_be_able_to_sign_events,
                 )
             } catch (_: SignerExceptions.UnauthorizedDecryptionException) {
                 toastManager.toast(
-                    R.string.unauthorized_exception,
-                    R.string.unauthorized_exception_description,
+                    Res.string.unauthorized_exception,
+                    Res.string.unauthorized_exception_description,
                 )
             } catch (_: SignerExceptions.SignerNotFoundException) {
                 toastManager.toast(
-                    R.string.signer_not_found_exception,
-                    R.string.signer_not_found_exception_description,
+                    Res.string.signer_not_found_exception,
+                    Res.string.signer_not_found_exception_description,
                 )
             } catch (e: SignerExceptions.TimedOutException) {
                 Log.w("AccountViewModel", "TimedOutException", e)
@@ -1070,8 +1080,8 @@ class AccountViewModel(
                 Log.w("AccountViewModel", "TimedOutRunningOnBackgroundWithoutAutomaticPermissionExceptionException", e)
             } catch (e: IllegalStateException) {
                 toastManager.toast(
-                    R.string.signer_not_found_exception,
-                    R.string.signer_illegal_state_exception_description,
+                    Res.string.signer_not_found_exception,
+                    Res.string.signer_illegal_state_exception_description,
                     e,
                 )
             }
@@ -1576,8 +1586,8 @@ class AccountViewModel(
     ) {
         if (baseNote.isDraft()) {
             toastManager.toast(
-                R.string.draft_note,
-                R.string.it_s_not_possible_to_quote_to_a_draft_note,
+                Res.string.draft_note,
+                Res.string.it_s_not_possible_to_quote_to_a_draft_note,
             )
             return
         }
@@ -1593,8 +1603,8 @@ class AccountViewModel(
             }
         } else {
             toastManager.toast(
-                R.string.read_only_user,
-                R.string.login_with_a_private_key_to_be_able_to_boost_posts,
+                Res.string.read_only_user,
+                Res.string.login_with_a_private_key_to_be_able_to_boost_posts,
             )
         }
     }

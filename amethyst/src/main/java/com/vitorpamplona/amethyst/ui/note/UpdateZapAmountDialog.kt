@@ -102,6 +102,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.couldnt_find_nwc_wallets
+import com.vitorpamplona.amethyst.commons.resources.couldnt_find_nwc_wallets_description
+import com.vitorpamplona.amethyst.commons.resources.invalid_nip47_uri_description
+import com.vitorpamplona.amethyst.commons.resources.invalid_nip47_uri_title
 import com.vitorpamplona.amethyst.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.ui.components.util.getText
@@ -429,8 +434,8 @@ fun UpdateZapAmountContent(
                         onClose()
                     } catch (_: IllegalArgumentException) {
                         accountViewModel.toastManager.toast(
-                            R.string.couldnt_find_nwc_wallets,
-                            R.string.couldnt_find_nwc_wallets_description,
+                            Res.string.couldnt_find_nwc_wallets,
+                            Res.string.couldnt_find_nwc_wallets_description,
                         )
                     }
                 },
@@ -455,8 +460,8 @@ fun UpdateZapAmountContent(
                             clipText?.let { postViewModel.copyFromClipboard(it) }
                         } catch (e: IllegalArgumentException) {
                             accountViewModel.toastManager.toast(
-                                R.string.invalid_nip47_uri_title,
-                                R.string.invalid_nip47_uri_description,
+                                Res.string.invalid_nip47_uri_title,
+                                Res.string.invalid_nip47_uri_description,
                                 clipText ?: "",
                             )
                         }

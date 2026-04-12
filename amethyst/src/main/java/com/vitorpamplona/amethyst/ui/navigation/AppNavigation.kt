@@ -39,8 +39,10 @@ import androidx.core.content.IntentCompat
 import androidx.core.util.Consumer
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.call.CallState
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.invalid_nip19_uri
+import com.vitorpamplona.amethyst.commons.resources.invalid_nip19_uri_description
 import com.vitorpamplona.amethyst.service.call.CallSessionBridge
 import com.vitorpamplona.amethyst.service.crashreports.DisplayCrashMessages
 import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.compose.DisplayNotifyMessages
@@ -526,8 +528,8 @@ private fun NavigateIfIntentRequested(
                     actionableNextPage = null
                 } else {
                     accountViewModel.toastManager.toast(
-                        R.string.invalid_nip19_uri,
-                        R.string.invalid_nip19_uri_description,
+                        Res.string.invalid_nip19_uri,
+                        Res.string.invalid_nip19_uri_description,
                         intentNextPage,
                     )
                 }
@@ -583,8 +585,8 @@ private fun NavigateIfIntentRequested(
                                 scope.launch {
                                     delay(1000)
                                     accountViewModel.toastManager.toast(
-                                        R.string.invalid_nip19_uri,
-                                        R.string.invalid_nip19_uri_description,
+                                        Res.string.invalid_nip19_uri,
+                                        Res.string.invalid_nip19_uri_description,
                                         uri,
                                     )
                                 }

@@ -70,6 +70,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.request_to_vanish
+import com.vitorpamplona.amethyst.commons.resources.vanish_request_sent
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
@@ -396,8 +399,8 @@ fun RequestToVanishScreen(
                     }
                 }
                 accountViewModel.toastManager.toast(
-                    R.string.request_to_vanish,
-                    R.string.vanish_request_sent,
+                    Res.string.request_to_vanish,
+                    Res.string.vanish_request_sent,
                 )
                 nav.popBack()
             },

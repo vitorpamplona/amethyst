@@ -67,6 +67,10 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_hide_word
+import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_show_word
+import com.vitorpamplona.amethyst.commons.resources.read_only_user
 import com.vitorpamplona.amethyst.model.WarningType
 import com.vitorpamplona.amethyst.model.parseWarningType
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.observeAccountIsHiddenWord
@@ -409,8 +413,8 @@ fun MutedWordActionOptions(
         ShowWordButton {
             if (!accountViewModel.isWriteable()) {
                 accountViewModel.toastManager.toast(
-                    R.string.read_only_user,
-                    R.string.login_with_a_private_key_to_be_able_to_show_word,
+                    Res.string.read_only_user,
+                    Res.string.login_with_a_private_key_to_be_able_to_show_word,
                 )
             } else {
                 accountViewModel.showWord(word)
@@ -420,8 +424,8 @@ fun MutedWordActionOptions(
         HideWordButton {
             if (!accountViewModel.isWriteable()) {
                 accountViewModel.toastManager.toast(
-                    R.string.read_only_user,
-                    R.string.login_with_a_private_key_to_be_able_to_hide_word,
+                    Res.string.read_only_user,
+                    Res.string.login_with_a_private_key_to_be_able_to_hide_word,
                 )
             } else {
                 accountViewModel.hideWord(word)
@@ -471,8 +475,8 @@ private fun hideIfWritable(
 ) {
     if (!accountViewModel.isWriteable()) {
         accountViewModel.toastManager.toast(
-            R.string.read_only_user,
-            R.string.login_with_a_private_key_to_be_able_to_hide_word,
+            Res.string.read_only_user,
+            Res.string.login_with_a_private_key_to_be_able_to_hide_word,
         )
     } else {
         accountViewModel.hide(currentWordToAdd.value)

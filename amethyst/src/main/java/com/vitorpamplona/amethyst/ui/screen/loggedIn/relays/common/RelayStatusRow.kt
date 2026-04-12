@@ -40,6 +40,15 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.connection_success_rate_description
+import com.vitorpamplona.amethyst.commons.resources.errors
+import com.vitorpamplona.amethyst.commons.resources.read_from_relay
+import com.vitorpamplona.amethyst.commons.resources.read_from_relay_description
+import com.vitorpamplona.amethyst.commons.resources.spam
+import com.vitorpamplona.amethyst.commons.resources.spam_description
+import com.vitorpamplona.amethyst.commons.resources.write_to_relay
+import com.vitorpamplona.amethyst.commons.resources.write_to_relay_description
 import com.vitorpamplona.amethyst.service.countToHumanReadable
 import com.vitorpamplona.amethyst.service.countToHumanReadableBytes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -103,8 +112,8 @@ fun RelayStatusRow(
                         },
                         onLongPress = {
                             accountViewModel.toastManager.toast(
-                                R.string.read_from_relay,
-                                R.string.read_from_relay_description,
+                                Res.string.read_from_relay,
+                                Res.string.read_from_relay_description,
                             )
                         },
                     )
@@ -135,8 +144,8 @@ fun RelayStatusRow(
                         },
                         onLongPress = {
                             accountViewModel.toastManager.toast(
-                                R.string.write_to_relay,
-                                R.string.write_to_relay_description,
+                                Res.string.write_to_relay,
+                                Res.string.write_to_relay_description,
                             )
                         },
                     )
@@ -167,8 +176,8 @@ fun RelayStatusRow(
                         },
                         onLongPress = {
                             accountViewModel.toastManager.toast(
-                                R.string.errors,
-                                R.string.connection_success_rate_description,
+                                Res.string.errors,
+                                Res.string.connection_success_rate_description,
                             )
                         },
                     )
@@ -208,8 +217,8 @@ fun RelayStatusRow(
                         },
                         onLongPress = {
                             accountViewModel.toastManager.toast(
-                                R.string.spam,
-                                R.string.spam_description,
+                                Res.string.spam,
+                                Res.string.spam_description,
                             )
                         },
                     )

@@ -46,7 +46,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.draft_note
 import com.vitorpamplona.amethyst.commons.resources.error_dialog_zap_error
+import com.vitorpamplona.amethyst.commons.resources.it_s_not_possible_to_zap_to_a_draft_note
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
@@ -287,8 +289,8 @@ private fun handleZapClick(
 ) {
     if (baseNote.isDraft()) {
         accountViewModel.toastManager.toast(
-            R.string.draft_note,
-            R.string.it_s_not_possible_to_zap_to_a_draft_note,
+            Res.string.draft_note,
+            Res.string.it_s_not_possible_to_zap_to_a_draft_note,
         )
         return
     }

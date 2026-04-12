@@ -72,6 +72,9 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.failed_to_save_the_image
+import com.vitorpamplona.amethyst.commons.resources.failed_to_save_the_video
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaLocalImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaLocalVideo
@@ -328,7 +331,7 @@ private suspend fun saveMediaToGallery(
     val isImage = content is MediaUrlImage || content is MediaLocalImage
 
     val success = if (isImage) R.string.image_saved_to_the_gallery else R.string.video_saved_to_the_gallery
-    val failure = if (isImage) R.string.failed_to_save_the_image else R.string.failed_to_save_the_video
+    val failure = if (isImage) Res.string.failed_to_save_the_image else Res.string.failed_to_save_the_video
 
     if (content is MediaUrlContent) {
         MediaSaverToDisk.downloadAndSave(

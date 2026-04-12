@@ -43,6 +43,9 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_sign_events
+import com.vitorpamplona.amethyst.commons.resources.read_only_user
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectSingleFromGallery
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.CreatingTopBar
@@ -145,8 +148,8 @@ fun BookmarkGroupMetadataTopBar(
                     nav.popBack()
                 } catch (e: SignerExceptions.ReadOnlyException) {
                     accountViewModel.toastManager.toast(
-                        R.string.read_only_user,
-                        R.string.login_with_a_private_key_to_be_able_to_sign_events,
+                        Res.string.read_only_user,
+                        Res.string.login_with_a_private_key_to_be_able_to_sign_events,
                     )
                 }
             },
@@ -165,8 +168,8 @@ fun BookmarkGroupMetadataTopBar(
                     nav.popBack()
                 } catch (e: SignerExceptions.ReadOnlyException) {
                     accountViewModel.toastManager.toast(
-                        R.string.read_only_user,
-                        R.string.login_with_a_private_key_to_be_able_to_sign_events,
+                        Res.string.read_only_user,
+                        Res.string.login_with_a_private_key_to_be_able_to_sign_events,
                     )
                 }
             },

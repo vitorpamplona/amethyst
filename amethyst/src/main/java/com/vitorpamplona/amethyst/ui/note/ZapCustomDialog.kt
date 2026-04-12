@@ -72,6 +72,8 @@ import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.error_dialog_zap_error
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -451,7 +453,7 @@ fun DisplayPayable(
         PayButton(isActive = !paid.value) {
             payViaIntent(payable.invoice, context, { paid.value = true }) {
                 accountViewModel.toastManager.toast(
-                    R.string.error_dialog_zap_error,
+                    Res.string.error_dialog_zap_error,
                     UserBasedErrorMessage(it, payable.info.user),
                 )
             }

@@ -30,6 +30,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.ots_info_description
+import com.vitorpamplona.amethyst.commons.resources.ots_info_title
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.buildLinkString
 import com.vitorpamplona.amethyst.ui.note.LoadOts
@@ -64,8 +67,8 @@ fun DisplayOts(
                 text =
                     buildLinkString(stringRes(R.string.existed_since, timeStr)) {
                         accountViewModel.toastManager.toast(
-                            R.string.ots_info_title,
-                            R.string.ots_info_description,
+                            Res.string.ots_info_title,
+                            Res.string.ots_info_description,
                             SimpleDateFormat.getDateTimeInstance().format(Date(unixtimestamp * 1000)),
                         )
                     },
