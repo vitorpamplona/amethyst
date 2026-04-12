@@ -106,14 +106,11 @@ fun FollowListAndPackAndUserView(
                     userIsPrivateMember = list.privateMembers.contains(userToAddOrRemove),
                     userIsPublicMember = list.publicMembers.contains(userToAddOrRemove),
                     onRemoveUser = {
-                        accountViewModel.launchSigner {
-                            accountViewModel.account.peopleLists.removeUserFromSet(
-                                userToAddOrRemove,
-                                isPrivate = list.privateMembers.contains(userToAddOrRemove),
-                                list.identifierTag,
-                                accountViewModel.account,
-                            )
-                        }
+                        accountViewModel.removeUserFromPeopleList(
+                            user = userToAddOrRemove,
+                            isPrivate = list.privateMembers.contains(userToAddOrRemove),
+                            identifierTag = list.identifierTag,
+                        )
                     },
                     privateMemberSize = list.privateMembers.size,
                     publicMemberSize = list.publicMembers.size,
@@ -121,14 +118,11 @@ fun FollowListAndPackAndUserView(
                         nav.nav(Route.MyPeopleListView(list.identifierTag))
                     },
                     onAddUserToList = { userShouldBePrivate ->
-                        accountViewModel.launchSigner {
-                            accountViewModel.account.peopleLists.addUserToSet(
-                                userToAddOrRemove,
-                                list.identifierTag,
-                                userShouldBePrivate,
-                                accountViewModel.account,
-                            )
-                        }
+                        accountViewModel.addUserToPeopleList(
+                            user = userToAddOrRemove,
+                            identifierTag = list.identifierTag,
+                            shouldBePrivateMember = userShouldBePrivate,
+                        )
                     },
                 )
                 HorizontalDivider(thickness = DividerThickness)
@@ -181,23 +175,17 @@ fun FollowListAndPackAndUserView(
                         nav.nav(Route.MyFollowPackView(list.identifierTag))
                     },
                     onRemoveUser = {
-                        accountViewModel.launchSigner {
-                            accountViewModel.account.followLists.removeUserFromSet(
-                                userToAddOrRemove,
-                                list.identifierTag,
-                                accountViewModel.account,
-                            )
-                        }
+                        accountViewModel.removeUserFromFollowPack(
+                            user = userToAddOrRemove,
+                            identifierTag = list.identifierTag,
+                        )
                     },
                     memberSize = list.publicMembers.size,
                     onAddUserToList = {
-                        accountViewModel.launchSigner {
-                            accountViewModel.account.followLists.addUserToSet(
-                                userToAddOrRemove,
-                                list.identifierTag,
-                                accountViewModel.account,
-                            )
-                        }
+                        accountViewModel.addUserToFollowPack(
+                            user = userToAddOrRemove,
+                            identifierTag = list.identifierTag,
+                        )
                     },
                 )
                 HorizontalDivider(thickness = DividerThickness)

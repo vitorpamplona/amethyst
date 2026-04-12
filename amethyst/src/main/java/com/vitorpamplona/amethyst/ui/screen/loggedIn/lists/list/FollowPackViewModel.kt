@@ -40,22 +40,14 @@ class FollowPackViewModel : ViewModel() {
         customName: String?,
         customDescription: String?,
     ) {
-        accountViewModel.launchSigner {
-            accountViewModel.account.followLists.cloneFollowSet(
-                currentFollowPack = followSet,
-                customCloneName = customName,
-                customCloneDescription = customDescription,
-                account = accountViewModel.account,
-            )
-        }
+        accountViewModel.cloneFollowPack(
+            currentFollowPack = followSet,
+            customCloneName = customName,
+            customCloneDescription = customDescription,
+        )
     }
 
     fun deleteItem(followSet: PeopleList) {
-        accountViewModel.launchSigner {
-            accountViewModel.account.followLists.deleteFollowSet(
-                identifierTag = followSet.identifierTag,
-                account = accountViewModel.account,
-            )
-        }
+        accountViewModel.deleteFollowPack(followSet.identifierTag)
     }
 }

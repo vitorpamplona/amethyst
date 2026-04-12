@@ -61,6 +61,7 @@ import com.vitorpamplona.amethyst.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.nip51Lists.labeledBookmarkLists.LabeledBookmarkList
+import com.vitorpamplona.amethyst.model.nip51Lists.peopleList.PeopleList
 import com.vitorpamplona.amethyst.model.privacyOptions.EmptyRoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.model.privacyOptions.IRoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.model.privacyOptions.RoleBasedHttpClientBuilder
@@ -1057,6 +1058,100 @@ class AccountViewModel(
                 account = account,
             )
         }
+
+    // -- People Lists --
+
+    fun clonePeopleList(
+        currentPeopleList: PeopleList,
+        customCloneName: String?,
+        customCloneDescription: String?,
+    ) = launchSigner {
+        account.peopleLists.cloneFollowSet(
+            currentPeopleList = currentPeopleList,
+            customCloneName = customCloneName,
+            customCloneDescription = customCloneDescription,
+            account = account,
+        )
+    }
+
+    fun deletePeopleList(identifierTag: String) =
+        launchSigner {
+            account.peopleLists.deleteFollowSet(
+                identifierTag = identifierTag,
+                account = account,
+            )
+        }
+
+    fun addUserToPeopleList(
+        user: User,
+        identifierTag: String,
+        shouldBePrivateMember: Boolean,
+    ) = launchSigner {
+        account.peopleLists.addUserToSet(
+            user = user,
+            identifierTag = identifierTag,
+            shouldBePrivateMember = shouldBePrivateMember,
+            account = account,
+        )
+    }
+
+    fun removeUserFromPeopleList(
+        user: User,
+        isPrivate: Boolean,
+        identifierTag: String,
+    ) = launchSigner {
+        account.peopleLists.removeUserFromSet(
+            user = user,
+            isPrivate = isPrivate,
+            identifierTag = identifierTag,
+            account = account,
+        )
+    }
+
+    // -- Follow Packs --
+
+    fun cloneFollowPack(
+        currentFollowPack: PeopleList,
+        customCloneName: String?,
+        customCloneDescription: String?,
+    ) = launchSigner {
+        account.followLists.cloneFollowSet(
+            currentFollowPack = currentFollowPack,
+            customCloneName = customCloneName,
+            customCloneDescription = customCloneDescription,
+            account = account,
+        )
+    }
+
+    fun deleteFollowPack(identifierTag: String) =
+        launchSigner {
+            account.followLists.deleteFollowSet(
+                identifierTag = identifierTag,
+                account = account,
+            )
+        }
+
+    fun addUserToFollowPack(
+        user: User,
+        identifierTag: String,
+    ) = launchSigner {
+        account.followLists.addUserToSet(
+            user = user,
+            identifierTag = identifierTag,
+            account = account,
+        )
+    }
+
+    fun removeUserFromFollowPack(
+        user: User,
+        identifierTag: String,
+    ) = launchSigner {
+        account.followLists.removeUserFromSet(
+            user = user,
+            identifierTag = identifierTag,
+            account = account,
+        )
+    }
 
     fun broadcast(note: Note) = launchSigner { account.broadcast(note) }
 
