@@ -2426,6 +2426,12 @@ object LocalCache : ILocalCache, ICacheProvider {
 
     override fun filterNotesIntoSet(consumer: CacheCollectors.BiFilter<HexKey, Note>): Set<Note> = notes.filterIntoSet(consumer)
 
+    override fun filterAddressablesIntoSet(
+        kind: Int,
+        pubKey: HexKey,
+        consumer: CacheCollectors.BiFilter<Address, AddressableNote>,
+    ): Set<AddressableNote> = addressables.filterIntoSet(kind, pubKey, consumer)
+
     fun justConsume(
         event: Event,
         relay: IRelayClient?,

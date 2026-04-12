@@ -20,37 +20,5 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.drafts.dal
 
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.filterIntoSet
-import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
-import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
-
-class DraftEventsFeedFilter(
-    val account: Account,
-) : AdditiveFeedFilter<Note>() {
-    override fun feedKey(): String = account.userProfile().pubkeyHex
-
-    override fun applyFilter(newItems: Set<Note>): Set<Note> =
-        newItems.filterTo(HashSet()) {
-            acceptableEvent(it)
-        }
-
-    override fun feed(): List<Note> {
-        val drafts =
-            LocalCache.addressables.filterIntoSet(DraftWrapEvent.KIND, account.userProfile().pubkeyHex) { _, note ->
-                acceptableEvent(note)
-            }
-
-        return sort(drafts)
-    }
-
-    fun acceptableEvent(it: Note): Boolean {
-        val noteEvent = it.event
-        return noteEvent is DraftWrapEvent && noteEvent.pubKey == account.userProfile().pubkeyHex
-    }
-
-    override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder)
-}
+// Re-export from commons for backwards compatibility
+typealias DraftEventsFeedFilter = com.vitorpamplona.amethyst.commons.ui.feeds.DraftEventsFeedFilter

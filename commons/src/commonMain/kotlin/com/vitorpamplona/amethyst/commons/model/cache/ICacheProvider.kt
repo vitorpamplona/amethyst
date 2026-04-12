@@ -149,4 +149,14 @@ interface ICacheProvider {
      * Used by feed filters that scan the full note cache.
      */
     fun filterNotesIntoSet(consumer: CacheCollectors.BiFilter<HexKey, Note>): Set<Note>
+
+    /**
+     * Filters addressable notes by kind and pubkey into a set.
+     * Used by draft and other addressable feed filters.
+     */
+    fun filterAddressablesIntoSet(
+        kind: Int,
+        pubKey: HexKey,
+        consumer: CacheCollectors.BiFilter<Address, AddressableNote>,
+    ): Set<AddressableNote>
 }

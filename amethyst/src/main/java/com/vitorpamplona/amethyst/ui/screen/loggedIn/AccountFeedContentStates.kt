@@ -89,7 +89,7 @@ class AccountFeedContentStates(
 
     val feedListOptions = TopNavFilterState(account, scope)
 
-    val drafts = FeedContentState(DraftEventsFeedFilter(account), scope, LocalCache)
+    val drafts = FeedContentState(DraftEventsFeedFilter(account, LocalCache), scope, LocalCache)
 
     val webBookmarks = FeedContentState(WebBookmarkFeedFilter(account), scope, LocalCache)
 
