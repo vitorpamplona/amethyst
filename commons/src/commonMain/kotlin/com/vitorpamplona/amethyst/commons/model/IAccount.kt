@@ -20,7 +20,10 @@
  */
 package com.vitorpamplona.amethyst.commons.model
 
+import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupList
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.BookmarkListState
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.OldBookmarkListState
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
@@ -107,6 +110,18 @@ interface IAccount {
 
     /** Whether a note is acceptable (not hidden, not blocked, etc.) */
     fun isAcceptable(note: Note): Boolean
+
+    /** Bookmark list state (NIP-51 bookmark lists) */
+    val bookmarkState: BookmarkListState
+
+    /** Old bookmark list state (legacy NIP-51 bookmarks) */
+    val oldBookmarkState: OldBookmarkListState
+
+    /** Set of transiently-hidden (spammer) user pubkeys */
+    val transientHiddenUsers: Set<String>
+
+    /** Cache provider for resolving notes/users */
+    val cacheProvider: ICacheProvider
 
     /** Send a NIP-04 encrypted direct message */
     suspend fun sendNip04PrivateMessage(eventTemplate: EventTemplate<PrivateDmEvent>)

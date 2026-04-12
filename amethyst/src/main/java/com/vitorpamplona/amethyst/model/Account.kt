@@ -333,9 +333,13 @@ class Account(
 
     val hiddenUsers = HiddenUsersState(muteList.flow, blockPeopleList.flow, scope, settings)
 
+    override val transientHiddenUsers: Set<String> get() = hiddenUsers.transientHiddenUsers.value
+
+    override val cacheProvider: com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider get() = cache
+
     val labeledBookmarkLists = LabeledBookmarkListsState(signer, cache, scope)
-    val oldBookmarkState = OldBookmarkListState(signer, cache, scope)
-    val bookmarkState = BookmarkListState(signer, cache, scope)
+    override val oldBookmarkState = OldBookmarkListState(signer, cache, scope)
+    override val bookmarkState = BookmarkListState(signer, cache, scope)
     val pinState = PinListState(signer, cache, scope)
     val emoji = EmojiPackState(signer, cache, scope)
 
