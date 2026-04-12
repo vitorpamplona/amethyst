@@ -1980,4 +1980,18 @@ anz der Bedingungen ist erforderlich</string>
     <string name="ai_tone_more_direct">Direkter</string>
     <string name="ai_tone_punchy">Prägnant</string>
     <string name="ai_tone_emojify">+ Emoji</string>
+    <string name="call_settings">Anrufeinstellungen</string>
+    <string name="call_settings_add_turn">TURN-Server hinzufügen</string>
+    <string name="call_settings_custom_turn">Benutzerdefinierte TURN-Server</string>
+    <string name="call_settings_default_servers">Standard-Server (immer aktiv)</string>
+    <string name="call_settings_max_bitrate">Maximale Video-Bitrate</string>
+    <string name="call_settings_no_custom_turn">Keine benutzerdefinierten TURN-Server konfiguriert.</string>
+    <string name="call_settings_remove_turn">Entfernen</string>
+    <string name="call_settings_turn_credential">Anmeldeinformationen</string>
+    <string name="call_settings_turn_description">Standard-STUN- und TURN-Server werden immer eingebunden. Fügen Sie für restriktive Netzwerke benutzerdefinierte TURN-Server hinzu.</string>
+    <string name="call_settings_turn_servers">TURN- / STUN-Server</string>
+    <string name="call_settings_turn_url">Server-URL</string>
+    <string name="call_settings_turn_username">Benutzername</string>
+    <string name="call_settings_video_quality">Videoqualität</string>
+    <string name="call_switch_camera">Kamera wechseln</string>
 </resources>

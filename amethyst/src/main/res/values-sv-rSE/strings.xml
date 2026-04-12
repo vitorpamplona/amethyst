@@ -1974,4 +1974,18 @@
     <string name="ai_tone_more_direct">Mer direkt</string>
     <string name="ai_tone_punchy">Slagkraftig</string>
     <string name="ai_tone_emojify">+ Emoji</string>
+    <string name="call_settings">Samtalsinställningar</string>
+    <string name="call_settings_add_turn">Lägg till TURN-server</string>
+    <string name="call_settings_custom_turn">Anpassade TURN-servrar</string>
+    <string name="call_settings_default_servers">Standardservrar (alltid aktiva)</string>
+    <string name="call_settings_max_bitrate">Maximal videobitfrekvens</string>
+    <string name="call_settings_no_custom_turn">Inga anpassade TURN-servrar konfigurerade.</string>
+    <string name="call_settings_remove_turn">Ta bort</string>
+    <string name="call_settings_turn_credential">Inloggningsuppgift</string>
+    <string name="call_settings_turn_description">Standard-STUN- och TURN-servrar inkluderas alltid. Lägg till anpassade TURN-servrar för restriktiva nätverk.</string>
+    <string name="call_settings_turn_servers">TURN- / STUN-servrar</string>
+    <string name="call_settings_turn_url">Server-URL</string>
+    <string name="call_settings_turn_username">Användarnamn</string>
+    <string name="call_settings_video_quality">Videokvalitet</string>
+    <string name="call_switch_camera">Byt kamera</string>
 </resources>

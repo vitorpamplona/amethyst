@@ -1975,4 +1975,18 @@
     <string name="ai_tone_more_direct">Přímější</string>
     <string name="ai_tone_punchy">Úderný</string>
     <string name="ai_tone_emojify">+ Emoji</string>
+    <string name="call_settings">Nastavení hovorů</string>
+    <string name="call_settings_add_turn">Přidat TURN server</string>
+    <string name="call_settings_custom_turn">Vlastní TURN servery</string>
+    <string name="call_settings_default_servers">Výchozí servery (vždy aktivní)</string>
+    <string name="call_settings_max_bitrate">Maximální datový tok videa</string>
+    <string name="call_settings_no_custom_turn">Nejsou nakonfigurovány žádné vlastní TURN servery.</string>
+    <string name="call_settings_remove_turn">Odebrat</string>
+    <string name="call_settings_turn_credential">Pověření</string>
+    <string name="call_settings_turn_description">Výchozí STUN a TURN servery jsou vždy zahrnuty. Pro restriktivní sítě přidejte vlastní TURN servery.</string>
+    <string name="call_settings_turn_servers">TURN / STUN servery</string>
+    <string name="call_settings_turn_url">URL serveru</string>
+    <string name="call_settings_turn_username">Uživatelské jméno</string>
+    <string name="call_settings_video_quality">Kvalita videa</string>
+    <string name="call_switch_camera">Přepnout kameru</string>
 </resources>
