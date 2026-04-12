@@ -59,11 +59,11 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.LightRedColor
@@ -74,7 +74,7 @@ import kotlinx.collections.immutable.toImmutableList
 @Composable
 fun ReportNoteDialog(
     note: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     onDismiss: () -> Unit,
 ) {
     val reportTypes =

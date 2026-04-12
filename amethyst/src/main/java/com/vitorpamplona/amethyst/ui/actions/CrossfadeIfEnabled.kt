@@ -37,7 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.util.fastForEach
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 
 @Composable
 fun <T> CrossfadeIfEnabled(
@@ -46,7 +46,7 @@ fun <T> CrossfadeIfEnabled(
     contentAlignment: Alignment = Alignment.TopStart,
     animationSpec: FiniteAnimationSpec<Float> = tween(),
     label: String = "Crossfade",
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     content: @Composable (T) -> Unit,
 ) {
     if (accountViewModel.settings.isPerformanceMode()) {

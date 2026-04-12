@@ -37,10 +37,10 @@ import androidx.compose.ui.layout.ContentScale
 import coil3.compose.AsyncImagePainter
 import coil3.compose.SubcomposeAsyncImage
 import coil3.compose.SubcomposeAsyncImageContent
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.note.DownloadForOfflineIcon
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.Size40dp
 import com.vitorpamplona.amethyst.ui.theme.Size6dp
 import com.vitorpamplona.amethyst.ui.theme.Size75dp
@@ -52,7 +52,7 @@ fun MyAsyncImage(
     contentScale: ContentScale,
     mainImageModifier: Modifier,
     loadedImageModifier: Modifier,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     onLoadingBackground: (@Composable () -> Unit)?,
     onError: (@Composable () -> Unit)?,
 ) {

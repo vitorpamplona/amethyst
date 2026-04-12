@@ -18,30 +18,30 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.header.actions
+package com.vitorpamplona.amethyst.commons.ui.components.toasts
 
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
-import com.vitorpamplona.amethyst.ui.theme.HalfHalfHorzModifier
+/**
+ * Cross-platform interface for toast notifications.
+ *
+ * Abstracts the Android-specific ToastManager for use in commonMain.
+ * The Android ToastManager implements this interface.
+ */
+interface IToastManager {
+    fun toast(
+        title: String,
+        message: String,
+    )
 
-@Composable
-fun JoinChatButton(
-    channel: PublicChatChannel,
-    accountViewModel: IAccountViewModel,
-    nav: INav,
-) {
-    FilledTonalButton(
-        modifier = HalfHalfHorzModifier,
-        onClick = { accountViewModel.follow(channel) },
-        contentPadding = ButtonPadding,
-    ) {
-        Text(text = stringRes(R.string.join))
-    }
+    fun toast(
+        titleResId: Int,
+        resourceId: Int,
+    )
+
+    fun toast(
+        titleResId: Int,
+        resourceId: Int,
+        vararg params: String,
+    )
+
+    fun clearToasts()
 }
