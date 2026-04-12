@@ -20,7 +20,10 @@
  */
 package com.vitorpamplona.amethyst.service
 
+import com.vitorpamplona.amethyst.commons.util.replace as commonsReplace
+
+// Re-export from commons for backwards compatibility
 fun <T> Iterable<T>.replace(
     old: T,
     new: T,
-): List<T> = map { if (it == old) new else it }
+): List<T> = commonsReplace(old, new)

@@ -18,13 +18,10 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service
+package com.vitorpamplona.amethyst.commons.util
 
-// Re-export from commons for backwards compatibility
-fun countToHumanReadableBytes(counter: Int) =
-    com.vitorpamplona.amethyst.commons.util
-        .countToHumanReadableBytes(counter)
-
-fun countToHumanReadableBytes(counter: Long) =
-    com.vitorpamplona.amethyst.commons.util
-        .countToHumanReadableBytes(counter)
+/**
+ * Toggles the presence of an item in a Set.
+ * If the item is present, it is removed; if absent, it is added.
+ */
+fun <T> Set<T>.togglePresenceInSet(item: T): Set<T> = if (contains(item)) minus(item) else plus(item)

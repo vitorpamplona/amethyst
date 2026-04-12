@@ -20,4 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.playback.diskCache
 
-fun isLiveStreaming(url: String) = url.contains(".m3u8", true)
+// Re-export from commons for backwards compatibility
+fun isLiveStreaming(url: String) =
+    com.vitorpamplona.amethyst.commons.util
+        .isLiveStreaming(url)
