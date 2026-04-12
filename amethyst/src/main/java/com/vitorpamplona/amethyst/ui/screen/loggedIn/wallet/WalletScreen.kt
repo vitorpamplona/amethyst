@@ -74,6 +74,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.services.nwc.wallet.WalletInfo
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -395,10 +396,11 @@ private fun WalletCard(
                 }
             }
 
-            if (walletInfo.error != null) {
+            val errorMsg = walletInfo.error
+            if (errorMsg != null) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = walletInfo.error,
+                    text = errorMsg,
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodySmall,
                 )

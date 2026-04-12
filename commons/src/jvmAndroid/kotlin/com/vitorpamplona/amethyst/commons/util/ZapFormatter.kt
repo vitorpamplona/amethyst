@@ -24,12 +24,12 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 import java.text.DecimalFormat
 
-private val TenGiga = BigDecimal(10_000_000_000)
-private val OneGiga = BigDecimal(1_000_000_000)
-private val TenMega = BigDecimal(10_000_000)
-private val OneMega = BigDecimal(1_000_000)
-private val TenKilo = BigDecimal(10_000)
-private val OneKilo = BigDecimal(1_000)
+val TenGiga = BigDecimal(10_000_000_000)
+val OneGiga = BigDecimal(1_000_000_000)
+val TenMega = BigDecimal(10_000_000)
+val OneMega = BigDecimal(1_000_000)
+val TenKilo = BigDecimal(10_000)
+val OneKilo = BigDecimal(1_000)
 
 private val dfGBig = ThreadLocal.withInitial { DecimalFormat("#.#G") }
 private val dfGSmall = ThreadLocal.withInitial { DecimalFormat("#.0G") }
@@ -80,3 +80,44 @@ fun Long.toZapAmount(): String = showAmount(BigDecimal(this))
  * Extension function to format Int as zap amount.
  */
 fun Int.toZapAmount(): String = showAmount(BigDecimal(this))
+
+// --- Integer (no-decimal) formatting ---
+
+private val dfGInt = ThreadLocal.withInitial { DecimalFormat("#G") }
+private val dfMInt = ThreadLocal.withInitial { DecimalFormat("#M") }
+private val dfKInt = ThreadLocal.withInitial { DecimalFormat("#k") }
+private val dfNInt = ThreadLocal.withInitial { DecimalFormat("#") }
+
+/**
+ * Formats a BigDecimal amount with no decimals, using G/M/K suffixes.
+ * Returns empty string for null or very small amounts.
+ */
+fun showAmountInteger(amount: BigDecimal?): String {
+    if (amount == null) return ""
+    if (amount.abs() < BigDecimal(0.01)) return ""
+
+    return when {
+        amount >= OneGiga -> dfGInt.get()?.format(amount.div(OneGiga).setScale(0, RoundingMode.HALF_UP)) ?: ""
+        amount >= OneMega -> dfMInt.get()?.format(amount.div(OneMega).setScale(0, RoundingMode.HALF_UP)) ?: ""
+        amount >= TenKilo -> dfKInt.get()?.format(amount.div(OneKilo).setScale(0, RoundingMode.HALF_UP)) ?: ""
+        else -> dfNInt.get()?.format(amount) ?: ""
+    }
+}
+
+/**
+ * Convenience overload for Int amounts.
+ */
+fun showAmountInteger(amount: Int?): String {
+    if (amount == null) return "0"
+    return showAmountIntegerWithZero(BigDecimal.valueOf(amount.toLong()))
+}
+
+/**
+ * Formats a BigDecimal amount with no decimals.
+ * Returns "0" for null or very small amounts.
+ */
+fun showAmountIntegerWithZero(amount: BigDecimal?): String {
+    if (amount == null) return "0"
+    if (amount.abs() < BigDecimal(0.01)) return "0"
+    return showAmountInteger(amount)
+}

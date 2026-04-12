@@ -26,6 +26,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.model.nip57Zaps.ZapPollValidation
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -137,73 +138,13 @@ class PollNoteViewModel : ViewModel() {
             pollNote?.createdAt()?.plus(it * (86400 + 120))!! < TimeUtils.now()
         } == true
 
-    fun voteAmountPlaceHolderText(sats: String): String =
-        if (valueMinimum == null && valueMaximum == null) {
-            sats
-        } else if (valueMinimum == null) {
-            "1—$valueMaximum $sats"
-        } else if (valueMaximum == null) {
-            ">$valueMinimum $sats"
-        } else {
-            "$valueMinimum—$valueMaximum $sats"
-        }
+    fun voteAmountPlaceHolderText(sats: String): String = ZapPollValidation.voteAmountPlaceholder(valueMinimum, valueMaximum, sats)
 
-    fun inputVoteAmountLong(textAmount: String) =
-        if (textAmount.isEmpty()) {
-            null
-        } else {
-            try {
-                textAmount.toLong()
-            } catch (e: Exception) {
-                null
-            }
-        }
+    fun inputVoteAmountLong(textAmount: String) = ZapPollValidation.parseVoteAmount(textAmount)
 
-    fun isValidInputVoteAmount(amount: BigDecimal?): Boolean {
-        if (amount == null) {
-            return false
-        } else if (valueMinimum == null && valueMaximum == null) {
-            if (amount > BigDecimal.ZERO) {
-                return true
-            }
-        } else if (valueMinimum == null) {
-            if (amount > BigDecimal.ZERO && amount <= valueMaximumBD!!) {
-                return true
-            }
-        } else if (valueMaximum == null) {
-            if (amount >= valueMinimumBD!!) {
-                return true
-            }
-        } else {
-            if ((valueMinimumBD!! <= amount) && (amount <= valueMaximumBD!!)) {
-                return true
-            }
-        }
-        return false
-    }
+    fun isValidInputVoteAmount(amount: BigDecimal?): Boolean = ZapPollValidation.isValidVoteAmount(amount, valueMinimumBD, valueMaximumBD)
 
-    fun isValidInputVoteAmount(amount: Long?): Boolean {
-        if (amount == null) {
-            return false
-        } else if (valueMinimum == null && valueMaximum == null) {
-            if (amount > 0) {
-                return true
-            }
-        } else if (valueMinimum == null) {
-            if (amount > 0 && amount <= valueMaximum!!) {
-                return true
-            }
-        } else if (valueMaximum == null) {
-            if (amount >= valueMinimum!!) {
-                return true
-            }
-        } else {
-            if ((valueMinimum!! <= amount) && (amount <= valueMaximum!!)) {
-                return true
-            }
-        }
-        return false
-    }
+    fun isValidInputVoteAmount(amount: Long?): Boolean = ZapPollValidation.isValidVoteAmount(amount, valueMinimum, valueMaximum)
 
     suspend fun isPollOptionZappedBy(
         option: Int,
@@ -253,23 +194,5 @@ class PollNoteViewModel : ViewModel() {
         }
             ?: BigDecimal.ZERO
 
-    fun createZapOptionsThatMatchThePollingParameters(zapPaymentChoices: List<Long>): List<Long> {
-        val options =
-            zapPaymentChoices
-                .filter { isValidInputVoteAmount(it) }
-                .toMutableList()
-        if (options.isEmpty()) {
-            valueMinimum?.let { minimum ->
-                valueMaximum?.let { maximum ->
-                    if (minimum != maximum) {
-                        options.add(((minimum + maximum) / 2))
-                    }
-                }
-            }
-        }
-        valueMinimum?.let { options.add(it) }
-        valueMaximum?.let { options.add(it) }
-
-        return options.toSet().sorted()
-    }
+    fun createZapOptionsThatMatchThePollingParameters(zapPaymentChoices: List<Long>): List<Long> = ZapPollValidation.filterZapChoices(zapPaymentChoices, valueMinimum, valueMaximum)
 }

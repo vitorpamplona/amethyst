@@ -22,8 +22,12 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.services.nwc.wallet.NwcWalletEntryNorm
+import com.vitorpamplona.amethyst.commons.services.nwc.wallet.ReceiveState
+import com.vitorpamplona.amethyst.commons.services.nwc.wallet.SendState
+import com.vitorpamplona.amethyst.commons.services.nwc.wallet.TransactionFilter
+import com.vitorpamplona.amethyst.commons.services.nwc.wallet.WalletInfo
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcWalletEntryNorm
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.GetBalanceMethod
@@ -48,51 +52,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-
-sealed class SendState {
-    data object Idle : SendState()
-
-    data object Sending : SendState()
-
-    data class Success(
-        val preimage: String?,
-    ) : SendState()
-
-    data class Error(
-        val message: String,
-    ) : SendState()
-}
-
-sealed class ReceiveState {
-    data object Idle : ReceiveState()
-
-    data object Creating : ReceiveState()
-
-    data class Created(
-        val invoice: String,
-        val amount: Long,
-    ) : ReceiveState()
-
-    data class Error(
-        val message: String,
-    ) : ReceiveState()
-}
-
-enum class TransactionFilter {
-    ALL,
-    ZAPS,
-    NON_ZAPS,
-}
-
-data class WalletInfo(
-    val walletId: String,
-    val name: String,
-    val alias: String? = null,
-    val balanceSats: Long? = null,
-    val isDefault: Boolean = false,
-    val isLoading: Boolean = false,
-    val error: String? = null,
-)
 
 private const val NWC_TIMEOUT_MS = 30_000L
 private const val PAYMENT_FAILED = "Payment failed"

@@ -24,8 +24,8 @@ import androidx.compose.runtime.Stable
 import com.patrykandpatrick.vico.compose.cartesian.CartesianMeasuringContext
 import com.patrykandpatrick.vico.compose.cartesian.axis.Axis
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianValueFormatter
-import com.vitorpamplona.amethyst.ui.note.showAmountIntegerWithZero
-import com.vitorpamplona.amethyst.ui.note.showAmountWithZero
+import com.vitorpamplona.amethyst.commons.util.showAmountIntegerWithZero
+import com.vitorpamplona.amethyst.commons.util.showAmountWithZero
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.ShowDecimals
 
 @Stable
