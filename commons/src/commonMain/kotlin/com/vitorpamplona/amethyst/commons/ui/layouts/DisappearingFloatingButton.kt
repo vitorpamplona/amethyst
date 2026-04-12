@@ -18,18 +18,49 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.layouts
+package com.vitorpamplona.amethyst.commons.ui.layouts
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.BottomAppBarScrollBehavior
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.unit.dp
 
-// Backward compatibility - moved to commons
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DisappearingFloatingButton(
     scrollBehavior: BottomAppBarScrollBehavior,
     content: @Composable (BoxScope.() -> Unit),
-) = com.vitorpamplona.amethyst.commons.ui.layouts
-    .DisappearingFloatingButton(scrollBehavior, content)
+) {
+    // We calculate the scale/alpha based on how much the bar is expanded
+    // 1.0 = fully visible, 0.0 = fully hidden
+    val progress = (1f - scrollBehavior.state.collapsedFraction).coerceAtLeast(0.001f)
+
+    Box(
+        modifier =
+            Modifier
+                .size(75.dp)
+                .layout { measurable, constraints ->
+                    val placeable = measurable.measure(constraints)
+                    // Adjust the height of the layout so the FAB doesn't leave a "hole"
+                    val currentHeight = (placeable.height * progress).toInt()
+                    layout(placeable.width, currentHeight) {
+                        placeable.placeRelative(0, 0)
+                    }
+                }.graphicsLayer {
+                    this.translationY = this.size.height / 3.5f
+                    this.scaleX = progress
+                    this.scaleY = progress
+                    this.alpha = progress
+                    clip = true
+                },
+        contentAlignment = Alignment.TopCenter,
+        content = content,
+    )
+}

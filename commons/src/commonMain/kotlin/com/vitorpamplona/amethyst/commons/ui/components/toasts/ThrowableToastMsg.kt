@@ -18,7 +18,20 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.creators.zapraiser
+package com.vitorpamplona.amethyst.commons.ui.components.toasts
 
-// Backward compatibility - moved to commons
-typealias IZapRaiser = com.vitorpamplona.amethyst.commons.ui.note.creators.zapraiser.IZapRaiser
+import androidx.compose.runtime.Immutable
+
+@Immutable
+class ThrowableToastMsg(
+    val titleResId: Int,
+    val msg: String? = null,
+    val throwable: Throwable,
+) : ToastMsg()
+
+@Immutable
+class ThrowableToastMsg2(
+    val titleResId: Int,
+    val description: Int,
+    val throwable: Throwable,
+) : ToastMsg()

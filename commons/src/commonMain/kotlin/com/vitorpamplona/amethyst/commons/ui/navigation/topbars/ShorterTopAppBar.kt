@@ -18,20 +18,21 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.navigation.topbars
+package com.vitorpamplona.amethyst.commons.ui.navigation.topbars
 
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarColors
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 
-// Backward compatibility - moved to commons
-val TopBarSize = com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarSize
+val TopBarSize = 50.dp
 
 @ExperimentalMaterial3Api
 @Composable
@@ -44,7 +45,7 @@ fun ShorterTopAppBar(
     windowInsets: WindowInsets = TopAppBarDefaults.windowInsets,
     colors: TopAppBarColors = TopAppBarDefaults.topAppBarColors(),
     scrollBehavior: TopAppBarScrollBehavior? = null,
-) = com.vitorpamplona.amethyst.commons.ui.navigation.topbars.ShorterTopAppBar(
+) = TopAppBar(
     title,
     modifier,
     navigationIcon,

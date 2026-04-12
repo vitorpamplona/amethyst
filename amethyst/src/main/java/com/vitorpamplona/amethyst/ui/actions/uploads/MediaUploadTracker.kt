@@ -20,28 +20,5 @@
  */
 package com.vitorpamplona.amethyst.ui.actions.uploads
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-
-class MediaUploadTracker {
-    var isUploadingImage by mutableStateOf(false)
-        private set
-    var isUploadingFile by mutableStateOf(false)
-        private set
-
-    val isUploading: Boolean get() = isUploadingImage || isUploadingFile
-
-    fun startUpload(hasNonMedia: Boolean) {
-        if (hasNonMedia) {
-            isUploadingFile = true
-        } else {
-            isUploadingImage = true
-        }
-    }
-
-    fun finishUpload() {
-        isUploadingImage = false
-        isUploadingFile = false
-    }
-}
+// Backward compatibility - moved to commons
+typealias MediaUploadTracker = com.vitorpamplona.amethyst.commons.ui.actions.uploads.MediaUploadTracker

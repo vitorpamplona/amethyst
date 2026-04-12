@@ -18,7 +18,30 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.creators.zapraiser
+package com.vitorpamplona.amethyst.commons.ui.actions.uploads
 
-// Backward compatibility - moved to commons
-typealias IZapRaiser = com.vitorpamplona.amethyst.commons.ui.note.creators.zapraiser.IZapRaiser
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+
+class MediaUploadTracker {
+    var isUploadingImage by mutableStateOf(false)
+        private set
+    var isUploadingFile by mutableStateOf(false)
+        private set
+
+    val isUploading: Boolean get() = isUploadingImage || isUploadingFile
+
+    fun startUpload(hasNonMedia: Boolean) {
+        if (hasNonMedia) {
+            isUploadingFile = true
+        } else {
+            isUploadingImage = true
+        }
+    }
+
+    fun finishUpload() {
+        isUploadingImage = false
+        isUploadingFile = false
+    }
+}

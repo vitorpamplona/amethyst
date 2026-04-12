@@ -20,16 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.components.toasts
 
-import androidx.compose.runtime.Immutable
-
-@Immutable
-class StringToastMsg(
-    val title: String,
-    val msg: String,
-) : ToastMsg()
-
-class ActionableStringToastMsg(
-    val title: String,
-    val msg: String,
-    val action: () -> Unit,
-) : ToastMsg()
+// Backward compatibility - moved to commons
+typealias StringToastMsg = com.vitorpamplona.amethyst.commons.ui.components.toasts.StringToastMsg
+typealias ActionableStringToastMsg = com.vitorpamplona.amethyst.commons.ui.components.toasts.ActionableStringToastMsg
