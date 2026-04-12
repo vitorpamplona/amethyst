@@ -28,6 +28,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -61,7 +62,7 @@ fun ChatroomByAuthorScreen(
 @Composable
 fun LoadRoomByAuthor(
     authorPubKeyHex: String,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     content: @Composable (ChatroomKey?) -> Unit,
 ) {
     val room by remember(authorPubKeyHex) {

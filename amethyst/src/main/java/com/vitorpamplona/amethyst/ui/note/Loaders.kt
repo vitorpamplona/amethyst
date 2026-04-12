@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -51,7 +52,7 @@ import kotlin.coroutines.CoroutineContext
 @Composable
 fun LoadDecryptedContent(
     note: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     inner: @Composable (String) -> Unit,
 ) {
     var decryptedContent by
@@ -72,7 +73,7 @@ fun LoadDecryptedContent(
 @Composable
 fun LoadDecryptedContentOrNull(
     note: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     inner: @Composable (String?) -> Unit,
 ) {
     var decryptedContent by remember(note.event?.id) { mutableStateOf(accountViewModel.cachedDecrypt(note)) }
@@ -91,7 +92,7 @@ fun LoadDecryptedContentOrNull(
 @Composable
 fun LoadAddressableNote(
     address: Address,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     content: @Composable (AddressableNote?) -> Unit,
 ) {
     val note by produceState(

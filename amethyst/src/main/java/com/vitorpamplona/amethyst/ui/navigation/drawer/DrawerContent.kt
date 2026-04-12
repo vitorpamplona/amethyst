@@ -100,6 +100,7 @@ import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.User
@@ -836,7 +837,7 @@ private fun RelayStatus(accountViewModel: AccountViewModel) {
 @Composable
 fun BottomContent(
     user: User,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
     Column(modifier = Modifier) {

@@ -80,6 +80,7 @@ import com.vitorpamplona.amethyst.commons.richtext.EncryptedMediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromFiles
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
@@ -507,7 +508,7 @@ private fun BottomRowActions(
 @Composable
 fun SendDirectMessageTo(
     postViewModel: ChatNewMessageViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current

@@ -43,6 +43,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
@@ -328,7 +329,7 @@ private fun UserRoomCompose(
 @Composable
 fun LoadUser(
     baseUserHex: String,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     content: @Composable (User?) -> Unit,
 ) {
     var user by

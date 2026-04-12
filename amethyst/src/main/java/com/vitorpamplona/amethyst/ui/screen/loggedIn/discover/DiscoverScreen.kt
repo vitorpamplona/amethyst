@@ -57,6 +57,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.feeds.FeedEmpty
 import com.vitorpamplona.amethyst.ui.feeds.FeedError
@@ -343,7 +344,7 @@ private fun RenderDiscoverFeed(
 
 @Composable
 fun NewProductButton(
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
     FloatingActionButton(
@@ -365,7 +366,7 @@ fun NewProductButton(
 
 @Composable
 fun NewLongFormMarkdownButton(
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
     FloatingActionButton(
