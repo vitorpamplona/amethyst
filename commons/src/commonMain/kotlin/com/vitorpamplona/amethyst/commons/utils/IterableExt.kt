@@ -18,7 +18,9 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.old.dal
+package com.vitorpamplona.amethyst.commons.utils
 
-// Re-export from commons for backwards compatibility
-typealias OldBookmarkPrivateFeedFilter = com.vitorpamplona.amethyst.commons.ui.feeds.OldBookmarkPrivateFeedFilter
+fun <T> Iterable<T>.replace(
+    old: T,
+    new: T,
+): List<T> = map { if (it == old) new else it }

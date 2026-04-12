@@ -21,7 +21,10 @@
 package com.vitorpamplona.amethyst.commons.model
 
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupList
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.BookmarkListState
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.OldBookmarkListState
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
@@ -104,6 +107,15 @@ interface IAccount {
 
     /** Marmot MLS group chat list */
     val marmotGroupList: MarmotGroupList
+
+    /** Bookmark list state for public/private bookmarks */
+    val bookmarkState: BookmarkListState
+
+    /** Old-style bookmark list state (deprecated) */
+    val oldBookmarkState: OldBookmarkListState
+
+    /** Check if all users in a set are hidden */
+    fun isAllHidden(users: Set<HexKey>): Boolean
 
     /** Whether a note is acceptable (not hidden, not blocked, etc.) */
     fun isAcceptable(note: Note): Boolean

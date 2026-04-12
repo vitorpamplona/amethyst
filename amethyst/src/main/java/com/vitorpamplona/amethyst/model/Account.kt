@@ -334,8 +334,8 @@ class Account(
     val hiddenUsers = HiddenUsersState(muteList.flow, blockPeopleList.flow, scope, settings)
 
     val labeledBookmarkLists = LabeledBookmarkListsState(signer, cache, scope)
-    val oldBookmarkState = OldBookmarkListState(signer, cache, scope)
-    val bookmarkState = BookmarkListState(signer, cache, scope)
+    override val oldBookmarkState = OldBookmarkListState(signer, cache, scope)
+    override val bookmarkState = BookmarkListState(signer, cache, scope)
     val pinState = PinListState(signer, cache, scope)
     val emoji = EmojiPackState(signer, cache, scope)
 
@@ -2215,7 +2215,7 @@ class Account(
 
     suspend fun decryptZapOrNull(event: LnZapRequestEvent): LnZapPrivateEvent? = if (event.isPrivateZap() && isWriteable()) privateZapsDecryptionCache.decryptPrivateZap(event) else null
 
-    fun isAllHidden(users: Set<HexKey>): Boolean = users.all { isHidden(it) }
+    override fun isAllHidden(users: Set<HexKey>): Boolean = users.all { isHidden(it) }
 
     override fun isHidden(user: User) = isHidden(user.pubkeyHex)
 
