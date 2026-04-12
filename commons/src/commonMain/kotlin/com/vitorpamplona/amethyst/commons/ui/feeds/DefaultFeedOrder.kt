@@ -21,6 +21,14 @@
 package com.vitorpamplona.amethyst.commons.ui.feeds
 
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.ui.notifications.Card
+import com.vitorpamplona.quartz.nip01Core.core.Event
 
 val DefaultFeedOrder: Comparator<Note> =
     compareByDescending<Note> { it.createdAt() }.thenBy { it.idHex }
+
+val DefaultFeedOrderEvent: Comparator<Event> =
+    compareByDescending<Event> { it.createdAt }.thenBy { it.id }
+
+val DefaultFeedOrderCard: Comparator<Card> =
+    compareByDescending<Card> { it.createdAt() }.thenBy { it.id() }

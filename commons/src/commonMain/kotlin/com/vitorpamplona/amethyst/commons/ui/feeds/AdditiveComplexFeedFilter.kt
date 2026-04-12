@@ -18,18 +18,11 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.dal
+package com.vitorpamplona.amethyst.commons.ui.feeds
 
-import com.vitorpamplona.amethyst.commons.model.Note
-import com.vitorpamplona.amethyst.commons.ui.notifications.Card
-import com.vitorpamplona.quartz.nip01Core.core.Event
-
-// Re-export from commons for backwards compatibility
-val DefaultFeedOrder: Comparator<Note> =
-    com.vitorpamplona.amethyst.commons.ui.feeds.DefaultFeedOrder
-
-val DefaultFeedOrderEvent: Comparator<Event> =
-    com.vitorpamplona.amethyst.commons.ui.feeds.DefaultFeedOrderEvent
-
-val DefaultFeedOrderCard: Comparator<Card> =
-    com.vitorpamplona.amethyst.commons.ui.feeds.DefaultFeedOrderCard
+abstract class AdditiveComplexFeedFilter<T, U> : FeedFilter<T>() {
+    abstract fun updateListWith(
+        oldList: List<T>,
+        newItems: Set<U>,
+    ): List<T>
+}
