@@ -27,7 +27,6 @@ import com.vitorpamplona.amethyst.ui.actions.InformationDialog
 import com.vitorpamplona.amethyst.ui.components.toasts.multiline.MultiErrorToastMsg
 import com.vitorpamplona.amethyst.ui.components.toasts.multiline.MultiUserErrorMessageDialog
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 
 @Composable
@@ -36,8 +35,6 @@ fun DisplayErrorMessages(
     accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
-    @Suppress("NAME_SHADOWING")
-    val accountViewModel = accountViewModel as AccountViewModel
     val openDialogMsg = toastManager.toasts.collectAsStateWithLifecycle(null)
 
     openDialogMsg.value?.let { obj ->

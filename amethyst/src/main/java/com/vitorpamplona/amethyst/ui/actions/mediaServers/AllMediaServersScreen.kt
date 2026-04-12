@@ -41,7 +41,6 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.grayText
 
@@ -50,8 +49,6 @@ fun AllMediaServersScreen(
     accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
-    @Suppress("NAME_SHADOWING")
-    val accountViewModel = accountViewModel as AccountViewModel
     val blossomServersViewModel: BlossomServersViewModel = viewModel()
 
     blossomServersViewModel.init(accountViewModel)

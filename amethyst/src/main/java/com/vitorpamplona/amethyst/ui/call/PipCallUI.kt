@@ -45,7 +45,6 @@ import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.commons.call.CallState
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.service.call.CallController
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.delay
 import org.webrtc.VideoTrack
@@ -56,8 +55,6 @@ fun PipCallUI(
     statusText: String,
     accountViewModel: IAccountViewModel,
 ) {
-    @Suppress("NAME_SHADOWING")
-    val accountViewModel = accountViewModel as AccountViewModel
     Box(
         modifier =
             Modifier
@@ -90,8 +87,6 @@ fun PipConnectedCallUI(
     callController: CallController?,
     accountViewModel: IAccountViewModel,
 ) {
-    @Suppress("NAME_SHADOWING")
-    val accountViewModel = accountViewModel as AccountViewModel
     var elapsed by remember { mutableLongStateOf(0L) }
 
     LaunchedEffect(state.startedAtEpoch) {

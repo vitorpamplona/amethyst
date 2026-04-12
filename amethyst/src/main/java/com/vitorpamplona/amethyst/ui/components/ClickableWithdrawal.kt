@@ -35,7 +35,6 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.note.ErrorMessageDialog
 import com.vitorpamplona.amethyst.ui.note.payViaIntent
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.lightning.LnWithdrawalUtil
 import kotlinx.coroutines.Dispatchers
@@ -46,8 +45,6 @@ fun MayBeWithdrawal(
     lnurlWord: String,
     accountViewModel: IAccountViewModel,
 ) {
-    @Suppress("NAME_SHADOWING")
-    val accountViewModel = accountViewModel as AccountViewModel
     var lnWithdrawal by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(key1 = lnurlWord) {

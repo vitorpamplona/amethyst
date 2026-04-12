@@ -32,7 +32,6 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
 fun RefresheableFeedContentStateView(
@@ -43,8 +42,6 @@ fun RefresheableFeedContentStateView(
     accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
-    @Suppress("NAME_SHADOWING")
-    val accountViewModel = accountViewModel as AccountViewModel
     RefresheableBox(feedContentState, enablePullRefresh) {
         SaveableFeedContentState(feedContentState, scrollStateKey) { listState ->
             RenderFeedContentState(feedContentState, accountViewModel, listState, nav, routeForLastRead)
@@ -100,8 +97,6 @@ fun RenderFeedContentState(
     onError: @Composable (String) -> Unit = { FeedError(it, feedContentState::invalidateData) },
     onLoading: @Composable () -> Unit = { LoadingFeed() },
 ) {
-    @Suppress("NAME_SHADOWING")
-    val accountViewModel = accountViewModel as AccountViewModel
     val feedState by feedContentState.feedContent.collectAsStateWithLifecycle()
 
     CrossfadeIfEnabled(
