@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.model.topNavFeeds.allFollows
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.topNavFeeds.CommunityRelayLoader
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
@@ -78,17 +79,17 @@ class AllFollowsByOutboxTopNavFilter(
                 (communities != null && noteEvent.isTaggedAddressableNotes(communities))
         }
 
-    override fun toPerRelayFlow(cache: LocalCache): Flow<AllFollowsTopNavPerRelayFilterSet> {
+    override fun toPerRelayFlow(cache: ICacheProvider): Flow<AllFollowsTopNavPerRelayFilterSet> {
         val authorsPerRelay =
             if (authors != null) {
-                OutboxRelayLoader().toAuthorsPerRelayFlow(authors, cache) { it }
+                OutboxRelayLoader().toAuthorsPerRelayFlow(authors, cache as LocalCache) { it }
             } else {
                 MutableStateFlow(emptyMap())
             }
 
         val communitiesPerRelay =
             if (communities != null) {
-                CommunityRelayLoader.toCommunitiesPerRelayFlow(communities, cache) { it }
+                CommunityRelayLoader.toCommunitiesPerRelayFlow(communities, cache as LocalCache) { it }
             } else {
                 MutableStateFlow(emptyMap())
             }
@@ -109,17 +110,17 @@ class AllFollowsByOutboxTopNavFilter(
         }
     }
 
-    override fun startValue(cache: LocalCache): AllFollowsTopNavPerRelayFilterSet {
+    override fun startValue(cache: ICacheProvider): AllFollowsTopNavPerRelayFilterSet {
         val authorsPerRelay =
             if (authors != null) {
-                OutboxRelayLoader().authorsPerRelaySnapshot(authors, cache) { it }
+                OutboxRelayLoader().authorsPerRelaySnapshot(authors, cache as LocalCache) { it }
             } else {
                 emptyMap()
             }
 
         val communitiesPerRelay =
             if (communities != null) {
-                CommunityRelayLoader.communitiesPerRelaySnapshot(communities, cache) { it }
+                CommunityRelayLoader.communitiesPerRelaySnapshot(communities, cache as LocalCache) { it }
             } else {
                 emptyMap()
             }

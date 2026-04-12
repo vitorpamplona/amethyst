@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.model.topNavFeeds.global
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -40,7 +40,7 @@ class GlobalTopNavFilter(
 
     override fun match(noteEvent: Event) = true
 
-    override fun toPerRelayFlow(cache: LocalCache): Flow<GlobalTopNavPerRelayFilterSet> =
+    override fun toPerRelayFlow(cache: ICacheProvider): Flow<GlobalTopNavPerRelayFilterSet> =
         combine(outboxRelays, proxyRelays, relayFeeds) { outboxRelays, proxyRelays, relayFeeds ->
             if (proxyRelays.isNotEmpty()) {
                 GlobalTopNavPerRelayFilterSet(proxyRelays.associateWith { GlobalTopNavPerRelayFilter })
@@ -49,7 +49,7 @@ class GlobalTopNavFilter(
             }
         }
 
-    override fun startValue(cache: LocalCache): GlobalTopNavPerRelayFilterSet =
+    override fun startValue(cache: ICacheProvider): GlobalTopNavPerRelayFilterSet =
         if (proxyRelays.value.isNotEmpty()) {
             GlobalTopNavPerRelayFilterSet(proxyRelays.value.associateWith { GlobalTopNavPerRelayFilter })
         } else {

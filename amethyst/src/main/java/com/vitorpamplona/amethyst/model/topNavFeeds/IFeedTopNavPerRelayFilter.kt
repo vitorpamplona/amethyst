@@ -20,4 +20,4 @@
  */
 package com.vitorpamplona.amethyst.model.topNavFeeds
 
-interface IFeedTopNavPerRelayFilter
+typealias IFeedTopNavPerRelayFilter = com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavPerRelayFilter

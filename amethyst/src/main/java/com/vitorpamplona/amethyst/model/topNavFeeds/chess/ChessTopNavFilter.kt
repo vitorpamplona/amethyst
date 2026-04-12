@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.model.topNavFeeds.chess
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -45,7 +45,7 @@ class ChessTopNavFilter(
             noteEvent is LiveChessGameChallengeEvent ||
             noteEvent is LiveChessGameEndEvent
 
-    override fun toPerRelayFlow(cache: LocalCache): Flow<ChessTopNavPerRelayFilterSet> =
+    override fun toPerRelayFlow(cache: ICacheProvider): Flow<ChessTopNavPerRelayFilterSet> =
         combine(outboxRelays, proxyRelays) { outboxRelays, proxyRelays ->
             if (proxyRelays.isNotEmpty()) {
                 ChessTopNavPerRelayFilterSet(proxyRelays.associateWith { ChessTopNavPerRelayFilter })
@@ -54,7 +54,7 @@ class ChessTopNavFilter(
             }
         }
 
-    override fun startValue(cache: LocalCache): ChessTopNavPerRelayFilterSet =
+    override fun startValue(cache: ICacheProvider): ChessTopNavPerRelayFilterSet =
         if (proxyRelays.value.isNotEmpty()) {
             ChessTopNavPerRelayFilterSet(proxyRelays.value.associateWith { ChessTopNavPerRelayFilter })
         } else {

@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.model.topNavFeeds.unknown
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -37,7 +37,7 @@ class UnknownTopNavFilter(
 
     override fun match(noteEvent: Event) = false
 
-    override fun toPerRelayFlow(cache: LocalCache): Flow<UnknownTopNavPerRelayFilterSet> = MutableStateFlow(UnknownTopNavPerRelayFilterSet)
+    override fun toPerRelayFlow(cache: ICacheProvider): Flow<UnknownTopNavPerRelayFilterSet> = MutableStateFlow(UnknownTopNavPerRelayFilterSet)
 
-    override fun startValue(cache: LocalCache) = UnknownTopNavPerRelayFilterSet
+    override fun startValue(cache: ICacheProvider) = UnknownTopNavPerRelayFilterSet
 }
