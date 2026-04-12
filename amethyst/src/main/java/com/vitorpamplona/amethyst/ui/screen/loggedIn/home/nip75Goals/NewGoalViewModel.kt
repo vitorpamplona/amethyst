@@ -27,17 +27,23 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.posting.NewGoalState
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
-import com.vitorpamplona.quartz.nip75ZapGoals.GoalEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
+/**
+ * Android ViewModel wrapper around [NewGoalState].
+ *
+ * Provides Compose [TextFieldValue] properties for UI binding and
+ * delegates validation and template creation to the commons state class.
+ */
 @Stable
 class NewGoalViewModel : ViewModel() {
     lateinit var accountViewModel: AccountViewModel
     lateinit var account: Account
+
+    val state = NewGoalState()
 
     var description by mutableStateOf(TextFieldValue(""))
     var amount by mutableStateOf(TextFieldValue(""))
@@ -53,13 +59,13 @@ class NewGoalViewModel : ViewModel() {
         this.account = accountVM.account
     }
 
-    fun canPost(): Boolean =
-        description.text.isNotBlank() &&
-            amount.text.isNotBlank() &&
-            amount.text.toLongOrNull() != null &&
-            (amount.text.toLongOrNull() ?: 0) > 0
+    fun canPost(): Boolean {
+        syncToState()
+        return state.canPost()
+    }
 
     fun cancel() {
+        state.cancel()
         description = TextFieldValue("")
         amount = TextFieldValue("")
         summary = TextFieldValue("")
@@ -70,32 +76,25 @@ class NewGoalViewModel : ViewModel() {
     }
 
     suspend fun sendPostSync() {
-        val template = createTemplate() ?: return
-        cancel()
-        account.signAndComputeBroadcast(template)
-    }
-
-    private fun createTemplate(): EventTemplate<out Event>? {
-        val amountSats = amount.text.toLongOrNull() ?: return null
-        val amountMillisats = amountSats * 1000L
+        syncToState()
 
         val relays =
             account.outboxRelays.flow.value
                 .toList()
 
-        val closedAt = if (wantsDeadline) deadlineTimestamp else null
-        val img = imageUrl.text.ifBlank { null }
-        val sum = summary.text.ifBlank { null }
-        val web = websiteUrl.text.ifBlank { null }
+        val template = state.createTemplate(relays) ?: return
+        cancel()
+        account.signAndComputeBroadcast(template)
+    }
 
-        return GoalEvent.build(
-            description = description.text,
-            amount = amountMillisats,
-            relays = relays,
-            closedAt = closedAt,
-            image = img,
-            summary = sum,
-            websiteUrl = web,
-        )
+    /** Push Compose mutable state into the platform-independent state object. */
+    private fun syncToState() {
+        state.updateDescription(description.text)
+        state.updateAmount(amount.text)
+        state.updateSummary(summary.text)
+        state.updateImageUrl(imageUrl.text)
+        state.updateWebsiteUrl(websiteUrl.text)
+        state.updateWantsDeadline(wantsDeadline)
+        state.updateDeadlineTimestamp(deadlineTimestamp)
     }
 }
