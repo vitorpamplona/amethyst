@@ -38,6 +38,8 @@ import com.vitorpamplona.amethyst.commons.compose.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.compose.replaceCurrentWord
 import com.vitorpamplona.amethyst.commons.compose.setTextAndPlaceCursorAtBeginning
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
+import com.vitorpamplona.amethyst.commons.viewmodels.posting.CommentPostState
+import com.vitorpamplona.amethyst.commons.viewmodels.posting.LongFormPostState
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -73,26 +75,15 @@ import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
-import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohash
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.hasGeohashes
-import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
-import com.vitorpamplona.quartz.nip01Core.tags.references.references
-import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
-import com.vitorpamplona.quartz.nip10Notes.content.findNostrUris
 import com.vitorpamplona.quartz.nip10Notes.content.findURLs
-import com.vitorpamplona.quartz.nip18Reposts.quotes.quotes
 import com.vitorpamplona.quartz.nip18Reposts.quotes.taggedQuoteIds
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
-import com.vitorpamplona.quartz.nip22Comments.notify
-import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
-import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
-import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarningReason
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitive
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip40Expiration.expiration
-import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplits
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiser
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
@@ -125,6 +116,7 @@ open class CommentPostViewModel :
     IZapRaiser,
     IExpiration {
     val draftTag = DraftTagState()
+    val postState = CommentPostState()
 
     init {
         viewModelScope.launch(Dispatchers.IO) {
@@ -384,16 +376,16 @@ open class CommentPostViewModel :
             )
         tagger.run()
 
-        val geoHash = (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString()
+        syncToPostState()
 
-        val emojis = findEmoji(tagger.message, account.emoji.myEmojis.value)
+        val emojiMedia = account.emoji.myEmojis.value
+        val emojis =
+            LongFormPostState.findEmoji(
+                tagger.message,
+                emojiMedia?.map { Pair(it.code, it.link) },
+            )
         val urls = findURLs(tagger.message)
         val usedAttachments = iMetaAttachments.filterIsIn(urls.toSet())
-
-        val zapReceiver = if (wantsForwardZapTo) forwardZapTo.value.toZapSplitSetup() else null
-        val localZapRaiserAmount = if (wantsZapraiser) zapRaiserAmount.value else null
-        val contentWarningReason = if (wantsToMarkAsSensitive) contentWarningDescription else null
-        val localExpirationDate = if (wantsExpirationDate) expirationDate else null
 
         val replyingTo = replyingTo
         val replyingToEvent = replyingTo?.event
@@ -402,79 +394,52 @@ open class CommentPostViewModel :
             if (replyingTo != null) {
                 val eventHint = replyingTo.toEventHint<Event>() ?: return null
 
-                CommentEvent.replyBuilder(
-                    msg = tagger.message,
-                    replyingTo = eventHint,
-                ) {
-                    val notifyPTags = tagger.pTags?.let { pTagList -> pTagList.map { it.toPTag() } } ?: emptyList()
+                val notifyPTags = tagger.pTags?.let { pTagList -> pTagList.map { it.toPTag() } } ?: emptyList()
 
-                    val extraNotificationAuthors =
-                        if (replyingToEvent is CommunityDefinitionEvent) {
-                            replyingToEvent.moderatorKeys().mapNotNull {
-                                if (it != replyingToEvent.pubKey) {
-                                    accountViewModel.checkGetOrCreateUser(it)?.toPTag()
-                                } else {
-                                    null
-                                }
+                val extraNotificationAuthors =
+                    if (replyingToEvent is CommunityDefinitionEvent) {
+                        replyingToEvent.moderatorKeys().mapNotNull {
+                            if (it != replyingToEvent.pubKey) {
+                                accountViewModel.checkGetOrCreateUser(it)?.toPTag()
+                            } else {
+                                null
                             }
-                        } else {
-                            emptyList()
                         }
+                    } else {
+                        emptyList()
+                    }
 
-                    notify((notifyPTags + extraNotificationAuthors).distinctBy { it.pubKey })
-
-                    hashtags(findHashtags(tagger.message))
-                    references(findURLs(tagger.message))
-                    quotes(findNostrUris(tagger.message))
-
-                    localZapRaiserAmount?.let { zapraiser(it) }
-                    zapReceiver?.let { zapSplits(it) }
-                    contentWarningReason?.let { contentWarning(it) }
-                    localExpirationDate?.let { expiration(it) }
-
-                    emojis(emojis)
-                    imetas(usedAttachments)
-                    geoHash?.let { geohash(it) }
-                }
+                postState.createReplyTemplate(
+                    tagger.message,
+                    eventHint,
+                    notifyPTags + extraNotificationAuthors,
+                    emojis,
+                    usedAttachments,
+                )
             } else {
                 val externalIdentity = externalIdentity ?: return null
-                CommentEvent.replyExternalIdentity(
-                    msg = tagger.message,
-                    extId = externalIdentity,
-                ) {
-                    tagger.pTags?.let { pTagList -> notify(pTagList.map { it.toPTag() }) }
+                val notifyPTags = tagger.pTags?.let { pTagList -> pTagList.map { it.toPTag() } } ?: emptyList()
 
-                    hashtags(findHashtags(tagger.message))
-                    references(findURLs(tagger.message))
-                    quotes(findNostrUris(tagger.message))
-
-                    localZapRaiserAmount?.let { zapraiser(it) }
-                    zapReceiver?.let { zapSplits(it) }
-                    contentWarningReason?.let { contentWarning(it) }
-                    localExpirationDate?.let { expiration(it) }
-
-                    emojis(emojis)
-                    imetas(usedAttachments)
-                    geoHash?.let { geohash(it) }
-                }
+                postState.createExternalReplyTemplate(
+                    tagger.message,
+                    externalIdentity,
+                    notifyPTags,
+                    emojis,
+                    usedAttachments,
+                )
             }
 
         return template
     }
 
-    fun findEmoji(
-        message: String,
-        myEmojiSet: List<EmojiPackState.EmojiMedia>?,
-    ): List<EmojiUrlTag> {
-        if (myEmojiSet == null) return emptyList()
-        return CustomEmoji.findAllEmojiCodes(message).mapNotNull { possibleEmoji ->
-            myEmojiSet.firstOrNull { it.code == possibleEmoji }?.let {
-                EmojiUrlTag(
-                    it.code,
-                    it.link,
-                )
-            }
-        }
+    /** Push Compose mutable state into the platform-independent state object. */
+    private fun syncToPostState() {
+        val geoHash = (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString()
+        postState.options.updateGeoHash(wantsToAddGeoHash, geoHash)
+        postState.options.updateZapRaiser(wantsZapraiser, zapRaiserAmount.value)
+        postState.options.updateZapSplits(if (wantsForwardZapTo) forwardZapTo.value.toZapSplitSetup() else null)
+        postState.options.updateContentWarning(wantsToMarkAsSensitive, contentWarningDescription)
+        postState.options.updateExpiration(wantsExpirationDate, expirationDate)
     }
 
     fun upload(
