@@ -24,8 +24,6 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.ParticipantListBuilder
-import com.vitorpamplona.amethyst.model.TopFilter
-import com.vitorpamplona.amethyst.model.filterIntoSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsByOutboxTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsByProxyTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsByOutboxTopNavFilter
@@ -33,76 +31,22 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsByPr
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.community.SingleCommunityTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsByOutboxTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsByProxyTopNavFilter
-import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
-import com.vitorpamplona.quartz.utils.TimeUtils
 
-open class DiscoverNIP89FeedFilter(
-    val account: Account,
-    val targetKind: Int = 5300,
-) : AdditiveFeedFilter<Note>() {
-    val lastAnnounced = TimeUtils.oneYearAgo()
-
-    override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + followList().code
-
-    override fun limit() = 50
-
-    open fun followList(): TopFilter = account.settings.defaultDiscoveryFollowList.value
-
-    fun TopFilter.isMuteList() = this is TopFilter.MuteList
-
-    fun TopFilter.isBlockList() = this is TopFilter.PeopleList && this.address == account.blockPeopleList.getBlockListAddress()
-
-    fun TopFilter.wantsToSeeNegativeStuff() = isMuteList() || isBlockList()
-
-    override fun showHiddenKey(): Boolean = followList().wantsToSeeNegativeStuff()
-
-    override fun feed(): List<Note> {
-        val notes =
-            LocalCache.addressables.filterIntoSet(AppDefinitionEvent.KIND) { _, it ->
-                acceptApp(it)
-            }
-
-        return sort(notes)
-    }
-
-    override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)
-
-    fun buildFilterParams(account: Account): FilterByListParams =
-        FilterByListParams.create(
-            account.liveDiscoveryFollowLists.value,
-            account.hiddenUsers.flow.value,
-        )
-
-    fun acceptApp(note: Note): Boolean {
-        val noteEvent = note.event
-        return if (noteEvent is AppDefinitionEvent) {
-            acceptApp(noteEvent, note.relays)
-        } else {
-            false
-        }
-    }
-
-    open fun acceptApp(
-        noteEvent: AppDefinitionEvent,
-        relays: List<NormalizedRelayUrl>,
-    ): Boolean {
-        val filterParams = buildFilterParams(account)
-        return noteEvent.appMetaData()?.subscription != true &&
-            filterParams.match(noteEvent, relays) &&
-            noteEvent.includeKind(targetKind) &&
-            noteEvent.createdAt > lastAnnounced
-    }
-
-    protected open fun innerApplyFilter(collection: Collection<Note>): Set<Note> =
-        collection.filterTo(HashSet()) {
-            acceptApp(it)
-        }
-
+/**
+ * Android-specific version that overrides sort() with participant-count-based ranking.
+ * The core filter/feed logic lives in commons:
+ * [com.vitorpamplona.amethyst.commons.ui.screen.discover.DiscoverNIP89FeedFilter]
+ */
+class DiscoverNIP89FeedFilter(
+    val androidAccount: Account,
+    targetKind: Int = 5300,
+) : com.vitorpamplona.amethyst.commons.ui.screen.discover.DiscoverNIP89FeedFilter(
+        account = androidAccount,
+        cache = LocalCache,
+        targetKind = targetKind,
+    ) {
     override fun sort(items: Set<Note>): List<Note> {
-        val topFilter = account.liveDiscoveryFollowLists.value
+        val topFilter = androidAccount.liveDiscoveryFollowLists.value
         val discoveryTopFilterAuthors =
             when (topFilter) {
                 is AuthorsByOutboxTopNavFilter -> topFilter.authors
@@ -116,7 +60,7 @@ open class DiscoverNIP89FeedFilter(
             }
 
         val followingKeySet =
-            discoveryTopFilterAuthors ?: account.kind3FollowList.flow.value.authors
+            discoveryTopFilterAuthors ?: androidAccount.kind3FollowList.flow.value.authors
 
         val counter = ParticipantListBuilder()
         val participantCounts =
