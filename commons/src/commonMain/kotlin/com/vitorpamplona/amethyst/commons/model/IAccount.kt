@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.commons.model
 
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupList
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
@@ -33,6 +35,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Request
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import com.vitorpamplona.quartz.nip57Zaps.IPrivateZapsDecryptionCache
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
+import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayInfo
 import com.vitorpamplona.quartz.utils.DualCase
 
 /**
@@ -119,4 +122,38 @@ interface IAccount {
 
     /** Broadcast pre-created gift wraps (e.g. reactions within group DMs) */
     suspend fun sendGiftWraps(wraps: List<GiftWrapEvent>)
+
+    // --- v4: User visibility & follow checks ---
+
+    /** Mute a user (add to mute list) */
+    suspend fun hideUser(pubkeyHex: HexKey)
+
+    /** Unmute a user (remove from block/mute lists) */
+    suspend fun showUser(pubkeyHex: HexKey)
+
+    /** Mute a word */
+    suspend fun hideWord(word: String)
+
+    /** Unmute a word */
+    suspend fun showWord(word: String)
+
+    /** Check if account follows the given user */
+    fun isFollowing(user: User): Boolean
+
+    /** Check if account follows the given pubkey */
+    fun isFollowing(user: HexKey): Boolean
+
+    // --- v4: Relay list management ---
+
+    /** Save NIP-65 advertised relay list */
+    suspend fun sendNip65RelayList(relays: List<AdvertisedRelayInfo>)
+
+    /** Save DM inbox relay list */
+    suspend fun saveDMRelayList(dmRelays: List<NormalizedRelayUrl>)
+
+    /** Save search relay list */
+    suspend fun saveSearchRelayList(searchRelays: List<NormalizedRelayUrl>)
+
+    /** Save broadcast relay list */
+    suspend fun saveBroadcastRelayList(relays: List<NormalizedRelayUrl>)
 }

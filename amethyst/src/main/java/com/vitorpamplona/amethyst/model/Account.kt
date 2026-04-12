@@ -2136,20 +2136,20 @@ class Account(
         challenge: String,
     ): RelayAuthEvent = RelayAuthEvent.create(relay, challenge, signer)
 
-    suspend fun hideWord(word: String) {
+    override suspend fun hideWord(word: String) {
         sendMyPublicAndPrivateOutbox(muteList.hideWord(word))
     }
 
-    suspend fun showWord(word: String) {
+    override suspend fun showWord(word: String) {
         sendMyPublicAndPrivateOutbox(blockPeopleList.showWord(word))
         sendMyPublicAndPrivateOutbox(muteList.showWord(word))
     }
 
-    suspend fun hideUser(pubkeyHex: HexKey) {
+    override suspend fun hideUser(pubkeyHex: HexKey) {
         sendMyPublicAndPrivateOutbox(muteList.hideUser(pubkeyHex))
     }
 
-    suspend fun showUser(pubkeyHex: HexKey) {
+    override suspend fun showUser(pubkeyHex: HexKey) {
         sendMyPublicAndPrivateOutbox(blockPeopleList.showUser(pubkeyHex))
         sendMyPublicAndPrivateOutbox(muteList.showUser(pubkeyHex))
         hiddenUsers.showUser(pubkeyHex)
@@ -2269,9 +2269,9 @@ class Account(
             false
         }
 
-    fun isFollowing(user: User): Boolean = user.pubkeyHex in followingKeySet()
+    override fun isFollowing(user: User): Boolean = user.pubkeyHex in followingKeySet()
 
-    fun isFollowing(user: HexKey): Boolean = user in followingKeySet()
+    override fun isFollowing(user: HexKey): Boolean = user in followingKeySet()
 
     fun isKnown(user: User): Boolean = user.pubkeyHex in allFollows.flow.value.authors
 
@@ -2311,15 +2311,15 @@ class Account(
         ).toSet()
     }
 
-    suspend fun saveDMRelayList(dmRelays: List<NormalizedRelayUrl>) = sendLiterallyEverywhere(dmRelayList.saveRelayList(dmRelays))
+    override suspend fun saveDMRelayList(dmRelays: List<NormalizedRelayUrl>) = sendLiterallyEverywhere(dmRelayList.saveRelayList(dmRelays))
 
     suspend fun savePrivateOutboxRelayList(relays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(privateStorageRelayList.saveRelayList(relays))
 
-    suspend fun saveSearchRelayList(searchRelays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(searchRelayList.saveRelayList(searchRelays))
+    override suspend fun saveSearchRelayList(searchRelays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(searchRelayList.saveRelayList(searchRelays))
 
     suspend fun saveIndexerRelayList(trustedRelays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(indexerRelayList.saveRelayList(trustedRelays))
 
-    suspend fun saveBroadcastRelayList(trustedRelays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(broadcastRelayList.saveRelayList(trustedRelays))
+    override suspend fun saveBroadcastRelayList(relays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(broadcastRelayList.saveRelayList(relays))
 
     suspend fun saveProxyRelayList(trustedRelays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(proxyRelayList.saveRelayList(trustedRelays))
 
@@ -2358,7 +2358,7 @@ class Account(
         client.publish(signedEvent, followPlusAllMineWithIndex.flow.value + client.availableRelaysFlow().value)
     }
 
-    suspend fun sendNip65RelayList(relays: List<AdvertisedRelayInfo>) = sendLiterallyEverywhere(nip65RelayList.saveRelayList(relays))
+    override suspend fun sendNip65RelayList(relays: List<AdvertisedRelayInfo>) = sendLiterallyEverywhere(nip65RelayList.saveRelayList(relays))
 
     suspend fun sendBlossomServersList(servers: List<String>) = sendMyPublicAndPrivateOutbox(blossomServers.saveBlossomServersList(servers))
 
