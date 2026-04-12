@@ -117,9 +117,7 @@ open class ChannelNewMessageViewModel :
             draftTag.versions.collectLatest {
                 // don't save the first
                 if (it > 0) {
-                    accountViewModel.launchSigner {
-                        sendDraftSync()
-                    }
+                    sendDraftSync()
                 }
             }
         }
@@ -300,6 +298,13 @@ open class ChannelNewMessageViewModel :
         accountViewModel.account.signAndSendPrivately(template, channelRelays)
         accountViewModel.viewModelScope.launch(Dispatchers.IO) {
             accountViewModel.account.deleteDraftIgnoreErrors(version)
+        }
+    }
+
+    fun sendDraftAndCancel() {
+        accountViewModel.launchSigner {
+            sendDraftSync()
+            cancel()
         }
     }
 

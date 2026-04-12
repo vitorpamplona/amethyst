@@ -151,10 +151,7 @@ fun GenericCommentPostScreen(
     StrippingFailureDialog(postViewModel.strippingFailureConfirmation)
 
     BackHandler {
-        accountViewModel.launchSigner {
-            postViewModel.sendDraftSync()
-            postViewModel.cancel()
-        }
+        postViewModel.sendDraftAndCancel()
         nav.popBack()
     }
 
@@ -165,19 +162,13 @@ fun GenericCommentPostScreen(
                 onCancel = {
                     // uses the accountViewModel scope to avoid cancelling this
                     // function when the postViewModel is released
-                    accountViewModel.launchSigner {
-                        postViewModel.sendDraftSync()
-                        postViewModel.cancel()
-                    }
+                    postViewModel.sendDraftAndCancel()
                     nav.popBack()
                 },
                 onPost = {
                     // uses the accountViewModel scope to avoid cancelling this
                     // function when the postViewModel is released
-                    accountViewModel.launchSigner {
-                        postViewModel.sendPostSync()
-                        nav.popBack()
-                    }
+                    postViewModel.sendPost { nav.popBack() }
                 },
             )
         },

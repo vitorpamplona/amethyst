@@ -149,10 +149,7 @@ fun LongFormPostScreen(
     StrippingFailureDialog(postViewModel.strippingFailureConfirmation)
 
     BackHandler {
-        accountViewModel.launchSigner {
-            postViewModel.sendDraftSync()
-            postViewModel.cancel()
-        }
+        postViewModel.sendDraftAndCancel()
         nav.popBack()
     }
 
@@ -162,16 +159,10 @@ fun LongFormPostScreen(
                 titleRes = R.string.new_long_form_post,
                 isActive = postViewModel::canPost,
                 onPost = {
-                    accountViewModel.launchSigner {
-                        postViewModel.sendPostSync()
-                        nav.popBack()
-                    }
+                    postViewModel.sendPost { nav.popBack() }
                 },
                 onCancel = {
-                    accountViewModel.launchSigner {
-                        postViewModel.sendDraftSync()
-                        postViewModel.cancel()
-                    }
+                    postViewModel.sendDraftAndCancel()
                     nav.popBack()
                 },
             )

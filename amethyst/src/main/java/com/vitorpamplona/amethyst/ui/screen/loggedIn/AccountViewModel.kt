@@ -1015,6 +1015,8 @@ class AccountViewModel(
 
     fun delete(note: Note) = launchSigner { account.delete(note) }
 
+    fun deleteDraftIgnoreErrors(draftTag: String) = launchSigner { account.deleteDraftIgnoreErrors(draftTag) }
+
     fun requestToVanish(
         relays: List<NormalizedRelayUrl>,
         reason: String,

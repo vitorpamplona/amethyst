@@ -96,10 +96,7 @@ fun NewGoalScreen(
                     nav.popBack()
                 },
                 onPost = {
-                    accountViewModel.launchSigner {
-                        goalViewModel.sendPostSync()
-                        nav.popBack()
-                    }
+                    goalViewModel.sendPost { nav.popBack() }
                 },
             )
         },

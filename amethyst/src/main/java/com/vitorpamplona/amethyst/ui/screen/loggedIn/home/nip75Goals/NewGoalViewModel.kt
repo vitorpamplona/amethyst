@@ -69,6 +69,13 @@ class NewGoalViewModel : ViewModel() {
         deadlineTimestamp = TimeUtils.now() + TimeUtils.ONE_WEEK
     }
 
+    fun sendPost(onDone: (() -> Unit)? = null) {
+        accountViewModel.launchSigner {
+            sendPostSync()
+            onDone?.invoke()
+        }
+    }
+
     suspend fun sendPostSync() {
         val template = createTemplate() ?: return
         cancel()

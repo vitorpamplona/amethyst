@@ -110,11 +110,10 @@ fun PrivateMessageEditFieldRow(
 ) {
     BackHandler {
         if (channelScreenModel.message.text.isNotBlank()) {
-            accountViewModel.launchSigner {
-                channelScreenModel.sendDraftSync()
-            }
+            channelScreenModel.sendDraftAndCancel()
+        } else {
+            channelScreenModel.cancel()
         }
-        channelScreenModel.cancel()
         nav.popBack()
     }
 
@@ -217,8 +216,7 @@ fun EditField(
                 isActive = channelScreenModel.canPost(),
                 modifier = EditFieldTrailingIconModifier,
             ) {
-                accountViewModel.launchSigner {
-                    channelScreenModel.sendPostSync()
+                channelScreenModel.sendPost {
                     onSendNewMessage()
                 }
             }

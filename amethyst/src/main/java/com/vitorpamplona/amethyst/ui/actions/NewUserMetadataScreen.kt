@@ -93,9 +93,7 @@ fun NewUserMetadataScreen(
                     nav.popBack()
                 },
                 onPost = {
-                    accountViewModel.launchSigner {
-                        postViewModel.create()
-                    }
+                    postViewModel.sendPost()
                     nav.popBack()
                 },
             )

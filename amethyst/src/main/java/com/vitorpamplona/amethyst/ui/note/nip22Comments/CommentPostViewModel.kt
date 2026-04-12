@@ -361,6 +361,20 @@ open class CommentPostViewModel :
         }
     }
 
+    fun sendPost(onDone: (() -> Unit)? = null) {
+        accountViewModel.launchSigner {
+            sendPostSync()
+            onDone?.invoke()
+        }
+    }
+
+    fun sendDraftAndCancel() {
+        accountViewModel.launchSigner {
+            sendDraftSync()
+            cancel()
+        }
+    }
+
     suspend fun sendDraftSync() {
         if (message.text.toString().isBlank()) {
             accountViewModel.account.deleteDraftIgnoreErrors(draftTag.current)
