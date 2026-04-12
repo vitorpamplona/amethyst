@@ -200,36 +200,14 @@ void fe_mul(secp256k1_fe *r, const secp256k1_fe *a, const secp256k1_fe *b) {
 }
 
 /*
- * Dedicated squaring: exploits a[i]*a[j] == a[j]*a[i] to halve cross-products.
- * 4x4 squaring needs only 10 products vs 16 for general multiplication:
- *   Diagonal: a0², a1², a2², a3² (4 products)
- *   Cross: a0*a1, a0*a2, a0*a3, a1*a2, a1*a3, a2*a3 (6 products, doubled)
+ * Squaring: just call fe_mul(r, a, a).
+ * With 4x64 limbs, a dedicated sqr doesn't help because:
+ * - Cross-product doubling overflows uint128 (64+64+1 > 128 bits)
+ * - fe_mul is already inlined with optimal instruction scheduling
+ * - Saves 0 products (still 16 MUL instructions either way)
  */
 void fe_sqr(secp256k1_fe *r, const secp256k1_fe *a) {
-    uint64_t a0 = a->d[0], a1 = a->d[1], a2 = a->d[2], a3 = a->d[3];
-    uint64_t w[8];
-
-#if HAVE_INT128
-    uint128_t cross, diag, acc;
-
-    /* Compute cross-products first (each appears twice) */
-    /* w[1] = 2*a0*a1 */
-    /* w[2] = 2*a0*a2 + a1*a1 */
-    /* w[3] = 2*a0*a3 + 2*a1*a2 */
-    /* w[4] = 2*a1*a3 + a2*a2 */
-    /* w[5] = 2*a2*a3 */
-
-    /* Use mul_wide for correctness. The "add twice" approach for cross products
-     * can overflow uint128 when a[i] values are near 2^64.
-     * A dedicated sqr_wide requires 192-bit intermediate tracking to handle
-     * the doubled cross products safely. For now, mul_wide is proven correct. */
-    mul_wide(w, a->d, a->d);
-#else
-    /* Fallback: use general multiplication */
-    mul_wide(w, a->d, a->d);
-#endif
-
-    reduce_wide(r, w);
+    fe_mul(r, a, a);
 }
 
 #else /* Portable fallback */
