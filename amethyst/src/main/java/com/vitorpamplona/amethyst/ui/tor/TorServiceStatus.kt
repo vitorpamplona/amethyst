@@ -20,12 +20,5 @@
  */
 package com.vitorpamplona.amethyst.ui.tor
 
-sealed class TorServiceStatus {
-    data class Active(
-        val port: Int,
-    ) : TorServiceStatus()
-
-    object Off : TorServiceStatus()
-
-    object Connecting : TorServiceStatus()
-}
+// Re-export from commons for backwards compatibility
+typealias TorServiceStatus = com.vitorpamplona.amethyst.commons.ui.tor.TorServiceStatus
