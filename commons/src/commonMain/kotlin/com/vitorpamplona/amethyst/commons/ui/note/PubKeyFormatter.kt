@@ -18,7 +18,16 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.creators.expiration
+package com.vitorpamplona.amethyst.commons.ui.note
 
-// Re-export from commons for backwards compatibility
-typealias IExpiration = com.vitorpamplona.amethyst.commons.ui.note.creators.expiration.IExpiration
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+
+fun ByteArray.toHexShortDisplay(): String = toHexKey().toShortDisplay()
+
+fun String.toShortDisplay(): String {
+    if (length <= 16) return this
+    return replaceRange(8, length - 8, "…")
+}
+
+fun HexKey.toDisplayHexKey(): String = this.toShortDisplay()

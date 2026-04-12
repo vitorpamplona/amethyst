@@ -21,50 +21,16 @@
 package com.vitorpamplona.amethyst.ui.note
 
 import java.math.BigDecimal
-import java.math.RoundingMode
-import java.text.DecimalFormat
 
-private val dfG =
-    object : ThreadLocal<DecimalFormat>() {
-        override fun initialValue() = DecimalFormat("#G")
-    }
+// Re-export from commons for backwards compatibility
+fun showAmountInteger(amount: BigDecimal?): String =
+    com.vitorpamplona.amethyst.commons.ui.note
+        .showAmountInteger(amount)
 
-private val dfM =
-    object : ThreadLocal<DecimalFormat>() {
-        override fun initialValue() = DecimalFormat("#M")
-    }
+fun showAmountInteger(amount: Int?): String =
+    com.vitorpamplona.amethyst.commons.ui.note
+        .showAmountInteger(amount)
 
-private val dfK =
-    object : ThreadLocal<DecimalFormat>() {
-        override fun initialValue() = DecimalFormat("#k")
-    }
-
-private val dfN =
-    object : ThreadLocal<DecimalFormat>() {
-        override fun initialValue() = DecimalFormat("#")
-    }
-
-fun showAmountInteger(amount: BigDecimal?): String {
-    if (amount == null) return ""
-    if (amount.abs() < BigDecimal(0.01)) return ""
-
-    return when {
-        amount >= OneGiga -> dfG.get()?.format(amount.div(OneGiga).setScale(0, RoundingMode.HALF_UP)) ?: ""
-        amount >= OneMega -> dfM.get()?.format(amount.div(OneMega).setScale(0, RoundingMode.HALF_UP)) ?: ""
-        amount >= TenKilo -> dfK.get()?.format(amount.div(OneKilo).setScale(0, RoundingMode.HALF_UP)) ?: ""
-        else -> dfN.get()?.format(amount) ?: ""
-    }
-}
-
-fun showAmountInteger(amount: Int?): String {
-    if (amount == null) return "0"
-
-    return showAmountIntegerWithZero(BigDecimal.valueOf(amount.toLong()))
-}
-
-fun showAmountIntegerWithZero(amount: BigDecimal?): String {
-    if (amount == null) return "0"
-    if (amount.abs() < BigDecimal(0.01)) return "0"
-
-    return showAmountInteger(amount)
-}
+fun showAmountIntegerWithZero(amount: BigDecimal?): String =
+    com.vitorpamplona.amethyst.commons.ui.note
+        .showAmountIntegerWithZero(amount)

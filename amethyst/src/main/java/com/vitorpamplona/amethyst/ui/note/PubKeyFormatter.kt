@@ -21,13 +21,13 @@
 package com.vitorpamplona.amethyst.ui.note
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.amethyst.commons.ui.note.toDisplayHexKey as commonsToDisplayHexKey
+import com.vitorpamplona.amethyst.commons.ui.note.toHexShortDisplay as commonsToHexShortDisplay
+import com.vitorpamplona.amethyst.commons.ui.note.toShortDisplay as commonsToShortDisplay
 
-fun ByteArray.toHexShortDisplay(): String = toHexKey().toShortDisplay()
+// Re-export from commons for backwards compatibility
+fun ByteArray.toHexShortDisplay(): String = commonsToHexShortDisplay()
 
-fun String.toShortDisplay(): String {
-    if (length <= 16) return this
-    return replaceRange(8, length - 8, "…")
-}
+fun String.toShortDisplay(): String = commonsToShortDisplay()
 
-fun HexKey.toDisplayHexKey(): String = this.toShortDisplay()
+fun HexKey.toDisplayHexKey(): String = commonsToDisplayHexKey()

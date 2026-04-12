@@ -18,7 +18,22 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.creators.expiration
+package com.vitorpamplona.amethyst.commons.ui.actions.uploads
 
-// Re-export from commons for backwards compatibility
-typealias IExpiration = com.vitorpamplona.amethyst.commons.ui.note.creators.expiration.IExpiration
+import java.util.Locale
+
+/**
+ * Formats seconds into a human-readable time string (M:SS or MM:SS format).
+ *
+ * @param seconds The number of seconds to format
+ * @return Formatted time string (e.g., "0:05", "1:23", "12:45")
+ */
+fun formatSecondsToTime(seconds: Int): String {
+    val minutes = seconds / 60
+    val secs = seconds % 60
+    return if (minutes > 0) {
+        String.format(Locale.getDefault(), "%d:%02d", minutes, secs)
+    } else {
+        String.format(Locale.getDefault(), "0:%02d", secs)
+    }
+}

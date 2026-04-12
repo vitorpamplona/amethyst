@@ -21,63 +21,19 @@
 package com.vitorpamplona.amethyst.ui.note
 
 import java.math.BigDecimal
-import java.math.RoundingMode
-import java.text.DecimalFormat
 
-val TenGiga = BigDecimal(10000000000)
-val OneGiga = BigDecimal(1000000000)
-val TenMega = BigDecimal(10000000)
-val OneMega = BigDecimal(1000000)
-val TenKilo = BigDecimal(10000)
-val OneKilo = BigDecimal(1000)
+// Re-export from commons for backwards compatibility
+val TenGiga: BigDecimal get() = com.vitorpamplona.amethyst.commons.ui.note.TenGiga
+val OneGiga: BigDecimal get() = com.vitorpamplona.amethyst.commons.ui.note.OneGiga
+val TenMega: BigDecimal get() = com.vitorpamplona.amethyst.commons.ui.note.TenMega
+val OneMega: BigDecimal get() = com.vitorpamplona.amethyst.commons.ui.note.OneMega
+val TenKilo: BigDecimal get() = com.vitorpamplona.amethyst.commons.ui.note.TenKilo
+val OneKilo: BigDecimal get() = com.vitorpamplona.amethyst.commons.ui.note.OneKilo
 
-private val dfGBig =
-    object : ThreadLocal<DecimalFormat>() {
-        override fun initialValue() = DecimalFormat("#.#G")
-    }
+fun showAmount(amount: BigDecimal?): String =
+    com.vitorpamplona.amethyst.commons.ui.note
+        .showAmount(amount)
 
-private val dfGSmall =
-    object : ThreadLocal<DecimalFormat>() {
-        override fun initialValue() = DecimalFormat("#.0G")
-    }
-
-private val dfMBig =
-    object : ThreadLocal<DecimalFormat>() {
-        override fun initialValue() = DecimalFormat("#.#M")
-    }
-
-private val dfMSmall =
-    object : ThreadLocal<DecimalFormat>() {
-        override fun initialValue() = DecimalFormat("#.0M")
-    }
-
-private val dfK =
-    object : ThreadLocal<DecimalFormat>() {
-        override fun initialValue() = DecimalFormat("#.#k")
-    }
-
-private val dfN =
-    object : ThreadLocal<DecimalFormat>() {
-        override fun initialValue() = DecimalFormat("#")
-    }
-
-fun showAmount(amount: BigDecimal?): String {
-    if (amount == null) return ""
-    if (amount.abs() < BigDecimal(0.01)) return ""
-
-    return when {
-        amount >= TenGiga -> dfGBig.get()!!.format(amount.div(OneGiga).setScale(0, RoundingMode.HALF_UP))
-        amount >= OneGiga -> dfGSmall.get()!!.format(amount.div(OneGiga).setScale(0, RoundingMode.HALF_UP))
-        amount >= TenMega -> dfMBig.get()!!.format(amount.div(OneMega).setScale(0, RoundingMode.HALF_UP))
-        amount >= OneMega -> dfMSmall.get()!!.format(amount.div(OneMega).setScale(0, RoundingMode.HALF_UP))
-        amount >= TenKilo -> dfK.get()!!.format(amount.div(OneKilo).setScale(0, RoundingMode.HALF_UP))
-        else -> dfN.get()!!.format(amount)
-    }
-}
-
-fun showAmountWithZero(amount: BigDecimal?): String {
-    if (amount == null) return "0"
-    if (amount.abs() < BigDecimal(0.01)) return "0"
-
-    return showAmount(amount)
-}
+fun showAmountWithZero(amount: BigDecimal?): String =
+    com.vitorpamplona.amethyst.commons.ui.note
+        .showAmountWithZero(amount)
