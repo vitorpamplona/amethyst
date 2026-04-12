@@ -20,157 +20,49 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common
 
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.common.BasicRelaySetupInfo
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoState
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.service.replace
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.count
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
 
-abstract class BasicRelaySetupInfoModel : ViewModel() {
+abstract class BasicRelaySetupInfoModel : BasicRelaySetupInfoState() {
     lateinit var accountViewModel: AccountViewModel
     lateinit var account: Account
-
-    private val _relays = MutableStateFlow<List<BasicRelaySetupInfo>>(emptyList())
-    val relays = _relays.asStateFlow()
-
-    private val _countResults = MutableStateFlow<Map<NormalizedRelayUrl, RelayCountResult>>(emptyMap())
-    val countResults = _countResults.asStateFlow()
-
-    var hasModified = false
 
     fun init(accountViewModel: AccountViewModel) {
         this.accountViewModel = accountViewModel
         this.account = accountViewModel.account
     }
 
-    fun load() {
-        clear()
-        loadRelayDocuments()
-        loadCounts()
-    }
-
-    abstract fun getRelayList(): List<NormalizedRelayUrl>?
-
-    abstract suspend fun saveRelayList(urlList: List<NormalizedRelayUrl>)
-
-    open fun countFilters(relayUrl: NormalizedRelayUrl): List<CountFilter> = emptyList()
-
-    fun create() {
-        if (hasModified) {
-            accountViewModel.launchSigner {
-                saveRelayList(_relays.value.map { it.relay })
-                clear()
-            }
+    override fun launchSigner(block: suspend () -> Unit) {
+        accountViewModel.launchSigner {
+            block()
         }
     }
 
-    fun loadRelayDocuments() {
-        viewModelScope.launch(Dispatchers.IO) {
-            _relays.value.forEach { item ->
-                Amethyst.instance.nip11Cache.loadRelayInfo(
-                    relay = item.relay,
-                    onInfo = {
-                        togglePaidRelay(item, it.limitation?.payment_required ?: false)
-                    },
-                    onError = { url, errorCode, exceptionMessage -> },
-                )
-            }
-        }
-    }
-
-    private fun loadCounts() {
-        _countResults.value = emptyMap()
-
-        val client = account.client
-        val relayList = _relays.value
-        if (relayList.isEmpty()) return
-
-        relayList.forEach { item ->
-            val filters = countFilters(item.relay)
-            if (filters.isEmpty()) return@forEach
-
-            filters.forEach { countFilter ->
-                viewModelScope.launch(Dispatchers.IO) {
-                    val result = client.count(item.relay, countFilter.filter)
-                    if (result != null) {
-                        _countResults.update { currentMap ->
-                            val current = currentMap[item.relay] ?: RelayCountResult()
-                            val entries = current.counts.toMutableList()
-                            val newEntry =
-                                RelayCountResult.CountEntry(
-                                    label = countFilter.label,
-                                    count = result.count,
-                                    approximate = result.approximate,
-                                )
-                            val existing = entries.indexOfFirst { it.label == countFilter.label }
-                            if (existing >= 0) entries[existing] = newEntry else entries.add(newEntry)
-                            currentMap + (item.relay to RelayCountResult(entries))
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    open fun relayListBuilder(): List<BasicRelaySetupInfo> {
-        val relayList = getRelayList() ?: emptyList()
-
-        return relayList
-            .map {
-                relaySetupInfoBuilder(
-                    normalized = it,
-                    forcesTor =
-                        Amethyst.instance.torEvaluatorFlow.flow.value
-                            .useTor(it),
-                )
-            }.distinctBy { it.relay }
-    }
-
-    fun clear() {
-        _relays.update { relayListBuilder() }
-    }
-
-    fun addRelay(relay: BasicRelaySetupInfo) {
-        if (relays.value.any { it.relay == relay.relay }) return
-
-        _relays.update { it.plus(relay) }
-        hasModified = true
-    }
-
-    fun deleteRelay(relay: BasicRelaySetupInfo) {
-        _relays.update { it.minus(relay) }
-        hasModified = true
-    }
-
-    fun moveRelay(
-        from: Int,
-        to: Int,
+    override suspend fun loadRelayInfo(
+        relay: NormalizedRelayUrl,
+        onPaid: (Boolean) -> Unit,
     ) {
-        _relays.update { list ->
-            list.toMutableList().apply {
-                add(to, removeAt(from))
-            }
-        }
-        hasModified = true
+        Amethyst.instance.nip11Cache.loadRelayInfo(
+            relay = relay,
+            onInfo = {
+                onPaid(it.limitation?.payment_required ?: false)
+            },
+            onError = { url, errorCode, exceptionMessage -> },
+        )
     }
 
-    fun deleteAll() {
-        _relays.update { relays -> emptyList() }
-        hasModified = true
-    }
+    override fun buildRelaySetupInfo(normalized: NormalizedRelayUrl): BasicRelaySetupInfo =
+        relaySetupInfoBuilder(
+            normalized = normalized,
+            forcesTor =
+                Amethyst.instance.torEvaluatorFlow.flow.value
+                    .useTor(normalized),
+        )
 
-    fun togglePaidRelay(
-        relay: BasicRelaySetupInfo,
-        paid: Boolean,
-    ) {
-        _relays.update { it.replace(relay, relay.copy(paidRelay = paid)) }
-    }
+    override fun getClient(): INostrClient = account.client
 }

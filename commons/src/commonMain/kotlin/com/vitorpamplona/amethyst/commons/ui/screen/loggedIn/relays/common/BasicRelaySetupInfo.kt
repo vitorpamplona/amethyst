@@ -18,19 +18,18 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.common
 
-import com.vitorpamplona.amethyst.Amethyst
+import androidx.compose.runtime.Immutable
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStat
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
-typealias BasicRelaySetupInfo = com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.common.BasicRelaySetupInfo
-
-fun relaySetupInfoBuilder(
-    normalized: NormalizedRelayUrl,
-    forcesTor: Boolean = false,
-): BasicRelaySetupInfo =
-    BasicRelaySetupInfo(
-        relay = normalized,
-        relayStat = Amethyst.instance.relayStats.get(normalized),
-        forcesTor = forcesTor,
-    )
+@Immutable
+data class BasicRelaySetupInfo(
+    val relay: NormalizedRelayUrl,
+    val relayStat: RelayStat,
+    val paidRelay: Boolean = false,
+    val forcesTor: Boolean = false,
+    val users: List<User> = emptyList(),
+)

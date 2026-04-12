@@ -18,19 +18,9 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.common
 
-import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-
-typealias BasicRelaySetupInfo = com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.common.BasicRelaySetupInfo
-
-fun relaySetupInfoBuilder(
-    normalized: NormalizedRelayUrl,
-    forcesTor: Boolean = false,
-): BasicRelaySetupInfo =
-    BasicRelaySetupInfo(
-        relay = normalized,
-        relayStat = Amethyst.instance.relayStats.get(normalized),
-        forcesTor = forcesTor,
-    )
+fun <T> Iterable<T>.replace(
+    old: T,
+    new: T,
+): List<T> = map { if (it == old) new else it }

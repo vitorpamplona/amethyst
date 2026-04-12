@@ -20,22 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common
 
-import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+typealias RelayCountResult = com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.common.RelayCountResult
 
-@Immutable
-data class RelayCountResult(
-    val counts: List<CountEntry> = emptyList(),
-) {
-    @Immutable
-    data class CountEntry(
-        val label: Int,
-        val count: Int,
-        val approximate: Boolean = false,
-    )
-}
-
-data class CountFilter(
-    val label: Int,
-    val filter: Filter,
-)
+typealias CountFilter = com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.common.CountFilter
