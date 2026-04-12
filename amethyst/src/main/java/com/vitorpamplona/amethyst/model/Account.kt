@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.commons.marmot.MarmotManager
 import com.vitorpamplona.amethyst.commons.model.IAccount
+import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
 import com.vitorpamplona.amethyst.commons.model.TopFilter
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatListDecryptionCache
@@ -240,6 +241,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
@@ -328,11 +330,11 @@ class Account(
     val trustProviderList = TrustProviderListState(signer, cache, trustProviderListDecryptionCache, scope, settings)
 
     val peopleListDecryptionCache = PeopleListDecryptionCache(signer)
-    val blockPeopleList = BlockPeopleListState(signer, cache, peopleListDecryptionCache, scope)
+    override val blockPeopleList = BlockPeopleListState(signer, cache, peopleListDecryptionCache, scope)
     val peopleLists = PeopleListsState(signer, cache, peopleListDecryptionCache, scope)
     val followLists = FollowListsState(signer, cache, scope)
 
-    val hiddenUsers = HiddenUsersState(muteList.flow, blockPeopleList.flow, scope, settings)
+    override val hiddenUsers = HiddenUsersState(muteList.flow, blockPeopleList.flow, scope, settings)
 
     val labeledBookmarkLists = LabeledBookmarkListsState(signer, cache, scope)
     val oldBookmarkState = OldBookmarkListState(signer, cache, scope)
@@ -416,29 +418,46 @@ class Account(
         ).flow
 
     // App-ready Feeds
-    val liveHomeFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultHomeFollowList)
+    override val liveHomeFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultHomeFollowList)
     val liveHomeFollowListsPerRelay = OutboxLoaderState(liveHomeFollowLists, cache, scope).flow
 
-    val liveStoriesFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultStoriesFollowList)
+    override val liveStoriesFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultStoriesFollowList)
     val liveStoriesFollowListsPerRelay = OutboxLoaderState(liveStoriesFollowLists, cache, scope).flow
 
-    val liveDiscoveryFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultDiscoveryFollowList)
+    override val liveDiscoveryFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultDiscoveryFollowList)
     val liveDiscoveryFollowListsPerRelay = OutboxLoaderState(liveDiscoveryFollowLists, cache, scope).flow
 
-    val liveNotificationFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultNotificationFollowList)
+    override val liveNotificationFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultNotificationFollowList)
     val liveNotificationFollowListsPerRelay = OutboxLoaderState(liveNotificationFollowLists, cache, scope).flow
 
-    val livePollsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultPollsFollowList)
+    override val livePollsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultPollsFollowList)
     val livePollsFollowListsPerRelay = OutboxLoaderState(livePollsFollowLists, cache, scope).flow
 
-    val livePicturesFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultPicturesFollowList)
+    override val livePicturesFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultPicturesFollowList)
     val livePicturesFollowListsPerRelay = OutboxLoaderState(livePicturesFollowLists, cache, scope).flow
 
-    val liveShortsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultShortsFollowList)
+    override val liveShortsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultShortsFollowList)
     val liveShortsFollowListsPerRelay = OutboxLoaderState(liveShortsFollowLists, cache, scope).flow
 
-    val liveLongsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultLongsFollowList)
+    override val liveLongsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultLongsFollowList)
     val liveLongsFollowListsPerRelay = OutboxLoaderState(liveLongsFollowLists, cache, scope).flow
+
+    // IAccount reactive state overrides
+    override val liveHiddenUsersFlow: StateFlow<LiveHiddenUsers> get() = hiddenUsers.flow
+
+    override val liveBookmarks: StateFlow<com.vitorpamplona.amethyst.commons.model.nip51Lists.BookmarkListState.BookmarkList> get() = bookmarkState.bookmarks
+
+    override val liveOldBookmarks: StateFlow<com.vitorpamplona.amethyst.commons.model.nip51Lists.OldBookmarkListState.BookmarkList> get() = oldBookmarkState.bookmarks
+
+    override val liveProxyRelayList: StateFlow<Set<NormalizedRelayUrl>> get() = proxyRelayList.flow
+
+    override val defaultHomeFollowListFlow: StateFlow<String> by lazy {
+        settings.defaultHomeFollowList
+            .map { it.code }
+            .stateIn(scope, SharingStarted.Eagerly, settings.defaultHomeFollowList.value.code)
+    }
+
+    override fun getBlockListAddress() = blockPeopleList.getBlockListAddress()
 
     override fun isWriteable(): Boolean = settings.isWriteable()
 

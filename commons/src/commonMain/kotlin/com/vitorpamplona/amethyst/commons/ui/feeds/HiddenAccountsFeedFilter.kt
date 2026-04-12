@@ -18,7 +18,30 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.old.dal
+package com.vitorpamplona.amethyst.commons.ui.feeds
 
-// Re-export from commons for backwards compatibility
-typealias OldBookmarkPrivateFeedFilter = com.vitorpamplona.amethyst.commons.ui.feeds.OldBookmarkPrivateFeedFilter
+import com.vitorpamplona.amethyst.commons.model.IAccount
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
+import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.CancellationException
+
+class HiddenAccountsFeedFilter(
+    val account: IAccount,
+    val cache: ICacheProvider,
+) : FeedFilter<User>() {
+    override fun feedKey(): String = account.userProfile().pubkeyHex
+
+    override fun showHiddenKey(): Boolean = true
+
+    override fun feed(): List<User> =
+        account.hiddenUsers.flow.value.hiddenUsers.reversed().mapNotNull {
+            try {
+                cache.getOrCreateUser(it)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.e("HiddenAccountsFeedFilter") { "Failed to parse key $it" }
+                null
+            }
+        }
+}

@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupList
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.BookmarkListState
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.OldBookmarkListState
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
@@ -128,14 +129,14 @@ interface IAccount {
     val liveHiddenUsersFlow: StateFlow<LiveHiddenUsers>
 
     /** Top navigation follow list filters per feed type (from topNavFilterFlow) */
-    val liveHomeFollowLists: StateFlow<ITopNavFilter>
-    val liveStoriesFollowLists: StateFlow<ITopNavFilter>
-    val liveDiscoveryFollowLists: StateFlow<ITopNavFilter>
-    val liveNotificationFollowLists: StateFlow<ITopNavFilter>
-    val livePollsFollowLists: StateFlow<ITopNavFilter>
-    val livePicturesFollowLists: StateFlow<ITopNavFilter>
-    val liveShortsFollowLists: StateFlow<ITopNavFilter>
-    val liveLongsFollowLists: StateFlow<ITopNavFilter>
+    val liveHomeFollowLists: StateFlow<IFeedTopNavFilter>
+    val liveStoriesFollowLists: StateFlow<IFeedTopNavFilter>
+    val liveDiscoveryFollowLists: StateFlow<IFeedTopNavFilter>
+    val liveNotificationFollowLists: StateFlow<IFeedTopNavFilter>
+    val livePollsFollowLists: StateFlow<IFeedTopNavFilter>
+    val livePicturesFollowLists: StateFlow<IFeedTopNavFilter>
+    val liveShortsFollowLists: StateFlow<IFeedTopNavFilter>
+    val liveLongsFollowLists: StateFlow<IFeedTopNavFilter>
 
     /** Block list address for the current user */
     fun getBlockListAddress(): Address

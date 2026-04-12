@@ -18,7 +18,18 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.old.dal
+package com.vitorpamplona.amethyst.commons.ui.feeds
 
-// Re-export from commons for backwards compatibility
-typealias OldBookmarkPrivateFeedFilter = com.vitorpamplona.amethyst.commons.ui.feeds.OldBookmarkPrivateFeedFilter
+import com.vitorpamplona.amethyst.commons.model.IAccount
+import com.vitorpamplona.amethyst.commons.model.Note
+
+class OldBookmarkPublicFeedFilter(
+    val account: IAccount,
+) : FeedFilter<Note>() {
+    override fun feedKey(): String =
+        account.liveOldBookmarks.value
+            .hashCode()
+            .toString()
+
+    override fun feed(): List<Note> = account.liveOldBookmarks.value.public
+}
