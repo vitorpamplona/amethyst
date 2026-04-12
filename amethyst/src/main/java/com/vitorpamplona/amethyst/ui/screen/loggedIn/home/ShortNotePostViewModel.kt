@@ -31,6 +31,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
@@ -165,8 +166,9 @@ enum class UserSuggestionAnchor {
 }
 
 @Stable
-open class ShortNotePostViewModel :
-    ViewModel(),
+open class ShortNotePostViewModel(
+    private val savedStateHandle: SavedStateHandle = SavedStateHandle(),
+) : ViewModel(),
     ILocationGrabber,
     IMessageField,
     IZapField,
@@ -177,7 +179,21 @@ open class ShortNotePostViewModel :
     lateinit var accountViewModel: AccountViewModel
     lateinit var account: Account
 
+    /** True when the ViewModel was restored from [SavedStateHandle] after process death. */
+    var restoredFromSavedState: Boolean = false
+        private set
+
     init {
+        // Restore draft tag and message text from SavedStateHandle after process death.
+        savedStateHandle.get<String>(KEY_DRAFT_TAG)?.let { savedTag ->
+            draftTag.set(savedTag)
+        }
+        savedStateHandle.get<String>(KEY_MESSAGE_TEXT)?.let { savedText ->
+            if (savedText.isNotBlank()) {
+                restoredFromSavedState = true
+            }
+        }
+
         viewModelScope.launch(Dispatchers.IO) {
             draftTag.versions.collectLatest {
                 // don't save the first
@@ -199,7 +215,10 @@ open class ShortNotePostViewModel :
     val iMetaAttachments = IMetaAttachments()
     var nip95attachments by mutableStateOf<List<Pair<FileStorageEvent, FileStorageHeaderEvent>>>(emptyList())
 
-    override val message = TextFieldState()
+    override val message =
+        TextFieldState(
+            initialText = savedStateHandle.get<String>(KEY_MESSAGE_TEXT) ?: "",
+        )
 
     val urlPreviews = PreviewState()
 
@@ -1156,6 +1175,7 @@ open class ShortNotePostViewModel :
         draftTag.rotate()
 
         message.setTextAndPlaceCursorAtEnd("")
+        clearSavedState()
 
         forkedFromNote = null
 
@@ -1238,7 +1258,20 @@ open class ShortNotePostViewModel :
         }
 
         precomputeAiResults()
+        saveToSavedState()
         draftTag.newVersion()
+    }
+
+    /** Persist message text and draft tag into [SavedStateHandle] so they survive process death. */
+    private fun saveToSavedState() {
+        savedStateHandle[KEY_MESSAGE_TEXT] = message.text.toString()
+        savedStateHandle[KEY_DRAFT_TAG] = draftTag.current
+    }
+
+    /** Clear saved state when the draft is intentionally discarded. */
+    private fun clearSavedState() {
+        savedStateHandle.remove<String>(KEY_MESSAGE_TEXT)
+        savedStateHandle.remove<String>(KEY_DRAFT_TAG)
     }
 
     override fun updateZapForwardTo(newZapForwardTo: TextFieldValue) {
@@ -1608,4 +1641,9 @@ open class ShortNotePostViewModel :
     }
 
     override fun locationManager(): LocationState = Amethyst.instance.locationManager
+
+    companion object {
+        private const val KEY_MESSAGE_TEXT = "draft_message_text"
+        private const val KEY_DRAFT_TAG = "draft_tag"
+    }
 }

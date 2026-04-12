@@ -44,13 +44,17 @@ fun PollPostScreen(
     postViewModel.init(accountViewModel)
 
     LaunchedEffect(postViewModel, accountViewModel) {
-        val draft = draftId?.let { accountViewModel.getNoteIfExists(it) }
-        postViewModel.load(null, null, null, null, draft)
-        message?.ifBlank { null }?.let {
-            postViewModel.message.setTextAndPlaceCursorAtEnd(it)
-            postViewModel.onMessageChanged()
+        if (!postViewModel.restoredFromSavedState) {
+            val draft = draftId?.let { accountViewModel.getNoteIfExists(it) }
+            postViewModel.load(null, null, null, null, draft)
+            message?.ifBlank { null }?.let {
+                postViewModel.message.setTextAndPlaceCursorAtEnd(it)
+                postViewModel.onMessageChanged()
+            }
+            postViewModel.wantsPoll = true
+        } else {
+            postViewModel.urlPreviews.update(postViewModel.message.text.toString())
         }
-        postViewModel.wantsPoll = true
     }
 
     NewPostScreenInner(postViewModel, accountViewModel, nav)

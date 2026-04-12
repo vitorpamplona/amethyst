@@ -150,21 +150,28 @@ fun ShortNotePostScreen(
     }
 
     LaunchedEffect(postViewModel, accountViewModel) {
-        val baseReplyTo = baseReplyToId?.let { accountViewModel.getNoteIfExists(it) }
-        val quote = quoteId?.let { accountViewModel.getNoteIfExists(it) }
-        val fork = forkId?.let { accountViewModel.getNoteIfExists(it) }
-        val version = versionId?.let { accountViewModel.getNoteIfExists(it) }
-        val draft = draftId?.let { accountViewModel.getNoteIfExists(it) }
-        postViewModel.load(baseReplyTo, quote, fork, version, draft)
-        message?.ifBlank { null }?.let {
-            postViewModel.message.setTextAndPlaceCursorAtEnd(it)
-            postViewModel.onMessageChanged()
-        }
-        attachment?.ifBlank { null }?.toUri()?.let {
-            withContext(Dispatchers.IO) {
-                val mediaType = context.contentResolver.getType(it)
-                postViewModel.selectImage(persistentListOf(SelectedMedia(it, mediaType)))
+        // Skip load when restored from SavedStateHandle after process death —
+        // the message text is already present in the TextFieldState.
+        if (!postViewModel.restoredFromSavedState) {
+            val baseReplyTo = baseReplyToId?.let { accountViewModel.getNoteIfExists(it) }
+            val quote = quoteId?.let { accountViewModel.getNoteIfExists(it) }
+            val fork = forkId?.let { accountViewModel.getNoteIfExists(it) }
+            val version = versionId?.let { accountViewModel.getNoteIfExists(it) }
+            val draft = draftId?.let { accountViewModel.getNoteIfExists(it) }
+            postViewModel.load(baseReplyTo, quote, fork, version, draft)
+            message?.ifBlank { null }?.let {
+                postViewModel.message.setTextAndPlaceCursorAtEnd(it)
+                postViewModel.onMessageChanged()
             }
+            attachment?.ifBlank { null }?.toUri()?.let {
+                withContext(Dispatchers.IO) {
+                    val mediaType = context.contentResolver.getType(it)
+                    postViewModel.selectImage(persistentListOf(SelectedMedia(it, mediaType)))
+                }
+            }
+        } else {
+            // Restored from process death — update URL previews for the restored text.
+            postViewModel.urlPreviews.update(postViewModel.message.text.toString())
         }
     }
 
