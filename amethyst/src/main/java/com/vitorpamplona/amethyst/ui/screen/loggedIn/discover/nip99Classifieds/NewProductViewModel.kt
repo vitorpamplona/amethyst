@@ -37,6 +37,8 @@ import com.vitorpamplona.amethyst.commons.compose.currentWord
 import com.vitorpamplona.amethyst.commons.compose.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.compose.replaceCurrentWord
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
+import com.vitorpamplona.amethyst.commons.viewmodels.posting.ClassifiedsPostState
+import com.vitorpamplona.amethyst.commons.viewmodels.posting.LongFormPostState
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -72,29 +74,18 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohash
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.getGeoHash
-import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
-import com.vitorpamplona.quartz.nip01Core.tags.references.references
-import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
-import com.vitorpamplona.quartz.nip10Notes.content.findNostrUris
 import com.vitorpamplona.quartz.nip10Notes.content.findURLs
-import com.vitorpamplona.quartz.nip18Reposts.quotes.quotes
-import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
-import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
-import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarningReason
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitive
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip40Expiration.expiration
-import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplits
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiser
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
 import com.vitorpamplona.quartz.nip92IMeta.imetas
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ProductImageMeta
-import com.vitorpamplona.quartz.nip99Classifieds.image
 import com.vitorpamplona.quartz.nip99Classifieds.tags.ConditionTag
-import com.vitorpamplona.quartz.nip99Classifieds.tags.PriceTag
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
@@ -113,6 +104,7 @@ open class NewProductViewModel :
     IZapRaiser,
     IExpiration {
     val draftTag = DraftTagState()
+    val postState = ClassifiedsPostState()
 
     lateinit var accountViewModel: AccountViewModel
     lateinit var account: Account
@@ -334,8 +326,6 @@ open class NewProductViewModel :
     }
 
     private suspend fun createTemplate(): EventTemplate<out Event>? {
-        val accountViewModel = accountViewModel
-
         val tagger =
             NewMessageTagger(
                 message = message.text.toString(),
@@ -343,54 +333,39 @@ open class NewProductViewModel :
             )
         tagger.run()
 
-        val emojis = findEmoji(tagger.message, account.emoji.myEmojis.value)
+        syncToPostState()
+
+        val emojiMedia = account.emoji.myEmojis.value
+        val emojis =
+            LongFormPostState.findEmoji(
+                tagger.message,
+                emojiMedia?.map { Pair(it.code, it.link) },
+            )
         val urls = findURLs(tagger.message)
         val usedAttachments = iMetaDescription.filterIsIn(urls.toSet()) + productImages.map { it.toIMeta() }
 
-        val geoHash = if (wantsToAddGeoHash) (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString() else null
-
-        val zapReceiver = if (wantsForwardZapTo) forwardZapTo.value.toZapSplitSetup() else null
-        val localZapRaiserAmount = if (wantsZapraiser) zapRaiserAmount.value else null
-        val contentWarningReason = if (wantsToMarkAsSensitive) contentWarningDescription else null
-        val localExpirationDate = if (wantsExpirationDate) expirationDate else null
-
-        val quotes = findNostrUris(tagger.message)
-
-        val template =
-            ClassifiedsEvent.build(
-                title.text.toString(),
-                PriceTag(price.text.toString(), "SATS", null),
-                tagger.message,
-                locationText.text.toString().ifBlank { null },
-                condition,
-            ) {
-                productImages.forEach { image(it.url) }
-
-                hashtags(listOfNotNull(category.text.toString().ifBlank { null }) + findHashtags(tagger.message))
-                quotes(quotes)
-
-                geoHash?.let { geohash(it) }
-                localZapRaiserAmount?.let { zapraiser(it) }
-                zapReceiver?.let { zapSplits(it) }
-                contentWarningReason?.let { contentWarning(it) }
-                localExpirationDate?.let { expiration(it) }
-
-                emojis(emojis)
-                imetas(usedAttachments)
-                references(urls)
-            }
-
-        return template
+        return postState.createTemplate(
+            tagger.message,
+            emojis,
+            usedAttachments,
+            productImages.map { it.url },
+        )
     }
 
-    fun findEmoji(
-        message: String,
-        myEmojiSet: List<EmojiPackState.EmojiMedia>?,
-    ): List<EmojiUrlTag> {
-        if (myEmojiSet == null) return emptyList()
-        return CustomEmoji.findAllEmojiCodes(message).mapNotNull { possibleEmoji ->
-            myEmojiSet.firstOrNull { it.code == possibleEmoji }?.let { EmojiUrlTag(it.code, it.link) }
-        }
+    /** Push Compose mutable state into the platform-independent state object. */
+    private fun syncToPostState() {
+        postState.updateTitle(title.text.toString())
+        postState.updatePrice(price.text.toString())
+        postState.updateLocation(locationText.text.toString())
+        postState.updateCategory(category.text.toString())
+        postState.updateCondition(condition)
+
+        val geoHash = if (wantsToAddGeoHash) (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString() else null
+        postState.options.updateGeoHash(wantsToAddGeoHash, geoHash)
+        postState.options.updateZapRaiser(wantsZapraiser, zapRaiserAmount.value)
+        postState.options.updateZapSplits(if (wantsForwardZapTo) forwardZapTo.value.toZapSplitSetup() else null)
+        postState.options.updateContentWarning(wantsToMarkAsSensitive, contentWarningDescription)
+        postState.options.updateExpiration(wantsExpirationDate, expirationDate)
     }
 
     fun upload(
