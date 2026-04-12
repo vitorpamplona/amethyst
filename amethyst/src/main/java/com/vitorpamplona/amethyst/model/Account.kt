@@ -306,10 +306,10 @@ class Account(
     val kind3FollowList = Kind3FollowListState(signer, cache, scope, settings)
 
     val ephemeralChatListDecryptionCache = EphemeralChatListDecryptionCache(signer)
-    val ephemeralChatList = EphemeralChatListState(signer, cache, ephemeralChatListDecryptionCache, scope, settings)
+    override val ephemeralChatList = EphemeralChatListState(signer, cache, ephemeralChatListDecryptionCache, scope, settings)
 
     val publicChatListDecryptionCache = PublicChatListDecryptionCache(signer)
-    val publicChatList = PublicChatListState(signer, cache, publicChatListDecryptionCache, scope, settings)
+    override val publicChatList = PublicChatListState(signer, cache, publicChatListDecryptionCache, scope, settings)
 
     val communityListDecryptionCache = CommunityListDecryptionCache(signer)
     val communityList = CommunityListState(signer, cache, communityListDecryptionCache, scope, settings)
@@ -2215,7 +2215,7 @@ class Account(
 
     suspend fun decryptZapOrNull(event: LnZapRequestEvent): LnZapPrivateEvent? = if (event.isPrivateZap() && isWriteable()) privateZapsDecryptionCache.decryptPrivateZap(event) else null
 
-    fun isAllHidden(users: Set<HexKey>): Boolean = users.all { isHidden(it) }
+    override fun isAllHidden(users: Set<HexKey>): Boolean = users.all { isHidden(it) }
 
     override fun isHidden(user: User) = isHidden(user.pubkeyHex)
 

@@ -24,6 +24,9 @@ import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
+import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
+import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -135,4 +138,22 @@ interface ICacheProvider {
     fun getOrCreateUser(pubkey: HexKey): User?
 
     fun justConsumeMyOwnEvent(event: Event): Boolean
+
+    /**
+     * Gets or creates a PublicChatChannel by event ID.
+     * Used for resolving NIP-28 public chat channels.
+     *
+     * @param key The channel event ID in hex format
+     * @return The PublicChatChannel (existing or newly created)
+     */
+    fun getOrCreatePublicChatChannel(key: HexKey): PublicChatChannel
+
+    /**
+     * Gets or creates an EphemeralChatChannel by room ID.
+     * Used for resolving ephemeral chat channels.
+     *
+     * @param key The room ID
+     * @return The EphemeralChatChannel (existing or newly created)
+     */
+    fun getOrCreateEphemeralChannel(key: RoomId): EphemeralChatChannel
 }

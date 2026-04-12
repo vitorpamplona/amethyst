@@ -62,7 +62,7 @@ class AccountFeedContentStates(
     val homeNewThreads = FeedContentState(HomeNewThreadFeedFilter(account), scope, LocalCache)
     val homeReplies = FeedContentState(HomeConversationsFeedFilter(account), scope, LocalCache)
 
-    val dmKnown = FeedContentState(ChatroomListKnownFeedFilter(account), scope, LocalCache)
+    val dmKnown = FeedContentState(ChatroomListKnownFeedFilter(account, LocalCache), scope, LocalCache)
     val dmNew = FeedContentState(ChatroomListNewFeedFilter(account), scope, LocalCache)
 
     val videoFeed = FeedContentState(VideoFeedFilter(account), scope, LocalCache)
