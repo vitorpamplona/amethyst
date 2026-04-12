@@ -18,9 +18,9 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model
+package com.vitorpamplona.amethyst.commons.model.cache
 
-import com.vitorpamplona.amethyst.commons.model.cache.LargeSoftCache
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.utils.cache.CacheCollectors

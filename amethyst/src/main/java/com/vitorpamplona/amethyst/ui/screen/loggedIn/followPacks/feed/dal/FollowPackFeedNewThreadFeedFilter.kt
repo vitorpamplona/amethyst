@@ -20,11 +20,11 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.feed.dal
 
+import com.vitorpamplona.amethyst.commons.model.cache.filterIntoSet
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.filterIntoSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.allUserFollows.AllUserFollowsByOutboxTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.allUserFollows.AllUserFollowsByProxyTopNavFilter
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
