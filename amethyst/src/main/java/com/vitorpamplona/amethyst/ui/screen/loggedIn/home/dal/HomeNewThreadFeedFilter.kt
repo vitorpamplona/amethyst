@@ -127,7 +127,7 @@ class HomeNewThreadFeedFilter(
                 noteEvent is AudioTrackEvent ||
                 noteEvent is VoiceEvent ||
                 noteEvent is AudioHeaderEvent ||
-                noteEvent is ChessGameEvent ||
+                (noteEvent is ChessGameEvent && noteEvent.isCompletedGame()) ||
                 noteEvent is LiveChessGameEndEvent ||
                 noteEvent is AttestationEvent ||
                 noteEvent is AttestationRequestEvent ||

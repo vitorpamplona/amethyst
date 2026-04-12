@@ -55,6 +55,25 @@ class ChessGameEvent(
      */
     fun pgn(): String = content
 
+    /**
+     * Check if this is a completed game (has a definitive result).
+     *
+     * In-progress games have [Result "*"] in PGN. Completed games have
+     * [Result "1-0"], [Result "0-1"], or [Result "1/2-1/2"].
+     *
+     * Some chess apps (e.g. nostrchess) publish a new kind 64 event after
+     * every move with the running PGN. Only completed games should appear
+     * in general feeds to avoid spamming followers with every move.
+     */
+    fun isCompletedGame(): Boolean {
+        // Fast check: look for PGN Result tag without full parsing
+        val idx = content.indexOf("[Result ")
+        if (idx < 0) return false
+        return content.indexOf("\"1-0\"", idx) != -1 ||
+            content.indexOf("\"0-1\"", idx) != -1 ||
+            content.indexOf("\"1/2-1/2\"", idx) != -1
+    }
+
     companion object {
         const val KIND = 64
         const val ALT_DESCRIPTION = "Chess Game"
