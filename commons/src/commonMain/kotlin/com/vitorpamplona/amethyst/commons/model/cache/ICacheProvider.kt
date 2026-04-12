@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.utils.cache.ICacheOperations
 
 /**
  * Cache provider interface for accessing cached Notes, Users, and Channels.
@@ -41,6 +42,18 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
  * - Platform-agnostic model layer
  */
 interface ICacheProvider {
+    /**
+     * Collection-level access to cached notes.
+     * Provides filterIntoSet, mapFlattenIntoSet, etc. for feed filters.
+     */
+    val notes: ICacheOperations<HexKey, Note>
+
+    /**
+     * Collection-level access to cached addressable notes.
+     * Provides filterIntoSet, mapFlattenIntoSet, etc. for feed filters.
+     */
+    val addressables: ICacheOperations<Address, AddressableNote>
+
     /**
      * Gets a channel by Note reference.
      * Used for resolving relay hints for channel messages.

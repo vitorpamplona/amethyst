@@ -24,6 +24,7 @@ import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.screen.AndroidFeedViewModel
 
@@ -31,7 +32,7 @@ import com.vitorpamplona.amethyst.ui.screen.AndroidFeedViewModel
 class UserProfileConversationsFeedViewModel(
     val user: User,
     val account: Account,
-) : AndroidFeedViewModel(UserProfileConversationsFeedFilter(user, account)) {
+) : AndroidFeedViewModel(UserProfileConversationsFeedFilter(user, account, LocalCache)) {
     class Factory(
         val user: User,
         val account: Account,
