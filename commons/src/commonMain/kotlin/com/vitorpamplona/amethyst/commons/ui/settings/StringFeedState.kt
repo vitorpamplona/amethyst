@@ -18,10 +18,21 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.actions.mediaServers
+package com.vitorpamplona.amethyst.commons.ui.settings
 
-// Re-export from commons for backwards compatibility
-typealias ServerName = com.vitorpamplona.amethyst.commons.ui.actions.mediaServers.ServerName
-typealias ServerType = com.vitorpamplona.amethyst.commons.ui.actions.mediaServers.ServerType
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.coroutines.flow.MutableStateFlow
 
-val DEFAULT_MEDIA_SERVERS = com.vitorpamplona.amethyst.commons.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
+sealed class StringFeedState {
+    object Loading : StringFeedState()
+
+    class Loaded(
+        val feed: MutableStateFlow<ImmutableList<String>>,
+    ) : StringFeedState()
+
+    object Empty : StringFeedState()
+
+    class FeedError(
+        val errorMessage: String,
+    ) : StringFeedState()
+}

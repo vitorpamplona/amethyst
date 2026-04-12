@@ -18,10 +18,29 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.actions.mediaServers
+package com.vitorpamplona.amethyst.commons.ui.video
 
-// Re-export from commons for backwards compatibility
-typealias ServerName = com.vitorpamplona.amethyst.commons.ui.actions.mediaServers.ServerName
-typealias ServerType = com.vitorpamplona.amethyst.commons.ui.actions.mediaServers.ServerType
+class SupportedContent(
+    val blockedUrls: List<String>,
+    val mimeTypes: Set<String>,
+    val supportedFileExtensions: Set<String>,
+) {
+    private fun validExtension(fullUrl: String): Boolean {
+        val queryIndex = fullUrl.indexOf('?')
+        if (queryIndex > 0) {
+            return supportedFileExtensions.any { fullUrl.startsWith(it, queryIndex - it.length) }
+        }
 
-val DEFAULT_MEDIA_SERVERS = com.vitorpamplona.amethyst.commons.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
+        val fragmentIndex = fullUrl.indexOf('#')
+        if (fragmentIndex > 0) {
+            return supportedFileExtensions.any { fullUrl.startsWith(it, fragmentIndex - it.length) }
+        }
+
+        return supportedFileExtensions.any { fullUrl.endsWith(it) }
+    }
+
+    fun acceptableUrl(
+        url: String,
+        mimeType: String?,
+    ) = blockedUrls.none { url.contains(it) } && ((mimeType != null && mimeTypes.contains(mimeType)) || validExtension(url))
+}
