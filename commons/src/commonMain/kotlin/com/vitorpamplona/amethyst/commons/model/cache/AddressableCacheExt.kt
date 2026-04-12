@@ -18,6 +18,30 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.webBookmarks.dal
+package com.vitorpamplona.amethyst.commons.model.cache
 
-typealias WebBookmarkFeedFilter = com.vitorpamplona.amethyst.commons.ui.feeds.WebBookmarkFeedFilter
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.utils.cache.CacheCollectors
+import com.vitorpamplona.quartz.utils.cache.ICacheOperations
+
+private const val START_KEY = "0000000000000000000000000000000000000000000000000000000000000000"
+private const val END_KEY = "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+private const val END_D_TAG = "\uFFFF\uFFFF\uFFFF\uFFFF"
+
+private fun kindStart(
+    kind: Int,
+    pubKey: HexKey = START_KEY,
+) = Address(kind, pubKey, "")
+
+private fun kindEnd(
+    kind: Int,
+    pubKey: HexKey = END_KEY,
+) = Address(kind, pubKey, END_D_TAG)
+
+fun ICacheOperations<Address, AddressableNote>.filterIntoSet(
+    kind: Int,
+    pubKey: HexKey,
+    consumer: CacheCollectors.BiFilter<Address, AddressableNote> = CacheCollectors.BiFilter { _, _ -> true },
+): Set<AddressableNote> = filterIntoSet(kindStart(kind, pubKey), kindEnd(kind, pubKey), consumer)

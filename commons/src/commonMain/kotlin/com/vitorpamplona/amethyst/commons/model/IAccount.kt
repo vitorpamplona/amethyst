@@ -108,6 +108,9 @@ interface IAccount {
     /** Whether a note is acceptable (not hidden, not blocked, etc.) */
     fun isAcceptable(note: Note): Boolean
 
+    /** Current live hidden users state for isHiddenFor() checks */
+    fun liveHiddenUsers(): LiveHiddenUsers
+
     /** Send a NIP-04 encrypted direct message */
     suspend fun sendNip04PrivateMessage(eventTemplate: EventTemplate<PrivateDmEvent>)
 

@@ -20,42 +20,4 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.apps
 
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
-import com.vitorpamplona.quartz.nip89AppHandlers.recommendation.AppRecommendationEvent
-import com.vitorpamplona.quartz.utils.flattenToSet
-
-class UserProfileAppRecommendationsFeedFilter(
-    val user: User,
-) : AdditiveFeedFilter<Note>() {
-    override fun feedKey(): String = user.pubkeyHex
-
-    override fun feed(): List<Note> {
-        val recommendations =
-            LocalCache.addressables.mapFlattenIntoSet { _, note ->
-                filterMap(note)
-            }
-
-        return sort(recommendations)
-    }
-
-    override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)
-
-    private fun innerApplyFilter(collection: Collection<Note>): Set<Note> = collection.mapNotNull { filterMap(it) }.flattenToSet()
-
-    fun filterMap(it: Note): List<Note>? {
-        val noteEvent = it.event
-        if (noteEvent is AppRecommendationEvent) {
-            if (noteEvent.pubKey == user.pubkeyHex) {
-                return noteEvent.recommendations().map { LocalCache.getOrCreateAddressableNote(it.address) }
-            }
-        }
-
-        return null
-    }
-
-    override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder)
-}
+typealias UserProfileAppRecommendationsFeedFilter = com.vitorpamplona.amethyst.commons.ui.feeds.UserProfileAppRecommendationsFeedFilter

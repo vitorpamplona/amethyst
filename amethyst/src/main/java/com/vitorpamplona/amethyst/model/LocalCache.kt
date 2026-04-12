@@ -267,8 +267,8 @@ object LocalCache : ILocalCache, ICacheProvider {
     val antiSpam = AntiSpamFilter()
 
     val users = LargeSoftCache<HexKey, User>()
-    val notes = LargeSoftCache<HexKey, Note>()
-    val addressables = LargeSoftCache<Address, AddressableNote>()
+    override val notes = LargeSoftCache<HexKey, Note>()
+    override val addressables = LargeSoftCache<Address, AddressableNote>()
 
     val chatroomList = LargeCache<HexKey, ChatroomList>()
     val publicChatChannels = LargeCache<HexKey, PublicChatChannel>()

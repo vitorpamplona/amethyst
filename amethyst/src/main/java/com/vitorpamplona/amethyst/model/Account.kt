@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.commons.marmot.MarmotManager
 import com.vitorpamplona.amethyst.commons.model.IAccount
+import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatListState
@@ -2220,6 +2221,8 @@ class Account(
     override fun isHidden(user: User) = isHidden(user.pubkeyHex)
 
     fun isHidden(userHex: String): Boolean = hiddenUsers.flow.value.isUserHidden(userHex)
+
+    override fun liveHiddenUsers(): LiveHiddenUsers = hiddenUsers.flow.value
 
     override fun followingKeySet(): Set<HexKey> = kind3FollowList.flow.value.authors
 

@@ -91,7 +91,7 @@ class AccountFeedContentStates(
 
     val drafts = FeedContentState(DraftEventsFeedFilter(account), scope, LocalCache)
 
-    val webBookmarks = FeedContentState(WebBookmarkFeedFilter(account), scope, LocalCache)
+    val webBookmarks = FeedContentState(WebBookmarkFeedFilter(account, LocalCache), scope, LocalCache)
 
     suspend fun init() {
         notificationSummary.initializeSuspend()
