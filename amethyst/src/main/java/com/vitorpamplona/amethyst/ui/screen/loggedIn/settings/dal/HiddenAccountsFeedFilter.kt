@@ -20,28 +20,5 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.dal
 
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.ui.dal.FeedFilter
-import com.vitorpamplona.quartz.utils.Log
-import kotlinx.coroutines.CancellationException
-
-class HiddenAccountsFeedFilter(
-    val account: Account,
-) : FeedFilter<User>() {
-    override fun feedKey(): String = account.userProfile().pubkeyHex
-
-    override fun showHiddenKey(): Boolean = true
-
-    override fun feed(): List<User> =
-        account.hiddenUsers.flow.value.hiddenUsers.reversed().mapNotNull {
-            try {
-                LocalCache.getOrCreateUser(it)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                Log.e("HiddenAccountsFeedFilter") { "Failed to parse key $it" }
-                null
-            }
-        }
-}
+// Re-export from commons for backwards compatibility
+typealias HiddenAccountsFeedFilter = com.vitorpamplona.amethyst.commons.ui.feeds.dal.HiddenAccountsFeedFilter

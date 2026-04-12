@@ -105,6 +105,18 @@ interface IAccount {
     /** Marmot MLS group chat list */
     val marmotGroupList: MarmotGroupList
 
+    /** Current hidden users state (live, from flows) */
+    val liveHiddenUsers: LiveHiddenUsers
+
+    /** Whether the given user is known (followed) by this account */
+    fun isKnown(user: User): Boolean
+
+    /** Whether the given hex key is known (followed) by this account */
+    fun isKnown(user: String): Boolean
+
+    /** Currently pinned notes list */
+    fun pinnedNotesList(): List<Note>
+
     /** Whether a note is acceptable (not hidden, not blocked, etc.) */
     fun isAcceptable(note: Note): Boolean
 

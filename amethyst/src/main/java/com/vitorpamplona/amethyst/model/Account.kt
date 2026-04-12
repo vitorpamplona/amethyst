@@ -267,6 +267,13 @@ class Account(
     override val hiddenWordsCase: List<DualCase> get() = hiddenUsers.flow.value.hiddenWordsCase
     override val hiddenUsersHashCodes: Set<Int> get() = hiddenUsers.flow.value.hiddenUsersHashCodes
     override val spammersHashCodes: Set<Int> get() = hiddenUsers.flow.value.spammersHashCodes
+    override val liveHiddenUsers get() = hiddenUsers.flow.value
+
+    override fun isKnown(user: User): Boolean = user.pubkeyHex in allFollows.flow.value.authors
+
+    override fun isKnown(user: String): Boolean = user in allFollows.flow.value.authors
+
+    override fun pinnedNotesList(): List<Note> = pinState.pinnedNotesList.value
 
     val userMetadata = UserMetadataState(signer, cache, scope, settings)
 
@@ -2272,10 +2279,6 @@ class Account(
     fun isFollowing(user: User): Boolean = user.pubkeyHex in followingKeySet()
 
     fun isFollowing(user: HexKey): Boolean = user in followingKeySet()
-
-    fun isKnown(user: User): Boolean = user.pubkeyHex in allFollows.flow.value.authors
-
-    fun isKnown(user: HexKey): Boolean = user in allFollows.flow.value.authors
 
     private fun hasExcessiveHashtags(note: Note): Boolean {
         val limit = settings.syncedSettings.security.maxHashtagLimit.value
