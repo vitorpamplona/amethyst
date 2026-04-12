@@ -44,6 +44,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
@@ -73,9 +74,11 @@ import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.StatusTag
 @Composable
 fun RenderMeetingSpaceEvent(
     baseNote: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Row(modifier = Modifier.padding(top = 5.dp)) {
         Column(
             modifier = Modifier.fillMaxWidth(),
@@ -89,9 +92,11 @@ fun RenderMeetingSpaceEvent(
 @Composable
 fun RenderMeetingSpaceEventInner(
     baseNote: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val noteEvent = baseNote.event as? MeetingSpaceEvent ?: return
 
     val eventUpdates by observeNote(baseNote, accountViewModel)
@@ -158,9 +163,11 @@ fun RenderMeetingSpaceEventInner(
 @Composable
 fun RenderMeetingRoomEvent(
     baseNote: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Row(modifier = Modifier.padding(top = 5.dp)) {
         Column(
             modifier = Modifier.fillMaxWidth(),
@@ -174,9 +181,11 @@ fun RenderMeetingRoomEvent(
 @Composable
 fun RenderMeetingRoomEventInner(
     baseNote: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val noteEvent = baseNote.event as? MeetingRoomEvent ?: return
 
     val eventUpdates by observeNote(baseNote, accountViewModel)
@@ -233,9 +242,11 @@ fun RenderMeetingRoomEventInner(
 @Composable
 private fun RenderParticipants(
     participants: List<ParticipantTag>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     var participantUsers by remember {
         mutableStateOf<ImmutableList<Pair<ParticipantTag, User>>>(
             persistentListOf(),

@@ -45,6 +45,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.nip51Lists.relayLists.RelayListCard
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserRelayIntoList
@@ -70,9 +71,11 @@ import kotlinx.coroutines.launch
 fun DisplayRelaySet(
     baseNote: Note,
     backgroundColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val noteEvent = baseNote.event as? RelaySetEvent ?: return
 
     val relays by
@@ -103,9 +106,11 @@ fun DisplayRelaySet(
 fun DisplayNIP65RelayList(
     baseNote: Note,
     backgroundColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val noteEvent = baseNote.event as? AdvertisedRelayListEvent ?: return
 
     val writeRelays by
@@ -149,9 +154,11 @@ fun DisplayNIP65RelayList(
 fun DisplayDMRelayList(
     baseNote: Note,
     backgroundColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val noteEvent = baseNote.event as? ChatMessageRelayListEvent ?: return
 
     val relays by
@@ -177,9 +184,11 @@ fun DisplayDMRelayList(
 fun DisplaySearchRelayList(
     baseNote: Note,
     backgroundColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val relays by accountViewModel.account.searchRelayListDecryptionCache.observeDecryptedRelayList(baseNote).collectAsStateWithLifecycle(
         accountViewModel.account.searchRelayListDecryptionCache.fastStartValueForRelayList(baseNote),
     )
@@ -198,9 +207,11 @@ fun DisplaySearchRelayList(
 fun DisplayBlockedRelayList(
     baseNote: Note,
     backgroundColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val relays by accountViewModel.account.blockedRelayListDecryptionCache.observeDecryptedRelayList(baseNote).collectAsStateWithLifecycle(
         accountViewModel.account.blockedRelayListDecryptionCache.fastStartValueForRelayList(baseNote),
     )
@@ -219,9 +230,11 @@ fun DisplayBlockedRelayList(
 fun DisplayTrustedRelayList(
     baseNote: Note,
     backgroundColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val relays by accountViewModel.account.trustedRelayListDecryptionCache.observeDecryptedRelayList(baseNote).collectAsStateWithLifecycle(
         accountViewModel.account.trustedRelayListDecryptionCache.fastStartValueForRelayList(baseNote),
     )
@@ -240,9 +253,11 @@ fun DisplayTrustedRelayList(
 fun DisplayRelayFeedsList(
     baseNote: Note,
     backgroundColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val relays by accountViewModel.account.relayFeedsListDecryptionCache.observeDecryptedRelayList(baseNote).collectAsStateWithLifecycle(
         accountViewModel.account.relayFeedsListDecryptionCache.fastStartValueForRelayList(baseNote),
     )
@@ -261,9 +276,11 @@ fun DisplayRelayFeedsList(
 fun DisplayProxyRelayList(
     baseNote: Note,
     backgroundColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val relays by accountViewModel.account.proxyRelayListDecryptionCache.observeDecryptedRelayList(baseNote).collectAsStateWithLifecycle(
         accountViewModel.account.proxyRelayListDecryptionCache.fastStartValueForRelayList(baseNote),
     )
@@ -282,9 +299,11 @@ fun DisplayProxyRelayList(
 fun DisplayIndexerRelayList(
     baseNote: Note,
     backgroundColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val relays by accountViewModel.account.indexerRelayListDecryptionCache.observeDecryptedRelayList(baseNote).collectAsStateWithLifecycle(
         accountViewModel.account.indexerRelayListDecryptionCache.fastStartValueForRelayList(baseNote),
     )
@@ -303,9 +322,11 @@ fun DisplayIndexerRelayList(
 fun DisplayBroadcastRelayList(
     baseNote: Note,
     backgroundColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val relays by accountViewModel.account.broadcastRelayListDecryptionCache.observeDecryptedRelayList(baseNote).collectAsStateWithLifecycle(
         accountViewModel.account.broadcastRelayListDecryptionCache.fastStartValueForRelayList(baseNote),
     )
@@ -326,9 +347,11 @@ fun DisplayRelaySet(
     relayListName: String,
     relayDescription: String?,
     backgroundColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     var expanded by remember { mutableStateOf(false) }
 
     val toMembersShow =
@@ -408,9 +431,11 @@ fun DisplayRelaySet(
 @Composable
 private fun RelayOptionsAction(
     relay: NormalizedRelayUrl,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val isCurrentlyOnTheUsersList by observeUserRelayIntoList(relay, accountViewModel)
     val clipboardManager = LocalClipboard.current
     val scope = rememberCoroutineScope()

@@ -37,6 +37,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -54,9 +55,11 @@ import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 @Composable
 fun RenderWikiContent(
     note: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val noteEvent = note.event as? WikiNoteEvent ?: return
 
     WikiNoteHeader(noteEvent, note, accountViewModel, nav)
@@ -66,9 +69,11 @@ fun RenderWikiContent(
 private fun WikiNoteHeader(
     noteEvent: WikiNoteEvent,
     note: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val title = remember(noteEvent) { noteEvent.title() }
     val summary =
         remember(noteEvent) {

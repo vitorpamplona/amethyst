@@ -75,6 +75,7 @@ import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.nip88Polls.PollResponsesCache
 import com.vitorpamplona.amethyst.commons.model.nip88Polls.TallyResults
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
@@ -114,9 +115,11 @@ fun RenderPoll(
     canPreview: Boolean,
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val noteEvent = note.event as? PollEvent ?: return
 
     if (makeItShort && accountViewModel.isLoggedUser(note.author)) {
@@ -144,9 +147,11 @@ fun InnerRenderPoll(
     canPreview: Boolean,
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val tags = remember(note) { note.event?.tags?.toImmutableListOfLists() ?: EmptyTagList }
     val callbackUri = remember(note) { note.toNostrUri() }
 
@@ -225,10 +230,12 @@ class PollItemCard(
 fun RenderPollCard(
     event: PollEvent,
     pollState: PollResponsesCache,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     galleryUser: @Composable RowScope.(user: User) -> Unit,
     labelContent: @Composable ColumnScope.(code: String, label: String) -> Unit,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val card =
         remember(event) {
             PollCard(

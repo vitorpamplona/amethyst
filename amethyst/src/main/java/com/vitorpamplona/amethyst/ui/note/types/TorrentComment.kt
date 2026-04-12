@@ -46,6 +46,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.countToHumanReadableBytes
@@ -163,9 +164,11 @@ fun RenderTorrentComment(
     unPackReply: ReplyRenderType,
     backgroundColor: MutableState<Color>,
     editState: State<GenericLoadable<EditState>>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Column {
         val noteEvent = note.event
 
@@ -208,9 +211,11 @@ fun RenderTorrentComment(
 fun TorrentHeader(
     torrentHex: String,
     modifier: Modifier,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     LoadNote(baseNoteHex = torrentHex, accountViewModel = accountViewModel) {
         if (it != null) {
             ShortTorrentHeader(it, modifier, accountViewModel, nav)
@@ -222,9 +227,11 @@ fun TorrentHeader(
 fun ShortTorrentHeader(
     baseNote: Note,
     modifier: Modifier,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val noteEvent by observeNoteEvent<TorrentEvent>(baseNote, accountViewModel)
 
     ShortTorrentHeader(
@@ -241,9 +248,11 @@ fun ShortTorrentHeader(
     title: String,
     size: String,
     modifier: Modifier = Modifier,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = modifier,

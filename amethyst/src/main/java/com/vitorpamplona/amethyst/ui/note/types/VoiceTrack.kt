@@ -53,6 +53,7 @@ import androidx.media3.ui.compose.SURFACE_TYPE_TEXTURE_VIEW
 import androidx.media3.ui.compose.state.rememberPlayPauseButtonState
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.playback.composable.DEFAULT_MUTED_SETTING
 import com.vitorpamplona.amethyst.service.playback.composable.GetVideoController
@@ -88,9 +89,11 @@ import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
 @Composable
 fun RenderVoiceTrack(
     note: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val noteEvent = note.event as? BaseVoiceEvent ?: return
 
     VoiceHeader(noteEvent, note, accountViewModel, nav)
@@ -100,9 +103,11 @@ fun RenderVoiceTrack(
 fun VoiceHeader(
     noteEvent: BaseVoiceEvent,
     note: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val media =
         remember(noteEvent) {
             noteEvent.content.ifBlank { null } ?: noteEvent.iMetaTags().firstOrNull()?.url
@@ -141,9 +146,11 @@ fun RenderAudioWithWaveform(
     mimeType: String?,
     waveform: WaveformData?,
     note: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val noteEvent = note.event ?: return
     val callbackUri = remember(note) { note.toNostrUri() }
 
@@ -194,8 +201,10 @@ fun RenderVoicePlayer(
     controllerState: MediaControllerState,
     waveform: WaveformData? = null,
     borderModifier: Modifier,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val controllerVisible = remember(controllerState) { mutableStateOf(false) }
 
     Box(modifier = borderModifier) {
@@ -285,9 +294,11 @@ fun Event.isAudioOnlyContent(): Boolean {
 @Composable
 fun RenderAudioFromIMeta(
     note: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val noteEvent = note.event ?: return
 
     val audioMeta = remember(noteEvent) { noteEvent.getAudioMetaWithWaveform() } ?: return
@@ -314,8 +325,10 @@ fun RenderTopButtonsForVoice(
     controllerState: MediaControllerState,
     controllerVisible: MutableState<Boolean>,
     modifier: Modifier,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val context = LocalContext.current.getActivity()
 
     RenderTopButtonsForVoice(
@@ -343,8 +356,10 @@ fun RenderTopButtonsForVoice(
     onMuteClick: (Boolean) -> Unit,
     onPictureInPictureClick: () -> Unit,
     modifier: Modifier,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Row(modifier) {
         if (!isLiveStreaming(mediaData.videoUri)) {
             AnimatedShareButton(controllerVisible) { popupExpanded, toggle ->

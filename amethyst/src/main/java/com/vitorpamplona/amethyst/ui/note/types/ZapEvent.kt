@@ -38,6 +38,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -65,9 +66,11 @@ import kotlinx.coroutines.withContext
 fun RenderLnZap(
     note: Note,
     backgroundColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val zapEvent = note.event as? LnZapEvent ?: return
 
     val card by parseAuthorCommentAndAmount(note, accountViewModel)
@@ -87,7 +90,7 @@ fun RenderLnZap(
 @Composable
 private fun parseAuthorCommentAndAmount(
     zapEventNote: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) = produceState(
     ZapAmountCommentNotification(
         user = null,
@@ -96,6 +99,8 @@ private fun parseAuthorCommentAndAmount(
     ),
     zapEventNote,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val newState = accountViewModel.innerDecryptAmountMessage(zapEventNote)
     value = newState ?: ZapAmountCommentNotification(
         user = null,
@@ -139,9 +144,11 @@ fun TransferCard(
     toUser: String,
     backgroundColor: MutableState<Color>,
     modifier: Modifier = Modifier,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Row(
         modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
