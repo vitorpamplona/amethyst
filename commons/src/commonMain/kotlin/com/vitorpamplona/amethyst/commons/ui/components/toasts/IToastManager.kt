@@ -18,30 +18,30 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.nip22Comments
+package com.vitorpamplona.amethyst.commons.ui.components.toasts
 
-import androidx.compose.runtime.Composable
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.quartz.nip73ExternalIds.ExternalId
-import com.vitorpamplona.quartz.nip73ExternalIds.location.GeohashId
-import com.vitorpamplona.quartz.nip73ExternalIds.topics.HashtagId
+/**
+ * Cross-platform interface for toast notifications.
+ *
+ * Abstracts the Android-specific ToastManager for use in commonMain.
+ * The Android ToastManager implements this interface.
+ */
+interface IToastManager {
+    fun toast(
+        title: String,
+        message: String,
+    )
 
-@Composable
-fun DisplayExternalId(
-    externalId: ExternalId,
-    accountViewModel: IAccountViewModel,
-    nav: INav,
-) {
-    when (externalId) {
-        is GeohashId -> {
-            DisplayGeohashExternalId(externalId, accountViewModel, nav)
-        }
+    fun toast(
+        titleResId: Int,
+        resourceId: Int,
+    )
 
-        is HashtagId -> {
-            DisplayHashtagExternalId(externalId, accountViewModel, nav)
-        }
+    fun toast(
+        titleResId: Int,
+        resourceId: Int,
+        vararg params: String,
+    )
 
-        else -> {}
-    }
+    fun clearToasts()
 }

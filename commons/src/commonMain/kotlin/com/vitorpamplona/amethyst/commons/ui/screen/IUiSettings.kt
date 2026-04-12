@@ -18,30 +18,26 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.nip22Comments
+package com.vitorpamplona.amethyst.commons.ui.screen
 
-import androidx.compose.runtime.Composable
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.quartz.nip73ExternalIds.ExternalId
-import com.vitorpamplona.quartz.nip73ExternalIds.location.GeohashId
-import com.vitorpamplona.quartz.nip73ExternalIds.topics.HashtagId
+/**
+ * Cross-platform interface for UI settings state.
+ *
+ * Abstracts the Android-specific UiSettingsState for use in commonMain.
+ * The Android UiSettingsState implements this interface.
+ */
+interface IUiSettings {
+    fun isPerformanceMode(): Boolean
 
-@Composable
-fun DisplayExternalId(
-    externalId: ExternalId,
-    accountViewModel: IAccountViewModel,
-    nav: INav,
-) {
-    when (externalId) {
-        is GeohashId -> {
-            DisplayGeohashExternalId(externalId, accountViewModel, nav)
-        }
+    fun isNotPerformanceMode(): Boolean
 
-        is HashtagId -> {
-            DisplayHashtagExternalId(externalId, accountViewModel, nav)
-        }
+    fun isCompleteUIMode(): Boolean
 
-        else -> {}
-    }
+    fun showProfilePictures(): Boolean
+
+    fun showUrlPreview(): Boolean
+
+    fun showImages(): Boolean
+
+    fun startVideoPlayback(): Boolean
 }
