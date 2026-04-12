@@ -18,7 +18,29 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.pictures.dal
+package com.vitorpamplona.amethyst.commons.model
 
-// Re-export from commons for backwards compatibility
-typealias PictureFeedFilter = com.vitorpamplona.amethyst.commons.ui.dal.PictureFeedFilter
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+
+/**
+ * Platform-agnostic interface for follow list matching used by FilterByListParams.
+ * Android's IFeedTopNavFilter implementations can implement this interface.
+ */
+interface IFollowListFilter {
+    /** Check if an author's pubkey matches this follow list filter */
+    fun matchAuthor(pubkey: HexKey): Boolean
+
+    /** Check if a note event matches this follow list filter */
+    fun match(noteEvent: Event): Boolean
+
+    /** Relay URL if this is a relay-based filter, null otherwise */
+    val relayUrl: NormalizedRelayUrl?
+
+    /** Whether this represents a muted authors list */
+    val isMutedList: Boolean
+
+    /** Whether this is a global (unfiltered) list */
+    val isGlobal: Boolean
+}

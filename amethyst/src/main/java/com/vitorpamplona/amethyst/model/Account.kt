@@ -24,7 +24,10 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.commons.marmot.MarmotManager
+import com.vitorpamplona.amethyst.commons.model.FeedType
 import com.vitorpamplona.amethyst.commons.model.IAccount
+import com.vitorpamplona.amethyst.commons.model.IFollowListFilter
+import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatListState
@@ -2450,5 +2453,38 @@ class Account(
                 }
             }
         }
+    }
+
+    // Feed follow list support for commons filters
+
+    override val currentHiddenUsers: LiveHiddenUsers
+        get() = hiddenUsers.flow.value
+
+    override fun feedFollowListFilter(feedType: FeedType): IFollowListFilter? =
+        when (feedType) {
+            FeedType.PICTURES -> livePicturesFollowLists.value
+            FeedType.DISCOVERY -> liveDiscoveryFollowLists.value
+            FeedType.POLLS -> livePollsFollowLists.value
+            FeedType.STORIES -> liveStoriesFollowLists.value
+        }
+
+    override fun feedFollowListCode(feedType: FeedType): String =
+        when (feedType) {
+            FeedType.PICTURES -> settings.defaultPicturesFollowList.value.code
+            FeedType.DISCOVERY -> settings.defaultDiscoveryFollowList.value.code
+            FeedType.POLLS -> settings.defaultPollsFollowList.value.code
+            FeedType.STORIES -> settings.defaultStoriesFollowList.value.code
+        }
+
+    override fun feedFollowListShowsHidden(feedType: FeedType): Boolean {
+        val topFilter =
+            when (feedType) {
+                FeedType.PICTURES -> settings.defaultPicturesFollowList.value
+                FeedType.DISCOVERY -> settings.defaultDiscoveryFollowList.value
+                FeedType.POLLS -> settings.defaultPollsFollowList.value
+                FeedType.STORIES -> settings.defaultStoriesFollowList.value
+            }
+        return topFilter is TopFilter.MuteList ||
+            (topFilter is TopFilter.PeopleList && topFilter.address == blockPeopleList.getBlockListAddress())
     }
 }

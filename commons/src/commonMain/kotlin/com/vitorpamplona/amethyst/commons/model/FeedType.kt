@@ -18,7 +18,14 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.pictures.dal
+package com.vitorpamplona.amethyst.commons.model
 
-// Re-export from commons for backwards compatibility
-typealias PictureFeedFilter = com.vitorpamplona.amethyst.commons.ui.dal.PictureFeedFilter
+/**
+ * Feed categories for follow list and settings lookups.
+ */
+enum class FeedType {
+    PICTURES,
+    DISCOVERY,
+    POLLS,
+    STORIES,
+}

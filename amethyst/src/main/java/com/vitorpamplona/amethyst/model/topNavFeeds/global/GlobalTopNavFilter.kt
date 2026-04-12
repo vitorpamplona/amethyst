@@ -40,6 +40,8 @@ class GlobalTopNavFilter(
 
     override fun match(noteEvent: Event) = true
 
+    override val isGlobal: Boolean get() = true
+
     override fun toPerRelayFlow(cache: LocalCache): Flow<GlobalTopNavPerRelayFilterSet> =
         combine(outboxRelays, proxyRelays, relayFeeds) { outboxRelays, proxyRelays, relayFeeds ->
             if (proxyRelays.isNotEmpty()) {

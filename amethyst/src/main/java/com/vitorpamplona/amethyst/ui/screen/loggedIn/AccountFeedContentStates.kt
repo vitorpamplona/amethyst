@@ -79,7 +79,7 @@ class AccountFeedContentStates(
     val openPollsFeed = FeedContentState(OpenPollsFeedFilter(account), scope, LocalCache)
     val closedPollsFeed = FeedContentState(ClosedPollsFeedFilter(account), scope, LocalCache)
 
-    val picturesFeed = FeedContentState(PictureFeedFilter(account), scope, LocalCache)
+    val picturesFeed = FeedContentState(PictureFeedFilter(account, LocalCache), scope, LocalCache)
     val shortsFeed = FeedContentState(ShortsFeedFilter(account), scope, LocalCache)
     val longsFeed = FeedContentState(LongsFeedFilter(account), scope, LocalCache)
 

@@ -20,17 +20,24 @@
  */
 package com.vitorpamplona.amethyst.model.topNavFeeds
 
+import com.vitorpamplona.amethyst.commons.model.IFollowListFilter
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.flow.Flow
 
-interface IFeedTopNavFilter {
-    fun matchAuthor(pubkey: HexKey): Boolean
+interface IFeedTopNavFilter : IFollowListFilter {
+    override fun matchAuthor(pubkey: HexKey): Boolean
 
-    fun match(noteEvent: Event): Boolean
+    override fun match(noteEvent: Event): Boolean
 
     fun toPerRelayFlow(cache: LocalCache): Flow<IFeedTopNavPerRelayFilterSet>
 
     fun startValue(cache: LocalCache): IFeedTopNavPerRelayFilterSet
+
+    // Default IFollowListFilter implementations
+    override val relayUrl: NormalizedRelayUrl? get() = null
+    override val isMutedList: Boolean get() = false
+    override val isGlobal: Boolean get() = false
 }

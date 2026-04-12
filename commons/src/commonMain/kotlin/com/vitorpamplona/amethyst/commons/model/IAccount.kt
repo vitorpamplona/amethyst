@@ -119,4 +119,18 @@ interface IAccount {
 
     /** Broadcast pre-created gift wraps (e.g. reactions within group DMs) */
     suspend fun sendGiftWraps(wraps: List<GiftWrapEvent>)
+
+    // ── Feed follow list support ──
+
+    /** Current follow list filter for a given feed type */
+    fun feedFollowListFilter(feedType: FeedType): IFollowListFilter?
+
+    /** Current follow list code (for feed key) for a given feed type */
+    fun feedFollowListCode(feedType: FeedType): String
+
+    /** Whether the current follow list for a feed type shows hidden/blocked content */
+    fun feedFollowListShowsHidden(feedType: FeedType): Boolean
+
+    /** Current hidden users state */
+    val currentHiddenUsers: LiveHiddenUsers
 }
