@@ -18,7 +18,28 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
+package com.vitorpamplona.amethyst.commons.ui.feeds
 
-// Re-export from commons for backwards compatibility
-typealias StringFeedState = com.vitorpamplona.amethyst.commons.ui.feeds.StringFeedState
+import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.model.User
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.coroutines.flow.MutableStateFlow
+
+@Stable
+sealed class UserFeedState {
+    @Stable
+    object Loading : UserFeedState()
+
+    @Stable
+    class Loaded(
+        val feed: MutableStateFlow<ImmutableList<User>>,
+    ) : UserFeedState()
+
+    @Stable
+    object Empty : UserFeedState()
+
+    @Stable
+    class FeedError(
+        val errorMessage: String,
+    ) : UserFeedState()
+}

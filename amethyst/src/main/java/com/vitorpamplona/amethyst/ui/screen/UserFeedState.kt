@@ -20,26 +20,5 @@
  */
 package com.vitorpamplona.amethyst.ui.screen
 
-import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.model.User
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.coroutines.flow.MutableStateFlow
-
-@Stable
-sealed class UserFeedState {
-    @Stable
-    object Loading : UserFeedState()
-
-    @Stable
-    class Loaded(
-        val feed: MutableStateFlow<ImmutableList<User>>,
-    ) : UserFeedState()
-
-    @Stable
-    object Empty : UserFeedState()
-
-    @Stable
-    class FeedError(
-        val errorMessage: String,
-    ) : UserFeedState()
-}
+// Re-export from commons for backwards compatibility
+typealias UserFeedState = com.vitorpamplona.amethyst.commons.ui.feeds.UserFeedState
