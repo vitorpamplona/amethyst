@@ -18,7 +18,32 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.creators.expiration
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.home.datasource.nip22Comments
 
-// Re-export from commons for backwards compatibility
-typealias IExpiration = com.vitorpamplona.amethyst.commons.ui.note.creators.expiration.IExpiration
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+
+val CommentKinds = listOf(CommentEvent.KIND)
+
+fun filterHomePostsByScopes(
+    relay: NormalizedRelayUrl,
+    scopesToLoad: Set<String>,
+    since: Long?,
+): List<RelayBasedFilter> {
+    if (scopesToLoad.isEmpty()) return emptyList()
+
+    return listOf(
+        RelayBasedFilter(
+            relay = relay,
+            filter =
+                Filter(
+                    kinds = CommentKinds,
+                    tags = mapOf("I" to scopesToLoad.toList()),
+                    limit = 100,
+                    since = since,
+                ),
+        ),
+    )
+}

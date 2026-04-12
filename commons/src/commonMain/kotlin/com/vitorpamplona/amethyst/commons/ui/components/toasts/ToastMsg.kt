@@ -18,7 +18,9 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.creators.expiration
+package com.vitorpamplona.amethyst.commons.ui.components.toasts
 
-// Re-export from commons for backwards compatibility
-typealias IExpiration = com.vitorpamplona.amethyst.commons.ui.note.creators.expiration.IExpiration
+import androidx.compose.runtime.Immutable
+
+@Immutable
+open class ToastMsg
