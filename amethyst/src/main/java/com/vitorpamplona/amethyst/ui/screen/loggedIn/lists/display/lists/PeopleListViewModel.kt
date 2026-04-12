@@ -46,6 +46,7 @@ import kotlinx.coroutines.flow.transformLatest
 @Stable
 class PeopleListViewModel : ViewModel() {
     lateinit var account: Account
+    lateinit var accountViewModel: AccountViewModel
     lateinit var userSuggestions: UserSuggestionState
 
     var userSuggestionFocus by mutableStateOf<UserSuggestionState?>(null)
@@ -72,6 +73,7 @@ class PeopleListViewModel : ViewModel() {
     ) {
         if (!this::account.isInitialized || this.account != accountVM.account) {
             this.account = accountVM.account
+            this.accountViewModel = accountVM
             this.userSuggestions = UserSuggestionState(accountVM.account, accountVM.nip05ClientBuilder())
         }
 
@@ -96,6 +98,38 @@ class PeopleListViewModel : ViewModel() {
         isPrivate: Boolean,
     ) {
         account.peopleLists.addUserToSet(user, selectedDTag.value, isPrivate, account)
+    }
+
+    fun removeUser(
+        user: User,
+        isPrivate: Boolean,
+    ) {
+        accountViewModel.launchSigner {
+            removeUserFromSet(user, isPrivate)
+        }
+    }
+
+    fun addUser(
+        user: User,
+        isPrivate: Boolean,
+    ) {
+        accountViewModel.launchSigner {
+            addUserToSet(user, isPrivate)
+        }
+    }
+
+    fun deleteList() {
+        accountViewModel.launchSigner {
+            deleteFollowSet()
+        }
+    }
+
+    fun broadcastList() {
+        accountViewModel.launchSigner {
+            loadNote()?.let { updatedSetNote ->
+                accountViewModel.broadcast(updatedSetNote)
+            }
+        }
     }
 
     fun hasUserFlow(

@@ -223,9 +223,7 @@ private fun ListViewAndEditColumn(
             pagerState = pagerState,
             modifier = Modifier.weight(1f),
             onDeleteUser = { user, isPrivate ->
-                accountViewModel.launchSigner {
-                    viewModel.removeUserFromSet(user, isPrivate)
-                }
+                viewModel.removeUser(user, isPrivate)
             },
             accountViewModel = accountViewModel,
             nav = nav,
@@ -247,14 +245,10 @@ private fun RenderAddUserFieldAndSuggestions(
             viewModel.hasUserFlow(user, pagerState.currentPage == 1)
         },
         addUserToSet = { user ->
-            accountViewModel.launchSigner {
-                viewModel.addUserToSet(user, pagerState.currentPage == 1)
-            }
+            viewModel.addUser(user, pagerState.currentPage == 1)
         },
         removeUserFromSet = { user ->
-            accountViewModel.launchSigner {
-                viewModel.removeUserFromSet(user, pagerState.currentPage == 1)
-            }
+            viewModel.removeUser(user, pagerState.currentPage == 1)
         },
         accountViewModel = accountViewModel,
     )
@@ -382,16 +376,10 @@ private fun ListActionsMenuButton(
             nav.nav { Route.PeopleListMetadataEdit(viewModel.selectedDTag.value) }
         },
         onBroadcastList = {
-            accountViewModel.launchSigner {
-                viewModel.loadNote()?.let { updatedSetNote ->
-                    accountViewModel.broadcast(updatedSetNote)
-                }
-            }
+            viewModel.broadcastList()
         },
         onDeleteList = {
-            accountViewModel.launchSigner {
-                viewModel.deleteFollowSet()
-            }
+            viewModel.deleteList()
             nav.popBack()
         },
     )

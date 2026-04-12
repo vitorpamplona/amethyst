@@ -169,9 +169,7 @@ private fun ListViewAndEditColumn(
             viewModel = viewModel,
             modifier = Modifier.weight(1f),
             onDeleteUser = { user ->
-                accountViewModel.launchSigner {
-                    viewModel.removeUserFromSet(user)
-                }
+                viewModel.removeUser(user)
             },
             accountViewModel = accountViewModel,
             nav = nav,
@@ -192,14 +190,10 @@ private fun RenderAddUserFieldAndSuggestions(
             viewModel.hasUserFlow(user)
         },
         addUserToSet = { user ->
-            accountViewModel.launchSigner {
-                viewModel.addUserToSet(user)
-            }
+            viewModel.addUser(user)
         },
         removeUserFromSet = { user ->
-            accountViewModel.launchSigner {
-                viewModel.removeUserFromSet(user)
-            }
+            viewModel.removeUser(user)
         },
         accountViewModel = accountViewModel,
     )
@@ -237,16 +231,10 @@ private fun ListActionsMenuButton(
             nav.nav { Route.FollowPackMetadataEdit(viewModel.selectedDTag.value) }
         },
         onBroadcastList = {
-            accountViewModel.launchSigner {
-                viewModel.loadNote()?.let { updatedSetNote ->
-                    accountViewModel.broadcast(updatedSetNote)
-                }
-            }
+            viewModel.broadcastList()
         },
         onDeleteList = {
-            accountViewModel.launchSigner {
-                viewModel.deleteFollowSet()
-            }
+            viewModel.deleteList()
             nav.popBack()
         },
     )

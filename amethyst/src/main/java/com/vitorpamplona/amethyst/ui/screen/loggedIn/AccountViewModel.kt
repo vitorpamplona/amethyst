@@ -1913,6 +1913,46 @@ class AccountViewModel(
             }
     }
 
+    // --- People List / Follow Pack helpers for UI ---
+
+    fun removeUserFromPeopleList(
+        user: User,
+        isPrivate: Boolean,
+        identifierTag: String,
+    ) {
+        launchSigner {
+            account.peopleLists.removeUserFromSet(user, isPrivate, identifierTag, account)
+        }
+    }
+
+    fun addUserToPeopleList(
+        user: User,
+        identifierTag: String,
+        isPrivate: Boolean,
+    ) {
+        launchSigner {
+            account.peopleLists.addUserToSet(user, identifierTag, isPrivate, account)
+        }
+    }
+
+    fun removeUserFromFollowPack(
+        user: User,
+        identifierTag: String,
+    ) {
+        launchSigner {
+            account.followLists.removeUserFromSet(user, identifierTag, account)
+        }
+    }
+
+    fun addUserToFollowPack(
+        user: User,
+        identifierTag: String,
+    ) {
+        launchSigner {
+            account.followLists.addUserToSet(user, identifierTag, account)
+        }
+    }
+
     val bechLinkCache = CachedLoadedBechLink(this)
 
     class CachedLoadedBechLink(

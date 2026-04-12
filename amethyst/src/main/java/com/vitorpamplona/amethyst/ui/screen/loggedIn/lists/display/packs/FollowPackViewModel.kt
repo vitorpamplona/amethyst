@@ -46,6 +46,7 @@ import kotlinx.coroutines.flow.transformLatest
 @Stable
 class FollowPackViewModel : ViewModel() {
     lateinit var account: Account
+    lateinit var accountViewModel: AccountViewModel
     lateinit var userSuggestions: UserSuggestionState
 
     var userSuggestionFocus by mutableStateOf<UserSuggestionState?>(null)
@@ -72,6 +73,7 @@ class FollowPackViewModel : ViewModel() {
     ) {
         if (!this::account.isInitialized || this.account != accountVM.account) {
             this.account = accountVM.account
+            this.accountViewModel = accountVM
             this.userSuggestions = UserSuggestionState(accountVM.account, accountVM.nip05ClientBuilder())
         }
 
@@ -90,6 +92,32 @@ class FollowPackViewModel : ViewModel() {
 
     suspend fun addUserToSet(user: User) {
         account.followLists.addUserToSet(user, selectedDTag.value, account)
+    }
+
+    fun removeUser(user: User) {
+        accountViewModel.launchSigner {
+            removeUserFromSet(user)
+        }
+    }
+
+    fun addUser(user: User) {
+        accountViewModel.launchSigner {
+            addUserToSet(user)
+        }
+    }
+
+    fun deleteList() {
+        accountViewModel.launchSigner {
+            deleteFollowSet()
+        }
+    }
+
+    fun broadcastList() {
+        accountViewModel.launchSigner {
+            loadNote()?.let { updatedSetNote ->
+                accountViewModel.broadcast(updatedSetNote)
+            }
+        }
     }
 
     fun hasUserFlow(user: User): Flow<Boolean> =
