@@ -25,16 +25,18 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.ui.screen.AndroidFeedViewModel
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 @Stable
 class HashtagFeedViewModel(
-    val hashtag: String,
-    val relays: Set<NormalizedRelayUrl>,
-    val account: Account,
-) : AndroidFeedViewModel(
-        HashtagFeedFilter(hashtag, relays, account, LocalCache),
+    hashtag: String,
+    relays: Set<NormalizedRelayUrl>,
+    account: Account,
+) : com.vitorpamplona.amethyst.commons.viewmodels.hashtag.HashtagFeedViewModel(
+        hashtag,
+        relays,
+        account,
+        LocalCache,
     ) {
     @Suppress("UNCHECKED_CAST")
     class Factory(

@@ -18,7 +18,21 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.dal
+package com.vitorpamplona.amethyst.commons.viewmodels.geohash
 
-// Re-export from commons for backwards compatibility
-typealias GeoHashFeedFilter = com.vitorpamplona.amethyst.commons.viewmodels.geohash.GeoHashFeedFilter
+import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.model.IAccount
+import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
+import com.vitorpamplona.amethyst.commons.viewmodels.FeedViewModel
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+
+@Stable
+open class GeoHashFeedViewModel(
+    val geohash: String,
+    val relays: Set<NormalizedRelayUrl>,
+    val account: IAccount,
+    cacheProvider: ICacheProvider,
+) : FeedViewModel(
+        GeoHashFeedFilter(geohash, relays, account, cacheProvider),
+        cacheProvider,
+    )

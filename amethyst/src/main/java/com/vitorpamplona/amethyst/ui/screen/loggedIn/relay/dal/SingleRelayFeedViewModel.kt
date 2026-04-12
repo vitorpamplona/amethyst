@@ -25,15 +25,16 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.ui.screen.AndroidFeedViewModel
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 @Stable
 class SingleRelayFeedViewModel(
-    val relayUrl: NormalizedRelayUrl,
-    val account: Account,
-) : AndroidFeedViewModel(
-        RelayFeedFilter(relayUrl, account, LocalCache),
+    relayUrl: NormalizedRelayUrl,
+    account: Account,
+) : com.vitorpamplona.amethyst.commons.viewmodels.relay.RelayFeedViewModel(
+        relayUrl,
+        account,
+        LocalCache,
     ) {
     class Factory(
         val relayUrl: NormalizedRelayUrl,
