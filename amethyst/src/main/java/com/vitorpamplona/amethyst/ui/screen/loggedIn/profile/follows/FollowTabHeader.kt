@@ -25,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.follows.dal.UserProfileFollowsUserFeedViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -32,8 +33,10 @@ import com.vitorpamplona.amethyst.ui.stringRes
 @Composable
 fun FollowTabHeader(
     followsFeedViewModel: UserProfileFollowsUserFeedViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val followCount by followsFeedViewModel.followCount.collectAsStateWithLifecycle()
 
     val text =

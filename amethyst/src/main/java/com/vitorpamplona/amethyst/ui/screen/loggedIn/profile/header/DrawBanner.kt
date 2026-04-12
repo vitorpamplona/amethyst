@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserBanner
 import com.vitorpamplona.amethyst.ui.components.ZoomableImageDialog
@@ -51,8 +52,10 @@ import kotlinx.coroutines.launch
 @Composable
 fun DrawBanner(
     baseUser: User,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val banner by observeUserBanner(baseUser, accountViewModel)
 
     DrawBanner(banner, accountViewModel)
@@ -62,8 +65,10 @@ fun DrawBanner(
 @Composable
 fun DrawBanner(
     banner: String?,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     if (!banner.isNullOrBlank()) {
         val clipboardManager = LocalClipboard.current
         val scope = rememberCoroutineScope()

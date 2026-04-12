@@ -32,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.layouts.listItem.SlimListItem
@@ -53,9 +54,11 @@ import com.vitorpamplona.quartz.utils.BigDecimal
 @Composable
 fun ZapNoteCompose(
     zap: ZapAmount,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Column(
         modifier =
             Modifier.clickable(
@@ -86,9 +89,11 @@ fun RenderZapNoteSlimPreview() {
 @Composable
 private fun RenderZapNoteSlim(
     zap: ZapAmount,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     SlimListItem(
         leadingContent = {
             UserPicture(zap.user, Size55dp, accountViewModel = accountViewModel, nav = nav)

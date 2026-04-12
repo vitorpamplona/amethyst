@@ -34,6 +34,7 @@ import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -46,9 +47,11 @@ import kotlinx.coroutines.launch
 @Composable
 fun RelayFeedView(
     viewModel: RelayFeedViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val outboxListState by viewModel.nip65OutboxFlow.collectAsStateWithLifecycle()
     val inboxListState by viewModel.nip65InboxFlow.collectAsStateWithLifecycle()
     val dmListState by viewModel.dmInboxFlow.collectAsStateWithLifecycle()
@@ -93,9 +96,11 @@ fun RelayFeedView(
 @Composable
 private fun RenderRelayRow(
     relay: MyRelayInfo,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val clipboardManager = LocalClipboard.current
     val scope = rememberCoroutineScope()
     RelayCompose(

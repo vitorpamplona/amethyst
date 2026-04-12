@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserIsFollowing
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -32,8 +33,10 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.UnfollowButton
 @Composable
 fun DisplayFollowUnfollowButton(
     baseUser: User,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val isLoggedInFollowingUser by observeUserIsFollowing(accountViewModel.account.userProfile(), baseUser, accountViewModel)
     val isUserFollowingLoggedIn by observeUserIsFollowing(baseUser, accountViewModel.account.userProfile(), accountViewModel)
 

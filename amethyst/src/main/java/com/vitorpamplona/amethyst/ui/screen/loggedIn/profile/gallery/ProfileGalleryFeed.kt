@@ -34,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.feeds.FeedEmpty
 import com.vitorpamplona.amethyst.ui.feeds.FeedError
@@ -47,9 +48,11 @@ import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 fun RenderGalleryFeed(
     viewModel: FeedViewModel,
     listState: LazyGridState,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val feedState by viewModel.feedState.feedContent.collectAsStateWithLifecycle()
     CrossfadeIfEnabled(
         targetState = feedState,
@@ -86,9 +89,11 @@ fun RenderGalleryFeed(
 private fun GalleryFeedLoaded(
     loaded: FeedState.Loaded,
     listState: LazyGridState,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val items by loaded.feed.collectAsStateWithLifecycle()
 
     val ratio =

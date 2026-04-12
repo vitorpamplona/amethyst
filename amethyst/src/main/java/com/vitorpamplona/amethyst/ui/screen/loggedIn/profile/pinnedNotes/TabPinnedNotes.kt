@@ -27,6 +27,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -35,9 +36,11 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.pinnedNotes.dal.Use
 @Composable
 fun TabPinnedNotes(
     feedViewModel: UserProfilePinnedNotesFeedViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     LaunchedEffect(Unit) { feedViewModel.invalidateData() }
 
     Column(Modifier.fillMaxHeight()) {

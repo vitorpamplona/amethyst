@@ -26,6 +26,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.note.QuickActionAlertDialogOneButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -34,9 +35,11 @@ import com.vitorpamplona.amethyst.ui.stringRes
 @Composable
 fun QuickActionGallery(
     baseNote: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     content: @Composable (() -> Unit) -> Unit,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val popupExpanded = remember { mutableStateOf(false) }
 
     content { popupExpanded.value = true }
@@ -55,9 +58,11 @@ fun QuickActionGallery(
 @Composable
 fun DeleteFromGalleryDialog(
     note: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     onDismiss: () -> Unit,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     QuickActionAlertDialogOneButton(
         title = stringRes(R.string.quick_action_request_deletion_gallery_title),
         textContent = stringRes(R.string.quick_action_request_deletion_gallery_alert_body_v2),

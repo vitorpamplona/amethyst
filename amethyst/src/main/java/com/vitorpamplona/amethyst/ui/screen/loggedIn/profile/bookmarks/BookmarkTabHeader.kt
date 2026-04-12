@@ -24,6 +24,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserBookmarkCount
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -32,8 +33,10 @@ import com.vitorpamplona.amethyst.ui.stringRes
 @Composable
 fun BookmarkTabHeader(
     baseUser: User,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val userBookmarks by observeUserBookmarkCount(baseUser, accountViewModel)
 
     Text(text = "$userBookmarks ${stringRes(R.string.bookmarks_title)}")

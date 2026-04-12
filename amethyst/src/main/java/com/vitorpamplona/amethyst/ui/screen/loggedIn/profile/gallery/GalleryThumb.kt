@@ -47,6 +47,7 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser.Companion.isVideoUrl
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
@@ -68,9 +69,11 @@ import com.vitorpamplona.quartz.nip71Video.VideoEvent
 @Composable
 fun GalleryThumbnail(
     baseNote: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val noteState by observeNote(baseNote, accountViewModel)
     val noteEvent = noteState.note.event ?: return
 
@@ -137,8 +140,10 @@ fun GalleryThumbnail(
 fun InnerRenderGalleryThumb(
     content: List<MediaUrlContent>,
     note: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     if (content.isNotEmpty()) {
         GalleryContentView(content, accountViewModel)
     } else {
@@ -149,8 +154,10 @@ fun InnerRenderGalleryThumb(
 @Composable
 fun DisplayGalleryAuthorBanner(
     note: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     WatchAuthor(note, accountViewModel) { author ->
         BannerImage(
             author,
@@ -166,8 +173,10 @@ fun DisplayGalleryAuthorBanner(
 @Composable
 fun GalleryContentView(
     contentList: List<MediaUrlContent>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     AutoNonlazyGrid(contentList.size, modifier = Modifier.fillMaxSize()) { contentIndex ->
         val content = contentList[contentIndex]
 
@@ -187,8 +196,10 @@ fun GalleryContentView(
 @Composable
 fun UrlImageView(
     content: MediaUrlContent,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val defaultModifier = Modifier.fillMaxSize()
 
     val showImage =

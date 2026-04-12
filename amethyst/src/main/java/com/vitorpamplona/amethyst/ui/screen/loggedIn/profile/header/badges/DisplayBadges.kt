@@ -34,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -66,9 +67,11 @@ import kotlinx.coroutines.flow.flowOn
 @Composable
 fun DisplayBadges(
     baseUser: User,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val oldDesign = AcceptedBadgeSetEvent.createAddress(baseUser.pubkeyHex)
     val newDesign = ProfileBadgesEvent.createAddress(baseUser.pubkeyHex)
 
@@ -82,9 +85,11 @@ fun DisplayBadges(
 private fun WatchAndRenderBadgeList(
     oldNote: AddressableNote,
     newNote: AddressableNote,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     // Subscribe in the relay for changes in this note.
     EventFinderFilterAssemblerSubscription(oldNote, accountViewModel)
     EventFinderFilterAssemblerSubscription(newNote, accountViewModel)
@@ -115,9 +120,11 @@ private fun WatchAndRenderBadgeList(
 @OptIn(ExperimentalLayoutApi::class)
 private fun RenderBadgeList(
     list: ImmutableList<ETag>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     FlowRow(
         verticalArrangement = Arrangement.Center,
         modifier = Modifier.padding(vertical = 5.dp),
@@ -129,9 +136,11 @@ private fun RenderBadgeList(
 @Composable
 private fun LoadAndRenderBadge(
     badgeAwardEvent: ETag,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val baseNote =
         produceState(
             LocalCache.getNoteIfExists(badgeAwardEvent),
@@ -151,9 +160,11 @@ private fun LoadAndRenderBadge(
 @Composable
 private fun ObserveAndRenderBadge(
     it: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val badgeAwardState by observeNoteEvent<BadgeAwardEvent>(it, accountViewModel)
     val badgeDefinitionId = badgeAwardState?.awardDefinition()?.firstOrNull()
     if (badgeDefinitionId != null) {
@@ -168,9 +179,11 @@ private fun ObserveAndRenderBadge(
 @Composable
 fun BadgeThumb(
     baseNote: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Box(
         modifier =
             Size35Modifier.clickable(
@@ -188,8 +201,10 @@ fun BadgeThumb(
 @Composable
 private fun WatchAndRenderBadgeImage(
     baseNote: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val event by observeNoteEvent<BadgeDefinitionEvent>(baseNote, accountViewModel)
 
     event?.let {
@@ -206,8 +221,10 @@ private fun RenderBadgeImage(
     id: String,
     name: String?,
     image: String?,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val description =
         if (name != null) {
             stringRes(id = R.string.badge_award_image_for, name)

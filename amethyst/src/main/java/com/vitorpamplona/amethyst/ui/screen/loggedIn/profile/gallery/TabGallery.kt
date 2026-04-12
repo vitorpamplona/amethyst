@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.SaveableGridFeedState
@@ -34,9 +35,11 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.gallery.dal.UserPro
 @Composable
 fun TabGallery(
     feedViewModel: UserProfileGalleryFeedViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     LaunchedEffect(Unit) { feedViewModel.invalidateData() }
 
     Column(Modifier.fillMaxHeight()) {

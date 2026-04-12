@@ -58,6 +58,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntSize
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.observeAccountIsHiddenUser
@@ -104,9 +105,11 @@ import kotlinx.coroutines.launch
 @Composable
 fun ProfileScreen(
     userId: String?,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     if (userId == null) return
 
     var userBase by remember { mutableStateOf(LocalCache.getUserIfExists(userId)) }
@@ -132,9 +135,11 @@ fun ProfileScreen(
 @Composable
 fun PrepareViewModels(
     baseUser: User,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val followsFeedViewModel: UserProfileFollowsUserFeedViewModel =
         viewModel(
             key = baseUser.pubkeyHex + "UserProfileFollowsUserFeedViewModel",
@@ -278,9 +283,11 @@ fun ProfileScreen(
     pinnedNotesFeedViewModel: UserProfilePinnedNotesFeedViewModel,
     galleryFeedViewModel: UserProfileGalleryFeedViewModel,
     reportsFeedViewModel: UserProfileReportFeedViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     WatchLifecycleAndUpdateModel(threadsViewModel)
     WatchLifecycleAndUpdateModel(repliesViewModel)
     WatchLifecycleAndUpdateModel(mutualViewModel)
@@ -403,9 +410,11 @@ private fun RenderScreen(
     pinnedNotesFeedViewModel: UserProfilePinnedNotesFeedViewModel,
     galleryFeedViewModel: UserProfileGalleryFeedViewModel,
     reportsFeedViewModel: UserProfileReportFeedViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val pagerState = rememberPagerState { 11 }
 
     Column {
@@ -471,9 +480,11 @@ private fun CreateAndRenderPages(
     pinnedNotesFeedViewModel: UserProfilePinnedNotesFeedViewModel,
     galleryFeedViewModel: UserProfileGalleryFeedViewModel,
     reportsFeedViewModel: UserProfileReportFeedViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     UpdateThreadsAndRepliesWhenBlockUnblock(
         baseUser,
         threadsViewModel,
@@ -501,8 +512,10 @@ fun UpdateThreadsAndRepliesWhenBlockUnblock(
     baseUser: User,
     threadsViewModel: UserProfileNewThreadsFeedViewModel,
     repliesViewModel: UserProfileConversationsFeedViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val isHidden by observeAccountIsHiddenUser(accountViewModel.account, baseUser)
 
     LaunchedEffect(key1 = isHidden) {
@@ -524,8 +537,10 @@ private fun CreateAndRenderTabs(
     bookmarksFeedViewModel: UserProfileBookmarksFeedViewModel,
     galleryFeedViewModel: UserProfileGalleryFeedViewModel,
     reportsFeedViewModel: UserProfileReportFeedViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val coroutineScope = rememberCoroutineScope()
 
     val tabs =

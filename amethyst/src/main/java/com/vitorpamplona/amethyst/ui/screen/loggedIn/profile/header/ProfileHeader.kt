@@ -59,6 +59,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserPicture
 import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataViewModel
@@ -85,8 +86,10 @@ fun ProfileHeader(
     appRecommendations: UserAppRecommendationsFeedViewModel,
     externalIdentities: UserExternalIdentitiesViewModel,
     nav: INav,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     var popupExpanded by remember { mutableStateOf(false) }
 
     Box {
@@ -166,9 +169,11 @@ fun ProfileHeader(
 @Composable
 fun ZoomableUserPicture(
     baseUser: User,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     size: Dp,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val clipboardManager = LocalClipboard.current
     val scope = rememberCoroutineScope()
 
@@ -207,9 +212,11 @@ fun ZoomableUserPicture(
 @Composable
 fun ProfilePictureWithUploadOverlay(
     baseUser: User,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     size: Dp,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val isMe by remember(accountViewModel) { derivedStateOf { accountViewModel.userProfile() == baseUser } }
     val picture by observeUserPicture(baseUser, accountViewModel)
 
@@ -227,9 +234,11 @@ fun ProfilePictureWithUploadOverlay(
 
 @Composable
 private fun ProfilePictureUploadButton(
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     size: Dp,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val postViewModel: NewUserMetadataViewModel = viewModel()
     postViewModel.init(accountViewModel)
     val context = LocalContext.current

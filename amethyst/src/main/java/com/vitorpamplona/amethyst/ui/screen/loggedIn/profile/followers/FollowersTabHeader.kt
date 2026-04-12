@@ -25,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserContactCardsFollowerCount
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -35,8 +36,10 @@ import com.vitorpamplona.amethyst.ui.stringRes
 fun FollowersTabHeader(
     baseUser: User,
     followersFeedViewModel: UserProfileFollowersUserFeedViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val followerCount by observeUserContactCardsFollowerCount(baseUser, accountViewModel)
 
     if (followerCount == "--") {
@@ -49,8 +52,10 @@ fun FollowersTabHeader(
 @Composable
 fun FollowersTabHeaderLocal(
     followersFeedViewModel: UserProfileFollowersUserFeedViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val followerCount by followersFeedViewModel.followerCount.collectAsStateWithLifecycle()
 
     Text(text = stringRes(R.string.number_followers, followerCount))

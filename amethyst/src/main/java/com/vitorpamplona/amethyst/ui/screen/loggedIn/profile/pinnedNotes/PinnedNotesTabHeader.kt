@@ -24,6 +24,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserPinnedNotesCount
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -32,8 +33,10 @@ import com.vitorpamplona.amethyst.ui.stringRes
 @Composable
 fun PinnedNotesTabHeader(
     baseUser: User,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val count by observeUserPinnedNotesCount(baseUser, accountViewModel)
 
     Text(text = "$count ${stringRes(R.string.pinned_notes)}")

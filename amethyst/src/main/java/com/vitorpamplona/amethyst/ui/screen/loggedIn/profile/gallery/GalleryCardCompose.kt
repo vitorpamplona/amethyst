@@ -27,6 +27,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
@@ -45,9 +46,11 @@ import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 fun GalleryCardCompose(
     baseNote: Note,
     modifier: Modifier = Modifier,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     WatchNoteEvent(baseNote = baseNote, accountViewModel = accountViewModel, nav, shortPreview = true) {
         CheckHiddenFeedWatchBlockAndReport(
             note = baseNote,
@@ -105,9 +108,11 @@ fun RedirectableGalleryCard(
     galleryNote: Note,
     sourceNote: Note,
     modifier: Modifier = Modifier,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     QuickActionGallery(baseNote = galleryNote, accountViewModel = accountViewModel) { showPopup ->
         ClickableNote(
             baseNote = sourceNote,
@@ -136,11 +141,13 @@ fun RedirectableGalleryCard(
 fun ClickableNote(
     baseNote: Note,
     modifier: Modifier,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     showPopup: () -> Unit,
     nav: INav,
     content: @Composable () -> Unit,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val updatedModifier =
         remember(baseNote, modifier) {
             modifier

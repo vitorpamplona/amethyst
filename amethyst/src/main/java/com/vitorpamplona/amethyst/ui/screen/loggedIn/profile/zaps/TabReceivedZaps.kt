@@ -30,6 +30,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -41,9 +42,11 @@ import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 fun TabReceivedZaps(
     baseUser: User,
     zapFeedViewModel: UserProfileZapsViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Column(Modifier.fillMaxHeight()) {
         val feedState by zapFeedViewModel.receivedZapAmountsByUser.collectAsStateWithLifecycle()
 

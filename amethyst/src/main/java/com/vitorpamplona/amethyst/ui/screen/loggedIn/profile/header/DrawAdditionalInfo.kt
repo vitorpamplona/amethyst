@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.Nip05State
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.commons.util.toShortDisplay
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
@@ -102,9 +103,11 @@ fun DrawAdditionalInfo(
     baseUser: User,
     appRecommendations: UserAppRecommendationsFeedViewModel,
     externalIdentities: UserExternalIdentitiesViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val userState by observeUserInfo(baseUser, accountViewModel)
     val user = userState ?: return
     val uri = LocalUriHandler.current
@@ -297,8 +300,10 @@ fun DrawAdditionalInfo(
 @Composable
 fun DisplayLastSeen(
     user: User,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val lastSeenFlow =
         remember {
             accountViewModel.account.cache
@@ -324,8 +329,10 @@ fun DisplayLastSeen(
 @Composable
 fun DisplayNip05ProfileStatus(
     user: User,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val nip05StateMetadata by user.nip05State().flow.collectAsStateWithLifecycle()
 
     when (val nip05State = nip05StateMetadata) {
@@ -378,8 +385,10 @@ fun getIdentityClaimDescription(identity: IdentityClaimTag): Int =
 @Composable
 fun DisplayPaymentTargets(
     baseUser: User,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val address =
         remember(baseUser.pubkeyHex) {
             PaymentTargetsEvent.createAddress(baseUser.pubkeyHex)

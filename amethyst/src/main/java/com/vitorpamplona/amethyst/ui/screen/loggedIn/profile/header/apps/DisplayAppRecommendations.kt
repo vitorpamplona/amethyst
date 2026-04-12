@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -43,9 +44,11 @@ import com.vitorpamplona.amethyst.ui.stringRes
 @Composable
 fun DisplayAppRecommendations(
     appRecommendations: UserAppRecommendationsFeedViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val feedState by appRecommendations.feedState.feedContent.collectAsStateWithLifecycle()
 
     LaunchedEffect(key1 = Unit) { appRecommendations.invalidateData() }
@@ -73,9 +76,11 @@ fun DisplayAppRecommendations(
 @OptIn(ExperimentalLayoutApi::class)
 fun Recommends(
     loaded: FeedState.Loaded,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val items by loaded.feed.collectAsStateWithLifecycle()
     FlowRow(
         verticalArrangement = Arrangement.Center,
