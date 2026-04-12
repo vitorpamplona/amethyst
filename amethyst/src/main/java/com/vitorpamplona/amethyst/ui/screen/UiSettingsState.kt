@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen
 
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.ui.screen.IUiSettings
 import com.vitorpamplona.amethyst.model.BooleanType
 import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.model.FeatureSetType
@@ -37,7 +38,7 @@ class UiSettingsState(
     val uiSettingsFlow: UiSettingsFlow,
     val isMobileOrMeteredConnection: StateFlow<Boolean>,
     val scope: CoroutineScope,
-) {
+) : IUiSettings {
     val showProfilePictures =
         combine(
             uiSettingsFlow.automaticallyShowProfilePictures,
@@ -124,19 +125,19 @@ class UiSettingsState(
             ProfileGalleryType.MODERN -> true
         }
 
-    fun isPerformanceMode() = uiSettingsFlow.featureSet.value == FeatureSetType.PERFORMANCE
+    override fun isPerformanceMode() = uiSettingsFlow.featureSet.value == FeatureSetType.PERFORMANCE
 
-    fun isNotPerformanceMode() = uiSettingsFlow.featureSet.value != FeatureSetType.PERFORMANCE
+    override fun isNotPerformanceMode() = uiSettingsFlow.featureSet.value != FeatureSetType.PERFORMANCE
 
-    fun isCompleteUIMode() = uiSettingsFlow.featureSet.value == FeatureSetType.COMPLETE
+    override fun isCompleteUIMode() = uiSettingsFlow.featureSet.value == FeatureSetType.COMPLETE
 
     fun isImmersiveScrollingActive() = uiSettingsFlow.automaticallyHideNavigationBars.value == BooleanType.ALWAYS
 
-    fun showProfilePictures() = showProfilePictures.value
+    override fun showProfilePictures() = showProfilePictures.value
 
-    fun showUrlPreview() = showUrlPreview.value
+    override fun showUrlPreview() = showUrlPreview.value
 
-    fun startVideoPlayback() = startVideoPlayback.value
+    override fun startVideoPlayback() = startVideoPlayback.value
 
-    fun showImages() = showImages.value
+    override fun showImages() = showImages.value
 }

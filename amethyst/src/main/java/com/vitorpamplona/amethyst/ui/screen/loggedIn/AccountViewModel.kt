@@ -177,7 +177,7 @@ import kotlinx.coroutines.withContext
 @Stable
 class AccountViewModel(
     override val account: Account,
-    val settings: UiSettingsState,
+    override val settings: UiSettingsState,
     val torSettings: TorSettingsFlow,
     val dataSources: RelaySubscriptionsCoordinator,
     val httpClientBuilder: IRoleBasedHttpClientBuilder,
@@ -189,7 +189,7 @@ class AccountViewModel(
 
     var firstRoute: Route? = null
 
-    val toastManager = ToastManager()
+    override val toastManager = ToastManager()
     val broadcastTracker = BroadcastTracker()
     val feedStates = AccountFeedContentStates(account, viewModelScope)
 
@@ -846,16 +846,16 @@ class AccountViewModel(
         )
     }
 
-    fun report(
+    override fun report(
         note: Note,
         type: ReportType,
-        content: String = "",
+        content: String,
     ) = launchSigner { account.report(note, type, content) }
 
-    fun report(
+    override fun report(
         user: User,
         type: ReportType,
-        content: String = "",
+        content: String,
     ) {
         launchSigner {
             account.report(user, type, content)
@@ -1085,19 +1085,19 @@ class AccountViewModel(
         community: AddressableNote,
     ) = launchSigner { account.approveCommunityPost(post, community) }
 
-    fun follow(community: AddressableNote) = launchSigner { account.follow(community) }
+    override fun follow(community: AddressableNote) = launchSigner { account.follow(community) }
 
-    fun follow(channel: PublicChatChannel) = launchSigner { account.follow(channel) }
+    override fun follow(channel: PublicChatChannel) = launchSigner { account.follow(channel) }
 
-    fun follow(channel: EphemeralChatChannel) = launchSigner { account.follow(channel) }
+    override fun follow(channel: EphemeralChatChannel) = launchSigner { account.follow(channel) }
 
-    fun unfollow(community: AddressableNote) = launchSigner { account.unfollow(community) }
+    override fun unfollow(community: AddressableNote) = launchSigner { account.unfollow(community) }
 
-    fun unfollow(channel: PublicChatChannel) = launchSigner { account.unfollow(channel) }
+    override fun unfollow(channel: PublicChatChannel) = launchSigner { account.unfollow(channel) }
 
-    fun unfollow(channel: EphemeralChatChannel) = launchSigner { account.unfollow(channel) }
+    override fun unfollow(channel: EphemeralChatChannel) = launchSigner { account.unfollow(channel) }
 
-    fun follow(users: List<User>) = launchSigner { account.follow(users) }
+    override fun follow(users: List<User>) = launchSigner { account.follow(users) }
 
     override fun follow(user: User) = launchSigner { account.follow(user) }
 
@@ -1260,7 +1260,7 @@ class AccountViewModel(
 
     override suspend fun getOrCreateNote(hex: HexKey): Note = LocalCache.getOrCreateNote(hex)
 
-    fun noteFromEvent(event: Event): Note? {
+    override fun noteFromEvent(event: Event): Note? {
         var note = checkGetOrCreateNote(event.id)
 
         if (note == null) {
@@ -1312,17 +1312,17 @@ class AccountViewModel(
             LocalCache.findLatestModificationForNote(note)
         }
 
-    fun checkGetOrCreatePublicChatChannel(key: HexKey): PublicChatChannel = LocalCache.getOrCreatePublicChatChannel(key)
+    override fun checkGetOrCreatePublicChatChannel(key: HexKey): PublicChatChannel = LocalCache.getOrCreatePublicChatChannel(key)
 
-    fun checkGetOrCreateLiveActivityChannel(key: Address): LiveActivitiesChannel = LocalCache.getOrCreateLiveChannel(key)
+    override fun checkGetOrCreateLiveActivityChannel(key: Address): LiveActivitiesChannel = LocalCache.getOrCreateLiveChannel(key)
 
-    fun checkGetOrCreateEphemeralChatChannel(key: RoomId): EphemeralChatChannel = LocalCache.getOrCreateEphemeralChannel(key)
+    override fun checkGetOrCreateEphemeralChatChannel(key: RoomId): EphemeralChatChannel = LocalCache.getOrCreateEphemeralChannel(key)
 
-    fun getPublicChatChannelIfExists(hex: HexKey) = LocalCache.getPublicChatChannelIfExists(hex)
+    override fun getPublicChatChannelIfExists(hex: HexKey) = LocalCache.getPublicChatChannelIfExists(hex)
 
-    fun getEphemeralChatChannelIfExists(key: RoomId) = LocalCache.getEphemeralChatChannelIfExists(key)
+    override fun getEphemeralChatChannelIfExists(key: RoomId) = LocalCache.getEphemeralChatChannelIfExists(key)
 
-    fun getLiveActivityChannelIfExists(key: Address) = LocalCache.getLiveActivityChannelIfExists(key)
+    override fun getLiveActivityChannelIfExists(key: Address) = LocalCache.getLiveActivityChannelIfExists(key)
 
     fun <T : PubKeyReferenceTag> loadParticipants(
         participants: List<T>,

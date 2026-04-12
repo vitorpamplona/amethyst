@@ -24,8 +24,15 @@ import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.IAccount
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
+import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
+import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
+import com.vitorpamplona.amethyst.commons.ui.components.toasts.IToastManager
+import com.vitorpamplona.amethyst.commons.ui.screen.IUiSettings
+import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -51,6 +58,12 @@ interface IAccountViewModel {
 
     /** Coroutine scope tied to the ViewModel lifecycle. */
     val scope: CoroutineScope
+
+    /** Toast notification manager. */
+    val toastManager: IToastManager
+
+    /** UI settings (performance mode, show pictures, etc.). */
+    val settings: IUiSettings
 
     // ---- Identity helpers (used by 50+ files) ----
 
@@ -97,7 +110,21 @@ interface IAccountViewModel {
 
     fun follow(user: User)
 
+    fun follow(community: AddressableNote)
+
+    fun follow(channel: PublicChatChannel)
+
+    fun follow(channel: EphemeralChatChannel)
+
+    fun follow(users: List<User>)
+
     fun unfollow(user: User)
+
+    fun unfollow(community: AddressableNote)
+
+    fun unfollow(channel: PublicChatChannel)
+
+    fun unfollow(channel: EphemeralChatChannel)
 
     fun hide(user: User)
 
@@ -161,4 +188,38 @@ interface IAccountViewModel {
     fun dontTranslateFrom(): Set<String>
 
     fun translateTo(): String
+
+    // ---- Note creation / lookup helpers ----
+
+    suspend fun getOrCreateNote(key: HexKey): Note
+
+    fun noteFromEvent(event: com.vitorpamplona.quartz.nip01Core.core.Event): Note?
+
+    // ---- Channel lookups ----
+
+    fun checkGetOrCreatePublicChatChannel(key: HexKey): PublicChatChannel
+
+    fun checkGetOrCreateLiveActivityChannel(key: Address): LiveActivitiesChannel
+
+    fun checkGetOrCreateEphemeralChatChannel(key: RoomId): EphemeralChatChannel
+
+    fun getPublicChatChannelIfExists(hex: HexKey): PublicChatChannel?
+
+    fun getEphemeralChatChannelIfExists(key: RoomId): EphemeralChatChannel?
+
+    fun getLiveActivityChannelIfExists(key: Address): LiveActivitiesChannel?
+
+    // ---- Reporting ----
+
+    fun report(
+        note: Note,
+        type: ReportType,
+        content: String = "",
+    )
+
+    fun report(
+        user: User,
+        type: ReportType,
+        content: String = "",
+    )
 }

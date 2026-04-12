@@ -51,9 +51,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
@@ -66,7 +66,7 @@ import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitiveOrNSFW
 @Composable
 fun SensitivityWarning(
     note: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     content: @Composable () -> Unit,
 ) {
     note.event?.let { SensitivityWarning(it, accountViewModel, content) }
@@ -75,7 +75,7 @@ fun SensitivityWarning(
 @Composable
 fun SensitivityWarning(
     event: Event,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     content: @Composable () -> Unit,
 ) {
     val hasSensitiveContent = remember(event) { event.isSensitiveOrNSFW() }
@@ -91,7 +91,7 @@ fun SensitivityWarning(
 @Composable
 fun SensitivityWarning(
     reason: String?,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     content: @Composable () -> Unit,
 ) {
     if (reason != null) {
@@ -104,7 +104,7 @@ fun SensitivityWarning(
 @Composable
 fun ObserveSensitivityWarning(
     reason: String?,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     content: @Composable () -> Unit,
 ) {
     val accountState = accountViewModel.showSensitiveContent().collectAsStateWithLifecycle()
