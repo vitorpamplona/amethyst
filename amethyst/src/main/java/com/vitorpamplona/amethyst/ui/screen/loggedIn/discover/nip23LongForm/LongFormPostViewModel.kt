@@ -37,6 +37,7 @@ import com.vitorpamplona.amethyst.commons.compose.currentWord
 import com.vitorpamplona.amethyst.commons.compose.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.compose.replaceCurrentWord
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState.EmojiMedia
+import com.vitorpamplona.amethyst.commons.viewmodels.posting.LongFormPostState
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -73,26 +74,14 @@ import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
-import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohash
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.getGeoHash
-import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
-import com.vitorpamplona.quartz.nip01Core.tags.references.references
-import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
-import com.vitorpamplona.quartz.nip10Notes.content.findNostrUris
 import com.vitorpamplona.quartz.nip10Notes.content.findURLs
-import com.vitorpamplona.quartz.nip18Reposts.quotes.quotes
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
-import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
-import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
-import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
-import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarningReason
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitive
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip40Expiration.expiration
-import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplits
-import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiser
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTagBuilder
 import com.vitorpamplona.quartz.nip92IMeta.imetas
@@ -106,7 +95,6 @@ import com.vitorpamplona.quartz.nip94FileMetadata.originalHash
 import com.vitorpamplona.quartz.nip94FileMetadata.sensitiveContent
 import com.vitorpamplona.quartz.nip94FileMetadata.size
 import com.vitorpamplona.quartz.utils.Log
-import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
@@ -125,6 +113,7 @@ class LongFormPostViewModel :
     IZapRaiser,
     IExpiration {
     val draftTag = DraftTagState()
+    val postState = LongFormPostState()
 
     lateinit var accountViewModel: AccountViewModel
     lateinit var account: Account
@@ -366,49 +355,36 @@ class LongFormPostViewModel :
             )
         tagger.run()
 
-        val zapReceiver = if (wantsForwardZapTo) forwardZapTo.value.toZapSplitSetup() else null
+        syncToPostState()
 
-        val geoHash = if (wantsToAddGeoHash) (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString() else null
-        val localZapRaiserAmount = if (wantsZapRaiser) zapRaiserAmount.value else null
-
-        val emojis = findEmoji(tagger.message, account.emoji.myEmojis.value)
+        val emojiMedia = account.emoji.myEmojis.value
+        val emojis =
+            LongFormPostState.findEmoji(
+                tagger.message,
+                emojiMedia?.map { Pair(it.code, it.link) },
+            )
         val urls = findURLs(tagger.message)
         val usedAttachments = iMetaAttachments.filterIsIn(urls.toSet())
 
-        val contentWarningReason = if (wantsToMarkAsSensitive) contentWarningDescription else null
-        val localExpirationDate = if (wantsExpirationDate) expirationDate else null
-
-        return LongTextNoteEvent.build(
-            description = tagger.message,
-            title = title.text.trim(),
-            summary = summary.text.trim().ifBlank { null },
-            image = coverImageUrl.trim().ifBlank { null },
-            publishedAt = publishedAt,
-            dTag = existingDTag ?: slug.ifBlank { RandomInstance.randomChars(16) },
-        ) {
-            hashtags(findHashtags(tagger.message) + tags)
-            references(findURLs(tagger.message))
-            quotes(findNostrUris(tagger.message))
-
-            geoHash?.let { geohash(it) }
-            localZapRaiserAmount?.let { zapraiser(it) }
-            zapReceiver?.let { zapSplits(it) }
-            contentWarningReason?.let { contentWarning(it) }
-            localExpirationDate?.let { expiration(it) }
-
-            emojis(emojis)
-            imetas(usedAttachments)
-        }
+        return postState.createTemplate(tagger.message, emojis, usedAttachments)
     }
 
-    private fun findEmoji(
-        message: String,
-        myEmojiSet: List<EmojiMedia>?,
-    ): List<EmojiUrlTag> {
-        if (myEmojiSet == null) return emptyList()
-        return CustomEmoji.findAllEmojiCodes(message).mapNotNull { possibleEmoji ->
-            myEmojiSet.firstOrNull { it.code == possibleEmoji }?.let { EmojiUrlTag(it.code, it.link) }
-        }
+    /** Push Compose mutable state into the platform-independent state object. */
+    private fun syncToPostState() {
+        postState.updateTitle(title.text)
+        postState.updateSummary(summary.text)
+        postState.updateCoverImageUrl(coverImageUrl)
+        postState.updatePublishedAt(publishedAt)
+        postState.updateTags(tags)
+        postState.updateSlug(slug)
+        postState.updateExistingDTag(existingDTag)
+
+        val geoHash = if (wantsToAddGeoHash) (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString() else null
+        postState.options.updateGeoHash(wantsToAddGeoHash, geoHash)
+        postState.options.updateZapRaiser(wantsZapRaiser, zapRaiserAmount.value)
+        postState.options.updateZapSplits(if (wantsForwardZapTo) forwardZapTo.value.toZapSplitSetup() else null)
+        postState.options.updateContentWarning(wantsToMarkAsSensitive, contentWarningDescription)
+        postState.options.updateExpiration(wantsExpirationDate, expirationDate)
     }
 
     fun uploadCoverImage(
