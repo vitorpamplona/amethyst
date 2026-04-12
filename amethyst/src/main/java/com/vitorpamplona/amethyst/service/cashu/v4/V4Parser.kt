@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.service.cashu.v4
 
-import com.vitorpamplona.amethyst.service.cashu.CashuToken
-import com.vitorpamplona.amethyst.service.cashu.Proof
+import com.vitorpamplona.amethyst.commons.data.cashu.CashuToken
+import com.vitorpamplona.amethyst.commons.data.cashu.Proof
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import kotlinx.collections.immutable.ImmutableList

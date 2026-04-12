@@ -21,8 +21,8 @@
 package com.vitorpamplona.amethyst
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.vitorpamplona.amethyst.commons.data.cashu.CashuToken
 import com.vitorpamplona.amethyst.service.cashu.CashuParser
-import com.vitorpamplona.amethyst.service.cashu.CashuToken
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.runBlocking

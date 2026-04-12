@@ -24,7 +24,7 @@ import android.content.Context
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.service.cashu.CashuToken
+import com.vitorpamplona.amethyst.commons.data.cashu.CashuToken
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.utils.asTextOrNull

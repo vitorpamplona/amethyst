@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.service.cashu.v3
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
-import com.vitorpamplona.amethyst.service.cashu.CashuToken
+import com.vitorpamplona.amethyst.commons.data.cashu.CashuToken
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
