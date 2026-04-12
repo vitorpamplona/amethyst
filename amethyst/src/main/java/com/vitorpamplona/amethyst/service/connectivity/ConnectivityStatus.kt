@@ -20,13 +20,6 @@
  */
 package com.vitorpamplona.amethyst.service.connectivity
 
-sealed class ConnectivityStatus {
-    data class Active(
-        val networkId: Long,
-        val isMobile: Boolean,
-    ) : ConnectivityStatus()
+import com.vitorpamplona.amethyst.commons.service.connectivity.ConnectivityStatus as CommonsConnectivityStatus
 
-    object Off : ConnectivityStatus()
-
-    object StartingService : ConnectivityStatus()
-}
+typealias ConnectivityStatus = CommonsConnectivityStatus

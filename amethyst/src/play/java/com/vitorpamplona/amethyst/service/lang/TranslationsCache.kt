@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.service.lang
 
 import android.util.LruCache
-import com.vitorpamplona.amethyst.ui.components.TranslationConfig
+import com.vitorpamplona.amethyst.commons.ui.components.TranslationConfig
 
 object TranslationsCache {
     val cache = LruCache<String, TranslationConfig>(100)

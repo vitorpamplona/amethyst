@@ -20,41 +20,5 @@
  */
 package com.vitorpamplona.amethyst.service.uploads
 
-import androidx.compose.runtime.Stable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
-import kotlin.coroutines.resume
-
-data class ConfirmationCallbacks(
-    val onConfirm: () -> Unit,
-    val onCancel: () -> Unit,
-)
-
-@Stable
-class SuspendableConfirmation {
-    var state by mutableStateOf<ConfirmationCallbacks?>(null)
-        private set
-
-    private val mutex = Mutex()
-
-    suspend fun awaitConfirmation(): Boolean =
-        mutex.withLock {
-            suspendCancellableCoroutine { continuation ->
-                state =
-                    ConfirmationCallbacks(
-                        onConfirm = {
-                            state = null
-                            continuation.resume(true)
-                        },
-                        onCancel = {
-                            state = null
-                            continuation.resume(false)
-                        },
-                    )
-            }
-        }
-}
+typealias ConfirmationCallbacks = com.vitorpamplona.amethyst.commons.service.uploads.ConfirmationCallbacks
+typealias SuspendableConfirmation = com.vitorpamplona.amethyst.commons.service.uploads.SuspendableConfirmation

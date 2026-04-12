@@ -20,21 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.feeds
 
-import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.commons.model.Channel
-import kotlinx.coroutines.flow.MutableStateFlow
+import com.vitorpamplona.amethyst.commons.ui.feeds.ChannelFeedState as CommonsChannelFeedState
 
-@Stable
-sealed class ChannelFeedState {
-    object Loading : ChannelFeedState()
-
-    class Loaded(
-        val feed: MutableStateFlow<LoadedFeedState<Channel>>,
-    ) : ChannelFeedState()
-
-    object Empty : ChannelFeedState()
-
-    class FeedError(
-        val errorMessage: String,
-    ) : ChannelFeedState()
-}
+typealias ChannelFeedState = CommonsChannelFeedState

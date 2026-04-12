@@ -20,18 +20,5 @@
  */
 package com.vitorpamplona.amethyst.ui.components.toasts
 
-import androidx.compose.runtime.Immutable
-
-@Immutable
-class ThrowableToastMsg(
-    val titleResId: Int,
-    val msg: String? = null,
-    val throwable: Throwable,
-) : ToastMsg()
-
-@Immutable
-class ThrowableToastMsg2(
-    val titleResId: Int,
-    val description: Int,
-    val throwable: Throwable,
-) : ToastMsg()
+typealias ThrowableToastMsg = com.vitorpamplona.amethyst.commons.ui.components.toasts.ThrowableToastMsg
+typealias ThrowableToastMsg2 = com.vitorpamplona.amethyst.commons.ui.components.toasts.ThrowableToastMsg2

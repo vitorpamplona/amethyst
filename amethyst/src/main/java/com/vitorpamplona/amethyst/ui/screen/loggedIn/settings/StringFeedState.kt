@@ -20,19 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.coroutines.flow.MutableStateFlow
+import com.vitorpamplona.amethyst.commons.ui.feeds.StringFeedState as CommonsStringFeedState
 
-sealed class StringFeedState {
-    object Loading : StringFeedState()
-
-    class Loaded(
-        val feed: MutableStateFlow<ImmutableList<String>>,
-    ) : StringFeedState()
-
-    object Empty : StringFeedState()
-
-    class FeedError(
-        val errorMessage: String,
-    ) : StringFeedState()
-}
+typealias StringFeedState = CommonsStringFeedState
