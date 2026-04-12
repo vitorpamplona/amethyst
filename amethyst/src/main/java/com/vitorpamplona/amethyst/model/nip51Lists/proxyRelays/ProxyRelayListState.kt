@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.model.nip51Lists.proxyRelays
 
+import com.vitorpamplona.amethyst.commons.model.IRelayListState
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -42,7 +43,7 @@ class ProxyRelayListState(
     val decryptionCache: ProxyRelayListDecryptionCache,
     val scope: CoroutineScope,
     val settings: AccountSettings,
-) {
+) : IRelayListState {
     // Creates a long-term reference for this note so that the GC doesn't collect the note it self
     val proxyListNote = cache.getOrCreateAddressableNote(getProxyRelayListAddress())
 
@@ -57,7 +58,7 @@ class ProxyRelayListState(
         return event?.let { decryptionCache.relays(it) } ?: emptySet()
     }
 
-    val flow =
+    override val flow =
         getProxyRelayListFlow()
             .map { normalizeProxyRelayListWithBackup(it.note) }
             .onStart { emit(normalizeProxyRelayListWithBackup(proxyListNote)) }

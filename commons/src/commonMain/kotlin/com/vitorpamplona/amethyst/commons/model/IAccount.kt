@@ -119,4 +119,10 @@ interface IAccount {
 
     /** Broadcast pre-created gift wraps (e.g. reactions within group DMs) */
     suspend fun sendGiftWraps(wraps: List<GiftWrapEvent>)
+
+    /** Proxy relay list state for relay routing */
+    val proxyRelayList: IRelayListState
+
+    /** Blocked relay list state for relay filtering */
+    val blockedRelayList: IRelayListState
 }
