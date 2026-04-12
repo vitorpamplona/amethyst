@@ -36,6 +36,7 @@ import androidx.compose.ui.layout.ContentScale
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.commons.robohash.CachedRobohash
 import com.vitorpamplona.amethyst.commons.ui.components.ProfilePictureUrl
+import com.vitorpamplona.amethyst.commons.ui.components.forwardingPainter
 import com.vitorpamplona.amethyst.ui.theme.isLight
 import com.vitorpamplona.amethyst.ui.theme.onBackgroundColorFilter
 
