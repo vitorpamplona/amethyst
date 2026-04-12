@@ -175,14 +175,15 @@ import kotlinx.coroutines.withContext
 
 @Stable
 class AccountViewModel(
-    val account: Account,
+    override val account: Account,
     val settings: UiSettingsState,
     val torSettings: TorSettingsFlow,
     val dataSources: RelaySubscriptionsCoordinator,
     val httpClientBuilder: IRoleBasedHttpClientBuilder,
     val nip05ClientBuilder: () -> INip05Client,
 ) : ViewModel(),
-    Dao {
+    Dao,
+    com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel {
     var firstRoute: Route? = null
 
     val toastManager = ToastManager()
@@ -418,9 +419,9 @@ class AccountViewModel(
             Route.Notification() to notificationHasNewItemsFlow,
         )
 
-    fun isWriteable(): Boolean = account.isWriteable()
+    override fun isWriteable(): Boolean = account.isWriteable()
 
-    fun userProfile(): User = account.userProfile()
+    override fun userProfile(): User = account.userProfile()
 
     fun reactToOrDelete(
         note: Note,
@@ -842,10 +843,10 @@ class AccountViewModel(
         )
     }
 
-    fun report(
+    override fun report(
         note: Note,
         type: ReportType,
-        content: String = "",
+        content: String,
     ) = launchSigner { account.report(note, type, content) }
 
     fun report(
@@ -1007,13 +1008,13 @@ class AccountViewModel(
         }
     }
 
-    fun broadcast(note: Note) = launchSigner { account.broadcast(note) }
+    override fun broadcast(note: Note) = launchSigner { account.broadcast(note) }
 
     fun timestamp(note: Note) = launchSigner { account.otsState.timestamp(note) }
 
-    fun delete(notes: List<Note>) = launchSigner { account.delete(notes) }
+    override fun delete(notes: List<Note>) = launchSigner { account.delete(notes) }
 
-    fun delete(note: Note) = launchSigner { account.delete(note) }
+    override fun delete(note: Note) = launchSigner { account.delete(note) }
 
     fun requestToVanish(
         relays: List<NormalizedRelayUrl>,
@@ -1026,9 +1027,9 @@ class AccountViewModel(
         createdAt: Long,
     ) = launchSigner { account.requestToVanishFromEverywhere(reason, createdAt) }
 
-    fun cachedDecrypt(note: Note): String? = account.cachedDecryptContent(note)
+    override fun cachedDecrypt(note: Note): String? = account.cachedDecryptContent(note)
 
-    fun decrypt(
+    override fun decrypt(
         note: Note,
         onReady: (String) -> Unit,
     ) = launchSigner {
@@ -1081,79 +1082,79 @@ class AccountViewModel(
         community: AddressableNote,
     ) = launchSigner { account.approveCommunityPost(post, community) }
 
-    fun follow(community: AddressableNote) = launchSigner { account.follow(community) }
+    override fun follow(community: AddressableNote) = launchSigner { account.follow(community) }
 
-    fun follow(channel: PublicChatChannel) = launchSigner { account.follow(channel) }
+    override fun follow(channel: PublicChatChannel) = launchSigner { account.follow(channel) }
 
-    fun follow(channel: EphemeralChatChannel) = launchSigner { account.follow(channel) }
+    override fun follow(channel: EphemeralChatChannel) = launchSigner { account.follow(channel) }
 
-    fun unfollow(community: AddressableNote) = launchSigner { account.unfollow(community) }
+    override fun unfollow(community: AddressableNote) = launchSigner { account.unfollow(community) }
 
-    fun unfollow(channel: PublicChatChannel) = launchSigner { account.unfollow(channel) }
+    override fun unfollow(channel: PublicChatChannel) = launchSigner { account.unfollow(channel) }
 
-    fun unfollow(channel: EphemeralChatChannel) = launchSigner { account.unfollow(channel) }
+    override fun unfollow(channel: EphemeralChatChannel) = launchSigner { account.unfollow(channel) }
 
-    fun follow(users: List<User>) = launchSigner { account.follow(users) }
+    override fun follow(users: List<User>) = launchSigner { account.follow(users) }
 
-    fun follow(user: User) = launchSigner { account.follow(user) }
+    override fun follow(user: User) = launchSigner { account.follow(user) }
 
-    fun unfollow(user: User) = launchSigner { account.unfollow(user) }
+    override fun unfollow(user: User) = launchSigner { account.unfollow(user) }
 
-    fun followGeohash(tag: String) = launchSigner { account.followGeohash(tag) }
+    override fun followGeohash(tag: String) = launchSigner { account.followGeohash(tag) }
 
-    fun unfollowGeohash(tag: String) = launchSigner { account.unfollowGeohash(tag) }
+    override fun unfollowGeohash(tag: String) = launchSigner { account.unfollowGeohash(tag) }
 
-    fun followHashtag(tag: String) = launchSigner { account.followHashtag(tag) }
+    override fun followHashtag(tag: String) = launchSigner { account.followHashtag(tag) }
 
-    fun unfollowHashtag(tag: String) = launchSigner { account.unfollowHashtag(tag) }
+    override fun unfollowHashtag(tag: String) = launchSigner { account.unfollowHashtag(tag) }
 
-    fun followRelayFeed(url: NormalizedRelayUrl) = launchSigner { account.followRelayFeed(url) }
+    override fun followRelayFeed(url: NormalizedRelayUrl) = launchSigner { account.followRelayFeed(url) }
 
-    fun unfollowRelayFeed(url: NormalizedRelayUrl) = launchSigner { account.unfollowRelayFeed(url) }
+    override fun unfollowRelayFeed(url: NormalizedRelayUrl) = launchSigner { account.unfollowRelayFeed(url) }
 
-    fun showWord(word: String) = launchSigner { account.showWord(word) }
+    override fun showWord(word: String) = launchSigner { account.showWord(word) }
 
-    fun hideWord(word: String) = launchSigner { account.hideWord(word) }
+    override fun hideWord(word: String) = launchSigner { account.hideWord(word) }
 
-    fun isLoggedUser(pubkeyHex: HexKey?): Boolean = account.signer.pubKey == pubkeyHex
+    override fun isLoggedUser(pubkeyHex: HexKey?): Boolean = account.signer.pubKey == pubkeyHex
 
-    fun isLoggedUser(user: User?): Boolean = isLoggedUser(user?.pubkeyHex)
+    override fun isLoggedUser(user: User?): Boolean = isLoggedUser(user?.pubkeyHex)
 
-    fun isFollowing(user: User?): Boolean {
+    override fun isFollowing(user: User?): Boolean {
         if (user == null) return false
         return account.isFollowing(user)
     }
 
-    fun isFollowing(user: HexKey): Boolean = account.isFollowing(user)
+    override fun isFollowing(user: HexKey): Boolean = account.isFollowing(user)
 
-    fun markDonatedInThisVersion() = account.markDonatedInThisVersion()
+    override fun markDonatedInThisVersion() = account.markDonatedInThisVersion()
 
-    fun dismissPollNotification(noteId: String) = account.dismissPollNotification(noteId)
+    override fun dismissPollNotification(noteId: String) = account.dismissPollNotification(noteId)
 
-    fun hasViewedPollResults(noteId: String) = account.hasViewedPollResults(noteId)
+    override fun hasViewedPollResults(noteId: String) = account.hasViewedPollResults(noteId)
 
-    fun markPollResultsViewed(
+    override fun markPollResultsViewed(
         noteId: String,
         pollEndsAt: Long?,
     ) = account.markPollResultsViewed(noteId, pollEndsAt)
 
-    fun dontTranslateFrom() = account.settings.syncedSettings.languages.dontTranslateFrom.value
+    override fun dontTranslateFrom() = account.settings.syncedSettings.languages.dontTranslateFrom.value
 
-    fun translateTo() = account.settings.syncedSettings.languages.translateTo.value
+    override fun translateTo() = account.settings.syncedSettings.languages.translateTo.value
 
-    fun defaultZapType() = account.settings.syncedSettings.zaps.defaultZapType.value
+    override fun defaultZapType() = account.settings.syncedSettings.zaps.defaultZapType.value
 
-    fun showSensitiveContent(): MutableStateFlow<Boolean?> = account.settings.syncedSettings.security.showSensitiveContent
+    override fun showSensitiveContent(): MutableStateFlow<Boolean?> = account.settings.syncedSettings.security.showSensitiveContent
 
-    fun zapAmountChoicesFlow() = account.settings.syncedSettings.zaps.zapAmountChoices
+    override fun zapAmountChoicesFlow() = account.settings.syncedSettings.zaps.zapAmountChoices
 
-    fun zapAmountChoices() = zapAmountChoicesFlow().value
+    override fun zapAmountChoices() = zapAmountChoicesFlow().value
 
-    fun reactionChoicesFlow() = account.settings.syncedSettings.reactions.reactionChoices
+    override fun reactionChoicesFlow() = account.settings.syncedSettings.reactions.reactionChoices
 
-    fun reactionChoices() = reactionChoicesFlow().value
+    override fun reactionChoices() = reactionChoicesFlow().value
 
-    fun filterSpamFromStrangers() = account.settings.syncedSettings.security.filterSpamFromStrangers
+    override fun filterSpamFromStrangers() = account.settings.syncedSettings.security.filterSpamFromStrangers
 
     fun toggleSendKind0ToLocalRelay(enabled: Boolean) = launchSigner { account.updateSendKind0EventsToLocalRelay(enabled) }
 
@@ -1199,19 +1200,19 @@ class AccountViewModel(
 
     fun updateTranslateTo(languageCode: String) = launchSigner { account.updateTranslateTo(languageCode) }
 
-    fun prefer(
+    override fun prefer(
         source: String,
         target: String,
         preference: String,
     ) = launchSigner { account.prefer(source, target, preference) }
 
-    fun show(user: User) = launchSigner { account.showUser(user.pubkeyHex) }
+    override fun show(user: User) = launchSigner { account.showUser(user.pubkeyHex) }
 
-    fun hide(user: User) = launchSigner { account.hideUser(user.pubkeyHex) }
+    override fun hide(user: User) = launchSigner { account.hideUser(user.pubkeyHex) }
 
-    fun hide(word: String) = launchSigner { account.hideWord(word) }
+    override fun hide(word: String) = launchSigner { account.hideWord(word) }
 
-    fun showUser(pubkeyHex: String) = launchSigner { account.showUser(pubkeyHex) }
+    override fun showUser(pubkeyHex: String) = launchSigner { account.showUser(pubkeyHex) }
 
     fun createStatus(newStatus: String) = launchSigner { account.createStatus(newStatus) }
 
@@ -1242,17 +1243,17 @@ class AccountViewModel(
         return note.getReactionBy(userProfile())
     }
 
-    fun runOnIO(runOnIO: suspend () -> Unit) {
+    override fun runOnIO(runOnIO: suspend () -> Unit) {
         viewModelScope.launch(Dispatchers.IO) { runOnIO() }
     }
 
-    fun checkGetOrCreateUser(key: HexKey): User? = LocalCache.checkGetOrCreateUser(key)
+    override fun checkGetOrCreateUser(key: HexKey): User? = LocalCache.checkGetOrCreateUser(key)
 
     override suspend fun getOrCreateUser(hex: HexKey): User = LocalCache.getOrCreateUser(hex)
 
-    fun getUserIfExists(hex: HexKey): User? = LocalCache.getUserIfExists(hex)
+    override fun getUserIfExists(hex: HexKey): User? = LocalCache.getUserIfExists(hex)
 
-    fun checkGetOrCreateNote(key: HexKey): Note? = LocalCache.checkGetOrCreateNote(key)
+    override fun checkGetOrCreateNote(key: HexKey): Note? = LocalCache.checkGetOrCreateNote(key)
 
     override suspend fun getOrCreateNote(hex: HexKey): Note = LocalCache.getOrCreateNote(hex)
 
@@ -1267,7 +1268,7 @@ class AccountViewModel(
         return note
     }
 
-    fun getNoteIfExists(hex: HexKey): Note? = LocalCache.getNoteIfExists(hex)
+    override fun getNoteIfExists(hex: HexKey): Note? = LocalCache.getNoteIfExists(hex)
 
     /**
      * Fixes author and relay hints in MarkedETag list by looking up notes from cache.
