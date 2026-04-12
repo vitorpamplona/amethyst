@@ -20,42 +20,41 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.list
 
-import androidx.compose.runtime.Stable
-import androidx.lifecycle.ViewModel
-import com.vitorpamplona.amethyst.model.nip51Lists.peopleList.PeopleList
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.peopleList.PeopleList
+import com.vitorpamplona.amethyst.commons.viewmodels.FollowPackOperations
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import kotlinx.coroutines.flow.StateFlow
 
-@Stable
-class FollowPackViewModel : ViewModel() {
-    lateinit var accountViewModel: AccountViewModel
+typealias FollowPackViewModel = com.vitorpamplona.amethyst.commons.viewmodels.FollowPackListViewModel
 
-    fun init(accountViewModel: AccountViewModel) {
-        this.accountViewModel = accountViewModel
-    }
+fun FollowPackViewModel.init(accountViewModel: AccountViewModel) {
+    init(
+        object : FollowPackOperations {
+            override fun listFlow(): StateFlow<List<PeopleList>> = accountViewModel.account.followLists.uiListFlow
 
-    fun listFlow() = accountViewModel.account.followLists.uiListFlow
+            override fun launchSigner(block: suspend () -> Unit) {
+                accountViewModel.launchSigner { block() }
+            }
 
-    fun cloneItem(
-        followSet: PeopleList,
-        customName: String?,
-        customDescription: String?,
-    ) {
-        accountViewModel.launchSigner {
-            accountViewModel.account.followLists.cloneFollowSet(
-                currentFollowPack = followSet,
-                customCloneName = customName,
-                customCloneDescription = customDescription,
-                account = accountViewModel.account,
-            )
-        }
-    }
+            override suspend fun cloneFollowSet(
+                currentFollowPack: PeopleList,
+                customCloneName: String?,
+                customCloneDescription: String?,
+            ) {
+                accountViewModel.account.followLists.cloneFollowSet(
+                    currentFollowPack = currentFollowPack,
+                    customCloneName = customCloneName,
+                    customCloneDescription = customCloneDescription,
+                    account = accountViewModel.account,
+                )
+            }
 
-    fun deleteItem(followSet: PeopleList) {
-        accountViewModel.launchSigner {
-            accountViewModel.account.followLists.deleteFollowSet(
-                identifierTag = followSet.identifierTag,
-                account = accountViewModel.account,
-            )
-        }
-    }
+            override suspend fun deleteFollowSet(identifierTag: String) {
+                accountViewModel.account.followLists.deleteFollowSet(
+                    identifierTag = identifierTag,
+                    account = accountViewModel.account,
+                )
+            }
+        },
+    )
 }
