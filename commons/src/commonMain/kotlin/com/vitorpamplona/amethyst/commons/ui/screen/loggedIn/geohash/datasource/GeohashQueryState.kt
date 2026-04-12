@@ -18,26 +18,14 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.datasource
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.geohash.datasource
 
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.KeyDataSourceSubscription
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.hashtag.datasource.HashtagQueryState
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
-@Composable
-fun HashtagFilterAssemblerSubscription(
-    tag: Route.Hashtag,
-    accountViewModel: AccountViewModel,
+// This allows multiple screens to be listening to tags, even the same tag
+class GeohashQueryState(
+    val geohash: String,
+    val relays: Set<NormalizedRelayUrl>,
 ) {
-    // different screens get different states
-    // even if they are tracking the same tag.
-    val state =
-        remember(tag) {
-            HashtagQueryState(tag.hashtag, accountViewModel.account.followOutboxesOrProxy.flow.value)
-        }
-
-    KeyDataSourceSubscription(state, accountViewModel.dataSources().hashtags)
+    val lowercaseGeohash = geohash.lowercase()
 }

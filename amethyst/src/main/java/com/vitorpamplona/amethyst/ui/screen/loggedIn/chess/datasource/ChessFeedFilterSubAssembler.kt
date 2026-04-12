@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.datasource
 
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chess.datasource.ChessQueryState
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chess.datasource.filterChessEvents
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEoseManager
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -30,18 +32,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscriptio
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.TimeUtils
-
-/**
- * Query state for chess subscription
- */
-data class ChessQueryState(
-    val userPubkey: String,
-    val inboxRelays: Set<NormalizedRelayUrl>,
-    val globalRelays: Set<NormalizedRelayUrl>,
-    val isGlobal: Boolean,
-    val activeGameIds: Set<String> = emptySet(),
-    val opponentPubkeys: Set<String> = emptySet(),
-)
 
 /**
  * Sub-assembler that creates the actual relay filters.

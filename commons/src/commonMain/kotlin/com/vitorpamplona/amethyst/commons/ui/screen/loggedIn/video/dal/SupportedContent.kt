@@ -18,26 +18,29 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.datasource
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.video.dal
 
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.KeyDataSourceSubscription
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.hashtag.datasource.HashtagQueryState
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-
-@Composable
-fun HashtagFilterAssemblerSubscription(
-    tag: Route.Hashtag,
-    accountViewModel: AccountViewModel,
+class SupportedContent(
+    val blockedUrls: List<String>,
+    val mimeTypes: Set<String>,
+    val supportedFileExtensions: Set<String>,
 ) {
-    // different screens get different states
-    // even if they are tracking the same tag.
-    val state =
-        remember(tag) {
-            HashtagQueryState(tag.hashtag, accountViewModel.account.followOutboxesOrProxy.flow.value)
+    private fun validExtension(fullUrl: String): Boolean {
+        val queryIndex = fullUrl.indexOf('?')
+        if (queryIndex > 0) {
+            return supportedFileExtensions.any { fullUrl.startsWith(it, queryIndex - it.length) }
         }
 
-    KeyDataSourceSubscription(state, accountViewModel.dataSources().hashtags)
+        val fragmentIndex = fullUrl.indexOf('#')
+        if (fragmentIndex > 0) {
+            return supportedFileExtensions.any { fullUrl.startsWith(it, fragmentIndex - it.length) }
+        }
+
+        return supportedFileExtensions.any { fullUrl.endsWith(it) }
+    }
+
+    fun acceptableUrl(
+        url: String,
+        mimeType: String?,
+    ) = blockedUrls.none { url.contains(it) } && ((mimeType != null && mimeTypes.contains(mimeType)) || validExtension(url))
 }

@@ -20,35 +20,12 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource
 
-import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
-import com.vitorpamplona.quartz.nip68Picture.PictureEvent
-import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
-import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
-import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
-import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
-import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
-
-val SUPPORTED_VIDEO_FEED_MIME_TYPES = listOf("image/jpeg", "image/gif", "image/png", "image/webp", "video/mp4", "video/mpeg", "video/webm", "audio/aac", "audio/mpeg", "audio/webm", "audio/wav", "image/avif")
-val SUPPORTED_VIDEO_FEED_MIME_TYPES_SET = SUPPORTED_VIDEO_FEED_MIME_TYPES.toSet()
-
-val PictureAndVideoKinds =
-    listOf(
-        PictureEvent.KIND,
-        VideoHorizontalEvent.KIND,
-        VideoVerticalEvent.KIND,
-        VideoNormalEvent.KIND,
-        VideoShortEvent.KIND,
-    )
-
-val PictureAndVideoKTags =
-    listOf(
-        PictureEvent.KIND.toString(),
-        VideoHorizontalEvent.KIND.toString(),
-        VideoVerticalEvent.KIND.toString(),
-        VideoNormalEvent.KIND.toString(),
-        VideoShortEvent.KIND.toString(),
-    )
-val PictureAndVideoLegacyKinds = listOf(FileHeaderEvent.KIND, FileStorageHeaderEvent.KIND)
-val PictureAndVideoLegacyKTags = listOf(FileHeaderEvent.KIND.toString(), FileStorageHeaderEvent.KIND.toString())
-val LegacyMimeTypes = SUPPORTED_VIDEO_FEED_MIME_TYPES
-val LegacyMimeTypeMap = mapOf("m" to LegacyMimeTypes)
+// Re-exported from commons for backwards compatibility
+val SUPPORTED_VIDEO_FEED_MIME_TYPES get() = com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.video.datasource.SUPPORTED_VIDEO_FEED_MIME_TYPES
+val SUPPORTED_VIDEO_FEED_MIME_TYPES_SET get() = com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.video.datasource.SUPPORTED_VIDEO_FEED_MIME_TYPES_SET
+val PictureAndVideoKinds get() = com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.video.datasource.PictureAndVideoKinds
+val PictureAndVideoKTags get() = com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.video.datasource.PictureAndVideoKTags
+val PictureAndVideoLegacyKinds get() = com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.video.datasource.PictureAndVideoLegacyKinds
+val PictureAndVideoLegacyKTags get() = com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.video.datasource.PictureAndVideoLegacyKTags
+val LegacyMimeTypes get() = com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.video.datasource.LegacyMimeTypes
+val LegacyMimeTypeMap get() = com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.video.datasource.LegacyMimeTypeMap

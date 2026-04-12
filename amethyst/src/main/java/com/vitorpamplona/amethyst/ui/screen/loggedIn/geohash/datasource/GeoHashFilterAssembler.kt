@@ -22,16 +22,8 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.datasource
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.geohash.datasource.GeohashQueryState
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-
-// This allows multiple screen to be listening to tags, even the same tag
-class GeohashQueryState(
-    val geohash: String,
-    val relays: Set<NormalizedRelayUrl>,
-) {
-    val lowercaseGeohash = geohash.lowercase()
-}
 
 /**
  * Creates a filter for multiple geohashes at the same time.

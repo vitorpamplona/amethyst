@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.datasource
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chess.datasource
 
 import com.vitorpamplona.amethyst.commons.chess.subscription.ChessFilterBuilder
 import com.vitorpamplona.amethyst.commons.chess.subscription.ChessSubscriptionState
