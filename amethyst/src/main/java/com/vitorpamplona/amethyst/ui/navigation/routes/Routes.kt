@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.ui.navigation.routes
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavHostController
 import androidx.navigation.toRoute
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.BookmarkType
+import com.vitorpamplona.amethyst.commons.ui.screens.bookmarkgroups.BookmarkType
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey

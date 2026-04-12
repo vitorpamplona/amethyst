@@ -18,7 +18,21 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
+package com.vitorpamplona.amethyst.commons.ui.screens.settings
 
-// Re-export from commons for backwards compatibility
-typealias StringFeedState = com.vitorpamplona.amethyst.commons.ui.screens.settings.StringFeedState
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.coroutines.flow.MutableStateFlow
+
+sealed class StringFeedState {
+    object Loading : StringFeedState()
+
+    class Loaded(
+        val feed: MutableStateFlow<ImmutableList<String>>,
+    ) : StringFeedState()
+
+    object Empty : StringFeedState()
+
+    class FeedError(
+        val errorMessage: String,
+    ) : StringFeedState()
+}

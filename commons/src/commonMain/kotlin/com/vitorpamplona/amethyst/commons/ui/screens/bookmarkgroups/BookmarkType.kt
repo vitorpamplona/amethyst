@@ -18,7 +18,10 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
+package com.vitorpamplona.amethyst.commons.ui.screens.bookmarkgroups
 
-// Re-export from commons for backwards compatibility
-typealias StringFeedState = com.vitorpamplona.amethyst.commons.ui.screens.settings.StringFeedState
+enum class BookmarkType {
+    PostBookmark,
+
+    ArticleBookmark,
+}
