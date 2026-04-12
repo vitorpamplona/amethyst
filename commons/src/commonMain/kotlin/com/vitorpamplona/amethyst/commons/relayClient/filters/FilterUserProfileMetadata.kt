@@ -18,14 +18,42 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.datasource
+package com.vitorpamplona.amethyst.commons.relayClient.filters
 
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.amethyst.commons.relayClient.filters.filterUserProfileLastSeen as commonsFilterUserProfileLastSeen
+import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
+import com.vitorpamplona.quartz.nip58Badges.accepted.AcceptedBadgeSetEvent
+import com.vitorpamplona.quartz.nip58Badges.profile.ProfileBadgesEvent
+import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 
-fun filterUserProfileLastSeen(
+val UserProfileMetadataKinds =
+    listOf(
+        MetadataEvent.KIND,
+        AdvertisedRelayListEvent.KIND,
+        ContactListEvent.KIND,
+        AcceptedBadgeSetEvent.KIND,
+        ProfileBadgesEvent.KIND,
+    )
+
+fun filterUserProfileMetadata(
     users: Map<NormalizedRelayUrl, Set<String>>,
     since: SincePerRelayMap?,
-): List<RelayBasedFilter> = commonsFilterUserProfileLastSeen(users, since)
+): List<RelayBasedFilter> {
+    if (users.isEmpty()) return emptyList()
+
+    return users.map {
+        RelayBasedFilter(
+            relay = it.key,
+            filter =
+                Filter(
+                    kinds = UserProfileMetadataKinds,
+                    authors = it.value.sorted(),
+                    since = since?.get(it.key)?.time,
+                ),
+        )
+    }
+}

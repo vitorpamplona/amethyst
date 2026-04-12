@@ -21,27 +21,13 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.datasource.subassemblies
 
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
-import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
+import com.vitorpamplona.amethyst.commons.relayClient.filters.filterMyMessagesToPublicChat as commonsFilterMyMessagesToPublicChat
 
 fun filterMyMessagesToPublicChat(
     channel: PublicChatChannel,
     pubKey: HexKey,
     since: SincePerRelayMap?,
-): List<RelayBasedFilter> =
-    channel.relays().toSet().map {
-        RelayBasedFilter(
-            relay = it,
-            filter =
-                Filter(
-                    kinds = listOf(ChannelMessageEvent.KIND),
-                    tags = mapOf("e" to listOfNotNull(channel.idHex)),
-                    authors = listOf(pubKey),
-                    limit = 50,
-                    since = since?.get(it)?.time,
-                ),
-        )
-    }
+): List<RelayBasedFilter> = commonsFilterMyMessagesToPublicChat(channel, pubKey, since)

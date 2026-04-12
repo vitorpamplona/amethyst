@@ -20,91 +20,19 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.datasource
 
-import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip22Comments.CommentKinds
-import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
-import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
-import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStorySceneEvent
-import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
-import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
+import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtagAlts
-import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import com.vitorpamplona.quartz.nip22Comments.CommentEvent
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
-import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
-import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
-import com.vitorpamplona.quartz.nip73ExternalIds.topics.HashtagId
-import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
-import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
-import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
+import com.vitorpamplona.amethyst.commons.relayClient.filters.PostsByHashtagKinds2 as CommonsPostsByHashtagKinds2
+import com.vitorpamplona.amethyst.commons.relayClient.filters.PostsByHashtagsKinds as CommonsPostsByHashtagsKinds
+import com.vitorpamplona.amethyst.commons.relayClient.filters.filterPostsByHashtags as commonsFilterPostsByHashtags
 
-val PostsByHashtagsKinds =
-    listOf(
-        TextNoteEvent.KIND,
-        ChannelMessageEvent.KIND,
-        LongTextNoteEvent.KIND,
-        PollEvent.KIND,
-        LiveActivitiesChatMessageEvent.KIND,
-        ClassifiedsEvent.KIND,
-        HighlightEvent.KIND,
-        WikiNoteEvent.KIND,
-        CommentEvent.KIND,
-    )
-
-val PostsByHashtagKinds2 =
-    listOf(
-        InteractiveStorySceneEvent.KIND,
-        AudioTrackEvent.KIND,
-        AudioHeaderEvent.KIND,
-        NipTextEvent.KIND,
-        ZapPollEvent.KIND,
-    )
+// Re-exports from commons
+val PostsByHashtagsKinds = CommonsPostsByHashtagsKinds
+val PostsByHashtagKinds2 = CommonsPostsByHashtagKinds2
 
 fun filterPostsByHashtags(
     hashtag: String,
     relays: Set<NormalizedRelayUrl>,
     since: SincePerRelayMap?,
-): List<RelayBasedFilter> {
-    val hashtagsToFollowMap = mapOf("t" to hashtagAlts(hashtag).sorted())
-    val hashtagScoreMap = mapOf("I" to listOf(HashtagId.toScope(hashtag)))
-
-    return relays.flatMap { relay ->
-        val since = since?.get(relay)?.time
-        listOf(
-            RelayBasedFilter(
-                relay = relay,
-                filter =
-                    Filter(
-                        tags = hashtagsToFollowMap,
-                        kinds = PostsByHashtagsKinds,
-                        limit = 400,
-                        since = since,
-                    ),
-            ),
-            RelayBasedFilter(
-                relay = relay,
-                filter =
-                    Filter(
-                        tags = hashtagsToFollowMap,
-                        kinds = PostsByHashtagKinds2,
-                        limit = 100,
-                        since = since,
-                    ),
-            ),
-            RelayBasedFilter(
-                relay = relay,
-                filter =
-                    Filter(
-                        tags = hashtagScoreMap,
-                        kinds = CommentKinds,
-                        limit = 200,
-                        since = since,
-                    ),
-            ),
-        )
-    }
-}
+): List<RelayBasedFilter> = commonsFilterPostsByHashtags(hashtag, relays, since)

@@ -18,14 +18,27 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.datasource
+package com.vitorpamplona.amethyst.commons.relayClient.filters
 
+import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.amethyst.commons.relayClient.filters.filterUserProfileLastSeen as commonsFilterUserProfileLastSeen
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 
-fun filterUserProfileLastSeen(
-    users: Map<NormalizedRelayUrl, Set<String>>,
+fun filterMessagesToLiveActivities(
+    channel: LiveActivitiesChannel,
     since: SincePerRelayMap?,
-): List<RelayBasedFilter> = commonsFilterUserProfileLastSeen(users, since)
+): List<RelayBasedFilter> =
+    channel.relays().toSet().map {
+        RelayBasedFilter(
+            relay = it,
+            filter =
+                Filter(
+                    kinds = listOf(LiveActivitiesChatMessageEvent.KIND),
+                    tags = mapOf("a" to listOfNotNull(channel.address.toValue())),
+                    limit = 200,
+                    since = since?.get(it)?.time,
+                ),
+        )
+    }

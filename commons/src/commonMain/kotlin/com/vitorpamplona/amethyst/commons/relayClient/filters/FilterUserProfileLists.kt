@@ -18,14 +18,46 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.datasource
+package com.vitorpamplona.amethyst.commons.relayClient.filters
 
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.amethyst.commons.relayClient.filters.filterUserProfileLastSeen as commonsFilterUserProfileLastSeen
+import com.vitorpamplona.quartz.nip51Lists.PinListEvent
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
+import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
+import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
+import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
+import com.vitorpamplona.quartz.nip89AppHandlers.recommendation.AppRecommendationEvent
 
-fun filterUserProfileLastSeen(
+val UserProfileListKinds =
+    listOf(
+        BookmarkListEvent.KIND,
+        OldBookmarkListEvent.KIND,
+        PinListEvent.KIND,
+        PeopleListEvent.KIND,
+        FollowListEvent.KIND,
+        HashtagListEvent.KIND,
+        AppRecommendationEvent.KIND,
+        PaymentTargetsEvent.KIND,
+    )
+
+fun filterUserProfileLists(
     users: Map<NormalizedRelayUrl, Set<String>>,
     since: SincePerRelayMap?,
-): List<RelayBasedFilter> = commonsFilterUserProfileLastSeen(users, since)
+): List<RelayBasedFilter> =
+    users.map {
+        RelayBasedFilter(
+            relay = it.key,
+            filter =
+                Filter(
+                    kinds = UserProfileListKinds,
+                    authors = it.value.sorted(),
+                    limit = 100,
+                    since = since?.get(it.key)?.time,
+                ),
+        )
+    }

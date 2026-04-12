@@ -18,14 +18,32 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.datasource
+package com.vitorpamplona.amethyst.commons.relayClient.filters
 
+import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.amethyst.commons.relayClient.filters.filterUserProfileLastSeen as commonsFilterUserProfileLastSeen
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 
-fun filterUserProfileLastSeen(
-    users: Map<NormalizedRelayUrl, Set<String>>,
+fun filterMessagesToEphemeralChat(
+    channel: EphemeralChatChannel,
     since: SincePerRelayMap?,
-): List<RelayBasedFilter> = commonsFilterUserProfileLastSeen(users, since)
+): List<RelayBasedFilter> =
+    channel.relays().toSet().map {
+        RelayBasedFilter(
+            relay = it,
+            filter =
+                Filter(
+                    kinds = listOf(EphemeralChatEvent.KIND),
+                    tags =
+                        if (channel.roomId.id.isBlank()) {
+                            mapOf("d" to listOf("_"))
+                        } else {
+                            mapOf("d" to listOfNotNull(channel.roomId.id))
+                        },
+                    limit = 200,
+                    since = since?.get(it)?.time,
+                ),
+        )
+    }

@@ -21,24 +21,11 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.datasource.subassemblies
 
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
-import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
+import com.vitorpamplona.amethyst.commons.relayClient.filters.filterMessagesToLiveActivities as commonsFilterMessagesToLiveActivities
 
 fun filterMessagesToLiveActivities(
     channel: LiveActivitiesChannel,
     since: SincePerRelayMap?,
-): List<RelayBasedFilter> =
-    channel.relays().toSet().map {
-        RelayBasedFilter(
-            relay = it,
-            filter =
-                Filter(
-                    kinds = listOf(LiveActivitiesChatMessageEvent.KIND),
-                    tags = mapOf("a" to listOfNotNull(channel.address.toValue())),
-                    limit = 200,
-                    since = since?.get(it)?.time,
-                ),
-        )
-    }
+): List<RelayBasedFilter> = commonsFilterMessagesToLiveActivities(channel, since)

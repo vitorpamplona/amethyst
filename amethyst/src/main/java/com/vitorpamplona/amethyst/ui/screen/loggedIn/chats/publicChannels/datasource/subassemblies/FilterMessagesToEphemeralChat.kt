@@ -21,29 +21,11 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.datasource.subassemblies
 
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
-import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
-import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
+import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.amethyst.commons.relayClient.filters.filterMessagesToEphemeralChat as commonsFilterMessagesToEphemeralChat
 
 fun filterMessagesToEphemeralChat(
     channel: EphemeralChatChannel,
     since: SincePerRelayMap?,
-): List<RelayBasedFilter> =
-    channel.relays().toSet().map {
-        RelayBasedFilter(
-            relay = it,
-            filter =
-                Filter(
-                    kinds = listOf(EphemeralChatEvent.KIND),
-                    tags =
-                        if (channel.roomId.id.isBlank()) {
-                            mapOf("d" to listOf("_"))
-                        } else {
-                            mapOf("d" to listOfNotNull(channel.roomId.id))
-                        },
-                    limit = 200,
-                    since = since?.get(it)?.time,
-                ),
-        )
-    }
+): List<RelayBasedFilter> = commonsFilterMessagesToEphemeralChat(channel, since)

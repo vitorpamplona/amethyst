@@ -18,14 +18,32 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.datasource
+package com.vitorpamplona.amethyst.commons.relayClient.filters
 
-import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.amethyst.commons.relayClient.filters.filterUserProfileLastSeen as commonsFilterUserProfileLastSeen
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 
-fun filterUserProfileLastSeen(
-    users: Map<NormalizedRelayUrl, Set<String>>,
-    since: SincePerRelayMap?,
-): List<RelayBasedFilter> = commonsFilterUserProfileLastSeen(users, since)
+val CommentKinds = listOf(CommentEvent.KIND)
+
+fun filterHomePostsByScopes(
+    relay: NormalizedRelayUrl,
+    scopesToLoad: Set<String>,
+    since: Long?,
+): List<RelayBasedFilter> {
+    if (scopesToLoad.isEmpty()) return emptyList()
+
+    return listOf(
+        RelayBasedFilter(
+            relay = relay,
+            filter =
+                Filter(
+                    kinds = CommentKinds,
+                    tags = mapOf("I" to scopesToLoad.toList()),
+                    limit = 100,
+                    since = since,
+                ),
+        ),
+    )
+}
