@@ -105,6 +105,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.commons.util.timeDiffAgoShortish
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
@@ -298,9 +299,11 @@ private const val HTTPS_PREFIX = "https://"
 @Composable
 fun RelayInformationScreen(
     relayUrl: String,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     RelayUrlNormalizer.normalizeOrNull(relayUrl)?.let {
         RelayInformationScreen(
             relay = it,
@@ -314,9 +317,11 @@ fun RelayInformationScreen(
 @Composable
 fun RelayInformationScreen(
     relay: NormalizedRelayUrl,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
@@ -369,9 +374,11 @@ fun RelayInformationBody(
     relayStats: RelayStat,
     messages: ImmutableList<IRelayDebugMessage>,
     pad: PaddingValues,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val activeReqs = remember(relay) { accountViewModel.account.client.activeRequests(relay) }
     val activeCounts = remember(relay) { accountViewModel.account.client.activeCounts(relay) }
     val activeOutbox = remember(relay) { accountViewModel.account.client.activeOutboxCache(relay) }
@@ -1083,9 +1090,11 @@ private fun RenderDebugMessage(msg: IRelayDebugMessage) {
 @Composable
 private fun DisplayOwnerInformation(
     userHex: String,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     LoadUser(baseUserHex = userHex, accountViewModel) { loadedUser ->
         CrossfadeIfEnabled(loadedUser, accountViewModel = accountViewModel) {
             if (it != null) {
@@ -1106,9 +1115,11 @@ private fun RelayHeader(
     relay: NormalizedRelayUrl,
     relayStats: RelayStat,
     relayInfo: Nip11RelayInformation,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = SpacedBy10dp,
@@ -1620,9 +1631,11 @@ fun loadRelayDiscoveryEvents(relay: NormalizedRelayUrl): State<ImmutableList<Rel
 @Composable
 private fun RelayMonitorReportCard(
     event: RelayDiscoveryEvent,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val context = LocalContext.current
 
     OutlinedCard(

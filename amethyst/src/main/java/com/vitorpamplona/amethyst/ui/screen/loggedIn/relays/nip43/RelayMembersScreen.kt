@@ -65,6 +65,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.UserCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -87,9 +88,11 @@ import kotlinx.coroutines.launch
 @Composable
 fun RelayMembersScreen(
     relayUrl: String,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val normalizedRelayUrl = remember(relayUrl) { RelayUrlNormalizer.normalizeOrNull(relayUrl) }
     if (normalizedRelayUrl == null) return
 
@@ -365,8 +368,10 @@ private fun MembershipActionsLeaveSentPreview() {
 
 suspend fun sendJoinRequest(
     relay: NormalizedRelayUrl,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val template = RelayJoinRequestEvent.build()
     val signedEvent = accountViewModel.account.signer.sign(template)
     accountViewModel.account.cache.justConsumeMyOwnEvent(signedEvent)
@@ -375,8 +380,10 @@ suspend fun sendJoinRequest(
 
 suspend fun sendLeaveRequest(
     relay: NormalizedRelayUrl,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val template = RelayLeaveRequestEvent.build()
     val signedEvent = accountViewModel.account.signer.sign(template)
     accountViewModel.account.cache.justConsumeMyOwnEvent(signedEvent)

@@ -59,6 +59,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.nip62Vanish.ComplianceStatus
 import com.vitorpamplona.amethyst.model.nip62Vanish.VanishEventItem
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -75,9 +76,11 @@ import java.util.Locale
 
 @Composable
 fun VanishEventsScreen(
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Scaffold(
         topBar = {
             TopBarWithBackButton(
@@ -100,9 +103,11 @@ fun VanishEventsScreen(
 
 @Composable
 fun VanishEventsBody(
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val vanishEvents by accountViewModel.account.vanish.testableFlow
         .collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()

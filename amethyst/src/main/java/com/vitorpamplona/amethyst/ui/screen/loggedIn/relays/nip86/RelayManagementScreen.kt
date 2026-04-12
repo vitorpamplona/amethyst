@@ -83,6 +83,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.Nip05State
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.nip86RelayManagement.Nip86Retriever
@@ -118,9 +119,11 @@ import kotlinx.coroutines.launch
 @Composable
 fun RelayManagementScreen(
     relayUrl: String,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     RelayUrlNormalizer.normalizeOrNull(relayUrl)?.let {
         RelayManagementScreen(
             relay = it,
@@ -134,9 +137,11 @@ fun RelayManagementScreen(
 @Composable
 fun RelayManagementScreen(
     relay: NormalizedRelayUrl,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val retriever =
         remember {
             Nip86Retriever(Amethyst.instance.torEvaluatorFlow::okHttpClientForRelay)
@@ -241,8 +246,10 @@ private fun RelayManagementContent(
     viewModel: RelayManagementViewModel,
     supportedMethods: ImmutableList<String>,
     error: String?,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val tabs =
         remember(supportedMethods) {
             buildList {
@@ -356,8 +363,10 @@ private enum class ManagementTab(
 private fun PubkeysTab(
     viewModel: RelayManagementViewModel,
     supportedMethods: List<String>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val bannedPubkeyUsers by viewModel.bannedPubkeyUsers.collectAsStateWithLifecycle(emptyList())
     val allowedPubkeyUsers by viewModel.allowedPubkeyUsers.collectAsStateWithLifecycle(emptyList())
     var showBanDialog by remember { mutableStateOf(false) }
@@ -445,8 +454,10 @@ private fun PubkeyUserCard(
     entry: PubkeyUser,
     showRemove: Boolean,
     onRemove: () -> Unit,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     SlimListItem(
         modifier = Modifier.fillMaxWidth(),
         leadingContent = {
@@ -489,8 +500,10 @@ private fun PubkeyUserCard(
 @Composable
 private fun PubkeyNip05Row(
     user: User,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val nip05StateMetadata by user.nip05State().flow.collectAsStateWithLifecycle()
 
     when (val nip05State = nip05StateMetadata) {
@@ -996,8 +1009,10 @@ private fun UserSearchDialog(
     title: String,
     onConfirm: (User, String) -> Unit,
     onDismiss: () -> Unit,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val userSuggestions =
         remember {
             UserSuggestionState(accountViewModel.account, accountViewModel.nip05ClientBuilder())
@@ -1096,9 +1111,11 @@ private fun UserSearchDialog(
 @Composable
 private fun SelectedUserRow(
     user: User,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     onClear: () -> Unit,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Row(
         modifier =
             Modifier
@@ -1131,8 +1148,10 @@ private fun SelectedUserRow(
 private fun ShowUserSuggestions(
     userSuggestions: UserSuggestionState,
     onSelect: (User) -> Unit,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val listState = rememberLazyListState()
 
     AnimateOnNewSearch(userSuggestions, listState)

@@ -70,6 +70,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
@@ -98,9 +99,11 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RequestToVanishScreen(
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     RequestToVanishScreen(
         nip11CachedRetriever = Amethyst.instance.nip11Cache,
         accountViewModel = accountViewModel,
@@ -112,9 +115,11 @@ fun RequestToVanishScreen(
 @Composable
 fun RequestToVanishScreen(
     nip11CachedRetriever: Nip11CachedRetriever,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val connectedRelays by accountViewModel.account.client
         .connectedRelaysFlow()
         .collectAsStateWithLifecycle()

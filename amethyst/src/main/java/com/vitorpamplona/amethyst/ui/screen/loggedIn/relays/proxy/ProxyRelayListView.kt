@@ -30,6 +30,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.navs.rememberExtendedNav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -49,10 +50,12 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 @Composable
 fun ProxyRelayList(
     postViewModel: ProxyRelayListViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     onClose: () -> Unit,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val feedState by postViewModel.relays.collectAsStateWithLifecycle()
     val newNav = rememberExtendedNav(nav, onClose)
     val dragState =
@@ -74,11 +77,13 @@ fun ProxyRelayList(
 fun LazyListScope.renderProxyItems(
     feedState: List<BasicRelaySetupInfo>,
     postViewModel: ProxyRelayListViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
     countResults: Map<NormalizedRelayUrl, RelayCountResult> = emptyMap(),
     dragState: RelayDragState? = null,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     itemsIndexed(feedState, key = { _, item -> "Proxy" + item.relay.url }) { index, item ->
         BasicRelaySetupInfoDialog(
             item,

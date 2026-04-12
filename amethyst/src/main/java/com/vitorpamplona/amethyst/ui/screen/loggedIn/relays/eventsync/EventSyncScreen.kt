@@ -67,6 +67,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.note.timeAgoNoDotNoDay
@@ -81,9 +82,11 @@ import java.util.Locale
 
 @Composable
 fun EventSyncScreen(
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val syncViewModel = accountViewModel.eventSync
     val isMobileOrMetered by accountViewModel.settings.isMobileOrMeteredConnection.collectAsStateWithLifecycle()
     val syncState by syncViewModel.syncState.collectAsStateWithLifecycle()

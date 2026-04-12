@@ -49,6 +49,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.DefaultDMRelayList
 import com.vitorpamplona.amethyst.model.DefaultIndexerRelayList
 import com.vitorpamplona.amethyst.model.DefaultSearchRelayList
@@ -97,9 +98,11 @@ import com.vitorpamplona.amethyst.ui.theme.grayText
 
 @Composable
 fun AllRelayListScreen(
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val dmViewModel: DMRelayListViewModel = viewModel()
     val nip65ViewModel: Nip65RelayListViewModel = viewModel()
     val privateOutboxViewModel: PrivateOutboxRelayListViewModel = viewModel()
@@ -174,9 +177,11 @@ fun MappedAllRelayListView(
     indexerViewModel: IndexerRelayListViewModel,
     proxyViewModel: ProxyRelayListViewModel,
     relayFeedsViewModel: RelayFeedsListViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val dmFeedState by dmViewModel.relays.collectAsStateWithLifecycle()
     val homeFeedState by nip65ViewModel.homeRelays.collectAsStateWithLifecycle()
     val notifFeedState by nip65ViewModel.notificationRelays.collectAsStateWithLifecycle()

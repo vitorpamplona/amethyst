@@ -40,6 +40,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.service.countToHumanReadable
 import com.vitorpamplona.amethyst.service.countToHumanReadableBytes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -87,8 +88,10 @@ fun RelayStatusRow(
     item: BasicRelaySetupInfo,
     onClick: () -> Unit,
     modifier: Modifier,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceEvenly,

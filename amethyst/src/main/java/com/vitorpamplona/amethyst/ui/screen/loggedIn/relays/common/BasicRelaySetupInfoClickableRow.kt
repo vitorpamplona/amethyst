@@ -44,6 +44,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.components.util.setText
@@ -75,9 +76,11 @@ fun BasicRelaySetupInfoClickableRow(
     index: Int = -1,
     dragState: RelayDragState? = null,
     countResult: RelayCountResult? = null,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val clipboardManager = LocalClipboard.current
     val scope = rememberCoroutineScope()
 
@@ -167,9 +170,11 @@ fun BasicRelaySetupInfoClickableRow(
 @Composable
 fun UsedBy(
     item: BasicRelaySetupInfo,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     if (item.users.isNotEmpty()) {
         Row(modifier = HalfHalfVertPadding, verticalAlignment = Alignment.CenterVertically) {
             item.users.getOrNull(0)?.let {

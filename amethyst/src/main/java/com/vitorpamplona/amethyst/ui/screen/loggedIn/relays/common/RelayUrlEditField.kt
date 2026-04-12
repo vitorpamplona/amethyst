@@ -46,6 +46,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -122,9 +123,11 @@ fun RelayUrlEditFieldPreview() {
 fun RelayUrlEditField(
     onNewRelay: (NormalizedRelayUrl) -> Unit,
     modifier: Modifier,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     RelayUrlEditField(
         onNewRelay = onNewRelay,
         nip11CachedRetriever = Amethyst.instance.nip11Cache,
@@ -139,9 +142,11 @@ fun RelayUrlEditField(
     onNewRelay: (NormalizedRelayUrl) -> Unit,
     nip11CachedRetriever: Nip11CachedRetriever,
     modifier: Modifier,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val relaySuggestions = remember { RelaySuggestionState() }
     RelayUrlEditField(
         onNewRelay = onNewRelay,
@@ -159,9 +164,11 @@ fun RelayUrlEditField(
     relaySuggestions: IRelaySuggestionState,
     nip11CachedRetriever: Nip11CachedRetriever,
     modifier: Modifier,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     var url by remember { mutableStateOf("") }
 
     fun submitRelay() {

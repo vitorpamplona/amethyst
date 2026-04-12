@@ -30,6 +30,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.navs.rememberExtendedNav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -49,10 +50,12 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 @Composable
 fun Nip65RelayList(
     postViewModel: Nip65RelayListViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     onClose: () -> Unit,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val newNav = rememberExtendedNav(nav, onClose)
 
     val homeFeedState by postViewModel.homeRelays.collectAsStateWithLifecycle()
@@ -83,10 +86,12 @@ fun Nip65RelayList(
 @Composable
 fun Nip65InboxRelayList(
     postViewModel: Nip65RelayListViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     onClose: () -> Unit,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val newNav = rememberExtendedNav(nav, onClose)
     val notifFeedState by postViewModel.notificationRelays.collectAsStateWithLifecycle()
     val dragState =
@@ -108,10 +113,12 @@ fun Nip65InboxRelayList(
 @Composable
 fun Nip65OutboxRelayList(
     postViewModel: Nip65RelayListViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     onClose: () -> Unit,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val newNav = rememberExtendedNav(nav, onClose)
     val homeFeedState by postViewModel.homeRelays.collectAsStateWithLifecycle()
     val dragState =
@@ -133,11 +140,13 @@ fun Nip65OutboxRelayList(
 fun LazyListScope.renderNip65HomeItems(
     feedState: List<BasicRelaySetupInfo>,
     postViewModel: Nip65RelayListViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
     countResults: Map<NormalizedRelayUrl, RelayCountResult> = emptyMap(),
     dragState: RelayDragState? = null,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     itemsIndexed(feedState, key = { _, item -> "Nip65Home" + item.relay.url }) { index, item ->
         BasicRelaySetupInfoDialog(
             item,
@@ -166,11 +175,13 @@ fun LazyListScope.renderNip65HomeItems(
 fun LazyListScope.renderNip65NotifItems(
     feedState: List<BasicRelaySetupInfo>,
     postViewModel: Nip65RelayListViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
     countResults: Map<NormalizedRelayUrl, RelayCountResult> = emptyMap(),
     dragState: RelayDragState? = null,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     itemsIndexed(feedState, key = { _, item -> "Nip65Notif" + item.relay.url }) { index, item ->
         BasicRelaySetupInfoDialog(
             item,

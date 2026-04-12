@@ -29,6 +29,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.navs.rememberExtendedNav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -40,10 +41,12 @@ import com.vitorpamplona.amethyst.ui.theme.HorzHalfVertPadding
 @Composable
 fun ConnectedRelayList(
     postViewModel: ConnectedRelayListViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     onClose: () -> Unit,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val newNav = rememberExtendedNav(nav, onClose)
     val feedState by postViewModel.relays.collectAsStateWithLifecycle()
 
@@ -59,9 +62,11 @@ fun ConnectedRelayList(
 fun LazyListScope.renderConnectedItems(
     feedState: List<BasicRelaySetupInfo>,
     postViewModel: ConnectedRelayListViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     itemsIndexed(feedState, key = { _, item -> "Connected" + item.relay.url }) { index, item ->
         BasicRelaySetupInfoDialog(
             item,

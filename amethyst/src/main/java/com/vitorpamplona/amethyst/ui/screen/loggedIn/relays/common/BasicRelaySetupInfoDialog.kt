@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -36,9 +37,11 @@ fun BasicRelaySetupInfoDialog(
     countResult: RelayCountResult? = null,
     index: Int = -1,
     dragState: RelayDragState? = null,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     BasicRelaySetupInfoClickableRow(
         item = item,
         loadProfilePicture = accountViewModel.settings.showProfilePictures(),

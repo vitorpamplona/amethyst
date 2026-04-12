@@ -32,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.navs.rememberExtendedNav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -51,10 +52,12 @@ import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 @Composable
 fun LocalRelayList(
     postViewModel: LocalRelayListViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     onClose: () -> Unit,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val newNav = rememberExtendedNav(nav, onClose)
     val feedState by postViewModel.relays.collectAsStateWithLifecycle()
     val dragState =
@@ -76,10 +79,12 @@ fun LocalRelayList(
 fun LazyListScope.renderLocalItems(
     feedState: List<BasicRelaySetupInfo>,
     postViewModel: LocalRelayListViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
     dragState: RelayDragState? = null,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     itemsIndexed(feedState, key = { _, item -> "Local" + item.relay.url }) { index, item ->
         BasicRelaySetupInfoDialog(
             item,

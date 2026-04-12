@@ -23,14 +23,17 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.datasource
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.KeyDataSourceSubscription
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 @Composable
 fun RelayInfoNip66FilterAssemblerSubscription(
     relayUrl: NormalizedRelayUrl,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val state =
         remember(relayUrl) {
             RelayInfoNip66QueryState(relayUrl, accountViewModel.account.followOutboxesOrProxy.flow.value)
