@@ -699,6 +699,7 @@
     <string name="call_unmute">Zrušit ztlumení</string>
     <string name="call_camera_on">Kamera zapnuta</string>
     <string name="call_camera_off">Kamera vypnuta</string>
+    <string name="call_switch_camera">Přepnout kameru</string>
     <string name="call_speaker">Reproduktor</string>
     <string name="call_earpiece">Sluchátko</string>
     <string name="call_bluetooth">Bluetooth</string>
@@ -710,6 +711,19 @@
     <string name="call_failed_start">Nepodařilo se zahájit hovor</string>
     <string name="call_failed_accept">Nepodařilo se přijmout hovor</string>
     <string name="call_failed_session">Nepodařilo se vytvořit relaci hovoru</string>
+    <string name="call_settings">Nastavení hovorů</string>
+    <string name="call_settings_video_quality">Kvalita videa</string>
+    <string name="call_settings_max_bitrate">Maximální datový tok videa</string>
+    <string name="call_settings_turn_servers">TURN / STUN servery</string>
+    <string name="call_settings_turn_description">Výchozí STUN a TURN servery jsou vždy zahrnuty. Pro restriktivní sítě přidejte vlastní TURN servery.</string>
+    <string name="call_settings_default_servers">Výchozí servery (vždy aktivní)</string>
+    <string name="call_settings_custom_turn">Vlastní TURN servery</string>
+    <string name="call_settings_no_custom_turn">Nejsou nakonfigurovány žádné vlastní TURN servery.</string>
+    <string name="call_settings_add_turn">Přidat TURN server</string>
+    <string name="call_settings_remove_turn">Odebrat</string>
+    <string name="call_settings_turn_url">URL serveru</string>
+    <string name="call_settings_turn_username">Uživatelské jméno</string>
+    <string name="call_settings_turn_credential">Pověření</string>
     <string name="reply_notify">Upozornit: </string>
     <string name="channel_list_join_conversation">Připojit se ke konverzaci</string>
     <string name="channel_list_user_or_group_id">ID uživatele nebo skupiny</string>
@@ -1975,18 +1989,4 @@
     <string name="ai_tone_more_direct">Přímější</string>
     <string name="ai_tone_punchy">Úderný</string>
     <string name="ai_tone_emojify">+ Emoji</string>
-    <string name="call_settings">Nastavení hovorů</string>
-    <string name="call_settings_add_turn">Přidat TURN server</string>
-    <string name="call_settings_custom_turn">Vlastní TURN servery</string>
-    <string name="call_settings_default_servers">Výchozí servery (vždy aktivní)</string>
-    <string name="call_settings_max_bitrate">Maximální datový tok videa</string>
-    <string name="call_settings_no_custom_turn">Nejsou nakonfigurovány žádné vlastní TURN servery.</string>
-    <string name="call_settings_remove_turn">Odebrat</string>
-    <string name="call_settings_turn_credential">Pověření</string>
-    <string name="call_settings_turn_description">Výchozí STUN a TURN servery jsou vždy zahrnuty. Pro restriktivní sítě přidejte vlastní TURN servery.</string>
-    <string name="call_settings_turn_servers">TURN / STUN servery</string>
-    <string name="call_settings_turn_url">URL serveru</string>
-    <string name="call_settings_turn_username">Uživatelské jméno</string>
-    <string name="call_settings_video_quality">Kvalita videa</string>
-    <string name="call_switch_camera">Přepnout kameru</string>
 </resources>
