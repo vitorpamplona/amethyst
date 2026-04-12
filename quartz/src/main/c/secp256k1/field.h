@@ -152,8 +152,25 @@ static inline void fe_negate(secp256k1_fe *r, const secp256k1_fe *a, int m) {
 
 /* ==================== Function declarations ==================== */
 
+/* Field multiply and square — declared here, defined in field.c.
+ * On platforms with ASM (x86_64 MULX, ARM64 CE), fe_mul dispatches
+ * to the inline fe_mul_asm which the compiler can inline into callers
+ * within the same compilation unit. For cross-unit inlining (point.c
+ * calling fe_mul), we rely on LTO or the static inline below. */
+#include "field_asm.h"
+
+#if FE_MUL_ASM
+/* Use the ASM version directly as static inline so point.c can inline it */
+static inline void fe_mul(secp256k1_fe *r, const secp256k1_fe *a, const secp256k1_fe *b) {
+    fe_mul_asm(r, a, b);
+}
+static inline void fe_sqr(secp256k1_fe *r, const secp256k1_fe *a) {
+    fe_mul_asm(r, a, a);
+}
+#else
 void fe_mul(secp256k1_fe *r, const secp256k1_fe *a, const secp256k1_fe *b);
 void fe_sqr(secp256k1_fe *r, const secp256k1_fe *a);
+#endif
 void fe_inv(secp256k1_fe *r, const secp256k1_fe *a);
 int fe_sqrt(secp256k1_fe *r, const secp256k1_fe *a);
 void fe_half(secp256k1_fe *r, const secp256k1_fe *a);
