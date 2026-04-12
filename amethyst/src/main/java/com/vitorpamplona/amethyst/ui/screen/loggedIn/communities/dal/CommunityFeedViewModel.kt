@@ -24,12 +24,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.screen.AndroidFeedViewModel
 
 class CommunityFeedViewModel(
     val note: AddressableNote,
     val account: Account,
-) : AndroidFeedViewModel(CommunityFeedFilter(note, account)) {
+) : AndroidFeedViewModel(CommunityFeedFilter(note, account, LocalCache)) {
     class Factory(
         val note: AddressableNote,
         val account: Account,

@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.utils.cache.CacheCollectors
 
 /**
  * Cache provider interface for accessing cached Notes, Users, and Channels.
@@ -135,4 +136,17 @@ interface ICacheProvider {
     fun getOrCreateUser(pubkey: HexKey): User?
 
     fun justConsumeMyOwnEvent(event: Event): Boolean
+
+    /**
+     * Iterates all notes, applying a mapper that returns a collection per note,
+     * and flattens results into a set.
+     * Used by community feed filters to gather approved/pending posts.
+     */
+    fun <R> mapFlattenNotesIntoSet(consumer: CacheCollectors.BiMapper<HexKey, Note, Collection<R>?>): Set<R>
+
+    /**
+     * Filters all notes into a set using the given predicate.
+     * Used by feed filters that scan the full note cache.
+     */
+    fun filterNotesIntoSet(consumer: CacheCollectors.BiFilter<HexKey, Note>): Set<Note>
 }
