@@ -95,6 +95,12 @@ internal object FieldP {
      * out = a - b mod p. Specialized add-back for P = [P0, -1, -1, -1]:
      * adding -1 to limbs 1-3 with carry=1 is identity, so only the carry=0
      * case needs work (subtract 1 with borrow propagation). ~500 calls/verify.
+     *
+     * NOTE: unlike fe_add, fe_sub CANNOT be lazy because the unsigned-wrapped
+     * underflow value (a - b + 2^256) differs from (a - b + P) by C = 2^32+977.
+     * When multiplied, this C factor produces wrong results:
+     *   (a-b+2^256) * x mod p ≠ (a-b) * x mod p  (off by x*C mod p)
+     * The P-add-back is required to keep values in [0, P).
      */
     fun sub(
         out: Fe4,
@@ -107,15 +113,11 @@ internal object FieldP {
             val s0 = out.l0 + P0
             val c0 = if (uLtInline(s0, out.l0)) 1L else 0L
             out.l0 = s0
-            // For limbs 1-3: adding P[i]=-1 with carry c:
-            //   c=1 → result unchanged, carry out=1 (identity propagation)
-            //   c=0 → result = out[i]-1, carry out = (out[i] != 0) ? 1 : 0
-            // So if c0=1, limbs 1-3 are untouched. If c0=0, subtract 1 with borrow:
             if (c0 == 0L) {
                 if (out.l1 != 0L) {
                     out.l1--
                 } else {
-                    out.l1 = -1L // 0-1 wraps
+                    out.l1 = -1L
                     if (out.l2 != 0L) {
                         out.l2--
                     } else {
