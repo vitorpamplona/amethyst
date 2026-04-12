@@ -18,20 +18,28 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.topNavFeeds
+package com.vitorpamplona.amethyst.commons.ui.dal
 
-import com.vitorpamplona.amethyst.commons.ui.dal.IFilterByListTopNavFilter
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import kotlinx.coroutines.flow.Flow
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
-interface IFeedTopNavFilter : IFilterByListTopNavFilter {
-    override fun matchAuthor(pubkey: HexKey): Boolean
+/**
+ * Minimal interface for top-nav filter capabilities needed by [FilterByListParams].
+ * This allows FilterByListParams to live in commons without depending on the full
+ * [IFeedTopNavFilter] from amethyst which requires LocalCache.
+ */
+interface IFilterByListTopNavFilter {
+    fun matchAuthor(pubkey: HexKey): Boolean
 
-    override fun match(noteEvent: Event): Boolean
+    fun match(noteEvent: Event): Boolean
 
-    fun toPerRelayFlow(cache: LocalCache): Flow<IFeedTopNavPerRelayFilterSet>
+    /** True if this filter represents the global/unfiltered feed */
+    val isGlobal: Boolean get() = false
 
-    fun startValue(cache: LocalCache): IFeedTopNavPerRelayFilterSet
+    /** True if this filter shows muted/hidden authors */
+    val isMutedFilter: Boolean get() = false
+
+    /** Non-null only for relay-scoped filters */
+    val relayUrl: NormalizedRelayUrl? get() = null
 }

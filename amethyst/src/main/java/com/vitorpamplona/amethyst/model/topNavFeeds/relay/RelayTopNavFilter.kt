@@ -31,7 +31,7 @@ import kotlinx.coroutines.flow.flowOf
 
 @Immutable
 class RelayTopNavFilter(
-    val relayUrl: NormalizedRelayUrl,
+    override val relayUrl: NormalizedRelayUrl,
 ) : IFeedTopNavFilter {
     override fun matchAuthor(pubkey: HexKey): Boolean = true
 
