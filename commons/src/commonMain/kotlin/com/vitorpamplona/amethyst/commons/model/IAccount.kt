@@ -70,6 +70,9 @@ data class LiveHiddenUsers(
  * Abstracts Android-specific Account class for use in commons.
  */
 interface IAccount {
+    /** Account settings (follow list defaults, etc.) */
+    val settings: IAccountSettings
+
     /** NIP-47 wallet connect state for payment verification */
     val nip47SignerState: INwcSignerState
 

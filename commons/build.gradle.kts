@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.androidKotlinMultiplatformLibrary)
     alias(libs.plugins.jetbrainsComposeCompiler)
     alias(libs.plugins.composeMultiplatform)
+    alias(libs.plugins.serialization)
 }
 
 kotlin {
@@ -69,6 +70,9 @@ kotlin {
 
                 // Immutable collections
                 api(libs.kotlinx.collections.immutable)
+
+                // Kotlin serialization
+                implementation(libs.kotlinx.serialization.json)
 
                 // Compose Multiplatform Resources
                 implementation(libs.jetbrains.compose.components.resources)

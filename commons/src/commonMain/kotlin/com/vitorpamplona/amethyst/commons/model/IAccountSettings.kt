@@ -18,26 +18,23 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.topNavFeeds.unknown
+package com.vitorpamplona.amethyst.commons.model
 
-import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.commons.model.TopFilter
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
-import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 
-@Immutable
-class UnknownTopNavFilter(
-    val feedName: TopFilter,
-) : IFeedTopNavFilter {
-    override fun matchAuthor(pubkey: HexKey) = false
-
-    override fun match(noteEvent: Event) = false
-
-    override fun toPerRelayFlow(cache: LocalCache): Flow<UnknownTopNavPerRelayFilterSet> = MutableStateFlow(UnknownTopNavPerRelayFilterSet)
-
-    override fun startValue(cache: LocalCache) = UnknownTopNavPerRelayFilterSet
+/**
+ * Interface for account settings needed by DAL feed filters in commons.
+ * Abstracts Android-specific AccountSettings for use in KMP modules.
+ *
+ * DAL filters access settings.defaultXxxFollowList.value to determine
+ * which follow list to use for each feed type.
+ */
+interface IAccountSettings {
+    val defaultHomeFollowList: StateFlow<TopFilter>
+    val defaultStoriesFollowList: StateFlow<TopFilter>
+    val defaultNotificationFollowList: StateFlow<TopFilter>
+    val defaultPollsFollowList: StateFlow<TopFilter>
+    val defaultPicturesFollowList: StateFlow<TopFilter>
+    val defaultShortsFollowList: StateFlow<TopFilter>
+    val defaultLongsFollowList: StateFlow<TopFilter>
 }
