@@ -62,7 +62,13 @@ fun BookmarkGroupMetadataScreen(
     nav: INav,
 ) {
     val bookmarkGroupInfoViewModel: BookmarkGroupMetadataViewModel = viewModel()
-    bookmarkGroupInfoViewModel.init(accountViewModel)
+    bookmarkGroupInfoViewModel.init(
+        accountViewModel,
+        com.vitorpamplona.amethyst.service.uploads.AndroidMediaUploader(
+            context = androidx.compose.ui.platform.LocalContext.current,
+            account = accountViewModel.account,
+        ),
+    )
 
     if (bookmarkGroupIdentifier != null) {
         LaunchedEffect(bookmarkGroupInfoViewModel) {
@@ -219,7 +225,7 @@ private fun Picture(
                 tint = MaterialTheme.colorScheme.placeholderText,
                 modifier = Modifier.padding(start = 2.dp),
             ) {
-                bookmarkGroupInfoViewModel.uploadForPicture(it, context, onError = accountViewModel.toastManager::toast)
+                bookmarkGroupInfoViewModel.uploadForPicture(it, onError = accountViewModel.toastManager::toast)
             }
         },
     )

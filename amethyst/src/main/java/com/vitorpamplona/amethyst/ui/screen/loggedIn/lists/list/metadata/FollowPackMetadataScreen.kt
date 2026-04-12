@@ -66,7 +66,13 @@ fun FollowPackMetadataScreen(
     nav: INav,
 ) {
     val postViewModel: FollowPackMetadataViewModel = viewModel()
-    postViewModel.init(accountViewModel)
+    postViewModel.init(
+        accountViewModel,
+        com.vitorpamplona.amethyst.service.uploads.AndroidMediaUploader(
+            context = androidx.compose.ui.platform.LocalContext.current,
+            account = accountViewModel.account,
+        ),
+    )
 
     if (selectedDTag != null) {
         LaunchedEffect(postViewModel) {
@@ -90,7 +96,13 @@ fun FollowPackMetadataScreen(
 private fun DialogContentPreview() {
     val accountViewModel = mockAccountViewModel()
     val postViewModel: FollowPackMetadataViewModel = viewModel()
-    postViewModel.init(accountViewModel)
+    postViewModel.init(
+        accountViewModel,
+        com.vitorpamplona.amethyst.service.uploads.AndroidMediaUploader(
+            context = androidx.compose.ui.platform.LocalContext.current,
+            account = accountViewModel.account,
+        ),
+    )
 
     ThemeComparisonRow {
         FollowPackMetadataScaffold(
@@ -243,7 +255,7 @@ private fun Picture(
                 tint = MaterialTheme.colorScheme.placeholderText,
                 modifier = Modifier.padding(start = 2.dp),
             ) {
-                postViewModel.uploadForPicture(it, context, onError = accountViewModel.toastManager::toast)
+                postViewModel.uploadForPicture(it, onError = accountViewModel.toastManager::toast)
             }
         },
     )
