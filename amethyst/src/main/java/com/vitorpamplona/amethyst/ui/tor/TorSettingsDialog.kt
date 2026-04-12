@@ -59,6 +59,7 @@ import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.CancellationException
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun ConnectTorDialog(
@@ -166,9 +167,9 @@ fun PrivacySettingsBody(dialogViewModel: TorDialogViewModel) {
             R.string.use_internal_tor,
             R.string.use_internal_tor_explainer,
             persistentListOf(
-                TitleExplainer(stringRes(TorType.OFF.resourceId)),
-                TitleExplainer(stringRes(TorType.INTERNAL.resourceId)),
-                TitleExplainer(stringRes(TorType.EXTERNAL.resourceId)),
+                TitleExplainer(stringResource(TorType.OFF.resourceId)),
+                TitleExplainer(stringResource(TorType.INTERNAL.resourceId)),
+                TitleExplainer(stringResource(TorType.EXTERNAL.resourceId)),
             ),
             dialogViewModel.torType.value.screenCode,
         ) {
@@ -216,11 +217,11 @@ fun PrivacySettingsBody(dialogViewModel: TorDialogViewModel) {
                 R.string.tor_preset,
                 R.string.tor_preset_explainer,
                 persistentListOf(
-                    TitleExplainer(stringRes(TorPresetType.ONLY_WHEN_NEEDED.resourceId), stringRes(TorPresetType.ONLY_WHEN_NEEDED.explainerId)),
-                    TitleExplainer(stringRes(TorPresetType.DEFAULT.resourceId), stringRes(TorPresetType.DEFAULT.explainerId)),
-                    TitleExplainer(stringRes(TorPresetType.SMALL_PAYLOADS.resourceId), stringRes(TorPresetType.SMALL_PAYLOADS.explainerId)),
-                    TitleExplainer(stringRes(TorPresetType.FULL_PRIVACY.resourceId), stringRes(TorPresetType.FULL_PRIVACY.explainerId)),
-                    TitleExplainer(stringRes(TorPresetType.CUSTOM.resourceId), stringRes(TorPresetType.CUSTOM.explainerId)),
+                    TitleExplainer(stringResource(TorPresetType.ONLY_WHEN_NEEDED.resourceId), stringResource(TorPresetType.ONLY_WHEN_NEEDED.explainerId)),
+                    TitleExplainer(stringResource(TorPresetType.DEFAULT.resourceId), stringResource(TorPresetType.DEFAULT.explainerId)),
+                    TitleExplainer(stringResource(TorPresetType.SMALL_PAYLOADS.resourceId), stringResource(TorPresetType.SMALL_PAYLOADS.explainerId)),
+                    TitleExplainer(stringResource(TorPresetType.FULL_PRIVACY.resourceId), stringResource(TorPresetType.FULL_PRIVACY.explainerId)),
+                    TitleExplainer(stringResource(TorPresetType.CUSTOM.resourceId), stringResource(TorPresetType.CUSTOM.explainerId)),
                 ),
                 dialogViewModel.preset.value.screenCode,
             ) {

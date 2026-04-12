@@ -18,6 +18,21 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.actions.uploads
+package com.vitorpamplona.amethyst.commons.ui.actions.uploads
 
-typealias VoicePreset = com.vitorpamplona.amethyst.commons.ui.actions.uploads.VoicePreset
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.voice_preset_deep
+import com.vitorpamplona.amethyst.commons.resources.voice_preset_high
+import com.vitorpamplona.amethyst.commons.resources.voice_preset_neutral
+import com.vitorpamplona.amethyst.commons.resources.voice_preset_none
+import org.jetbrains.compose.resources.StringResource
+
+enum class VoicePreset(
+    val pitchFactor: Double,
+    val labelRes: StringResource,
+) {
+    NONE(1.0, Res.string.voice_preset_none),
+    DEEP(1.4, Res.string.voice_preset_deep),
+    HIGH(0.75, Res.string.voice_preset_high),
+    NEUTRAL(1.1, Res.string.voice_preset_neutral),
+}

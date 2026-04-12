@@ -32,9 +32,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.ui.stringRes
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun VoicePresetSelector(
@@ -43,7 +42,6 @@ fun VoicePresetSelector(
     onPresetSelected: (VoicePreset) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val context = LocalContext.current
     val isProcessing = processingPreset != null
 
     Row(
@@ -67,7 +65,7 @@ fun VoicePresetSelector(
                             color = MaterialTheme.colorScheme.onPrimary,
                         )
                     } else {
-                        Text(stringRes(context, preset.labelRes))
+                        Text(stringResource(preset.labelRes))
                     }
                 },
                 colors =

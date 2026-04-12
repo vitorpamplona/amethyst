@@ -54,4 +54,25 @@
     <!-- Accessibility -->
     <string name="accessibility_user_avatar">User avatar</string>
     <string name="accessibility_navigate">Navigate</string>
+
+    <!-- Voice Presets -->
+    <string name="voice_preset_none">None</string>
+    <string name="voice_preset_deep">Deep</string>
+    <string name="voice_preset_high">High</string>
+    <string name="voice_preset_neutral">Neutral</string>
+
+    <!-- Tor Settings -->
+    <string name="tor_off">Off</string>
+    <string name="tor_internal">Internal</string>
+    <string name="tor_external">Orbot</string>
+    <string name="tor_when_needed">Basic</string>
+    <string name="tor_when_needed_explainer">Use Tor when it\'s required by the server</string>
+    <string name="tor_default">Default</string>
+    <string name="tor_default_explainer">Hide your IP from random relays</string>
+    <string name="tor_small_payloads">All but Media</string>
+    <string name="tor_small_payloads_explainer">Hide your IP from everything, but images and videos</string>
+    <string name="tor_full_privacy">Full Privacy</string>
+    <string name="tor_full_privacy_explainer">Hide your IP in all connections</string>
+    <string name="tor_custom">Custom</string>
+    <string name="tor_custom_explainer">Make your own</string>
 </resources>
