@@ -18,7 +18,24 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.dal
+package com.vitorpamplona.amethyst.commons.viewmodels.thread
 
-// Re-export from commons for backwards compatibility
-typealias ChannelFeedFilter = com.vitorpamplona.amethyst.commons.ui.feeds.ChannelFeedFilter
+import com.vitorpamplona.amethyst.commons.model.IAccount
+import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
+
+/**
+ * Platform-agnostic ThreadFeedViewModel.
+ *
+ * Assembles a thread view by combining the ThreadFeedFilter (which uses
+ * ThreadAssembler + ThreadLevelCalculator) with the LevelFeedViewModel
+ * (which computes per-note indentation levels).
+ *
+ * @param account The current user's account
+ * @param noteId The root note ID of the thread
+ * @param cacheProvider The cache provider for note lookups
+ */
+open class ThreadFeedViewModel(
+    val account: IAccount,
+    val noteId: String,
+    cacheProvider: ICacheProvider,
+) : LevelFeedViewModel(ThreadFeedFilter(account, noteId, cacheProvider), cacheProvider)

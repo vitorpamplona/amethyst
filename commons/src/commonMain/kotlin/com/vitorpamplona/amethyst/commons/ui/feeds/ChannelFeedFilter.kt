@@ -18,7 +18,28 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.dal
+package com.vitorpamplona.amethyst.commons.ui.feeds
 
-// Re-export from commons for backwards compatibility
-typealias ChannelFeedFilter = com.vitorpamplona.amethyst.commons.ui.feeds.ChannelFeedFilter
+import com.vitorpamplona.amethyst.commons.model.Channel
+import com.vitorpamplona.amethyst.commons.model.IAccount
+import com.vitorpamplona.amethyst.commons.model.Note
+
+class ChannelFeedFilter(
+    val channel: Channel,
+    val account: IAccount,
+) : AdditiveFeedFilter<Note>(),
+    ChangesFlowFilter<Note> {
+    override fun feedKey() = channel
+
+    override fun changesFlow() = channel.changesFlow()
+
+    // returns the last Note of each user.
+    override fun feed(): List<Note> = sort(channel.notes.filterIntoSet { key, it -> account.isAcceptable(it) })
+
+    override fun applyFilter(newItems: Set<Note>): Set<Note> =
+        newItems
+            .filter { channel.notes.containsKey(it.idHex) && account.isAcceptable(it) }
+            .toSet()
+
+    override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder)
+}
