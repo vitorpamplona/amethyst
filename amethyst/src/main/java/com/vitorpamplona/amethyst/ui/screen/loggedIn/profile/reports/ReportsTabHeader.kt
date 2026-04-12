@@ -25,8 +25,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.reports.dal.UserProfileReportFeedViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 
@@ -34,7 +34,7 @@ import com.vitorpamplona.amethyst.ui.stringRes
 fun ReportsTabHeader(
     baseUser: User,
     reportsFeedViewModel: UserProfileReportFeedViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
     val reportCount by reportsFeedViewModel.followerCount.collectAsStateWithLifecycle()
 

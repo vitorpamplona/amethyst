@@ -21,8 +21,8 @@
 package com.vitorpamplona.amethyst.ui.note.nip22Comments
 
 import androidx.compose.runtime.Composable
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip73ExternalIds.ExternalId
 import com.vitorpamplona.quartz.nip73ExternalIds.location.GeohashId
 import com.vitorpamplona.quartz.nip73ExternalIds.topics.HashtagId
@@ -30,7 +30,7 @@ import com.vitorpamplona.quartz.nip73ExternalIds.topics.HashtagId
 @Composable
 fun DisplayExternalId(
     externalId: ExternalId,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
     when (externalId) {
