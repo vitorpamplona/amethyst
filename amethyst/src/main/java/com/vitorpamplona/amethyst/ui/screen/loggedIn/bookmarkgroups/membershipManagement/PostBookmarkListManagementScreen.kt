@@ -151,24 +151,18 @@ private fun ListManagementViewBody(
                 totalArticleBookmarkSize = bookmarkList.publicArticleBookmarks.size + bookmarkList.privateArticleBookmarks.size,
                 onClick = { nav.nav(Route.BookmarkGroupView(bookmarkList.identifier, BookmarkType.PostBookmark)) },
                 onAddBookmarkToGroup = { shouldBePrivate ->
-                    accountViewModel.launchSigner {
-                        accountViewModel.account.labeledBookmarkLists.addBookmarkToList(
-                            bookmark = EventBookmark(eventId = note.idHex, relay = note.relayHintUrl(), author = note.author?.pubkeyHex),
-                            bookmarkListIdentifier = bookmarkList.identifier,
-                            isBookmarkPrivate = shouldBePrivate,
-                            account = accountViewModel.account,
-                        )
-                    }
+                    accountViewModel.addBookmarkToList(
+                        bookmark = EventBookmark(eventId = note.idHex, relay = note.relayHintUrl(), author = note.author?.pubkeyHex),
+                        bookmarkListIdentifier = bookmarkList.identifier,
+                        isBookmarkPrivate = shouldBePrivate,
+                    )
                 },
                 onRemoveBookmarkFromGroup = {
-                    accountViewModel.launchSigner {
-                        accountViewModel.account.labeledBookmarkLists.removeBookmarkFromList(
-                            bookmark = EventBookmark(eventId = note.idHex),
-                            bookmarkListIdentifier = bookmarkList.identifier,
-                            isBookmarkPrivate = maybePrivateBookmark != null,
-                            account = accountViewModel.account,
-                        )
-                    }
+                    accountViewModel.removeBookmarkFromList(
+                        bookmark = EventBookmark(eventId = note.idHex),
+                        bookmarkListIdentifier = bookmarkList.identifier,
+                        isBookmarkPrivate = maybePrivateBookmark != null,
+                    )
                 },
             )
         }

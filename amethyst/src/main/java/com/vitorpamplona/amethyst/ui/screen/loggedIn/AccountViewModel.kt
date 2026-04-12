@@ -60,6 +60,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.nip51Lists.labeledBookmarkLists.LabeledBookmarkList
 import com.vitorpamplona.amethyst.model.privacyOptions.EmptyRoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.model.privacyOptions.IRoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.model.privacyOptions.RoleBasedHttpClientBuilder
@@ -137,6 +138,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.BookmarkIdTag
 import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
@@ -1006,6 +1008,55 @@ class AccountViewModel(
             launchSigner { account.removeBookmark(note, false) }
         }
     }
+
+    // -- Labeled Bookmark Lists --
+
+    fun addBookmarkToList(
+        bookmark: BookmarkIdTag,
+        bookmarkListIdentifier: String,
+        isBookmarkPrivate: Boolean,
+    ) = launchSigner {
+        account.labeledBookmarkLists.addBookmarkToList(
+            bookmark = bookmark,
+            bookmarkListIdentifier = bookmarkListIdentifier,
+            isBookmarkPrivate = isBookmarkPrivate,
+            account = account,
+        )
+    }
+
+    fun removeBookmarkFromList(
+        bookmark: BookmarkIdTag,
+        bookmarkListIdentifier: String,
+        isBookmarkPrivate: Boolean,
+    ) = launchSigner {
+        account.labeledBookmarkLists.removeBookmarkFromList(
+            bookmark = bookmark,
+            bookmarkListIdentifier = bookmarkListIdentifier,
+            isBookmarkPrivate = isBookmarkPrivate,
+            account = account,
+        )
+    }
+
+    fun cloneBookmarkList(
+        currentBookmarkList: LabeledBookmarkList,
+        customCloneName: String?,
+        customCloneDescription: String?,
+    ) = launchSigner {
+        account.labeledBookmarkLists.cloneBookmarkList(
+            currentBookmarkList = currentBookmarkList,
+            customCloneName = customCloneName,
+            customCloneDescription = customCloneDescription,
+            account = account,
+        )
+    }
+
+    fun deleteBookmarkList(bookmarkListIdentifier: String) =
+        launchSigner {
+            account.labeledBookmarkLists.deleteBookmarkList(
+                bookmarkListIdentifier = bookmarkListIdentifier,
+                account = account,
+            )
+        }
 
     fun broadcast(note: Note) = launchSigner { account.broadcast(note) }
 
