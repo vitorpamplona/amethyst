@@ -70,6 +70,8 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.EventBookmark
 import kotlinx.coroutines.launch
 
 @Composable
@@ -88,17 +90,10 @@ fun BookmarkGroupScreen(
         bookmarkGroupViewModel,
         bookmarkType,
         broadcastBookmarkGroup = {
-            accountViewModel.launchSigner {
-                val groupNote = accountViewModel.account.labeledBookmarkLists.getLabeledBookmarkListNote(bookmarkIdentifier)
-                groupNote?.let {
-                    accountViewModel.broadcast(it)
-                }
-            }
+            accountViewModel.broadcastBookmarkGroup(bookmarkIdentifier)
         },
         deleteBookmarkGroup = {
-            accountViewModel.launchSigner {
-                bookmarkGroupViewModel.deleteBookmarkGroup(bookmarkIdentifier)
-            }
+            accountViewModel.deleteBookmarkGroup(bookmarkIdentifier)
             nav.popBack()
         },
         accountViewModel,
@@ -165,22 +160,18 @@ fun BookmarkGroupScreenView(
                         pagerState,
                         accountViewModel,
                         movePostBookmark = { postId, isPrivate ->
-                            accountViewModel.launchSigner {
-                                bookmarkGroupViewModel.movePostBookmark(
-                                    groupIdentifier = bookmarkGroupViewModel.bookmarkGroupIdentifier,
-                                    postId = postId,
-                                    isCurrentlyPrivate = isPrivate,
-                                )
-                            }
+                            accountViewModel.moveBookmarkInList(
+                                bookmark = EventBookmark(postId),
+                                groupIdentifier = bookmarkGroupViewModel.bookmarkGroupIdentifier,
+                                isCurrentlyPrivate = isPrivate,
+                            )
                         },
                         deletePostBookmark = { postId, isPrivate ->
-                            accountViewModel.launchSigner {
-                                bookmarkGroupViewModel.removePostBookmark(
-                                    bookmarkGroupViewModel.bookmarkGroupIdentifier,
-                                    postId,
-                                    isPrivate,
-                                )
-                            }
+                            accountViewModel.removeBookmarkFromList(
+                                bookmark = EventBookmark(postId),
+                                groupIdentifier = bookmarkGroupViewModel.bookmarkGroupIdentifier,
+                                isPrivate = isPrivate,
+                            )
                         },
                         nav,
                     )
@@ -192,22 +183,18 @@ fun BookmarkGroupScreenView(
                         pagerState,
                         accountViewModel,
                         moveArticleBookmark = { articleAddress, isPrivate ->
-                            accountViewModel.launchSigner {
-                                bookmarkGroupViewModel.moveArticleBookmark(
-                                    groupIdentifier = bookmarkGroupViewModel.bookmarkGroupIdentifier,
-                                    articleAddress = articleAddress,
-                                    isCurrentlyPrivate = isPrivate,
-                                )
-                            }
+                            accountViewModel.moveBookmarkInList(
+                                bookmark = AddressBookmark(articleAddress),
+                                groupIdentifier = bookmarkGroupViewModel.bookmarkGroupIdentifier,
+                                isCurrentlyPrivate = isPrivate,
+                            )
                         },
                         deleteArticleBookmark = { articleAddress, isPrivate ->
-                            accountViewModel.launchSigner {
-                                bookmarkGroupViewModel.removeArticleBookmark(
-                                    bookmarkGroupViewModel.bookmarkGroupIdentifier,
-                                    articleAddress,
-                                    isPrivate,
-                                )
-                            }
+                            accountViewModel.removeBookmarkFromList(
+                                bookmark = AddressBookmark(articleAddress),
+                                groupIdentifier = bookmarkGroupViewModel.bookmarkGroupIdentifier,
+                                isPrivate = isPrivate,
+                            )
                         },
                         nav,
                     )

@@ -67,22 +67,14 @@ fun ListOfBookmarkGroupsScreen(
             nav.nav(Route.BookmarkGroupMetadataEdit(bookmarkGroup.identifier))
         },
         cloneBookmarkGroup = { bookmarkGroup, customName, customDesc ->
-            accountViewModel.launchSigner {
-                accountViewModel.account.labeledBookmarkLists.cloneBookmarkList(
-                    currentBookmarkList = bookmarkGroup,
-                    customCloneName = customName,
-                    customCloneDescription = customDesc,
-                    account = accountViewModel.account,
-                )
-            }
+            accountViewModel.cloneBookmarkList(
+                currentBookmarkList = bookmarkGroup,
+                customCloneName = customName,
+                customCloneDescription = customDesc,
+            )
         },
         deleteBookmarkGroup = { bookmarkGroup ->
-            accountViewModel.launchSigner {
-                accountViewModel.account.labeledBookmarkLists.deleteBookmarkList(
-                    bookmarkListIdentifier = bookmarkGroup.identifier,
-                    account = accountViewModel.account,
-                )
-            }
+            accountViewModel.deleteBookmarkGroup(bookmarkGroup.identifier)
         },
         nav,
     )
