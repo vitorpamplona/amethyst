@@ -21,7 +21,12 @@
 package com.vitorpamplona.amethyst.commons.model
 
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupList
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.BookmarkListState
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.OldBookmarkListState
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
+import com.vitorpamplona.quartz.experimental.nipA3.PaymentTarget
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
@@ -31,9 +36,11 @@ import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentRequestEve
 import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Request
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
+import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.nip57Zaps.IPrivateZapsDecryptionCache
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.utils.DualCase
+import java.math.BigDecimal
 
 /**
  * Interface for NIP-47 wallet connect signer state.
@@ -119,4 +126,86 @@ interface IAccount {
 
     /** Broadcast pre-created gift wraps (e.g. reactions within group DMs) */
     suspend fun sendGiftWraps(wraps: List<GiftWrapEvent>)
+
+    // --- Bookmark domain (v5) ---
+
+    /** Current bookmark list state (NIP-51 kind 10003) */
+    val bookmarkState: BookmarkListState
+
+    /** Old/legacy bookmark list state (NIP-51 kind 30001) */
+    val oldBookmarkState: OldBookmarkListState
+
+    /** Add a note to bookmarks (public or private) */
+    suspend fun addBookmark(
+        note: Note,
+        isPrivate: Boolean,
+    )
+
+    /** Remove a note from bookmarks (public or private) */
+    suspend fun removeBookmark(
+        note: Note,
+        isPrivate: Boolean,
+    )
+
+    /** Remove a note from all bookmarks (public and private) */
+    suspend fun removeBookmark(note: Note)
+
+    /** Create bookmark add event without sending (for tracked broadcasting) */
+    suspend fun createAddBookmarkEvent(
+        note: Note,
+        isPrivate: Boolean,
+    ): Pair<Event, Set<NormalizedRelayUrl>>?
+
+    /** Create bookmark remove event without sending (for tracked broadcasting) */
+    suspend fun createRemoveBookmarkEvent(
+        note: Note,
+        isPrivate: Boolean,
+    ): Pair<Event, Set<NormalizedRelayUrl>>?
+
+    // --- Payment targets domain (v5) ---
+
+    /** Save payment targets (NIP-A3) */
+    suspend fun savePaymentTargets(targets: List<PaymentTarget>)
+
+    // --- Zap domain (v5) ---
+
+    /** Check if a note was zapped by this account */
+    suspend fun calculateIfNoteWasZappedByAccount(
+        zappedNote: Note?,
+        afterTimeInSeconds: Long,
+    ): Boolean
+
+    /** Calculate total zapped amount for a note */
+    suspend fun calculateZappedAmount(zappedNote: Note): BigDecimal
+
+    // --- Core actions (v5) ---
+
+    /** React to a note with the given reaction string */
+    suspend fun reactTo(
+        note: Note,
+        reaction: String,
+    )
+
+    /** Boost/repost a note */
+    suspend fun boost(note: Note)
+
+    /** Delete a single note */
+    suspend fun delete(note: Note)
+
+    /** Delete multiple notes */
+    suspend fun delete(notes: List<Note>)
+
+    /** Report a note */
+    suspend fun report(
+        note: Note,
+        type: ReportType,
+        content: String = "",
+    )
+
+    /** Report a user */
+    suspend fun report(
+        user: User,
+        type: ReportType,
+        content: String = "",
+    )
 }

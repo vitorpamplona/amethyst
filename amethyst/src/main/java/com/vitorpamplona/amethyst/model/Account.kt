@@ -334,8 +334,8 @@ class Account(
     val hiddenUsers = HiddenUsersState(muteList.flow, blockPeopleList.flow, scope, settings)
 
     val labeledBookmarkLists = LabeledBookmarkListsState(signer, cache, scope)
-    val oldBookmarkState = OldBookmarkListState(signer, cache, scope)
-    val bookmarkState = BookmarkListState(signer, cache, scope)
+    override val oldBookmarkState = OldBookmarkListState(signer, cache, scope)
+    override val bookmarkState = BookmarkListState(signer, cache, scope)
     val pinState = PinListState(signer, cache, scope)
     val emoji = EmojiPackState(signer, cache, scope)
 
@@ -541,7 +541,7 @@ class Account(
 
     private suspend fun sendNewAppSpecificData() = sendMyPublicAndPrivateOutbox(appSpecific.saveNewAppSpecificData())
 
-    suspend fun reactTo(
+    override suspend fun reactTo(
         note: Note,
         reaction: String,
     ) = ReactionAction.reactTo(
@@ -601,12 +601,12 @@ class Account(
         toUserPubHex = toUser?.pubkeyHex,
     )
 
-    suspend fun calculateIfNoteWasZappedByAccount(
+    override suspend fun calculateIfNoteWasZappedByAccount(
         zappedNote: Note?,
         afterTimeInSeconds: Long,
     ): Boolean = zappedNote?.isZappedBy(userProfile(), afterTimeInSeconds, this) == true
 
-    suspend fun calculateZappedAmount(zappedNote: Note): BigDecimal = zappedNote.zappedAmountWithNWCPayments(nip47SignerState)
+    override suspend fun calculateZappedAmount(zappedNote: Note): BigDecimal = zappedNote.zappedAmountWithNWCPayments(nip47SignerState)
 
     suspend fun sendNwcRequest(
         request: Request,
@@ -652,21 +652,21 @@ class Account(
         return zapRequest
     }
 
-    suspend fun report(
+    override suspend fun report(
         note: Note,
         type: ReportType,
-        content: String = "",
+        content: String,
     ) = sendMyPublicAndPrivateOutbox(ReportAction.report(note, type, content, userProfile(), signer))
 
-    suspend fun report(
+    override suspend fun report(
         user: User,
         type: ReportType,
-        content: String = "",
+        content: String,
     ) = sendMyPublicAndPrivateOutbox(ReportAction.report(user, type, content, userProfile(), signer))
 
-    suspend fun delete(note: Note) = delete(listOf(note))
+    override suspend fun delete(note: Note) = delete(listOf(note))
 
-    suspend fun delete(notes: List<Note>) {
+    override suspend fun delete(notes: List<Note>) {
         if (!isWriteable()) return
 
         val myNotes = notes.filter { it.author == userProfile() && it.event != null }
@@ -715,7 +715,7 @@ class Account(
         alt: String,
     ) = blossomServers.createBlossomDeleteAuth(hash, alt)
 
-    suspend fun boost(note: Note) {
+    override suspend fun boost(note: Note) {
         RepostAction.repost(note, signer)?.let { event ->
             client.publish(event, computeMyReactionToNote(note, event))
             cache.justConsumeMyOwnEvent(event)
@@ -1981,7 +1981,7 @@ class Account(
         delete(note)
     }
 
-    suspend fun addBookmark(
+    override suspend fun addBookmark(
         note: Note,
         isPrivate: Boolean,
     ) {
@@ -1990,7 +1990,7 @@ class Account(
         sendMyPublicAndPrivateOutbox(bookmarkState.addBookmark(note, isPrivate))
     }
 
-    suspend fun removeBookmark(
+    override suspend fun removeBookmark(
         note: Note,
         isPrivate: Boolean,
     ) {
@@ -2002,7 +2002,7 @@ class Account(
         }
     }
 
-    suspend fun removeBookmark(note: Note) {
+    override suspend fun removeBookmark(note: Note) {
         if (!isWriteable() || note.isDraft()) return
 
         val event = bookmarkState.removeBookmark(note)
@@ -2015,7 +2015,7 @@ class Account(
      * Creates a bookmark event without sending it.
      * Returns the event and target relays for tracked broadcasting.
      */
-    suspend fun createAddBookmarkEvent(
+    override suspend fun createAddBookmarkEvent(
         note: Note,
         isPrivate: Boolean,
     ): Pair<Event, Set<NormalizedRelayUrl>>? {
@@ -2031,7 +2031,7 @@ class Account(
      * Creates a remove bookmark event without sending it.
      * Returns the event and target relays for tracked broadcasting.
      */
-    suspend fun createRemoveBookmarkEvent(
+    override suspend fun createRemoveBookmarkEvent(
         note: Note,
         isPrivate: Boolean,
     ): Pair<Event, Set<NormalizedRelayUrl>>? {
@@ -2362,7 +2362,7 @@ class Account(
 
     suspend fun sendBlossomServersList(servers: List<String>) = sendMyPublicAndPrivateOutbox(blossomServers.saveBlossomServersList(servers))
 
-    suspend fun savePaymentTargets(targets: List<PaymentTarget>) = sendMyPublicAndPrivateOutbox(paymentTargetsState.savePaymentTargets(targets))
+    override suspend fun savePaymentTargets(targets: List<PaymentTarget>) = sendMyPublicAndPrivateOutbox(paymentTargetsState.savePaymentTargets(targets))
 
     fun markAsRead(
         route: String,
