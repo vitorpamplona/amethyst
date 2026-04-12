@@ -94,6 +94,12 @@ interface IAccount {
     val hiddenUsersHashCodes: Set<Int>
     val spammersHashCodes: Set<Int>
 
+    /** Hidden users state for DAL content filtering */
+    val hiddenUsers: IHiddenUsersState
+
+    /** Block people list state for DAL filter comparisons */
+    val blockPeopleList: IBlockPeopleListState
+
     /** Set of followed user pubkeys (for feed ordering/highlighting) */
     fun followingKeySet(): Set<String>
 

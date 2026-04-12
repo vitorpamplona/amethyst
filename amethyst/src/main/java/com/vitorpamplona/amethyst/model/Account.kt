@@ -327,11 +327,11 @@ class Account(
     val trustProviderList = TrustProviderListState(signer, cache, trustProviderListDecryptionCache, scope, settings)
 
     val peopleListDecryptionCache = PeopleListDecryptionCache(signer)
-    val blockPeopleList = BlockPeopleListState(signer, cache, peopleListDecryptionCache, scope)
+    override val blockPeopleList = BlockPeopleListState(signer, cache, peopleListDecryptionCache, scope)
     val peopleLists = PeopleListsState(signer, cache, peopleListDecryptionCache, scope)
     val followLists = FollowListsState(signer, cache, scope)
 
-    val hiddenUsers = HiddenUsersState(muteList.flow, blockPeopleList.flow, scope, settings)
+    override val hiddenUsers = HiddenUsersState(muteList.flow, blockPeopleList.flow, scope, settings)
 
     val labeledBookmarkLists = LabeledBookmarkListsState(signer, cache, scope)
     val oldBookmarkState = OldBookmarkListState(signer, cache, scope)
