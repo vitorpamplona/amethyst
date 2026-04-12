@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.nip86RelayManagement
+package com.vitorpamplona.amethyst.commons.model.nip86RelayManagement
 
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip86RelayManagement.Nip86Client
@@ -37,10 +37,16 @@ import okhttp3.coroutines.executeAsync
 private const val CONTENT_TYPE_STRING = "application/nostr+json+rpc"
 private val CONTENT_TYPE = CONTENT_TYPE_STRING.toMediaType()
 
+/**
+ * OkHttp-based implementation of [INip86Retriever] for JVM/Android.
+ *
+ * Executes NIP-86 relay management RPC requests over HTTP, handling
+ * authentication, serialization, and error recovery.
+ */
 class Nip86Retriever(
     val okHttpClient: (NormalizedRelayUrl) -> OkHttpClient,
-) {
-    suspend fun execute(
+) : INip86Retriever {
+    override suspend fun execute(
         client: Nip86Client,
         request: Nip86Request,
     ): Nip86Response {

@@ -92,6 +92,9 @@ kotlin {
             create("jvmAndroid") {
                 dependsOn(commonMain.get())
                 dependencies {
+                    // OkHttp for NIP-86 relay management HTTP client
+                    implementation(libs.okhttp)
+                    implementation(libs.okhttpCoroutines)
                 }
             }
 

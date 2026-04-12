@@ -23,26 +23,15 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.nip86
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.model.nip86RelayManagement.INip86Retriever
+import com.vitorpamplona.amethyst.commons.model.nip86RelayManagement.RelayManagementState
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.model.nip86RelayManagement.Nip86Retriever
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip86RelayManagement.Nip86Client
-import com.vitorpamplona.quartz.nip86RelayManagement.rpc.AllowedPubkey
-import com.vitorpamplona.quartz.nip86RelayManagement.rpc.BannedEvent
-import com.vitorpamplona.quartz.nip86RelayManagement.rpc.BannedPubkey
-import com.vitorpamplona.quartz.nip86RelayManagement.rpc.BlockedIp
-import com.vitorpamplona.quartz.nip86RelayManagement.rpc.EventNeedingModeration
-import com.vitorpamplona.quartz.nip86RelayManagement.rpc.Nip86Request
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentListOf
-import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.launch
 
 class PubkeyUser(
     val user: User,
@@ -53,33 +42,30 @@ class PubkeyUser(
 class RelayManagementViewModel(
     relayUrl: NormalizedRelayUrl,
     account: Account,
-    private val retriever: Nip86Retriever,
+    retriever: INip86Retriever,
 ) : ViewModel() {
-    val client = Nip86Client(relayUrl, account.signer)
+    val state =
+        RelayManagementState(
+            client = Nip86Client(relayUrl, account.signer),
+            retriever = retriever,
+            scope = viewModelScope,
+        )
 
-    private val _supportedMethods = MutableStateFlow<ImmutableList<String>>(persistentListOf())
-    val supportedMethods: StateFlow<ImmutableList<String>> = _supportedMethods
+    // Delegate all core state from RelayManagementState
+    val client get() = state.client
+    val supportedMethods get() = state.supportedMethods
+    val bannedPubkeys get() = state.bannedPubkeys
+    val allowedPubkeys get() = state.allowedPubkeys
+    val bannedEvents get() = state.bannedEvents
+    val eventsNeedingModeration get() = state.eventsNeedingModeration
+    val allowedKinds get() = state.allowedKinds
+    val blockedIps get() = state.blockedIps
+    val isLoading get() = state.isLoading
+    val error get() = state.error
 
-    private val _bannedPubkeys = MutableStateFlow<List<BannedPubkey>>(emptyList())
-    val bannedPubkeys: StateFlow<List<BannedPubkey>> = _bannedPubkeys
-
-    private val _allowedPubkeys = MutableStateFlow<List<AllowedPubkey>>(emptyList())
-    val allowedPubkeys: StateFlow<List<AllowedPubkey>> = _allowedPubkeys
-
-    private val _bannedEvents = MutableStateFlow<List<BannedEvent>>(emptyList())
-    val bannedEvents: StateFlow<List<BannedEvent>> = _bannedEvents
-
-    private val _eventsNeedingModeration = MutableStateFlow<List<EventNeedingModeration>>(emptyList())
-    val eventsNeedingModeration: StateFlow<List<EventNeedingModeration>> = _eventsNeedingModeration
-
-    private val _allowedKinds = MutableStateFlow<List<Int>>(emptyList())
-    val allowedKinds: StateFlow<List<Int>> = _allowedKinds
-
-    private val _blockedIps = MutableStateFlow<List<BlockedIp>>(emptyList())
-    val blockedIps: StateFlow<List<BlockedIp>> = _blockedIps
-
+    // Android-specific: resolve pubkey hex to User objects via LocalCache
     val bannedPubkeyUsers: Flow<List<PubkeyUser>> =
-        _bannedPubkeys.map { list ->
+        state.bannedPubkeys.map { list ->
             list
                 .mapNotNull { entry ->
                     LocalCache.checkGetOrCreateUser(entry.pubkey)?.let { PubkeyUser(it, entry.reason) }
@@ -87,262 +73,70 @@ class RelayManagementViewModel(
         }
 
     val allowedPubkeyUsers: Flow<List<PubkeyUser>> =
-        _allowedPubkeys.map { list ->
+        state.allowedPubkeys.map { list ->
             list
                 .mapNotNull { entry ->
                     LocalCache.checkGetOrCreateUser(entry.pubkey)?.let { PubkeyUser(it, entry.reason) }
                 }.sortedByDescending { account.isKnown(it.user) }
         }
 
-    private val _isLoading = MutableStateFlow(false)
-    val isLoading: StateFlow<Boolean> = _isLoading
+    // Delegate all actions
+    fun loadSupportedMethods() = state.loadSupportedMethods()
 
-    private val _error = MutableStateFlow<String?>(null)
-    val error: StateFlow<String?> = _error
+    fun loadBannedPubkeys() = state.loadBannedPubkeys()
 
-    fun loadSupportedMethods() {
-        viewModelScope.launch {
-            _isLoading.value = true
-            _error.value = null
-            val response = retriever.execute(client, Nip86Request.supportedMethods())
-            if (response.error != null) {
-                _error.value = response.error
-            } else {
-                _supportedMethods.value = client.parseSupportedMethods(response)?.toImmutableList() ?: persistentListOf()
-            }
-            _isLoading.value = false
-        }
-    }
+    fun loadAllowedPubkeys() = state.loadAllowedPubkeys()
 
-    fun loadBannedPubkeys() {
-        viewModelScope.launch {
-            val response = retriever.execute(client, Nip86Request.listBannedPubkeys())
-            if (response.error != null) {
-                _error.value = response.error
-            } else {
-                _bannedPubkeys.value = client.parseBannedPubkeys(response)?.distinctBy { it.pubkey } ?: emptyList()
-            }
-        }
-    }
+    fun loadBannedEvents() = state.loadBannedEvents()
 
-    fun loadAllowedPubkeys() {
-        viewModelScope.launch {
-            val response = retriever.execute(client, Nip86Request.listAllowedPubkeys())
-            if (response.error != null) {
-                _error.value = response.error
-            } else {
-                _allowedPubkeys.value = client.parseAllowedPubkeys(response)?.distinctBy { it.pubkey } ?: emptyList()
-            }
-        }
-    }
+    fun loadEventsNeedingModeration() = state.loadEventsNeedingModeration()
 
-    fun loadBannedEvents() {
-        viewModelScope.launch {
-            val response = retriever.execute(client, Nip86Request.listBannedEvents())
-            if (response.error != null) {
-                _error.value = response.error
-            } else {
-                _bannedEvents.value = client.parseBannedEvents(response)?.distinctBy { it.id } ?: emptyList()
-            }
-        }
-    }
+    fun loadAllowedKinds() = state.loadAllowedKinds()
 
-    fun loadEventsNeedingModeration() {
-        viewModelScope.launch {
-            val response = retriever.execute(client, Nip86Request.listEventsNeedingModeration())
-            if (response.error != null) {
-                _error.value = response.error
-            } else {
-                _eventsNeedingModeration.value = client.parseEventsNeedingModeration(response)?.distinctBy { it.id } ?: emptyList()
-            }
-        }
-    }
-
-    fun loadAllowedKinds() {
-        viewModelScope.launch {
-            val response = retriever.execute(client, Nip86Request.listAllowedKinds())
-            if (response.error != null) {
-                _error.value = response.error
-            } else {
-                _allowedKinds.value = client.parseAllowedKinds(response)?.distinctBy { it } ?: emptyList()
-            }
-        }
-    }
-
-    fun loadBlockedIps() {
-        viewModelScope.launch {
-            val response = retriever.execute(client, Nip86Request.listBlockedIps())
-            if (response.error != null) {
-                _error.value = response.error
-            } else {
-                _blockedIps.value = client.parseBlockedIps(response)?.distinctBy { it.ip } ?: emptyList()
-            }
-        }
-    }
+    fun loadBlockedIps() = state.loadBlockedIps()
 
     fun banPubkey(
         pubkey: String,
         reason: String? = null,
-    ) {
-        viewModelScope.launch {
-            val response = retriever.execute(client, Nip86Request.banPubkey(pubkey, reason))
-            if (response.error != null) {
-                _error.value = response.error
-            } else {
-                loadBannedPubkeys()
-            }
-        }
-    }
+    ) = state.banPubkey(pubkey, reason)
 
-    fun unbanPubkey(pubkey: String) {
-        viewModelScope.launch {
-            val response = retriever.execute(client, Nip86Request.unbanPubkey(pubkey))
-            if (response.error != null) {
-                _error.value = response.error
-            } else {
-                loadBannedPubkeys()
-            }
-        }
-    }
+    fun unbanPubkey(pubkey: String) = state.unbanPubkey(pubkey)
 
     fun allowPubkey(
         pubkey: String,
         reason: String? = null,
-    ) {
-        viewModelScope.launch {
-            val response = retriever.execute(client, Nip86Request.allowPubkey(pubkey, reason))
-            if (response.error != null) {
-                _error.value = response.error
-            } else {
-                loadAllowedPubkeys()
-            }
-        }
-    }
+    ) = state.allowPubkey(pubkey, reason)
 
-    fun unallowPubkey(pubkey: String) {
-        viewModelScope.launch {
-            val response = retriever.execute(client, Nip86Request.unallowPubkey(pubkey))
-            if (response.error != null) {
-                _error.value = response.error
-            } else {
-                loadAllowedPubkeys()
-            }
-        }
-    }
+    fun unallowPubkey(pubkey: String) = state.unallowPubkey(pubkey)
 
     fun banEvent(
         eventId: String,
         reason: String? = null,
-    ) {
-        viewModelScope.launch {
-            val response = retriever.execute(client, Nip86Request.banEvent(eventId, reason))
-            if (response.error != null) {
-                _error.value = response.error
-            } else {
-                loadBannedEvents()
-            }
-        }
-    }
+    ) = state.banEvent(eventId, reason)
 
     fun allowEvent(
         eventId: String,
         reason: String? = null,
-    ) {
-        viewModelScope.launch {
-            val response = retriever.execute(client, Nip86Request.allowEvent(eventId, reason))
-            if (response.error != null) {
-                _error.value = response.error
-            } else {
-                loadEventsNeedingModeration()
-            }
-        }
-    }
+    ) = state.allowEvent(eventId, reason)
 
-    fun changeRelayName(newName: String) {
-        viewModelScope.launch {
-            val response = retriever.execute(client, Nip86Request.changeRelayName(newName))
-            if (response.error != null) {
-                _error.value = response.error
-            }
-        }
-    }
+    fun changeRelayName(newName: String) = state.changeRelayName(newName)
 
-    fun changeRelayDescription(newDescription: String) {
-        viewModelScope.launch {
-            val response = retriever.execute(client, Nip86Request.changeRelayDescription(newDescription))
-            if (response.error != null) {
-                _error.value = response.error
-            }
-        }
-    }
+    fun changeRelayDescription(newDescription: String) = state.changeRelayDescription(newDescription)
 
-    fun changeRelayIcon(newIconUrl: String) {
-        viewModelScope.launch {
-            val response = retriever.execute(client, Nip86Request.changeRelayIcon(newIconUrl))
-            if (response.error != null) {
-                _error.value = response.error
-            }
-        }
-    }
+    fun changeRelayIcon(newIconUrl: String) = state.changeRelayIcon(newIconUrl)
 
-    fun allowKind(kind: Int) {
-        viewModelScope.launch {
-            val response = retriever.execute(client, Nip86Request.allowKind(kind))
-            if (response.error != null) {
-                _error.value = response.error
-            } else {
-                loadAllowedKinds()
-            }
-        }
-    }
+    fun allowKind(kind: Int) = state.allowKind(kind)
 
-    fun disallowKind(kind: Int) {
-        viewModelScope.launch {
-            val response = retriever.execute(client, Nip86Request.disallowKind(kind))
-            if (response.error != null) {
-                _error.value = response.error
-            } else {
-                loadAllowedKinds()
-            }
-        }
-    }
+    fun disallowKind(kind: Int) = state.disallowKind(kind)
 
     fun blockIp(
         ip: String,
         reason: String? = null,
-    ) {
-        viewModelScope.launch {
-            val response = retriever.execute(client, Nip86Request.blockIp(ip, reason))
-            if (response.error != null) {
-                _error.value = response.error
-            } else {
-                loadBlockedIps()
-            }
-        }
-    }
+    ) = state.blockIp(ip, reason)
 
-    fun unblockIp(ip: String) {
-        viewModelScope.launch {
-            val response = retriever.execute(client, Nip86Request.unblockIp(ip))
-            if (response.error != null) {
-                _error.value = response.error
-            } else {
-                loadBlockedIps()
-            }
-        }
-    }
+    fun unblockIp(ip: String) = state.unblockIp(ip)
 
-    fun clearError() {
-        _error.value = null
-    }
+    fun clearError() = state.clearError()
 
-    fun loadAllLists() {
-        val methods = _supportedMethods.value
-        if (methods.contains("listbannedpubkeys")) loadBannedPubkeys()
-        if (methods.contains("listallowedpubkeys")) loadAllowedPubkeys()
-        if (methods.contains("listbannedevents")) loadBannedEvents()
-        if (methods.contains("listeventsneedingmoderation")) loadEventsNeedingModeration()
-        if (methods.contains("listallowedkinds")) loadAllowedKinds()
-        if (methods.contains("listblockedips")) loadBlockedIps()
-    }
+    fun loadAllLists() = state.loadAllLists()
 }
