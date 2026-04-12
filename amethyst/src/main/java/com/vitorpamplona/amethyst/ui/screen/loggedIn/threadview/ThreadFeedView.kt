@@ -75,6 +75,7 @@ import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.commons.ui.thread.drawReplyLevel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -297,9 +298,11 @@ import kotlinx.coroutines.withContext
 fun ThreadFeedView(
     noteId: String,
     viewModel: LevelFeedViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     RefresheableBox(viewModel) {
         RenderFeedState(
             viewModel = viewModel,
@@ -320,9 +323,11 @@ fun RenderThreadFeed(
     loaded: FeedState.Loaded,
     listState: LazyListState,
     viewModel: LevelFeedViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val items by loaded.feed.collectAsStateWithLifecycle()
 
     val position = items.list.indexOfFirst { it.idHex == noteId }
@@ -420,9 +425,11 @@ fun NoteMaster(
     baseNote: Note,
     modifier: Modifier = Modifier,
     parentBackgroundColor: MutableState<Color>? = null,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     WatchNoteEvent(
         baseNote = baseNote,
         accountViewModel = accountViewModel,
@@ -461,9 +468,11 @@ private fun FullBleedNoteCompose(
     modifier: Modifier,
     canPreview: Boolean,
     parentBackgroundColor: MutableState<Color>?,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val noteEvent = baseNote.event ?: return
 
     val isDraft = baseNote.isDraft()
@@ -881,9 +890,11 @@ private fun FullBleedNoteCompose(
 @Composable
 private fun RenderApprovalIfNeeded(
     baseNote: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     if (baseNote.isNewThread()) {
         val communityAddress =
             remember(baseNote) {
@@ -909,9 +920,11 @@ private fun RenderApprovalIfNeeded(
 private fun RenderClassifiedsReaderForThread(
     noteEvent: ClassifiedsEvent,
     note: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val imageSet =
         noteEvent.imageMetas().ifEmpty { null }?.map {
             MediaUrlImage(
@@ -1111,8 +1124,10 @@ private fun RenderClassifiedsReaderForThread(
 private fun RenderLongFormHeaderForThread(
     noteEvent: LongTextNoteEvent,
     note: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Column(modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp)) {
         noteEvent.image()?.let {
             MyAsyncImage(
@@ -1220,9 +1235,11 @@ private fun RenderWikiHeaderForThreadPreview() {
 @Composable
 private fun RenderWikiHeaderForThread(
     noteEvent: WikiNoteEvent,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Row(modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp)) {
         Column {
             noteEvent.image()?.let {

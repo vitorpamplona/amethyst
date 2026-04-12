@@ -42,6 +42,7 @@ import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
@@ -58,9 +59,11 @@ import kotlin.text.ifEmpty
 @Composable
 fun VideoCardCompose(
     baseNote: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val event = (baseNote.event as? VideoEvent) ?: return
     val backgroundColor = remember { mutableStateOf(Color.Transparent) }
     val editState = observeEdits(baseNote = baseNote, accountViewModel = accountViewModel)
@@ -94,8 +97,10 @@ private fun VideoCardImage(
     note: Note,
     event: VideoEvent,
     backgroundColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val videoEvent = (note.event as? VideoEvent) ?: return
     val event = (event as? Event) ?: return
 

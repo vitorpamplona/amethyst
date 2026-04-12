@@ -39,6 +39,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -64,9 +65,11 @@ fun AddOutboxRelayCardPreview() {
 
 @Composable
 fun ObserveInboxRelayListAndDisplayIfNotFound(
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val outboxRelayList by accountViewModel.account.nip65RelayList.outboxFlowNoDefaults
         .collectAsStateWithLifecycle()
 
@@ -80,9 +83,11 @@ fun ObserveInboxRelayListAndDisplayIfNotFound(
 
 @Composable
 fun AddOutboxRelayCard(
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Column(modifier = StdPadding) {
         Card(
             modifier = MaterialTheme.colorScheme.imageModifier,

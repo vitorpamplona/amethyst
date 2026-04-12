@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip23LongForm
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -32,9 +33,11 @@ import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 @Composable
 fun RenderLongFormThumb(
     baseNote: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val noteEvent by observeNoteEvent<LongTextNoteEvent>(baseNote, accountViewModel)
 
     noteEvent?.let {

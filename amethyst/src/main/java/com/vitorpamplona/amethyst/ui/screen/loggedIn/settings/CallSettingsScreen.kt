@@ -55,6 +55,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.CallTurnServer
 import com.vitorpamplona.amethyst.model.CallVideoResolution
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -64,9 +65,11 @@ import com.vitorpamplona.amethyst.ui.stringRes
 
 @Composable
 fun CallSettingsScreen(
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Scaffold(
         topBar = {
             TopBarWithBackButton(stringRes(id = R.string.call_settings), nav::popBack)
@@ -83,7 +86,9 @@ fun CallSettingsScreen(
 }
 
 @Composable
-private fun CallSettingsContent(accountViewModel: AccountViewModel) {
+private fun CallSettingsContent(accountViewModel: IAccountViewModel) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val settings = accountViewModel.account.settings
 
     SectionHeader(stringRes(R.string.call_settings_video_quality))

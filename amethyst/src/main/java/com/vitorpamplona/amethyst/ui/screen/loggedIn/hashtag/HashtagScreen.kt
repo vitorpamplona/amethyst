@@ -35,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserIsFollowingHashtag
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
@@ -52,9 +53,11 @@ import com.vitorpamplona.amethyst.ui.theme.StdPadding
 @Composable
 fun HashtagScreen(
     tag: Route.Hashtag,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     if (tag.hashtag.isEmpty()) return
 
     PrepareViewModelsHashtagScreen(tag, accountViewModel, nav)
@@ -64,9 +67,11 @@ fun HashtagScreen(
 @Composable
 fun PrepareViewModelsHashtagScreen(
     tag: Route.Hashtag,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val hashtagFeedViewModel: HashtagFeedViewModel =
         viewModel(
             key = tag.hashtag + "HashtagFeedViewModel",
@@ -85,9 +90,11 @@ fun PrepareViewModelsHashtagScreen(
 fun HashtagScreen(
     tag: Route.Hashtag,
     feedViewModel: HashtagFeedViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     WatchLifecycleAndUpdateModel(feedViewModel)
     HashtagFilterAssemblerSubscription(tag, accountViewModel)
 
@@ -143,8 +150,10 @@ fun HashtagHeader(
 @Composable
 fun HashtagActionOptions(
     tag: String,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val isFollowingTag by observeUserIsFollowingHashtag(tag, accountViewModel)
 
     if (isFollowingTag) {

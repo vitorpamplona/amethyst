@@ -63,6 +63,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.UserSearchDataSourceSubscription
@@ -92,8 +93,10 @@ fun RenderAddUserFieldAndSuggestions(
     hasUserFlow: (User) -> Flow<Boolean>,
     addUserToSet: (User) -> Unit,
     removeUserFromSet: (User) -> Unit,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     UserSearchDataSourceSubscription(userSuggestions, accountViewModel)
 
     LaunchedEffect(Unit) {
@@ -163,8 +166,10 @@ fun ShowUserSuggestions(
     hasUserFlow: (User) -> Flow<Boolean>,
     onSelect: (User) -> Unit,
     onDelete: (User) -> Unit,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val listState = rememberLazyListState()
 
     AnimateOnNewSearch(userSuggestions, listState)
@@ -204,8 +209,10 @@ fun DrawUser(
     hasUserFlow: (User) -> Flow<Boolean>,
     onSelect: (User) -> Unit,
     onDelete: (User) -> Unit,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Row(
         modifier =
             Modifier

@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromFiles
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
@@ -95,9 +96,11 @@ fun NewProductScreen(
     attachment: String? = null,
     quoteId: HexKey? = null,
     draftId: HexKey? = null,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: Nav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val postViewModel: NewProductViewModel = viewModel()
     postViewModel.init(accountViewModel)
 
@@ -134,9 +137,11 @@ fun NewProductScreen(
 @Composable
 fun NewProductScreen(
     postViewModel: NewProductViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     WatchAndLoadMyEmojiList(accountViewModel)
 
     StrippingFailureDialog(postViewModel.strippingFailureConfirmation)
@@ -191,9 +196,11 @@ fun NewProductScreen(
 @Composable
 private fun NewProductBody(
     postViewModel: NewProductViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val scrollState = rememberScrollState()
 
     Column(Modifier.fillMaxSize()) {

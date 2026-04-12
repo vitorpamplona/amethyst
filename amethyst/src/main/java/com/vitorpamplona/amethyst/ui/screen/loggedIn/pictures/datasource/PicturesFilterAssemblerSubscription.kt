@@ -24,10 +24,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.KeyDataSourceSubscription
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
-fun PicturesFilterAssemblerSubscription(accountViewModel: AccountViewModel) {
+fun PicturesFilterAssemblerSubscription(accountViewModel: IAccountViewModel) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     PicturesFilterAssemblerSubscription(
         accountViewModel.dataSources().pictures,
         accountViewModel,
@@ -37,8 +40,10 @@ fun PicturesFilterAssemblerSubscription(accountViewModel: AccountViewModel) {
 @Composable
 fun PicturesFilterAssemblerSubscription(
     dataSource: PicturesFilterAssembler,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val state =
         remember(accountViewModel.account) {
             PicturesQueryState(accountViewModel.account, accountViewModel.feedStates, accountViewModel.viewModelScope)

@@ -86,6 +86,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.ui.actions.uploads.GallerySelectSingle
@@ -132,9 +133,11 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 fun LongFormPostScreen(
     draftId: HexKey? = null,
     versionId: HexKey? = null,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: Nav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val postViewModel: LongFormPostViewModel = viewModel()
     postViewModel.init(accountViewModel)
 
@@ -193,9 +196,11 @@ fun LongFormPostScreen(
 @Composable
 private fun MarkdownPostScreenBody(
     postViewModel: LongFormPostViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: Nav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val scrollState = rememberScrollState()
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -563,10 +568,12 @@ private fun MarkdownPostScreenBody(
 private fun BannerImageArea(
     coverImageUrl: String,
     isUploading: Boolean,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     onImageSelected: (SelectedMedia) -> Unit,
     onClear: () -> Unit,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     var showGallerySelect by remember { mutableStateOf(false) }
     if (showGallerySelect) {
         GallerySelectSingle(

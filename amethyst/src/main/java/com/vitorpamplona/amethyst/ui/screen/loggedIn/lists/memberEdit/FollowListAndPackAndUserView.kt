@@ -37,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -53,9 +54,11 @@ import com.vitorpamplona.amethyst.ui.theme.grayText
 @Composable
 fun FollowListAndPackAndUserView(
     userToAddOrRemove: User,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val followSetsState by accountViewModel.account.peopleLists.uiListFlow
         .collectAsStateWithLifecycle()
     val followPackFeedState by accountViewModel.account.followLists.uiListFlow

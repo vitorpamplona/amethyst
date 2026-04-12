@@ -35,6 +35,7 @@ import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.UserComposeNoAction
@@ -51,9 +52,11 @@ fun PeopleListView(
     memberList: ImmutableList<User>,
     modifier: Modifier = Modifier,
     onDeleteUser: (User) -> Unit,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val listState = rememberLazyListState()
 
     LazyColumn(
@@ -77,10 +80,12 @@ fun PeopleListView(
 fun PeopleListItem(
     modifier: Modifier = Modifier,
     user: User,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
     onDeleteUser: (User) -> Unit,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Column(
         modifier = modifier,
     ) {

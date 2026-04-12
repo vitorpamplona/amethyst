@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -57,9 +58,11 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun BookmarkListScreen(
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val publicFeedViewModel: BookmarkPublicFeedViewModel =
         viewModel(
             key = "NostrBookmarkPublicFeedViewModel",
@@ -105,9 +108,11 @@ private fun RenderBookmarkScreen(
     publicFeedViewModel: BookmarkPublicFeedViewModel,
     privateFeedViewModel: BookmarkPrivateFeedViewModel,
     pinnedNotesFeedViewModel: PinnedNotesFeedViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val pagerState = rememberPagerState { 3 }
     val coroutineScope = rememberCoroutineScope()
 
@@ -182,8 +187,10 @@ private fun RenderBookmarkScreen(
 private fun PreloadBookmarkEvents(
     bookmarkState: com.vitorpamplona.amethyst.commons.model.nip51Lists.BookmarkListState.BookmarkList?,
     pinState: List<com.vitorpamplona.amethyst.model.Note>?,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val eventFinder = accountViewModel.dataSources().eventFinder
     val account = accountViewModel.account
 

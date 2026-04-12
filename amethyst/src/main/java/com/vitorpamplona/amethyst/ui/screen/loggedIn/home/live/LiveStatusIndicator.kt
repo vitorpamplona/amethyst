@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.utils.Log
@@ -56,9 +57,11 @@ fun LiveStatusIndicator(
 @Composable
 fun LiveStatusIndicatorForChannel(
     channel: Channel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     modifier: Modifier = Modifier,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val isOnline by produceState(initialValue = false, key1 = channel) {
         while (true) {
             value = checkChannelIsOnline(channel, accountViewModel)

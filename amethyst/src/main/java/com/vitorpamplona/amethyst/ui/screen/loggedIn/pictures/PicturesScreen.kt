@@ -28,6 +28,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.feeds.RenderFeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.SaveableFeedContentState
@@ -42,9 +43,11 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.pictures.datasource.Picture
 
 @Composable
 fun PicturesScreen(
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     PicturesScreen(
         picturesFeedContentState = accountViewModel.feedStates.picturesFeed,
         accountViewModel = accountViewModel,
@@ -55,9 +58,11 @@ fun PicturesScreen(
 @Composable
 fun PicturesScreen(
     picturesFeedContentState: FeedContentState,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     WatchLifecycleAndUpdateModel(picturesFeedContentState)
     WatchAccountForPicturesScreen(picturesFeedContentState = picturesFeedContentState, accountViewModel = accountViewModel)
     PicturesFilterAssemblerSubscription(accountViewModel)
@@ -108,8 +113,10 @@ fun PicturesScreen(
 @Composable
 fun WatchAccountForPicturesScreen(
     picturesFeedContentState: FeedContentState,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val listState by accountViewModel.account.livePicturesFollowLists.collectAsStateWithLifecycle()
     val hiddenUsers =
         accountViewModel.account.hiddenUsers.flow

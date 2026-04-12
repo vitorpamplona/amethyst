@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.feeds.RenderFeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.SaveableFeedContentState
@@ -58,9 +59,11 @@ import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
 
 @Composable
 fun VideoScreen(
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     VideoScreen(
         accountViewModel.feedStates.videoFeed,
         accountViewModel,
@@ -71,9 +74,11 @@ fun VideoScreen(
 @Composable
 fun VideoScreen(
     videoFeedContentState: FeedContentState,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     WatchLifecycleAndUpdateModel(videoFeedContentState)
     WatchAccountForVideoScreen(videoFeedContentState = videoFeedContentState, accountViewModel = accountViewModel)
     VideoFilterAssemblerSubscription(accountViewModel)
@@ -113,8 +118,10 @@ fun VideoScreen(
 @Composable
 fun WatchAccountForVideoScreen(
     videoFeedContentState: FeedContentState,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val listState by accountViewModel.account.liveStoriesFollowLists.collectAsStateWithLifecycle()
     val hiddenUsers =
         accountViewModel.account.hiddenUsers.flow
@@ -129,9 +136,11 @@ fun WatchAccountForVideoScreen(
 private fun RenderFeed(
     videoFeedContentState: FeedContentState,
     scrollKey: String?,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     RefresheableBox(invalidateableContent = videoFeedContentState) {
         SaveableFeedContentState(videoFeedContentState, scrollStateKey = scrollKey) { listState ->
             RenderFeedContentState(
@@ -157,9 +166,11 @@ private fun RenderFeed(
 fun VideoFeedLoaded(
     loaded: FeedState.Loaded,
     listState: LazyListState,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val items by loaded.feed.collectAsStateWithLifecycle()
 
     LazyColumn(

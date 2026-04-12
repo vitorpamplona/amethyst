@@ -68,6 +68,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
@@ -93,9 +94,11 @@ fun UserSettingsScreenPreview() {
 
 @Composable
 fun UserSettingsScreen(
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Scaffold(
         topBar = {
             TopBarWithBackButton(stringRes(id = R.string.user_preferences), nav::popBack)
@@ -192,7 +195,9 @@ private fun SearchableLanguageList(
 }
 
 @Composable
-fun TranslateToSetting(accountViewModel: AccountViewModel) {
+fun TranslateToSetting(accountViewModel: IAccountViewModel) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val currentTranslateTo by accountViewModel.account.settings.syncedSettings.languages.translateTo
         .collectAsStateWithLifecycle()
     val allLanguages = remember { getAllLanguagesSorted() }
@@ -235,7 +240,9 @@ fun TranslateToSetting(accountViewModel: AccountViewModel) {
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun DontTranslateFromSetting(accountViewModel: AccountViewModel) {
+fun DontTranslateFromSetting(accountViewModel: IAccountViewModel) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val selectedLanguages by accountViewModel.account.settings.syncedSettings.languages.dontTranslateFrom
         .collectAsStateWithLifecycle()
     var showAddPicker by remember { mutableStateOf(false) }
@@ -303,7 +310,9 @@ fun DontTranslateFromSetting(accountViewModel: AccountViewModel) {
 }
 
 @Composable
-fun LanguagePreferencesSetting(accountViewModel: AccountViewModel) {
+fun LanguagePreferencesSetting(accountViewModel: IAccountViewModel) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val languagePreferences by
         accountViewModel.account.settings.syncedSettings.languages.languagePreferences
             .collectAsStateWithLifecycle()
@@ -363,8 +372,10 @@ private fun LanguagePreferenceCard(
     source: String,
     target: String,
     preference: String,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val sourceName = JavaLocale.forLanguageTag(source).displayName
     val targetName = JavaLocale.forLanguageTag(target).displayName
 
@@ -446,9 +457,11 @@ private fun LanguagePreferenceCard(
 
 @Composable
 private fun AddLanguagePairCard(
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     onDismiss: () -> Unit,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val allLanguages = remember { getAllLanguagesSorted() }
     var selectedSource by remember { mutableStateOf<JavaLocale?>(null) }
     var selectedTarget by remember { mutableStateOf<JavaLocale?>(null) }

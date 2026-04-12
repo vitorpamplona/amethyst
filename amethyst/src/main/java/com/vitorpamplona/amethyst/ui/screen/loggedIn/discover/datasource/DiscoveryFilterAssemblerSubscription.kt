@@ -24,10 +24,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.KeyDataSourceSubscription
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
-fun DiscoveryFilterAssemblerSubscription(accountViewModel: AccountViewModel) {
+fun DiscoveryFilterAssemblerSubscription(accountViewModel: IAccountViewModel) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     DiscoveryFilterAssemblerSubscription(
         accountViewModel.dataSources().discovery,
         accountViewModel,
@@ -37,8 +40,10 @@ fun DiscoveryFilterAssemblerSubscription(accountViewModel: AccountViewModel) {
 @Composable
 fun DiscoveryFilterAssemblerSubscription(
     dataSource: DiscoveryFilterAssembler,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     // different screens get different states
     // even if they are tracking the same tag.
     val state =

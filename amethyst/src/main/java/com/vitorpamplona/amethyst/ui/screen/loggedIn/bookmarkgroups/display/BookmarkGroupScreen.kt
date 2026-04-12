@@ -56,6 +56,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
@@ -76,9 +77,11 @@ import kotlinx.coroutines.launch
 fun BookmarkGroupScreen(
     bookmarkIdentifier: String,
     bookmarkType: BookmarkType,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val bookmarkGroupViewModel: BookmarkGroupViewModel =
         viewModel(
             factory = BookmarkGroupViewModel.Initializer(accountViewModel.account, bookmarkIdentifier),
@@ -113,9 +116,11 @@ fun BookmarkGroupScreenView(
     bookmarkType: BookmarkType,
     broadcastBookmarkGroup: () -> Unit,
     deleteBookmarkGroup: () -> Unit,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val pagerState = rememberPagerState { 2 }
     Scaffold(
         topBar = {

@@ -28,6 +28,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.ui.components.SelectNotificationProvider
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
@@ -43,9 +44,11 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 @Composable
 fun NotificationScreen(
     scrollToEventId: String? = null,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     NotificationScreen(
         notifFeedContentState = accountViewModel.feedStates.notifications,
         notifSummaryState = accountViewModel.feedStates.notificationSummary,
@@ -64,9 +67,11 @@ fun NotificationScreen(
     notifPolls: OpenPollsState,
     sharedPrefs: UiSettingsFlow,
     scrollToEventId: String? = null,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     SelectNotificationProvider(sharedPrefs)
 
     WatchAccountForNotifications(notifFeedContentState, accountViewModel)
@@ -110,8 +115,10 @@ fun NotificationScreen(
 @Composable
 fun WatchAccountForNotifications(
     notifFeedContentState: CardFeedContentState,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val listState by
         accountViewModel.account.liveNotificationFollowLists.collectAsStateWithLifecycle()
 

@@ -30,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserIsFollowingGeohash
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
@@ -47,9 +48,11 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.UnfollowButton
 @Composable
 fun GeoHashScreen(
     tag: Route.Geohash,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     if (tag.geohash.isEmpty()) return
 
     PrepareViewModelsGeoHashScreen(tag, accountViewModel, nav)
@@ -59,9 +62,11 @@ fun GeoHashScreen(
 @Composable
 fun PrepareViewModelsGeoHashScreen(
     tag: Route.Geohash,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val geohashViewModel: GeoHashFeedViewModel =
         viewModel(
             key = tag.geohash + "GeoHashFeedViewModel",
@@ -80,9 +85,11 @@ fun PrepareViewModelsGeoHashScreen(
 fun GeoHashScreen(
     tag: Route.Geohash,
     feedViewModel: GeoHashFeedViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     WatchLifecycleAndUpdateModel(feedViewModel)
     GeoHashFilterAssemblerSubscription(tag, accountViewModel)
 
@@ -130,8 +137,10 @@ fun DisplayGeoTagHeader(
 @Composable
 fun GeoHashActionOptions(
     tag: String,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val isFollowingTag by observeUserIsFollowingGeohash(tag, accountViewModel)
 
     if (isFollowingTag) {

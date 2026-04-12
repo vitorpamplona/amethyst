@@ -24,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.FeedFilterSpinner
@@ -35,9 +36,11 @@ import com.vitorpamplona.amethyst.ui.stringRes
 
 @Composable
 fun LongsTopBar(
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     UserDrawerSearchTopBar(accountViewModel, nav) {
         val list by accountViewModel.account.settings.defaultLongsFollowList
             .collectAsStateWithLifecycle()
@@ -55,9 +58,11 @@ fun LongsTopBar(
 private fun LongsTopNavFilterBar(
     followListsModel: TopNavFilterState,
     listName: TopFilter,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     onChange: (FeedDefinition) -> Unit,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val allLists by followListsModel.kind3GlobalPeople.collectAsStateWithLifecycle()
 
     FeedFilterSpinner(

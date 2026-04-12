@@ -31,6 +31,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
@@ -41,12 +42,14 @@ import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 fun RenderPostList(
     bookmarkGroupViewModel: BookmarkGroupViewModel,
     pagerState: PagerState,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     movePostBookmark: (postId: String, fromPrivate: Boolean) -> Unit,
     deletePostBookmark: (postId: String, isPrivate: Boolean) -> Unit,
     nav: INav,
     modifier: Modifier = Modifier,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val privatePosts by bookmarkGroupViewModel.privatePosts().collectAsStateWithLifecycle()
     val publicPosts by bookmarkGroupViewModel.publicPosts().collectAsStateWithLifecycle()
 
@@ -95,9 +98,11 @@ private fun PostList(
     onMoveBookmarkToPublic: (postId: String) -> Unit = {},
     onMoveBookmarkToPrivate: (postId: String) -> Unit = {},
     onDeletePostBookmark: (postId: String) -> Unit,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val listState = rememberLazyListState()
 
     LazyColumn(

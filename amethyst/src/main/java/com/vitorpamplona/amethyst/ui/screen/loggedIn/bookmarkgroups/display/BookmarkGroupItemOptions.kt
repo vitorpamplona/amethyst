@@ -45,6 +45,7 @@ import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.EditPostView
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
@@ -78,9 +79,11 @@ fun BookmarkGroupItemOptions(
     onMoveBookmarkToPrivate: () -> Unit,
     onDeleteBookmarkItem: () -> Unit,
     editState: State<GenericLoadable<EditState>>? = null,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val popupExpanded = remember { mutableStateOf(false) }
 
     ClickableBox(
@@ -114,9 +117,11 @@ fun BookmarkGroupItemOptionsMenu(
     onMoveBookmarkToPrivate: () -> Unit,
     onDeleteBookmarkItem: () -> Unit,
     editState: State<GenericLoadable<EditState>>? = null,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     var reportDialogShowing by remember { mutableStateOf(false) }
 
     val state by observeBookmarksFollowsAndAccount(note, accountViewModel).collectAsStateWithLifecycle(

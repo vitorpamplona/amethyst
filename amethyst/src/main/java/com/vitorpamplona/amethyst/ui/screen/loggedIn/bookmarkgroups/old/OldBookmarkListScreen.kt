@@ -48,6 +48,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -62,9 +63,11 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun OldBookmarkListScreen(
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val publicFeedViewModel: OldBookmarkPublicFeedViewModel =
         viewModel(
             key = "NostrOldBookmarkPublicFeedViewModel",
@@ -97,9 +100,11 @@ fun OldBookmarkListScreen(
 private fun RenderOldBookmarkScreen(
     publicFeedViewModel: OldBookmarkPublicFeedViewModel,
     privateFeedViewModel: OldBookmarkPrivateFeedViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val pagerState = rememberPagerState { 2 }
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -184,8 +189,10 @@ private fun RenderOldBookmarkScreen(
 @Composable
 private fun PreloadOldBookmarkEvents(
     bookmarkState: com.vitorpamplona.amethyst.commons.model.nip51Lists.OldBookmarkListState.BookmarkList?,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val eventFinder = accountViewModel.dataSources().eventFinder
     val account = accountViewModel.account
 

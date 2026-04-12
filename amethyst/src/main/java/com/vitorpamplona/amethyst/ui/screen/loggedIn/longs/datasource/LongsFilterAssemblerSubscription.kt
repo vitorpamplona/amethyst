@@ -24,10 +24,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.KeyDataSourceSubscription
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
-fun LongsFilterAssemblerSubscription(accountViewModel: AccountViewModel) {
+fun LongsFilterAssemblerSubscription(accountViewModel: IAccountViewModel) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     LongsFilterAssemblerSubscription(
         accountViewModel.dataSources().longs,
         accountViewModel,
@@ -37,8 +40,10 @@ fun LongsFilterAssemblerSubscription(accountViewModel: AccountViewModel) {
 @Composable
 fun LongsFilterAssemblerSubscription(
     dataSource: LongsFilterAssembler,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val state =
         remember(accountViewModel.account) {
             LongsQueryState(accountViewModel.account, accountViewModel.feedStates, accountViewModel.viewModelScope)

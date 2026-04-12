@@ -36,6 +36,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
@@ -49,9 +50,11 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 @Composable
 fun FollowListAndPackAndUserScreen(
     userToAddOrRemove: HexKey,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     var userBase by remember { mutableStateOf(LocalCache.getUserIfExists(userToAddOrRemove)) }
 
     if (userBase == null) {
@@ -72,9 +75,11 @@ fun FollowListAndPackAndUserScreen(
 @Composable
 fun FollowListAndPackAndUserScreen(
     userToAddOrRemove: User,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Scaffold(
         modifier = Modifier.fillMaxSize().recalculateWindowInsets(),
         topBar = {

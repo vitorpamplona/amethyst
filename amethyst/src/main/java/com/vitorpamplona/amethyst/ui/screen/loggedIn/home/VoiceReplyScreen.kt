@@ -40,6 +40,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.FileServerSelectionRow
 import com.vitorpamplona.amethyst.ui.actions.uploads.UploadProgressIndicator
 import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceAnonymizationSection
@@ -61,9 +62,11 @@ fun VoiceReplyScreen(
     mimeType: String,
     duration: Int,
     amplitudesJson: String,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: Nav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val viewModel: VoiceReplyViewModel = viewModel()
 
     LaunchedEffect(replyToNoteId, recordingFilePath, accountViewModel) {
@@ -106,9 +109,11 @@ fun VoiceReplyScreen(
 @Composable
 private fun VoiceReplyScreenBody(
     viewModel: VoiceReplyViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: Nav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val scrollState = rememberScrollState()
 
     Column(

@@ -25,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -61,9 +62,11 @@ fun ChannelCardCompose(
     parentBackgroundColor: MutableState<Color>? = null,
     forceEventKind: Int?,
     isHiddenFeed: Boolean = false,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     WatchNoteEvent(baseNote = baseNote, accountViewModel = accountViewModel, nav) {
         if (forceEventKind == null || baseNote.event?.kind == forceEventKind) {
             CheckHiddenFeedWatchBlockAndReport(
@@ -93,9 +96,11 @@ fun NormalChannelCard(
     routeForLastRead: String? = null,
     modifier: Modifier = Modifier,
     parentBackgroundColor: MutableState<Color>? = null,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     LongPressToQuickAction(baseNote, accountViewModel, nav) { showPopup ->
         CheckNewAndRenderChannelCard(
             baseNote,
@@ -115,10 +120,12 @@ private fun CheckNewAndRenderChannelCard(
     routeForLastRead: String? = null,
     modifier: Modifier = Modifier,
     parentBackgroundColor: MutableState<Color>? = null,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     showPopup: () -> Unit,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val backgroundColor =
         calculateBackgroundColor(
             createdAt = baseNote.createdAt(),
@@ -146,9 +153,11 @@ private fun CheckNewAndRenderChannelCard(
 @Composable
 fun InnerChannelCardWithReactions(
     baseNote: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     when (baseNote.event) {
         is LiveActivitiesEvent -> InnerCardRow(baseNote, accountViewModel, nav)
         is MeetingSpaceEvent -> InnerCardRow(baseNote, accountViewModel, nav)
@@ -165,9 +174,11 @@ fun InnerChannelCardWithReactions(
 @Composable
 fun InnerCardRow(
     baseNote: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Column(StdPadding) {
         SensitivityWarning(
             note = baseNote,
@@ -185,9 +196,11 @@ fun InnerCardRow(
 @Composable
 fun InnerCardBox(
     baseNote: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Column(HalfPadding) {
         SensitivityWarning(
             note = baseNote,
@@ -201,9 +214,11 @@ fun InnerCardBox(
 @Composable
 private fun RenderNoteRow(
     baseNote: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     when (baseNote.event) {
         is LiveActivitiesEvent -> RenderLiveActivityThumb(baseNote, accountViewModel, nav)
         is MeetingSpaceEvent -> RenderLiveActivityThumb(baseNote, accountViewModel, nav)

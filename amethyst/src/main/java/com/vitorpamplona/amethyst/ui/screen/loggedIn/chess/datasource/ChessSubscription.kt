@@ -26,6 +26,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.KeyDataSourceSubscription
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.ChessViewModelNew
 
@@ -38,8 +39,10 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.ChessViewModelNew
 @Composable
 fun ChessSubscription(
     chessViewModel: ChessViewModelNew,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     // Get active game IDs from the view model for game-specific subscriptions
     val activeGames by chessViewModel.activeGames.collectAsStateWithLifecycle()
     val spectatingGames by chessViewModel.spectatingGames.collectAsStateWithLifecycle()

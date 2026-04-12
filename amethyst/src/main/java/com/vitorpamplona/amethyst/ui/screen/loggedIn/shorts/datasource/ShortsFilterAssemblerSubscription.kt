@@ -24,10 +24,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.KeyDataSourceSubscription
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
-fun ShortsFilterAssemblerSubscription(accountViewModel: AccountViewModel) {
+fun ShortsFilterAssemblerSubscription(accountViewModel: IAccountViewModel) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     ShortsFilterAssemblerSubscription(
         accountViewModel.dataSources().shorts,
         accountViewModel,
@@ -37,8 +40,10 @@ fun ShortsFilterAssemblerSubscription(accountViewModel: AccountViewModel) {
 @Composable
 fun ShortsFilterAssemblerSubscription(
     dataSource: ShortsFilterAssembler,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val state =
         remember(accountViewModel.account) {
             ShortsQueryState(accountViewModel.account, accountViewModel.feedStates, accountViewModel.viewModelScope)

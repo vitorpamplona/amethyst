@@ -62,6 +62,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.ReactionRowAction
 import com.vitorpamplona.amethyst.model.ReactionRowItem
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
@@ -86,9 +87,11 @@ fun ReactionsSettingsScreenPreview() {
 
 @Composable
 fun ReactionsSettingsScreen(
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Scaffold(
         topBar = {
             TopBarWithBackButton(stringRes(id = R.string.reactions_settings), nav::popBack)
@@ -101,7 +104,9 @@ fun ReactionsSettingsScreen(
 }
 
 @Composable
-fun ReactionsSettingsContent(accountViewModel: AccountViewModel) {
+fun ReactionsSettingsContent(accountViewModel: IAccountViewModel) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val reactionRowItems by accountViewModel.reactionRowItemsFlow().collectAsStateWithLifecycle()
     var items by remember(reactionRowItems) { mutableStateOf(reactionRowItems.toList()) }
 

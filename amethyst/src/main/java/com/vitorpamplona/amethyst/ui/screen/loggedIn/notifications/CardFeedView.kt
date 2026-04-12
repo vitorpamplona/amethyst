@@ -55,6 +55,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.ui.notifications.Card
 import com.vitorpamplona.amethyst.commons.ui.notifications.CardFeedState
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.feeds.FeedError
@@ -81,12 +82,14 @@ import kotlinx.coroutines.delay
 fun RenderCardFeed(
     feedContent: CardFeedContentState,
     pollContent: OpenPollsState,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     listState: LazyListState,
     nav: INav,
     routeForLastRead: String,
     scrollToEventId: String? = null,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val feedState by feedContent.feedContent.collectAsStateWithLifecycle()
 
     CrossfadeIfEnabled(
@@ -143,10 +146,12 @@ private fun FeedLoaded(
     polls: OpenPollsState,
     listState: LazyListState,
     routeForLastRead: String,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
     scrollToEventId: String? = null,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val items by loaded.feed.collectAsStateWithLifecycle()
     val openPolls by polls.flow.collectAsStateWithLifecycle()
 
@@ -258,9 +263,11 @@ private fun RenderCardItem(
     item: Card,
     routeForLastRead: String,
     showHidden: Boolean,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     when (item) {
         is NoteCard -> {
             NoteCardCompose(
@@ -325,9 +332,11 @@ fun NoteCardCompose(
     makeItShort: Boolean = false,
     showHidden: Boolean = false,
     parentBackgroundColor: MutableState<Color>? = null,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     NoteCompose(
         baseNote = baseNote.note,
         modifier = modifier.fillMaxWidth(),

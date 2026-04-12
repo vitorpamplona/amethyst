@@ -39,6 +39,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -63,9 +64,11 @@ fun AddInboxRelayForSearchCardPreview() {
 
 @Composable
 fun ObserveRelayListForSearchAndDisplayIfNotFound(
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val searchRelayList by accountViewModel.account.searchRelayList.flowNoDefaults
         .collectAsStateWithLifecycle()
 
@@ -79,9 +82,11 @@ fun ObserveRelayListForSearchAndDisplayIfNotFound(
 
 @Composable
 fun AddInboxRelayForSearchCard(
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Column(modifier = StdPadding) {
         Card(
             modifier = MaterialTheme.colorScheme.imageModifier,

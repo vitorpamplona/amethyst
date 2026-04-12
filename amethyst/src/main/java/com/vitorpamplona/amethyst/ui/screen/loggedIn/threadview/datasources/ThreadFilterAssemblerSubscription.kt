@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.datasources
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.KeyDataSourceSubscription
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -30,12 +31,16 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 @Composable
 fun ThreadFilterAssemblerSubscription(
     eventId: HexKey,
-    accountViewModel: AccountViewModel,
-) = ThreadFilterAssemblerSubscription(
-    eventId,
-    accountViewModel.account,
-    accountViewModel.dataSources().thread,
-)
+    accountViewModel: IAccountViewModel,
+) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
+    ThreadFilterAssemblerSubscription(
+        eventId,
+        accountViewModel.account,
+        accountViewModel.dataSources().thread,
+    )
+}
 
 @Composable
 fun ThreadFilterAssemblerSubscription(

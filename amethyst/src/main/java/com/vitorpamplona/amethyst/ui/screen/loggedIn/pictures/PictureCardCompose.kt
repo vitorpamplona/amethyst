@@ -39,6 +39,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.AutoNonlazyGrid
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
@@ -54,9 +55,11 @@ import kotlinx.collections.immutable.toImmutableList
 @Composable
 fun PictureCardCompose(
     baseNote: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val event = (baseNote.event as? PictureEvent) ?: return
     val backgroundColor = remember { mutableStateOf(Color.Transparent) }
     val editState = observeEdits(baseNote = baseNote, accountViewModel = accountViewModel)
@@ -90,8 +93,10 @@ private fun PictureCardImage(
     note: Note,
     event: PictureEvent,
     backgroundColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val uri = note.toNostrUri()
 
     val images by

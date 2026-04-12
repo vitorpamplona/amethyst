@@ -59,6 +59,7 @@ import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.service.location.LocationState
@@ -98,9 +99,11 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun HomeScreen(
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     HomeScreen(
         liveFeedState = accountViewModel.feedStates.homeLive,
         newThreadsFeedState = accountViewModel.feedStates.homeNewThreads,
@@ -116,9 +119,11 @@ fun HomeScreen(
     liveFeedState: ChannelFeedContentState,
     newThreadsFeedState: FeedContentState,
     repliesFeedState: FeedContentState,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     WatchAccountForHomeScreen(liveFeedState, newThreadsFeedState, repliesFeedState, accountViewModel)
 
     WatchLifecycleAndUpdateModel(liveFeedState)
@@ -171,9 +176,11 @@ private fun AssembleHomeTabs(
 private fun HomePages(
     pagerState: PagerState,
     tabs: ImmutableList<TabItem>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     DisappearingScaffold(
         isInvertedLayout = false,
         topBar = {
@@ -234,9 +241,11 @@ private fun HomePages(
 
 @Composable
 fun HomeScreenFloatingButton(
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val list =
         accountViewModel.account.settings.defaultHomeFollowList
             .collectAsStateWithLifecycle()
@@ -278,9 +287,11 @@ fun HomeFeeds(
     enablePullRefresh: Boolean = true,
     scrollStateKey: String? = null,
     liveSection: ChannelFeedContentState? = null,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     RefresheableBox(feedState, enablePullRefresh) {
         SaveableFeedContentState(feedState, scrollStateKey) { listState ->
             RenderFeedContentState(
@@ -303,9 +314,11 @@ fun FeedLoaded(
     listState: LazyListState,
     routeForLastRead: String?,
     liveSection: ChannelFeedContentState? = null,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val items by loaded.feed.collectAsStateWithLifecycle()
 
     LazyColumn(
@@ -346,9 +359,11 @@ fun FeedLoaded(
 @Composable
 fun DisplayLiveBubbles(
     liveSection: ChannelFeedContentState,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val feedState by liveSection.feedContent.collectAsStateWithLifecycle()
 
     when (val state = feedState) {
@@ -362,9 +377,11 @@ fun DisplayLiveBubbles(
 @Composable
 fun DisplayLiveBubbles(
     liveFeed: ChannelFeedState.Loaded,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val feed by liveFeed.feed.collectAsStateWithLifecycle()
 
     LazyRow(HorzPadding, horizontalArrangement = spacedBy(Size5dp)) {
@@ -401,9 +418,11 @@ fun HomeFeedEmpty(onRefresh: () -> Unit) {
 @Composable
 fun CheckIfVideoIsOnline(
     url: String,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     whenOnline: @Composable (Boolean) -> Unit,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val online by produceState(
         initialValue = OnlineChecker.isOnlineCached(url),
         key1 = url,
@@ -420,9 +439,11 @@ fun CheckIfVideoIsOnline(
 @Composable
 fun CrossfadeCheckIfVideoIsOnline(
     url: String,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     whenOnline: @Composable () -> Unit,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val online by produceState(
         initialValue = OnlineChecker.isOnlineCached(url),
         key1 = url,
@@ -449,8 +470,10 @@ fun WatchAccountForHomeScreen(
     liveFeedState: ChannelFeedContentState,
     newThreadsFeedState: FeedContentState,
     repliesFeedState: FeedContentState,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val homeFollowList by accountViewModel.account.liveHomeFollowLists.collectAsStateWithLifecycle()
 
     LaunchedEffect(accountViewModel, homeFollowList) {

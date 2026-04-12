@@ -48,6 +48,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.PostingTopBar
@@ -57,9 +58,11 @@ import com.vitorpamplona.amethyst.ui.stringRes
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NewGoalScreen(
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: Nav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val goalViewModel: NewGoalViewModel = viewModel()
     goalViewModel.init(accountViewModel)
 
@@ -78,9 +81,11 @@ fun NewGoalScreen(
 @Composable
 fun NewGoalScreen(
     goalViewModel: NewGoalViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     BackHandler {
         goalViewModel.cancel()
         nav.popBack()

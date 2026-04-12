@@ -54,6 +54,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.TextSearchDataSourceSubscription
@@ -82,9 +83,11 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun SearchScreen(
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val searchBarViewModel: SearchBarViewModel =
         viewModel(
             key = "SearchBarViewModel",
@@ -101,9 +104,11 @@ fun SearchScreen(
 @Composable
 fun SearchScreen(
     searchBarViewModel: SearchBarViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     WatchLifecycleAndUpdateModel(searchBarViewModel)
 
     LaunchedEffect(searchBarViewModel.focusRequester) {
@@ -137,9 +142,11 @@ fun SearchScreen(
 @Composable
 private fun SearchBar(
     searchBarViewModel: SearchBarViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     TextSearchDataSourceSubscription(searchBarViewModel, accountViewModel)
 
     LaunchedEffect(Unit) {
@@ -220,8 +227,10 @@ private fun SearchTextField(
 private fun DisplaySearchResults(
     searchBarViewModel: SearchBarViewModel,
     nav: INav,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     if (!searchBarViewModel.isRefreshing.value) {
         return
     }

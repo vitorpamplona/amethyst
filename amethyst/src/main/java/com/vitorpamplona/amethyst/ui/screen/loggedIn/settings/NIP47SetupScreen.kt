@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.actions.paymentTargets.PaymentTargetAddField
 import com.vitorpamplona.amethyst.ui.actions.paymentTargets.PaymentTargetsViewModel
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -62,10 +63,12 @@ import com.vitorpamplona.quartz.experimental.nipA3.PaymentTarget
 
 @Composable
 fun NIP47SetupScreen(
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
     nip47: String?,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val postViewModel: UpdateZapAmountViewModel = viewModel()
     postViewModel.init(accountViewModel)
 
@@ -90,10 +93,12 @@ fun NIP47SetupScreen(
     postViewModel: UpdateZapAmountViewModel,
     walletViewModel: WalletViewModel,
     paymentTargetsViewModel: PaymentTargetsViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
     nip47: String?,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Scaffold(
         topBar = {
             SavingTopBar(

@@ -43,6 +43,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.ParticipantListBuilder
@@ -88,9 +89,11 @@ data class CommunityCard(
 @Composable
 fun RenderCommunitiesThumb(
     baseNote: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val noteState by observeNote(baseNote, accountViewModel)
     val noteEvent = noteState.note.event as? CommunityDefinitionEvent ?: return
 
@@ -111,9 +114,11 @@ fun RenderCommunitiesThumb(
 fun RenderCommunitiesThumb(
     card: CommunityCard,
     baseNote: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     LeftPictureLayout(
         onImage = {
             card.cover?.let {
@@ -184,9 +189,11 @@ fun RenderCommunitiesThumb(
 fun LoadModerators(
     moderators: ImmutableList<String>,
     baseNote: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     content: @Composable (ImmutableList<User>) -> Unit,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     var participantUsers by remember {
         mutableStateOf<ImmutableList<User>>(
             persistentListOf(),

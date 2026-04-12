@@ -42,6 +42,7 @@ import coil3.compose.AsyncImage
 import coil3.compose.AsyncImagePainter
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.ParticipantListBuilder
 import com.vitorpamplona.amethyst.model.User
@@ -78,9 +79,11 @@ import kotlinx.coroutines.launch
 @Composable
 fun RenderPublicChatChannelThumb(
     baseNote: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val noteEvent = baseNote.event as? ChannelCreateEvent ?: return
 
     LoadPublicChatChannel(baseNote.idHex, accountViewModel) {
@@ -92,9 +95,11 @@ fun RenderPublicChatChannelThumb(
 fun RenderPublicChatChannelThumb(
     baseNote: Note,
     channel: PublicChatChannel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val channelUpdates by observeChannel(channel, accountViewModel)
     val publicChat = channelUpdates?.channel as PublicChatChannel
 

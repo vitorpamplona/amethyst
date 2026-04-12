@@ -31,6 +31,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
@@ -42,12 +43,14 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 fun RenderArticleList(
     bookmarkGroupViewModel: BookmarkGroupViewModel,
     pagerState: PagerState,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     moveArticleBookmark: (articleAddress: Address, fromPrivate: Boolean) -> Unit,
     deleteArticleBookmark: (articleAddress: Address, isPrivate: Boolean) -> Unit,
     nav: INav,
     modifier: Modifier = Modifier,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val privateArticles by bookmarkGroupViewModel.privateArticles().collectAsStateWithLifecycle()
     val publicArticles by bookmarkGroupViewModel.publicArticles().collectAsStateWithLifecycle()
 
@@ -96,9 +99,11 @@ fun ArticleList(
     onMoveBookmarkToPublic: (articleAddress: Address) -> Unit = {},
     onMoveBookmarkToPrivate: (articleAddress: Address) -> Unit = {},
     onDeleteArticleBookmark: (Address) -> Unit,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val listState = rememberLazyListState()
 
     LazyColumn(

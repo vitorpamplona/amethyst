@@ -44,6 +44,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteAndMap
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -65,9 +66,11 @@ data class ClassifiedsThumb(
 @Composable
 fun RenderClassifiedsThumb(
     baseNote: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     if (baseNote.event !is ClassifiedsEvent) return
 
     val card by observeNoteAndMap(baseNote, accountViewModel) {
@@ -103,8 +106,10 @@ fun RenderClassifiedsThumbPreview() {
 fun InnerRenderClassifiedsThumb(
     card: ClassifiedsThumb,
     note: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Box(
         Modifier
             .fillMaxWidth()

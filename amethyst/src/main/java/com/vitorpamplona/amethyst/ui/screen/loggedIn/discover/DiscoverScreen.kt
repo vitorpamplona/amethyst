@@ -57,6 +57,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.feeds.FeedEmpty
 import com.vitorpamplona.amethyst.ui.feeds.FeedError
@@ -94,9 +95,11 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun DiscoverScreen(
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     DiscoverScreen(
         discoveryFollowSetsFeedContentState = accountViewModel.feedStates.discoverFollowSets,
         discoveryReadsFeedContentState = accountViewModel.feedStates.discoverReads,
@@ -120,9 +123,11 @@ fun DiscoverScreen(
     discoveryLiveFeedContentState: FeedContentState,
     discoveryCommunityFeedContentState: FeedContentState,
     discoveryChatFeedContentState: FeedContentState,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val feedTabs by
         remember(accountViewModel) {
             mutableStateOf(
@@ -211,9 +216,11 @@ fun DiscoverScreen(
 private fun DiscoverPages(
     pagerState: PagerState,
     feedTabs: ImmutableList<TabItem>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     DisappearingScaffold(
         isInvertedLayout = false,
         topBar = {
@@ -303,9 +310,11 @@ private fun RenderDiscoverFeed(
     routeForLastRead: String?,
     forceEventKind: Int?,
     listState: LazyGridState,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val feedState by feedContentState.feedContent.collectAsStateWithLifecycle()
 
     CrossfadeIfEnabled(
@@ -343,9 +352,11 @@ private fun RenderDiscoverFeed(
 
 @Composable
 fun NewProductButton(
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     FloatingActionButton(
         onClick = {
             nav.nav(Route.NewProduct())
@@ -365,9 +376,11 @@ fun NewProductButton(
 
 @Composable
 fun NewLongFormMarkdownButton(
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     FloatingActionButton(
         onClick = {
             nav.nav(Route.NewLongFormPost())
@@ -391,9 +404,11 @@ private fun RenderDiscoverFeed(
     routeForLastRead: String?,
     forceEventKind: Int?,
     listState: LazyListState,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val feedState by feedContentState.feedContent.collectAsStateWithLifecycle()
 
     CrossfadeIfEnabled(
@@ -438,8 +453,10 @@ fun WatchAccountForDiscoveryScreen(
     discoveryLiveFeedContentState: FeedContentState,
     discoveryCommunityFeedContentState: FeedContentState,
     discoveryChatFeedContentState: FeedContentState,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val listState by accountViewModel.account.liveDiscoveryFollowLists.collectAsStateWithLifecycle()
 
     LaunchedEffect(accountViewModel, listState) {
@@ -460,9 +477,11 @@ private fun DiscoverFeedLoaded(
     routeForLastRead: String?,
     listState: LazyListState,
     forceEventKind: Int?,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val items by loaded.feed.collectAsStateWithLifecycle()
 
     LazyColumn(
@@ -495,9 +514,11 @@ private fun DiscoverFeedColumnsLoaded(
     routeForLastRead: String?,
     listState: LazyGridState,
     forceEventKind: Int?,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val items by loaded.feed.collectAsStateWithLifecycle()
 
     LazyVerticalGrid(

@@ -65,6 +65,7 @@ import androidx.core.net.toUri
 import androidx.core.util.Consumer
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.FileServerSelectionRow
 import com.vitorpamplona.amethyst.ui.actions.uploads.MAX_VOICE_RECORD_SECONDS
@@ -136,9 +137,11 @@ fun ShortNotePostScreen(
     forkId: HexKey? = null,
     versionId: HexKey? = null,
     draftId: HexKey? = null,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: Nav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val postViewModel: ShortNotePostViewModel = viewModel()
     postViewModel.init(accountViewModel)
 
@@ -195,9 +198,11 @@ fun ShortNotePostScreen(
 @Composable
 internal fun NewPostScreenInner(
     postViewModel: ShortNotePostViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: Nav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     WatchAndLoadMyEmojiList(accountViewModel)
 
     StrippingFailureDialog(postViewModel.strippingFailureConfirmation)
@@ -249,9 +254,11 @@ internal fun NewPostScreenInner(
 @Composable
 private fun NewPostScreenBody(
     postViewModel: ShortNotePostViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: Nav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val scrollState = rememberScrollState()
     Column(
         modifier =

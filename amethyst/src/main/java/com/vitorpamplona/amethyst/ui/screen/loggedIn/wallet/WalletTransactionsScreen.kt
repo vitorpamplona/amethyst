@@ -61,6 +61,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
@@ -77,9 +78,11 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WalletTransactionsScreen(
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val walletViewModel: WalletViewModel = viewModel()
 
     LaunchedEffect(accountViewModel) {
@@ -229,9 +232,11 @@ private fun TransactionFilterRow(
 @Composable
 private fun TransactionItem(
     tx: NwcTransaction,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val isIncoming = tx.type == NwcTransactionType.INCOMING
     val amountSats = (tx.amount ?: 0L) / 1000L
     val formattedAmount =
@@ -378,8 +383,10 @@ private fun TransactionItem(
 private fun TransactionUserName(
     pubkeyHex: String,
     fallbackName: String?,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     LoadUser(baseUserHex = pubkeyHex, accountViewModel = accountViewModel) { user ->
         if (user != null) {
             UsernameDisplay(

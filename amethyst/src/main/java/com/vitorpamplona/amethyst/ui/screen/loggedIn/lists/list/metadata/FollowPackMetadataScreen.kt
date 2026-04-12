@@ -44,6 +44,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectSingleFromGallery
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -62,9 +63,11 @@ import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 @Composable
 fun FollowPackMetadataScreen(
     selectedDTag: String?,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val postViewModel: FollowPackMetadataViewModel = viewModel()
     postViewModel.init(accountViewModel)
 
@@ -105,9 +108,11 @@ private fun DialogContentPreview() {
 @Composable
 private fun FollowPackMetadataScaffold(
     postViewModel: FollowPackMetadataViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Scaffold(
         topBar = {
             FollowPackMetadataTopBar(
@@ -152,9 +157,11 @@ private fun FollowPackMetadataScaffold(
 @Composable
 fun FollowPackMetadataTopBar(
     postViewModel: FollowPackMetadataViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     if (postViewModel.isNewPack) {
         CreatingTopBar(
             titleRes = R.string.follow_pack_creation_dialog_title,
@@ -223,8 +230,10 @@ private fun Description(postViewModel: FollowPackMetadataViewModel) {
 @Composable
 private fun Picture(
     postViewModel: FollowPackMetadataViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     OutlinedTextField(
         label = { Text(text = stringRes(R.string.picture_url)) },
         modifier = Modifier.fillMaxWidth(),

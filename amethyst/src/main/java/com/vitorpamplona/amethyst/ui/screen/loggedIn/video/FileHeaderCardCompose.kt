@@ -42,6 +42,7 @@ import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
@@ -57,9 +58,11 @@ import kotlin.text.ifEmpty
 @Composable
 fun FileHeaderCardCompose(
     baseNote: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val event = (baseNote.event as? FileHeaderEvent) ?: return
     val backgroundColor = remember { mutableStateOf(Color.Transparent) }
     val editState = observeEdits(baseNote = baseNote, accountViewModel = accountViewModel)
@@ -93,8 +96,10 @@ private fun FileHeaderCardImage(
     note: Note,
     event: FileHeaderEvent,
     backgroundColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val fullUrl = event.url() ?: return
 
     val content by remember(note) {

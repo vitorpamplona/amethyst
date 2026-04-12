@@ -74,6 +74,7 @@ import com.vitorpamplona.amethyst.commons.chess.OutgoingChallengeCard
 import com.vitorpamplona.amethyst.commons.chess.OverlappingAvatars
 import com.vitorpamplona.amethyst.commons.chess.PublicGameCard
 import com.vitorpamplona.amethyst.commons.chess.SpectatingGameCard
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -88,9 +89,11 @@ import com.vitorpamplona.quartz.nip64Chess.Color as ChessColor
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChessLobbyScreen(
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     // Scope ViewModel to Activity so it's shared between lobby and game screens
     val activity = LocalActivity.current as FragmentActivity
     val chessViewModel: ChessViewModelNew =
@@ -153,9 +156,11 @@ fun NavigateIfInAGame(
 @Composable
 fun ChessLobbyScreen(
     chessViewModel: ChessViewModelNew,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     var showNewGameDialog by remember { mutableStateOf(false) }
     var showRelaySettings by remember { mutableStateOf(false) }
 
@@ -287,12 +292,14 @@ fun ErrorDisplay(chessViewModel: ChessViewModelNew) {
 @Composable
 fun ChessLobbyContent(
     chessViewModel: ChessViewModelNew,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     onAcceptChallenge: (ChessChallenge) -> Unit,
     onOpenOwnChallenge: (ChessChallenge) -> Unit,
     onSelectGame: (String) -> Unit,
     onWatchGame: (String) -> Unit,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val activeGames by chessViewModel.activeGames.collectAsState()
     val spectatingGames by chessViewModel.spectatingGames.collectAsState()
     val publicGames by chessViewModel.publicGames.collectAsState()

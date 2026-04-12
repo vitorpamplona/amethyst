@@ -42,6 +42,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
@@ -73,9 +74,11 @@ data class DVMCard(
 @Composable
 fun RenderContentDVMThumb(
     baseNote: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     // downloads user metadata to pre-load the NIP-65 relays.
     baseNote.author?.let { UserFinderFilterAssemblerSubscription(it, accountViewModel) }
     val card = observeAppDefinition(appDefinitionNote = baseNote, accountViewModel)

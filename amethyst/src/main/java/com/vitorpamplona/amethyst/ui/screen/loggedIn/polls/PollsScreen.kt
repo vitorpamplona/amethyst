@@ -38,6 +38,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.feeds.PagerStateKeys
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.feeds.RenderFeedContentState
@@ -59,9 +60,11 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun PollsScreen(
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     PollsScreen(
         openPollsFeedContentState = accountViewModel.feedStates.openPollsFeed,
         closedPollsFeedContentState = accountViewModel.feedStates.closedPollsFeed,
@@ -74,9 +77,11 @@ fun PollsScreen(
 fun PollsScreen(
     openPollsFeedContentState: FeedContentState,
     closedPollsFeedContentState: FeedContentState,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     WatchLifecycleAndUpdateModel(openPollsFeedContentState)
     WatchLifecycleAndUpdateModel(closedPollsFeedContentState)
     WatchAccountForPollsScreen(openPollsFeedContentState, closedPollsFeedContentState, accountViewModel)
@@ -122,9 +127,11 @@ private fun AssemblePollsTabs(
 private fun PollsPages(
     pagerState: PagerState,
     tabs: ImmutableList<PollsTabItem>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     DisappearingScaffold(
         isInvertedLayout = false,
         topBar = {
@@ -185,8 +192,10 @@ private fun PollsPages(
 fun WatchAccountForPollsScreen(
     openPollsFeedContentState: FeedContentState,
     closedPollsFeedContentState: FeedContentState,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val listState by accountViewModel.account.livePollsFollowLists.collectAsStateWithLifecycle()
     val hiddenUsers =
         accountViewModel.account.hiddenUsers.flow

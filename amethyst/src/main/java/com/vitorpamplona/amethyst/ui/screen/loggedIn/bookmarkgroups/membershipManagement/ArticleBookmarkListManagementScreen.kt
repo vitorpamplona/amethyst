@@ -36,6 +36,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.nip51Lists.labeledBookmarkLists.LabeledBookmarkList
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -52,9 +53,11 @@ import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
 @Composable
 fun ArticleBookmarkListManagementScreen(
     articleAddress: Address,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     LoadAddressableNote(address = articleAddress, accountViewModel = accountViewModel) {
         it?.let {
             ListManagementView(
@@ -71,9 +74,11 @@ fun ArticleBookmarkListManagementScreen(
 private fun ListManagementView(
     modifier: Modifier = Modifier,
     note: AddressableNote,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Scaffold(
         modifier = modifier,
         topBar = {
@@ -100,9 +105,11 @@ private fun ListManagementView(
 @Composable
 private fun ListManagementViewBody(
     note: AddressableNote,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val bookmarkGroups by accountViewModel.account.labeledBookmarkLists.listFeedFlow
         .collectAsStateWithLifecycle()
 

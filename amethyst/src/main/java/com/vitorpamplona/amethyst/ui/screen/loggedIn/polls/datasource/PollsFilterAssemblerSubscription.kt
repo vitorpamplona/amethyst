@@ -24,10 +24,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.KeyDataSourceSubscription
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
-fun PollsFilterAssemblerSubscription(accountViewModel: AccountViewModel) {
+fun PollsFilterAssemblerSubscription(accountViewModel: IAccountViewModel) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     PollsFilterAssemblerSubscription(
         accountViewModel.dataSources().polls,
         accountViewModel,
@@ -37,8 +40,10 @@ fun PollsFilterAssemblerSubscription(accountViewModel: AccountViewModel) {
 @Composable
 fun PollsFilterAssemblerSubscription(
     dataSource: PollsFilterAssembler,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val state =
         remember(accountViewModel.account) {
             PollsQueryState(accountViewModel.account, accountViewModel.feedStates, accountViewModel.viewModelScope)

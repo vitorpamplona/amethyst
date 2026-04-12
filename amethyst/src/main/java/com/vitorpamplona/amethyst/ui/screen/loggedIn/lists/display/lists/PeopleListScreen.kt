@@ -73,6 +73,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
@@ -109,9 +110,11 @@ import kotlinx.coroutines.launch
 @Composable
 fun PeopleListScreen(
     selectedDTag: String,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val viewModel: PeopleListViewModel = viewModel()
     viewModel.init(accountViewModel, selectedDTag)
 
@@ -214,9 +217,11 @@ private fun ListViewAndEditColumn(
     viewModel: PeopleListViewModel,
     pagerState: PagerState,
     modifier: Modifier = Modifier,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Column(modifier = modifier) {
         PeopleListPager(
             viewModel = viewModel,
@@ -239,8 +244,10 @@ private fun ListViewAndEditColumn(
 private fun RenderAddUserFieldAndSuggestions(
     viewModel: PeopleListViewModel,
     pagerState: PagerState,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     RenderAddUserFieldAndSuggestions(
         viewModel.userSuggestions,
         hasUserFlow = { user ->
@@ -266,9 +273,11 @@ private fun PeopleListPager(
     pagerState: PagerState,
     modifier: Modifier,
     onDeleteUser: (User, Boolean) -> Unit,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val selectedSetState = viewModel.selectedList.collectAsStateWithLifecycle()
     selectedSetState.value?.let { selectedSet ->
         HorizontalPager(state = pagerState, modifier) { page ->
@@ -373,9 +382,11 @@ private fun PeopleListViewPreview() {
 @Composable
 private fun ListActionsMenuButton(
     viewModel: PeopleListViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     ListActionsMenuButton(
         note = viewModel::selectedNote,
         onEditList = {

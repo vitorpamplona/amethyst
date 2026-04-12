@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
@@ -119,9 +120,11 @@ fun ZapTheDevsCardPreview() {
 @Composable
 fun ZapTheDevsCard(
     baseNote: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val releaseNoteState by observeNote(baseNote, accountViewModel)
     val releaseNote = releaseNoteState.note
 
@@ -216,9 +219,11 @@ fun ZapTheDevsCard(
 fun ZapDonationButton(
     baseNote: Note,
     grayTint: Color,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val config =
         ZapButtonConfig(
             grayTint = grayTint,

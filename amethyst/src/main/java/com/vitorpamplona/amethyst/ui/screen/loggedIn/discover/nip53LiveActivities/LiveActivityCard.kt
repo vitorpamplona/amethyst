@@ -41,6 +41,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.ParticipantListBuilder
@@ -96,9 +97,11 @@ data class LiveActivityCard(
 @Composable
 fun RenderLiveActivityThumb(
     baseNote: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val card by observeNoteAndMap(baseNote, accountViewModel) {
         when (val noteEvent = it.event) {
             is LiveActivitiesEvent -> {
@@ -177,9 +180,11 @@ fun RenderLiveActivityThumb(
 fun RenderLiveActivityThumb(
     card: LiveActivityCard,
     baseNote: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Column(
         modifier = Modifier.fillMaxWidth(),
     ) {
@@ -270,9 +275,11 @@ fun RenderLiveActivityThumb(
 fun LoadParticipants(
     participants: ImmutableList<ParticipantTag>,
     baseNote: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     inner: @Composable (ImmutableList<User>) -> Unit,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     var participantUsers by remember {
         mutableStateOf<ImmutableList<User>>(
             persistentListOf(),

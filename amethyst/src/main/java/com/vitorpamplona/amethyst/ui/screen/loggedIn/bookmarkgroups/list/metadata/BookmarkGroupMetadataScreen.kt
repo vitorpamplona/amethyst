@@ -43,6 +43,7 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectSingleFromGallery
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.CreatingTopBar
@@ -58,9 +59,11 @@ import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 @Composable
 fun BookmarkGroupMetadataScreen(
     bookmarkGroupIdentifier: String?,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val bookmarkGroupInfoViewModel: BookmarkGroupMetadataViewModel = viewModel()
     bookmarkGroupInfoViewModel.init(accountViewModel)
 
@@ -81,9 +84,11 @@ fun BookmarkGroupMetadataScreen(
 @Composable
 private fun BookmarkGroupMetadataScaffold(
     bookmarkGroupInfoViewModel: BookmarkGroupMetadataViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Scaffold(
         topBar = {
             BookmarkGroupMetadataTopBar(
@@ -128,9 +133,11 @@ private fun BookmarkGroupMetadataScaffold(
 @Composable
 fun BookmarkGroupMetadataTopBar(
     bookmarkGroupInfoViewModel: BookmarkGroupMetadataViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     if (bookmarkGroupInfoViewModel.isNewList) {
         CreatingTopBar(
             titleRes = R.string.bookmark_list_creation_screen_title,
@@ -199,8 +206,10 @@ private fun Description(bookmarkGroupInfoViewModel: BookmarkGroupMetadataViewMod
 @Composable
 private fun Picture(
     bookmarkGroupInfoViewModel: BookmarkGroupMetadataViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     OutlinedTextField(
         label = { Text(text = stringRes(R.string.optional_picture_url)) },
         modifier = Modifier.fillMaxWidth(),

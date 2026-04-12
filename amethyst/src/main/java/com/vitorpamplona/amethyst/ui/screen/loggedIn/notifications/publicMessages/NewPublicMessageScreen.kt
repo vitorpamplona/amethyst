@@ -55,6 +55,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromFiles
@@ -109,9 +110,11 @@ fun NewPublicMessageScreen(
     to: Set<HexKey>? = null,
     replyId: HexKey? = null,
     draftId: HexKey? = null,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: Nav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val postViewModel: NewPublicMessageViewModel = viewModel()
     postViewModel.init(accountViewModel)
 
@@ -181,9 +184,11 @@ fun NewPublicMessageScreen(
 @Composable
 fun PublicMessageScreenContent(
     postViewModel: NewPublicMessageViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val scrollState = rememberScrollState()
 
     Column(Modifier.fillMaxSize()) {
@@ -311,8 +316,10 @@ fun PublicMessageScreenContent(
 @Composable
 private fun BottomRowActions(
     postViewModel: NewPublicMessageViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val scrollState = rememberScrollState()
     Row(
         modifier =
@@ -389,8 +396,10 @@ private fun BottomRowActions(
 @Composable
 fun SendDirectMessageTo(
     postViewModel: NewPublicMessageViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
 

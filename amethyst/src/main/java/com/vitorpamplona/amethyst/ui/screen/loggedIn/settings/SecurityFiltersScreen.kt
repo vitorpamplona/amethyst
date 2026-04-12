@@ -67,6 +67,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.WarningType
 import com.vitorpamplona.amethyst.model.parseWarningType
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.observeAccountIsHiddenWord
@@ -96,9 +97,11 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun SecurityFiltersScreen(
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val hiddenFeedViewModel: HiddenAccountsFeedViewModel =
         viewModel(
             factory = HiddenAccountsFeedViewModel.Factory(accountViewModel.account),
@@ -135,9 +138,11 @@ fun SecurityFiltersScreen(
     hiddenFeedViewModel: HiddenAccountsFeedViewModel,
     hiddenWordsViewModel: HiddenWordsFeedViewModel,
     spammerFeedViewModel: SpammerAccountsFeedViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val lifeCycleOwner = LocalLifecycleOwner.current
 
     DisposableEffect(lifeCycleOwner) {
@@ -208,7 +213,9 @@ fun SecurityFiltersScreen(
 }
 
 @Composable
-private fun HeaderOptions(accountViewModel: AccountViewModel) {
+private fun HeaderOptions(accountViewModel: IAccountViewModel) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Column(
         Modifier
             .padding(top = Size10dp, bottom = Size10dp, start = Size15dp, end = Size15dp),
@@ -301,8 +308,10 @@ private fun HeaderOptions(accountViewModel: AccountViewModel) {
 @Composable
 private fun HiddenWordsFeed(
     hiddenWordsViewModel: HiddenWordsFeedViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     RefresheableBox(hiddenWordsViewModel, false) {
         StringFeedView(
             hiddenWordsViewModel,
@@ -315,7 +324,9 @@ private fun HiddenWordsFeed(
 }
 
 @Composable
-private fun AddMuteWordTextField(accountViewModel: AccountViewModel) {
+private fun AddMuteWordTextField(accountViewModel: IAccountViewModel) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Row {
         val currentWordToAdd = remember { mutableStateOf("") }
         val hasChanged by remember { derivedStateOf { currentWordToAdd.value != "" } }
@@ -359,9 +370,11 @@ private fun AddMuteWordTextField(accountViewModel: AccountViewModel) {
 
 @Composable
 fun WatchAccountAndBlockList(
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     invalidate: () -> Unit,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val transientSpammers by accountViewModel.account.hiddenUsers.transientHiddenUsers
         .collectAsStateWithLifecycle()
     val blockListState by accountViewModel.account.hiddenUsers.flow
@@ -401,8 +414,10 @@ fun MutedWordHeader(
 @Composable
 fun MutedWordActionOptions(
     word: String,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val isMutedWord by observeAccountIsHiddenWord(accountViewModel.account, word)
 
     if (isMutedWord) {
