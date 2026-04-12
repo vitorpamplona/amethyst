@@ -20,32 +20,24 @@
  */
 package com.vitorpamplona.amethyst.ui.actions
 
-import android.content.Context
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
-import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.upload.IMediaUploader
+import com.vitorpamplona.amethyst.commons.upload.MediaUploadException
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
-import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
-import com.vitorpamplona.amethyst.service.uploads.MetadataStripper
-import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
-import com.vitorpamplona.amethyst.service.uploads.nip96.Nip96Uploader
-import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip39ExtIdentities.GitHubIdentity
 import com.vitorpamplona.quartz.nip39ExtIdentities.MastodonIdentity
 import com.vitorpamplona.quartz.nip39ExtIdentities.TwitterIdentity
 import com.vitorpamplona.quartz.nip39ExtIdentities.identityClaims
-import kotlin.coroutines.cancellation.CancellationException
 
 class NewUserMetadataViewModel : ViewModel() {
     private lateinit var accountViewModel: AccountViewModel
     private lateinit var account: Account
+    private lateinit var mediaUploader: IMediaUploader
 
     val name = mutableStateOf("")
     val displayName = mutableStateOf("")
@@ -65,9 +57,13 @@ class NewUserMetadataViewModel : ViewModel() {
     var isUploadingImageForPicture by mutableStateOf(false)
     var isUploadingImageForBanner by mutableStateOf(false)
 
-    fun init(accountViewModel: AccountViewModel) {
+    fun init(
+        accountViewModel: AccountViewModel,
+        mediaUploader: IMediaUploader,
+    ) {
         this.accountViewModel = accountViewModel
         this.account = accountViewModel.account
+        this.mediaUploader = mediaUploader
     }
 
     fun load() {
@@ -147,125 +143,67 @@ class NewUserMetadataViewModel : ViewModel() {
 
     fun uploadForPicture(
         uri: SelectedMedia,
-        context: Context,
         onError: (String, String) -> Unit,
     ) {
         accountViewModel.launchSigner {
-            upload(
-                galleryUri = uri,
-                context = context,
-                onError = onError,
-            )?.let {
-                picture.value = it
+            isUploadingImageForPicture = true
+            try {
+                val result =
+                    mediaUploader.uploadMedia(
+                        mediaUri = uri.uri.toString(),
+                        mimeType = uri.mimeType,
+                    )
+                picture.value = result.url
+            } catch (e: MediaUploadException) {
+                onError(e.title, e.message)
+            } finally {
+                isUploadingImageForPicture = false
             }
         }
     }
 
     fun uploadForBanner(
         uri: SelectedMedia,
-        context: Context,
         onError: (String, String) -> Unit,
     ) {
         accountViewModel.launchSigner {
-            upload(
-                galleryUri = uri,
-                context = context,
-                onError = onError,
-            )?.let {
-                banner.value = it
+            isUploadingImageForBanner = true
+            try {
+                val result =
+                    mediaUploader.uploadMedia(
+                        mediaUri = uri.uri.toString(),
+                        mimeType = uri.mimeType,
+                    )
+                banner.value = result.url
+            } catch (e: MediaUploadException) {
+                onError(e.title, e.message)
+            } finally {
+                isUploadingImageForBanner = false
             }
         }
     }
 
     fun uploadPictureAndSave(
         uri: SelectedMedia,
-        context: Context,
         onError: (String, String) -> Unit,
     ) {
         load()
         accountViewModel.launchSigner {
-            upload(
-                galleryUri = uri,
-                context = context,
-                onError = onError,
-            )?.let {
-                picture.value = it
+            isUploadingImageForPicture = true
+            try {
+                val result =
+                    mediaUploader.uploadMedia(
+                        mediaUri = uri.uri.toString(),
+                        mimeType = uri.mimeType,
+                    )
+                picture.value = result.url
+            } catch (e: MediaUploadException) {
+                onError(e.title, e.message)
+            } finally {
+                isUploadingImageForPicture = false
             }
 
             create()
-        }
-    }
-
-    private suspend fun upload(
-        galleryUri: SelectedMedia,
-        context: Context,
-        onError: (String, String) -> Unit,
-    ): String? {
-        isUploadingImageForPicture = true
-
-        val strippingResult =
-            if (account.settings.stripLocationOnUpload) {
-                MetadataStripper.strip(galleryUri.uri, galleryUri.mimeType, context.applicationContext)
-            } else {
-                null
-            }
-
-        val sourceUri =
-            if (account.settings.stripLocationOnUpload &&
-                strippingResult != null &&
-                !strippingResult.stripped
-            ) {
-                onError(
-                    stringRes(context, R.string.metadata_strip_failed_title),
-                    stringRes(context, R.string.metadata_strip_failed_upload_cancelled),
-                )
-                return null
-            } else {
-                strippingResult?.uri ?: galleryUri.uri
-            }
-
-        val compResult = MediaCompressor().compress(sourceUri, galleryUri.mimeType, CompressorQuality.MEDIUM, context.applicationContext)
-
-        return try {
-            val result =
-                if (account.settings.defaultFileServer.type == ServerType.NIP96) {
-                    Nip96Uploader().upload(
-                        uri = compResult.uri,
-                        contentType = compResult.contentType,
-                        size = compResult.size,
-                        alt = null,
-                        sensitiveContent = null,
-                        serverBaseUrl = account.settings.defaultFileServer.baseUrl,
-                        okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForUploads,
-                        onProgress = {},
-                        httpAuth = account::createHTTPAuthorization,
-                        context = context,
-                    )
-                } else {
-                    BlossomUploader().upload(
-                        uri = compResult.uri,
-                        contentType = compResult.contentType,
-                        size = compResult.size,
-                        alt = null,
-                        sensitiveContent = null,
-                        serverBaseUrl = account.settings.defaultFileServer.baseUrl,
-                        okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForUploads,
-                        httpAuth = account::createBlossomUploadAuth,
-                        context = context,
-                    )
-                }
-
-            if (result.url == null) {
-                onError(stringRes(context, R.string.failed_to_upload_media_no_details), stringRes(context, R.string.server_did_not_provide_a_url_after_uploading))
-            }
-
-            result.url
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            onError(stringRes(context, R.string.failed_to_upload_media_no_details), e.message ?: e.javaClass.simpleName)
-            null
-        } finally {
-            isUploadingImageForPicture = false
         }
     }
 }

@@ -94,7 +94,13 @@ fun ChannelMetadataScreen(
     nav: INav,
 ) {
     val postViewModel: ChannelMetadataViewModel = viewModel()
-    postViewModel.init(accountViewModel)
+    postViewModel.init(
+        accountViewModel,
+        com.vitorpamplona.amethyst.service.uploads.AndroidMediaUploader(
+            context = androidx.compose.ui.platform.LocalContext.current,
+            account = accountViewModel.account,
+        ),
+    )
 
     if (channel != null) {
         LaunchedEffect(postViewModel) {
@@ -118,7 +124,13 @@ fun ChannelMetadataScreen(
 private fun DialogContentPreview() {
     val accountViewModel = mockAccountViewModel()
     val postViewModel: ChannelMetadataViewModel = viewModel()
-    postViewModel.init(accountViewModel)
+    postViewModel.init(
+        accountViewModel,
+        com.vitorpamplona.amethyst.service.uploads.AndroidMediaUploader(
+            context = androidx.compose.ui.platform.LocalContext.current,
+            account = accountViewModel.account,
+        ),
+    )
 
     ThemeComparisonColumn {
         ChannelMetadataScaffold(
@@ -284,13 +296,12 @@ private fun Picture(
             )
         },
         leadingIcon = {
-            val context = LocalContext.current
             SelectSingleFromGallery(
                 isUploading = postViewModel.isUploadingImageForPicture,
                 tint = MaterialTheme.colorScheme.placeholderText,
                 modifier = Modifier.padding(start = 2.dp),
             ) {
-                postViewModel.uploadForPicture(it, context, onError = accountViewModel.toastManager::toast)
+                postViewModel.uploadForPicture(it, onError = accountViewModel.toastManager::toast)
             }
         },
     )

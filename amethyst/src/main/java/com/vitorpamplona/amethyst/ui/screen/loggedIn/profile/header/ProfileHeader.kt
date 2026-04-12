@@ -231,8 +231,14 @@ private fun ProfilePictureUploadButton(
     size: Dp,
 ) {
     val postViewModel: NewUserMetadataViewModel = viewModel()
-    postViewModel.init(accountViewModel)
     val context = LocalContext.current
+    postViewModel.init(
+        accountViewModel,
+        com.vitorpamplona.amethyst.service.uploads.AndroidMediaUploader(
+            context = context,
+            account = accountViewModel.account,
+        ),
+    )
 
     var showGallerySelect by remember { mutableStateOf(false) }
     if (showGallerySelect) {
@@ -240,7 +246,7 @@ private fun ProfilePictureUploadButton(
             onImageUri = { media ->
                 showGallerySelect = false
                 if (media != null) {
-                    postViewModel.uploadPictureAndSave(media, context, accountViewModel.toastManager::toast)
+                    postViewModel.uploadPictureAndSave(media, onError = accountViewModel.toastManager::toast)
                 }
             },
         )

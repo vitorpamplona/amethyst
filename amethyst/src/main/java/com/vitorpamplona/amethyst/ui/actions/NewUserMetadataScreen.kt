@@ -71,8 +71,14 @@ fun NewUserMetadataScreen(
     accountViewModel: AccountViewModel,
 ) {
     val postViewModel: NewUserMetadataViewModel = viewModel()
-    postViewModel.init(accountViewModel)
     val context = LocalContext.current
+    postViewModel.init(
+        accountViewModel,
+        com.vitorpamplona.amethyst.service.uploads.AndroidMediaUploader(
+            context = context,
+            account = accountViewModel.account,
+        ),
+    )
 
     val socialExpanded = rememberSaveable { mutableStateOf(false) }
 
@@ -194,7 +200,7 @@ fun NewUserMetadataScreen(
                             tint = MaterialTheme.colorScheme.placeholderText,
                             modifier = Modifier.padding(start = 5.dp),
                         ) {
-                            postViewModel.uploadForPicture(it, context, onError = accountViewModel.toastManager::toast)
+                            postViewModel.uploadForPicture(it, onError = accountViewModel.toastManager::toast)
                         }
                     },
                     singleLine = true,
@@ -219,7 +225,7 @@ fun NewUserMetadataScreen(
                             tint = MaterialTheme.colorScheme.placeholderText,
                             modifier = Modifier.padding(start = 5.dp),
                         ) {
-                            postViewModel.uploadForBanner(it, context, onError = accountViewModel.toastManager::toast)
+                            postViewModel.uploadForBanner(it, onError = accountViewModel.toastManager::toast)
                         }
                     },
                     singleLine = true,

@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.metadata
 
-import android.content.Context
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -29,24 +28,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
+import com.vitorpamplona.amethyst.commons.upload.IMediaUploader
+import com.vitorpamplona.amethyst.commons.upload.MediaUploadException
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
-import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
-import com.vitorpamplona.amethyst.service.uploads.MetadataStripper
-import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
-import com.vitorpamplona.amethyst.service.uploads.nip96.Nip96Uploader
-import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
-import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
@@ -55,12 +46,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlin.coroutines.cancellation.CancellationException
 
 @Stable
 class ChannelMetadataViewModel : ViewModel() {
     private lateinit var accountViewModel: AccountViewModel
     private lateinit var account: Account
+    private lateinit var mediaUploader: IMediaUploader
 
     private var originalChannel: PublicChatChannel? = null
 
@@ -77,9 +68,13 @@ class ChannelMetadataViewModel : ViewModel() {
         channelName.value.text.isNotBlank()
     }
 
-    fun init(accountViewModel: AccountViewModel) {
+    fun init(
+        accountViewModel: AccountViewModel,
+        mediaUploader: IMediaUploader,
+    ) {
         this.accountViewModel = accountViewModel
         this.account = accountViewModel.account
+        this.mediaUploader = mediaUploader
     }
 
     fun new() {
@@ -184,90 +179,22 @@ class ChannelMetadataViewModel : ViewModel() {
 
     fun uploadForPicture(
         uri: SelectedMedia,
-        context: Context,
         onError: (String, String) -> Unit,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            upload(
-                uri,
-                context,
-                onUploading = { isUploadingImageForPicture = it },
-                onUploaded = { channelPicture.value = TextFieldValue(it) },
-                onError = onError,
-            )
-        }
-    }
-
-    private suspend fun upload(
-        galleryUri: SelectedMedia,
-        context: Context,
-        onUploading: (Boolean) -> Unit,
-        onUploaded: (String) -> Unit,
-        onError: (String, String) -> Unit,
-    ) {
-        val account = account
-        onUploading(true)
-
-        val sourceUri =
-            if (account.settings.stripLocationOnUpload) {
-                val result = MetadataStripper.strip(galleryUri.uri, galleryUri.mimeType, context.applicationContext)
-                if (!result.stripped) {
-                    onError(
-                        stringRes(context, R.string.metadata_strip_failed_title),
-                        stringRes(context, R.string.metadata_strip_failed_upload_cancelled),
+            isUploadingImageForPicture = true
+            try {
+                val result =
+                    mediaUploader.uploadMedia(
+                        mediaUri = uri.uri.toString(),
+                        mimeType = uri.mimeType,
                     )
-                    onUploading(false)
-                    return
-                }
-                result.uri
-            } else {
-                galleryUri.uri
+                channelPicture.value = TextFieldValue(result.url)
+            } catch (e: MediaUploadException) {
+                onError(e.title, e.message)
+            } finally {
+                isUploadingImageForPicture = false
             }
-        val compResult = MediaCompressor().compress(sourceUri, galleryUri.mimeType, CompressorQuality.MEDIUM, context.applicationContext)
-
-        try {
-            val result =
-                if (account.settings.defaultFileServer.type == ServerType.NIP96) {
-                    Nip96Uploader().upload(
-                        uri = compResult.uri,
-                        contentType = compResult.contentType,
-                        size = compResult.size,
-                        alt = null,
-                        sensitiveContent = null,
-                        serverBaseUrl = account.settings.defaultFileServer.baseUrl,
-                        okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForUploads,
-                        onProgress = {},
-                        httpAuth = account::createHTTPAuthorization,
-                        context = context,
-                    )
-                } else {
-                    BlossomUploader().upload(
-                        uri = compResult.uri,
-                        contentType = compResult.contentType,
-                        size = compResult.size,
-                        alt = null,
-                        sensitiveContent = null,
-                        serverBaseUrl = account.settings.defaultFileServer.baseUrl,
-                        okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForUploads,
-                        httpAuth = account::createBlossomUploadAuth,
-                        context = context,
-                    )
-                }
-
-            if (result.url != null) {
-                onUploading(false)
-                onUploaded(result.url)
-            } else {
-                onUploading(false)
-                onError(stringRes(context, R.string.failed_to_upload_media_no_details), stringRes(context, R.string.server_did_not_provide_a_url_after_uploading))
-            }
-        } catch (_: SignerExceptions.ReadOnlyException) {
-            onUploading(false)
-            onError(stringRes(context, R.string.failed_to_upload_media_no_details), stringRes(context, R.string.login_with_a_private_key_to_be_able_to_upload))
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            onUploading(false)
-            onError(stringRes(context, R.string.failed_to_upload_media_no_details), e.message ?: e.javaClass.simpleName)
         }
     }
 }
