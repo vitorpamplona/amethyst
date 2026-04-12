@@ -25,15 +25,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.viewmodels.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.note.showAmountInteger
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps.dal.UserProfileZapsViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 
 @Composable
 fun ZapTabHeader(
     zapsViewModel: UserProfileZapsViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
     val zapAmount by zapsViewModel.totalReceivedZaps.collectAsStateWithLifecycle()
 

@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActiviti
 import com.vitorpamplona.amethyst.commons.model.observables.CreatedAtComparator
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.ui.notifications.CardFeedState
+import com.vitorpamplona.amethyst.commons.viewmodels.IAccountViewModel
 import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings
@@ -175,13 +176,14 @@ import kotlinx.coroutines.withContext
 
 @Stable
 class AccountViewModel(
-    val account: Account,
+    override val account: Account,
     val settings: UiSettingsState,
     val torSettings: TorSettingsFlow,
     val dataSources: RelaySubscriptionsCoordinator,
     val httpClientBuilder: IRoleBasedHttpClientBuilder,
     val nip05ClientBuilder: () -> INip05Client,
 ) : ViewModel(),
+    IAccountViewModel,
     Dao {
     var firstRoute: Route? = null
 

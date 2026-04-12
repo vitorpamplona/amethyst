@@ -18,30 +18,15 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.nip22Comments
+package com.vitorpamplona.amethyst.commons.viewmodels
 
-import androidx.compose.runtime.Composable
-import com.vitorpamplona.amethyst.commons.viewmodels.IAccountViewModel
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.quartz.nip73ExternalIds.ExternalId
-import com.vitorpamplona.quartz.nip73ExternalIds.location.GeohashId
-import com.vitorpamplona.quartz.nip73ExternalIds.topics.HashtagId
+import com.vitorpamplona.amethyst.commons.model.IAccount
 
-@Composable
-fun DisplayExternalId(
-    externalId: ExternalId,
-    accountViewModel: IAccountViewModel,
-    nav: INav,
-) {
-    when (externalId) {
-        is GeohashId -> {
-            DisplayGeohashExternalId(externalId, accountViewModel, nav)
-        }
-
-        is HashtagId -> {
-            DisplayHashtagExternalId(externalId, accountViewModel, nav)
-        }
-
-        else -> {}
-    }
+/**
+ * Interface for AccountViewModel, enabling composables to depend on the
+ * abstraction rather than the concrete Android ViewModel.
+ * This is a prerequisite for moving composables to the commons module.
+ */
+interface IAccountViewModel {
+    val account: IAccount
 }

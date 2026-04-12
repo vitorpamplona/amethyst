@@ -22,15 +22,15 @@ package com.vitorpamplona.amethyst.ui.note.types
 
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.vitorpamplona.amethyst.commons.viewmodels.IAccountViewModel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip90Dvms.status.NIP90StatusEvent
 
 @Composable
 fun RenderNIP90Status(
     note: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
     val noteEvent = note.event as? NIP90StatusEvent ?: return

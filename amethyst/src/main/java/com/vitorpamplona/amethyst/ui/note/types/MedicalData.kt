@@ -39,6 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.viewmodels.IAccountViewModel
 import com.vitorpamplona.amethyst.model.Bundle
 import com.vitorpamplona.amethyst.model.FhirElementDatabase
 import com.vitorpamplona.amethyst.model.LensSpecification
@@ -52,7 +53,6 @@ import com.vitorpamplona.amethyst.model.VisionPrescription
 import com.vitorpamplona.amethyst.model.findReferenceInDb
 import com.vitorpamplona.amethyst.model.parseResourceBundleOrNull
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
@@ -173,7 +173,7 @@ fun RenderEyeGlassesPrescription2Preview() {
 @Composable
 fun RenderFhirResource(
     baseNote: Note,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
     val event = baseNote.event as? FhirResourceEvent ?: return
