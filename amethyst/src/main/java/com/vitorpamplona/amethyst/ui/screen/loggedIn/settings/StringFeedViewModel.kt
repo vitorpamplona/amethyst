@@ -20,102 +20,17 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.Stable
-import androidx.compose.runtime.mutableStateOf
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import com.vitorpamplona.amethyst.commons.ui.feeds.InvalidatableContent
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.service.BundledUpdate
-import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
-import com.vitorpamplona.quartz.utils.Log
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.toImmutableList
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 
-@Stable
-open class StringFeedViewModel(
-    val dataSource: FeedFilter<String>,
-) : ViewModel(),
-    InvalidatableContent {
-    private val _feedContent = MutableStateFlow<StringFeedState>(StringFeedState.Loading)
-    val feedContent = _feedContent.asStateFlow()
+// Re-export from commons for backwards compatibility
+typealias StringFeedViewModel = com.vitorpamplona.amethyst.commons.viewmodels.StringFeedViewModel
+typealias StringFeedState = com.vitorpamplona.amethyst.commons.viewmodels.StringFeedState
 
-    override val isRefreshing: MutableState<Boolean> = mutableStateOf(false)
-
-    private fun refresh() {
-        viewModelScope.launch(Dispatchers.IO) { refreshSuspended() }
-    }
-
-    private fun refreshSuspended() {
-        checkNotInMainThread()
-
-        try {
-            isRefreshing.value = true
-
-            val notes = dataSource.loadTop().toImmutableList()
-
-            val oldNotesState = _feedContent.value
-            if (oldNotesState is StringFeedState.Loaded) {
-                // Using size as a proxy for has changed.
-                if (!equalImmutableLists(notes, oldNotesState.feed.value)) {
-                    updateFeed(notes)
-                }
-            } else {
-                updateFeed(notes)
-            }
-        } finally {
-            isRefreshing.value = false
-        }
-    }
-
-    private fun updateFeed(notes: ImmutableList<String>) {
-        val currentState = _feedContent.value
-        if (notes.isEmpty()) {
-            _feedContent.tryEmit(StringFeedState.Empty)
-        } else if (currentState is StringFeedState.Loaded) {
-            // updates the current list
-            currentState.feed.tryEmit(notes)
-        } else {
-            _feedContent.tryEmit(StringFeedState.Loaded(MutableStateFlow(notes)))
-        }
-    }
-
-    private val bundler = BundledUpdate(250, Dispatchers.IO)
-
-    override fun invalidateData(ignoreIfDoing: Boolean) {
-        bundler.invalidate(ignoreIfDoing) {
-            // adds the time to perform the refresh into this delay
-            // holding off new updates in case of heavy refresh routines.
-            refreshSuspended()
-        }
-    }
-
-    init {
-        Log.d("Init", this.javaClass.simpleName)
-        viewModelScope.launch(Dispatchers.IO) {
-            LocalCache.live.newEventBundles.collect { newNotes ->
-                Log.d("Rendering Metrics") { "Update feeds: ${this@StringFeedViewModel.javaClass.simpleName} with ${newNotes.size}" }
-                invalidateData()
-            }
-        }
-        viewModelScope.launch(Dispatchers.IO) {
-            LocalCache.live.deletedEventBundles.collect { newNotes ->
-                Log.d("Rendering Metrics") { "Delete feeds: ${this@StringFeedViewModel.javaClass.simpleName} with ${newNotes.size}" }
-                invalidateData()
-            }
-        }
-    }
-
-    override fun onCleared() {
-        Log.d("Init") { "OnCleared: ${this.javaClass.simpleName}" }
-        bundler.cancel()
-        super.onCleared()
-    }
-}
+/**
+ * Android-specific StringFeedViewModel base class that provides LocalCache as the cache provider.
+ * Subclasses can extend this to automatically use LocalCache without passing cacheProvider.
+ */
+abstract class AndroidStringFeedViewModel(
+    dataSource: FeedFilter<String>,
+) : StringFeedViewModel(dataSource, LocalCache)

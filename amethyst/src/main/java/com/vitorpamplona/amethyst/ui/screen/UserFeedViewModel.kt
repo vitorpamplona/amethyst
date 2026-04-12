@@ -20,104 +20,18 @@
  */
 package com.vitorpamplona.amethyst.ui.screen
 
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.Stable
-import androidx.compose.runtime.mutableStateOf
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import com.vitorpamplona.amethyst.commons.ui.feeds.InvalidatableContent
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.BundledUpdate
-import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
-import com.vitorpamplona.quartz.utils.Log
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.toImmutableList
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 
-@Stable
-open class UserFeedViewModel(
-    val dataSource: FeedFilter<User>,
-) : ViewModel(),
-    InvalidatableContent {
-    private val _feedContent = MutableStateFlow<UserFeedState>(UserFeedState.Loading)
-    val feedContent = _feedContent.asStateFlow()
+// Re-export from commons for backwards compatibility
+typealias UserFeedViewModel = com.vitorpamplona.amethyst.commons.viewmodels.UserFeedViewModel
+typealias UserFeedState = com.vitorpamplona.amethyst.commons.viewmodels.UserFeedState
 
-    private fun refresh() {
-        viewModelScope.launch(Dispatchers.IO) { refreshSuspended() }
-    }
-
-    override val isRefreshing: MutableState<Boolean> = mutableStateOf(false)
-
-    private fun refreshSuspended() {
-        checkNotInMainThread()
-
-        try {
-            isRefreshing.value = true
-
-            val notes = dataSource.loadTop().toImmutableList()
-
-            val oldNotesState = _feedContent.value
-            if (oldNotesState is UserFeedState.Loaded) {
-                // Using size as a proxy for has changed.
-                if (!equalImmutableLists(notes, oldNotesState.feed.value)) {
-                    updateFeed(notes)
-                }
-            } else {
-                updateFeed(notes)
-            }
-        } finally {
-            isRefreshing.value = false
-        }
-    }
-
-    private fun updateFeed(notes: ImmutableList<User>) {
-        val currentState = _feedContent.value
-        if (notes.isEmpty()) {
-            _feedContent.tryEmit(UserFeedState.Empty)
-        } else if (currentState is UserFeedState.Loaded) {
-            // updates the current list
-            currentState.feed.tryEmit(notes)
-        } else {
-            _feedContent.tryEmit(UserFeedState.Loaded(MutableStateFlow(notes)))
-        }
-    }
-
-    private val bundler = BundledUpdate(250, Dispatchers.IO)
-
-    override fun invalidateData(ignoreIfDoing: Boolean) {
-        bundler.invalidate(ignoreIfDoing) {
-            // adds the time to perform the refresh into this delay
-            // holding off new updates in case of heavy refresh routines.
-            refreshSuspended()
-        }
-    }
-
-    init {
-        Log.d("Init") { "${this.javaClass.simpleName}" }
-        viewModelScope.launch(Dispatchers.IO) {
-            LocalCache.live.newEventBundles.collect { newNotes ->
-                Log.d("Rendering Metrics") { "Update feeds: ${this@UserFeedViewModel.javaClass.simpleName} with ${newNotes.size}" }
-                invalidateData()
-            }
-        }
-
-        viewModelScope.launch(Dispatchers.IO) {
-            LocalCache.live.deletedEventBundles.collect { newNotes ->
-                Log.d("Rendering Metrics") { "Delete from feeds: ${this@UserFeedViewModel.javaClass.simpleName} with ${newNotes.size}" }
-                invalidateData()
-            }
-        }
-    }
-
-    override fun onCleared() {
-        Log.d("Init") { "OnCleared: ${this.javaClass.simpleName}" }
-        bundler.cancel()
-        super.onCleared()
-    }
-}
+/**
+ * Android-specific UserFeedViewModel base class that provides LocalCache as the cache provider.
+ * Subclasses can extend this to automatically use LocalCache without passing cacheProvider.
+ */
+abstract class AndroidUserFeedViewModel(
+    dataSource: FeedFilter<User>,
+) : UserFeedViewModel(dataSource, LocalCache)
