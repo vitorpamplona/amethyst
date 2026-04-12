@@ -18,25 +18,29 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.pinnedNotes.dal
+package com.vitorpamplona.amethyst.commons.ui.feeds
 
-import androidx.compose.runtime.Stable
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.commons.model.IAccount
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
+import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 
-@Stable
-class UserProfilePinnedNotesFeedViewModel(
-    user: User,
-    account: Account,
-) : com.vitorpamplona.amethyst.commons.viewmodels.UserProfilePinnedNotesFeedViewModel(user, account, LocalCache) {
-    class Factory(
-        val user: User,
-        val account: Account,
-    ) : ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = UserProfilePinnedNotesFeedViewModel(user, account) as T
+class UserProfilePinnedNotesFeedFilter(
+    val user: User,
+    val account: IAccount,
+    val cache: ICacheProvider,
+) : FeedFilter<Note>() {
+    override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + user.pubkeyHex
+
+    override fun feed(): List<Note> {
+        val note = cache.getOrCreateAddressableNote(PinListEvent.createPinAddress(user.pubkeyHex))
+        val noteEvent = note.event as? PinListEvent ?: return emptyList()
+
+        return noteEvent
+            .pinnedEvents()
+            .mapNotNull {
+                cache.checkGetOrCreateNote(it.eventId)
+            }.reversed()
     }
 }

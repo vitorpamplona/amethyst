@@ -18,29 +18,15 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.pinnedNotes.dal
+package com.vitorpamplona.amethyst.commons.viewmodels
 
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.ui.dal.FeedFilter
-import com.vitorpamplona.quartz.nip51Lists.PinListEvent
+import com.vitorpamplona.amethyst.commons.model.IAccount
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
+import com.vitorpamplona.amethyst.commons.ui.feeds.UserProfilePinnedNotesFeedFilter
 
-class UserProfilePinnedNotesFeedFilter(
+open class UserProfilePinnedNotesFeedViewModel(
     val user: User,
-    val account: Account,
-) : FeedFilter<Note>() {
-    override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + user.pubkeyHex
-
-    override fun feed(): List<Note> {
-        val note = LocalCache.getOrCreateAddressableNote(PinListEvent.createPinAddress(user.pubkeyHex))
-        val noteEvent = note.event as? PinListEvent ?: return emptyList()
-
-        return noteEvent
-            .pinnedEvents()
-            .mapNotNull {
-                LocalCache.checkGetOrCreateNote(it.eventId)
-            }.reversed()
-    }
-}
+    val account: IAccount,
+    cacheProvider: ICacheProvider,
+) : FeedViewModel(UserProfilePinnedNotesFeedFilter(user, account, cacheProvider), cacheProvider)
