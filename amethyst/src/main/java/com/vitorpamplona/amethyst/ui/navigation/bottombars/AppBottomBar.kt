@@ -41,6 +41,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -52,9 +53,11 @@ import com.vitorpamplona.amethyst.ui.theme.Size10Modifier
 @Composable
 fun AppBottomBar(
     selectedRoute: Route?,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: (Route) -> Unit,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val isKeyboardState by keyboardAsState()
     if (isKeyboardState == KeyboardState.Closed) {
         RenderBottomMenu(selectedRoute, accountViewModel, nav)
@@ -64,9 +67,11 @@ fun AppBottomBar(
 @Composable
 private fun RenderBottomMenu(
     selectedRoute: Route?,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: (Route) -> Unit,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Column(
         modifier =
             Modifier
@@ -93,9 +98,11 @@ private fun RenderBottomMenu(
 private fun RowScope.HasNewItemsIcon(
     selected: Boolean,
     bottomNav: BottomBarRoute,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: (Route) -> Unit,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     NavigationBarItem(
         alwaysShowLabel = false,
         icon = {
@@ -114,8 +121,10 @@ private fun RowScope.HasNewItemsIcon(
 private fun NotifiableIcon(
     selected: Boolean,
     route: BottomBarRoute,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Box(route.notifSize) {
         Icon(
             painter = painterRes(resourceId = route.icon, 0),
@@ -131,9 +140,11 @@ private fun NotifiableIcon(
 @Composable
 fun AddNotifIconIfNeeded(
     route: Route,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     modifier: Modifier = Modifier,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val flow = accountViewModel.hasNewItems[route] ?: return
     val hasNewItems by flow.collectAsStateWithLifecycle()
     if (hasNewItems) {

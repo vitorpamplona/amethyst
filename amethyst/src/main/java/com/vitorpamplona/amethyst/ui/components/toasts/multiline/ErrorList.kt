@@ -42,6 +42,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
@@ -98,9 +99,11 @@ fun ErrorListPreview() {
 @Composable
 fun ErrorList(
     model: MultiErrorToastMsg,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val errorState by model.errors.collectAsStateWithLifecycle()
     LazyColumn {
         itemsIndexed(errorState) { index, it ->
@@ -115,9 +118,11 @@ fun ErrorList(
 @Composable
 fun ErrorRow(
     errorState: UserBasedErrorMessage,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = Size5dp),
         horizontalArrangement = Arrangement.SpaceBetween,

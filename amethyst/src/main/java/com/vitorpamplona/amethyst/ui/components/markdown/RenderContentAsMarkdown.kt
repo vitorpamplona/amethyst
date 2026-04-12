@@ -42,6 +42,7 @@ import com.halilibo.richtext.ui.material3.RichText
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.preview.UrlInfoItem
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.ui.components.UrlPreviewState
@@ -68,9 +69,11 @@ fun RenderContentAsMarkdown(
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     callbackUri: String? = null,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val uriHandler = LocalUriHandler.current
     val onClick =
         remember(uriHandler) {

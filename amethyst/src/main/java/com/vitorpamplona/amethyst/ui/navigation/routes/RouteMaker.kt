@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.navigation.routes
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -164,7 +165,7 @@ fun routeToMessage(
     replyId: HexKey? = null,
     draftId: HexKey? = null,
     expiresDays: Int? = null,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ): Route =
     routeToMessage(
         setOf(user),
@@ -181,7 +182,7 @@ fun routeToMessage(
     replyId: HexKey? = null,
     draftId: HexKey? = null,
     expiresDays: Int? = null,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) = routeToMessage(
     ChatroomKey(users),
     draftMessage,
@@ -197,8 +198,8 @@ fun routeToMessage(
     replyId: HexKey? = null,
     draftId: HexKey? = null,
     expiresDays: Int? = null,
-    accountViewModel: AccountViewModel,
-): Route = routeToMessage(room, draftMessage, replyId, draftId, expiresDays, accountViewModel.account)
+    accountViewModel: IAccountViewModel,
+): Route = routeToMessage(room, draftMessage, replyId, draftId, expiresDays, (accountViewModel as AccountViewModel).account)
 
 fun routeToMessage(
     room: ChatroomKey,
@@ -219,7 +220,7 @@ fun routeToMessage(
     replyId: HexKey? = null,
     draftId: HexKey? = null,
     expiresDays: Int? = null,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ): Route = routeToMessage(user.pubkeyHex, draftMessage, replyId, draftId, expiresDays, accountViewModel)
 
 fun routeFor(note: EphemeralChatChannel): Route = Route.EphemeralChat(note.roomId.id, note.roomId.relayUrl.url)

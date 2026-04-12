@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
@@ -104,9 +105,11 @@ fun PeerVideoGrid(
     remoteVideoTracks: Map<String, VideoTrack>,
     activePeerVideos: Set<String>,
     eglBase: org.webrtc.EglBase?,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     modifier: Modifier = Modifier,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val peers = remember(peerPubKeys) { peerPubKeys.toList() }
 
     if (peers.size == 1) {
@@ -167,9 +170,11 @@ fun PeerVideoGrid(
 @Composable
 fun PeerAvatarCell(
     peerPubKey: String,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     modifier: Modifier = Modifier,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Box(
         modifier = modifier.background(Color.DarkGray),
         contentAlignment = Alignment.Center,
@@ -202,8 +207,10 @@ fun PeerAvatarCell(
 fun GroupCallPictures(
     peerPubKeys: Set<String>,
     size: Dp,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val userList = remember(peerPubKeys) { peerPubKeys.toList() }
     val displayCount = minOf(userList.size, 4)
     val remaining = userList.size - displayCount
@@ -318,9 +325,11 @@ fun GroupCallPictures(
 @Composable
 fun GroupCallNames(
     peerPubKeys: Set<String>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     textColor: Color = MaterialTheme.colorScheme.onSurface,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val userList = remember(peerPubKeys) { peerPubKeys.toList() }
 
     when (userList.size) {

@@ -100,6 +100,7 @@ import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.User
@@ -141,8 +142,10 @@ import kotlinx.coroutines.flow.combine
 fun DrawerContent(
     nav: INav,
     openSheet: () -> Unit,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val onClickUser = {
         nav.nav(routeFor(accountViewModel.userProfile()))
         nav.closeDrawer()
@@ -200,9 +203,11 @@ fun DrawerContent(
 fun ProfileContent(
     baseAccountUser: User,
     modifier: Modifier = Modifier,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     onClickUser: () -> Unit,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val userInfo by observeUserInfo(baseAccountUser, accountViewModel)
 
     ProfileContentTemplate(
@@ -225,9 +230,11 @@ fun ProfileContentTemplate(
     bestDisplayName: String?,
     tags: ImmutableListOfLists<String>?,
     modifier: Modifier,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     onClick: () -> Unit,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Box {
         if (profileBanner != null) {
             AsyncImage(
@@ -282,9 +289,11 @@ fun ProfileContentTemplate(
 @Composable
 private fun EditStatusBoxes(
     baseAccountUser: User,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val statuses by observeUserStatuses(baseAccountUser, accountViewModel)
 
     if (statuses.isEmpty()) {
@@ -302,9 +311,11 @@ private fun EditStatusBoxes(
 fun PreviewStatusEditBar(
     savedStatus: String? = null,
     address: Address? = null,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     var isEditing by remember { mutableStateOf(false) }
 
     if (isEditing) {
@@ -376,9 +387,11 @@ fun StatusEditBar(
     savedStatus: String? = null,
     address: Address? = null,
     onDone: () -> Unit,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val focusManager = LocalFocusManager.current
     val focusRequester = remember { FocusRequester() }
 
@@ -483,9 +496,11 @@ fun UserStatusDeleteButton(onClick: () -> Unit) {
 @Composable
 private fun FollowingAndFollowerCounts(
     baseAccountUser: Account,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     onClick: () -> Unit,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Row(
         modifier = drawerSpacing.clickable(onClick = onClick),
     ) {
@@ -514,8 +529,10 @@ fun DisplayFollowingCount(baseAccountUser: Account) {
 @Composable
 fun DisplayFollowerCount(
     baseAccountUser: Account,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val followerCount by observeUserContactCardsFollowerCount(baseAccountUser.userProfile(), accountViewModel)
 
     Text(
@@ -528,9 +545,11 @@ fun DisplayFollowerCount(
 fun ListContent(
     modifier: Modifier,
     openSheet: () -> Unit,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Column(modifier) {
         NavigationRow(
             title = R.string.profile,
@@ -777,9 +796,11 @@ fun IconRow(
 
 @Composable
 fun IconRowRelays(
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     onClick: () -> Unit,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Row(
         modifier =
             Modifier
@@ -813,7 +834,9 @@ class PoolStatus(
 )
 
 @Composable
-private fun RelayStatus(accountViewModel: AccountViewModel) {
+private fun RelayStatus(accountViewModel: IAccountViewModel) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val statusCounterFlow: Flow<PoolStatus> =
         remember(accountViewModel) {
             combine(
@@ -836,9 +859,11 @@ private fun RelayStatus(accountViewModel: AccountViewModel) {
 @Composable
 fun BottomContent(
     user: User,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Column(modifier = Modifier) {
         HorizontalDivider(
             modifier = Modifier.padding(top = 15.dp),

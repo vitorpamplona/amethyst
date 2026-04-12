@@ -57,6 +57,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.AccountInfo
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
@@ -77,9 +78,11 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AccountSwitchBottomSheet(
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     accountSessionManager: AccountSessionManager,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     var popupExpanded by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
 
@@ -116,9 +119,11 @@ fun AccountSwitchBottomSheet(
 
 @Composable
 private fun DisplayAllAccounts(
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     accountSessionManager: AccountSessionManager,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val accounts by LocalPreferences.accountsFlow().collectAsStateWithLifecycle()
 
     // Trigger lazy load from encrypted storage if the flow hasn't been populated yet.
@@ -135,9 +140,11 @@ private fun DisplayAllAccounts(
 @Composable
 fun DisplayAccount(
     acc: AccountInfo,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     accountSessionManager: AccountSessionManager,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     var baseUser by remember(acc) {
         mutableStateOf(
             decodePublicKeyAsHexOrNull(acc.npub)?.let {
@@ -196,8 +203,10 @@ fun DisplayAccount(
 @Composable
 private fun ActiveMarker(
     acc: AccountInfo,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val isCurrentUser by
         remember(accountViewModel) {
             derivedStateOf { accountViewModel.account.userProfile().pubkeyNpub() == acc.npub }
@@ -215,8 +224,10 @@ private fun ActiveMarker(
 @Composable
 private fun AccountPicture(
     user: User,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val userInfo by observeUserInfo(user, accountViewModel)
 
     RobohashFallbackAsyncImage(
@@ -233,8 +244,10 @@ private fun AccountPicture(
 private fun AccountName(
     acc: AccountInfo,
     user: User,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val info by observeUserInfo(user, accountViewModel)
 
     info?.let {

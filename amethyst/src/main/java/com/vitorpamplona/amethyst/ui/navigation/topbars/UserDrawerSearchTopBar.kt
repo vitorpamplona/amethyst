@@ -32,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserPicture
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -46,10 +47,12 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UserDrawerSearchTopBar(
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
     content: @Composable () -> Unit,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     ShorterTopAppBar(
         title = {
             Column(
@@ -73,9 +76,11 @@ fun UserDrawerSearchTopBar(
 
 @Composable
 private fun LoggedInUserPictureDrawer(
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     onClick: () -> Unit,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     IconButton(onClick = onClick) {
         val profilePicture by observeUserPicture(accountViewModel.userProfile(), accountViewModel)
 

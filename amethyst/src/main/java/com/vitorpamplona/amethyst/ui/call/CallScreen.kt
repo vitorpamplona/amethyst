@@ -59,6 +59,7 @@ import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.call.CallManager
 import com.vitorpamplona.amethyst.commons.call.CallState
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.service.call.CallController
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -69,10 +70,12 @@ import kotlinx.coroutines.launch
 fun CallScreen(
     callManager: CallManager,
     callController: CallController?,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     onCallEnded: () -> Unit,
     isInPipMode: Boolean = false,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val callState by callManager.state.collectAsState()
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -216,9 +219,11 @@ fun CallScreen(
 private fun CallInProgressUI(
     peerPubKeys: Set<String>,
     statusText: String,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     onHangup: () -> Unit,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Box(
         modifier =
             Modifier
@@ -270,10 +275,12 @@ private fun CallInProgressUI(
 private fun IncomingCallUI(
     groupMembers: Set<String>,
     callType: com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     onAccept: () -> Unit,
     onReject: () -> Unit,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Box(
         modifier =
             Modifier

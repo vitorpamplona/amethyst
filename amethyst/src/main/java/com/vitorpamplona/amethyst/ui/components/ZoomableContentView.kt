@@ -84,6 +84,7 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaPreloadedContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.service.images.BlurhashWrapper
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView
@@ -136,8 +137,10 @@ fun ZoomableContentView(
     images: ImmutableList<BaseMediaContent> = remember(content) { persistentListOf(content) },
     roundedCorner: Boolean,
     contentScale: ContentScale,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     var dialogOpen by remember(content) { mutableStateOf(false) }
 
     when (content) {
@@ -236,9 +239,11 @@ fun LocalImageView(
     mainImageModifier: Modifier,
     loadedImageModifier: Modifier,
     controllerVisible: MutableState<Boolean>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     alwayShowImage: Boolean = false,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     if (content.localFileExists()) {
         val showImage =
             remember {
@@ -351,9 +356,11 @@ fun UrlImageView(
     mainImageModifier: Modifier,
     loadedImageModifier: Modifier,
     controllerVisible: MutableState<Boolean>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     alwayShowImage: Boolean = false,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val ratio = content.dim?.aspectRatio() ?: MediaAspectRatioCache.get(content.url)
 
     val showImage =
@@ -714,11 +721,13 @@ fun DisplayBlurHash(
 
 @Composable
 fun ShareMediaAction(
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     popupExpanded: MutableState<Boolean>,
     content: BaseMediaContent,
     onDismiss: () -> Unit,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     if (content is MediaUrlContent) {
         ShareMediaAction(
             popupExpanded = popupExpanded,
@@ -760,8 +769,10 @@ fun ShareMediaAction(
     mimeType: String?,
     onDismiss: () -> Unit,
     content: BaseMediaContent? = null,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     // Track if video is downloading - hoisted here to block menu dismiss during download
     val isDownloadingVideo = remember { mutableStateOf(false) }
 

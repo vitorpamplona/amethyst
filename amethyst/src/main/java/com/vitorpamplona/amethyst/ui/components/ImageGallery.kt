@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.richtext.ImageGalleryParagraph
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.RichTextViewerState
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
@@ -117,8 +118,10 @@ private fun GalleryImage(
     modifier: Modifier = Modifier,
     roundedCorner: Boolean,
     contentScale: ContentScale,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Box(modifier = modifier) {
         ZoomableContentView(
             content = image,
@@ -134,10 +137,12 @@ private fun GalleryImage(
 fun ImageGallery(
     images: ImageGalleryParagraph,
     state: RichTextViewerState,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     modifier: Modifier = Modifier,
     roundedCorner: Boolean = true,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     if (images.words.isEmpty()) return
 
     val resolvedImages =
@@ -161,9 +166,11 @@ fun ImageGallery(
 @Composable
 private fun SingleImageGallery(
     images: ImmutableList<MediaUrlImage>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     roundedCorner: Boolean,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     GalleryImage(
         image = images.first(),
         allImages = images,
@@ -177,9 +184,11 @@ private fun SingleImageGallery(
 @Composable
 private fun TwoImageGallery(
     images: ImmutableList<MediaUrlImage>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     roundedCorner: Boolean,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val orientation = rememberFirstImageOrientation(images.firstOrNull())
 
     if (orientation.isLandscape) {
@@ -220,9 +229,11 @@ private fun TwoImageGallery(
 @Composable
 private fun ThreeImageGallery(
     images: ImmutableList<MediaUrlImage>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     roundedCorner: Boolean,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val firstImage = images.first()
     val orientation = rememberFirstImageOrientation(firstImage)
     val remainingImages = images.drop(1)
@@ -299,9 +310,11 @@ private fun ThreeImageGallery(
 @Composable
 private fun FourImageGallery(
     images: ImmutableList<MediaUrlImage>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     roundedCorner: Boolean,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Column(
         modifier = Modifier.aspectRatio(ASPECT_RATIO),
         verticalArrangement = Arrangement.spacedBy(IMAGE_SPACING),
@@ -329,9 +342,11 @@ private fun FourImageGallery(
 @Composable
 private fun ManyImageGallery(
     images: ImmutableList<MediaUrlImage>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     roundedCorner: Boolean,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val columns =
         when {
             images.size <= 9 -> 3

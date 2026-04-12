@@ -56,6 +56,7 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
@@ -85,9 +86,11 @@ import kotlinx.collections.immutable.ImmutableMap
 fun ClickableRoute(
     word: String,
     nip19: Nip19Parser.ParseReturn,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     when (val entity = nip19.entity) {
         is NPub -> DisplayUser(entity.hex, nip19.nip19raw, nip19.additionalChars, accountViewModel, nav)
         is NProfile -> DisplayUser(entity.hex, nip19.nip19raw, nip19.additionalChars, accountViewModel, nav)
@@ -104,9 +107,11 @@ fun ClickableRoute(
 @Composable
 fun LoadOrCreateNote(
     event: Event,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     content: @Composable (Note?) -> Unit,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     var note by
         remember(event.id) { mutableStateOf(accountViewModel.getNoteIfExists(event.id)) }
 
@@ -123,9 +128,11 @@ fun LoadOrCreateNote(
 private fun LoadAndDisplayEvent(
     event: Event,
     additionalChars: String?,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     LoadOrCreateNote(event, accountViewModel) {
         if (it != null) {
             DisplayNoteLink(it, event.id, additionalChars, accountViewModel, nav)
@@ -150,9 +157,11 @@ fun DisplayEvent(
     hex: HexKey,
     nip19: String,
     additionalChars: String?,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     LoadNote(hex, accountViewModel) {
         if (it != null) {
             DisplayNoteLink(it, hex, additionalChars, accountViewModel, nav)
@@ -177,9 +186,11 @@ private fun DisplayNoteLink(
     it: Note,
     hex: HexKey,
     addedCharts: String?,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val noteState by observeNote(it, accountViewModel)
     val noteIdDisplayNote = remember(noteState) { "@${noteState.note.idDisplayNote()}" }
 
@@ -198,9 +209,11 @@ private fun DisplayAddress(
     nip19: NAddress,
     originalNip19: String,
     additionalChars: String?,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     var noteBase by remember(nip19) { mutableStateOf(accountViewModel.getNoteIfExists(nip19.aTag())) }
 
     if (noteBase == null) {
@@ -242,9 +255,11 @@ fun DisplayUser(
     userHex: HexKey,
     originalNip19: String,
     additionalChars: String?,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     var userBase by
         remember(userHex) {
             mutableStateOf(
@@ -278,9 +293,11 @@ fun DisplayUser(
 fun RenderUserAsClickableText(
     baseUser: User,
     additionalChars: String?,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val userState by observeUserInfo(baseUser, accountViewModel)
 
     CreateClickableTextWithEmoji(

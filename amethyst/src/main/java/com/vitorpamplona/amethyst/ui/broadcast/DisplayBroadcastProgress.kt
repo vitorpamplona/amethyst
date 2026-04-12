@@ -36,6 +36,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.service.broadcast.BroadcastEvent
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -52,7 +53,9 @@ import kotlinx.coroutines.delay
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DisplayBroadcastProgress(accountViewModel: AccountViewModel) {
+fun DisplayBroadcastProgress(accountViewModel: IAccountViewModel) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     // Only show in COMPLETE UI mode
     if (!accountViewModel.settings.isCompleteUIMode()) return
 
@@ -109,8 +112,10 @@ fun DisplayBroadcastProgress(accountViewModel: AccountViewModel) {
 fun DisplaySnack(
     activeBroadcasts: ImmutableList<BroadcastEvent>,
     onTap: () -> Unit,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Box(modifier = Modifier.fillMaxSize()) {
         BroadcastBanner(
             broadcasts = activeBroadcasts,

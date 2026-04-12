@@ -30,6 +30,7 @@ import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.feeds.FeedEmpty
 import com.vitorpamplona.amethyst.ui.feeds.FeedError
@@ -48,9 +49,11 @@ fun RefresheableFeedView(
     routeForLastRead: String?,
     enablePullRefresh: Boolean = true,
     scrollStateKey: String? = null,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     RefresheableBox(viewModel, enablePullRefresh) {
         SaveableFeedState(viewModel.feedState, scrollStateKey) { listState ->
             RenderFeedState(viewModel, accountViewModel, listState, nav, routeForLastRead)
@@ -97,7 +100,7 @@ fun SaveableGridFeedState(
 @Composable
 fun RenderFeedState(
     viewModel: FeedViewModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     listState: LazyListState,
     nav: INav,
     routeForLastRead: String?,
@@ -108,6 +111,8 @@ fun RenderFeedState(
     onError: @Composable (String) -> Unit = { FeedError(it) { viewModel.invalidateData() } },
     onLoading: @Composable () -> Unit = { LoadingFeed() },
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val feedState by viewModel.feedState.feedContent.collectAsStateWithLifecycle()
 
     CrossfadeIfEnabled(

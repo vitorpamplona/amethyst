@@ -27,6 +27,7 @@ import androidx.compose.runtime.produceState
 import androidx.compose.ui.layout.ContentScale
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -37,8 +38,10 @@ fun LoadUrlPreview(
     url: String,
     urlText: String,
     callbackUri: String? = null,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     if (!accountViewModel.settings.showUrlPreview()) {
         ClickableUrl(urlText, url)
     } else {
@@ -51,8 +54,11 @@ fun LoadUrlPreviewDirect(
     url: String,
     urlText: String,
     callbackUri: String? = null,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
+
     @Suppress("ProduceStateDoesNotAssignValue")
     val urlPreviewState by
         produceState(
@@ -92,8 +98,10 @@ fun RenderLoaded(
     state: UrlPreviewState.Loaded,
     url: String,
     callbackUri: String? = null,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     if (state.previewInfo.mimeType.startsWith("image")) {
         Box(modifier = HalfVertPadding) {
             ZoomableContentView(

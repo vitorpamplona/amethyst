@@ -27,6 +27,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
@@ -65,7 +66,9 @@ class NewUserMetadataViewModel : ViewModel() {
     var isUploadingImageForPicture by mutableStateOf(false)
     var isUploadingImageForBanner by mutableStateOf(false)
 
-    fun init(accountViewModel: AccountViewModel) {
+    fun init(accountViewModel: IAccountViewModel) {
+        @Suppress("NAME_SHADOWING")
+        val accountViewModel = accountViewModel as AccountViewModel
         this.accountViewModel = accountViewModel
         this.account = accountViewModel.account
     }

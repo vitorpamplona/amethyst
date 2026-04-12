@@ -70,6 +70,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.call.CallState
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.service.call.AudioRoute
 import com.vitorpamplona.amethyst.service.call.CallController
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
@@ -84,13 +85,15 @@ import org.webrtc.VideoTrack
 fun ConnectedCallUI(
     state: CallState.Connected,
     callController: CallController?,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     onHangup: () -> Unit,
     onToggleMute: () -> Unit,
     onToggleVideo: () -> Unit,
     onCycleAudioRoute: () -> Unit,
     onInvitePeer: (String) -> Unit = {},
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     var elapsed by remember { mutableLongStateOf(0L) }
 
     LaunchedEffect(state.startedAtEpoch) {
@@ -352,11 +355,13 @@ private fun CallControls(
 
 @Composable
 private fun AddParticipantDialog(
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     existingPeers: Set<String>,
     onInvite: (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val userSuggestions =
         remember {
             UserSuggestionState(accountViewModel.account, accountViewModel.nip05ClientBuilder())

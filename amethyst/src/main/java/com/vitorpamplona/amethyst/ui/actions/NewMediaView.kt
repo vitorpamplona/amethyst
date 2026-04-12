@@ -54,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.ShowImageUploadGallery
@@ -77,9 +78,11 @@ fun NewMediaView(
     uris: ImmutableList<SelectedMedia>,
     onClose: () -> Unit,
     postViewModel: NewMediaModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val account = accountViewModel.account
     val context = LocalContext.current
 
@@ -147,8 +150,10 @@ fun NewMediaView(
 @Composable
 fun ImageVideoPost(
     postViewModel: NewMediaModel,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val fileServers by accountViewModel.account.blossomServers.hostNameFlow
         .collectAsState()
 

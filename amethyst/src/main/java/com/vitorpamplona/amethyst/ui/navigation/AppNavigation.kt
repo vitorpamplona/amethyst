@@ -41,6 +41,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.call.CallState
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.service.call.CallSessionBridge
 import com.vitorpamplona.amethyst.service.crashreports.DisplayCrashMessages
 import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.compose.DisplayNotifyMessages
@@ -162,9 +163,11 @@ import java.net.URI
 
 @Composable
 fun AppNavigation(
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     accountSessionManager: AccountSessionManager,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val nav = rememberNav()
 
     AccountSwitcherAndLeftDrawerLayout(accountViewModel, accountSessionManager, nav) {
@@ -182,7 +185,9 @@ fun AppNavigation(
 }
 
 @Composable
-private fun ObserveIncomingCalls(accountViewModel: AccountViewModel) {
+private fun ObserveIncomingCalls(accountViewModel: IAccountViewModel) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val context = LocalContext.current
     val callState by accountViewModel.callManager.state.collectAsState()
 
@@ -197,9 +202,11 @@ private fun ObserveIncomingCalls(accountViewModel: AccountViewModel) {
 
 @Composable
 fun BuildNavigation(
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: Nav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val context = androidx.compose.ui.platform.LocalContext.current
     androidx.compose.runtime.LaunchedEffect(Unit) {
         accountViewModel.initCallController(context)
@@ -450,9 +457,11 @@ fun BuildNavigation(
 @Composable
 private fun NavigateIfIntentRequested(
     nav: Nav,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     accountSessionManager: AccountSessionManager,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     accountViewModel.firstRoute?.let { newRoute ->
         accountViewModel.firstRoute = null
         val currentRoute = getRouteWithArguments(newRoute::class, nav.controller)

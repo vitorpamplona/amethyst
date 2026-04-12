@@ -76,6 +76,7 @@ import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.service.call.CallSessionBridge.accountViewModel
@@ -110,8 +111,10 @@ fun FeedFilterSpinner(
     options: ImmutableList<FeedDefinition>,
     onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     var optionsShowing by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
@@ -273,8 +276,10 @@ fun FeedFilterSpinner(
 @Composable
 fun RenderOption(
     option: Name,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     when (option) {
         is GeoHashName -> {
             LoadCityName(option.geoHashTag) {

@@ -65,6 +65,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView
 import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
@@ -85,8 +86,10 @@ import kotlinx.coroutines.launch
 fun ShowImageUploadGallery(
     list: MultiOrchestrator,
     onDelete: (SelectedMediaProcessing) -> Unit,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     AutoNonlazyGrid(list.size()) {
         ShowImageUploadItem(list.get(it), onDelete, accountViewModel)
     }
@@ -112,8 +115,10 @@ fun createVideoThumb(
 @Composable
 fun ShowImageGallery(
     media: SelectedMedia,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     if (media.isImage() == true) {
         AsyncImage(
             model = media.uri.toString(),
@@ -182,8 +187,10 @@ fun ShowImageGallery(
 fun ShowImageUploadItem(
     item: SelectedMediaProcessing,
     onDelete: (SelectedMediaProcessing) -> Unit,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     ShowImageGallery(item.media, accountViewModel)
 
     OrchestratorOverlay(item.orchestrator) {

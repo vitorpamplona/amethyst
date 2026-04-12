@@ -55,6 +55,7 @@ import androidx.core.net.toUri
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.Cashu
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.service.cashu.CachedCashuParser
 import com.vitorpamplona.amethyst.service.cashu.CashuToken
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
@@ -79,8 +80,11 @@ import kotlinx.coroutines.withContext
 @Composable
 fun CashuPreview(
     cashutoken: String,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
+
     @Suppress("ProduceStateDoesNotAssignValue")
     val cashuData by produceState(
         initialValue = CachedCashuParser.cached(cashutoken),
@@ -113,8 +117,10 @@ fun CashuPreview(
 @Composable
 fun CashuPreview(
     tokens: ImmutableList<CashuToken>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     tokens.forEach {
         CashuPreviewNew(
             it,

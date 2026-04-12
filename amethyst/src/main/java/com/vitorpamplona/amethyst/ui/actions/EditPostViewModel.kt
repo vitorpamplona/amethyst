@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.compose.currentWord
 import com.vitorpamplona.amethyst.commons.compose.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -101,7 +102,9 @@ open class EditPostViewModel : ViewModel() {
     var canAddInvoice by mutableStateOf(false)
     var wantsInvoice by mutableStateOf(false)
 
-    open fun init(accountViewModel: AccountViewModel) {
+    open fun init(accountViewModel: IAccountViewModel) {
+        @Suppress("NAME_SHADOWING")
+        val accountViewModel = accountViewModel as AccountViewModel
         this.accountViewModel = accountViewModel
         this.account = accountViewModel.account
     }

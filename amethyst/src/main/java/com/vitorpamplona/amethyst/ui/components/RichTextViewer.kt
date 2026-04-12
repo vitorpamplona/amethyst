@@ -90,6 +90,7 @@ import com.vitorpamplona.amethyst.commons.richtext.SecretEmoji
 import com.vitorpamplona.amethyst.commons.richtext.Segment
 import com.vitorpamplona.amethyst.commons.richtext.VideoSegment
 import com.vitorpamplona.amethyst.commons.richtext.WithdrawSegment
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.HashtagIcon
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -139,9 +140,11 @@ fun RichTextViewer(
     tags: ImmutableListOfLists<String>,
     backgroundColor: MutableState<Color>,
     callbackUri: String? = null,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     Column(modifier = modifier) {
         if (remember(content) { isMarkdown(content) }) {
             RenderContentAsMarkdown(content, tags, canPreview, quotesLeft, backgroundColor, callbackUri, accountViewModel, nav)
@@ -346,9 +349,11 @@ private fun RenderRegular(
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     callbackUri: String? = null,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     if (canPreview) {
         RenderRegular(content, tags, callbackUri) { paragraph, state, spaceWidth, modifier ->
             if (paragraph is ImageGalleryParagraph) {
@@ -470,9 +475,11 @@ private fun RenderWordWithoutPreview(
     word: Segment,
     state: RichTextViewerState,
     backgroundColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     when (word) {
         // Don't preview Images
         is ImageSegment -> ClickableUrl(word.segmentText, word.segmentText)
@@ -523,9 +530,11 @@ private fun RenderWordWithPreview(
     backgroundColor: MutableState<Color>,
     quotesLeft: Int,
     callbackUri: String? = null,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     when (word) {
         is ImageSegment -> ZoomableContentView(word.segmentText, state, accountViewModel)
         is VideoSegment -> ZoomableContentView(word.segmentText, state, accountViewModel)
@@ -554,8 +563,10 @@ fun BlossomUriRenderer(
     word: String,
     state: RichTextViewerState,
     callbackUri: String? = null,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val isMedia = state.mediaForPager.contains(word)
 
     if (isMedia) {
@@ -584,8 +595,10 @@ fun BlossomUriRenderer(
 @Composable
 fun ClickableBlossomUri(
     blossomUri: String,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val context = LocalContext.current
 
     ClickableTextPrimary(
@@ -599,8 +612,10 @@ fun ClickableBlossomUri(
 @Composable
 fun BlossomUriRendererNoPreview(
     word: String,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val serverResultState =
         remember(word) {
             mutableStateOf(Amethyst.instance.blossomResolver.cachedFindServer(word))
@@ -624,8 +639,10 @@ fun BlossomUriRendererNoPreview(
 private fun ZoomableContentView(
     word: String,
     state: RichTextViewerState,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     state.mediaForPager[word]?.let {
         Box(modifier = HalfVertPadding) {
             ZoomableContentView(it, state.mediaList, roundedCorner = true, contentScale = ContentScale.FillWidth, accountViewModel)
@@ -655,9 +672,11 @@ fun BechLink(
     canPreview: Boolean,
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val loadedLink by produceCachedState(cache = accountViewModel.bechLinkCache, key = word)
 
     val baseNote = loadedLink?.baseNote
@@ -695,9 +714,11 @@ fun DisplayFullNote(
     extraChars: String?,
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     NoteCompose(
         baseNote = note,
         modifier = MaterialTheme.colorScheme.innerPostModifier,
@@ -724,9 +745,11 @@ fun DisplaySecretEmoji(
     canPreview: Boolean,
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     if (canPreview && quotesLeft > 0) {
         var secretContent by remember {
             mutableStateOf(CachedRichTextParser.cachedText(EmojiCoder.decode(segment.segmentText), state.tags))
@@ -772,9 +795,11 @@ fun CoreSecretMessage(
     callbackUri: String?,
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     if (localSecretContent.paragraphs.size == 1) {
         localSecretContent.paragraphs[0].words.forEach { word ->
             RenderWordWithPreview(
@@ -871,9 +896,11 @@ private fun inlineIcon(hashtagIcon: HashtagIcon) =
 @Composable
 fun TagLink(
     word: HashIndexUserSegment,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     LoadUser(baseUserHex = word.hex, accountViewModel) {
         if (it == null) {
             Text(text = word.segmentText)
@@ -891,9 +918,11 @@ fun TagLink(
 @Composable
 fun LoadNote(
     baseNoteHex: String,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     content: @Composable (Note?) -> Unit,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     var note by
         remember(baseNoteHex) { mutableStateOf(accountViewModel.getNoteIfExists(baseNoteHex)) }
 
@@ -912,9 +941,11 @@ fun TagLink(
     canPreview: Boolean,
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     LoadNote(baseNoteHex = word.hex, accountViewModel) {
         if (it == null) {
             Text(text = remember { word.segmentText.toShortDisplay() })
@@ -966,10 +997,12 @@ private fun DisplayNoteFromTag(
     addedChars: String?,
     canPreview: Boolean,
     quotesLeft: Int,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     backgroundColor: MutableState<Color>,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     if (canPreview && quotesLeft > 0) {
         NoteCompose(
             baseNote = baseNote,
@@ -994,9 +1027,11 @@ private fun DisplayNoteFromTag(
 @Composable
 private fun DisplayUserFromTag(
     baseUser: User,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     nav: INav,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val meta by observeUserInfo(baseUser, accountViewModel)
 
     CrossfadeIfEnabled(targetState = meta, label = "DisplayUserFromTag", accountViewModel = accountViewModel) {

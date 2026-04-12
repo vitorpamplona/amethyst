@@ -30,6 +30,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 
@@ -40,10 +41,12 @@ fun DisappearingScaffold(
     topBar: (@Composable () -> Unit)? = null,
     bottomBar: (@Composable () -> Unit)? = null,
     floatingButton: (@Composable () -> Unit)? = null,
-    accountViewModel: AccountViewModel,
+    accountViewModel: IAccountViewModel,
     isActive: () -> Boolean = { true },
     mainContent: @Composable (padding: PaddingValues) -> Unit,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val accountViewModel = accountViewModel as AccountViewModel
     val topBehavior =
         enterAlwaysScrollBehavior(
             canScroll = {

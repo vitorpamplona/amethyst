@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.actions.paymentTargets
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.IAccountViewModel
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTarget
@@ -40,7 +41,9 @@ class PaymentTargetsViewModel : ViewModel() {
     val paymentTargets = _paymentTargets.asStateFlow()
     private var isModified = false
 
-    fun init(accountViewModel: AccountViewModel) {
+    fun init(accountViewModel: IAccountViewModel) {
+        @Suppress("NAME_SHADOWING")
+        val accountViewModel = accountViewModel as AccountViewModel
         this.accountViewModel = accountViewModel
         this.account = accountViewModel.account
     }
