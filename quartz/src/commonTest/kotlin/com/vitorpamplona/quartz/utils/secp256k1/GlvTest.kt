@@ -102,9 +102,13 @@ class GlvTest {
 
     @Test
     fun betaCubedIsOne() {
-        // β³ ≡ 1 (mod p) — the defining property of the cube root of unity
+        // β³ ≡ 1 (mod p) — the defining property of the cube root of unity.
+        // FieldP.mul is lazy, so the result may be the raw limb pattern for
+        // 1 + p (mathematically 1 mod p, but not bit-equal to the canonical
+        // representation). Reduce explicitly before comparing.
         val b2 = FieldP.sqr(Glv.BETA)
         val b3 = FieldP.mul(b2, Glv.BETA)
+        FieldP.reduceSelf(b3)
         val one = Fe4(1L, 0L, 0L, 0L)
         assertEquals(toHex(one), toHex(b3))
     }

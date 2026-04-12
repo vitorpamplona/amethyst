@@ -70,9 +70,12 @@ class FieldPTest {
     @Test
     fun addNearP() {
         // (p - 1) + 1 = p ≡ 0 (mod p)
+        // FieldP.add is lazy: the result here is the literal limb pattern for p
+        // rather than the canonical 0. Compare after an explicit reduceSelf.
         val pMinus1 = hex("fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2e")
         val one = Fe4(1L, 0L, 0L, 0L)
         val result = FieldP.add(pMinus1, one)
+        FieldP.reduceSelf(result)
         assertTrue(result.isZero())
     }
 
@@ -112,6 +115,9 @@ class FieldPTest {
     fun addNegIsZero() {
         val a = hex("67e56582298859ddae725f972992a07c6c4fb9f62a8fff58ce3ca926a1063530")
         val result = FieldP.add(a, FieldP.neg(a))
+        // a + (-a) = a + (p - a) = p, which the lazy adder stores as the raw
+        // limb pattern for p rather than 0. Reduce before checking.
+        FieldP.reduceSelf(result)
         assertTrue(result.isZero())
     }
 
@@ -149,6 +155,7 @@ class FieldPTest {
         val aInv = FieldP.inv(a)
         val product = FieldP.mul(a, aInv)
         val one = Fe4(1L, 0L, 0L, 0L)
+        FieldP.reduceSelf(product)
         assertEquals(toHex(one), toHex(product))
     }
 
@@ -180,12 +187,14 @@ class FieldPTest {
 
     @Test
     fun halfOfOdd() {
-        // half(1) = (1 + p) / 2 = (p + 1) / 2
+        // half(1) = (1 + p) / 2. Then 2 * half(1) ≡ 1 (mod p).
+        // The lazy adder may leave `doubled` as a representation of 1 + p
+        // rather than the canonical 1; reduce before comparing.
         val out = Fe4()
         val one = Fe4(1L, 0L, 0L, 0L)
         FieldP.half(out, one)
-        // Verify: 2 * half(1) = 1 mod p
         val doubled = FieldP.add(out, out)
+        FieldP.reduceSelf(doubled)
         assertEquals(1L, doubled.l0)
         assertEquals(0L, doubled.l1)
         assertEquals(0L, doubled.l2)
@@ -238,9 +247,12 @@ class FieldPTest {
 
     @Test
     fun reduceWideWithMaxValues() {
-        // Multiply two values near p and verify result is < p
+        // Multiply two values near p and verify result is mathematically < p.
+        // fe_mul is lazy, so the raw limbs can temporarily be in [P, 2^256);
+        // we explicitly normalize, then compare both bounds and value.
         val pMinus1 = hex("fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2e")
         val result = FieldP.mul(pMinus1, pMinus1)
+        FieldP.reduceSelf(result)
         assertTrue(U256.cmp(result, FieldP.P) < 0, "Result should be < p")
         // (p-1)² ≡ 1 (mod p)
         val one = Fe4(1L, 0L, 0L, 0L)
@@ -283,6 +295,7 @@ class FieldPTest {
         val inv2 = FieldP.inv(two)
         val product = FieldP.mul(two, inv2)
         val one = Fe4(1L, 0L, 0L, 0L)
+        FieldP.reduceSelf(product)
         assertEquals(toHex(one), toHex(product))
     }
 
@@ -309,5 +322,81 @@ class FieldPTest {
         val aCopy = a.copyOf()
         FieldP.mul(aCopy, aCopy, b) // out == a
         assertEquals(toHex(expected), toHex(aCopy))
+    }
+
+    // ==================== Adversarial carry-fold regression tests ====================
+    //
+    // These tests exercise the code path where the reduction's final fold has
+    // to loop more than once. A naïve single-pass fold (the shape the C and
+    // Kotlin reducers had historically) silently drops a carry out of the top
+    // limb when the result grows past 2^256. The while-loop fold makes the
+    // invariant "output in [0, 2^256)" robust for any reachable input,
+    // including pathological lazy-reduced chains like these.
+    //
+    // The Kotlin field arithmetic uses lazy reduction, so results up to
+    // ~2^256 can be representationally in [P, 2^256) rather than in [0, P).
+    // These tests compare after an explicit `reduceSelf` to compare the
+    // mathematical value rather than the raw limb bytes.
+
+    private fun reduced(a: Fe4): Fe4 {
+        val r = a.copyOf()
+        FieldP.reduceSelf(r)
+        return r
+    }
+
+    @Test
+    fun chainedLazyAddThenMulReducesCorrectly() {
+        // Build a value close to 2^256 via chained lazy adds so the
+        // subsequent multiplication feeds the reducer an input near its
+        // upper bound. Verify: 4*(p-1) ≡ p-4 (mod p).
+        val pMinus1 = hex("fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2e")
+        val two = FieldP.add(pMinus1, pMinus1)
+        val four = FieldP.add(two, two)
+        val expected = hex("fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2b")
+        val one = Fe4(1L, 0L, 0L, 0L)
+        val product = FieldP.mul(four, one)
+        assertEquals(toHex(expected), toHex(reduced(product)))
+    }
+
+    @Test
+    fun mulOfLargeValuesStaysReduced() {
+        // ((p-1)^2)^2 ≡ 1 (mod p). Feed the squared result back into another
+        // multiplication to flush any hidden lazy state.
+        val pMinus1 = hex("fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2e")
+        val sq = FieldP.sqr(pMinus1)
+        val sqAgain = FieldP.mul(sq, sq)
+        val one = Fe4(1L, 0L, 0L, 0L)
+        assertEquals(toHex(one), toHex(reduced(sqAgain)))
+    }
+
+    @Test
+    fun repeatedSquaringConvergesAcrossMulAndSqrPaths() {
+        // Squaring chain: a, a², a⁴, …, a^(2^10). Any latent carry-drop
+        // would compound across 10 iterations. Run via both fe_mul(x, x)
+        // and the dedicated fe_sqr path and compare results.
+        val a = hex("fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2d") // p-2
+        var byMul = a
+        repeat(10) { byMul = FieldP.mul(byMul, byMul) }
+        var bySqr = a
+        val out = Fe4()
+        repeat(10) {
+            FieldP.sqr(out, bySqr)
+            bySqr = out.copyOf()
+        }
+        assertEquals(toHex(reduced(byMul)), toHex(reduced(bySqr)))
+    }
+
+    @Test
+    fun mulRoundTripViaInvStressesLazyInput() {
+        // Build a large, possibly-unreduced value and check the round trip
+        // (x * b) * inv(b) ≡ x (mod p). Exercises the full pipeline:
+        // unreduced input → mul → reduce → inv → mul → reduce.
+        val pMinus1 = hex("fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2e")
+        val lazyBig = FieldP.add(pMinus1, pMinus1) // may be lazy
+        val b = hex("0000000000000000000000000000000000000000000000000000000000000042")
+        val ref = FieldP.mul(lazyBig, b)
+        val bInv = FieldP.inv(b)
+        val back = FieldP.mul(ref, bInv)
+        assertEquals(toHex(reduced(lazyBig)), toHex(reduced(back)))
     }
 }

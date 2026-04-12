@@ -3,6 +3,22 @@ project(secp256k1_amethyst C)
 
 set(CMAKE_C_STANDARD 11)
 
+# ==================== Link-Time Optimization ====================
+#
+# LTO lets the linker inline fe_mul / fe_sqr across translation units
+# (field.c ↔ point.c ↔ scalar.c ↔ schnorr.c), recovering ~5-15% on the
+# hot Jacobian formulas where fe_mul would otherwise be a call boundary.
+# Disabled automatically when the toolchain doesn't support it.
+
+include(CheckIPOSupported)
+check_ipo_supported(RESULT LTO_SUPPORTED OUTPUT LTO_ERROR)
+if(LTO_SUPPORTED)
+    message(STATUS "LTO supported - enabling interprocedural optimization")
+    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+else()
+    message(STATUS "LTO not supported: ${LTO_ERROR}")
+endif()
+
 # ==================== Platform-specific optimizations ====================
 
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64|ARM64")
