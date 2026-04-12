@@ -57,6 +57,7 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
+import com.vitorpamplona.amethyst.commons.ui.feeds.ChannelFeedState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.model.TopFilter
@@ -65,7 +66,6 @@ import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.zonedDrawerSwipe
 import com.vitorpamplona.amethyst.ui.feeds.ChannelFeedContentState
-import com.vitorpamplona.amethyst.ui.feeds.ChannelFeedState
 import com.vitorpamplona.amethyst.ui.feeds.PagerStateKeys
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.feeds.RenderFeedContentState

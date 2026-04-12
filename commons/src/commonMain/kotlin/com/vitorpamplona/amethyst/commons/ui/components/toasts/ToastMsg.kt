@@ -18,10 +18,9 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.components.toasts
+package com.vitorpamplona.amethyst.commons.ui.components.toasts
 
-import com.vitorpamplona.amethyst.commons.ui.components.toasts.ActionableStringToastMsg as CommonsActionableStringToastMsg
-import com.vitorpamplona.amethyst.commons.ui.components.toasts.StringToastMsg as CommonsStringToastMsg
+import androidx.compose.runtime.Immutable
 
-typealias StringToastMsg = CommonsStringToastMsg
-typealias ActionableStringToastMsg = CommonsActionableStringToastMsg
+@Immutable
+open class ToastMsg
