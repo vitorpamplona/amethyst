@@ -20,44 +20,5 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.metadata
 
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.ui.text.input.TextFieldValue
-import androidx.lifecycle.ViewModel
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
-
-class NewEphemeralChatMetaViewModel : ViewModel() {
-    private var account: Account? = null
-
-    val relayUrl = mutableStateOf(TextFieldValue())
-    val channelName = mutableStateOf(TextFieldValue())
-
-    val canPost by derivedStateOf {
-        channelName.value.text.isNotBlank() && relayUrl.value.text.isNotBlank()
-    }
-
-    fun load(account: Account) {
-        this.account = account
-    }
-
-    fun buildRoom() =
-        RelayUrlNormalizer
-            .normalizeOrNull(relayUrl.value.text)
-            ?.let { RoomId(channelName.value.text, it) }
-
-    /*
-    fun createOrUpdate(onDone: (RoomId) -> Unit) {
-        viewModelScope.launch(Dispatchers.IO) {
-            account?.follow(, onDone)
-            clear()
-        }
-    }*/
-
-    fun clear() {
-        channelName.value = TextFieldValue()
-        relayUrl.value = TextFieldValue()
-    }
-}
+// Re-export from commons for backwards compatibility
+typealias NewEphemeralChatMetaViewModel = com.vitorpamplona.amethyst.commons.viewmodels.NewEphemeralChatMetaViewModel
