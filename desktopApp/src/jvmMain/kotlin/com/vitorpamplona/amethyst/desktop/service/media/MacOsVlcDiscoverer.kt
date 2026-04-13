@@ -24,11 +24,12 @@ import com.sun.jna.NativeLibrary
 import uk.co.caprica.vlcj.binding.lib.LibC
 import uk.co.caprica.vlcj.binding.support.runtime.RuntimeUtil
 import uk.co.caprica.vlcj.factory.discovery.strategy.BaseNativeDiscoveryStrategy
-import java.io.File
 
 /**
  * Discovers bundled VLC libraries on macOS.
  * Must force-load libvlccore before libvlc to avoid link errors.
+ * Uses [VlcResourceResolver] to find the VLC directory from the Compose application
+ * resources or development fallback paths.
  */
 class MacOsVlcDiscoverer :
     BaseNativeDiscoveryStrategy(
@@ -41,9 +42,8 @@ class MacOsVlcDiscoverer :
     }
 
     override fun discoveryDirectories(): List<String> {
-        val resourcesDir = System.getProperty("compose.application.resources.dir") ?: return emptyList()
-        val vlcDir = File(resourcesDir, "vlc")
-        return if (vlcDir.isDirectory) listOf(vlcDir.absolutePath) else emptyList()
+        val vlcDir = VlcResourceResolver.findVlcDir() ?: return emptyList()
+        return listOf(vlcDir.absolutePath)
     }
 
     override fun onFound(path: String): Boolean {

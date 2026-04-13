@@ -21,11 +21,11 @@
 package com.vitorpamplona.amethyst.desktop.service.media
 
 import uk.co.caprica.vlcj.factory.discovery.strategy.NativeDiscoveryStrategy
-import java.io.File
 
 /**
  * Discovers bundled VLC libraries on Windows and Linux.
- * Reads the Compose application resources directory and looks for a vlc/ subdirectory.
+ * Uses [VlcResourceResolver] to find the VLC directory from the Compose application
+ * resources or development fallback paths.
  */
 class BundledVlcDiscoverer : NativeDiscoveryStrategy {
     override fun supported(): Boolean {
@@ -34,9 +34,8 @@ class BundledVlcDiscoverer : NativeDiscoveryStrategy {
     }
 
     override fun discover(): String {
-        val resourcesDir = System.getProperty("compose.application.resources.dir") ?: return ""
-        val vlcDir = File(resourcesDir, "vlc")
-        return if (vlcDir.isDirectory) vlcDir.absolutePath else ""
+        val vlcDir = VlcResourceResolver.findVlcDir() ?: return ""
+        return vlcDir.absolutePath
     }
 
     override fun onFound(path: String): Boolean = true
