@@ -37,7 +37,6 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.BluetoothAudio
 import androidx.compose.material.icons.filled.CallEnd
@@ -48,6 +47,7 @@ import androidx.compose.material.icons.filled.MicOff
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.filled.VideocamOff
+import androidx.compose.material.icons.outlined.Hearing
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -303,7 +303,7 @@ private fun CallControls(
                 Icon(
                     imageVector =
                         when (currentAudioRoute) {
-                            AudioRoute.EARPIECE -> Icons.AutoMirrored.Filled.VolumeOff
+                            AudioRoute.EARPIECE -> Icons.Outlined.Hearing
                             AudioRoute.SPEAKER -> Icons.AutoMirrored.Filled.VolumeUp
                             AudioRoute.BLUETOOTH -> Icons.Default.BluetoothAudio
                         },
