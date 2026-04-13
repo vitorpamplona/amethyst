@@ -46,6 +46,7 @@ import com.vitorpamplona.amethyst.desktop.model.DesktopIAccount
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.service.drafts.DesktopDraftStore
 import com.vitorpamplona.amethyst.desktop.service.highlights.DesktopHighlightStore
+import com.vitorpamplona.amethyst.desktop.service.namecoin.LocalNamecoinPreferences
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.desktop.subscriptions.FeedMode
 import com.vitorpamplona.amethyst.desktop.ui.ArticleEditorScreen
@@ -312,7 +313,12 @@ internal fun RootContent(
         }
 
         DeckColumnType.Settings -> {
-            RelaySettingsScreen(relayManager, account, accountManager)
+            RelaySettingsScreen(
+                relayManager = relayManager,
+                account = account,
+                accountManager = accountManager,
+                namecoinPreferences = LocalNamecoinPreferences.current,
+            )
         }
 
         is DeckColumnType.Profile -> {

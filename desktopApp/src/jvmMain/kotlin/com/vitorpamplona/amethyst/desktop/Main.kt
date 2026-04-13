@@ -80,9 +80,14 @@ import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.service.highlights.DesktopHighlightStore
 import com.vitorpamplona.amethyst.desktop.service.images.DesktopImageLoaderSetup
 import com.vitorpamplona.amethyst.desktop.service.media.VlcjPlayerPool
+import com.vitorpamplona.amethyst.desktop.service.namecoin.DesktopNamecoinNameService
+import com.vitorpamplona.amethyst.desktop.service.namecoin.DesktopNamecoinPreferences
+import com.vitorpamplona.amethyst.desktop.service.namecoin.LocalNamecoinPreferences
+import com.vitorpamplona.amethyst.desktop.service.namecoin.LocalNamecoinService
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.desktop.ui.ComposeNoteDialog
 import com.vitorpamplona.amethyst.desktop.ui.ConnectingRelaysScreen
+import com.vitorpamplona.amethyst.desktop.ui.ImportFollowListDialog
 import com.vitorpamplona.amethyst.desktop.ui.LoginScreen
 import com.vitorpamplona.amethyst.desktop.ui.ZapFeedback
 import com.vitorpamplona.amethyst.desktop.ui.auth.ForceLogoutDialog
@@ -99,6 +104,7 @@ import com.vitorpamplona.amethyst.desktop.ui.media.LocalWindowState
 import com.vitorpamplona.amethyst.desktop.ui.profile.ProfileInfoCard
 import com.vitorpamplona.amethyst.desktop.ui.relay.RelayStatusCard
 import com.vitorpamplona.amethyst.desktop.ui.settings.MediaServerSettings
+import com.vitorpamplona.amethyst.desktop.ui.settings.NamecoinSettingsSection
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.utils.Log
@@ -185,6 +191,7 @@ fun main() {
         val accountManager = remember { AccountManager.create() }
         val accountState by accountManager.accountState.collectAsState()
         var showAddColumnDialog by remember { mutableStateOf(false) }
+        var showImportFollowListDialog by remember { mutableStateOf(false) }
         var layoutMode by remember {
             mutableStateOf(
                 try {
@@ -228,6 +235,18 @@ fun main() {
                                 deckState.addColumn(DeckColumnType.Settings)
                             }
                         },
+                    )
+                    Separator()
+                    Item(
+                        "Import Follow List…",
+                        shortcut =
+                            if (isMacOS) {
+                                KeyShortcut(Key.I, meta = true, shift = true)
+                            } else {
+                                KeyShortcut(Key.I, ctrl = true, shift = true)
+                            },
+                        onClick = { showImportFollowListDialog = true },
+                        enabled = accountState is AccountState.LoggedIn,
                     )
                     Separator()
                     Item(
@@ -422,6 +441,8 @@ fun main() {
                     onDismissAddColumnDialog = { showAddColumnDialog = false },
                     onShowAddColumnDialog = { showAddColumnDialog = true },
                     replyToNote = replyToNote,
+                    showImportFollowListDialog = showImportFollowListDialog,
+                    onDismissImportFollowListDialog = { showImportFollowListDialog = false },
                 )
             }
         }
@@ -441,6 +462,8 @@ fun App(
     onDismissAddColumnDialog: () -> Unit,
     onShowAddColumnDialog: () -> Unit,
     replyToNote: com.vitorpamplona.quartz.nip01Core.core.Event?,
+    showImportFollowListDialog: Boolean = false,
+    onDismissImportFollowListDialog: () -> Unit = {},
 ) {
     val relayManager = remember { DesktopRelayConnectionManager() }
     val localCache = remember { DesktopLocalCache() }
@@ -536,46 +559,69 @@ fun App(
                     val account = accountState as AccountState.LoggedIn
                     val nwcConnection by accountManager.nwcConnection.collectAsState()
 
+                    // Lazy-load Namecoin services — almost never used,
+                    // no need to keep in memory from the start (matches Android lazy pattern)
+                    val namecoinPreferences = remember { DesktopNamecoinPreferences() }
+                    val namecoinService =
+                        remember {
+                            DesktopNamecoinNameService(preferencesProvider = { namecoinPreferences.current })
+                        }
+
                     // Load NWC connection on first composition
                     LaunchedEffect(Unit) {
                         accountManager.loadNwcConnection()
                     }
 
-                    MainContent(
-                        layoutMode = layoutMode,
-                        deckState = deckState,
-                        relayManager = relayManager,
-                        localCache = localCache,
-                        accountManager = accountManager,
-                        account = account,
-                        nwcConnection = nwcConnection,
-                        subscriptionsCoordinator = subscriptionsCoordinator,
-                        appScope = scope,
-                        onShowComposeDialog = onShowComposeDialog,
-                        onShowReplyDialog = onShowReplyDialog,
-                        onShowAddColumnDialog = onShowAddColumnDialog,
-                    )
-
-                    // Compose dialog
-                    if (showComposeDialog) {
-                        ComposeNoteDialog(
-                            onDismiss = onDismissComposeDialog,
+                    CompositionLocalProvider(
+                        LocalNamecoinPreferences provides namecoinPreferences,
+                        LocalNamecoinService provides namecoinService,
+                    ) {
+                        MainContent(
+                            layoutMode = layoutMode,
+                            deckState = deckState,
                             relayManager = relayManager,
+                            localCache = localCache,
+                            accountManager = accountManager,
                             account = account,
-                            replyTo = replyToNote,
+                            nwcConnection = nwcConnection,
+                            subscriptionsCoordinator = subscriptionsCoordinator,
+                            appScope = scope,
+                            onShowComposeDialog = onShowComposeDialog,
+                            onShowReplyDialog = onShowReplyDialog,
+                            onShowAddColumnDialog = onShowAddColumnDialog,
                         )
-                    }
 
-                    // Add column dialog
-                    if (showAddColumnDialog) {
-                        AddColumnDialog(
-                            onDismiss = onDismissAddColumnDialog,
-                            onAdd = { type ->
-                                deckState.addColumn(type)
-                                onDismissAddColumnDialog()
-                            },
-                        )
-                    }
+                        // Compose dialog
+                        if (showComposeDialog) {
+                            ComposeNoteDialog(
+                                onDismiss = onDismissComposeDialog,
+                                relayManager = relayManager,
+                                account = account,
+                                replyTo = replyToNote,
+                            )
+                        }
+
+                        // Add column dialog
+                        if (showAddColumnDialog) {
+                            AddColumnDialog(
+                                onDismiss = onDismissAddColumnDialog,
+                                onAdd = { type ->
+                                    deckState.addColumn(type)
+                                    onDismissAddColumnDialog()
+                                },
+                            )
+                        }
+
+                        // Import Follow List dialog
+                        if (showImportFollowListDialog) {
+                            ImportFollowListDialog(
+                                onDismiss = onDismissImportFollowListDialog,
+                                relayManager = relayManager,
+                                account = account,
+                                localCache = localCache,
+                            )
+                        }
+                    } // end CompositionLocalProvider
                 }
             }
 
@@ -857,6 +903,7 @@ fun RelaySettingsScreen(
     relayManager: DesktopRelayConnectionManager,
     account: AccountState.LoggedIn,
     accountManager: AccountManager,
+    namecoinPreferences: DesktopNamecoinPreferences? = null,
 ) {
     val relayStatuses by relayManager.relayStatuses.collectAsState()
     val connectedRelays by relayManager.connectedRelays.collectAsState()
@@ -971,6 +1018,32 @@ fun RelaySettingsScreen(
         Spacer(Modifier.height(24.dp))
         HorizontalDivider()
         Spacer(Modifier.height(24.dp))
+
+        // Namecoin Resolution Settings
+        if (namecoinPreferences != null) {
+            val namecoinSettings by namecoinPreferences.settings.collectAsState()
+            val namecoinScope = rememberCoroutineScope()
+
+            NamecoinSettingsSection(
+                settings = namecoinSettings,
+                onToggleEnabled = { enabled ->
+                    namecoinScope.launch { namecoinPreferences.setEnabled(enabled) }
+                },
+                onAddServer = { server ->
+                    namecoinScope.launch { namecoinPreferences.addServer(server) }
+                },
+                onRemoveServer = { server ->
+                    namecoinScope.launch { namecoinPreferences.removeServer(server) }
+                },
+                onReset = {
+                    namecoinScope.launch { namecoinPreferences.reset() }
+                },
+            )
+
+            Spacer(Modifier.height(24.dp))
+            HorizontalDivider()
+            Spacer(Modifier.height(24.dp))
+        }
 
         // Developer Settings Section (only in debug mode)
         if (DebugConfig.isDebugMode) {

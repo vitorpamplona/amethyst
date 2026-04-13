@@ -18,6 +18,13 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.namecoin
+package com.vitorpamplona.amethyst.desktop.service.namecoin
 
-typealias NamecoinSettings = com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.namecoin.NamecoinSettings
+import androidx.compose.runtime.compositionLocalOf
+
+/**
+ * CompositionLocal for accessing Namecoin preferences and service
+ * throughout the Desktop compose tree without explicit parameter threading.
+ */
+val LocalNamecoinPreferences = compositionLocalOf<DesktopNamecoinPreferences?> { null }
+val LocalNamecoinService = compositionLocalOf<DesktopNamecoinNameService?> { null }
