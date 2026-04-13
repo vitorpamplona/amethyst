@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.ui.components
 import android.content.Context
 import android.net.Uri
 import android.os.Looper
-import com.abedelazizshe.lightcompressorlibrary.VideoCompressor
+import com.davotoula.lightcompressor.VideoCompressor
 import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.ui.components.util.MediaCompressorFileUtils

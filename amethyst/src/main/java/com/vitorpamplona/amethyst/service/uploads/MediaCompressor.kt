@@ -25,7 +25,7 @@ import android.graphics.Bitmap
 import android.net.Uri
 import androidx.core.net.toUri
 import androidx.media3.common.MimeTypes
-import com.abedelazizshe.lightcompressorlibrary.video.GifToMp4Converter
+import com.davotoula.lightcompressor.video.GifToMp4Converter
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.components.util.MediaCompressorFileUtils
 import com.vitorpamplona.quartz.utils.Log
