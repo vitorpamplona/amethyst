@@ -121,12 +121,22 @@ class DesktopTorManager(
                 when (mode) {
                     TorType.INTERNAL -> {
                         _status.value = TorServiceStatus.Connecting
-                        try {
-                            runtime.startDaemonAsync()
-                            // LISTENERS event will set Active(port)
-                        } catch (e: Exception) {
-                            Log.e("DesktopTorManager", "Failed to start Tor", e)
-                            _status.value = TorServiceStatus.Error(e.message ?: "Unknown error")
+                        // Retry start — previous daemon may still be stopping
+                        var started = false
+                        for (attempt in 1..3) {
+                            try {
+                                runtime.startDaemonAsync()
+                                started = true
+                                break
+                            } catch (e: Exception) {
+                                if (attempt < 3) {
+                                    Log.d("DesktopTorManager") { "Start attempt $attempt failed, retrying..." }
+                                    kotlinx.coroutines.delay(1000L * attempt)
+                                } else {
+                                    Log.e("DesktopTorManager", "Failed to start Tor after 3 attempts", e)
+                                    _status.value = TorServiceStatus.Error(e.message ?: "Unknown error")
+                                }
+                            }
                         }
                     }
 
@@ -165,10 +175,12 @@ class DesktopTorManager(
         }
     }
 
-    /** Call from shutdown hook to stop Tor synchronously. */
+    /** Call from shutdown hook to stop Tor synchronously. Waits for daemon exit. */
     fun stopSync() {
         try {
             runtime.stopDaemonSync()
+            // Wait for daemon process to fully exit
+            Thread.sleep(1000)
         } catch (_: Exception) {
             // Best-effort
         }

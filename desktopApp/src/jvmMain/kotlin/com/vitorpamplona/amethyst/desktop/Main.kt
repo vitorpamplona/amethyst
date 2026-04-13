@@ -193,6 +193,23 @@ fun main() {
         val accountManager = remember { AccountManager.create() }
         val accountState by accountManager.accountState.collectAsState()
         var showAddColumnDialog by remember { mutableStateOf(false) }
+
+        // Tor state at Window level — survives key() app rebuild
+        var torSettings by remember {
+            mutableStateOf(
+                com.vitorpamplona.amethyst.desktop.tor.DesktopTorPreferences
+                    .load(),
+            )
+        }
+        val torTypeFlow = remember { kotlinx.coroutines.flow.MutableStateFlow(torSettings.torType) }
+        val externalPortFlow = remember { kotlinx.coroutines.flow.MutableStateFlow(torSettings.externalSocksPort) }
+        val windowScope = rememberCoroutineScope()
+        val torManager =
+            remember {
+                com.vitorpamplona.amethyst.desktop.tor.DesktopTorManager(torTypeFlow, externalPortFlow, windowScope).also {
+                    activeTorManager = it
+                }
+            }
         var layoutMode by remember {
             mutableStateOf(
                 try {
@@ -432,6 +449,10 @@ fun main() {
                         onShowAddColumnDialog = { showAddColumnDialog = true },
                         replyToNote = replyToNote,
                         onRestartApp = { appRestartKey++ },
+                        torManager = torManager,
+                        torTypeFlow = torTypeFlow,
+                        externalPortFlow = externalPortFlow,
+                        initialTorSettings = torSettings,
                     )
                 }
             }
@@ -453,34 +474,54 @@ fun App(
     onShowAddColumnDialog: () -> Unit,
     replyToNote: com.vitorpamplona.quartz.nip01Core.core.Event?,
     onRestartApp: () -> Unit = {},
+    torManager: com.vitorpamplona.amethyst.desktop.tor.DesktopTorManager,
+    torTypeFlow: kotlinx.coroutines.flow.MutableStateFlow<com.vitorpamplona.amethyst.commons.tor.TorType>,
+    externalPortFlow: kotlinx.coroutines.flow.MutableStateFlow<Int>,
+    initialTorSettings: com.vitorpamplona.amethyst.commons.tor.TorSettings,
 ) {
-    val localCache = remember { DesktopLocalCache() }
-    val accountState by accountManager.accountState.collectAsState()
-    val scope = remember { CoroutineScope(SupervisorJob() + Dispatchers.Main) }
-
-    // Tor support: load settings, create manager, create proxy-aware HTTP client
+    // Always reload from prefs — after key() rebuild, prefs have the latest saved settings
     var torSettings by remember {
         mutableStateOf(
             com.vitorpamplona.amethyst.desktop.tor.DesktopTorPreferences
                 .load(),
         )
     }
-    val torTypeFlow = remember { kotlinx.coroutines.flow.MutableStateFlow(torSettings.torType) }
-    val externalPortFlow = remember { kotlinx.coroutines.flow.MutableStateFlow(torSettings.externalSocksPort) }
-    val torManager =
-        remember {
-            com.vitorpamplona.amethyst.desktop.tor.DesktopTorManager(torTypeFlow, externalPortFlow, scope).also {
-                activeTorManager = it
+
+    // Gate: block EVERYTHING until Tor proxy is ready (when Tor expected)
+    // This must be before any OkHttpClient/Coil/relay creation
+    val torStatus by torManager.status.collectAsState()
+    val isTorExpected = torSettings.torType != com.vitorpamplona.amethyst.commons.tor.TorType.OFF
+    if (isTorExpected && torStatus !is com.vitorpamplona.amethyst.commons.tor.TorServiceStatus.Active) {
+        androidx.compose.foundation.layout.Box(
+            modifier =
+                androidx.compose.ui.Modifier
+                    .fillMaxSize(),
+            contentAlignment = androidx.compose.ui.Alignment.Center,
+        ) {
+            androidx.compose.foundation.layout.Column(
+                horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
+            ) {
+                androidx.compose.material3.CircularProgressIndicator()
+                androidx.compose.foundation.layout.Spacer(
+                    modifier =
+                        androidx.compose.ui.Modifier
+                            .height(16.dp),
+                )
+                if (torStatus is com.vitorpamplona.amethyst.commons.tor.TorServiceStatus.Error) {
+                    androidx.compose.material3.Text(
+                        "Tor error: ${(torStatus as com.vitorpamplona.amethyst.commons.tor.TorServiceStatus.Error).message}",
+                    )
+                } else {
+                    androidx.compose.material3.Text("Connecting to Tor...")
+                }
             }
         }
-
-    // Clean up Tor daemon on unmount (key() change triggers this)
-    DisposableEffect(torManager) {
-        onDispose {
-            torManager.stopSync()
-            activeTorManager = null
-        }
+        return // Nothing below runs until Tor is Active
     }
+
+    val localCache = remember { DesktopLocalCache() }
+    val accountState by accountManager.accountState.collectAsState()
+    val scope = remember { CoroutineScope(SupervisorJob() + Dispatchers.Main) }
 
     // Build TorRelayEvaluation for per-relay routing
     val torRelayEvaluation =
@@ -512,6 +553,20 @@ fun App(
                         .setInstance(it)
                 }
         }
+    // Clean up old httpClient's connection pool on rebuild
+    DisposableEffect(httpClient) {
+        onDispose {
+            httpClient.sharedConnectionPool.evictAll()
+        }
+    }
+
+    // Reinitialize Coil after setInstance so image loads use the Tor-aware client
+    remember(httpClient) {
+        httpClient.evictConnections()
+        com.vitorpamplona.amethyst.desktop.service.images.DesktopImageLoaderSetup
+            .setup()
+    }
+
     val relayManager = remember(httpClient) { DesktopRelayConnectionManager(httpClient) }
 
     // Subscriptions coordinator — uses default relay URLs for metadata indexing.
