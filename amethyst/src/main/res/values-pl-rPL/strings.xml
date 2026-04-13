@@ -1760,8 +1760,8 @@
     <string name="namecoin_pin_cert_body">Serwer %1$s przedstawił certyfikat, który nie znajduje się jeszcze w Twoim magazynie certyfikatów zaufanych. Sprawdź, czy poniższy Fingerprint odpowiada wartości opublikowanej przez operatora serwera, a następnie zdecyduj, czy chcesz zaufać temu certyfikatowi w przypadku przyszłych połączeń.</string>
     <string name="namecoin_pin_cert_accept">Zaufaj</string>
     <string name="namecoin_pin_cert_reject">Odrzuć</string>
-    <string name="event_sync_title">Synchronizacja Transmitera</string>
-    <string name="event_sync_section">Synchronizacja Transmitera</string>
+    <string name="event_sync_title">Synchronizacja Transmiterów</string>
+    <string name="event_sync_section">Synchronizacja Transmiterów</string>
     <string name="event_sync_section_explainer">Opublikuj ponownie swoje wpisy na wszystkich znanych transmiterach, aby zaktualizować transmitery odbiorcze, nadawcze i wiadomości prywatnych. Wymagane połączenie Wi-Fi — może to spowodować zużycie dużej ilości danych.</string>
     <string name="event_sync_open_button">Otwórz transmiter synchronizacji…</string>
     <string name="event_sync_what_happens_title">Jak to działa</string>
@@ -1794,7 +1794,7 @@
     <string name="event_sync_activity_log_finished">Ukończono (%1$d transmiterów)</string>
     <string name="event_sync_log_sent">wysłano %1$s</string>
     <string name="event_sync_log_recv">odebrano %1$s</string>
-    <string name="event_sync_log_new">nowa %1$s</string>
+    <string name="event_sync_log_new">nowych %1$s</string>
     <string name="event_sync_no_events">brak wydarzeń</string>
     <string name="ots_explorer_settings">Eksplorator Bitcoin (OTS)</string>
     <string name="events">wydarzeń</string>
