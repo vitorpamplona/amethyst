@@ -18,7 +18,12 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.torState
+package com.vitorpamplona.amethyst.commons.tor
 
-// Canonical type now lives in commons
-typealias TorRelaySettings = com.vitorpamplona.amethyst.commons.tor.TorRelaySettings
+data class TorRelaySettings(
+    val torType: TorType = TorType.OFF,
+    val onionRelaysViaTor: Boolean = true,
+    val dmRelaysViaTor: Boolean = false,
+    val newRelaysViaTor: Boolean = false,
+    val trustedRelaysViaTor: Boolean = false,
+)

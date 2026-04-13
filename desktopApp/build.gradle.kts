@@ -62,6 +62,10 @@ dependencies {
     implementation(libs.kotlinx.collections.immutable)
     implementation(libs.androidx.collection)
 
+    // Tor daemon (desktop embedded via kmp-tor)
+    implementation(libs.kmp.tor.runtime)
+    implementation(libs.kmp.tor.resource.exec.tor)
+
     // SLF4J no-op — silence "No SLF4J providers" warnings from transitive deps
     implementation(libs.slf4j.nop)
 
@@ -85,6 +89,7 @@ compose.desktop {
         nativeDistributions {
             appResourcesRootDir.set(project.layout.projectDirectory.dir("src/jvmMain/appResources"))
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
+            modules("java.management") // Required by kmp-tor TorRuntime
 
             packageName = "Amethyst"
             packageVersion = "1.0.0"

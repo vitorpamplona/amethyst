@@ -18,7 +18,23 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.torState
+package com.vitorpamplona.amethyst.commons.tor
 
-// Canonical type now lives in commons
-typealias TorRelaySettings = com.vitorpamplona.amethyst.commons.tor.TorRelaySettings
+import kotlinx.coroutines.flow.StateFlow
+
+/**
+ * Platform-agnostic interface for Tor daemon management.
+ *
+ * Implementations are reactive: status is derived from settings changes.
+ * Android uses tor-android + jtorctl. Desktop uses kmp-tor.
+ */
+interface ITorManager {
+    val status: StateFlow<TorServiceStatus>
+    val activePortOrNull: StateFlow<Int?>
+
+    suspend fun dormant()
+
+    suspend fun active()
+
+    suspend fun newIdentity()
+}

@@ -20,20 +20,41 @@
  */
 package com.vitorpamplona.amethyst.desktop.network
 
+import com.vitorpamplona.amethyst.commons.tor.TorServiceStatus
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlin.test.Test
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class DesktopRelayConnectionManagerTest {
+    private fun createManager(): DesktopRelayConnectionManager {
+        val fakeTorManager =
+            object : com.vitorpamplona.amethyst.commons.tor.ITorManager {
+                override val status = MutableStateFlow<TorServiceStatus>(TorServiceStatus.Off)
+                override val activePortOrNull = MutableStateFlow<Int?>(null)
+
+                override suspend fun dormant() {}
+
+                override suspend fun active() {}
+
+                override suspend fun newIdentity() {}
+            }
+        val scope = CoroutineScope(SupervisorJob())
+        val httpClient = DesktopHttpClient(fakeTorManager, { false }, { com.vitorpamplona.amethyst.commons.tor.TorType.OFF }, scope)
+        return DesktopRelayConnectionManager(httpClient)
+    }
+
     @Test
     fun testRelayConnectionManagerCanBeInstantiated() {
-        val manager = DesktopRelayConnectionManager()
+        val manager = createManager()
         assertNotNull(manager)
     }
 
     @Test
     fun testRelayConnectionManagerHasNoActiveConnectionsInitially() {
-        val manager = DesktopRelayConnectionManager()
+        val manager = createManager()
         val connectedRelays = manager.connectedRelays.value
         val availableRelays = manager.availableRelays.value
         assertTrue(connectedRelays.isEmpty(), "Should have no connected relays on initialization")

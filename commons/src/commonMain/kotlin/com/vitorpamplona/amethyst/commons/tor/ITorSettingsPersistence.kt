@@ -18,7 +18,15 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.torState
+package com.vitorpamplona.amethyst.commons.tor
 
-// Canonical type now lives in commons
-typealias TorRelaySettings = com.vitorpamplona.amethyst.commons.tor.TorRelaySettings
+/**
+ * Platform-agnostic interface for persisting Tor settings.
+ *
+ * Android uses DataStore. Desktop uses java.util.prefs.Preferences.
+ */
+interface ITorSettingsPersistence {
+    fun load(): TorSettings
+
+    fun save(settings: TorSettings)
+}

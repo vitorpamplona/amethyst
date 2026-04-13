@@ -35,12 +35,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.amethyst.model.preferences.OtsSharedPreferences
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
-import com.vitorpamplona.amethyst.ui.tor.TorType
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)

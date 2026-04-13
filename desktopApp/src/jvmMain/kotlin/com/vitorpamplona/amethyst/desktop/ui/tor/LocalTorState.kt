@@ -18,7 +18,20 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.torState
+package com.vitorpamplona.amethyst.desktop.ui.tor
 
-// Canonical type now lives in commons
-typealias TorRelaySettings = com.vitorpamplona.amethyst.commons.tor.TorRelaySettings
+import androidx.compose.runtime.compositionLocalOf
+import com.vitorpamplona.amethyst.commons.tor.TorServiceStatus
+import com.vitorpamplona.amethyst.commons.tor.TorSettings
+import com.vitorpamplona.amethyst.commons.tor.TorType
+
+/**
+ * Composition locals for Tor state, avoiding threading params through every layer.
+ */
+data class TorState(
+    val status: TorServiceStatus = TorServiceStatus.Off,
+    val settings: TorSettings = TorSettings(torType = TorType.OFF),
+    val onSettingsChanged: (TorSettings) -> Unit = {},
+)
+
+val LocalTorState = compositionLocalOf { TorState() }

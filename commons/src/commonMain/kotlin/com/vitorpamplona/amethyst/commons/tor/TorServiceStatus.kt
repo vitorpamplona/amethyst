@@ -18,7 +18,18 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.torState
+package com.vitorpamplona.amethyst.commons.tor
 
-// Canonical type now lives in commons
-typealias TorRelaySettings = com.vitorpamplona.amethyst.commons.tor.TorRelaySettings
+sealed class TorServiceStatus {
+    data class Active(
+        val port: Int,
+    ) : TorServiceStatus()
+
+    data object Off : TorServiceStatus()
+
+    data object Connecting : TorServiceStatus()
+
+    data class Error(
+        val message: String,
+    ) : TorServiceStatus()
+}

@@ -67,6 +67,7 @@ import com.vitorpamplona.amethyst.commons.model.nip57Zaps.ZapAction
 import com.vitorpamplona.amethyst.commons.services.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
+import com.vitorpamplona.amethyst.desktop.network.DesktopHttpClient
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.nwc.NwcPaymentHandler
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -84,10 +85,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
 import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
-import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resume
 
 private val ZAP_AMOUNTS = listOf(21L, 100L, 500L, 1000L, 5000L, 10000L)
@@ -936,12 +935,7 @@ private suspend fun zapNote(
         }
 
         // Create HTTP client and resolver
-        val httpClient =
-            OkHttpClient
-                .Builder()
-                .connectTimeout(30, TimeUnit.SECONDS)
-                .readTimeout(30, TimeUnit.SECONDS)
-                .build()
+        val httpClient = DesktopHttpClient.currentClient()
         val resolver = LightningAddressResolver(httpClient)
 
         // Get relay URLs for zap request
