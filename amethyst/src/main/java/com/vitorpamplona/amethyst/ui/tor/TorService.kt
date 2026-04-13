@@ -54,6 +54,34 @@ class TorService(
     private val _status = MutableStateFlow<TorServiceStatus>(TorServiceStatus.Off)
     val status: StateFlow<TorServiceStatus> = _status.asStateFlow()
 
+    private fun artiDataDir() = File(context.filesDir, "arti")
+
+    /**
+     * Clears the Arti cache directory (consensus, relay descriptors) while
+     * preserving the state directory (guard selection). This forces a fresh
+     * consensus download on the next bootstrap, preventing stale cached data
+     * from causing circuit failures.
+     */
+    private fun clearArtiCache() {
+        val cacheDir = File(artiDataDir(), "cache")
+        if (cacheDir.exists()) {
+            cacheDir.deleteRecursively()
+            Log.d("TorService") { "Cleared Arti cache directory" }
+        }
+    }
+
+    /**
+     * Clears all Arti persistent data (state + cache). Used as a last resort
+     * when initialization fails, to recover from corrupted state.
+     */
+    private fun clearAllArtiData() {
+        val dataDir = artiDataDir()
+        if (dataDir.exists()) {
+            dataDir.deleteRecursively()
+            Log.d("TorService") { "Cleared all Arti data" }
+        }
+    }
+
     /**
      * Initialize the TorClient (once) and start the SOCKS proxy.
      * Must be called from a coroutine on [Dispatchers.IO].
@@ -90,12 +118,21 @@ class TorService(
                     }
                 }
 
-                val dataDir = File(context.filesDir, "arti").absolutePath
+                // Clear cached consensus/descriptors so Arti bootstraps with
+                // fresh network data, preventing stale guards/circuits.
+                clearArtiCache()
+
+                val dataDir = artiDataDir().absolutePath
                 Log.d("TorService") { "Initializing Arti with data dir: $dataDir" }
 
-                val initResult = ArtiNative.initialize(dataDir)
+                var initResult = ArtiNative.initialize(dataDir)
                 if (initResult != 0) {
-                    Log.e("TorService") { "Failed to initialize Arti: error $initResult" }
+                    Log.e("TorService") { "Failed to initialize Arti: error $initResult, clearing data and retrying" }
+                    clearAllArtiData()
+                    initResult = ArtiNative.initialize(dataDir)
+                }
+                if (initResult != 0) {
+                    Log.e("TorService") { "Failed to initialize Arti on retry: error $initResult" }
                     initialized.set(false)
                     _status.value = TorServiceStatus.Off
                     return@withContext

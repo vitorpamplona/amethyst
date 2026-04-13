@@ -73,7 +73,10 @@ object MlsCryptoProvider {
      *     opaque context<V> = Context;
      * } KDFLabel;
      * ```
-     * Label and context lengths use QUIC-style variable-length integer encoding.
+     * Label and context use TLS variable-length vectors with fixed-width
+     * length prefixes per RFC 9420 Section 8:
+     *   opaque label<V> uses a 1-byte length prefix (opaque<7..255>)
+     *   opaque context<V> uses a 4-byte length prefix (opaque<0..2^32-1>)
      */
     fun expandWithLabel(
         secret: ByteArray,
@@ -84,8 +87,8 @@ object MlsCryptoProvider {
         val fullLabel = "MLS 1.0 $label".encodeToByteArray()
         val hkdfLabel = TlsWriter(4 + fullLabel.size + context.size)
         hkdfLabel.putUint16(length)
-        hkdfLabel.putOpaqueVarInt(fullLabel)
-        hkdfLabel.putOpaqueVarInt(context)
+        hkdfLabel.putOpaque1(fullLabel)
+        hkdfLabel.putOpaque4(context)
         return hkdfExpand(secret, hkdfLabel.toByteArray(), length)
     }
 
@@ -103,8 +106,8 @@ object MlsCryptoProvider {
         val fullLabel = prefix + label
         val hkdfLabel = TlsWriter(4 + fullLabel.size + context.size)
         hkdfLabel.putUint16(length)
-        hkdfLabel.putOpaqueVarInt(fullLabel)
-        hkdfLabel.putOpaqueVarInt(context)
+        hkdfLabel.putOpaque1(fullLabel)
+        hkdfLabel.putOpaque4(context)
         return hkdfExpand(secret, hkdfLabel.toByteArray(), length)
     }
 

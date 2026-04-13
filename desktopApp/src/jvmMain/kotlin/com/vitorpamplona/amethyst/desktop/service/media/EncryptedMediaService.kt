@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.amethyst.desktop.service.media
 
+import com.vitorpamplona.amethyst.desktop.network.DesktopHttpClient
 import com.vitorpamplona.quartz.utils.ciphers.AESGCM
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.util.concurrent.ConcurrentHashMap
 
@@ -33,7 +33,7 @@ import java.util.concurrent.ConcurrentHashMap
  * Caches decrypted bytes in memory to avoid re-downloading on recomposition.
  */
 object EncryptedMediaService {
-    private val httpClient = OkHttpClient()
+    private val httpClient get() = DesktopHttpClient.currentClient()
     private val cache = ConcurrentHashMap<String, ByteArray>()
     private const val MAX_CACHE_ENTRIES = 20
 

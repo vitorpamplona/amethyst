@@ -24,6 +24,9 @@ fragmentKtx = "1.8.9"
 gms = "4.4.4"
 jacksonModuleKotlin = "2.21.2"
 javaKeyring = "1.0.4"
+jtorctl = "0.4.5.7"
+kmpTorRuntime = "2.6.0"
+kmpTorResource = "409.5.0"
 junit = "4.13.2"
 kchesslib = "1.0.5"
 kotlin = "2.3.20"
@@ -35,14 +38,14 @@ genaiPrompt = "1.0.0-beta2"
 genaiRewriting = "1.0.0-beta1"
 languageId = "17.0.6"
 lifecycleRuntimeKtx = "2.10.0"
-lightcompressor-enhanced = "1.8.3"
+lightcompressor-enhanced = "1.9.0"
 markdown = "f92ef49c9d"
 material3 = "1.9.0"
 materialIconsExtended = "1.7.3"
 media3 = "1.10.0"
 mockk = "1.14.9"
 kotlinx-coroutines-test = "1.10.2"
-negentropyKmp = "1.0.1"
+negentropyKmp = "v1.0.2"
 netUrlencoderLibVersion = "1.6.0"
 navigationCompose = "2.9.7"
 okhttp = "5.3.2"
@@ -144,6 +147,9 @@ google-mlkit-language-id = { group = "com.google.mlkit", name = "language-id", v
 google-mlkit-translate = { group = "com.google.mlkit", name = "translate", version.ref = "translate" }
 jackson-module-kotlin = { group = "com.fasterxml.jackson.module", name = "jackson-module-kotlin", version.ref = "jacksonModuleKotlin" }
 java-keyring = { group = "com.github.javakeyring", name = "java-keyring", version.ref = "javaKeyring" }
+jtorctl = { module = "info.guardianproject:jtorctl", version.ref = "jtorctl" }
+kmp-tor-runtime = { group = "io.matthewnelson.kmp-tor", name = "runtime", version.ref = "kmpTorRuntime" }
+kmp-tor-resource-exec-tor = { group = "io.matthewnelson.kmp-tor", name = "resource-exec-tor", version.ref = "kmpTorResource" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 kchesslib = { module = "io.github.cvb941:kchesslib", version.ref = "kchesslib" }
 kotlinx-collections-immutable = { group = "org.jetbrains.kotlinx", name = "kotlinx-collections-immutable", version.ref = "kotlinxCollectionsImmutable" }

@@ -42,14 +42,33 @@ static uint64_t now_ns(void) {
     return (uint64_t)ts.tv_sec * 1000000000ULL + ts.tv_nsec;
 }
 
+/* Format a uint64 with comma-separated thousands into a static buffer.
+   Uses a ring of 4 buffers so two calls can be used in one printf. */
+static const char *fmt_comma(uint64_t v) {
+    static char bufs[4][32];
+    static int idx = 0;
+    char *buf = bufs[idx++ & 3];
+    char tmp[32];
+    int n = snprintf(tmp, sizeof(tmp), "%llu", (unsigned long long)v);
+    int commas = (n - 1) / 3;
+    int len = n + commas;
+    buf[len] = '\0';
+    int src = n - 1, dst = len - 1, grp = 0;
+    while (src >= 0) {
+        buf[dst--] = tmp[src--];
+        if (++grp == 3 && src >= 0) { buf[dst--] = ','; grp = 0; }
+    }
+    return buf;
+}
+
 #define BENCH(name, warmup, iters, body) do { \
     for (int _w = 0; _w < (warmup); _w++) { body; } \
     uint64_t _start = now_ns(); \
     for (int _i = 0; _i < (iters); _i++) { body; } \
     uint64_t _el = now_ns() - _start; \
-    printf("  %-24s %8llu ns/op  %8llu ops/s\n", name, \
-        (unsigned long long)(_el / (iters)), \
-        (unsigned long long)((uint64_t)(iters) * 1000000000ULL / _el)); \
+    printf("  %-24s %10s ns/op  %10s ops/s\n", name, \
+        fmt_comma(_el / (iters)), \
+        fmt_comma((uint64_t)(iters) * 1000000000ULL / _el)); \
 } while(0)
 
 int main(void) {

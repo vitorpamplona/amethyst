@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.model.marmot
 
 import com.vitorpamplona.amethyst.model.preferences.KeyStoreEncryption
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupStateStore
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -42,7 +43,17 @@ class AndroidMlsGroupStateStore(
     private val rootDir: File,
     private val encryption: KeyStoreEncryption = KeyStoreEncryption(),
 ) : MlsGroupStateStore {
-    private fun groupDir(nostrGroupId: String): File = File(rootDir, "mls_groups/$nostrGroupId")
+    private fun groupDir(nostrGroupId: String): File {
+        // Validate nostrGroupId is a hex string to prevent path traversal
+        require(nostrGroupId.matches(HEX_PATTERN)) {
+            "Invalid nostrGroupId: must be a hex string"
+        }
+        return File(rootDir, "mls_groups/$nostrGroupId")
+    }
+
+    companion object {
+        private val HEX_PATTERN = Regex("^[0-9a-fA-F]+$")
+    }
 
     private fun stateFile(nostrGroupId: String): File = File(groupDir(nostrGroupId), "state")
 
@@ -158,7 +169,9 @@ class AndroidMlsGroupStateStore(
         if (!tempFile.renameTo(target)) {
             // Fallback: if rename fails (e.g., cross-filesystem), copy and delete
             tempFile.copyTo(target, overwrite = true)
-            tempFile.delete()
+            if (!tempFile.delete()) {
+                Log.w("AndroidMlsGroupStateStore") { "Failed to delete temp file after copy fallback: ${tempFile.absolutePath}" }
+            }
         }
     }
 }

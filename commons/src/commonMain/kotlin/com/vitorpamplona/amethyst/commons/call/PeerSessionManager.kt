@@ -32,6 +32,10 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
  * - **Callee-to-callee mesh**: lower pubkey initiates
  *
  * It is platform-independent and testable without real WebRTC.
+ *
+ * All map-accessing methods are synchronized because ICE candidates
+ * arrive from WebRTC native threads while session management runs
+ * on coroutine dispatchers.
  */
 class PeerSessionManager(
     val localPubKey: HexKey,
@@ -42,6 +46,7 @@ class PeerSessionManager(
         val pendingIceCandidates: MutableList<IceCandidateData> = mutableListOf(),
     )
 
+    private val lock = Any()
     private val sessions = mutableMapOf<HexKey, SessionEntry>()
 
     /** Candidates received before a session exists for the sender. */
@@ -52,24 +57,26 @@ class PeerSessionManager(
     fun registerSession(
         peerPubKey: HexKey,
         session: PeerSession,
-    ): SessionEntry {
-        val globalPending = globalPendingIce.remove(peerPubKey) ?: emptyList()
-        val entry = SessionEntry(session)
-        entry.pendingIceCandidates.addAll(globalPending)
-        sessions[peerPubKey] = entry
-        return entry
-    }
+    ): SessionEntry =
+        synchronized(lock) {
+            val globalPending = globalPendingIce.remove(peerPubKey) ?: emptyList()
+            val entry = SessionEntry(session)
+            entry.pendingIceCandidates.addAll(globalPending)
+            sessions[peerPubKey] = entry
+            entry
+        }
 
-    fun getSession(peerPubKey: HexKey): SessionEntry? = sessions[peerPubKey]
+    fun getSession(peerPubKey: HexKey): SessionEntry? = synchronized(lock) { sessions[peerPubKey] }
 
-    fun hasSession(peerPubKey: HexKey): Boolean = sessions.containsKey(peerPubKey)
+    fun hasSession(peerPubKey: HexKey): Boolean = synchronized(lock) { sessions.containsKey(peerPubKey) }
 
-    fun removeSession(peerPubKey: HexKey): SessionEntry? {
-        globalPendingIce.remove(peerPubKey)
-        return sessions.remove(peerPubKey)
-    }
+    fun removeSession(peerPubKey: HexKey): SessionEntry? =
+        synchronized(lock) {
+            globalPendingIce.remove(peerPubKey)
+            sessions.remove(peerPubKey)
+        }
 
-    fun allSessionKeys(): Set<HexKey> = sessions.keys.toSet()
+    fun allSessionKeys(): Set<HexKey> = synchronized(lock) { sessions.keys.toSet() }
 
     // ---- ICE candidate routing (two-layer buffering) ----
 
@@ -84,42 +91,47 @@ class PeerSessionManager(
     fun routeIceCandidate(
         senderPubKey: HexKey,
         candidate: IceCandidateData,
-    ): IceRouteAction {
-        val entry = sessions[senderPubKey]
-        return when {
-            entry != null && entry.remoteDescriptionSet -> {
-                entry.session.addIceCandidate(candidate)
-                IceRouteAction.ADDED_DIRECTLY
-            }
+    ): IceRouteAction =
+        synchronized(lock) {
+            val entry = sessions[senderPubKey]
+            when {
+                entry != null && entry.remoteDescriptionSet -> {
+                    entry.session.addIceCandidate(candidate)
+                    IceRouteAction.ADDED_DIRECTLY
+                }
 
-            entry != null -> {
-                entry.pendingIceCandidates.add(candidate)
-                IceRouteAction.BUFFERED_PER_SESSION
-            }
+                entry != null -> {
+                    entry.pendingIceCandidates.add(candidate)
+                    IceRouteAction.BUFFERED_PER_SESSION
+                }
 
-            else -> {
-                globalPendingIce.getOrPut(senderPubKey) { mutableListOf() }.add(candidate)
-                IceRouteAction.BUFFERED_GLOBALLY
+                else -> {
+                    globalPendingIce.getOrPut(senderPubKey) { mutableListOf() }.add(candidate)
+                    IceRouteAction.BUFFERED_GLOBALLY
+                }
             }
         }
-    }
 
     /**
      * Flushes all per-session buffered candidates into the PeerConnection.
      * Called after setRemoteDescription succeeds.
      */
     fun flushPendingIceCandidates(peerPubKey: HexKey): Int {
-        val entry = sessions[peerPubKey] ?: return 0
-        entry.remoteDescriptionSet = true
-        val candidates = entry.pendingIceCandidates.toList()
-        entry.pendingIceCandidates.clear()
+        val candidates: List<IceCandidateData>
+        val entry: SessionEntry
+        synchronized(lock) {
+            entry = sessions[peerPubKey] ?: return 0
+            entry.remoteDescriptionSet = true
+            candidates = entry.pendingIceCandidates.toList()
+            entry.pendingIceCandidates.clear()
+        }
         candidates.forEach { entry.session.addIceCandidate(it) }
         return candidates.size
     }
 
-    fun globalPendingCount(peerPubKey: HexKey): Int = globalPendingIce[peerPubKey]?.size ?: 0
+    fun globalPendingCount(peerPubKey: HexKey): Int = synchronized(lock) { globalPendingIce[peerPubKey]?.size ?: 0 }
 
-    fun sessionPendingCount(peerPubKey: HexKey): Int = sessions[peerPubKey]?.pendingIceCandidates?.size ?: 0
+    fun sessionPendingCount(peerPubKey: HexKey): Int = synchronized(lock) { sessions[peerPubKey]?.pendingIceCandidates?.size ?: 0 }
 
     // ---- Renegotiation glare handling ----
 
@@ -135,7 +147,7 @@ class PeerSessionManager(
         remoteSdpOffer: String,
         onAcceptRemote: (SessionEntry) -> Unit,
     ): GlareResolution {
-        val entry = sessions[peerPubKey] ?: return GlareResolution.NO_SESSION
+        val entry = synchronized(lock) { sessions[peerPubKey] } ?: return GlareResolution.NO_SESSION
 
         val signalingState = entry.session.getSignalingState()
         if (signalingState != SignalingState.HAVE_LOCAL_OFFER) {
@@ -172,7 +184,7 @@ class PeerSessionManager(
         peerPubKey: HexKey,
         sdpAnswer: String,
     ): AnswerRouteAction {
-        val entry = sessions[peerPubKey] ?: return AnswerRouteAction.NO_SESSION
+        val entry = synchronized(lock) { sessions[peerPubKey] } ?: return AnswerRouteAction.NO_SESSION
 
         val signalingState = entry.session.getSignalingState()
         if (signalingState != SignalingState.HAVE_LOCAL_OFFER) {
@@ -187,11 +199,15 @@ class PeerSessionManager(
     // ---- Cleanup ----
 
     fun disposeAll() {
-        for (entry in sessions.values) {
+        val entries: List<SessionEntry>
+        synchronized(lock) {
+            entries = sessions.values.toList()
+            sessions.clear()
+            globalPendingIce.clear()
+        }
+        for (entry in entries) {
             entry.session.dispose()
         }
-        sessions.clear()
-        globalPendingIce.clear()
     }
 }
 

@@ -200,6 +200,9 @@ class AccountSettings(
     val viewedPollResultNoteIds: MutableStateFlow<Map<String, Long>> = MutableStateFlow(mapOf()),
     val pendingAttestations: MutableStateFlow<Map<HexKey, String>> = MutableStateFlow(mapOf()),
     var backupNipA3PaymentTargets: PaymentTargetsEvent? = null,
+    var callTurnServers: List<CallTurnServer> = emptyList(),
+    var callVideoResolution: CallVideoResolution = CallVideoResolution.HD_720,
+    var callMaxBitrateBps: Int = 1_500_000,
 ) : EphemeralChatRepository,
     PublicChatListRepository {
     val saveable = MutableStateFlow(AccountSettingsUpdater(null))
@@ -920,4 +923,42 @@ class AccountSettings(
         } else {
             false
         }
+
+    // ---
+    // Call settings
+    // ---
+
+    fun changeCallTurnServers(servers: List<CallTurnServer>) {
+        callTurnServers = servers
+        saveAccountSettings()
+    }
+
+    fun changeCallVideoResolution(resolution: CallVideoResolution) {
+        callVideoResolution = resolution
+        saveAccountSettings()
+    }
+
+    fun changeCallMaxBitrateBps(bitrate: Int) {
+        callMaxBitrateBps = bitrate
+        saveAccountSettings()
+    }
+}
+
+@Serializable
+data class CallTurnServer(
+    val url: String,
+    val username: String,
+    val credential: String,
+)
+
+@Serializable
+enum class CallVideoResolution(
+    val width: Int,
+    val height: Int,
+    val fps: Int,
+    val label: String,
+) {
+    SD_480(640, 480, 30, "480p"),
+    HD_720(1280, 720, 30, "720p (default)"),
+    FHD_1080(1920, 1080, 30, "1080p"),
 }

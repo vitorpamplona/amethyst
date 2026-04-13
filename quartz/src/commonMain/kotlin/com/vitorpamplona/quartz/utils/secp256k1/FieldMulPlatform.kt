@@ -67,10 +67,10 @@ package com.vitorpamplona.quartz.utils.secp256k1
  * Platform implementations call fieldMulReduceWith with the best available intrinsic.
  */
 internal expect fun fieldMulReduce(
-    out: LongArray,
-    a: LongArray,
-    b: LongArray,
-    w: LongArray,
+    out: Fe4,
+    a: Fe4,
+    b: Fe4,
+    w: Wide8,
 )
 
 /**
@@ -78,9 +78,9 @@ internal expect fun fieldMulReduce(
  * Platform implementations call fieldSqrReduceWith with the best available intrinsic.
  */
 internal expect fun fieldSqrReduce(
-    out: LongArray,
-    a: LongArray,
-    w: LongArray,
+    out: Fe4,
+    a: Fe4,
+    w: Wide8,
 )
 
 // P[0] constant for reduceSelf (duplicated here because inline functions can't
@@ -101,21 +101,21 @@ private const val FIELD_P0 = -4294968273L // 0xFFFFFFFEFFFFFC2F
  */
 @Suppress("LongMethod")
 internal inline fun fieldMulReduceWith(
-    out: LongArray,
-    a: LongArray,
-    b: LongArray,
-    w: LongArray,
+    out: Fe4,
+    a: Fe4,
+    b: Fe4,
+    w: Wide8,
     umulh: (Long, Long) -> Long,
 ) {
     // === Stage 1: 4×4 schoolbook multiplication (16 products) ===
-    val a0 = a[0]
-    val a1 = a[1]
-    val a2 = a[2]
-    val a3 = a[3]
-    val b0 = b[0]
-    val b1 = b[1]
-    val b2 = b[2]
-    val b3 = b[3]
+    val a0 = a.l0
+    val a1 = a.l1
+    val a2 = a.l2
+    val a3 = a.l3
+    val b0 = b.l0
+    val b1 = b.l1
+    val b2 = b.l2
+    val b3 = b.l3
     var lo: Long
     var hi: Long
     var prev: Long
@@ -126,143 +126,143 @@ internal inline fun fieldMulReduceWith(
 
     // Row 0: a0 × [b0,b1,b2,b3]
     lo = a0 * b0
-    w[0] = lo
+    w.l0 = lo
     carry = umulh(a0, b0)
 
     lo = a0 * b1
     s = lo + carry
     c1 = if (uLtInline(s, lo)) 1L else 0L
-    w[1] = s
+    w.l1 = s
     carry = umulh(a0, b1) + c1
 
     lo = a0 * b2
     s = lo + carry
     c1 = if (uLtInline(s, lo)) 1L else 0L
-    w[2] = s
+    w.l2 = s
     carry = umulh(a0, b2) + c1
 
     lo = a0 * b3
     s = lo + carry
     c1 = if (uLtInline(s, lo)) 1L else 0L
-    w[3] = s
-    w[4] = umulh(a0, b3) + c1
+    w.l3 = s
+    w.l4 = umulh(a0, b3) + c1
 
     // Row 1: a1 × [b0,b1,b2,b3]
     lo = a1 * b0
     hi = umulh(a1, b0)
-    prev = w[1]
+    prev = w.l1
     s = prev + lo
     c1 = if (uLtInline(s, prev)) 1L else 0L
-    w[1] = s
+    w.l1 = s
     carry = hi + c1
 
     lo = a1 * b1
     hi = umulh(a1, b1)
-    prev = w[2]
+    prev = w.l2
     s = prev + lo
     c1 = if (uLtInline(s, prev)) 1L else 0L
     s += carry
     c2 = if (uLtInline(s, carry)) 1L else 0L
-    w[2] = s
+    w.l2 = s
     carry = hi + c1 + c2
 
     lo = a1 * b2
     hi = umulh(a1, b2)
-    prev = w[3]
+    prev = w.l3
     s = prev + lo
     c1 = if (uLtInline(s, prev)) 1L else 0L
     s += carry
     c2 = if (uLtInline(s, carry)) 1L else 0L
-    w[3] = s
+    w.l3 = s
     carry = hi + c1 + c2
 
     lo = a1 * b3
     hi = umulh(a1, b3)
-    prev = w[4]
+    prev = w.l4
     s = prev + lo
     c1 = if (uLtInline(s, prev)) 1L else 0L
     s += carry
     c2 = if (uLtInline(s, carry)) 1L else 0L
-    w[4] = s
-    w[5] = hi + c1 + c2
+    w.l4 = s
+    w.l5 = hi + c1 + c2
 
     // Row 2: a2 × [b0,b1,b2,b3]
     lo = a2 * b0
     hi = umulh(a2, b0)
-    prev = w[2]
+    prev = w.l2
     s = prev + lo
     c1 = if (uLtInline(s, prev)) 1L else 0L
-    w[2] = s
+    w.l2 = s
     carry = hi + c1
 
     lo = a2 * b1
     hi = umulh(a2, b1)
-    prev = w[3]
+    prev = w.l3
     s = prev + lo
     c1 = if (uLtInline(s, prev)) 1L else 0L
     s += carry
     c2 = if (uLtInline(s, carry)) 1L else 0L
-    w[3] = s
+    w.l3 = s
     carry = hi + c1 + c2
 
     lo = a2 * b2
     hi = umulh(a2, b2)
-    prev = w[4]
+    prev = w.l4
     s = prev + lo
     c1 = if (uLtInline(s, prev)) 1L else 0L
     s += carry
     c2 = if (uLtInline(s, carry)) 1L else 0L
-    w[4] = s
+    w.l4 = s
     carry = hi + c1 + c2
 
     lo = a2 * b3
     hi = umulh(a2, b3)
-    prev = w[5]
+    prev = w.l5
     s = prev + lo
     c1 = if (uLtInline(s, prev)) 1L else 0L
     s += carry
     c2 = if (uLtInline(s, carry)) 1L else 0L
-    w[5] = s
-    w[6] = hi + c1 + c2
+    w.l5 = s
+    w.l6 = hi + c1 + c2
 
     // Row 3: a3 × [b0,b1,b2,b3]
     lo = a3 * b0
     hi = umulh(a3, b0)
-    prev = w[3]
+    prev = w.l3
     s = prev + lo
     c1 = if (uLtInline(s, prev)) 1L else 0L
-    w[3] = s
+    w.l3 = s
     carry = hi + c1
 
     lo = a3 * b1
     hi = umulh(a3, b1)
-    prev = w[4]
+    prev = w.l4
     s = prev + lo
     c1 = if (uLtInline(s, prev)) 1L else 0L
     s += carry
     c2 = if (uLtInline(s, carry)) 1L else 0L
-    w[4] = s
+    w.l4 = s
     carry = hi + c1 + c2
 
     lo = a3 * b2
     hi = umulh(a3, b2)
-    prev = w[5]
+    prev = w.l5
     s = prev + lo
     c1 = if (uLtInline(s, prev)) 1L else 0L
     s += carry
     c2 = if (uLtInline(s, carry)) 1L else 0L
-    w[5] = s
+    w.l5 = s
     carry = hi + c1 + c2
 
     lo = a3 * b3
     hi = umulh(a3, b3)
-    prev = w[6]
+    prev = w.l6
     s = prev + lo
     c1 = if (uLtInline(s, prev)) 1L else 0L
     s += carry
     c2 = if (uLtInline(s, carry)) 1L else 0L
-    w[6] = s
-    w[7] = hi + c1 + c2
+    w.l6 = s
+    w.l7 = hi + c1 + c2
 
     // === Stage 2: mod-p reduction (2^256 ≡ 2^32 + 977 mod p) ===
     reduceWideInline(out, w, umulh)
@@ -275,15 +275,15 @@ internal inline fun fieldMulReduceWith(
  */
 @Suppress("LongMethod")
 internal inline fun fieldSqrReduceWith(
-    out: LongArray,
-    a: LongArray,
-    w: LongArray,
+    out: Fe4,
+    a: Fe4,
+    w: Wide8,
     umulh: (Long, Long) -> Long,
 ) {
-    val a0 = a[0]
-    val a1 = a[1]
-    val a2 = a[2]
-    val a3 = a[3]
+    val a0 = a.l0
+    val a1 = a.l1
+    val a2 = a.l2
+    val a3 = a.l3
     var lo: Long
     var hi: Long
     var prev: Long
@@ -294,117 +294,117 @@ internal inline fun fieldSqrReduceWith(
     var v: Long
 
     // Pass 1: cross-products a[i]*a[j] for i < j
-    w[0] = 0L
+    w.l0 = 0L
     lo = a0 * a1
-    w[1] = lo
+    w.l1 = lo
     carry = umulh(a0, a1)
 
     lo = a0 * a2
     s = lo + carry
     c1 = if (uLtInline(s, lo)) 1L else 0L
-    w[2] = s
+    w.l2 = s
     carry = umulh(a0, a2) + c1
 
     lo = a0 * a3
     s = lo + carry
     c1 = if (uLtInline(s, lo)) 1L else 0L
-    w[3] = s
-    w[4] = umulh(a0, a3) + c1
+    w.l3 = s
+    w.l4 = umulh(a0, a3) + c1
 
     lo = a1 * a2
     hi = umulh(a1, a2)
-    prev = w[3]
+    prev = w.l3
     s = prev + lo
     c1 = if (uLtInline(s, prev)) 1L else 0L
-    w[3] = s
+    w.l3 = s
     carry = hi + c1
 
     lo = a1 * a3
     hi = umulh(a1, a3)
-    prev = w[4]
+    prev = w.l4
     s = prev + lo
     c1 = if (uLtInline(s, prev)) 1L else 0L
     s += carry
     c2 = if (uLtInline(s, carry)) 1L else 0L
-    w[4] = s
-    w[5] = hi + c1 + c2
+    w.l4 = s
+    w.l5 = hi + c1 + c2
 
     lo = a2 * a3
     hi = umulh(a2, a3)
-    prev = w[5]
+    prev = w.l5
     s = prev + lo
     c1 = if (uLtInline(s, prev)) 1L else 0L
-    w[5] = s
-    w[6] = hi + c1
+    w.l5 = s
+    w.l6 = hi + c1
 
     // Pass 2: double all cross-products (shift left by 1 bit)
-    v = w[1]
-    w[1] = v shl 1
+    v = w.l1
+    w.l1 = v shl 1
     var shiftCarry = v ushr 63
-    v = w[2]
-    w[2] = (v shl 1) or shiftCarry
+    v = w.l2
+    w.l2 = (v shl 1) or shiftCarry
     shiftCarry = v ushr 63
-    v = w[3]
-    w[3] = (v shl 1) or shiftCarry
+    v = w.l3
+    w.l3 = (v shl 1) or shiftCarry
     shiftCarry = v ushr 63
-    v = w[4]
-    w[4] = (v shl 1) or shiftCarry
+    v = w.l4
+    w.l4 = (v shl 1) or shiftCarry
     shiftCarry = v ushr 63
-    v = w[5]
-    w[5] = (v shl 1) or shiftCarry
+    v = w.l5
+    w.l5 = (v shl 1) or shiftCarry
     shiftCarry = v ushr 63
-    v = w[6]
-    w[6] = (v shl 1) or shiftCarry
+    v = w.l6
+    w.l6 = (v shl 1) or shiftCarry
     shiftCarry = v ushr 63
-    w[7] = shiftCarry
+    w.l7 = shiftCarry
 
     // Pass 3: add diagonal products a[i]²
     lo = a0 * a0
     hi = umulh(a0, a0)
-    w[0] = lo
-    s = w[1] + hi
-    c1 = if (uLtInline(s, w[1])) 1L else 0L
-    w[1] = s
+    w.l0 = lo
+    s = w.l1 + hi
+    c1 = if (uLtInline(s, w.l1)) 1L else 0L
+    w.l1 = s
     var dCarry = c1
 
     lo = a1 * a1
     hi = umulh(a1, a1)
-    s = w[2] + lo
-    c1 = if (uLtInline(s, w[2])) 1L else 0L
+    s = w.l2 + lo
+    c1 = if (uLtInline(s, w.l2)) 1L else 0L
     s += dCarry
     c2 = if (uLtInline(s, dCarry)) 1L else 0L
-    w[2] = s
-    prev = w[3] + hi
-    val c3a = if (uLtInline(prev, w[3])) 1L else 0L
+    w.l2 = s
+    prev = w.l3 + hi
+    val c3a = if (uLtInline(prev, w.l3)) 1L else 0L
     prev += c1 + c2
     val c4a = if (uLtInline(prev, c1 + c2)) 1L else 0L
-    w[3] = prev
+    w.l3 = prev
     dCarry = c3a + c4a
 
     lo = a2 * a2
     hi = umulh(a2, a2)
-    s = w[4] + lo
-    c1 = if (uLtInline(s, w[4])) 1L else 0L
+    s = w.l4 + lo
+    c1 = if (uLtInline(s, w.l4)) 1L else 0L
     s += dCarry
     c2 = if (uLtInline(s, dCarry)) 1L else 0L
-    w[4] = s
-    prev = w[5] + hi
-    val c3b = if (uLtInline(prev, w[5])) 1L else 0L
+    w.l4 = s
+    prev = w.l5 + hi
+    val c3b = if (uLtInline(prev, w.l5)) 1L else 0L
     prev += c1 + c2
     val c4b = if (uLtInline(prev, c1 + c2)) 1L else 0L
-    w[5] = prev
+    w.l5 = prev
     dCarry = c3b + c4b
 
     lo = a3 * a3
     hi = umulh(a3, a3)
-    s = w[6] + lo
-    c1 = if (uLtInline(s, w[6])) 1L else 0L
+    s = w.l6 + lo
+    c1 = if (uLtInline(s, w.l6)) 1L else 0L
     s += dCarry
     c2 = if (uLtInline(s, dCarry)) 1L else 0L
-    w[6] = s
-    prev = w[7] + hi
+    w.l6 = s
+    prev = w.l7 + hi
     prev += c1 + c2
-    w[7] = prev
+    w.l7 = prev
 
     // === Reduction ===
     reduceWideInline(out, w, umulh)
@@ -417,8 +417,8 @@ internal inline fun fieldSqrReduceWith(
  */
 @Suppress("LongMethod")
 internal inline fun reduceWideInline(
-    out: LongArray,
-    w: LongArray,
+    out: Fe4,
+    w: Wide8,
     umulh: (Long, Long) -> Long,
 ) {
     val c = 4294968273L // 2^32 + 977
@@ -430,84 +430,84 @@ internal inline fun reduceWideInline(
     var c2: Long
 
     // Round 1: acc = lo + hi × C
-    hcLo = w[4] * c
-    hcHi = umulh(w[4], c)
-    s1 = w[0] + hcLo
-    c1 = if (uLtInline(s1, w[0])) 1L else 0L
-    out[0] = s1
+    hcLo = w.l4 * c
+    hcHi = umulh(w.l4, c)
+    s1 = w.l0 + hcLo
+    c1 = if (uLtInline(s1, w.l0)) 1L else 0L
+    out.l0 = s1
     var carry = hcHi + c1
 
-    hcLo = w[5] * c
-    hcHi = umulh(w[5], c)
-    s1 = w[1] + hcLo
-    c1 = if (uLtInline(s1, w[1])) 1L else 0L
+    hcLo = w.l5 * c
+    hcHi = umulh(w.l5, c)
+    s1 = w.l1 + hcLo
+    c1 = if (uLtInline(s1, w.l1)) 1L else 0L
     s2 = s1 + carry
     c2 = if (uLtInline(s2, s1)) 1L else 0L
-    out[1] = s2
+    out.l1 = s2
     carry = hcHi + c1 + c2
 
-    hcLo = w[6] * c
-    hcHi = umulh(w[6], c)
-    s1 = w[2] + hcLo
-    c1 = if (uLtInline(s1, w[2])) 1L else 0L
+    hcLo = w.l6 * c
+    hcHi = umulh(w.l6, c)
+    s1 = w.l2 + hcLo
+    c1 = if (uLtInline(s1, w.l2)) 1L else 0L
     s2 = s1 + carry
     c2 = if (uLtInline(s2, s1)) 1L else 0L
-    out[2] = s2
+    out.l2 = s2
     carry = hcHi + c1 + c2
 
-    hcLo = w[7] * c
-    hcHi = umulh(w[7], c)
-    s1 = w[3] + hcLo
-    c1 = if (uLtInline(s1, w[3])) 1L else 0L
+    hcLo = w.l7 * c
+    hcHi = umulh(w.l7, c)
+    s1 = w.l3 + hcLo
+    c1 = if (uLtInline(s1, w.l3)) 1L else 0L
     s2 = s1 + carry
     c2 = if (uLtInline(s2, s1)) 1L else 0L
-    out[3] = s2
+    out.l3 = s2
     carry = hcHi + c1 + c2
 
     // Round 2: fold carry × C
     if (carry != 0L) {
         val ccLo = carry * c
         val ccHi = umulh(carry, c)
-        s1 = out[0] + ccLo
-        c1 = if (uLtInline(s1, out[0])) 1L else 0L
-        out[0] = s1
+        s1 = out.l0 + ccLo
+        c1 = if (uLtInline(s1, out.l0)) 1L else 0L
+        out.l0 = s1
         var prop = ccHi + c1
         if (prop != 0L) {
-            s1 = out[1] + prop
-            prop = if (uLtInline(s1, out[1])) 1L else 0L
-            out[1] = s1
+            s1 = out.l1 + prop
+            prop = if (uLtInline(s1, out.l1)) 1L else 0L
+            out.l1 = s1
             if (prop != 0L) {
-                s1 = out[2] + prop
-                prop = if (uLtInline(s1, out[2])) 1L else 0L
-                out[2] = s1
+                s1 = out.l2 + prop
+                prop = if (uLtInline(s1, out.l2)) 1L else 0L
+                out.l2 = s1
                 if (prop != 0L) {
-                    s1 = out[3] + prop
-                    prop = if (uLtInline(s1, out[3])) 1L else 0L
-                    out[3] = s1
+                    s1 = out.l3 + prop
+                    prop = if (uLtInline(s1, out.l3)) 1L else 0L
+                    out.l3 = s1
                 }
             }
         }
         if (prop != 0L) {
-            s1 = out[0] + c
-            c1 = if (uLtInline(s1, out[0])) 1L else 0L
-            out[0] = s1
+            s1 = out.l0 + c
+            c1 = if (uLtInline(s1, out.l0)) 1L else 0L
+            out.l0 = s1
             if (c1 != 0L) {
-                out[1]++
-                if (out[1] == 0L) {
-                    out[2]++
-                    if (out[2] == 0L) out[3]++
+                out.l1++
+                if (out.l1 == 0L) {
+                    out.l2++
+                    if (out.l2 == 0L) out.l3++
                 }
             }
         }
     }
 
     // Final normalization: ensure out < p
-    if (out[3] == -1L && out[2] == -1L && out[1] == -1L &&
-        (out[0] xor Long.MIN_VALUE) >= (FIELD_P0 xor Long.MIN_VALUE)
+    if (out.l3 == -1L && out.l2 == -1L && out.l1 == -1L &&
+        (out.l0 xor Long.MIN_VALUE) >= (FIELD_P0 xor Long.MIN_VALUE)
     ) {
-        out[0] -= FIELD_P0
-        out[1] = 0L
-        out[2] = 0L
-        out[3] = 0L
+        out.l0 -= FIELD_P0
+        out.l1 = 0L
+        out.l2 = 0L
+        out.l3 = 0L
     }
 }

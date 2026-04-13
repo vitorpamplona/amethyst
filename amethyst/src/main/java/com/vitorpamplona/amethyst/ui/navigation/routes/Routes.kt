@@ -129,6 +129,8 @@ sealed class Route {
 
     @Serializable object ReactionsSettings : Route()
 
+    @Serializable object CallSettings : Route()
+
     @Serializable object Lists : Route()
 
     @Serializable data class MyPeopleListView(

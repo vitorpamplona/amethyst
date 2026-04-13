@@ -703,6 +703,7 @@
     <string name="call_unmute">取消静音</string>
     <string name="call_camera_on">开启摄像头</string>
     <string name="call_camera_off">关闭摄像头</string>
+    <string name="call_switch_camera">切换相机</string>
     <string name="call_speaker">扬声器</string>
     <string name="call_earpiece">耳机</string>
     <string name="call_bluetooth">蓝牙</string>
@@ -714,6 +715,19 @@
     <string name="call_failed_start">未能开始通话</string>
     <string name="call_failed_accept">未能接受通话</string>
     <string name="call_failed_session">创建通话会话失败</string>
+    <string name="call_settings">通话设置</string>
+    <string name="call_settings_video_quality">画质</string>
+    <string name="call_settings_max_bitrate">最大视频比特率</string>
+    <string name="call_settings_turn_servers">TURN / STUN 服务器</string>
+    <string name="call_settings_turn_description">始终包含默认STUN 和 TURN 服务器。为限制网络添加自定义 TURN 服务器。</string>
+    <string name="call_settings_default_servers">默认服务器 (始终活跃)</string>
+    <string name="call_settings_custom_turn">自定义 TURN 服务器</string>
+    <string name="call_settings_no_custom_turn">未配置自定义TURN服务器。</string>
+    <string name="call_settings_add_turn">添加 TURN 服务器</string>
+    <string name="call_settings_remove_turn">删除</string>
+    <string name="call_settings_turn_url">服务器 URL</string>
+    <string name="call_settings_turn_username">用户名</string>
+    <string name="call_settings_turn_credential">凭证</string>
     <string name="reply_notify">通知：</string>
     <string name="channel_list_join_conversation">加入对话</string>
     <string name="channel_list_user_or_group_id">用户或群组 ID</string>
@@ -1143,6 +1157,8 @@
     <string name="media_compression_quality_uncompressed">未压缩</string>
     <string name="video_codec_h265_label">使用 H.265/HEVC 编解码器</string>
     <string name="video_codec_h265_description">文件较小而质量更佳，但不是所有设备都支持 H.265 播放。</string>
+    <string name="convert_gif_to_mp4_label">转换 GIF 为 MP4</string>
+    <string name="convert_gif_to_mp4_description">将动画的 GIF 转换为 MP4 视频以获取较小文件大小和更好的播放兼容性。</string>
     <string name="strip_metadata_label">删除私密元数据</string>
     <string name="strip_metadata_description">尝试在上传之前从支持的媒体文件中删除私密元数据</string>
     <string name="metadata_strip_failed_title">无法删除元数据</string>

@@ -23,11 +23,22 @@ package com.vitorpamplona.amethyst.desktop.service.images
 import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
+import coil3.Uri
 import coil3.annotation.DelicateCoilApi
+import coil3.annotation.ExperimentalCoilApi
 import coil3.disk.DiskCache
+import coil3.fetch.Fetcher
 import coil3.memory.MemoryCache
+import coil3.network.CacheStrategy
+import coil3.network.ConcurrentRequestStrategy
+import coil3.network.ConnectivityChecker
+import coil3.network.NetworkFetcher
+import coil3.network.okhttp.asNetworkClient
+import coil3.request.Options
 import coil3.size.Precision
 import coil3.svg.SvgDecoder
+import com.vitorpamplona.amethyst.desktop.network.DesktopHttpClient
+import okhttp3.Call
 import okio.Path.Companion.toOkioPath
 import java.io.File
 
@@ -44,6 +55,7 @@ object DesktopImageLoaderSetup {
             .diskCache { newDiskCache() }
             .precision(Precision.INEXACT)
             .components {
+                add(TorAwareOkHttpFactory { DesktopHttpClient.currentClient() })
                 add(SvgDecoder.Factory())
                 add(SkiaGifDecoder.Factory())
                 add(DesktopBase64Fetcher.Factory)
@@ -90,5 +102,37 @@ object DesktopImageLoaderSetup {
                 )
             }
         }
+    }
+}
+
+/**
+ * Custom Coil Fetcher.Factory that routes all image requests through the Tor-aware client.
+ * Pattern ported from Android's OkHttpFactory in ImageLoaderSetup.kt.
+ *
+ * Each image request calls [clientProvider] to get the current OkHttpClient,
+ * which returns the SOCKS proxy client when Tor is active or the direct client when off.
+ */
+@OptIn(ExperimentalCoilApi::class)
+private class TorAwareOkHttpFactory(
+    val clientProvider: () -> Call.Factory,
+) : Fetcher.Factory<Uri> {
+    private val cacheStrategyLazy = lazy { CacheStrategy.DEFAULT }
+
+    override fun create(
+        data: Uri,
+        options: Options,
+        imageLoader: ImageLoader,
+    ): Fetcher? {
+        if (data.scheme != "http" && data.scheme != "https") return null
+
+        return NetworkFetcher(
+            url = data.toString(),
+            options = options,
+            networkClient = lazy { clientProvider().asNetworkClient() },
+            diskCache = lazy { imageLoader.diskCache },
+            cacheStrategy = cacheStrategyLazy,
+            connectivityChecker = lazy { ConnectivityChecker(options.context) },
+            concurrentRequestStrategy = lazy { ConcurrentRequestStrategy.UNCOORDINATED },
+        )
     }
 }

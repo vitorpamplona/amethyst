@@ -622,11 +622,11 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="follow_set_rename_dialog_indicator_first_part">Preimenuješ iz </string>
     <string name="follow_set_rename_dialog_indicator_second_part"> v..</string>
     <string name="connect_through_your_orbot_setup_short">Prevzeta vrata so 9050</string>
-    <string name="connect_through_your_orbot_setup_markdown">        ## Poveži se preko Tor omrežja z Orbot aplikacijo
-        \n\n1. Namesti [Orbot aplikacijo](https://play.google.com/store/apps/details?id=org.torproject.android)
+    <string name="connect_through_your_orbot_setup_markdown">        ## Poveži se preko Tor omrežja z Orbot
+        \n\n1. Namesti [Orbot](https://play.google.com/store/apps/details?id=org.torproject.android)
         \n2. Zaženi Orbot aplikacijo
         \n3. V Orbot aplikaciji, preveri \"Socks port\". Pradnastavitev uporablja vrata 9050
-        \n4. Po potrebi spremenite vrata v Orbot aplikaciji
+        \n4. Po potrebi spremenite vrata v Orbot 
         \n5. Prilagodi vrata na tem zaslonu
         \n6. Pritisni gumb aktiviraj za uporabo Orbot aplikacije kot proxy
     </string>
@@ -714,6 +714,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="call_unmute">Vklopi zvok</string>
     <string name="call_camera_on">Vklopljena kamera</string>
     <string name="call_camera_off">Izklopljena kamera</string>
+    <string name="call_switch_camera">Zamenjaj kamero</string>
     <string name="call_speaker">Zvočnik</string>
     <string name="call_earpiece">Slušalka</string>
     <string name="call_bluetooth">Bluetooth</string>
@@ -725,6 +726,19 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="call_failed_start">Klic ni uspel</string>
     <string name="call_failed_accept">Sprejem klica ni uspel</string>
     <string name="call_failed_session">Vzpostavitev klicne seje ni uspela</string>
+    <string name="call_settings">Klicne nastavitve</string>
+    <string name="call_settings_video_quality">Kakovost videa</string>
+    <string name="call_settings_max_bitrate">Najvišja bitna hitrost videa</string>
+    <string name="call_settings_turn_servers">Strežniki TURN / STUN</string>
+    <string name="call_settings_turn_description">Privzeti strežniki STUN in TURN so vedno vključeni. Za omejena omrežja dodajte strežnike TURN po meri.</string>
+    <string name="call_settings_default_servers">Privzeti strežniki (vedno aktivni)</string>
+    <string name="call_settings_custom_turn">Strežniki TURN po meri</string>
+    <string name="call_settings_no_custom_turn">Ni nastavljenih strežnikov TURN po meri.</string>
+    <string name="call_settings_add_turn">Dodaj TURN strežnik</string>
+    <string name="call_settings_remove_turn">Odstrani</string>
+    <string name="call_settings_turn_url">URL strežnika</string>
+    <string name="call_settings_turn_username">Uporabniško ime</string>
+    <string name="call_settings_turn_credential">Akreditivi</string>
     <string name="reply_notify">Obvesti: </string>
     <string name="channel_list_join_conversation">Pridruži se pogovoru</string>
     <string name="channel_list_user_or_group_id">ID uporabnika ali skupine</string>
@@ -1154,6 +1168,8 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="media_compression_quality_uncompressed">Nestisnjeno</string>
     <string name="video_codec_h265_label">Uporabi H.265/HEVC Codec</string>
     <string name="video_codec_h265_description">Boljša kakovost pri manjših velikostih datotek, vendar predvajanja H.265 ne podpirajo vse naprave.</string>
+    <string name="convert_gif_to_mp4_label">Pretvori GIF v MP4</string>
+    <string name="convert_gif_to_mp4_description">Pretvori animirane slike GIF v video MP4 za manjšo datoteko in boljšo združljivost predvajanja.</string>
     <string name="strip_metadata_label">Odstrani zasebne metapodatke</string>
     <string name="strip_metadata_description">Poskusi odstraniti zasebne metapodatke iz podprtih datotek pred nalaganjem.</string>
     <string name="metadata_strip_failed_title">Metapodatkov ni možno odstraniti</string>
@@ -1199,6 +1215,27 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="wallet_filter_all">Vse</string>
     <string name="wallet_filter_zaps">Zapi</string>
     <string name="wallet_filter_non_zaps">Brez zapov</string>
+    <string name="wallet_add">Dodaj denarnico</string>
+    <string name="wallet_default">Privzeto</string>
+    <string name="wallet_set_default">Nastavi kot privzeto</string>
+    <string name="wallet_remove">Odstrani</string>
+    <string name="wallet_remove_confirm">Odstrani to denarnico</string>
+    <string name="wallet_remove_confirm_description">S tem boste odstranili povezavo z denarnico. Pozneje jo lahko kadar koli znova dodate.</string>
+    <string name="wallet_name">Ime denarnice</string>
+    <string name="wallet_name_hint">Moja denarnica</string>
+    <string name="wallet_your_wallets">Vaše denarnice</string>
+    <string name="wallet_manage">Upravljanje denarnic</string>
+    <string name="wallet_no_wallets">Ni povezanih denarnic</string>
+    <string name="wallet_no_wallets_description">Povežite eno ali več NWC denarnic, za pošiljanje in sprejemanje plačil.</string>
+    <string name="wallet_add_connection">Dodaj NWC povezavo</string>
+    <string name="wallet_paste_uri">Prilepi nostr+walletconnect:// URI</string>
+    <string name="wallet_save">Shrani</string>
+    <string name="wallet_rename">Preimenuj</string>
+    <string name="wallet_rename_title">Preimenuj denarnico</string>
+    <string name="wallet_edit">Uredi</string>
+    <string name="wallet_invalid_uri">Neveljaven NWC URI povezave</string>
+    <string name="wallet_move_up">Premakni navzgor</string>
+    <string name="wallet_move_down">Premakni navzdol</string>
     <string name="route_security_filters">Varnostni filtri</string>
     <string name="route_import_follows">Uvozi sledilce</string>
     <string name="new_post">Nova objava</string>
@@ -1308,6 +1345,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="inbox_relays_not_found_examples">dobre opcije so::\n - nos.lol\n - nostr.mom\n - nostr.bitcoiner.social</string>
     <string name="dm_upload">Naloži ZS</string>
     <string name="relay_settings">Nastavitve relejev</string>
+    <string name="relay_reorder">Razvrsti releje</string>
     <string name="public_home_section">Javni za odhajajočo pošto/domači releji</string>
     <string name="public_home_section_explainer_profile">Uporabnik pošilja objave na te releje</string>
     <string name="public_home_section_explainer">Ta tip releja shranjuje vse vaše vsebine. Amethyst bo sem pošiljal vaše objave, ostali uporabniki pa bodo te releje uporabljali za iskanje vaših vsebin. Vstavite 1–3 releje. To so lahko osebni releji, plačljivi releji ali javni releji.</string>
@@ -1694,6 +1732,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="kind_shorts">Kratki videoposnetki</string>
     <string name="kind_voice_msg">Zvočno sporočilo</string>
     <string name="kind_voice_reply">Zvočni odgovori</string>
+    <string name="kind_wake">ZbudiSe</string>
     <string name="kind_web_bookmark">Spletni zaznamek</string>
     <string name="kind_wiki">Wiki</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">Zagotovite si odličen vir objav tako, da sledite istim ljudem kot nekdo, ki mu zaupate.</string>
@@ -1953,4 +1992,18 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="relay_members_removed">%1$d članov odstranjenih iz releja</string>
     <string name="relay_join_request">Prošnja za dostop do releja</string>
     <string name="relay_leave_request">Prošnja za izstop z releja</string>
+    <string name="ai_writing_help">Pomoč za pisanje z umetno inteligenco</string>
+    <string name="ai_writing_setting_title">Predlagaj tekstovne izboljšave</string>
+    <string name="ai_writing_setting_description">Uporablja model umetne inteligence v napravi za predloge popravkov besedila in spremembe tona.</string>
+    <string name="ai_writing_use_this">Uporabi to</string>
+    <string name="ai_writing_dismiss">Prekliči</string>
+    <string name="ai_tone_correct">Pravilno</string>
+    <string name="ai_tone_rephrase">Izrazi drugače</string>
+    <string name="ai_tone_shorter">Krajše</string>
+    <string name="ai_tone_elaborate">Razloži podrobneje</string>
+    <string name="ai_tone_friendly">Prijateljsko</string>
+    <string name="ai_tone_professional">Profesionalno</string>
+    <string name="ai_tone_more_direct">Boj direktno</string>
+    <string name="ai_tone_punchy">Udarno</string>
+    <string name="ai_tone_emojify">+ Emoji</string>
 </resources>

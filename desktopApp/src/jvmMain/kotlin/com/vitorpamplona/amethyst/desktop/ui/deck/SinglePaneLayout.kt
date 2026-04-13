@@ -68,6 +68,8 @@ import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscription
 import com.vitorpamplona.amethyst.desktop.ui.ZapFeedback
 import com.vitorpamplona.amethyst.desktop.ui.components.RelayHealthIndicator
 import com.vitorpamplona.amethyst.desktop.ui.media.LocalIsImmersiveFullscreen
+import com.vitorpamplona.amethyst.desktop.ui.tor.LocalTorState
+import com.vitorpamplona.amethyst.desktop.ui.tor.TorStatusIndicator
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect.Nip47URINorm
 import kotlinx.coroutines.CoroutineScope
 
@@ -161,6 +163,17 @@ fun SinglePaneLayout(
                 BunkerHeartbeatIndicator(
                     signerConnectionState = signerConnectionState,
                     lastPingTimeSec = lastPingTimeSec,
+                    modifier = Modifier.padding(bottom = 4.dp),
+                )
+
+                // Tor status — always last so it's never pushed off screen
+                val torState = LocalTorState.current
+                TorStatusIndicator(
+                    status = torState.status,
+                    onClick = {
+                        currentColumnType = DeckColumnType.Settings
+                        navState.clear()
+                    },
                     modifier = Modifier.padding(bottom = 12.dp),
                 )
             }

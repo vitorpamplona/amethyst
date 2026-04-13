@@ -90,19 +90,19 @@ private inline fun umulhFused(
  */
 @Suppress("LongMethod")
 internal fun fieldMulReduceFused(
-    out: LongArray,
-    a: LongArray,
-    b: LongArray,
-    w: LongArray,
+    out: Fe4,
+    a: Fe4,
+    b: Fe4,
+    w: Wide8,
 ) {
-    val a0 = a[0]
-    val a1 = a[1]
-    val a2 = a[2]
-    val a3 = a[3]
-    val b0 = b[0]
-    val b1 = b[1]
-    val b2 = b[2]
-    val b3 = b[3]
+    val a0 = a.l0
+    val a1 = a.l1
+    val a2 = a.l2
+    val a3 = a.l3
+    val b0 = b.l0
+    val b1 = b.l1
+    val b2 = b.l2
+    val b3 = b.l3
     var s: Long = 0L
     var c1: Long
     var c2: Long
@@ -110,135 +110,135 @@ internal fun fieldMulReduceFused(
 
     // Row 0: a0 × [b0,b1,b2,b3]
     mulFull(a0, b0) { lo, hi ->
-        w[0] = lo
+        w.l0 = lo
         carry = hi
     }
 
     mulFull(a0, b1) { lo, hi ->
         s = lo + carry
         c1 = if (uLtInline(s, lo)) 1L else 0L
-        w[1] = s
+        w.l1 = s
         carry = hi + c1
     }
     mulFull(a0, b2) { lo, hi ->
         s = lo + carry
         c1 = if (uLtInline(s, lo)) 1L else 0L
-        w[2] = s
+        w.l2 = s
         carry = hi + c1
     }
     mulFull(a0, b3) { lo, hi ->
         s = lo + carry
         c1 = if (uLtInline(s, lo)) 1L else 0L
-        w[3] = s
-        w[4] = hi + c1
+        w.l3 = s
+        w.l4 = hi + c1
     }
 
     // Row 1: a1 × [b0,b1,b2,b3]
     mulFull(a1, b0) { lo, hi ->
-        val prev = w[1]
+        val prev = w.l1
         s = prev + lo
         c1 = if (uLtInline(s, prev)) 1L else 0L
-        w[1] = s
+        w.l1 = s
         carry = hi + c1
     }
     mulFull(a1, b1) { lo, hi ->
-        val prev = w[2]
+        val prev = w.l2
         s = prev + lo
         c1 = if (uLtInline(s, prev)) 1L else 0L
         s += carry
         c2 = if (uLtInline(s, carry)) 1L else 0L
-        w[2] = s
+        w.l2 = s
         carry = hi + c1 + c2
     }
     mulFull(a1, b2) { lo, hi ->
-        val prev = w[3]
+        val prev = w.l3
         s = prev + lo
         c1 = if (uLtInline(s, prev)) 1L else 0L
         s += carry
         c2 = if (uLtInline(s, carry)) 1L else 0L
-        w[3] = s
+        w.l3 = s
         carry = hi + c1 + c2
     }
     mulFull(a1, b3) { lo, hi ->
-        val prev = w[4]
+        val prev = w.l4
         s = prev + lo
         c1 = if (uLtInline(s, prev)) 1L else 0L
         s += carry
         c2 = if (uLtInline(s, carry)) 1L else 0L
-        w[4] = s
-        w[5] = hi + c1 + c2
+        w.l4 = s
+        w.l5 = hi + c1 + c2
     }
 
     // Row 2: a2 × [b0,b1,b2,b3]
     mulFull(a2, b0) { lo, hi ->
-        val prev = w[2]
+        val prev = w.l2
         s = prev + lo
         c1 = if (uLtInline(s, prev)) 1L else 0L
-        w[2] = s
+        w.l2 = s
         carry = hi + c1
     }
     mulFull(a2, b1) { lo, hi ->
-        val prev = w[3]
+        val prev = w.l3
         s = prev + lo
         c1 = if (uLtInline(s, prev)) 1L else 0L
         s += carry
         c2 = if (uLtInline(s, carry)) 1L else 0L
-        w[3] = s
+        w.l3 = s
         carry = hi + c1 + c2
     }
     mulFull(a2, b2) { lo, hi ->
-        val prev = w[4]
+        val prev = w.l4
         s = prev + lo
         c1 = if (uLtInline(s, prev)) 1L else 0L
         s += carry
         c2 = if (uLtInline(s, carry)) 1L else 0L
-        w[4] = s
+        w.l4 = s
         carry = hi + c1 + c2
     }
     mulFull(a2, b3) { lo, hi ->
-        val prev = w[5]
+        val prev = w.l5
         s = prev + lo
         c1 = if (uLtInline(s, prev)) 1L else 0L
         s += carry
         c2 = if (uLtInline(s, carry)) 1L else 0L
-        w[5] = s
-        w[6] = hi + c1 + c2
+        w.l5 = s
+        w.l6 = hi + c1 + c2
     }
 
     // Row 3: a3 × [b0,b1,b2,b3]
     mulFull(a3, b0) { lo, hi ->
-        val prev = w[3]
+        val prev = w.l3
         s = prev + lo
         c1 = if (uLtInline(s, prev)) 1L else 0L
-        w[3] = s
+        w.l3 = s
         carry = hi + c1
     }
     mulFull(a3, b1) { lo, hi ->
-        val prev = w[4]
+        val prev = w.l4
         s = prev + lo
         c1 = if (uLtInline(s, prev)) 1L else 0L
         s += carry
         c2 = if (uLtInline(s, carry)) 1L else 0L
-        w[4] = s
+        w.l4 = s
         carry = hi + c1 + c2
     }
     mulFull(a3, b2) { lo, hi ->
-        val prev = w[5]
+        val prev = w.l5
         s = prev + lo
         c1 = if (uLtInline(s, prev)) 1L else 0L
         s += carry
         c2 = if (uLtInline(s, carry)) 1L else 0L
-        w[5] = s
+        w.l5 = s
         carry = hi + c1 + c2
     }
     mulFull(a3, b3) { lo, hi ->
-        val prev = w[6]
+        val prev = w.l6
         s = prev + lo
         c1 = if (uLtInline(s, prev)) 1L else 0L
         s += carry
         c2 = if (uLtInline(s, carry)) 1L else 0L
-        w[6] = s
-        w[7] = hi + c1 + c2
+        w.l6 = s
+        w.l7 = hi + c1 + c2
     }
 
     // Reduction uses umulh only (lo computed with hardware *)
@@ -251,84 +251,84 @@ internal fun fieldMulReduceFused(
  */
 @Suppress("LongMethod")
 internal fun fieldSqrReduceFused(
-    out: LongArray,
-    a: LongArray,
-    w: LongArray,
+    out: Fe4,
+    a: Fe4,
+    w: Wide8,
 ) {
-    val a0 = a[0]
-    val a1 = a[1]
-    val a2 = a[2]
-    val a3 = a[3]
+    val a0 = a.l0
+    val a1 = a.l1
+    val a2 = a.l2
+    val a3 = a.l3
     var s: Long = 0L
     var c1: Long
     var c2: Long
     var carry: Long = 0L
 
     // Pass 1: cross-products a[i]*a[j] for i < j
-    w[0] = 0L
+    w.l0 = 0L
     mulFull(a0, a1) { lo, hi ->
-        w[1] = lo
+        w.l1 = lo
         carry = hi
     }
 
     mulFull(a0, a2) { lo, hi ->
         s = lo + carry
         c1 = if (uLtInline(s, lo)) 1L else 0L
-        w[2] = s
+        w.l2 = s
         carry = hi + c1
     }
     mulFull(a0, a3) { lo, hi ->
         s = lo + carry
         c1 = if (uLtInline(s, lo)) 1L else 0L
-        w[3] = s
-        w[4] = hi + c1
+        w.l3 = s
+        w.l4 = hi + c1
     }
 
     mulFull(a1, a2) { lo, hi ->
-        val prev = w[3]
+        val prev = w.l3
         s = prev + lo
         c1 = if (uLtInline(s, prev)) 1L else 0L
-        w[3] = s
+        w.l3 = s
         carry = hi + c1
     }
     mulFull(a1, a3) { lo, hi ->
-        val prev = w[4]
+        val prev = w.l4
         s = prev + lo
         c1 = if (uLtInline(s, prev)) 1L else 0L
         s += carry
         c2 = if (uLtInline(s, carry)) 1L else 0L
-        w[4] = s
-        w[5] = hi + c1 + c2
+        w.l4 = s
+        w.l5 = hi + c1 + c2
     }
 
     mulFull(a2, a3) { lo, hi ->
-        val prev = w[5]
+        val prev = w.l5
         s = prev + lo
         c1 = if (uLtInline(s, prev)) 1L else 0L
-        w[5] = s
-        w[6] = hi + c1
+        w.l5 = s
+        w.l6 = hi + c1
     }
 
     // Pass 2: double all cross-products (shift left by 1 bit)
-    var v = w[1]
-    w[1] = v shl 1
+    var v = w.l1
+    w.l1 = v shl 1
     var shiftCarry = v ushr 63
-    v = w[2]
-    w[2] = (v shl 1) or shiftCarry
+    v = w.l2
+    w.l2 = (v shl 1) or shiftCarry
     shiftCarry = v ushr 63
-    v = w[3]
-    w[3] = (v shl 1) or shiftCarry
+    v = w.l3
+    w.l3 = (v shl 1) or shiftCarry
     shiftCarry = v ushr 63
-    v = w[4]
-    w[4] = (v shl 1) or shiftCarry
+    v = w.l4
+    w.l4 = (v shl 1) or shiftCarry
     shiftCarry = v ushr 63
-    v = w[5]
-    w[5] = (v shl 1) or shiftCarry
+    v = w.l5
+    w.l5 = (v shl 1) or shiftCarry
     shiftCarry = v ushr 63
-    v = w[6]
-    w[6] = (v shl 1) or shiftCarry
+    v = w.l6
+    w.l6 = (v shl 1) or shiftCarry
     shiftCarry = v ushr 63
-    w[7] = shiftCarry
+    w.l7 = shiftCarry
 
     // Pass 3: add diagonal products a[i]²
     // Use the original pattern: lo = a*a, hi = umulh(a,a) since the diagonal
@@ -339,50 +339,50 @@ internal fun fieldSqrReduceFused(
 
     dLo = a0 * a0
     dHi = umulhFused(a0, a0)
-    w[0] = dLo
-    s = w[1] + dHi
-    c1 = if (uLtInline(s, w[1])) 1L else 0L
-    w[1] = s
+    w.l0 = dLo
+    s = w.l1 + dHi
+    c1 = if (uLtInline(s, w.l1)) 1L else 0L
+    w.l1 = s
     var dCarry = c1
 
     dLo = a1 * a1
     dHi = umulhFused(a1, a1)
-    s = w[2] + dLo
-    c1 = if (uLtInline(s, w[2])) 1L else 0L
+    s = w.l2 + dLo
+    c1 = if (uLtInline(s, w.l2)) 1L else 0L
     s += dCarry
     c2 = if (uLtInline(s, dCarry)) 1L else 0L
-    w[2] = s
-    prev = w[3] + dHi
-    val c3a = if (uLtInline(prev, w[3])) 1L else 0L
+    w.l2 = s
+    prev = w.l3 + dHi
+    val c3a = if (uLtInline(prev, w.l3)) 1L else 0L
     prev += c1 + c2
     val c4a = if (uLtInline(prev, c1 + c2)) 1L else 0L
-    w[3] = prev
+    w.l3 = prev
     dCarry = c3a + c4a
 
     dLo = a2 * a2
     dHi = umulhFused(a2, a2)
-    s = w[4] + dLo
-    c1 = if (uLtInline(s, w[4])) 1L else 0L
+    s = w.l4 + dLo
+    c1 = if (uLtInline(s, w.l4)) 1L else 0L
     s += dCarry
     c2 = if (uLtInline(s, dCarry)) 1L else 0L
-    w[4] = s
-    prev = w[5] + dHi
-    val c3b = if (uLtInline(prev, w[5])) 1L else 0L
+    w.l4 = s
+    prev = w.l5 + dHi
+    val c3b = if (uLtInline(prev, w.l5)) 1L else 0L
     prev += c1 + c2
     val c4b = if (uLtInline(prev, c1 + c2)) 1L else 0L
-    w[5] = prev
+    w.l5 = prev
     dCarry = c3b + c4b
 
     dLo = a3 * a3
     dHi = umulhFused(a3, a3)
-    s = w[6] + dLo
-    c1 = if (uLtInline(s, w[6])) 1L else 0L
+    s = w.l6 + dLo
+    c1 = if (uLtInline(s, w.l6)) 1L else 0L
     s += dCarry
     c2 = if (uLtInline(s, dCarry)) 1L else 0L
-    w[6] = s
-    prev = w[7] + dHi
+    w.l6 = s
+    prev = w.l7 + dHi
     prev += c1 + c2
-    w[7] = prev
+    w.l7 = prev
 
     // Reduction
     reduceWideInline(out, w) { x, y -> umulhFused(x, y) }

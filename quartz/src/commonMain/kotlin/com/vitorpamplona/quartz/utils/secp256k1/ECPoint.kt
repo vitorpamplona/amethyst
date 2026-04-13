@@ -51,14 +51,14 @@ internal object ECPoint {
     // ==================== Generator point G ====================
 
     val GX =
-        longArrayOf(
+        Fe4(
             6481385041966929816L,
             188021827762530521L,
             6170039885052185351L,
             8772561819708210092L,
         )
     val GY =
-        longArrayOf(
+        Fe4(
             -7185545363635252040L,
             -209500633525038055L,
             6747795201694173352L,
@@ -66,7 +66,7 @@ internal object ECPoint {
         )
 
     /** Curve constant b = 7 in y² = x³ + 7. */
-    private val B = longArrayOf(7L, 0L, 0L, 0L)
+    private val B = Fe4(7L, 0L, 0L, 0L)
 
     // Thread-local scratch — declared before precomputed tables because
     // buildGOddTable() and buildCombTable() use doublePoint/addPoints which
@@ -119,7 +119,7 @@ internal object ECPoint {
     private const val P_TABLE_CACHE_MASK = P_TABLE_CACHE_SIZE - 1
 
     private class CachedPTable(
-        val px: LongArray, // x-coordinate of the point (cache key, 4 limbs)
+        val px: Fe4, // x-coordinate of the point (cache key, 4 limbs)
         val pOdd: Array<AffinePoint>, // 8 affine odd-multiples of P
         val pLamOdd: Array<AffinePoint>, // 8 affine odd-multiples of λ(P)
     )
@@ -127,7 +127,7 @@ internal object ECPoint {
     private val pTableCache = arrayOfNulls<CachedPTable>(P_TABLE_CACHE_SIZE)
 
     /** Hash a field element to a cache slot index. */
-    private fun cacheSlot(px: LongArray): Int = (px[0].toInt() xor px[1].toInt().shl(3)) and P_TABLE_CACHE_MASK
+    private fun cacheSlot(px: Fe4): Int = (px.l0.toInt() xor px.l1.toInt().shl(3)) and P_TABLE_CACHE_MASK
 
     private fun buildGOddTable(): Array<AffinePoint> {
         val g = MutablePoint()
@@ -153,21 +153,21 @@ internal object ECPoint {
 
         // Step 1: compute prefix products of Z coordinates
         // prods[i] = z[0] * z[1] * ... * z[i]
-        val prods = Array(n) { LongArray(4) }
-        jac[0].z.copyInto(prods[0], 0, 0, 4)
+        val prods = Array(n) { Fe4() }
+        prods[0].copyFrom(jac[0].z)
         for (i in 1 until n) {
             FieldP.mul(prods[i], prods[i - 1], jac[i].z)
         }
 
         // Step 2: invert the total product
-        val inv = LongArray(4)
+        val inv = Fe4()
         FieldP.inv(inv, prods[n - 1])
 
         // Step 3: recover individual inverses by multiplying back
         // zInv[i] = product_inv * prods[i-1] = 1 / z[i]
-        val zInv = LongArray(4)
-        val zInv2 = LongArray(4)
-        val zInv3 = LongArray(4)
+        val zInv = Fe4()
+        val zInv2 = Fe4()
+        val zInv3 = Fe4()
         val result = Array(n) { AffinePoint() }
 
         for (i in n - 1 downTo 1) {
@@ -245,10 +245,10 @@ internal object ECPoint {
 
         return Array(tableSize) { i ->
             if (jac[i].isInfinity()) {
-                AffinePoint(LongArray(4), LongArray(4))
+                AffinePoint(Fe4(), Fe4())
             } else {
-                val x = LongArray(4)
-                val y = LongArray(4)
+                val x = Fe4()
+                val y = Fe4()
                 toAffine(jac[i], x, y)
                 AffinePoint(x, y)
             }
@@ -319,16 +319,16 @@ internal object ECPoint {
     fun addMixed(
         out: MutablePoint,
         p: MutablePoint,
-        qx: LongArray,
-        qy: LongArray,
+        qx: Fe4,
+        qy: Fe4,
     ) = addMixed(out, p, qx, qy, scratch.get())
 
     /** addMixed with caller-provided scratch (hot path — no ThreadLocal lookup). */
     fun addMixed(
         out: MutablePoint,
         p: MutablePoint,
-        qx: LongArray,
-        qy: LongArray,
+        qx: Fe4,
+        qy: Fe4,
         s: PointScratch,
     ) {
         if (p.isInfinity()) {
@@ -344,9 +344,9 @@ internal object ECPoint {
         FieldP.mul(t[3], qy, t[1], w) // S₂ = qy·Z₁³  (S₁ = Y₁ since Z₂=1)
         FieldP.sub(t[4], t[2], p.x) // H = U₂ - U₁
 
-        if (U256.isZero(t[4])) {
+        if (t[4].isZero()) {
             FieldP.sub(t[5], t[3], p.y)
-            if (U256.isZero(t[5])) doublePoint(out, p, s) else out.setInfinity()
+            if (t[5].isZero()) doublePoint(out, p, s) else out.setInfinity()
             return
         }
 
@@ -454,10 +454,10 @@ internal object ECPoint {
     fun mul(
         out: MutablePoint,
         p: MutablePoint,
-        scalar: LongArray,
+        scalar: Fe4,
         s: PointScratch = scratch.get(),
     ) {
-        if (U256.isZero(scalar) || p.isInfinity()) {
+        if (scalar.isZero() || p.isInfinity()) {
             out.setInfinity()
             return
         }
@@ -472,7 +472,7 @@ internal object ECPoint {
         val wnaf2 = s.wnaf2
 
         // P odd-multiples [1P, 3P, 5P, ..., 15P] via 2P stepping (Jacobian)
-        // Uses pre-allocated tables from PointScratch to avoid ~80 LongArray allocs
+        // Uses pre-allocated tables from PointScratch to avoid ~80 Fe4 allocs
         doublePoint(s.p2, p, s)
         val pOddJac = s.pOddJac
         pOddJac[0].copyFrom(p)
@@ -482,8 +482,8 @@ internal object ECPoint {
         val pLamOddJac = s.pLamOddJac
         for (i in 0 until tableSize) {
             FieldP.mul(pLamOddJac[i].x, pOddJac[i].x, Glv.BETA, s.w)
-            pOddJac[i].y.copyInto(pLamOddJac[i].y, 0, 0, 4)
-            pOddJac[i].z.copyInto(pLamOddJac[i].z, 0, 0, 4)
+            pLamOddJac[i].y.copyFrom(pOddJac[i].y)
+            pLamOddJac[i].z.copyFrom(pOddJac[i].z)
         }
 
         // Effective-affine: batch-convert with shared Z inversion
@@ -536,10 +536,10 @@ internal object ECPoint {
      */
     fun mulG(
         out: MutablePoint,
-        scalar: LongArray,
+        scalar: Fe4,
         s: PointScratch = scratch.get(),
     ) {
-        if (U256.isZero(scalar)) {
+        if (scalar.isZero()) {
             out.setInfinity()
             return
         }
@@ -593,9 +593,9 @@ internal object ECPoint {
      */
     fun mulDoubleG(
         out: MutablePoint,
-        s: LongArray,
+        s: Fe4,
         p: MutablePoint,
-        e: LongArray,
+        e: Fe4,
         sc: PointScratch = scratch.get(),
     ) {
         val wP = 5 // Window for P-side (table built per-call, keep small)
@@ -639,8 +639,8 @@ internal object ECPoint {
             val pLamOddJac = sc.pLamOddJac
             for (i in 0 until pTableSize) {
                 FieldP.mul(pLamOddJac[i].x, pOddJac[i].x, Glv.BETA, sc.w)
-                pOddJac[i].y.copyInto(pLamOddJac[i].y, 0, 0, 4)
-                pOddJac[i].z.copyInto(pLamOddJac[i].z, 0, 0, 4)
+                pLamOddJac[i].y.copyFrom(pOddJac[i].y)
+                pLamOddJac[i].z.copyFrom(pOddJac[i].z)
             }
             // Batch-convert to affine (into scratch arrays)
             batchToAffinePair(pOddJac, pLamOddJac, sc.pOddAff, sc.pLamOddAff, sc)
@@ -769,7 +769,7 @@ internal object ECPoint {
     private fun addWnafMixedPP(
         cur: MutablePoint,
         alt: MutablePoint,
-        negY: LongArray,
+        negY: Fe4,
         wnafDigits: IntArray,
         bitIndex: Int,
         table: Array<AffinePoint>,
@@ -816,21 +816,21 @@ internal object ECPoint {
         val w = s.w
 
         // Prefix products of Z coordinates
-        val cumZ = Array(n) { LongArray(4) }
-        U256.copyInto(cumZ[0], points[0].z)
+        val cumZ = Array(n) { Fe4() }
+        cumZ[0].copyFrom(points[0].z)
         for (i in 1 until n) {
             FieldP.mul(cumZ[i], cumZ[i - 1], points[i].z, w)
         }
 
         // Invert the total product
-        val inv = LongArray(4)
+        val inv = Fe4()
         FieldP.inv(inv, cumZ[n - 1])
 
         // Recover individual Z inverses and convert to affine
         val result = Array(n) { AffinePoint() }
-        val zInv = LongArray(4)
-        val zInv2 = LongArray(4)
-        val zInv3 = LongArray(4)
+        val zInv = Fe4()
+        val zInv2 = Fe4()
+        val zInv3 = Fe4()
 
         for (i in n - 1 downTo 1) {
             // zInv = inv * cumZ[i-1] gives Z[i]^{-1}
@@ -870,7 +870,7 @@ internal object ECPoint {
 
         // Build prefix products of Z (shared between a and b)
         val cumZ = s.cumZ
-        a[0].z.copyInto(cumZ[0], 0, 0, 4)
+        cumZ[0].copyFrom(a[0].z)
         for (i in 1 until n) {
             FieldP.mul(cumZ[i], cumZ[i - 1], a[i].z, w)
         }
@@ -910,13 +910,13 @@ internal object ECPoint {
     /** Convert Jacobian → affine (convenience, allocates temps). For one-time init paths. */
     fun toAffine(
         p: MutablePoint,
-        outX: LongArray,
-        outY: LongArray,
+        outX: Fe4,
+        outY: Fe4,
     ): Boolean {
         if (p.isInfinity()) return false
-        val zInv = LongArray(4)
-        val zInv2 = LongArray(4)
-        val zInv3 = LongArray(4)
+        val zInv = Fe4()
+        val zInv2 = Fe4()
+        val zInv3 = Fe4()
         FieldP.inv(zInv, p.z)
         FieldP.sqr(zInv2, zInv)
         FieldP.mul(zInv3, zInv2, zInv)
@@ -928,8 +928,8 @@ internal object ECPoint {
     /** Convert Jacobian → affine using pre-allocated scratch (hot path). */
     fun toAffine(
         p: MutablePoint,
-        outX: LongArray,
-        outY: LongArray,
+        outX: Fe4,
+        outY: Fe4,
         s: PointScratch,
     ): Boolean {
         if (p.isInfinity()) return false
@@ -944,7 +944,7 @@ internal object ECPoint {
     /** Convert Jacobian → affine x-only using pre-allocated scratch (hot path). */
     fun toAffineX(
         p: MutablePoint,
-        outX: LongArray,
+        outX: Fe4,
         s: PointScratch,
     ): Boolean {
         if (p.isInfinity()) return false

@@ -22,6 +22,10 @@ package com.vitorpamplona.amethyst.service.call
 
 import android.content.Context
 import android.content.Intent
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import com.vitorpamplona.amethyst.commons.call.AnswerRouteAction
 import com.vitorpamplona.amethyst.commons.call.CallManager
 import com.vitorpamplona.amethyst.commons.call.CallState
@@ -49,9 +53,11 @@ import org.webrtc.EglBase
 import org.webrtc.IceCandidate
 import org.webrtc.VideoTrack
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 
 private const val TAG = "CallController"
-private const val VIDEO_MAX_BITRATE_BPS = 1_500_000
+private const val VIDEO_MAX_BITRATE_BPS_DEFAULT = 1_500_000
 
 class CallController(
     private val context: Context,
@@ -60,6 +66,7 @@ class CallController(
     private val publishWrap: suspend (EphemeralGiftWrapEvent) -> Unit,
     private val signerProvider: suspend () -> com.vitorpamplona.quartz.nip01Core.signers.NostrSigner,
     localPubKey: HexKey,
+    private val settingsProvider: () -> com.vitorpamplona.amethyst.model.AccountSettings,
 ) {
     private var peerSessionMgr = PeerSessionManager(localPubKey)
 
@@ -86,11 +93,35 @@ class CallController(
     private val _isAudioMuted = MutableStateFlow(false)
     val isAudioMuted: StateFlow<Boolean> = _isAudioMuted.asStateFlow()
     val isVideoEnabled: StateFlow<Boolean> = mediaManager.isVideoEnabled
+    val isFrontCamera: StateFlow<Boolean> = mediaManager.isFrontCamera
     val audioRoute: StateFlow<AudioRoute> = audioManager.audioRoute
     val isBluetoothAvailable: StateFlow<Boolean> = audioManager.isBluetoothAvailable
 
-    private var videoPausedByProximity = false
-    private var foregroundServiceStarted = false
+    @Volatile private var videoPausedByProximity = false
+
+    @Volatile private var foregroundServiceStarted = false
+    private val cleanedUp = AtomicBoolean(false)
+    private val videoSenders = ConcurrentHashMap<HexKey, org.webrtc.RtpSender>()
+
+    private val pendingRenegotiation = ConcurrentHashMap<HexKey, Boolean>()
+
+    private val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+    private var networkCallbackRegistered = false
+    private val networkCallback =
+        object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) {
+                Log.d(TAG) { "Network available — triggering ICE restart on all peers" }
+                restartIceOnAllPeers()
+            }
+
+            override fun onCapabilitiesChanged(
+                network: Network,
+                capabilities: NetworkCapabilities,
+            ) {
+                Log.d(TAG) { "Network capabilities changed — triggering ICE restart on all peers" }
+                restartIceOnAllPeers()
+            }
+        }
 
     // ---- Initialization ----
 
@@ -101,6 +132,7 @@ class CallController(
             callManager.state.collect { state ->
                 when (state) {
                     is CallState.IncomingCall -> {
+                        ensureForegroundService()
                         withContext(Dispatchers.IO) { audioManager.startRinging() }
                         scope.launch {
                             NotificationUtils.showIncomingCallNotification(state.callerPubKey, context)
@@ -109,6 +141,7 @@ class CallController(
 
                     is CallState.Offering -> {
                         audioManager.startRingbackTone()
+                        ensureForegroundService()
                     }
 
                     is CallState.Connecting -> {
@@ -117,6 +150,8 @@ class CallController(
                         withContext(Dispatchers.IO) { audioManager.switchToCallAudioMode() }
                         audioManager.acquireProximityWakeLock()
                         NotificationUtils.cancelCallNotification(context)
+                        updateForegroundServiceNotification()
+                        registerNetworkCallback()
                     }
 
                     is CallState.Connected -> {
@@ -125,6 +160,8 @@ class CallController(
                         withContext(Dispatchers.IO) { audioManager.switchToCallAudioMode() }
                         audioManager.acquireProximityWakeLock()
                         NotificationUtils.cancelCallNotification(context)
+                        updateForegroundServiceNotification()
+                        registerNetworkCallback()
                     }
 
                     is CallState.Ended -> {
@@ -132,7 +169,9 @@ class CallController(
                     }
 
                     is CallState.Idle -> {
-                        cleanup()
+                        // No cleanup here — Ended already handled it.
+                        // Ended auto-resets to Idle after 2 seconds;
+                        // running cleanup twice is wasteful and logs errors.
                     }
                 }
             }
@@ -154,6 +193,12 @@ class CallController(
         }
     }
 
+    private fun applyCallSettings() {
+        val settings = settingsProvider()
+        val resolution = settings.callVideoResolution
+        mediaManager.setCaptureResolution(resolution.width, resolution.height, resolution.fps)
+    }
+
     // ---- Call initiation (caller side) ----
 
     fun initiateGroupCall(
@@ -165,16 +210,19 @@ class CallController(
             val callId = UUID.randomUUID().toString()
             _errorMessage.value = null
 
+            applyCallSettings()
             try {
                 withContext(Dispatchers.IO) { mediaManager.initialize(callType) }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to initialize WebRTC", e)
                 _errorMessage.value = "Failed to start call: ${e.message}"
+                callManager.hangup()
                 return@launch
             }
 
             callManager.beginOffering(callId, peerPubKeys, callType)
 
+            var successCount = 0
             for (peerPubKey in peerPubKeys) {
                 try {
                     val webRtcSession = withContext(Dispatchers.IO) { createWebRtcSession(peerPubKey) }
@@ -185,9 +233,15 @@ class CallController(
                             callManager.publishOfferToPeer(peerPubKey, peerPubKeys, callType, callId, sdp.description)
                         }
                     }
+                    successCount++
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to create PeerConnection for ${peerPubKey.take(8)}", e)
                 }
+            }
+            if (successCount == 0) {
+                Log.e(TAG, "All PeerConnection creations failed, hanging up")
+                _errorMessage.value = "Failed to start call: could not create any connections"
+                callManager.hangup()
             }
         }
     }
@@ -202,11 +256,13 @@ class CallController(
         scope.launch {
             _errorMessage.value = null
 
+            applyCallSettings()
             try {
                 withContext(Dispatchers.IO) { mediaManager.initialize(state.callType) }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to initialize WebRTC", e)
                 _errorMessage.value = "Failed to accept call: ${e.message}"
+                callManager.rejectCall()
                 return@launch
             }
 
@@ -216,6 +272,7 @@ class CallController(
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to create PeerConnection", e)
                     _errorMessage.value = "Failed to accept call: ${e.message}"
+                    callManager.rejectCall()
                     return@launch
                 }
 
@@ -354,12 +411,55 @@ class CallController(
     }
 
     private fun performRenegotiation(peerPubKey: HexKey) {
-        val webRtcSession = webRtcSession(peerPubKey) ?: return
+        if (pendingRenegotiation.putIfAbsent(peerPubKey, true) != null) return
+        val webRtcSession =
+            webRtcSession(peerPubKey) ?: run {
+                pendingRenegotiation.remove(peerPubKey)
+                return
+            }
         val state = callManager.state.value
-        if (state !is CallState.Connected && state !is CallState.Connecting) return
+        if (state !is CallState.Connected && state !is CallState.Connecting) {
+            pendingRenegotiation.remove(peerPubKey)
+            return
+        }
         webRtcSession.createOffer { sdp ->
+            pendingRenegotiation.remove(peerPubKey)
             scope.launch { callManager.sendRenegotiation(sdp.description, peerPubKey) }
         }
+    }
+
+    // ---- Network change handling ----
+
+    private fun restartIceOnAllPeers() {
+        val state = callManager.state.value
+        if (state !is CallState.Connected && state !is CallState.Connecting) return
+        peerSessionMgr.allSessionKeys().forEach { key ->
+            webRtcSession(key)?.triggerIceRestart()
+        }
+    }
+
+    private fun registerNetworkCallback() {
+        if (networkCallbackRegistered) return
+        try {
+            val request =
+                NetworkRequest
+                    .Builder()
+                    .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                    .build()
+            connectivityManager.registerNetworkCallback(request, networkCallback)
+            networkCallbackRegistered = true
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to register network callback", e)
+        }
+    }
+
+    private fun unregisterNetworkCallback() {
+        if (!networkCallbackRegistered) return
+        try {
+            connectivityManager.unregisterNetworkCallback(networkCallback)
+        } catch (_: Exception) {
+        }
+        networkCallbackRegistered = false
     }
 
     // ---- UI toggle controls ----
@@ -375,17 +475,35 @@ class CallController(
         if (enabling) {
             if (mediaManager.localVideoTrack == null) {
                 mediaManager.createVideoResources()
-                peerSessionMgr.allSessionKeys().forEach { key ->
-                    webRtcSession(key)?.let { session ->
-                        mediaManager.localVideoTrack?.let { track -> session.addTrack(track, VIDEO_MAX_BITRATE_BPS) }
-                    }
-                }
             } else {
                 mediaManager.enableVideo()
             }
+            // Add video track to all peer connections
+            peerSessionMgr.allSessionKeys().forEach { key ->
+                if (videoSenders[key] == null) {
+                    webRtcSession(key)?.let { session ->
+                        mediaManager.localVideoTrack?.let { track ->
+                            val sender = session.addTrack(track, settingsProvider().callMaxBitrateBps)
+                            if (sender != null) {
+                                videoSenders[key] = sender
+                            }
+                        }
+                    }
+                }
+            }
         } else {
+            // Remove video track senders so remote peers see track removal
+            peerSessionMgr.allSessionKeys().forEach { key ->
+                videoSenders.remove(key)?.let { sender ->
+                    webRtcSession(key)?.removeTrack(sender)
+                }
+            }
             mediaManager.disableVideo()
         }
+    }
+
+    fun switchCamera() {
+        mediaManager.switchCamera()
     }
 
     fun cycleAudioRoute() {
@@ -395,7 +513,21 @@ class CallController(
     fun getEglBase(): EglBase? = mediaManager.sharedEglBase
 
     fun invitePeer(peerPubKey: String) {
-        scope.launch { createAndOfferToPeer(peerPubKey) }
+        scope.launch {
+            if (mediaManager.peerConnectionFactory == null) return@launch
+            val webRtcSession =
+                try {
+                    withContext(Dispatchers.IO) { createWebRtcSession(peerPubKey) }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to create PeerConnection for invite ${peerPubKey.take(8)}", e)
+                    return@launch
+                }
+            val adapter = WebRtcPeerSessionAdapter(webRtcSession)
+            peerSessionMgr.registerSession(peerPubKey, adapter)
+            webRtcSession.createOffer { sdp ->
+                scope.launch { callManager.invitePeer(peerPubKey, sdp.description) }
+            }
+        }
     }
 
     fun hangup() {
@@ -413,20 +545,24 @@ class CallController(
         val session =
             WebRtcCallSession(
                 peerConnectionFactory = factory,
-                iceServers = IceServerConfig.buildIceServers(),
+                iceServers = IceServerConfig.buildIceServers(settingsProvider().callTurnServers),
                 onIceCandidate = { candidate -> onLocalIceCandidate(peerPubKey, candidate) },
                 onPeerConnected = {
                     Log.d(TAG) { "Peer ${peerPubKey.take(8)} connected!" }
-                    scope.launch { callManager.onPeerConnected() }
-                    if (!foregroundServiceStarted) {
-                        foregroundServiceStarted = true
-                        startForegroundService()
+                    scope.launch {
+                        callManager.onPeerConnected()
+                        if (callManager.state.value is CallState.Connected) {
+                            ensureForegroundService()
+                        }
                     }
                 },
                 onRemoteVideoTrack = { track -> videoMonitor.onRemoteVideoTrack(peerPubKey, track) },
-                onDisconnected = { onPeerDisconnected(peerPubKey) },
+                onDisconnected = { scope.launch { onPeerDisconnected(peerPubKey) } },
                 onError = { error -> _errorMessage.value = error },
                 onRenegotiationNeeded = { performRenegotiation(peerPubKey) },
+                onIceRestartOffer = { sdp ->
+                    scope.launch { callManager.sendRenegotiation(sdp.description, peerPubKey) }
+                },
             )
         try {
             session.createPeerConnection()
@@ -435,7 +571,12 @@ class CallController(
             throw e
         }
         mediaManager.localAudioTrack?.let { session.addTrack(it) }
-        mediaManager.localVideoTrack?.let { session.addTrack(it, VIDEO_MAX_BITRATE_BPS) }
+        mediaManager.localVideoTrack?.let { track ->
+            val sender = session.addTrack(track, settingsProvider().callMaxBitrateBps)
+            if (sender != null) {
+                videoSenders[peerPubKey] = sender
+            }
+        }
         return session
     }
 
@@ -455,6 +596,7 @@ class CallController(
     // ---- Per-peer cleanup ----
 
     fun disposePeerSession(peerPubKey: HexKey) {
+        videoSenders.remove(peerPubKey)
         val entry = peerSessionMgr.removeSession(peerPubKey)
         if (entry != null) {
             try {
@@ -469,6 +611,8 @@ class CallController(
     // ---- Cleanup ----
 
     fun cleanup() {
+        if (!cleanedUp.compareAndSet(false, true)) return
+        unregisterNetworkCallback()
         try {
             audioManager.release()
         } catch (e: Exception) {
@@ -495,9 +639,18 @@ class CallController(
 
         _isAudioMuted.value = false
         videoPausedByProximity = false
+        videoSenders.clear()
+        pendingRenegotiation.clear()
+        cleanedUp.set(false)
     }
 
     // ---- Foreground service ----
+
+    private fun ensureForegroundService() {
+        if (foregroundServiceStarted) return
+        foregroundServiceStarted = true
+        startForegroundService()
+    }
 
     private fun startForegroundService() {
         try {
@@ -512,6 +665,21 @@ class CallController(
             context.startForegroundService(intent)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start foreground service", e)
+        }
+    }
+
+    private fun updateForegroundServiceNotification() {
+        if (!foregroundServiceStarted) return
+        try {
+            val peerName = callManager.currentPeerPubKey() ?: ""
+            val intent =
+                Intent(context, CallForegroundService::class.java).apply {
+                    action = CallForegroundService.ACTION_UPDATE
+                    putExtra(CallForegroundService.EXTRA_PEER_NAME, peerName)
+                }
+            context.startService(intent)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to update foreground service notification", e)
         }
     }
 

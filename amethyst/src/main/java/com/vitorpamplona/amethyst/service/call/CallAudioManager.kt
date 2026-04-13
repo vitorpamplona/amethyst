@@ -97,8 +97,13 @@ class CallAudioManager(
         }
 
     fun startRinging() {
-        startRingtone()
-        startVibration()
+        val ringerMode = audioManager.ringerMode
+        if (ringerMode != AudioManager.RINGER_MODE_SILENT) {
+            if (ringerMode == AudioManager.RINGER_MODE_NORMAL) {
+                startRingtone()
+            }
+            startVibration()
+        }
     }
 
     fun stopRinging() {
@@ -184,7 +189,10 @@ class CallAudioManager(
                 PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK,
                 "amethyst:call_proximity",
             )
-        proximityWakeLock?.acquire(60 * 60 * 1000L)
+        // No timeout — the wake lock is held for the entire call duration
+        // and released in releaseProximityWakeLock() during cleanup.
+        @Suppress("WakelockTimeout")
+        proximityWakeLock?.acquire()
         registerProximitySensor()
     }
 
@@ -320,10 +328,11 @@ class CallAudioManager(
                     }
                 }
             }
-        @Suppress("DEPRECATION")
-        context.registerReceiver(
+        ContextCompat.registerReceiver(
+            context,
             scoReceiver,
             IntentFilter(AudioManager.ACTION_SCO_AUDIO_STATE_UPDATED),
+            ContextCompat.RECEIVER_NOT_EXPORTED,
         )
     }
 

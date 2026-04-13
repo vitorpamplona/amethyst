@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.desktop.service.upload
 
+import com.vitorpamplona.amethyst.desktop.network.DesktopHttpClient
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomUploadResult
 import kotlinx.coroutines.Dispatchers
@@ -34,8 +35,10 @@ import okio.source
 import java.io.File
 
 class DesktopBlossomClient(
-    private val okHttpClient: OkHttpClient = OkHttpClient(),
+    private val clientOverride: OkHttpClient? = null,
 ) {
+    private val okHttpClient: OkHttpClient get() = clientOverride ?: DesktopHttpClient.currentClient()
+
     suspend fun upload(
         file: File,
         contentType: String,

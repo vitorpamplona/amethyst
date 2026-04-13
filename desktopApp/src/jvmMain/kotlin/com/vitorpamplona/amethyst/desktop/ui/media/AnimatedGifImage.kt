@@ -35,27 +35,20 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asComposeImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import coil3.compose.AsyncImage
+import com.vitorpamplona.amethyst.desktop.network.DesktopHttpClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.jetbrains.skia.Bitmap
 import org.jetbrains.skia.Codec
 import org.jetbrains.skia.Data
-import java.util.concurrent.TimeUnit
 
 private const val MAX_BITMAP_MEMORY = 64L * 1024 * 1024 // 64MB per GIF
 private const val MIN_FRAME_DURATION_MS = 20
 
-private val gifHttpClient: OkHttpClient by lazy {
-    OkHttpClient
-        .Builder()
-        .connectTimeout(15, TimeUnit.SECONDS)
-        .readTimeout(30, TimeUnit.SECONDS)
-        .build()
-}
+private val gifHttpClient get() = DesktopHttpClient.currentClient()
 
 fun isAnimatedGifUrl(url: String): Boolean {
     val lower = url.lowercase()

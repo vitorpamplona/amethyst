@@ -53,8 +53,11 @@ class WebRtcCallSession(
     private val onDisconnected: () -> Unit,
     private val onError: (String) -> Unit = {},
     private val onRenegotiationNeeded: () -> Unit = {},
+    private val onIceRestartOffer: (SessionDescription) -> Unit = {},
 ) {
-    private var peerConnection: PeerConnection? = null
+    @Volatile private var peerConnection: PeerConnection? = null
+
+    @Volatile private var iceRestartAttempted = false
 
     fun createPeerConnection() {
         val rtcConfig =
@@ -63,7 +66,7 @@ class WebRtcCallSession(
                 continualGatheringPolicy = PeerConnection.ContinualGatheringPolicy.GATHER_CONTINUALLY
             }
 
-        peerConnection =
+        val pc =
             peerConnectionFactory.createPeerConnection(
                 rtcConfig,
                 object : PeerConnection.Observer {
@@ -90,6 +93,7 @@ class WebRtcCallSession(
 
                             PeerConnection.IceConnectionState.CONNECTED -> {
                                 Log.d(TAG) { "ICE: CONNECTED - peer connection established!" }
+                                iceRestartAttempted = false
                                 onPeerConnected()
                             }
 
@@ -98,9 +102,15 @@ class WebRtcCallSession(
                             }
 
                             PeerConnection.IceConnectionState.FAILED -> {
-                                Log.e(TAG, "ICE: FAILED - could not establish connection")
-                                onError("Connection failed - check network")
-                                onDisconnected()
+                                if (!iceRestartAttempted) {
+                                    iceRestartAttempted = true
+                                    Log.d(TAG) { "ICE: FAILED - attempting ICE restart" }
+                                    restartIce()
+                                } else {
+                                    Log.e(TAG, "ICE: FAILED after restart - giving up")
+                                    onError("Connection failed - check network")
+                                    onDisconnected()
+                                }
                             }
 
                             PeerConnection.IceConnectionState.DISCONNECTED -> {
@@ -146,7 +156,8 @@ class WebRtcCallSession(
                         }
                     }
                 },
-            )
+            ) ?: throw IllegalStateException("PeerConnectionFactory.createPeerConnection returned null")
+        peerConnection = pc
     }
 
     /**
@@ -168,6 +179,13 @@ class WebRtcCallSession(
         }
         return sender
     }
+
+    /**
+     * Removes the sender for the given track from this PeerConnection.
+     * This signals to the remote peer that the track has been removed
+     * (e.g. camera turned off) rather than just sending a black frame.
+     */
+    fun removeTrack(sender: RtpSender): Boolean = peerConnection?.removeTrack(sender) ?: false
 
     fun createOffer(onSdpCreated: (SessionDescription) -> Unit) {
         val constraints =
@@ -255,6 +273,51 @@ class WebRtcCallSession(
         Log.d(TAG) { "addIceCandidate result=$added sdpMid=${candidate.sdpMid} sdp=${candidate.sdp.take(60)}" }
     }
 
+    /**
+     * Triggers an ICE restart by creating a new offer with iceRestart=true.
+     * This re-gathers candidates and attempts to establish connectivity
+     * without tearing down the PeerConnection.
+     */
+    private fun restartIce() {
+        val constraints =
+            MediaConstraints().apply {
+                mandatory.add(MediaConstraints.KeyValuePair("IceRestart", "true"))
+                mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveAudio", "true"))
+                mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveVideo", "true"))
+            }
+        peerConnection?.createOffer(
+            object : SdpObserver {
+                override fun onCreateSuccess(sdp: SessionDescription?) {
+                    sdp?.let {
+                        Log.d(TAG) { "ICE restart offer created, setting local description and sending to peer" }
+                        peerConnection?.setLocalDescription(loggingSdpObserver("setLocalDescription(ICE_RESTART)"), it)
+                        onIceRestartOffer(it)
+                    }
+                }
+
+                override fun onCreateFailure(error: String?) {
+                    Log.e(TAG, "ICE restart offer creation failed: $error")
+                    onError("Connection failed - check network")
+                    onDisconnected()
+                }
+
+                override fun onSetSuccess() {}
+
+                override fun onSetFailure(error: String?) {}
+            },
+            constraints,
+        )
+    }
+
+    /**
+     * Triggers an ICE restart proactively (e.g. on network change).
+     * Resets the attempt counter so the restart is always tried.
+     */
+    fun triggerIceRestart() {
+        iceRestartAttempted = false
+        restartIce()
+    }
+
     fun getSignalingState(): PeerConnection.SignalingState? = peerConnection?.signalingState()
 
     /**
@@ -284,9 +347,10 @@ class WebRtcCallSession(
     }
 
     fun dispose() {
-        peerConnection?.close()
-        peerConnection?.dispose()
+        val pc = peerConnection ?: return
         peerConnection = null
+        pc.close()
+        pc.dispose()
     }
 
     private fun loggingSdpObserver(label: String) =

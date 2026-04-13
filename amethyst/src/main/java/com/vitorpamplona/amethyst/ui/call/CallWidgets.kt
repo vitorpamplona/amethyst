@@ -36,6 +36,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -63,6 +64,10 @@ fun VideoRenderer(
     modifier: Modifier = Modifier,
     mirror: Boolean = false,
 ) {
+    // Track the current track so the update block can swap sinks when the
+    // track reference changes (e.g. after renegotiation).
+    val currentTrack = remember { mutableStateOf(videoTrack) }
+
     AndroidView(
         modifier = modifier,
         factory = { ctx ->
@@ -73,8 +78,21 @@ fun VideoRenderer(
                 videoTrack.addSink(this)
             }
         },
+        update = { renderer ->
+            if (currentTrack.value !== videoTrack) {
+                try {
+                    currentTrack.value.removeSink(renderer)
+                } catch (_: Exception) {
+                }
+                videoTrack.addSink(renderer)
+                currentTrack.value = videoTrack
+            }
+        },
         onRelease = { renderer ->
-            videoTrack.removeSink(renderer)
+            try {
+                currentTrack.value.removeSink(renderer)
+            } catch (_: Exception) {
+            }
             renderer.release()
         },
     )

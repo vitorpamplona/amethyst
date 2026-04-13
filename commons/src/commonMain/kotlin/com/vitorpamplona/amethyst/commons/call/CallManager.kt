@@ -199,15 +199,17 @@ class CallManager(
     ) {
         Log.d("CallManager") { "initiateCall: callId=$callId, callee=${calleePubKey.take(8)}, type=$callType, sdpLength=${sdpOffer.length}" }
         val result = factory.createCallOffer(sdpOffer, calleePubKey, callId, callType, signer)
-        _state.value = CallState.Offering(callId, setOf(calleePubKey), callType)
+        stateMutex.withLock {
+            _state.value = CallState.Offering(callId, setOf(calleePubKey), callType)
+            startTimeout(callId)
+        }
         publishEvent(result.wrap)
-        startTimeout(callId)
         Log.d("CallManager") { "initiateCall: offer published, timeout started" }
     }
 
     // ---- Incoming call handling ----
 
-    fun onIncomingCallEvent(event: CallOfferEvent) {
+    private fun onIncomingCallEvent(event: CallOfferEvent) {
         val callerPubKey = event.pubKey
         val callId = event.callId() ?: return
         val callType = event.callType() ?: CallType.VOICE
@@ -279,9 +281,10 @@ class CallManager(
             discoveredCalleePeers.clear()
         }
 
-        val allRecipients = current.groupMembers + signer.pubKey
-        Log.d("CallManager") { "acceptCall: publishing answer to ${allRecipients.size} recipients" }
-        val result = factory.createGroupCallAnswer(sdpAnswer, allRecipients, current.callId, signer)
+        val allMembers = current.groupMembers + signer.pubKey
+        val otherMembers = allMembers - signer.pubKey
+        Log.d("CallManager") { "acceptCall: publishing answer to ${otherMembers.size} recipients" }
+        val result = factory.createGroupCallAnswer(sdpAnswer, otherMembers, current.callId, signer)
         result.wraps.forEach { publishEvent(it) }
         Log.d("CallManager") { "acceptCall: answer published, now in Connecting state" }
 
@@ -304,12 +307,12 @@ class CallManager(
             transitionToEnded(current.callId, current.peerPubKeys(), EndReason.REJECTED)
         }
 
-        val allRecipients = current.groupMembers + signer.pubKey
-        val result = factory.createGroupReject(allRecipients, current.callId, signer = signer)
+        val otherMembers = current.groupMembers - signer.pubKey
+        val result = factory.createGroupReject(otherMembers, current.callId, signer = signer)
         result.wraps.forEach { publishEvent(it) }
     }
 
-    fun onCallAnswered(event: CallAnswerEvent) {
+    private fun onCallAnswered(event: CallAnswerEvent) {
         val current = _state.value
         val callId = event.callId()
         val answeringPeer = event.pubKey
@@ -394,7 +397,7 @@ class CallManager(
         }
     }
 
-    fun onCallRejected(event: CallRejectEvent) {
+    private fun onCallRejected(event: CallRejectEvent) {
         val current = _state.value
         val callId = event.callId()
         val rejectingPeer = event.pubKey
@@ -451,11 +454,11 @@ class CallManager(
         }
     }
 
-    fun onIceCandidate(event: CallIceCandidateEvent) {
+    private fun onIceCandidate(event: CallIceCandidateEvent) {
         onIceCandidateReceived?.invoke(event)
     }
 
-    fun onRenegotiate(event: CallRenegotiateEvent) {
+    private fun onRenegotiate(event: CallRenegotiateEvent) {
         val current = _state.value
         val callId = event.callId()
         val currentCallId =
@@ -575,7 +578,7 @@ class CallManager(
         result.wraps.forEach { publishEvent(it) }
     }
 
-    fun onPeerHangup(event: CallHangupEvent) {
+    private fun onPeerHangup(event: CallHangupEvent) {
         val current = _state.value
         val callId = event.callId() ?: return
         val leavingPeer = event.pubKey
@@ -765,21 +768,31 @@ class CallManager(
         timeoutJob =
             scope.launch {
                 delay(CALL_TIMEOUT_MS)
-                val current = _state.value
-                val currentCallId =
-                    when (current) {
-                        is CallState.Offering -> current.callId
-                        is CallState.IncomingCall -> current.callId
-                        else -> null
-                    }
-                if (currentCallId == callId) {
-                    val peerPubKeys =
+                val peerPubKeys: Set<HexKey>
+                val wasOffering: Boolean
+                stateMutex.withLock {
+                    val current = _state.value
+                    val currentCallId =
+                        when (current) {
+                            is CallState.Offering -> current.callId
+                            is CallState.IncomingCall -> current.callId
+                            else -> null
+                        }
+                    if (currentCallId != callId) return@launch
+                    peerPubKeys =
                         when (current) {
                             is CallState.Offering -> current.peerPubKeys
                             is CallState.IncomingCall -> current.peerPubKeys()
                             else -> return@launch
                         }
+                    wasOffering = current is CallState.Offering
                     transitionToEnded(callId, peerPubKeys, EndReason.TIMEOUT)
+                }
+                // Notify peers so their phones stop ringing immediately
+                // instead of waiting for their own 60-second timeout.
+                if (wasOffering && peerPubKeys.isNotEmpty()) {
+                    val result = factory.createGroupHangup(peerPubKeys, callId, signer = signer)
+                    result.wraps.forEach { publishEvent(it) }
                 }
             }
     }

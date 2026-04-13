@@ -24,6 +24,7 @@ import android.Manifest
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -34,6 +35,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.call.CallActivity
 import com.vitorpamplona.quartz.utils.Log
 
 private const val TAG = "CallForegroundService"
@@ -44,8 +46,11 @@ class CallForegroundService : Service() {
         const val NOTIFICATION_ID = 9001
         const val ACTION_START = "com.vitorpamplona.amethyst.CALL_START"
         const val ACTION_STOP = "com.vitorpamplona.amethyst.CALL_STOP"
+        const val ACTION_UPDATE = "com.vitorpamplona.amethyst.CALL_UPDATE"
         const val EXTRA_PEER_NAME = "peer_name"
         const val EXTRA_IS_VIDEO = "is_video"
+        const val EXTRA_STATUS_TEXT = "status_text"
+        private const val HANGUP_REQUEST_CODE = 0x70001
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -64,7 +69,8 @@ class CallForegroundService : Service() {
             ACTION_START -> {
                 val peerName = intent.getStringExtra(EXTRA_PEER_NAME) ?: "Unknown"
                 val isVideo = intent.getBooleanExtra(EXTRA_IS_VIDEO, false)
-                val notification = buildNotification(peerName)
+                val statusText = intent.getStringExtra(EXTRA_STATUS_TEXT)
+                val notification = buildNotification(peerName, statusText)
                 val hasAudioPermission =
                     ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) ==
                         PackageManager.PERMISSION_GRANTED
@@ -97,6 +103,14 @@ class CallForegroundService : Service() {
                 }
             }
 
+            ACTION_UPDATE -> {
+                val peerName = intent.getStringExtra(EXTRA_PEER_NAME) ?: "Unknown"
+                val statusText = intent.getStringExtra(EXTRA_STATUS_TEXT)
+                val notification = buildNotification(peerName, statusText)
+                val notificationManager = getSystemService(NotificationManager::class.java)
+                notificationManager.notify(NOTIFICATION_ID, notification)
+            }
+
             ACTION_STOP -> {
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
@@ -118,12 +132,40 @@ class CallForegroundService : Service() {
         notificationManager.createNotificationChannel(channel)
     }
 
-    private fun buildNotification(peerName: String): Notification =
-        NotificationCompat
+    private fun buildNotification(
+        peerName: String,
+        statusText: String? = null,
+    ): Notification {
+        val openCallIntent =
+            PendingIntent.getActivity(
+                this,
+                0,
+                Intent(this, CallActivity::class.java).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                },
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
+
+        val hangupIntent =
+            PendingIntent.getBroadcast(
+                this,
+                HANGUP_REQUEST_CODE,
+                Intent(this, CallNotificationReceiver::class.java).apply {
+                    action = CallNotificationReceiver.ACTION_HANGUP_CALL
+                },
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
+
+        val contentText = statusText ?: getString(R.string.call_with, peerName)
+
+        return NotificationCompat
             .Builder(this, CHANNEL_ID)
             .setContentTitle(getString(R.string.app_name))
-            .setContentText(getString(R.string.call_with, peerName))
+            .setContentText(contentText)
             .setSmallIcon(R.drawable.amethyst)
             .setOngoing(true)
+            .setContentIntent(openCallIntent)
+            .addAction(R.drawable.ic_call_end, getString(R.string.call_hangup), hangupIntent)
             .build()
+    }
 }

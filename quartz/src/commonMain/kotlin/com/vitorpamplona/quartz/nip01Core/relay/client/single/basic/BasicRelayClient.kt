@@ -228,7 +228,7 @@ open class BasicRelayClient(
     }
 
     fun dontTryAgainForALongTime() {
-        delayToConnectInSeconds = TimeUtils.ONE_DAY
+        delayToConnectInSeconds = TimeUtils.FIVE_MINUTES
     }
 
     override fun sendOrConnectAndSync(cmd: Command) {
