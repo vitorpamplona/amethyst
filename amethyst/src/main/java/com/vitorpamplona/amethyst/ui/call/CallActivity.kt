@@ -273,7 +273,6 @@ class CallActivity : AppCompatActivity() {
     }
 
     private fun updatePipParams() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         if (!isInPipMode.value) return
         try {
             setPictureInPictureParams(buildPipParams())
@@ -288,9 +287,7 @@ class CallActivity : AppCompatActivity() {
                 .Builder()
                 .setAspectRatio(aspectRatio)
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            builder.setActions(buildPipActions())
-        }
+        builder.setActions(buildPipActions())
 
         return builder.build()
     }

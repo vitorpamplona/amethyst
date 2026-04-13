@@ -80,7 +80,7 @@ class CallForegroundService : Service() {
                 try {
                     val fgsType =
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                            var type = 0
+                            var type = ServiceInfo.FOREGROUND_SERVICE_TYPE_PHONE_CALL
                             if (hasAudioPermission) {
                                 type = type or ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
                             }
@@ -92,10 +92,16 @@ class CallForegroundService : Service() {
                             0
                         }
                     ServiceCompat.startForeground(this, NOTIFICATION_ID, notification, fgsType)
-                } catch (e: SecurityException) {
-                    Log.e(TAG, "Cannot start microphone foreground service, falling back", e)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Cannot start foreground service, falling back", e)
                     try {
-                        ServiceCompat.startForeground(this, NOTIFICATION_ID, notification, 0)
+                        val fallbackType =
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                                ServiceInfo.FOREGROUND_SERVICE_TYPE_PHONE_CALL
+                            } else {
+                                0
+                            }
+                        ServiceCompat.startForeground(this, NOTIFICATION_ID, notification, fallbackType)
                     } catch (e2: Exception) {
                         Log.e(TAG, "Foreground service start failed entirely", e2)
                         stopSelf()
