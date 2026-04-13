@@ -63,6 +63,7 @@ fun VideoRenderer(
     eglBase: org.webrtc.EglBase?,
     modifier: Modifier = Modifier,
     mirror: Boolean = false,
+    zOrderMediaOverlay: Boolean = false,
 ) {
     // Track the current track so the update block can swap sinks when the
     // track reference changes (e.g. after renegotiation).
@@ -74,11 +75,13 @@ fun VideoRenderer(
             SurfaceViewRenderer(ctx).apply {
                 setMirror(mirror)
                 setScalingType(RendererCommon.ScalingType.SCALE_ASPECT_FILL)
+                setZOrderMediaOverlay(zOrderMediaOverlay)
                 eglBase?.eglBaseContext?.let { init(it, null) }
                 videoTrack.addSink(this)
             }
         },
         update = { renderer ->
+            renderer.setMirror(mirror)
             if (currentTrack.value !== videoTrack) {
                 try {
                     currentTrack.value.removeSink(renderer)

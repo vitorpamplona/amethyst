@@ -164,6 +164,7 @@ fun ConnectedCallUI(
                                 .windowInsetsPadding(WindowInsets.statusBars)
                                 .padding(16.dp),
                         mirror = isFrontCamera,
+                        zOrderMediaOverlay = true,
                     )
                 }
             }
