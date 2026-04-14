@@ -103,6 +103,12 @@ fun RenderTopButtons(
                     it()
                 }
             },
+        qualityButton = {
+            VideoQualityButton(
+                player = controllerState.controller,
+                controllerVisible = controllerVisible,
+            )
+        },
         modifier = modifier,
         accountViewModel = accountViewModel,
     )
@@ -121,6 +127,7 @@ fun RenderTopButtons(
     onZoomClick: (() -> Unit)?,
     modifier: Modifier,
     accountViewModel: AccountViewModel,
+    qualityButton: @Composable () -> Unit = {},
 ) {
     val shareDialogVisible = remember { mutableStateOf(false) }
     val saveAction =
@@ -141,6 +148,8 @@ fun RenderTopButtons(
             startingMuteState = startingMuteState,
             toggle = onMuteClick,
         )
+
+        qualityButton()
 
         Box {
             AnimatedOverflowMenuButton(
