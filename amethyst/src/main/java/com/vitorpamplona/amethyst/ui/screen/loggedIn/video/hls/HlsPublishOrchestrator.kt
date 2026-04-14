@@ -81,8 +81,8 @@ class HlsPublishOrchestrator(
             val uploader = buildUploader(request.server)
             val pipeline = HlsUploadPipeline(uploader)
             val uploadResult =
-                pipeline.upload(bundle) { done, total ->
-                    _state.value = HlsPublishState.Uploading(done, total)
+                pipeline.upload(bundle) { done, total, label ->
+                    _state.value = HlsPublishState.Uploading(done, total, label)
                 }
 
             _state.value = HlsPublishState.Publishing

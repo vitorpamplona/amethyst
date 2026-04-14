@@ -31,6 +31,7 @@ sealed class HlsPublishState {
     data class Uploading(
         val done: Int,
         val total: Int,
+        val currentLabel: String = "",
     ) : HlsPublishState()
 
     data object Publishing : HlsPublishState()

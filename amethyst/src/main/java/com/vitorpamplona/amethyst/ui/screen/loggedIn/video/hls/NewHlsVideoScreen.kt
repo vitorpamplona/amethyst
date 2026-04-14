@@ -523,8 +523,22 @@ private fun ProgressBody(
             }
         val uploadingLabel =
             when (state) {
-                is HlsPublishState.Uploading -> stringResource(R.string.hls_state_uploading_format, state.done, state.total)
-                else -> stringResource(R.string.hls_state_uploading_format, 0, 0)
+                is HlsPublishState.Uploading -> {
+                    if (state.currentLabel.isNotBlank()) {
+                        stringResource(
+                            R.string.hls_state_uploading_with_label_format,
+                            state.currentLabel,
+                            state.done,
+                            state.total,
+                        )
+                    } else {
+                        stringResource(R.string.hls_state_uploading_format, state.done, state.total)
+                    }
+                }
+
+                else -> {
+                    stringResource(R.string.hls_state_uploading_format, 0, 0)
+                }
             }
         PhaseRow(
             label = uploadingLabel,

@@ -242,21 +242,31 @@ class HlsUploadPipelineTest {
     }
 
     @Test
-    fun reportsUploadProgressPerStep() {
+    fun reportsUploadProgressWithCurrentLabelBeforeEachStep() {
         val bundle = createBundle(listOf("360p", "540p"))
         val uploader = FakeUploader()
         val pipeline = HlsUploadPipeline(uploader)
-        val observed = mutableListOf<Pair<Int, Int>>()
+        val observed = mutableListOf<Triple<Int, Int, String>>()
 
         runBlocking {
-            pipeline.upload(bundle) { done, total ->
-                observed += done to total
+            pipeline.upload(bundle) { done, total, label ->
+                observed += Triple(done, total, label)
             }
         }
 
-        // 2 renditions × 2 + 1 master = 5 uploads
+        // 2 renditions × 2 + 1 master = 5 uploads. Label is emitted BEFORE each upload with
+        // the done-count of previously-completed uploads, so the UI can show "Uploading 360p
+        // video (0 / 5)" while the first file is actually in flight. A trailing (5, 5, "")
+        // marks the final completion.
         assertEquals(
-            listOf(1 to 5, 2 to 5, 3 to 5, 4 to 5, 5 to 5),
+            listOf(
+                Triple(0, 5, "360p video"),
+                Triple(1, 5, "360p playlist"),
+                Triple(2, 5, "540p video"),
+                Triple(3, 5, "540p playlist"),
+                Triple(4, 5, "master playlist"),
+                Triple(5, 5, ""),
+            ),
             observed,
         )
     }

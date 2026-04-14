@@ -70,7 +70,7 @@ class HlsUploadPipeline(
 ) {
     suspend fun upload(
         bundle: HlsBundle,
-        onProgress: (done: Int, total: Int) -> Unit = { _, _ -> },
+        onProgress: (done: Int, total: Int, currentLabel: String) -> Unit = { _, _, _ -> },
     ): HlsUploadResult {
         val playlistDir = File(bundle.workDir, "playlists").apply { mkdirs() }
         val total = bundle.renditions.size * 2 + 1
@@ -78,8 +78,9 @@ class HlsUploadPipeline(
 
         val uploadedRenditions =
             bundle.renditions.map { rendition ->
+                onProgress(done, total, "${rendition.label} video")
                 val combined = uploader.upload(rendition.combinedFile, CONTENT_TYPE_VIDEO_MP4)
-                onProgress(++done, total)
+                done++
                 val combinedUrl =
                     combined.url ?: error("Uploader returned null URL for ${rendition.combinedFile.name}")
 
@@ -90,8 +91,9 @@ class HlsUploadPipeline(
                     )
                 val mediaPlaylistFile =
                     File(playlistDir, "${rendition.label}-media.m3u8").apply { writeText(rewrittenMedia) }
+                onProgress(done, total, "${rendition.label} playlist")
                 val mediaPlaylist = uploader.upload(mediaPlaylistFile, CONTENT_TYPE_HLS)
-                onProgress(++done, total)
+                done++
                 val mediaPlaylistUrl =
                     mediaPlaylist.url ?: error("Uploader returned null URL for media playlist ${rendition.label}")
 
@@ -109,10 +111,13 @@ class HlsUploadPipeline(
             uploadedRenditions.associate { "${it.label}/media.m3u8" to it.playlistUrl }
         val rewrittenMaster = HlsPlaylistRewriter.rewrite(bundle.masterPlaylist, masterUrlMap)
         val masterFile = File(playlistDir, "master.m3u8").apply { writeText(rewrittenMaster) }
+        onProgress(done, total, "master playlist")
         val master = uploader.upload(masterFile, CONTENT_TYPE_HLS)
-        onProgress(++done, total)
+        done++
         val masterUrl =
             master.url ?: error("Uploader returned null URL for master playlist")
+
+        onProgress(done, total, "")
 
         return HlsUploadResult(
             masterUrl = masterUrl,
