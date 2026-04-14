@@ -145,6 +145,7 @@ fun ConnectedCallUI(
         if (hasActiveVideo) {
             PeerVideoGrid(
                 peerPubKeys = otherMembers,
+                pendingPeerPubKeys = state.pendingPeerPubKeys,
                 remoteVideoTracks = remoteVideoTracks,
                 activePeerVideos = activePeerVideos,
                 eglBase = callController?.getEglBase(),
@@ -179,35 +180,27 @@ fun ConnectedCallUI(
                         .windowInsetsPadding(WindowInsets.statusBars)
                         .padding(top = 16.dp),
             )
-
-            if (state.pendingPeerPubKeys.isNotEmpty()) {
-                Text(
-                    text = stringRes(R.string.call_waiting_for_others),
-                    color = Color.White.copy(alpha = 0.5f),
-                    fontSize = 13.sp,
-                    modifier =
-                        Modifier
-                            .align(Alignment.TopCenter)
-                            .windowInsetsPadding(WindowInsets.statusBars)
-                            .padding(top = 38.dp),
-                )
-            }
         } else {
+            // Voice-only path: render the same peer grid so each pending
+            // callee shows their individual "Calling…" status rather than a
+            // single shared banner. Tracks and active-video sets are empty
+            // here, so every cell falls through to PeerAvatarCell.
+            val emptyTracks = remember { emptyMap<String, VideoTrack>() }
+            val emptyActive = remember { emptySet<String>() }
+
             Column(
                 modifier = Modifier.fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
-                GroupCallPictures(
+                PeerVideoGrid(
                     peerPubKeys = otherMembers,
-                    size = 120.dp,
+                    pendingPeerPubKeys = state.pendingPeerPubKeys,
+                    remoteVideoTracks = emptyTracks,
+                    activePeerVideos = emptyActive,
+                    eglBase = null,
                     accountViewModel = accountViewModel,
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                GroupCallNames(
-                    peerPubKeys = otherMembers,
-                    accountViewModel = accountViewModel,
-                    textColor = Color.White,
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
@@ -215,14 +208,7 @@ fun ConnectedCallUI(
                     color = Color.White.copy(alpha = 0.7f),
                     fontSize = 16.sp,
                 )
-                if (state.pendingPeerPubKeys.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = stringRes(R.string.call_waiting_for_others),
-                        color = Color.White.copy(alpha = 0.5f),
-                        fontSize = 13.sp,
-                    )
-                }
+                Spacer(modifier = Modifier.height(24.dp))
             }
         }
 

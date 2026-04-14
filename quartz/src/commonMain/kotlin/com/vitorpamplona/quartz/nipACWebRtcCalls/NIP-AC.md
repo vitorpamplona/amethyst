@@ -480,7 +480,8 @@ This NIP does not mandate specific STUN or TURN servers. Clients SHOULD:
 
 - The `call-id` tag MUST be a UUID that is unique per call session. All signaling events for the same call share the same `call-id`.
 - Signaling data is ephemeral and has no long-term value. Using kind `21059` (ephemeral gift wrap) signals to relays that these events are transient and SHOULD NOT be persisted.
-- Clients SHOULD implement a ringing timeout (e.g., 60 seconds). If no answer is received, the call transitions to a "timed out" state.
+- **Callee ringing timeout**: Clients SHOULD implement a ringing timeout (e.g., 60 seconds) on the callee side. If the user does not accept within the window, the call transitions to a "timed out" state.
+- **Caller per-peer invite timeout**: On the caller side in a group call, clients SHOULD track an independent per-peer invite timer (e.g., 30 seconds) for every peer in `pendingPeerPubKeys` (or for every peer in `Offering.peerPubKeys`, which is implicitly pending). When a peer's timer fires without an answer, the caller drops that peer from the current group call, publishes a `CallHangup` (kind 25053) addressed to them (so their device stops ringing), and continues the call with the remaining peers. If the resulting state has zero connected peers and zero pending peers, the call ends with `TIMEOUT`. The same timer is started when inviting a new peer mid-call. This ensures slow or unavailable peers do not stall the rest of the mesh.
 - After a call ends, the call state SHOULD auto-reset to idle after a brief display period (e.g., 2 seconds) to ensure the client is ready for subsequent calls.
 
 ### WebRTC Configuration

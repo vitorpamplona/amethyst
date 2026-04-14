@@ -79,6 +79,14 @@ class CallManager(
     private var resetJob: Job? = null
     private val processedEventIds = LinkedHashSet<String>()
 
+    /** Per-peer invite timeout jobs.  A separate 30-second timer is scheduled
+     *  for each peer we are waiting on (initial group-call offerees and
+     *  mid-call invitees) so that slow/unavailable peers can be dropped
+     *  individually without affecting the rest of the call. The timer is
+     *  cancelled when the peer answers, rejects, or hangs up — or when the
+     *  whole call ends. */
+    private val perPeerTimeoutJobs = mutableMapOf<HexKey, Job>()
+
     /** Call IDs for which we have seen a hangup, reject, or answer-elsewhere
      *  signal.  Checked before transitioning to [CallState.IncomingCall] so
      *  that stale offer events replayed by relays after an app restart do not
@@ -95,7 +103,8 @@ class CallManager(
     private val discoveredCalleePeers = mutableSetOf<HexKey>()
 
     companion object {
-        const val CALL_TIMEOUT_MS = 60_000L // 60 seconds ringing timeout
+        const val CALL_TIMEOUT_MS = 60_000L // 60 seconds ringing timeout (callee side)
+        const val PEER_INVITE_TIMEOUT_MS = 30_000L // 30 seconds per-peer invite timeout (caller side)
         const val ENDED_DISPLAY_MS = 2_000L // show "call ended" briefly before resetting
         const val MAX_EVENT_AGE_SECONDS = 20L // discard signaling events older than this
         const val MAX_PROCESSED_EVENT_IDS = 2_000 // cap dedup set to prevent unbounded growth
@@ -140,7 +149,8 @@ class CallManager(
         callType: CallType,
     ) = stateMutex.withLock {
         _state.value = CallState.Offering(callId, calleePubKeys, callType)
-        startTimeout(callId)
+        cancelAllPeerTimeouts()
+        calleePubKeys.forEach { schedulePeerTimeout(it, callId) }
     }
 
     /**
@@ -201,10 +211,11 @@ class CallManager(
         val result = factory.createCallOffer(sdpOffer, calleePubKey, callId, callType, signer)
         stateMutex.withLock {
             _state.value = CallState.Offering(callId, setOf(calleePubKey), callType)
-            startTimeout(callId)
+            cancelAllPeerTimeouts()
+            schedulePeerTimeout(calleePubKey, callId)
         }
         publishEvent(result.wrap)
-        Log.d("CallManager") { "initiateCall: offer published, timeout started" }
+        Log.d("CallManager") { "initiateCall: offer published, per-peer timeout started" }
     }
 
     // ---- Incoming call handling ----
@@ -348,7 +359,9 @@ class CallManager(
                         current.callType,
                         pendingPeerPubKeys = pending,
                     )
-                cancelTimeout()
+                // The answered peer no longer needs its invite timer. Peers
+                // still in `pending` keep theirs (scheduled in beginOffering).
+                cancelPeerTimeout(answeringPeer)
                 Log.d("CallManager") { "onCallAnswered: Offering -> Connecting, forwarding answer to CallController" }
                 onAnswerReceived?.invoke(event)
             }
@@ -362,6 +375,7 @@ class CallManager(
                                 peerPubKeys = current.peerPubKeys + answeringPeer,
                                 pendingPeerPubKeys = current.pendingPeerPubKeys - answeringPeer,
                             )
+                        cancelPeerTimeout(answeringPeer)
                     }
 
                     answeringPeer !in current.peerPubKeys -> {
@@ -398,6 +412,7 @@ class CallManager(
                                 peerPubKeys = current.peerPubKeys + answeringPeer,
                                 pendingPeerPubKeys = current.pendingPeerPubKeys - answeringPeer,
                             )
+                        cancelPeerTimeout(answeringPeer)
                     }
 
                     answeringPeer !in current.peerPubKeys -> {
@@ -433,6 +448,7 @@ class CallManager(
         when (current) {
             is CallState.Offering -> {
                 if (callId != current.callId) return
+                cancelPeerTimeout(rejectingPeer)
                 val remaining = current.peerPubKeys - rejectingPeer
                 if (remaining.isEmpty()) {
                     transitionToEnded(current.callId, current.peerPubKeys, EndReason.PEER_REJECTED)
@@ -444,6 +460,7 @@ class CallManager(
 
             is CallState.Connecting -> {
                 if (callId != current.callId) return
+                cancelPeerTimeout(rejectingPeer)
                 _state.value =
                     current.copy(pendingPeerPubKeys = current.pendingPeerPubKeys - rejectingPeer)
                 onPeerLeft?.invoke(rejectingPeer)
@@ -451,6 +468,7 @@ class CallManager(
 
             is CallState.Connected -> {
                 if (callId != current.callId) return
+                cancelPeerTimeout(rejectingPeer)
                 _state.value =
                     current.copy(pendingPeerPubKeys = current.pendingPeerPubKeys - rejectingPeer)
                 onPeerLeft?.invoke(rejectingPeer)
@@ -567,6 +585,10 @@ class CallManager(
             }
         }
 
+        // Start the per-peer invite timer. If the invitee does not answer
+        // within PEER_INVITE_TIMEOUT_MS, they are dropped from the call.
+        schedulePeerTimeout(peerPubKey, callId)
+
         val allMembers = existingMembers + peerPubKey + signer.pubKey
         val result = factory.createCallOffer(sdpOffer, peerPubKey, allMembers, callId, callType, signer)
         publishEvent(result.wrap)
@@ -616,6 +638,7 @@ class CallManager(
         when (current) {
             is CallState.Connected -> {
                 if (callId != current.callId) return
+                cancelPeerTimeout(leavingPeer)
                 val connectedRemaining = current.peerPubKeys - leavingPeer
                 val pendingRemaining = current.pendingPeerPubKeys - leavingPeer
                 if (connectedRemaining.isEmpty() && pendingRemaining.isEmpty()) {
@@ -634,6 +657,7 @@ class CallManager(
 
             is CallState.Connecting -> {
                 if (callId != current.callId) return
+                cancelPeerTimeout(leavingPeer)
                 val connectedRemaining = current.peerPubKeys - leavingPeer
                 val pendingRemaining = current.pendingPeerPubKeys - leavingPeer
                 if (connectedRemaining.isEmpty() && pendingRemaining.isEmpty()) {
@@ -652,6 +676,7 @@ class CallManager(
 
             is CallState.Offering -> {
                 if (callId != current.callId) return
+                cancelPeerTimeout(leavingPeer)
                 val remaining = current.peerPubKeys - leavingPeer
                 if (remaining.isEmpty()) {
                     transitionToEnded(callId, current.peerPubKeys, EndReason.PEER_HANGUP)
@@ -763,6 +788,7 @@ class CallManager(
     fun reset() {
         _state.value = CallState.Idle
         cancelTimeout()
+        cancelAllPeerTimeouts()
         resetJob?.cancel()
         resetJob = null
         processedEventIds.clear()
@@ -780,6 +806,7 @@ class CallManager(
         discoveredCalleePeers.clear()
         _state.value = CallState.Ended(callId, peerPubKeys, reason)
         cancelTimeout()
+        cancelAllPeerTimeouts()
         resetJob?.cancel()
         resetJob =
             scope.launch {
@@ -789,6 +816,118 @@ class CallManager(
                     processedEventIds.clear()
                 }
             }
+    }
+
+    // ---- Per-peer invite timeout ----
+
+    /**
+     * Starts a 30-second timer for [peerPubKey]. If the peer has not answered
+     * by the time it fires, [handlePeerTimeout] drops them from the current
+     * group call and publishes a CallHangup to them so their device stops
+     * ringing.
+     *
+     * Safe to call multiple times for the same peer — any previous timer is
+     * cancelled first.
+     */
+    private fun schedulePeerTimeout(
+        peerPubKey: HexKey,
+        callId: String,
+    ) {
+        perPeerTimeoutJobs.remove(peerPubKey)?.cancel()
+        perPeerTimeoutJobs[peerPubKey] =
+            scope.launch {
+                delay(PEER_INVITE_TIMEOUT_MS)
+                handlePeerTimeout(peerPubKey, callId)
+            }
+    }
+
+    /** Cancels the per-peer timer for [peerPubKey], if any. */
+    private fun cancelPeerTimeout(peerPubKey: HexKey) {
+        perPeerTimeoutJobs.remove(peerPubKey)?.cancel()
+    }
+
+    /** Cancels every per-peer timer. Called on terminal state transitions. */
+    private fun cancelAllPeerTimeouts() {
+        perPeerTimeoutJobs.values.forEach { it.cancel() }
+        perPeerTimeoutJobs.clear()
+    }
+
+    /**
+     * Handles a per-peer timeout firing. Drops the peer from the current
+     * group call state and publishes a CallHangup to them.
+     *
+     * - In [CallState.Offering] the peer is removed from `peerPubKeys`; if no
+     *   peers remain, the whole call ends with [EndReason.TIMEOUT].
+     * - In [CallState.Connecting] the peer is removed from `pendingPeerPubKeys`;
+     *   if that leaves nobody connected AND no more pending, the call ends
+     *   with [EndReason.TIMEOUT]. Otherwise the call continues with the
+     *   already-connected peers.
+     * - In [CallState.Connected] the peer is removed from `pendingPeerPubKeys`;
+     *   at least one other peer is connected by definition, so the call
+     *   always continues.
+     *
+     * Fires [onPeerLeft] so the CallController disposes the per-peer
+     * PeerConnection (and any pending ICE buffers) for the dropped peer.
+     */
+    private suspend fun handlePeerTimeout(
+        peerPubKey: HexKey,
+        callId: String,
+    ) {
+        var shouldPublishHangup = false
+        stateMutex.withLock {
+            perPeerTimeoutJobs.remove(peerPubKey)
+            when (val current = _state.value) {
+                is CallState.Offering -> {
+                    if (callId != current.callId) return@withLock
+                    if (peerPubKey !in current.peerPubKeys) return@withLock
+                    Log.d("CallManager") { "Per-peer timeout: dropping ${peerPubKey.take(8)} from Offering" }
+                    shouldPublishHangup = true
+                    val remaining = current.peerPubKeys - peerPubKey
+                    if (remaining.isEmpty()) {
+                        transitionToEnded(current.callId, current.peerPubKeys, EndReason.TIMEOUT)
+                    } else {
+                        _state.value = current.copy(peerPubKeys = remaining)
+                        onPeerLeft?.invoke(peerPubKey)
+                    }
+                }
+
+                is CallState.Connecting -> {
+                    if (callId != current.callId) return@withLock
+                    if (peerPubKey !in current.pendingPeerPubKeys) return@withLock
+                    Log.d("CallManager") { "Per-peer timeout: dropping ${peerPubKey.take(8)} from Connecting" }
+                    shouldPublishHangup = true
+                    val newPending = current.pendingPeerPubKeys - peerPubKey
+                    if (current.peerPubKeys.isEmpty() && newPending.isEmpty()) {
+                        transitionToEnded(
+                            current.callId,
+                            current.peerPubKeys + current.pendingPeerPubKeys,
+                            EndReason.TIMEOUT,
+                        )
+                    } else {
+                        _state.value = current.copy(pendingPeerPubKeys = newPending)
+                        onPeerLeft?.invoke(peerPubKey)
+                    }
+                }
+
+                is CallState.Connected -> {
+                    if (callId != current.callId) return@withLock
+                    if (peerPubKey !in current.pendingPeerPubKeys) return@withLock
+                    Log.d("CallManager") { "Per-peer timeout: dropping ${peerPubKey.take(8)} from Connected" }
+                    shouldPublishHangup = true
+                    _state.value = current.copy(pendingPeerPubKeys = current.pendingPeerPubKeys - peerPubKey)
+                    onPeerLeft?.invoke(peerPubKey)
+                }
+
+                else -> {
+                    return@withLock
+                }
+            }
+        }
+
+        if (shouldPublishHangup) {
+            val result = factory.createHangup(peerPubKey, callId, signer = signer)
+            publishEvent(result.wrap)
+        }
     }
 
     private fun startTimeout(callId: String) {

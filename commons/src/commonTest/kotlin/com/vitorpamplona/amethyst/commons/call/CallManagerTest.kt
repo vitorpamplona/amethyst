@@ -34,6 +34,7 @@ import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -1289,6 +1290,185 @@ class CallManagerTest {
             assertIs<CallState.Connected>(bobAfterCarolAnswer)
             assertTrue(carol in bobAfterCarolAnswer.peerPubKeys, "Bob should add Carol to his membership")
             assertEquals(carol, bobForwardedAnswer, "Bob must forward Carol's answer to his CallController")
+        }
+
+    // ========================================================================
+    // Per-peer 30-second invite timeout
+    // ========================================================================
+
+    /**
+     * P2P call: Alice calls Bob, Bob never answers. After 30 s Alice's
+     * per-peer timer fires and the call ends with [EndReason.TIMEOUT]. The
+     * timeout hangup is also published so Bob's device stops ringing.
+     */
+    @Test
+    fun perPeerTimeoutEndsP2PCallWhenBobNeverAnswers() =
+        runTest {
+            val (manager, published) = createManager(localPubKey = alice, followedKeys = setOf(bob))
+
+            manager.initiateCall(bob, CallType.VOICE, callId, sdpOffer)
+            assertIs<CallState.Offering>(manager.state.value)
+            published.clear()
+
+            advanceTimeBy(CallManager.PEER_INVITE_TIMEOUT_MS + 100)
+
+            val ended = manager.state.value
+            assertIs<CallState.Ended>(ended)
+            assertEquals(EndReason.TIMEOUT, ended.reason)
+            assertEquals(
+                1,
+                published.size,
+                "Timeout should publish exactly one hangup to the unresponsive peer",
+            )
+        }
+
+    /**
+     * Group call: Alice offers to Bob + Carol. Bob answers quickly, Carol
+     * does not. After 30 s Alice's timer for Carol fires and Carol is
+     * removed from pending. The call continues with Bob. A hangup is
+     * published to Carol but the Bob leg is untouched.
+     */
+    @Test
+    fun perPeerTimeoutDropsSlowCalleeFromGroupCall() =
+        runTest {
+            val (manager, published) = createManager(localPubKey = alice, followedKeys = setOf(bob, carol))
+
+            manager.beginOffering(callId, setOf(bob, carol), CallType.VOICE)
+            assertIs<CallState.Offering>(manager.state.value)
+
+            // Bob answers quickly (well before the 30 s timer).
+            manager.onSignalingEvent(makeGroupAnswer(from = bob, members = setOf(alice, bob, carol)))
+            val afterBob = manager.state.value
+            assertIs<CallState.Connecting>(afterBob)
+            assertTrue(bob in afterBob.peerPubKeys)
+            assertTrue(carol in afterBob.pendingPeerPubKeys)
+            published.clear()
+
+            // Advance past the 30 s per-peer timeout.
+            advanceTimeBy(CallManager.PEER_INVITE_TIMEOUT_MS + 100)
+
+            // Carol dropped; call continues with Bob.
+            val state = manager.state.value
+            assertIs<CallState.Connecting>(state)
+            assertTrue(carol !in state.pendingPeerPubKeys, "Carol should be dropped from pending")
+            assertTrue(bob in state.peerPubKeys, "Bob leg must be untouched")
+
+            assertEquals(
+                1,
+                published.size,
+                "Timeout must publish exactly one hangup (addressed to Carol)",
+            )
+        }
+
+    /**
+     * Bob answering inside the 30 s window cancels his per-peer timer.
+     * Advancing 60 s afterwards must not fire any phantom timeout.
+     */
+    @Test
+    fun perPeerTimeoutIsCancelledOnAnswer() =
+        runTest {
+            val (manager, published) = createManager(localPubKey = alice, followedKeys = setOf(bob))
+
+            manager.initiateCall(bob, CallType.VOICE, callId, sdpOffer)
+            assertIs<CallState.Offering>(manager.state.value)
+
+            // Bob answers before the timeout fires.
+            manager.onSignalingEvent(makeAnswer(from = bob, to = alice))
+            assertIs<CallState.Connecting>(manager.state.value)
+            manager.onPeerConnected()
+            assertIs<CallState.Connected>(manager.state.value)
+            published.clear()
+
+            // Advance way past the 30 s timeout — no timeout must fire.
+            advanceTimeBy(CallManager.PEER_INVITE_TIMEOUT_MS * 2)
+
+            assertIs<CallState.Connected>(manager.state.value)
+            assertTrue(published.isEmpty(), "No timeout hangup must be published after a successful answer")
+        }
+
+    /**
+     * Mid-call invite: Alice is Connected with Bob, then invites Carol.
+     * Carol never answers. After 30 s Carol is dropped from
+     * [CallState.Connected.pendingPeerPubKeys] and the call continues with
+     * Bob. A hangup is published to Carol.
+     */
+    @Test
+    fun perPeerTimeoutDropsMidCallInviteeWhenNoAnswer() =
+        runTest {
+            val (manager, published) = createManager(localPubKey = alice, followedKeys = setOf(bob))
+
+            // Alice ↔ Bob Connected.
+            manager.initiateCall(bob, CallType.VOICE, callId, sdpOffer)
+            manager.onSignalingEvent(makeAnswer(from = bob, to = alice))
+            manager.onPeerConnected()
+            assertIs<CallState.Connected>(manager.state.value)
+
+            // Alice invites Carol.
+            manager.invitePeer(carol, "invite-sdp")
+            val afterInvite = manager.state.value
+            assertIs<CallState.Connected>(afterInvite)
+            assertTrue(carol in afterInvite.pendingPeerPubKeys)
+            published.clear()
+
+            // Carol never answers — advance past the 30 s invite timeout.
+            advanceTimeBy(CallManager.PEER_INVITE_TIMEOUT_MS + 100)
+
+            val state = manager.state.value
+            assertIs<CallState.Connected>(state)
+            assertTrue(carol !in state.pendingPeerPubKeys, "Carol should be dropped from pending")
+            assertTrue(bob in state.peerPubKeys, "Bob leg must be untouched")
+
+            assertEquals(
+                1,
+                published.size,
+                "Invite timeout must publish exactly one hangup addressed to Carol",
+            )
+        }
+
+    /**
+     * Bob rejecting a P2P offer cancels his per-peer timer so advancing time
+     * past 30 s afterwards does not publish a duplicate hangup on top of the
+     * Ended transition.
+     */
+    @Test
+    fun perPeerTimeoutIsCancelledOnReject() =
+        runTest {
+            val (manager, published) = createManager(localPubKey = alice, followedKeys = setOf(bob))
+
+            manager.initiateCall(bob, CallType.VOICE, callId, sdpOffer)
+            manager.onSignalingEvent(makeReject(from = bob, to = alice))
+            val ended = manager.state.value
+            assertIs<CallState.Ended>(ended)
+            assertEquals(EndReason.PEER_REJECTED, ended.reason)
+
+            val publishedAfterReject = published.size
+            advanceTimeBy(CallManager.PEER_INVITE_TIMEOUT_MS * 2)
+            assertEquals(
+                publishedAfterReject,
+                published.size,
+                "No timeout hangup should be published after the peer rejected",
+            )
+        }
+
+    /**
+     * When a group offer is made, each callee gets its own timer. If NEITHER
+     * answers, both timers fire in turn and the whole call ends with
+     * [EndReason.TIMEOUT] (the second timeout has no peers left, so it tips
+     * the state over the edge).
+     */
+    @Test
+    fun perPeerTimeoutEndsCallWhenAllCalleesIgnore() =
+        runTest {
+            val (manager, _) = createManager(localPubKey = alice, followedKeys = setOf(bob, carol))
+
+            manager.beginOffering(callId, setOf(bob, carol), CallType.VOICE)
+            assertIs<CallState.Offering>(manager.state.value)
+
+            advanceTimeBy(CallManager.PEER_INVITE_TIMEOUT_MS + 100)
+
+            val ended = manager.state.value
+            assertIs<CallState.Ended>(ended)
+            assertEquals(EndReason.TIMEOUT, ended.reason)
         }
 
     @Test

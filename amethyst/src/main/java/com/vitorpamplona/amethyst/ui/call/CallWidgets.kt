@@ -48,11 +48,13 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
+import com.vitorpamplona.amethyst.ui.stringRes
 import org.webrtc.RendererCommon
 import org.webrtc.SurfaceViewRenderer
 import org.webrtc.VideoTrack
@@ -104,6 +106,7 @@ fun VideoRenderer(
 @Composable
 fun PeerVideoGrid(
     peerPubKeys: Set<String>,
+    pendingPeerPubKeys: Set<String>,
     remoteVideoTracks: Map<String, VideoTrack>,
     activePeerVideos: Set<String>,
     eglBase: org.webrtc.EglBase?,
@@ -115,7 +118,8 @@ fun PeerVideoGrid(
     if (peers.size == 1) {
         val peerKey = peers[0]
         val track = remoteVideoTracks[peerKey]
-        if (track != null && peerKey in activePeerVideos) {
+        val isPending = peerKey in pendingPeerPubKeys
+        if (track != null && peerKey in activePeerVideos && !isPending) {
             VideoRenderer(
                 videoTrack = track,
                 eglBase = eglBase,
@@ -126,6 +130,7 @@ fun PeerVideoGrid(
             PeerAvatarCell(
                 peerPubKey = peerKey,
                 accountViewModel = accountViewModel,
+                statusText = if (isPending) stringRes(R.string.call_calling) else null,
                 modifier = modifier,
             )
         }
@@ -143,18 +148,21 @@ fun PeerVideoGrid(
                 ) {
                     row.forEach { peerKey ->
                         val track = remoteVideoTracks[peerKey]
-                        if (track != null && peerKey in activePeerVideos) {
+                        val isPending = peerKey in pendingPeerPubKeys
+                        val cellModifier = Modifier.weight(1f).fillMaxHeight()
+                        if (track != null && peerKey in activePeerVideos && !isPending) {
                             VideoRenderer(
                                 videoTrack = track,
                                 eglBase = eglBase,
-                                modifier = Modifier.weight(1f).fillMaxHeight(),
+                                modifier = cellModifier,
                                 mirror = false,
                             )
                         } else {
                             PeerAvatarCell(
                                 peerPubKey = peerKey,
                                 accountViewModel = accountViewModel,
-                                modifier = Modifier.weight(1f).fillMaxHeight(),
+                                statusText = if (isPending) stringRes(R.string.call_calling) else null,
+                                modifier = cellModifier,
                             )
                         }
                     }
@@ -172,6 +180,7 @@ fun PeerAvatarCell(
     peerPubKey: String,
     accountViewModel: AccountViewModel,
     modifier: Modifier = Modifier,
+    statusText: String? = null,
 ) {
     Box(
         modifier = modifier.background(Color.DarkGray),
@@ -196,6 +205,14 @@ fun PeerAvatarCell(
                         textColor = Color.White,
                     )
                 }
+            }
+            if (statusText != null) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = statusText,
+                    color = Color.White.copy(alpha = 0.7f),
+                    fontSize = 13.sp,
+                )
             }
         }
     }
