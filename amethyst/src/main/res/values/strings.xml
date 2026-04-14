@@ -2083,7 +2083,7 @@
     <string name="video_quality_auto">Auto</string>
 
     <!-- HLS multi-resolution video sharing -->
-    <string name="share_hls_video">Share HD Video</string>
+    <string name="share_hls_video">HLS Upload</string>
     <string name="share_hls_video_drawer_description">Publish multi-resolution HLS to your media server</string>
     <string name="hls_pick_video_primary">Pick a video</string>
     <string name="hls_pick_video_helper">Your video will be transcoded into multiple resolutions so viewers get smooth playback on any connection.</string>

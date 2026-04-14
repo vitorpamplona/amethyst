@@ -410,6 +410,8 @@ sealed class Route {
         val draft: String? = null,
     ) : Route()
 
+    @Serializable data object NewHlsVideo : Route()
+
     @Serializable
     data class VoiceReply(
         val replyToNoteId: String,
