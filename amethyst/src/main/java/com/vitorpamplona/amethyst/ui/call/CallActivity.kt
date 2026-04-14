@@ -202,28 +202,40 @@ class CallActivity : AppCompatActivity() {
         if (wasInPipMode && !isInPictureInPictureMode) {
             hangupInitiated = true
             val manager = CallSessionBridge.callManager
+            val controller = CallSessionBridge.callController
             val state = manager?.state?.value
             if (state is CallState.Connected || state is CallState.Connecting || state is CallState.Offering) {
+                // Publish the hangup signaling event on a detached scope so
+                // it survives activity teardown.
                 CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate).launch {
                     manager.hangup()
-                    finishAndRemoveTask()
                 }
-            } else {
-                finishAndRemoveTask()
             }
+            // Synchronously release all WebRTC/audio resources before the
+            // activity is torn down so we don't leak a PeerConnection,
+            // camera capturer, wake lock, or audio mode change. cleanup() is
+            // idempotent within a call session, so the state-collector path
+            // triggered by hangup() above will be a no-op.
+            controller?.cleanup()
+            finishAndRemoveTask()
         }
     }
 
     override fun onDestroy() {
         unregisterPipReceiver()
 
+        val manager = CallSessionBridge.callManager
+        val controller = CallSessionBridge.callController
+
         // Safety net: if the Activity is destroyed while a call is still
-        // ringing/offering, ensure the call is hung up so audio stops.
-        // Skip if onStop already initiated the hangup to avoid double signaling.
-        if (!hangupInitiated) {
-            val manager = CallSessionBridge.callManager
-            when (manager?.state?.value) {
+        // ringing/offering, publish the reject/hangup signaling so the other
+        // side stops ringing. Skip if onStop already initiated the hangup to
+        // avoid double signaling.
+        if (!hangupInitiated && manager != null) {
+            when (manager.state.value) {
                 is CallState.IncomingCall -> {
+                    // Publish on a detached scope so the reject event goes out
+                    // even after the activity is gone.
                     CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate).launch {
                         manager.rejectCall()
                     }
@@ -241,6 +253,15 @@ class CallActivity : AppCompatActivity() {
                 else -> {}
             }
         }
+
+        // Ultimate safety net: synchronously release all WebRTC/audio
+        // resources before the Activity reference goes away. The normal
+        // Ended → state-collector → cleanup() path runs asynchronously on
+        // viewModelScope and is not guaranteed to finish before this method
+        // returns. CallController.cleanup() is idempotent within a call
+        // session, so calling it here in addition to the state-collector path
+        // is safe.
+        controller?.cleanup()
 
         super.onDestroy()
     }

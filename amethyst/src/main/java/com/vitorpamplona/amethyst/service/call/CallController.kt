@@ -212,6 +212,9 @@ class CallController(
             val callId = UUID.randomUUID().toString()
             _errorMessage.value = null
 
+            // A new call session begins — arm cleanup() so it will run again
+            // for this session's Ended transition.
+            cleanedUp.set(false)
             applyCallSettings()
             try {
                 withContext(Dispatchers.IO) { mediaManager.initialize(callType) }
@@ -258,6 +261,9 @@ class CallController(
         scope.launch {
             _errorMessage.value = null
 
+            // A new call session begins — arm cleanup() so it will run again
+            // for this session's Ended transition.
+            cleanedUp.set(false)
             applyCallSettings()
             try {
                 withContext(Dispatchers.IO) { mediaManager.initialize(state.callType) }
@@ -612,6 +618,17 @@ class CallController(
 
     // ---- Cleanup ----
 
+    /**
+     * Releases all WebRTC, audio, and foreground-service resources for the
+     * current call session.
+     *
+     * Idempotent within a call session: calling this multiple times in a row
+     * (e.g. once from the Ended state collector and once from [CallActivity]'s
+     * onDestroy safety net) executes the body at most once. The guard is
+     * re-armed when a new call starts via [initiateGroupCall] or
+     * [acceptIncomingCall], so subsequent call sessions still clean up
+     * correctly.
+     */
     fun cleanup() {
         if (!cleanedUp.compareAndSet(false, true)) return
         unregisterNetworkCallback()
@@ -643,7 +660,10 @@ class CallController(
         videoPausedByProximity = false
         videoSenders.clear()
         pendingRenegotiation.clear()
-        cleanedUp.set(false)
+        // NOTE: cleanedUp intentionally stays true here so that a second,
+        // sequential cleanup() in the same call session is a no-op. The flag
+        // is re-armed in initiateGroupCall() / acceptIncomingCall() when a new
+        // call session begins.
     }
 
     // ---- Foreground service ----
