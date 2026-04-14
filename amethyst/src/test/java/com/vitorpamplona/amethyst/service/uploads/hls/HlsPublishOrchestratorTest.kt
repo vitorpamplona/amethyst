@@ -98,6 +98,7 @@ class HlsPublishOrchestratorTest {
         description: String = "A test clip",
         sensitive: Boolean = false,
         warningReason: String = "",
+        crossPostAsNote: Boolean = false,
     ) = HlsPublishRequest(
         title = title,
         description = description,
@@ -105,6 +106,7 @@ class HlsPublishOrchestratorTest {
         contentWarningReason = warningReason,
         codec = VideoCodec.H265,
         server = server,
+        crossPostAsNote = crossPostAsNote,
     )
 
     @Test
@@ -119,6 +121,7 @@ class HlsPublishOrchestratorTest {
                     publishedTemplates += tpl
                     "signed-event-id"
                 },
+                signAndPublishNote = { "note-id" },
                 workDirFactory = { File(workDir, "work").apply { mkdirs() } },
             )
 
@@ -161,6 +164,7 @@ class HlsPublishOrchestratorTest {
                     capturedDuringPublish += orchestrator.state.value
                     "event-id"
                 },
+                signAndPublishNote = { "note-id" },
                 workDirFactory = { File(workDir, "work").apply { mkdirs() } },
             )
 
@@ -184,6 +188,7 @@ class HlsPublishOrchestratorTest {
                 runTranscode = { _, _, _ -> throw RuntimeException("decode failed") },
                 buildUploader = { CannedUploader() },
                 signAndPublish = { "never" },
+                signAndPublishNote = { "note-id" },
                 workDirFactory = { File(workDir, "work").apply { mkdirs() } },
             )
 
@@ -204,6 +209,7 @@ class HlsPublishOrchestratorTest {
                     HlsBlobUploader { _, _ -> throw RuntimeException("server 500") }
                 },
                 signAndPublish = { "never" },
+                signAndPublishNote = { "note-id" },
                 workDirFactory = { File(workDir, "work").apply { mkdirs() } },
             )
 
@@ -222,6 +228,7 @@ class HlsPublishOrchestratorTest {
                 runTranscode = { _, _, _ -> fakeBundle() },
                 buildUploader = { CannedUploader() },
                 signAndPublish = { throw RuntimeException("relay rejected") },
+                signAndPublishNote = { "note-id" },
                 workDirFactory = { File(workDir, "work").apply { mkdirs() } },
             )
 
@@ -244,6 +251,7 @@ class HlsPublishOrchestratorTest {
                     captured += tpl
                     "event-id"
                 },
+                signAndPublishNote = { "note-id" },
                 workDirFactory = { File(workDir, "work").apply { mkdirs() } },
             )
 
@@ -282,12 +290,75 @@ class HlsPublishOrchestratorTest {
                     captured += tpl
                     "event-id"
                 },
+                signAndPublishNote = { "note-id" },
                 workDirFactory = { File(workDir, "work").apply { mkdirs() } },
             )
 
         runBlocking { orchestrator.publish(newRequest()) }
 
         assertTrue(captured.single() is HlsVideoEventTemplate.Vertical)
+    }
+
+    @Test
+    fun crossPostAsNoteInvokesSignAndPublishNoteWithTitleDescriptionAndMasterUrl() {
+        val capturedNoteContent = mutableListOf<String>()
+        val orchestrator =
+            HlsPublishOrchestrator(
+                _state = MutableStateFlow(HlsPublishState.Idle),
+                runTranscode = { _, _, _ -> fakeBundle() },
+                buildUploader = { CannedUploader() },
+                signAndPublish = { "video-event-id" },
+                signAndPublishNote = { content ->
+                    capturedNoteContent += content
+                    "note-event-id"
+                },
+                workDirFactory = { File(workDir, "work").apply { mkdirs() } },
+            )
+
+        runBlocking {
+            orchestrator.publish(
+                newRequest(
+                    title = "Sunset",
+                    description = "Golden hour",
+                    crossPostAsNote = true,
+                ),
+            )
+        }
+
+        assertEquals(1, capturedNoteContent.size)
+        val note = capturedNoteContent[0]
+        assertTrue("note missing title: $note", note.contains("Sunset"))
+        assertTrue("note missing description: $note", note.contains("Golden hour"))
+        assertTrue("note missing master url: $note", note.contains("https://cdn.test/"))
+
+        val final = orchestrator.state.value as HlsPublishState.Success
+        assertEquals("note-event-id", final.noteEventId)
+        assertEquals("video-event-id", final.eventId)
+    }
+
+    @Test
+    fun crossPostDisabledLeavesNoteEventIdNull() {
+        val noteCallbackInvocations = mutableListOf<String>()
+        val orchestrator =
+            HlsPublishOrchestrator(
+                _state = MutableStateFlow(HlsPublishState.Idle),
+                runTranscode = { _, _, _ -> fakeBundle() },
+                buildUploader = { CannedUploader() },
+                signAndPublish = { "video-event-id" },
+                signAndPublishNote = {
+                    noteCallbackInvocations += it
+                    "should-not-be-used"
+                },
+                workDirFactory = { File(workDir, "work").apply { mkdirs() } },
+            )
+
+        runBlocking {
+            orchestrator.publish(newRequest(crossPostAsNote = false))
+        }
+
+        assertEquals(0, noteCallbackInvocations.size)
+        val final = orchestrator.state.value as HlsPublishState.Success
+        assertEquals(null, final.noteEventId)
     }
 
     @Test
@@ -298,6 +369,7 @@ class HlsPublishOrchestratorTest {
                 runTranscode = { _, _, _ -> throw RuntimeException("boom") },
                 buildUploader = { CannedUploader() },
                 signAndPublish = { "never" },
+                signAndPublishNote = { "note-id" },
                 workDirFactory = { File(workDir, "work").apply { mkdirs() } },
             )
 

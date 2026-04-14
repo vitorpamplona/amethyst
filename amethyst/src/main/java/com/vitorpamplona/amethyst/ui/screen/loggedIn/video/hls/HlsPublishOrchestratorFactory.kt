@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.uploads.hls.HlsBlobUploaderFactory
 import com.vitorpamplona.amethyst.service.uploads.hls.HlsTranscoder
 import com.vitorpamplona.amethyst.service.uploads.hls.HlsVideoEventTemplate
+import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import kotlinx.coroutines.flow.MutableStateFlow
 import java.io.File
 
@@ -64,6 +65,11 @@ fun createProductionHlsPublishOrchestrator(
                     is HlsVideoEventTemplate.Horizontal -> account.signer.sign(template.template)
                     is HlsVideoEventTemplate.Vertical -> account.signer.sign(template.template)
                 }
+            account.sendAutomatic(signed)
+            signed.id
+        },
+        signAndPublishNote = { content ->
+            val signed = account.signer.sign(TextNoteEvent.build(content))
             account.sendAutomatic(signed)
             signed.id
         },

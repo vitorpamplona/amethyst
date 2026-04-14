@@ -38,6 +38,7 @@ sealed class HlsPublishState {
     data class Success(
         val eventId: String,
         val masterUrl: String,
+        val noteEventId: String? = null,
     ) : HlsPublishState()
 
     data class Failure(

@@ -79,6 +79,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.collections.immutable.toImmutableList
@@ -315,6 +316,30 @@ private fun FormFields(vm: NewHlsVideoViewModel) {
             placeholder = { Text(stringResource(R.string.hls_content_warning_reason_placeholder)) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
+        )
+    }
+
+    Spacer(Modifier.height(8.dp))
+
+    // Cross-post as kind-1 note toggle
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(R.string.hls_cross_post_as_note),
+                style = MaterialTheme.typography.bodyLarge,
+            )
+            Text(
+                text = stringResource(R.string.hls_cross_post_as_note_explainer),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Switch(
+            checked = vm.crossPostAsNote,
+            onCheckedChange = { vm.crossPostAsNote = it },
         )
     }
 
@@ -587,14 +612,38 @@ private fun SuccessBody(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.height(16.dp))
-        Button(
-            onClick = {
-                vm.reset()
-                nav.popBack()
-            },
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Text(stringResource(R.string.hls_done))
+
+        val noteId = state.noteEventId
+        if (noteId != null) {
+            Button(
+                onClick = {
+                    vm.reset()
+                    nav.nav(Route.Note(noteId))
+                },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.hls_view_note))
+            }
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(
+                onClick = {
+                    vm.reset()
+                    nav.popBack()
+                },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.hls_done))
+            }
+        } else {
+            Button(
+                onClick = {
+                    vm.reset()
+                    nav.popBack()
+                },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.hls_done))
+            }
         }
     }
 }
