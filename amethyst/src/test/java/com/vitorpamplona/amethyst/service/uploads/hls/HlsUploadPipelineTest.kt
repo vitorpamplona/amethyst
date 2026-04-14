@@ -1,0 +1,273 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.service.uploads.hls
+
+import com.vitorpamplona.amethyst.service.uploads.MediaUploadResult
+import kotlinx.coroutines.runBlocking
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+import java.io.File
+import java.nio.file.Files
+
+class HlsUploadPipelineTest {
+    private lateinit var workDir: File
+
+    @Before
+    fun setUp() {
+        workDir = Files.createTempDirectory("hls-pipeline-test").toFile()
+    }
+
+    @After
+    fun tearDown() {
+        workDir.deleteRecursively()
+    }
+
+    private class FakeUploader : HlsBlobUploader {
+        data class Call(
+            val fileName: String,
+            val contentType: String,
+            val content: String,
+        )
+
+        val calls = mutableListOf<Call>()
+
+        override suspend fun upload(
+            file: File,
+            contentType: String,
+        ): MediaUploadResult {
+            val content = file.readText()
+            calls += Call(file.name, contentType, content)
+            val url = "https://cdn.test/${calls.size}-${file.name}"
+            return MediaUploadResult(url = url, sha256 = "sha-${calls.size}", size = file.length())
+        }
+    }
+
+    private class BareUrlUploader : HlsBlobUploader {
+        val calls = mutableListOf<Triple<String, String, String>>()
+
+        override suspend fun upload(
+            file: File,
+            contentType: String,
+        ): MediaUploadResult {
+            val content = file.readText()
+            calls += Triple(file.name, contentType, content)
+            return MediaUploadResult(url = "https://blossom.test/bare-${calls.size}", sha256 = "sha-${calls.size}", size = file.length())
+        }
+    }
+
+    private fun createBundle(labels: List<String>): HlsBundle {
+        val renditions =
+            labels.map { label ->
+                val combined = File(workDir, "$label.mp4").apply { writeText("bytes-$label") }
+                val mediaPlaylist =
+                    """
+                    #EXTM3U
+                    #EXT-X-VERSION:7
+                    #EXT-X-MAP:URI="$label.mp4",BYTERANGE="1000@0"
+
+                    #EXTINF:6.000,
+                    #EXT-X-BYTERANGE:500000@1000
+                    $label.mp4
+                    #EXT-X-ENDLIST
+                    """.trimIndent()
+                HlsBundleRendition(
+                    label = label,
+                    combinedFile = combined,
+                    mediaPlaylist = mediaPlaylist,
+                    bitrateKbps = 500 + labels.indexOf(label) * 1000,
+                )
+            }
+
+        val masterLines =
+            buildList {
+                add("#EXTM3U")
+                add("#EXT-X-VERSION:7")
+                renditions.forEach {
+                    add("#EXT-X-STREAM-INF:BANDWIDTH=${it.bitrateKbps * 1000}")
+                    add("${it.label}/media.m3u8")
+                }
+            }
+
+        return HlsBundle(
+            workDir = workDir,
+            masterPlaylist = masterLines.joinToString("\n"),
+            renditions = renditions,
+        )
+    }
+
+    @Test
+    fun uploadsCombinedThenMediaThenMasterInOrder() {
+        val bundle = createBundle(listOf("360p"))
+        val uploader = FakeUploader()
+        val pipeline = HlsUploadPipeline(uploader)
+
+        runBlocking { pipeline.upload(bundle) }
+
+        assertEquals(3, uploader.calls.size)
+        assertEquals("360p.mp4", uploader.calls[0].fileName)
+        assertEquals("video/mp4", uploader.calls[0].contentType)
+        assertTrue(uploader.calls[1].fileName.endsWith(".m3u8"))
+        assertEquals("application/vnd.apple.mpegurl", uploader.calls[1].contentType)
+        assertEquals("application/vnd.apple.mpegurl", uploader.calls[2].contentType)
+    }
+
+    @Test
+    fun mediaPlaylistIsRewrittenWithUploadedCombinedUrl() {
+        val bundle = createBundle(listOf("360p"))
+        val uploader = FakeUploader()
+        val pipeline = HlsUploadPipeline(uploader)
+
+        runBlocking { pipeline.upload(bundle) }
+
+        val combinedUrl = "https://cdn.test/1-360p.mp4"
+        val uploadedMediaPlaylist = uploader.calls[1].content
+        assertTrue(uploadedMediaPlaylist.contains(combinedUrl))
+        // Original filename reference must be gone
+        assertTrue(!uploadedMediaPlaylist.lines().any { it.trim() == "360p.mp4" })
+        // EXTINF metadata must still be present
+        assertTrue(uploadedMediaPlaylist.contains("#EXTINF:6.000,"))
+        // BYTERANGE must still be present
+        assertTrue(uploadedMediaPlaylist.contains("#EXT-X-BYTERANGE:500000@1000"))
+    }
+
+    @Test
+    fun masterPlaylistIsRewrittenWithUploadedMediaPlaylistUrls() {
+        val bundle = createBundle(listOf("360p", "540p"))
+        val uploader = FakeUploader()
+        val pipeline = HlsUploadPipeline(uploader)
+
+        runBlocking { pipeline.upload(bundle) }
+
+        // 2 renditions × (combined + media) + 1 master = 5 uploads
+        assertEquals(5, uploader.calls.size)
+        val masterContent = uploader.calls[4].content
+
+        // The uploaded media playlist URLs should appear in the rewritten master
+        val media360Url = uploader.calls[1].content.let { "https://cdn.test/2-" } // 2nd call is 360p media
+        // Extract the actual URLs the fake returned for each media playlist upload
+        val media360PlaylistUrl = "https://cdn.test/2-" + uploader.calls[1].fileName
+        val media540PlaylistUrl = "https://cdn.test/4-" + uploader.calls[3].fileName
+        assertTrue("master should contain $media360PlaylistUrl", masterContent.contains(media360PlaylistUrl))
+        assertTrue("master should contain $media540PlaylistUrl", masterContent.contains(media540PlaylistUrl))
+
+        // EXT-X-STREAM-INF metadata must survive
+        assertTrue(masterContent.contains("#EXT-X-STREAM-INF:BANDWIDTH=500000"))
+        assertTrue(masterContent.contains("#EXT-X-STREAM-INF:BANDWIDTH=1500000"))
+        // Original rendition filenames must be gone
+        assertTrue(!masterContent.lines().any { it.trim() == "360p/media.m3u8" })
+        assertTrue(!masterContent.lines().any { it.trim() == "540p/media.m3u8" })
+    }
+
+    @Test
+    fun appendsMp4HintToBareCombinedUrlInMediaPlaylist() {
+        val bundle = createBundle(listOf("360p"))
+        val uploader = BareUrlUploader()
+        val pipeline = HlsUploadPipeline(uploader)
+
+        runBlocking { pipeline.upload(bundle) }
+
+        val uploadedMediaPlaylist = uploader.calls[1].third
+        assertTrue(
+            "media playlist should reference url with .mp4 hint",
+            uploadedMediaPlaylist.contains("https://blossom.test/bare-1.mp4"),
+        )
+        assertTrue(!uploadedMediaPlaylist.contains("https://blossom.test/bare-1\""))
+    }
+
+    @Test
+    fun appendsM3u8HintToBarePlaylistUrlInMasterPlaylist() {
+        val bundle = createBundle(listOf("360p"))
+        val uploader = BareUrlUploader()
+        val pipeline = HlsUploadPipeline(uploader)
+
+        val result = runBlocking { pipeline.upload(bundle) }
+
+        val uploadedMaster = uploader.calls[2].third
+        assertTrue(
+            "master playlist should reference playlist url with .m3u8 hint",
+            uploadedMaster.contains("https://blossom.test/bare-2.m3u8"),
+        )
+        assertEquals("https://blossom.test/bare-3.m3u8", result.masterUrl)
+        assertEquals("https://blossom.test/bare-1.mp4", result.renditions[0].combinedUrl)
+    }
+
+    @Test
+    fun doesNotDoubleAppendExtensionWhenAlreadyPresent() {
+        val bundle = createBundle(listOf("360p"))
+        val uploader = FakeUploader() // returns urls ending in .mp4 / .m3u8
+        val pipeline = HlsUploadPipeline(uploader)
+
+        runBlocking { pipeline.upload(bundle) }
+
+        val uploadedMediaPlaylist = uploader.calls[1].content
+        assertTrue(!uploadedMediaPlaylist.contains(".mp4.mp4"))
+        val uploadedMaster = uploader.calls[2].content
+        assertTrue(!uploadedMaster.contains(".m3u8.m3u8"))
+    }
+
+    @Test
+    fun reportsUploadProgressPerStep() {
+        val bundle = createBundle(listOf("360p", "540p"))
+        val uploader = FakeUploader()
+        val pipeline = HlsUploadPipeline(uploader)
+        val observed = mutableListOf<Pair<Int, Int>>()
+
+        runBlocking {
+            pipeline.upload(bundle) { done, total ->
+                observed += done to total
+            }
+        }
+
+        // 2 renditions × 2 + 1 master = 5 uploads
+        assertEquals(
+            listOf(1 to 5, 2 to 5, 3 to 5, 4 to 5, 5 to 5),
+            observed,
+        )
+    }
+
+    @Test
+    fun resultExposesMasterUrlAndPerRenditionDetails() {
+        val bundle = createBundle(listOf("360p", "540p"))
+        val uploader = FakeUploader()
+        val pipeline = HlsUploadPipeline(uploader)
+
+        val result = runBlocking { pipeline.upload(bundle) }
+
+        // Master was the 5th upload
+        assertEquals("https://cdn.test/5-master.m3u8", result.masterUrl)
+        assertEquals("sha-5", result.masterSha256)
+
+        assertEquals(2, result.renditions.size)
+        val r360 = result.renditions[0]
+        assertEquals("360p", r360.label)
+        assertEquals("https://cdn.test/1-360p.mp4", r360.combinedUrl)
+        assertEquals("sha-1", r360.combinedSha256)
+        assertEquals(500, r360.bitrateKbps)
+
+        val r540 = result.renditions[1]
+        assertEquals("540p", r540.label)
+        assertEquals("https://cdn.test/3-540p.mp4", r540.combinedUrl)
+        assertEquals(1500, r540.bitrateKbps)
+    }
+}
