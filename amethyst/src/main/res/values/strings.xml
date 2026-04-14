@@ -2076,6 +2076,7 @@
     <string name="profile_actions_dialog_title">Profile Actions</string>
     <string name="media_actions_dialog_title">Media Actions</string>
     <string name="playback_actions_dialog_title">Playback</string>
+    <string name="video_quality_auto">Auto</string>
     <string name="pack_actions_dialog_title">Pack Actions</string>
     <string name="list_actions_dialog_title">List Actions</string>
     <string name="bookmark_item_actions_dialog_title">Bookmark Actions</string>
