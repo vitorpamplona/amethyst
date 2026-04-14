@@ -28,14 +28,33 @@ import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
 import com.vitorpamplona.amethyst.service.uploads.nip96.Nip96Uploader
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
+import okhttp3.OkHttpClient
+import java.util.concurrent.TimeUnit
 
 /**
  * Turns a user-chosen [ServerName] into an [HlsBlobUploader] by adapting the concrete
  * [Nip96Uploader] / [BlossomUploader] to the simpler file+contentType interface the HLS upload
  * pipeline uses. Keeps the pipeline free of direct Amethyst/account wiring so it stays
  * unit-testable.
+ *
+ * HLS uploads get a dedicated OkHttp client derived from the shared upload client: write and
+ * read timeouts are disabled so a slow rendition trickling through at a few hundred KB/s is
+ * not killed mid-stream, and server-side hashing/scanning that blocks the response for minutes
+ * does not fire the read timeout while the request is still in flight. A generous per-call
+ * timeout remains in place as a hard cap so a silently dead connection eventually errors out.
  */
 object HlsBlobUploaderFactory {
+    private const val CALL_TIMEOUT_MINUTES = 15L
+
+    private fun okHttpClientForHlsUploads(serverBaseUrl: String): OkHttpClient =
+        Amethyst.instance.roleBasedHttpClientBuilder
+            .okHttpClientForUploads(serverBaseUrl)
+            .newBuilder()
+            .writeTimeout(0, TimeUnit.MILLISECONDS)
+            .readTimeout(0, TimeUnit.MILLISECONDS)
+            .callTimeout(CALL_TIMEOUT_MINUTES, TimeUnit.MINUTES)
+            .build()
+
     fun create(
         server: ServerName,
         account: Account,
@@ -70,7 +89,7 @@ object HlsBlobUploaderFactory {
                 alt = null,
                 sensitiveContent = null,
                 serverBaseUrl = serverBaseUrl,
-                okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForUploads,
+                okHttpClient = ::okHttpClientForHlsUploads,
                 httpAuth = account::createBlossomUploadAuth,
                 context = context,
             )
@@ -89,7 +108,7 @@ object HlsBlobUploaderFactory {
                 alt = null,
                 sensitiveContent = null,
                 serverBaseUrl = serverBaseUrl,
-                okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForUploads,
+                okHttpClient = ::okHttpClientForHlsUploads,
                 onProgress = { /* pipeline reports progress per-upload; NIP-96 per-request progress is not forwarded */ },
                 httpAuth = account::createHTTPAuthorization,
                 context = context,
