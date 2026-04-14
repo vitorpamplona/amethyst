@@ -58,6 +58,12 @@ data class HlsUploadedRendition(
  * Finally rewrites the master playlist to reference the per-rendition playlist URLs and uploads
  * the master. The resulting [HlsUploadResult] is what the publisher uses to build the NIP-71
  * event.
+ *
+ * URL handling policy: the pipeline uses the URL the server returned verbatim. No extension is
+ * appended, no trailing dot stripped, no bare-hash rewriting. The server is responsible for
+ * returning a URL that the player can fetch as-is — that way we get the best cache coherence,
+ * correct Content-Type, clean range requests, and no double round trips. If a server returns an
+ * unplayable URL, the fix is server-side.
  */
 class HlsUploadPipeline(
     private val uploader: HlsBlobUploader,
@@ -75,10 +81,7 @@ class HlsUploadPipeline(
                 val combined = uploader.upload(rendition.combinedFile, CONTENT_TYPE_VIDEO_MP4)
                 onProgress(++done, total)
                 val combinedUrl =
-                    withExtensionHint(
-                        combined.url ?: error("Uploader returned null URL for ${rendition.combinedFile.name}"),
-                        CONTENT_TYPE_VIDEO_MP4,
-                    )
+                    combined.url ?: error("Uploader returned null URL for ${rendition.combinedFile.name}")
 
                 val rewrittenMedia =
                     HlsPlaylistRewriter.rewrite(
@@ -90,10 +93,7 @@ class HlsUploadPipeline(
                 val mediaPlaylist = uploader.upload(mediaPlaylistFile, CONTENT_TYPE_HLS)
                 onProgress(++done, total)
                 val mediaPlaylistUrl =
-                    withExtensionHint(
-                        mediaPlaylist.url ?: error("Uploader returned null URL for media playlist ${rendition.label}"),
-                        CONTENT_TYPE_HLS,
-                    )
+                    mediaPlaylist.url ?: error("Uploader returned null URL for media playlist ${rendition.label}")
 
                 HlsUploadedRendition(
                     label = rendition.label,
@@ -112,38 +112,13 @@ class HlsUploadPipeline(
         val master = uploader.upload(masterFile, CONTENT_TYPE_HLS)
         onProgress(++done, total)
         val masterUrl =
-            withExtensionHint(
-                master.url ?: error("Uploader returned null URL for master playlist"),
-                CONTENT_TYPE_HLS,
-            )
+            master.url ?: error("Uploader returned null URL for master playlist")
 
         return HlsUploadResult(
             masterUrl = masterUrl,
             masterSha256 = master.sha256,
             renditions = uploadedRenditions,
         )
-    }
-
-    // Blossom servers typically return bare-hash URLs (https://server/<sha256>), but HLS parsers
-    // and ExoPlayer's Util.inferContentType sniff the URL extension to pick the right source
-    // factory. Append a hint unless the upload server already baked one in. Trailing dots are
-    // trimmed and any pre-existing doubled extension (e.g. "..m3u8") collapsed, so a server that
-    // echoes our empty-extension upload filename does not produce unreachable URLs.
-    private fun withExtensionHint(
-        url: String,
-        contentType: String,
-    ): String {
-        val ext =
-            when (contentType) {
-                CONTENT_TYPE_VIDEO_MP4 -> ".mp4"
-                CONTENT_TYPE_HLS -> ".m3u8"
-                else -> return url
-            }
-        val sanitised =
-            url
-                .replace(Regex("""\.{2,}""" + Regex.escape(ext.trimStart('.')) + "$", RegexOption.IGNORE_CASE), ext)
-                .trimEnd('.')
-        return if (sanitised.endsWith(ext, ignoreCase = true)) sanitised else sanitised + ext
     }
 
     companion object {

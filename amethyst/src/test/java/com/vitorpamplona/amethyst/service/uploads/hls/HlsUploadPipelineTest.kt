@@ -180,36 +180,25 @@ class HlsUploadPipelineTest {
     }
 
     @Test
-    fun appendsMp4HintToBareCombinedUrlInMediaPlaylist() {
-        val bundle = createBundle(listOf("360p"))
-        val uploader = BareUrlUploader()
-        val pipeline = HlsUploadPipeline(uploader)
-
-        runBlocking { pipeline.upload(bundle) }
-
-        val uploadedMediaPlaylist = uploader.calls[1].third
-        assertTrue(
-            "media playlist should reference url with .mp4 hint",
-            uploadedMediaPlaylist.contains("https://blossom.test/bare-1.mp4"),
-        )
-        assertTrue(!uploadedMediaPlaylist.contains("https://blossom.test/bare-1\""))
-    }
-
-    @Test
-    fun appendsM3u8HintToBarePlaylistUrlInMasterPlaylist() {
+    fun bareServerUrlsPassThroughVerbatim() {
+        // Policy: the pipeline uses whatever URL the server returned, unchanged.
+        // Even a bare-hash URL with no extension flows straight into the rewritten
+        // playlists. If it does not play, the fix is server-side (return a playable URL).
         val bundle = createBundle(listOf("360p"))
         val uploader = BareUrlUploader()
         val pipeline = HlsUploadPipeline(uploader)
 
         val result = runBlocking { pipeline.upload(bundle) }
 
-        val uploadedMaster = uploader.calls[2].third
+        assertEquals("https://blossom.test/bare-1", result.renditions[0].combinedUrl)
+        assertEquals("https://blossom.test/bare-2", result.renditions[0].playlistUrl)
+        assertEquals("https://blossom.test/bare-3", result.masterUrl)
+        // The rewritten media playlist that the server received must contain the bare url.
+        val uploadedMediaPlaylist = uploader.calls[1].third
         assertTrue(
-            "master playlist should reference playlist url with .m3u8 hint",
-            uploadedMaster.contains("https://blossom.test/bare-2.m3u8"),
+            "media playlist should reference bare url: $uploadedMediaPlaylist",
+            uploadedMediaPlaylist.contains("https://blossom.test/bare-1"),
         )
-        assertEquals("https://blossom.test/bare-3.m3u8", result.masterUrl)
-        assertEquals("https://blossom.test/bare-1.mp4", result.renditions[0].combinedUrl)
     }
 
     @Test
@@ -250,46 +239,6 @@ class HlsUploadPipelineTest {
         assertTrue(!result.masterUrl.contains(".m3u8.m3u8"))
         assertTrue(!result.renditions[0].combinedUrl.contains(".mp4.mp4"))
         assertTrue(!result.renditions[0].playlistUrl.contains(".m3u8.m3u8"))
-    }
-
-    @Test
-    fun trailingDotUrlsAreSanitisedIntoCleanExtension() {
-        val bundle = createBundle(listOf("360p"))
-        val uploader =
-            object : HlsBlobUploader {
-                var count = 0
-
-                override suspend fun upload(
-                    file: File,
-                    contentType: String,
-                ): MediaUploadResult {
-                    count++
-                    return MediaUploadResult(url = "https://blossom.test/bare-$count.", sha256 = "sha-$count", size = file.length())
-                }
-            }
-        val pipeline = HlsUploadPipeline(uploader)
-
-        val result = runBlocking { pipeline.upload(bundle) }
-
-        assertTrue("masterUrl must not contain '..': ${result.masterUrl}", !result.masterUrl.contains(".."))
-        assertTrue("masterUrl must not end with '.': ${result.masterUrl}", !result.masterUrl.endsWith("."))
-        assertTrue(result.masterUrl.endsWith(".m3u8"))
-        assertTrue(!result.renditions[0].combinedUrl.contains(".."))
-        assertTrue(result.renditions[0].combinedUrl.endsWith(".mp4"))
-    }
-
-    @Test
-    fun doesNotDoubleAppendExtensionWhenAlreadyPresent() {
-        val bundle = createBundle(listOf("360p"))
-        val uploader = FakeUploader() // returns urls ending in .mp4 / .m3u8
-        val pipeline = HlsUploadPipeline(uploader)
-
-        runBlocking { pipeline.upload(bundle) }
-
-        val uploadedMediaPlaylist = uploader.calls[1].content
-        assertTrue(!uploadedMediaPlaylist.contains(".mp4.mp4"))
-        val uploadedMaster = uploader.calls[2].content
-        assertTrue(!uploadedMaster.contains(".m3u8.m3u8"))
     }
 
     @Test
