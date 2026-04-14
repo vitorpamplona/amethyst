@@ -78,6 +78,18 @@ open class NewHlsVideoViewModel : ViewModel() {
         this.selectedServer = this.selectedServer ?: DEFAULT_MEDIA_SERVERS.first()
     }
 
+    fun load(
+        account: Account,
+        context: Context,
+    ) = load(
+        account,
+        createProductionHlsPublishOrchestrator(
+            account = account,
+            context = context,
+            uriProvider = { pickedUri },
+        ),
+    )
+
     fun onVideoPicked(
         uri: Uri,
         metadata: HlsSourceMetadata?,

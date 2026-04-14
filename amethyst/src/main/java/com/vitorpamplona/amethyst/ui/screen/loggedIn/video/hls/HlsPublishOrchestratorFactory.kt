@@ -1,0 +1,70 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.video.hls
+
+import android.content.Context
+import android.net.Uri
+import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.service.uploads.hls.HlsBlobUploaderFactory
+import com.vitorpamplona.amethyst.service.uploads.hls.HlsTranscoder
+import com.vitorpamplona.amethyst.service.uploads.hls.HlsVideoEventTemplate
+import java.io.File
+
+/**
+ * Production wiring for [HlsPublishOrchestrator]. Binds the transcode to [HlsTranscoder], the
+ * uploader factory to [HlsBlobUploaderFactory], and the signAndPublish closure to the account's
+ * signer + outbox publish path.
+ *
+ * The Uri is read via [uriProvider] on each transcode invocation so the orchestrator can be built
+ * once (at VM load) before the user actually picks a video.
+ */
+fun createProductionHlsPublishOrchestrator(
+    account: Account,
+    context: Context,
+    uriProvider: () -> Uri?,
+): HlsPublishOrchestrator =
+    HlsPublishOrchestrator(
+        runTranscode = { workDir, codec, onProgress ->
+            val uri = uriProvider() ?: error("No video picked")
+            HlsTranscoder.transcode(
+                context = context,
+                uri = uri,
+                workDir = workDir,
+                codec = codec,
+                onRenditionProgress = onProgress,
+            )
+        },
+        buildUploader = { server ->
+            HlsBlobUploaderFactory.create(server, account, context)
+        },
+        signAndPublish = { template ->
+            val signed =
+                when (template) {
+                    is HlsVideoEventTemplate.Horizontal -> account.signer.sign(template.template)
+                    is HlsVideoEventTemplate.Vertical -> account.signer.sign(template.template)
+                }
+            account.sendAutomatic(signed)
+            signed.id
+        },
+        workDirFactory = {
+            File(context.cacheDir, "hls-${System.currentTimeMillis()}").apply { mkdirs() }
+        },
+    )
