@@ -2106,8 +2106,8 @@
     <string name="hls_publish_button">Publish HD video</string>
     <string name="hls_publishing_header_format">Publishing “%1$s”…</string>
     <string name="hls_state_transcoding_format">Transcoding %1$s</string>
-    <string name="hls_state_uploading_format">Uploading %1$d / %2$d</string>
-    <string name="hls_state_uploading_with_label_format">Uploading %1$s (%2$d / %3$d)</string>
+    <string name="hls_state_uploading_format">Uploading %1$d / %2$d done</string>
+    <string name="hls_state_uploading_with_label_format">Uploading %1$s (%2$d / %3$d done)</string>
     <string name="hls_state_publishing">Publishing event…</string>
     <string name="hls_state_success_title">Video published</string>
     <string name="hls_state_success_body">Your HD video is live on Nostr.</string>
