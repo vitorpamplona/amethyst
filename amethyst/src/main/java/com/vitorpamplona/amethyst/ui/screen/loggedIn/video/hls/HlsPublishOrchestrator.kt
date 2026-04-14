@@ -52,6 +52,7 @@ data class HlsPublishRequest(
  * exception. The [state] flow emits each transition as it happens so the UI can reflect progress.
  */
 class HlsPublishOrchestrator(
+    private val _state: MutableStateFlow<HlsPublishState>,
     private val runTranscode: suspend (
         workDir: File,
         codec: VideoCodec,
@@ -61,7 +62,6 @@ class HlsPublishOrchestrator(
     private val signAndPublish: suspend (HlsVideoEventTemplate) -> String,
     private val workDirFactory: () -> File,
 ) {
-    private val _state = MutableStateFlow<HlsPublishState>(HlsPublishState.Idle)
     val state: StateFlow<HlsPublishState> = _state
 
     suspend fun publish(request: HlsPublishRequest) {

@@ -35,7 +35,9 @@ import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 /**
@@ -63,11 +65,11 @@ open class NewHlsVideoViewModel : ViewModel() {
     var useH265 by mutableStateOf(true)
     var selectedServer by mutableStateOf<ServerName?>(null)
 
+    private val _state = MutableStateFlow<HlsPublishState>(HlsPublishState.Idle)
+    val state: StateFlow<HlsPublishState> = _state.asStateFlow()
+
     private var orchestrator: HlsPublishOrchestrator? = null
     private var currentJob: Job? = null
-
-    val state: StateFlow<HlsPublishState>
-        get() = orchestrator?.state ?: throw IllegalStateException("load() must be called first")
 
     fun load(
         account: Account,
@@ -84,6 +86,7 @@ open class NewHlsVideoViewModel : ViewModel() {
     ) = load(
         account,
         createProductionHlsPublishOrchestrator(
+            state = _state,
             account = account,
             context = context,
             uriProvider = { pickedUri },

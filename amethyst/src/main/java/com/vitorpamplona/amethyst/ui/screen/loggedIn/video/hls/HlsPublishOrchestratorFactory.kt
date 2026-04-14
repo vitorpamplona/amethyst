@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.uploads.hls.HlsBlobUploaderFactory
 import com.vitorpamplona.amethyst.service.uploads.hls.HlsTranscoder
 import com.vitorpamplona.amethyst.service.uploads.hls.HlsVideoEventTemplate
+import kotlinx.coroutines.flow.MutableStateFlow
 import java.io.File
 
 /**
@@ -37,11 +38,13 @@ import java.io.File
  * once (at VM load) before the user actually picks a video.
  */
 fun createProductionHlsPublishOrchestrator(
+    state: MutableStateFlow<HlsPublishState>,
     account: Account,
     context: Context,
     uriProvider: () -> Uri?,
 ): HlsPublishOrchestrator =
     HlsPublishOrchestrator(
+        _state = state,
         runTranscode = { workDir, codec, onProgress ->
             val uri = uriProvider() ?: error("No video picked")
             HlsTranscoder.transcode(

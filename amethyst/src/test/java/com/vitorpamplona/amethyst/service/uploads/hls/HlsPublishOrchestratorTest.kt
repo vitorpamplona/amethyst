@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.hls.HlsPublishOrchestrator
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.hls.HlsPublishRequest
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.hls.HlsPublishState
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -111,6 +112,7 @@ class HlsPublishOrchestratorTest {
         val publishedTemplates = mutableListOf<HlsVideoEventTemplate>()
         val orchestrator =
             HlsPublishOrchestrator(
+                _state = MutableStateFlow(HlsPublishState.Idle),
                 runTranscode = { _, _, _ -> fakeBundle() },
                 buildUploader = { CannedUploader() },
                 signAndPublish = { tpl ->
@@ -144,6 +146,7 @@ class HlsPublishOrchestratorTest {
 
         orchestrator =
             HlsPublishOrchestrator(
+                _state = MutableStateFlow(HlsPublishState.Idle),
                 runTranscode = { _, _, onProgress ->
                     capturedDuringTranscode += orchestrator.state.value
                     onProgress("360p", 42)
@@ -177,6 +180,7 @@ class HlsPublishOrchestratorTest {
     fun transcodeExceptionTransitionsToFailure() {
         val orchestrator =
             HlsPublishOrchestrator(
+                _state = MutableStateFlow(HlsPublishState.Idle),
                 runTranscode = { _, _, _ -> throw RuntimeException("decode failed") },
                 buildUploader = { CannedUploader() },
                 signAndPublish = { "never" },
@@ -194,6 +198,7 @@ class HlsPublishOrchestratorTest {
     fun uploadExceptionTransitionsToFailure() {
         val orchestrator =
             HlsPublishOrchestrator(
+                _state = MutableStateFlow(HlsPublishState.Idle),
                 runTranscode = { _, _, _ -> fakeBundle() },
                 buildUploader = {
                     HlsBlobUploader { _, _ -> throw RuntimeException("server 500") }
@@ -213,6 +218,7 @@ class HlsPublishOrchestratorTest {
     fun publishExceptionTransitionsToFailure() {
         val orchestrator =
             HlsPublishOrchestrator(
+                _state = MutableStateFlow(HlsPublishState.Idle),
                 runTranscode = { _, _, _ -> fakeBundle() },
                 buildUploader = { CannedUploader() },
                 signAndPublish = { throw RuntimeException("relay rejected") },
@@ -231,6 +237,7 @@ class HlsPublishOrchestratorTest {
         val captured = mutableListOf<HlsVideoEventTemplate>()
         val orchestrator =
             HlsPublishOrchestrator(
+                _state = MutableStateFlow(HlsPublishState.Idle),
                 runTranscode = { _, _, _ -> fakeBundle() },
                 buildUploader = { CannedUploader() },
                 signAndPublish = { tpl ->
@@ -268,6 +275,7 @@ class HlsPublishOrchestratorTest {
         val captured = mutableListOf<HlsVideoEventTemplate>()
         val orchestrator =
             HlsPublishOrchestrator(
+                _state = MutableStateFlow(HlsPublishState.Idle),
                 runTranscode = { _, _, _ -> HlsBundle(workDir, portraitMaster, listOf(rendition)) },
                 buildUploader = { CannedUploader() },
                 signAndPublish = { tpl ->
@@ -286,6 +294,7 @@ class HlsPublishOrchestratorTest {
     fun resetRestoresIdleState() {
         val orchestrator =
             HlsPublishOrchestrator(
+                _state = MutableStateFlow(HlsPublishState.Idle),
                 runTranscode = { _, _, _ -> throw RuntimeException("boom") },
                 buildUploader = { CannedUploader() },
                 signAndPublish = { "never" },
