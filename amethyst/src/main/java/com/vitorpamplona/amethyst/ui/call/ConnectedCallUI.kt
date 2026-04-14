@@ -334,7 +334,7 @@ private fun CallControls(
                 )
             }
         }
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(12.dp))
         FloatingActionButton(
             onClick = onHangup,
             containerColor = Color.Red,
