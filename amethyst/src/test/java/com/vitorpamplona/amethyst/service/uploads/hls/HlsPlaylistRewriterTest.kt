@@ -217,6 +217,56 @@ class HlsPlaylistRewriterTest {
     }
 
     @Test
+    fun rewritesSingleFileByterangePlaylist() {
+        // Matches PlaylistGenerator.buildByteRangeMediaPlaylist output when HlsConfig
+        // singleFilePerRendition=true (the default). All segment references point to
+        // the same combined fMP4 file; #EXT-X-BYTERANGE lines must be preserved.
+        val playlist =
+            """
+            #EXTM3U
+            #EXT-X-VERSION:7
+            #EXT-X-TARGETDURATION:6
+            #EXT-X-MEDIA-SEQUENCE:0
+            #EXT-X-PLAYLIST-TYPE:VOD
+            #EXT-X-MAP:URI="360p.mp4",BYTERANGE="1234@0"
+
+            #EXTINF:6.000,
+            #EXT-X-BYTERANGE:500000@1234
+            360p.mp4
+            #EXTINF:6.000,
+            #EXT-X-BYTERANGE:480000@501234
+            360p.mp4
+            #EXT-X-ENDLIST
+            """.trimIndent()
+
+        val rewritten =
+            HlsPlaylistRewriter.rewrite(
+                playlist,
+                mapOf("360p.mp4" to "https://cdn/abc.mp4"),
+            )
+
+        val expected =
+            """
+            #EXTM3U
+            #EXT-X-VERSION:7
+            #EXT-X-TARGETDURATION:6
+            #EXT-X-MEDIA-SEQUENCE:0
+            #EXT-X-PLAYLIST-TYPE:VOD
+            #EXT-X-MAP:URI="https://cdn/abc.mp4",BYTERANGE="1234@0"
+
+            #EXTINF:6.000,
+            #EXT-X-BYTERANGE:500000@1234
+            https://cdn/abc.mp4
+            #EXTINF:6.000,
+            #EXT-X-BYTERANGE:480000@501234
+            https://cdn/abc.mp4
+            #EXT-X-ENDLIST
+            """.trimIndent()
+
+        assertEquals(expected, rewritten)
+    }
+
+    @Test
     fun throwsWhenSegmentReferenceIsMissingFromUrlMap() {
         val playlist =
             """
