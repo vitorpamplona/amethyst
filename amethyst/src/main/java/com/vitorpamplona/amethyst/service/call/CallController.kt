@@ -310,8 +310,28 @@ class CallController(
             }
 
             AnswerRouteAction.NO_SESSION -> {
-                Log.d(TAG) { "Answer from unknown peer ${peerPubKey.take(8)} — triggering callee-to-callee" }
-                onNewPeerInGroupCall(peerPubKey)
+                // Unknown peer answering the current call. Two cases:
+                //
+                // 1. We are in Connected state — another participant invited a
+                //    new peer mid-call and the invitee is broadcasting their
+                //    acceptance to us. The invitee stays passive, so we MUST
+                //    unconditionally initiate a mesh offer to them. The
+                //    lower-pubkey tiebreaker does NOT apply here because only
+                //    one side (the existing Connected callee) reacts to the
+                //    broadcast answer.
+                //
+                // 2. We are still in Connecting state — both callees are
+                //    handshaking in parallel during an initial group call and
+                //    are observing each other's answers. Use the lower-pubkey
+                //    tiebreaker via onNewPeerInGroupCall() to avoid glare,
+                //    since the symmetric peer will apply the same rule.
+                if (callManager.state.value is CallState.Connected) {
+                    Log.d(TAG) { "Mid-call invite: ${peerPubKey.take(8)} joined — initiating mesh offer" }
+                    scope.launch { createAndOfferToPeer(peerPubKey) }
+                } else {
+                    Log.d(TAG) { "Answer from unknown peer ${peerPubKey.take(8)} — triggering callee-to-callee" }
+                    onNewPeerInGroupCall(peerPubKey)
+                }
             }
 
             AnswerRouteAction.IGNORED_WRONG_STATE -> {

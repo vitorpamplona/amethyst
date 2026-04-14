@@ -355,12 +355,25 @@ class CallManager(
 
             is CallState.Connecting -> {
                 if (callId != current.callId) return
-                if (answeringPeer in current.pendingPeerPubKeys) {
-                    _state.value =
-                        current.copy(
-                            peerPubKeys = current.peerPubKeys + answeringPeer,
-                            pendingPeerPubKeys = current.pendingPeerPubKeys - answeringPeer,
-                        )
+                when {
+                    answeringPeer in current.pendingPeerPubKeys -> {
+                        _state.value =
+                            current.copy(
+                                peerPubKeys = current.peerPubKeys + answeringPeer,
+                                pendingPeerPubKeys = current.pendingPeerPubKeys - answeringPeer,
+                            )
+                    }
+
+                    answeringPeer !in current.peerPubKeys -> {
+                        // Mid-call join while we're still handshaking: another
+                        // participant invited a new peer and that peer
+                        // broadcast their acceptance to us. Expand our group
+                        // membership so the UI reflects the new peer.
+                        _state.value =
+                            current.copy(
+                                peerPubKeys = current.peerPubKeys + answeringPeer,
+                            )
+                    }
                 }
                 // Forward to CallController — it routes to the correct PeerSession
                 // and internally triggers callee-to-callee mesh setup if needed.
@@ -378,12 +391,27 @@ class CallManager(
 
             is CallState.Connected -> {
                 if (callId != current.callId) return
-                if (answeringPeer in current.pendingPeerPubKeys) {
-                    _state.value =
-                        current.copy(
-                            peerPubKeys = current.peerPubKeys + answeringPeer,
-                            pendingPeerPubKeys = current.pendingPeerPubKeys - answeringPeer,
-                        )
+                when {
+                    answeringPeer in current.pendingPeerPubKeys -> {
+                        _state.value =
+                            current.copy(
+                                peerPubKeys = current.peerPubKeys + answeringPeer,
+                                pendingPeerPubKeys = current.pendingPeerPubKeys - answeringPeer,
+                            )
+                    }
+
+                    answeringPeer !in current.peerPubKeys -> {
+                        // Mid-call join: another participant invited a new
+                        // peer and that peer broadcast their acceptance to us.
+                        // Expand our group membership so the UI reflects the
+                        // new peer. CallController will unconditionally
+                        // initiate a mesh offer to them (the invitee stays
+                        // passive).
+                        _state.value =
+                            current.copy(
+                                peerPubKeys = current.peerPubKeys + answeringPeer,
+                            )
+                    }
                 }
                 // Forward to CallController — it routes to the correct PeerSession
                 // and internally triggers callee-to-callee mesh setup if needed.

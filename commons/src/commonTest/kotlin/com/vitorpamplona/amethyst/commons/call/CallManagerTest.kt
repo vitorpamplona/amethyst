@@ -1117,6 +1117,180 @@ class CallManagerTest {
             assertTrue(carol in state.pendingPeerPubKeys, "Invited peer should be in pending set")
         }
 
+    // ========================================================================
+    // Mid-Call Invite: existing callees observe the invitee's broadcast answer
+    // ========================================================================
+
+    /**
+     * Bob is already in a Connected group call with Alice. Alice invites Carol.
+     * Carol's broadcast CallAnswer reaches Bob. Bob's state must expand to
+     * include Carol in [CallState.Connected.peerPubKeys] and the answer must
+     * still be forwarded via [CallManager.onAnswerReceived] so the caller-side
+     * [CallController] can unconditionally initiate a mesh offer to Carol.
+     */
+    @Test
+    fun midCallInviteAnswerFromUnknownPeerInConnectedExpandsMembership() =
+        runTest {
+            val (manager, _) = createManager(localPubKey = bob, followedKeys = setOf(alice, carol))
+
+            // Bob is in an established 1-1 call with Alice.
+            manager.onSignalingEvent(makeOffer(from = alice, to = bob))
+            manager.acceptCall(sdpAnswer)
+            manager.onPeerConnected()
+            assertIs<CallState.Connected>(manager.state.value)
+
+            var forwardedPeer: HexKey? = null
+            manager.onAnswerReceived = { event -> forwardedPeer = event.pubKey }
+
+            // Alice invited Carol mid-call; Carol broadcasts her acceptance.
+            // Bob sees a CallAnswer from Carol (unknown peer, same call-id)
+            // with p-tags covering the whole expanded group {alice, bob, carol}.
+            val carolAnswer = makeGroupAnswer(from = carol, members = setOf(alice, bob, carol))
+            manager.onSignalingEvent(carolAnswer)
+
+            val state = manager.state.value
+            assertIs<CallState.Connected>(state)
+            assertTrue(carol in state.peerPubKeys, "Mid-call joiner must be added to peerPubKeys")
+            assertTrue(alice in state.peerPubKeys, "Existing peer must still be present")
+            assertEquals(carol, forwardedPeer, "Answer must still be forwarded to CallController")
+        }
+
+    /**
+     * Regression: in an initial group call, the callees observing each other's
+     * answers MUST NOT trip the mid-call expansion branch. The answering peer
+     * was already part of the group membership set by [acceptCall] (via the
+     * IncomingCall.groupMembers → Connecting.peerPubKeys transition), so no
+     * additional insertion should occur.
+     */
+    @Test
+    fun initialCallAnswerFromKnownPeerDoesNotExpandMembership() =
+        runTest {
+            val (manager, _) = createManager(localPubKey = bob, followedKeys = setOf(alice, carol))
+
+            // Alice calls Bob and Carol as a group.
+            manager.onSignalingEvent(makeGroupOffer(from = alice, members = setOf(bob, carol)))
+            assertIs<CallState.IncomingCall>(manager.state.value)
+
+            // Bob accepts. State becomes Connecting(peerPubKeys={alice, carol}).
+            manager.acceptCall(sdpAnswer)
+            val connecting = manager.state.value
+            assertIs<CallState.Connecting>(connecting)
+            assertTrue(alice in connecting.peerPubKeys)
+            assertTrue(carol in connecting.peerPubKeys)
+
+            val sizeBefore = connecting.peerPubKeys.size
+
+            // Carol — who is already in Bob's tracked membership — answers.
+            // This is the normal initial-call mesh observation path.
+            manager.onSignalingEvent(makeGroupAnswer(from = carol, members = setOf(alice, bob, carol)))
+
+            val after = manager.state.value
+            assertIs<CallState.Connecting>(after)
+            assertEquals(sizeBefore, after.peerPubKeys.size, "Known peer's answer must not grow peerPubKeys")
+        }
+
+    /**
+     * Edge case: an existing callee is still in Connecting state (its own ICE
+     * handshake with the caller hasn't completed yet) when the mid-call
+     * invitee broadcasts its answer. Membership must still expand so the UI
+     * shows the new peer.
+     */
+    @Test
+    fun midCallInviteAnswerFromUnknownPeerInConnectingExpandsMembership() =
+        runTest {
+            val (manager, _) = createManager(localPubKey = bob, followedKeys = setOf(alice, carol))
+
+            manager.onSignalingEvent(makeOffer(from = alice, to = bob))
+            manager.acceptCall(sdpAnswer)
+            // Intentionally NOT calling onPeerConnected — we want to stay in
+            // Connecting for this test.
+            assertIs<CallState.Connecting>(manager.state.value)
+
+            val carolAnswer = makeGroupAnswer(from = carol, members = setOf(alice, bob, carol))
+            manager.onSignalingEvent(carolAnswer)
+
+            val state = manager.state.value
+            assertIs<CallState.Connecting>(state)
+            assertTrue(carol in state.peerPubKeys, "Mid-call joiner must be added while in Connecting")
+        }
+
+    /**
+     * Full end-to-end mid-call invite: Alice calls Bob, connects, then invites
+     * Carol. Verifies the round-trip state on all three CallManagers:
+     *
+     * - Alice's pending→connected transition for Carol (caller side)
+     * - Carol's IncomingCall → Connecting with {alice, bob} as group members
+     * - Bob's Connected state expanding to include Carol via the broadcast
+     *   answer path
+     */
+    @Test
+    fun interfaceMidCallInviteFullFlow() =
+        runTest {
+            val (aliceManager, _) = createManager(localPubKey = alice, followedKeys = setOf(bob, carol))
+            val (bobManager, _) = createManager(localPubKey = bob, followedKeys = setOf(alice, carol))
+            val (carolManager, _) = createManager(localPubKey = carol, followedKeys = setOf(alice, bob))
+
+            // Step 1: Alice calls Bob (1-1). Both reach Connected.
+            aliceManager.initiateCall(bob, CallType.VIDEO, callId, sdpOffer)
+            bobManager.onSignalingEvent(makeOffer(from = alice, to = bob, callType = CallType.VIDEO))
+            bobManager.acceptCall(sdpAnswer)
+            aliceManager.onSignalingEvent(makeAnswer(from = bob, to = alice))
+            aliceManager.onPeerConnected()
+            bobManager.onPeerConnected()
+            assertIs<CallState.Connected>(aliceManager.state.value)
+            assertIs<CallState.Connected>(bobManager.state.value)
+
+            // Step 2: Alice invites Carol mid-call.
+            aliceManager.invitePeer(carol, "alice-to-carol-sdp")
+            val aliceAfterInvite = aliceManager.state.value
+            assertIs<CallState.Connected>(aliceAfterInvite)
+            assertTrue(carol in aliceAfterInvite.pendingPeerPubKeys)
+
+            // Step 3: Carol receives the invite offer. Its p-tags cover the
+            // full expanded group {alice, bob, carol} so Carol sees Bob in her
+            // group membership from the first event.
+            val carolOffer = makeGroupOffer(from = alice, members = setOf(alice, bob, carol), callType = CallType.VIDEO)
+            carolManager.onSignalingEvent(carolOffer)
+            val carolIncoming = carolManager.state.value
+            assertIs<CallState.IncomingCall>(carolIncoming)
+            assertTrue(alice in carolIncoming.groupMembers)
+            assertTrue(bob in carolIncoming.groupMembers)
+
+            // Step 4: Carol accepts. Her Connecting state must include Bob
+            // (so later mid-call offers from Bob are handled correctly).
+            carolManager.acceptCall("carol-answer-sdp")
+            val carolConnecting = carolManager.state.value
+            assertIs<CallState.Connecting>(carolConnecting)
+            assertTrue(bob in carolConnecting.peerPubKeys, "Carol's Connecting state must include Bob as a peer")
+            assertTrue(alice in carolConnecting.peerPubKeys, "Carol's Connecting state must include Alice as a peer")
+
+            // Step 5: Alice receives Carol's answer broadcast. Carol moves
+            // out of pending into peerPubKeys.
+            aliceManager.onSignalingEvent(
+                makeGroupAnswer(from = carol, members = setOf(alice, bob, carol), sdp = "carol-answer-sdp"),
+            )
+            val aliceAfterCarolAnswer = aliceManager.state.value
+            assertIs<CallState.Connected>(aliceAfterCarolAnswer)
+            assertTrue(carol in aliceAfterCarolAnswer.peerPubKeys, "Alice should have Carol connected")
+            assertTrue(
+                carol !in aliceAfterCarolAnswer.pendingPeerPubKeys,
+                "Alice should no longer have Carol pending",
+            )
+
+            // Step 6: Bob receives Carol's answer broadcast. Bob's state must
+            // expand to include Carol (mid-call join), and the answer must be
+            // forwarded so Bob's CallController can initiate a mesh offer.
+            var bobForwardedAnswer: HexKey? = null
+            bobManager.onAnswerReceived = { event -> bobForwardedAnswer = event.pubKey }
+            bobManager.onSignalingEvent(
+                makeGroupAnswer(from = carol, members = setOf(alice, bob, carol), sdp = "carol-answer-sdp"),
+            )
+            val bobAfterCarolAnswer = bobManager.state.value
+            assertIs<CallState.Connected>(bobAfterCarolAnswer)
+            assertTrue(carol in bobAfterCarolAnswer.peerPubKeys, "Bob should add Carol to his membership")
+            assertEquals(carol, bobForwardedAnswer, "Bob must forward Carol's answer to his CallController")
+        }
+
     @Test
     fun interfaceFullP2PCallFlowWithRealSigners() =
         runTest {

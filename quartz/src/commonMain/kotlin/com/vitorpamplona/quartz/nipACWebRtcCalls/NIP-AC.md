@@ -404,9 +404,52 @@ Callee A (lower pubkey)                    Callee B (higher pubkey)
 
 ICE candidates for callee-to-callee connections follow the same buffering rules as caller-callee connections.
 
+The "discover during ringing" mechanism only works for the **initial** group call, where every callee rings in parallel and observes each other's `CallAnswer` events during their own `IncomingCall` window. For peers that join **after** the initial call is already established (see [Inviting New Peers](#inviting-new-peers)), the symmetric tiebreaker does not apply and a different rule is used.
+
 ### Inviting New Peers
 
 To invite a new peer into an active group call, send a Call Offer (kind 25050) with `p` tags listing **all** existing group members plus the new invitee. This allows the invitee to immediately see the full group composition. The SDP in the offer is specific to the new PeerConnection being established, so the wrap is addressed only to the invitee.
+
+#### Mid-Call Mesh Expansion
+
+When a new peer joins mid-call, the invitee's ringing window happens **after** all existing callees have already answered, so the invitee cannot discover them via the "observe answers during ringing" mechanism. To preserve the full-mesh invariant without introducing new event kinds, clients MUST apply the following asymmetric rule:
+
+1. **New invitee (passive)**: After accepting a mid-call invite, the invitee sends its `CallAnswer` (kind 25051) gift-wrapped to **every** group member listed in the offer's `p` tags (as with any group acceptance). The invitee MUST NOT initiate any mesh `CallOffer`s after accepting. It only creates additional `PeerConnection`s **reactively**, by handling mid-call `CallOffer`s from existing callees (the same code path that handles any other mid-call offer for the current `call-id`).
+
+2. **Existing callees (active)**: When a callee in `Connected` state receives a `CallAnswer` for the current `call-id` from a peer that is **not** currently in its tracked group membership, it MUST treat the sender as a mid-call joiner and:
+   - Add the sender to its group membership.
+   - **Unconditionally** create a new `PeerConnection`, generate an SDP offer, and send a mesh `CallOffer` (kind 25050) addressed to the sender. The lower-pubkey tiebreaker does NOT apply in this case — only existing Connected callees react to the broadcast answer, so there is exactly one initiator per (existing callee, new invitee) pair and glare is structurally impossible.
+
+3. **Callees still in `Connecting` state**: If an existing callee is still handshaking with the caller when a mid-call invitee's broadcast answer arrives, it SHOULD also add the sender to its tracked group membership so the UI reflects the expansion, but MAY defer the mesh offer to the new peer until it reaches `Connected`. Implementations that initiate the mesh offer immediately (while still in `Connecting`) are also conformant — the target invitee processes it via the normal mid-call offer handler.
+
+The asymmetry (invitee passive, existing callees active) is what distinguishes this from the initial-call mesh setup. In the initial call, both sides observe each other's answers during parallel ringing, so the symmetric lower-pubkey tiebreaker is needed to avoid glare. In a mid-call invite, only the existing callees see a new peer appear (via the broadcast answer), so they unilaterally become the initiators.
+
+```
+Caller A               Existing callee B       Existing callee C        New invitee D
+  |                           |                       |                        |
+  |-- CallOffer (invite) ------------------------------------------------------>|
+  |   (p-tags: A, B, C, D; wrapped only to D)                                   |
+  |                           |                       |                        |
+  |                           |                       |                 [D rings → accepts]
+  |<-- CallAnswer ------------|-----------------------|-- (broadcast) ----------|
+  |                           |<----------------------|-- (broadcast) ----------|
+  |                           |                       |<- (broadcast) ----------|
+  |                           |                       |                        |
+  |  [A: D was pending,       |  [B: D is new →       |  [C: D is new →        |
+  |   move to peerPubKeys]    |   add to group,       |   add to group,        |
+  |                           |   initiate mesh]      |   initiate mesh]       |
+  |                           |                       |                        |
+  |                           |-- mesh CallOffer ------------------------------>|
+  |                           |                       |-- mesh CallOffer ----->|
+  |                           |                       |                        |
+  |                           |                       |                 [D: mid-call offer
+  |                           |                       |                  handler creates
+  |                           |                       |                  PCs for B and C]
+  |                           |<-- mesh CallAnswer --------------------------- |
+  |                           |                       |<-- mesh CallAnswer ----|
+  |                           |                       |                        |
+  |====== Full mesh: A↔B, A↔C, A↔D, B↔C, B↔D, C↔D =========================== |
+```
 
 ### Partial Disconnects
 
