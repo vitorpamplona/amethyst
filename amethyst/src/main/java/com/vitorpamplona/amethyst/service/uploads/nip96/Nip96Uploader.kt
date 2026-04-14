@@ -144,7 +144,10 @@ class Nip96Uploader {
         checkNotInMainThread()
 
         val fileName = RandomInstance.randomChars(16)
-        val extension = contentType?.let { MimeTypeMap.getSingleton().getExtensionFromMimeType(it) } ?: ""
+        val extension =
+            contentType?.let {
+                MimeTypeMap.getSingleton().getExtensionFromMimeType(it) ?: fallbackExtensionForMimeType(it)
+            } ?: ""
 
         val client = okHttpClient(server.apiUrl)
         val requestBuilder = Request.Builder()
@@ -230,6 +233,18 @@ class Nip96Uploader {
     }
 
     fun String.displayUrl() = this.removeSuffix("/").removePrefix("https://")
+
+    // Android's MimeTypeMap does not know every MIME we upload (notably HLS playlist types).
+    // When it returns null we fall back to a small static table so the multipart filename still
+    // carries a real extension — otherwise the server gets "name." and echoes it back, which
+    // breaks HLS URL rewriting.
+    private fun fallbackExtensionForMimeType(mimeType: String): String? =
+        when (mimeType.lowercase()) {
+            "application/vnd.apple.mpegurl", "application/x-mpegurl", "audio/x-mpegurl", "audio/mpegurl" -> "m3u8"
+            "video/mp2t" -> "ts"
+            "video/iso.segment", "video/mp4" -> "mp4"
+            else -> null
+        }
 
     fun convertToMediaResult(nip96: PartialEvent): MediaUploadResult {
         // Images don't seem to be ready immediately after upload

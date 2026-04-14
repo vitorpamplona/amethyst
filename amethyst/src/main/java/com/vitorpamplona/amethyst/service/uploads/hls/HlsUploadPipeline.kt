@@ -126,7 +126,9 @@ class HlsUploadPipeline(
 
     // Blossom servers typically return bare-hash URLs (https://server/<sha256>), but HLS parsers
     // and ExoPlayer's Util.inferContentType sniff the URL extension to pick the right source
-    // factory. Append a hint unless the upload server already baked one in.
+    // factory. Append a hint unless the upload server already baked one in. Trailing dots are
+    // trimmed and any pre-existing doubled extension (e.g. "..m3u8") collapsed, so a server that
+    // echoes our empty-extension upload filename does not produce unreachable URLs.
     private fun withExtensionHint(
         url: String,
         contentType: String,
@@ -137,7 +139,11 @@ class HlsUploadPipeline(
                 CONTENT_TYPE_HLS -> ".m3u8"
                 else -> return url
             }
-        return if (url.endsWith(ext, ignoreCase = true)) url else url + ext
+        val sanitised =
+            url
+                .replace(Regex("""\.{2,}""" + Regex.escape(ext.trimStart('.')) + "$", RegexOption.IGNORE_CASE), ext)
+                .trimEnd('.')
+        return if (sanitised.endsWith(ext, ignoreCase = true)) sanitised else sanitised + ext
     }
 
     companion object {

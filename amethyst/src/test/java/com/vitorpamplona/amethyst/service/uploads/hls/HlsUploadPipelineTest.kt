@@ -213,6 +213,32 @@ class HlsUploadPipelineTest {
     }
 
     @Test
+    fun trailingDotUrlsAreSanitisedIntoCleanExtension() {
+        val bundle = createBundle(listOf("360p"))
+        val uploader =
+            object : HlsBlobUploader {
+                var count = 0
+
+                override suspend fun upload(
+                    file: File,
+                    contentType: String,
+                ): MediaUploadResult {
+                    count++
+                    return MediaUploadResult(url = "https://blossom.test/bare-$count.", sha256 = "sha-$count", size = file.length())
+                }
+            }
+        val pipeline = HlsUploadPipeline(uploader)
+
+        val result = runBlocking { pipeline.upload(bundle) }
+
+        assertTrue("masterUrl must not contain '..': ${result.masterUrl}", !result.masterUrl.contains(".."))
+        assertTrue("masterUrl must not end with '.': ${result.masterUrl}", !result.masterUrl.endsWith("."))
+        assertTrue(result.masterUrl.endsWith(".m3u8"))
+        assertTrue(!result.renditions[0].combinedUrl.contains(".."))
+        assertTrue(result.renditions[0].combinedUrl.endsWith(".mp4"))
+    }
+
+    @Test
     fun doesNotDoubleAppendExtensionWhenAlreadyPresent() {
         val bundle = createBundle(listOf("360p"))
         val uploader = FakeUploader() // returns urls ending in .mp4 / .m3u8
