@@ -76,8 +76,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.davotoula.lightcompressor.hls.HlsLadder
 import com.davotoula.lightcompressor.utils.CompressorUtils
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
-import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -322,14 +320,14 @@ private fun FormFields(vm: NewHlsVideoViewModel) {
 
     Spacer(Modifier.height(16.dp))
 
-    // Server picker
+    // Server picker — reads the user's configured Blossom servers from the account
     Text(
         text = stringResource(R.string.file_server),
         style = MaterialTheme.typography.labelLarge,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
     Spacer(Modifier.height(4.dp))
-    val servers = remember { DEFAULT_MEDIA_SERVERS.filter { it.type != ServerType.NIP95 } }
+    val servers by vm.availableServers.collectAsState()
     val serverOptions =
         remember(servers) {
             servers.map { TitleExplainer(it.name, it.baseUrl) }.toImmutableList()

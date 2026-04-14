@@ -68,8 +68,12 @@ open class NewHlsVideoViewModel : ViewModel() {
     private val _state = MutableStateFlow<HlsPublishState>(HlsPublishState.Idle)
     val state: StateFlow<HlsPublishState> = _state.asStateFlow()
 
+    private val _availableServers = MutableStateFlow<List<ServerName>>(DEFAULT_MEDIA_SERVERS)
+    val availableServers: StateFlow<List<ServerName>> = _availableServers.asStateFlow()
+
     private var orchestrator: HlsPublishOrchestrator? = null
     private var currentJob: Job? = null
+    private var serversJob: Job? = null
 
     fun load(
         account: Account,
@@ -77,7 +81,27 @@ open class NewHlsVideoViewModel : ViewModel() {
     ) {
         this.account = account
         this.orchestrator = orchestrator
-        this.selectedServer = this.selectedServer ?: DEFAULT_MEDIA_SERVERS.first()
+
+        val initialServers = account.blossomServers.hostNameFlow.value
+        _availableServers.value = initialServers
+
+        if (selectedServer == null || initialServers.none { it == selectedServer }) {
+            selectedServer = account.settings.defaultFileServer
+                .takeIf { s -> initialServers.any { it == s } }
+                ?: initialServers.firstOrNull()
+                ?: DEFAULT_MEDIA_SERVERS.first()
+        }
+
+        serversJob?.cancel()
+        serversJob =
+            viewModelScope.launch {
+                account.blossomServers.hostNameFlow.collect { servers ->
+                    _availableServers.value = servers
+                    if (selectedServer == null || servers.none { it == selectedServer }) {
+                        selectedServer = servers.firstOrNull() ?: DEFAULT_MEDIA_SERVERS.first()
+                    }
+                }
+            }
     }
 
     fun load(
