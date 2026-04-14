@@ -321,25 +321,26 @@ private fun FormFields(vm: NewHlsVideoViewModel) {
 
     Spacer(Modifier.height(8.dp))
 
-    // Cross-post as kind-1 note toggle
+    // Draft-a-note-after-upload toggle — opens the existing short-note composer prefilled
+    // with the title, description and master playlist URL; the user edits and posts.
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = stringResource(R.string.hls_cross_post_as_note),
+                text = stringResource(R.string.hls_draft_note_after_upload),
                 style = MaterialTheme.typography.bodyLarge,
             )
             Text(
-                text = stringResource(R.string.hls_cross_post_as_note_explainer),
+                text = stringResource(R.string.hls_draft_note_after_upload_explainer),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         Switch(
-            checked = vm.crossPostAsNote,
-            onCheckedChange = { vm.crossPostAsNote = it },
+            checked = vm.draftNoteAfterUpload,
+            onCheckedChange = { vm.draftNoteAfterUpload = it },
         )
     }
 
@@ -613,16 +614,16 @@ private fun SuccessBody(
         )
         Spacer(Modifier.height(16.dp))
 
-        val noteId = state.noteEventId
-        if (noteId != null) {
+        if (vm.draftNoteAfterUpload) {
             Button(
                 onClick = {
+                    val draft = buildDraftNoteText(vm.title, vm.description, state.masterUrl)
                     vm.reset()
-                    nav.nav(Route.Note(noteId))
+                    nav.nav(Route.NewShortNote(message = draft))
                 },
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(stringResource(R.string.hls_view_note))
+                Text(stringResource(R.string.hls_draft_note_button))
             }
             Spacer(Modifier.height(8.dp))
             OutlinedButton(
@@ -647,6 +648,16 @@ private fun SuccessBody(
         }
     }
 }
+
+private fun buildDraftNoteText(
+    title: String,
+    description: String,
+    masterUrl: String,
+): String =
+    listOf(title, description, masterUrl)
+        .map { it.trim() }
+        .filter { it.isNotEmpty() }
+        .joinToString("\n\n")
 
 @Composable
 private fun FailureBody(

@@ -2112,8 +2112,9 @@
     <string name="hls_view_note">View note</string>
     <string name="hls_done">Done</string>
     <string name="hls_try_again">Try again</string>
-    <string name="hls_cross_post_as_note">Cross-post as note</string>
-    <string name="hls_cross_post_as_note_explainer">Also publish a regular Nostr note linking to the video so it shows in the home feed.</string>
+    <string name="hls_draft_note_after_upload">Draft note after upload</string>
+    <string name="hls_draft_note_after_upload_explainer">Open the note composer pre-filled with the title, description and video link so you can tweak it before posting.</string>
+    <string name="hls_draft_note_button">Draft note</string>
 
     <string name="pack_actions_dialog_title">Pack Actions</string>
     <string name="list_actions_dialog_title">List Actions</string>

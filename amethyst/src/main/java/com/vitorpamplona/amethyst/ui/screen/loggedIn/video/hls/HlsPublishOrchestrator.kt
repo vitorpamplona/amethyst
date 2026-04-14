@@ -41,7 +41,6 @@ data class HlsPublishRequest(
     val codec: VideoCodec,
     val server: ServerName,
     val durationSeconds: Int? = null,
-    val crossPostAsNote: Boolean = true,
 )
 
 /**
@@ -61,7 +60,6 @@ class HlsPublishOrchestrator(
     ) -> HlsBundle,
     private val buildUploader: (ServerName) -> HlsBlobUploader,
     private val signAndPublish: suspend (HlsVideoEventTemplate) -> String,
-    private val signAndPublishNote: suspend (content: String) -> String,
     private val workDirFactory: () -> File,
 ) {
     val state: StateFlow<HlsPublishState> = _state
@@ -98,19 +96,10 @@ class HlsPublishOrchestrator(
                 )
             val eventId = signAndPublish(template)
 
-            val noteEventId =
-                if (request.crossPostAsNote) {
-                    val content = buildCompanionNoteContent(request, uploadResult.masterUrl)
-                    signAndPublishNote(content)
-                } else {
-                    null
-                }
-
             _state.value =
                 HlsPublishState.Success(
                     eventId = eventId,
                     masterUrl = uploadResult.masterUrl,
-                    noteEventId = noteEventId,
                 )
         } catch (e: CancellationException) {
             _state.value = HlsPublishState.Failure(message = "Cancelled")
@@ -125,13 +114,4 @@ class HlsPublishOrchestrator(
     }
 
     private fun contentWarningOrNull(request: HlsPublishRequest): String? = if (request.sensitiveContent) request.contentWarningReason else null
-
-    private fun buildCompanionNoteContent(
-        request: HlsPublishRequest,
-        masterUrl: String,
-    ): String =
-        listOf(request.title, request.description, masterUrl)
-            .map { it.trim() }
-            .filter { it.isNotEmpty() }
-            .joinToString("\n\n")
 }

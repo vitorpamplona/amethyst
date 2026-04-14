@@ -63,7 +63,7 @@ open class NewHlsVideoViewModel : ViewModel() {
     var sensitiveContent by mutableStateOf(false)
     var contentWarningReason by mutableStateOf("")
     var useH265 by mutableStateOf(true)
-    var crossPostAsNote by mutableStateOf(true)
+    var draftNoteAfterUpload by mutableStateOf(true)
     var selectedServer by mutableStateOf<ServerName?>(null)
 
     private val _state = MutableStateFlow<HlsPublishState>(HlsPublishState.Idle)
@@ -147,7 +147,6 @@ open class NewHlsVideoViewModel : ViewModel() {
                 codec = codec,
                 server = server,
                 durationSeconds = sourceMetadata?.durationSeconds,
-                crossPostAsNote = crossPostAsNote,
             )
 
         currentJob =
