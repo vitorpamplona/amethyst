@@ -26,6 +26,7 @@ import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
+import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.call.AnswerRouteAction
 import com.vitorpamplona.amethyst.commons.call.CallManager
 import com.vitorpamplona.amethyst.commons.call.CallState
@@ -59,6 +60,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 private const val TAG = "CallController"
 private const val VIDEO_MAX_BITRATE_BPS_DEFAULT = 1_500_000
 
+@Stable
 class CallController(
     private val context: Context,
     val callManager: CallManager,
@@ -656,11 +658,13 @@ class CallController(
         try {
             val peerName = callManager.currentPeerPubKey() ?: ""
             val isVideo = mediaManager.isVideoEnabled.value
+            val isRinging = callManager.state.value is CallState.IncomingCall || callManager.state.value is CallState.Offering
             val intent =
                 Intent(context, CallForegroundService::class.java).apply {
                     action = CallForegroundService.ACTION_START
                     putExtra(CallForegroundService.EXTRA_PEER_NAME, peerName)
                     putExtra(CallForegroundService.EXTRA_IS_VIDEO, isVideo)
+                    putExtra(CallForegroundService.EXTRA_IS_RINGING, isRinging)
                 }
             context.startForegroundService(intent)
         } catch (e: Exception) {
@@ -672,10 +676,14 @@ class CallController(
         if (!foregroundServiceStarted) return
         try {
             val peerName = callManager.currentPeerPubKey() ?: ""
+            val isVideo = mediaManager.isVideoEnabled.value
+            val isRinging = callManager.state.value is CallState.IncomingCall || callManager.state.value is CallState.Offering
             val intent =
                 Intent(context, CallForegroundService::class.java).apply {
                     action = CallForegroundService.ACTION_UPDATE
                     putExtra(CallForegroundService.EXTRA_PEER_NAME, peerName)
+                    putExtra(CallForegroundService.EXTRA_IS_VIDEO, isVideo)
+                    putExtra(CallForegroundService.EXTRA_IS_RINGING, isRinging)
                 }
             context.startService(intent)
         } catch (e: Exception) {

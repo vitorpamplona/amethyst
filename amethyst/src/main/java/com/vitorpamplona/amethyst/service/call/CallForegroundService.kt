@@ -50,6 +50,7 @@ class CallForegroundService : Service() {
         const val EXTRA_PEER_NAME = "peer_name"
         const val EXTRA_IS_VIDEO = "is_video"
         const val EXTRA_STATUS_TEXT = "status_text"
+        const val EXTRA_IS_RINGING = "is_ringing"
         private const val HANGUP_REQUEST_CODE = 0x70001
     }
 
@@ -66,26 +67,31 @@ class CallForegroundService : Service() {
         startId: Int,
     ): Int {
         when (intent?.action) {
-            ACTION_START -> {
+            ACTION_START, ACTION_UPDATE -> {
                 val peerName = intent.getStringExtra(EXTRA_PEER_NAME) ?: "Unknown"
                 val isVideo = intent.getBooleanExtra(EXTRA_IS_VIDEO, false)
+                val isRinging = intent.getBooleanExtra(EXTRA_IS_RINGING, false)
                 val statusText = intent.getStringExtra(EXTRA_STATUS_TEXT)
                 val notification = buildNotification(peerName, statusText)
-                val hasAudioPermission =
-                    ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) ==
-                        PackageManager.PERMISSION_GRANTED
-                val hasCameraPermission =
-                    ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) ==
-                        PackageManager.PERMISSION_GRANTED
+
                 try {
                     val fgsType =
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
                             var type = ServiceInfo.FOREGROUND_SERVICE_TYPE_PHONE_CALL
-                            if (hasAudioPermission) {
-                                type = type or ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
-                            }
-                            if (isVideo && hasCameraPermission) {
-                                type = type or ServiceInfo.FOREGROUND_SERVICE_TYPE_CAMERA
+                            if (!isRinging) {
+                                val hasAudioPermission =
+                                    ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) ==
+                                        PackageManager.PERMISSION_GRANTED
+                                val hasCameraPermission =
+                                    ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) ==
+                                        PackageManager.PERMISSION_GRANTED
+
+                                if (hasAudioPermission) {
+                                    type = type or ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
+                                }
+                                if (isVideo && hasCameraPermission) {
+                                    type = type or ServiceInfo.FOREGROUND_SERVICE_TYPE_CAMERA
+                                }
                             }
                             type
                         } else {
@@ -104,17 +110,11 @@ class CallForegroundService : Service() {
                         ServiceCompat.startForeground(this, NOTIFICATION_ID, notification, fallbackType)
                     } catch (e2: Exception) {
                         Log.e(TAG, "Foreground service start failed entirely", e2)
-                        stopSelf()
+                        if (intent.action == ACTION_START) {
+                            stopSelf()
+                        }
                     }
                 }
-            }
-
-            ACTION_UPDATE -> {
-                val peerName = intent.getStringExtra(EXTRA_PEER_NAME) ?: "Unknown"
-                val statusText = intent.getStringExtra(EXTRA_STATUS_TEXT)
-                val notification = buildNotification(peerName, statusText)
-                val notificationManager = getSystemService(NotificationManager::class.java)
-                notificationManager.notify(NOTIFICATION_ID, notification)
             }
 
             ACTION_STOP -> {
