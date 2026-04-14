@@ -296,6 +296,7 @@ class AccountSessionManager(
                 accountSettings.backupSearchRelayList?.let { client.publish(it, toPost) }
                 accountSettings.backupIndexRelayList?.let { client.publish(it, toPost) }
                 accountSettings.backupRelayFeedsList?.let { client.publish(it, toPost) }
+                accountSettings.backupChannelList?.let { client.publish(it, toPost) }
             }
         }
     }
