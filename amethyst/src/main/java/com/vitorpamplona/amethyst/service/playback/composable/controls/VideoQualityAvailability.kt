@@ -25,10 +25,17 @@ import androidx.media3.common.Tracks
 
 fun getVideoTrackGroup(tracks: Tracks): Tracks.Group? = tracks.groups.firstOrNull { it.type == C.TRACK_TYPE_VIDEO && it.length > 0 }
 
-fun getCurrentPlayingHeight(tracks: Tracks): Int? {
+// Returns the "Xp" value for the currently selected video track. Uses min(width, height) so
+// that a portrait video's renditions get the same "360p / 540p / 720p" labels as a landscape
+// source — the streaming convention is to label by the short side, not format.height which is
+// the long side for portrait content.
+fun getCurrentPlayingShortSide(tracks: Tracks): Int? {
     val group = getVideoTrackGroup(tracks) ?: return null
     for (i in 0 until group.length) {
-        if (group.isTrackSelected(i)) return group.getTrackFormat(i).height
+        if (group.isTrackSelected(i)) {
+            val format = group.getTrackFormat(i)
+            return minOf(format.width, format.height).takeIf { it > 0 }
+        }
     }
     return null
 }
