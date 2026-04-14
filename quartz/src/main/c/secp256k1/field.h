@@ -167,10 +167,14 @@ static inline void fe_negate(secp256k1_fe *r, const secp256k1_fe *a, int m) {
  *   Pass 2: shift left by 1 (doubles every cross product simultaneously)
  *   Pass 3: add the 4 diagonal products a[i]^2
  *
- * Inlined so point.c callers (doublePoint uses 4 sqrs, addPoints 5) can
- * fuse it into the enclosing Jacobian formulas. On modern x86_64/ARM64
- * the multiplier is the bottleneck, so cutting 16→10 muls is a real win
- * even though the ASM fe_mul has better carry-chain scheduling.
+ * NOTE: this inline is only wired up for the non-FE_MUL_ASM build path.
+ * On x86_64 GCC with BMI2/ADX and on ARM64 GCC, fe_mul_asm's hand-tuned
+ * MULX + ADCX/ADOX (or ARM64 MUL/UMULH) carry-chain scheduling beats the
+ * __int128 path despite fe_mul_asm using 16 muls. Benchmark measurement
+ * (bench_vs_acinq) showed fe_sqr_inline regressed verify/batch-verify by
+ * ~10-25% on x86_64 when used in place of fe_mul_asm(r, a, a), so on
+ * ASM platforms we keep fe_mul_asm(r, a, a) for fe_sqr. The 10-mul
+ * version still helps portable builds (clang, MSVC, non-GCC toolchains).
  */
 static inline void fe_sqr_inline(secp256k1_fe *r, const secp256k1_fe *a) {
     uint64_t a0 = a->d[0], a1 = a->d[1], a2 = a->d[2], a3 = a->d[3];
@@ -292,16 +296,21 @@ static inline void fe_sqr_inline(secp256k1_fe *r, const secp256k1_fe *a) {
 #endif /* HAVE_INT128 */
 
 #if FE_MUL_ASM
-/* Use the ASM version directly as static inline so point.c can inline it */
+/* Use the ASM version directly as static inline so point.c can inline it.
+ *
+ * fe_sqr: on FE_MUL_ASM platforms (x86_64 GCC with BMI2/ADX, ARM64 GCC) the
+ * hand-tuned fe_mul_asm uses MULX + dual ADCX/ADOX carry chains that the
+ * __int128-based fe_sqr_inline cannot match in practice. Measurement showed
+ * that saving 6 multiplications via symmetry doesn't compensate for losing
+ * the ASM's optimized carry-chain scheduling and register usage. So on ASM
+ * platforms we just square via fe_mul_asm(r, a, a), which is faster in
+ * wall-clock terms. The 10-mul fe_sqr_inline is still used for compilers
+ * without the ASM path (clang, MSVC, portable fallback). */
 static inline void fe_mul(secp256k1_fe *r, const secp256k1_fe *a, const secp256k1_fe *b) {
     fe_mul_asm(r, a, b);
 }
 static inline void fe_sqr(secp256k1_fe *r, const secp256k1_fe *a) {
-#if HAVE_INT128
-    fe_sqr_inline(r, a);
-#else
     fe_mul_asm(r, a, a);
-#endif
 }
 #else
 void fe_mul(secp256k1_fe *r, const secp256k1_fe *a, const secp256k1_fe *b);
