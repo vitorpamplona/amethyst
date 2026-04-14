@@ -31,7 +31,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.media3.common.Player
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.service.playback.composable.DEFAULT_MUTED_SETTING
@@ -85,7 +84,6 @@ fun RenderTopButtons(
 
     RenderTopButtons(
         mediaData = mediaData,
-        player = controllerState.controller,
         controllerVisible = controllerVisible,
         startingMuteState = controllerState.controller.volume < 0.001,
         isLive = isLive,
@@ -105,6 +103,12 @@ fun RenderTopButtons(
                     it()
                 }
             },
+        qualityButton = {
+            VideoQualityButton(
+                player = controllerState.controller,
+                controllerVisible = controllerVisible,
+            )
+        },
         modifier = modifier,
         accountViewModel = accountViewModel,
     )
@@ -114,7 +118,6 @@ fun RenderTopButtons(
 @Composable
 fun RenderTopButtons(
     mediaData: MediaItemData,
-    player: Player? = null,
     controllerVisible: MutableState<Boolean>,
     startingMuteState: Boolean,
     isLive: Boolean,
@@ -124,6 +127,7 @@ fun RenderTopButtons(
     onZoomClick: (() -> Unit)?,
     modifier: Modifier,
     accountViewModel: AccountViewModel,
+    qualityButton: @Composable () -> Unit = {},
 ) {
     val shareDialogVisible = remember { mutableStateOf(false) }
     val saveAction =
@@ -145,12 +149,7 @@ fun RenderTopButtons(
             toggle = onMuteClick,
         )
 
-        if (player != null) {
-            VideoQualityButton(
-                player = player,
-                controllerVisible = controllerVisible,
-            )
-        }
+        qualityButton()
 
         Box {
             AnimatedOverflowMenuButton(

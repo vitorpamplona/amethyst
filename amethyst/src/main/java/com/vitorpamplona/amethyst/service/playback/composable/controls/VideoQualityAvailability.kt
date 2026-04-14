@@ -23,19 +23,12 @@ package com.vitorpamplona.amethyst.service.playback.composable.controls
 import androidx.media3.common.C
 import androidx.media3.common.Tracks
 
-/**
- * Checks if the current tracks contain multiple video renditions (HLS/DASH adaptive streams).
- * Returns false for single-rendition MP4s to avoid showing a useless quality menu.
- */
-fun hasMultipleRenditions(tracks: Tracks): Boolean {
-    val videoGroup = getVideoTrackGroup(tracks) ?: return false
-    return videoGroup.length > 1
-}
+fun getVideoTrackGroup(tracks: Tracks): Tracks.Group? = tracks.groups.firstOrNull { it.type == C.TRACK_TYPE_VIDEO && it.length > 0 }
 
-/**
- * Returns the first video track group from the tracks, or null if none exists.
- */
-fun getVideoTrackGroup(tracks: Tracks): Tracks.Group? =
-    tracks.groups.firstOrNull { group ->
-        group.type == C.TRACK_TYPE_VIDEO && group.length > 0
+fun getCurrentPlayingHeight(tracks: Tracks): Int? {
+    val group = getVideoTrackGroup(tracks) ?: return null
+    for (i in 0 until group.length) {
+        if (group.isTrackSelected(i)) return group.getTrackFormat(i).height
     }
+    return null
+}
