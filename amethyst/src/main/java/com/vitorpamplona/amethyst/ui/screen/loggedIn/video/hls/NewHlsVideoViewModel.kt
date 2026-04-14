@@ -29,6 +29,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.davotoula.lightcompressor.VideoCodec
+import com.davotoula.lightcompressor.hls.HlsLadder
 import com.davotoula.lightcompressor.utils.CompressorUtils
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
@@ -65,6 +66,14 @@ open class NewHlsVideoViewModel : ViewModel() {
     var useH265 by mutableStateOf(true)
     var draftNoteAfterUpload by mutableStateOf(true)
     var selectedServer by mutableStateOf<ServerName?>(null)
+
+    var selectedRenditionLabels by mutableStateOf(
+        HlsLadder
+            .default()
+            .renditions
+            .map { it.resolution.label }
+            .toSet(),
+    )
 
     private val _state = MutableStateFlow<HlsPublishState>(HlsPublishState.Idle)
     val state: StateFlow<HlsPublishState> = _state.asStateFlow()
@@ -136,8 +145,13 @@ open class NewHlsVideoViewModel : ViewModel() {
         val server = selectedServer ?: return
         if (pickedUri == null) return
         if (title.isBlank()) return
+        if (selectedRenditionLabels.isEmpty()) return
 
         val codec = effectiveCodec(useH265)
+        val ladder =
+            HlsLadder(
+                HlsLadder.default().renditions.filter { it.resolution.label in selectedRenditionLabels },
+            )
         val request =
             HlsPublishRequest(
                 title = title,
@@ -146,6 +160,7 @@ open class NewHlsVideoViewModel : ViewModel() {
                 contentWarningReason = contentWarningReason,
                 codec = codec,
                 server = server,
+                ladder = ladder,
                 durationSeconds = sourceMetadata?.durationSeconds,
             )
 

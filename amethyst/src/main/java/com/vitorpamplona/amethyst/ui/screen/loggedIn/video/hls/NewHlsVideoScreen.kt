@@ -48,6 +48,7 @@ import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -189,7 +190,7 @@ private fun IdleBody(vm: NewHlsVideoViewModel) {
             Spacer(Modifier.height(24.dp))
             Button(
                 onClick = { vm.publish(context) },
-                enabled = vm.title.isNotBlank() && vm.selectedServer != null,
+                enabled = vm.title.isNotBlank() && vm.selectedServer != null && vm.selectedRenditionLabels.isNotEmpty(),
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(stringResource(R.string.hls_publish_button))
@@ -375,8 +376,8 @@ private fun FormFields(vm: NewHlsVideoViewModel) {
 
     Spacer(Modifier.height(16.dp))
 
-    // Renditions preview (read-only)
-    RenditionsPreview(vm.sourceMetadata)
+    // Renditions — user can toggle which rungs to upload
+    RenditionsCheckboxes(vm)
 }
 
 @Composable
@@ -419,51 +420,73 @@ private fun CodecToggle(
 }
 
 @Composable
-private fun RenditionsPreview(metadata: HlsSourceMetadata?) {
+private fun RenditionsCheckboxes(vm: NewHlsVideoViewModel) {
     Text(
         text = stringResource(R.string.hls_renditions_label),
         style = MaterialTheme.typography.labelLarge,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
     Spacer(Modifier.height(4.dp))
-    if (metadata == null) {
-        Text(
-            text = "360p · 540p · 720p · 1080p · 4K",
-            style = MaterialTheme.typography.bodyMedium,
-        )
-        return
-    }
-    val shortSide = minOf(metadata.width, metadata.height)
-    val ladder =
-        HlsLadder
-            .default()
-            .forSource(shortSide)
-            .renditions
-            .map { it.resolution.label }
-    val skipped =
-        HlsLadder
-            .default()
-            .renditions
-            .map { it.resolution.label }
-            .filter { it !in ladder }
 
-    Text(
-        text = stringResource(R.string.hls_renditions_source_format, metadata.width, metadata.height),
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
-    Spacer(Modifier.height(2.dp))
-    Text(
-        text = stringResource(R.string.hls_renditions_produce_format, ladder.joinToString(" · ")),
-        style = MaterialTheme.typography.bodyMedium,
-    )
-    if (skipped.isNotEmpty()) {
-        Spacer(Modifier.height(2.dp))
+    val metadata = vm.sourceMetadata
+    val sourceShortSide = metadata?.let { minOf(it.width, it.height) }
+    if (metadata != null) {
         Text(
-            text = stringResource(R.string.hls_renditions_skipped_format, skipped.joinToString(", ")),
+            text = stringResource(R.string.hls_renditions_source_format, metadata.width, metadata.height),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        Spacer(Modifier.height(8.dp))
+    }
+
+    HlsLadder.default().renditions.forEach { rendition ->
+        val label = rendition.resolution.label
+        val aboveSource = sourceShortSide != null && rendition.resolution.shortSide > sourceShortSide
+        val enabled = !aboveSource
+        val checked = label in vm.selectedRenditionLabels && !aboveSource
+
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .clickable(enabled = enabled) {
+                        vm.selectedRenditionLabels =
+                            if (checked) {
+                                vm.selectedRenditionLabels - label
+                            } else {
+                                vm.selectedRenditionLabels + label
+                            }
+                    },
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Checkbox(
+                checked = checked,
+                enabled = enabled,
+                onCheckedChange = {
+                    vm.selectedRenditionLabels =
+                        if (it) vm.selectedRenditionLabels + label else vm.selectedRenditionLabels - label
+                },
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color =
+                        if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                val subline =
+                    if (aboveSource) {
+                        stringResource(R.string.hls_rendition_above_source)
+                    } else {
+                        stringResource(R.string.hls_rendition_bitrate_kbps_format, rendition.bitrateKbps)
+                    }
+                Text(
+                    text = subline,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
     }
 }
 

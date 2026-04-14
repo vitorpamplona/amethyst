@@ -113,7 +113,7 @@ class HlsPublishOrchestratorTest {
         val orchestrator =
             HlsPublishOrchestrator(
                 _state = MutableStateFlow(HlsPublishState.Idle),
-                runTranscode = { _, _, _ -> fakeBundle() },
+                runTranscode = { _, _, _, _ -> fakeBundle() },
                 buildUploader = { CannedUploader() },
                 signAndPublish = { tpl ->
                     publishedTemplates += tpl
@@ -147,7 +147,7 @@ class HlsPublishOrchestratorTest {
         orchestrator =
             HlsPublishOrchestrator(
                 _state = MutableStateFlow(HlsPublishState.Idle),
-                runTranscode = { _, _, onProgress ->
+                runTranscode = { _, _, _, onProgress ->
                     capturedDuringTranscode += orchestrator.state.value
                     onProgress("360p", 42)
                     capturedDuringTranscode += orchestrator.state.value
@@ -181,7 +181,7 @@ class HlsPublishOrchestratorTest {
         val orchestrator =
             HlsPublishOrchestrator(
                 _state = MutableStateFlow(HlsPublishState.Idle),
-                runTranscode = { _, _, _ -> throw RuntimeException("decode failed") },
+                runTranscode = { _, _, _, _ -> throw RuntimeException("decode failed") },
                 buildUploader = { CannedUploader() },
                 signAndPublish = { "never" },
                 workDirFactory = { File(workDir, "work").apply { mkdirs() } },
@@ -199,7 +199,7 @@ class HlsPublishOrchestratorTest {
         val orchestrator =
             HlsPublishOrchestrator(
                 _state = MutableStateFlow(HlsPublishState.Idle),
-                runTranscode = { _, _, _ -> fakeBundle() },
+                runTranscode = { _, _, _, _ -> fakeBundle() },
                 buildUploader = {
                     HlsBlobUploader { _, _ -> throw RuntimeException("server 500") }
                 },
@@ -219,7 +219,7 @@ class HlsPublishOrchestratorTest {
         val orchestrator =
             HlsPublishOrchestrator(
                 _state = MutableStateFlow(HlsPublishState.Idle),
-                runTranscode = { _, _, _ -> fakeBundle() },
+                runTranscode = { _, _, _, _ -> fakeBundle() },
                 buildUploader = { CannedUploader() },
                 signAndPublish = { throw RuntimeException("relay rejected") },
                 workDirFactory = { File(workDir, "work").apply { mkdirs() } },
@@ -238,7 +238,7 @@ class HlsPublishOrchestratorTest {
         val orchestrator =
             HlsPublishOrchestrator(
                 _state = MutableStateFlow(HlsPublishState.Idle),
-                runTranscode = { _, _, _ -> fakeBundle() },
+                runTranscode = { _, _, _, _ -> fakeBundle() },
                 buildUploader = { CannedUploader() },
                 signAndPublish = { tpl ->
                     captured += tpl
@@ -276,7 +276,7 @@ class HlsPublishOrchestratorTest {
         val orchestrator =
             HlsPublishOrchestrator(
                 _state = MutableStateFlow(HlsPublishState.Idle),
-                runTranscode = { _, _, _ -> HlsBundle(workDir, portraitMaster, listOf(rendition)) },
+                runTranscode = { _, _, _, _ -> HlsBundle(workDir, portraitMaster, listOf(rendition)) },
                 buildUploader = { CannedUploader() },
                 signAndPublish = { tpl ->
                     captured += tpl
@@ -295,7 +295,7 @@ class HlsPublishOrchestratorTest {
         val orchestrator =
             HlsPublishOrchestrator(
                 _state = MutableStateFlow(HlsPublishState.Idle),
-                runTranscode = { _, _, _ -> throw RuntimeException("boom") },
+                runTranscode = { _, _, _, _ -> throw RuntimeException("boom") },
                 buildUploader = { CannedUploader() },
                 signAndPublish = { "never" },
                 workDirFactory = { File(workDir, "work").apply { mkdirs() } },

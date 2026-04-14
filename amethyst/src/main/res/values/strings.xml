@@ -2101,6 +2101,8 @@
     <string name="hls_renditions_source_format">Source resolution: %1$d×%2$d</string>
     <string name="hls_renditions_produce_format">Will produce: %1$s</string>
     <string name="hls_renditions_skipped_format">(%1$s skipped — above source)</string>
+    <string name="hls_rendition_bitrate_kbps_format">%1$d kbps</string>
+    <string name="hls_rendition_above_source">above source — will be skipped</string>
     <string name="hls_publish_button">Publish HD video</string>
     <string name="hls_publishing_header_format">Publishing “%1$s”…</string>
     <string name="hls_state_transcoding_format">Transcoding %1$s</string>

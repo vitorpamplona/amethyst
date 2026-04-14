@@ -45,13 +45,14 @@ fun createProductionHlsPublishOrchestrator(
 ): HlsPublishOrchestrator =
     HlsPublishOrchestrator(
         _state = state,
-        runTranscode = { workDir, codec, onProgress ->
+        runTranscode = { workDir, codec, ladder, onProgress ->
             val uri = uriProvider() ?: error("No video picked")
             HlsTranscoder.transcode(
                 context = context,
                 uri = uri,
                 workDir = workDir,
                 codec = codec,
+                ladder = ladder,
                 onRenditionProgress = onProgress,
             )
         },

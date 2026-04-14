@@ -25,6 +25,7 @@ import android.net.Uri
 import com.davotoula.lightcompressor.HlsPreparer
 import com.davotoula.lightcompressor.VideoCodec
 import com.davotoula.lightcompressor.hls.HlsConfig
+import com.davotoula.lightcompressor.hls.HlsLadder
 import kotlinx.coroutines.CancellationException
 import java.io.File
 
@@ -49,11 +50,12 @@ object HlsTranscoder {
         uri: Uri,
         workDir: File,
         codec: VideoCodec,
+        ladder: HlsLadder = HlsLadder.default(),
         onRenditionProgress: (label: String, percent: Int) -> Unit = { _, _ -> },
     ): HlsBundle {
         workDir.mkdirs()
         val session = HlsTranscodingSession(workDir, onRenditionProgress)
-        val config = HlsConfig(codec = codec)
+        val config = HlsConfig(codec = codec, ladder = ladder)
 
         HlsPreparer.start(
             context = context,

@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.video.hls
 
 import com.davotoula.lightcompressor.VideoCodec
+import com.davotoula.lightcompressor.hls.HlsLadder
 import com.vitorpamplona.amethyst.service.uploads.hls.HlsBlobUploader
 import com.vitorpamplona.amethyst.service.uploads.hls.HlsBundle
 import com.vitorpamplona.amethyst.service.uploads.hls.HlsUploadPipeline
@@ -40,6 +41,7 @@ data class HlsPublishRequest(
     val contentWarningReason: String,
     val codec: VideoCodec,
     val server: ServerName,
+    val ladder: HlsLadder = HlsLadder.default(),
     val durationSeconds: Int? = null,
 )
 
@@ -56,6 +58,7 @@ class HlsPublishOrchestrator(
     private val runTranscode: suspend (
         workDir: File,
         codec: VideoCodec,
+        ladder: HlsLadder,
         onProgress: (label: String, percent: Int) -> Unit,
     ) -> HlsBundle,
     private val buildUploader: (ServerName) -> HlsBlobUploader,
@@ -69,7 +72,7 @@ class HlsPublishOrchestrator(
         try {
             _state.value = HlsPublishState.Transcoding(currentLabel = "", percent = 0)
             val bundle =
-                runTranscode(workDir, request.codec) { label, percent ->
+                runTranscode(workDir, request.codec, request.ladder) { label, percent ->
                     _state.value = HlsPublishState.Transcoding(label, percent)
                 }
 
