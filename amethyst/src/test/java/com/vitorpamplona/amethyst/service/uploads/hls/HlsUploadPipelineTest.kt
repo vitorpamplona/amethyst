@@ -213,6 +213,46 @@ class HlsUploadPipelineTest {
     }
 
     @Test
+    fun serverUrlsAlreadyWithExtensionPassThroughUntouched() {
+        // Matches the server-side fix where the NIP-96 plugin returns clean "<hash>.m3u8"
+        // URLs. The pipeline must not append a second ".m3u8" on top.
+        val bundle = createBundle(listOf("360p"))
+        val uploader =
+            object : HlsBlobUploader {
+                var count = 0
+
+                override suspend fun upload(
+                    file: File,
+                    contentType: String,
+                ): MediaUploadResult {
+                    count++
+                    val ext =
+                        when (contentType) {
+                            HlsUploadPipeline.CONTENT_TYPE_VIDEO_MP4 -> "mp4"
+                            HlsUploadPipeline.CONTENT_TYPE_HLS -> "m3u8"
+                            else -> "bin"
+                        }
+                    return MediaUploadResult(
+                        url = "https://server.test/hash-$count.$ext",
+                        sha256 = "sha-$count",
+                        size = file.length(),
+                    )
+                }
+            }
+        val pipeline = HlsUploadPipeline(uploader)
+
+        val result = runBlocking { pipeline.upload(bundle) }
+
+        assertEquals("https://server.test/hash-1.mp4", result.renditions[0].combinedUrl)
+        assertEquals("https://server.test/hash-2.m3u8", result.renditions[0].playlistUrl)
+        assertEquals("https://server.test/hash-3.m3u8", result.masterUrl)
+        // And crucially, no double-extension anywhere:
+        assertTrue(!result.masterUrl.contains(".m3u8.m3u8"))
+        assertTrue(!result.renditions[0].combinedUrl.contains(".mp4.mp4"))
+        assertTrue(!result.renditions[0].playlistUrl.contains(".m3u8.m3u8"))
+    }
+
+    @Test
     fun trailingDotUrlsAreSanitisedIntoCleanExtension() {
         val bundle = createBundle(listOf("360p"))
         val uploader =
