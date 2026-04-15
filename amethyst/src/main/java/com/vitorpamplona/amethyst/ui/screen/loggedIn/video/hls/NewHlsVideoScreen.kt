@@ -647,7 +647,10 @@ private fun SuccessBody(
                 onClick = {
                     val draft = buildDraftNoteText(vm.title, vm.description, state.masterUrl)
                     vm.reset()
-                    nav.nav(Route.NewShortNote(message = draft))
+                    // Pop the HLS publish screen off the back stack as we open the composer,
+                    // so that after the user posts (or backs out of) the draft they land on
+                    // the screen they came from, not back on the HLS publish flow.
+                    nav.popUpTo(Route.NewShortNote(message = draft), Route.NewHlsVideo::class)
                 },
                 modifier = Modifier.fillMaxWidth(),
             ) {
