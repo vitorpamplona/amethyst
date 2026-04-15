@@ -1830,4 +1830,195 @@ class CallManagerTest {
 
             assertIs<CallState.IncomingCall>(manager.state.value)
         }
+
+    // ========================================================================
+    // Multi-Device: Second Logged-In Device Must Stop Ringing
+    // ========================================================================
+    // When the user is logged in on two phones and Alice calls them, both
+    // devices ring.  When one picks up (or rejects), the other must stop
+    // ringing without disturbing the device that answered.
+    //
+    // Mechanism: acceptCall / rejectCall publish an extra gift wrap of the
+    // same signed answer/reject event addressed to the user's own pubkey,
+    // so a sibling device (subscribed to gift wraps for its own pubkey)
+    // observes the echo, detects a self-answer/self-reject in IncomingCall
+    // state and transitions to Ended(ANSWERED_ELSEWHERE / REJECTED).
+
+    private fun EphemeralGiftWrapEvent.recipientPubKey(): HexKey? =
+        tags.firstOrNull { it.size >= 2 && it[0] == "p" }?.get(1)
+
+    @Test
+    fun acceptCallPublishesAnswerWrappedForSelfSoSiblingDeviceCanStopRinging() =
+        runTest {
+            val (manager, published) = createManager(localPubKey = bob, followedKeys = setOf(alice))
+
+            manager.onSignalingEvent(makeOffer(from = alice, to = bob))
+            assertIs<CallState.IncomingCall>(manager.state.value)
+            published.clear()
+
+            manager.acceptCall(sdpAnswer)
+
+            val recipients = published.mapNotNull { it.recipientPubKey() }.toSet()
+            assertTrue(
+                alice in recipients,
+                "Answer must be wrapped for the caller (alice), recipients=$recipients",
+            )
+            assertTrue(
+                bob in recipients,
+                "Answer must also be wrapped for the callee's own pubkey (bob) so " +
+                    "sibling devices stop ringing, recipients=$recipients",
+            )
+        }
+
+    @Test
+    fun rejectCallPublishesRejectWrappedForSelfSoSiblingDeviceCanStopRinging() =
+        runTest {
+            val (manager, published) = createManager(localPubKey = bob, followedKeys = setOf(alice))
+
+            manager.onSignalingEvent(makeOffer(from = alice, to = bob))
+            assertIs<CallState.IncomingCall>(manager.state.value)
+            published.clear()
+
+            manager.rejectCall()
+
+            val recipients = published.mapNotNull { it.recipientPubKey() }.toSet()
+            assertTrue(
+                alice in recipients,
+                "Reject must be wrapped for the caller (alice), recipients=$recipients",
+            )
+            assertTrue(
+                bob in recipients,
+                "Reject must also be wrapped for the callee's own pubkey (bob) so " +
+                    "sibling devices stop ringing, recipients=$recipients",
+            )
+        }
+
+    /**
+     * Simulates the full multi-device scenario:
+     *   1. Alice calls Bob.  Bob is logged in on two phones (two separate
+     *      CallManagers backed by the same bobSigner).
+     *   2. Both phones receive the offer and enter IncomingCall.
+     *   3. Phone 1 accepts — this publishes an answer gift-wrapped for
+     *      alice AND for bob.
+     *   4. Phone 2 (subscribed to its own pubkey) receives the self-
+     *      addressed echo and must transition to Ended(ANSWERED_ELSEWHERE).
+     *   5. Phone 1 must remain in Connecting — the echo it also receives
+     *      must not disturb its in-progress session.
+     */
+    @Test
+    fun answeringOnDeviceOneStopsDeviceTwoRingingWithoutDisturbingDeviceOne() =
+        runTest {
+            val (phone1, published1) = createManager(localPubKey = bob, followedKeys = setOf(alice))
+            val (phone2, _) = createManager(localPubKey = bob, followedKeys = setOf(alice))
+
+            val offer = makeOffer(from = alice, to = bob)
+            phone1.onSignalingEvent(offer)
+            phone2.onSignalingEvent(offer)
+            assertIs<CallState.IncomingCall>(phone1.state.value)
+            assertIs<CallState.IncomingCall>(phone2.state.value)
+            published1.clear()
+
+            // Phone 1 picks up.  It will publish one wrap for alice and one
+            // wrap for bob (the self-echo).
+            phone1.acceptCall(sdpAnswer)
+            assertIs<CallState.Connecting>(phone1.state.value)
+
+            // Deliver the self-echo to phone 2. The inner event is what
+            // another CallManager would see after unwrapping the gift wrap,
+            // so construct a parallel CallAnswerEvent directly (the wrap
+            // payload is opaque in the test harness because published1
+            // stores EphemeralGiftWrapEvents, not the unwrapped inner).
+            val selfAnswer = makeAnswer(from = bob, to = alice)
+            phone2.onSignalingEvent(selfAnswer)
+
+            // Phone 2 stops ringing with ANSWERED_ELSEWHERE.
+            val phone2State = phone2.state.value
+            assertIs<CallState.Ended>(phone2State)
+            assertEquals(EndReason.ANSWERED_ELSEWHERE, phone2State.reason)
+
+            // Phone 1 ALSO receives the self-echo (it is addressed to bob).
+            // It must stay in Connecting — the live call cannot be torn down
+            // by its own answer bouncing off the relay.
+            phone1.onSignalingEvent(selfAnswer)
+            assertIs<CallState.Connecting>(phone1.state.value)
+        }
+
+    /**
+     * Regression for the subtle bug where a self-reject echo would trigger
+     * onPeerLeft(signer.pubKey) on a device that had already accepted,
+     * disposing its own PeerSession and killing the live call.
+     */
+    @Test
+    fun selfRejectEchoDoesNotDisturbDeviceAlreadyInCall() =
+        runTest {
+            val (manager, _) = createManager(localPubKey = bob, followedKeys = setOf(alice))
+
+            var peerLeftCalled = false
+            manager.onPeerLeft = { peerLeftCalled = true }
+
+            manager.onSignalingEvent(makeOffer(from = alice, to = bob))
+            manager.acceptCall(sdpAnswer)
+            manager.onPeerConnected()
+            assertIs<CallState.Connected>(manager.state.value)
+
+            // A sibling device rejects the call after we already answered.
+            // Its reject event is wrapped for us too (multi-device signal).
+            val siblingReject = makeReject(from = bob, to = alice)
+            manager.onSignalingEvent(siblingReject)
+
+            // Our live call must survive — the echo must not fire
+            // onPeerLeft (which would dispose our own PeerSession) and must
+            // not change state.
+            assertIs<CallState.Connected>(manager.state.value)
+            assertTrue(
+                !peerLeftCalled,
+                "onPeerLeft must not fire for a self-reject echo — the UI would " +
+                    "tear down our own PeerSession, killing the live call audio.",
+            )
+        }
+
+    /**
+     * Same guard for the Connecting state: a self-reject arriving during
+     * the connection handshake must not drop us from our own pending set
+     * and must not invoke onPeerLeft(self).
+     */
+    @Test
+    fun selfRejectEchoDuringConnectingDoesNotFireOnPeerLeft() =
+        runTest {
+            val (manager, _) = createManager(localPubKey = bob, followedKeys = setOf(alice))
+
+            var peerLeftCalled = false
+            manager.onPeerLeft = { peerLeftCalled = true }
+
+            manager.onSignalingEvent(makeOffer(from = alice, to = bob))
+            manager.acceptCall(sdpAnswer)
+            assertIs<CallState.Connecting>(manager.state.value)
+
+            val siblingReject = makeReject(from = bob, to = alice)
+            manager.onSignalingEvent(siblingReject)
+
+            assertIs<CallState.Connecting>(manager.state.value)
+            assertTrue(!peerLeftCalled, "onPeerLeft must not fire for a self-reject echo during Connecting")
+        }
+
+    /**
+     * If the relay replays events out of order — self-answer arriving
+     * before the original offer — the second device must NOT start ringing
+     * for a call-id it already knows was answered elsewhere.
+     */
+    @Test
+    fun offerReplayedAfterSelfAnswerDoesNotStartRinging() =
+        runTest {
+            val (manager, _) = createManager(localPubKey = bob, followedKeys = setOf(alice))
+
+            // Self-answer arrives first (while we're in Idle — nothing to
+            // do with it except remember the call-id so a later offer for
+            // it is treated as stale).
+            manager.onSignalingEvent(makeAnswer(from = bob, to = alice))
+            assertIs<CallState.Idle>(manager.state.value)
+
+            // Now the offer finally arrives.  We must NOT start ringing.
+            manager.onSignalingEvent(makeOffer(from = alice, to = bob))
+            assertIs<CallState.Idle>(manager.state.value)
+        }
 }
