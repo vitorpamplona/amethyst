@@ -34,7 +34,6 @@ import com.vitorpamplona.quartz.marmot.mls.framing.WireFormat
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupManager
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlin.io.encoding.Base64
@@ -229,6 +228,10 @@ class MarmotInboundProcessor(
         nostrGroupId: HexKey,
     ): WelcomeResult =
         try {
+            com.vitorpamplona.quartz.utils.Log
+                .d("MarmotDbg") {
+                    "MarmotInboundProcessor.processWelcome: group=${nostrGroupId.take(8)}… eventId=${welcomeEvent.id.take(8)}…"
+                }
             // Validate the caller-provided nostrGroupId matches the Welcome event's own h tag
             val eventGroupId = welcomeEvent.nostrGroupId()
             if (eventGroupId != null && eventGroupId != nostrGroupId) {
@@ -242,26 +245,49 @@ class MarmotInboundProcessor(
             if (keyPackageEventId == null) {
                 return WelcomeResult.Error("WelcomeEvent missing KeyPackage event ID tag")
             }
+            com.vitorpamplona.quartz.utils.Log
+                .d("MarmotDbg") {
+                    "MarmotInboundProcessor.processWelcome: welcomeBytes=${welcomeBytes.size}B looking up KeyPackage by ref=${keyPackageEventId.take(8)}…"
+                }
 
-            // Find the KeyPackageBundle that was consumed
-            val bundle =
-                keyPackageRotationManager.findBundleByRef(
-                    hexToBytes(keyPackageEventId),
-                ) ?: return WelcomeResult.Error(
+            // Find the KeyPackageBundle that was consumed.
+            //
+            // The Welcome's "e" tag carries the *Nostr event id* of the
+            // kind:30443 event (NOT the MLS reference hash), so we must
+            // resolve it via the eventId→slot index that
+            // [MarmotManager.generateKeyPackageEvent] populates after
+            // signing each KeyPackageEvent.
+            val bundle = keyPackageRotationManager.findBundleByEventId(keyPackageEventId)
+            if (bundle == null) {
+                com.vitorpamplona.quartz.utils.Log
+                    .w("MarmotDbg") {
+                        "MarmotInboundProcessor.processWelcome: NO matching KeyPackageBundle for eventId=${keyPackageEventId.take(8)}… " +
+                            "— inviter referenced a KeyPackage we don't have private keys for. " +
+                            "Either the bundle was generated in a previous session and never persisted, " +
+                            "or this account never published this KeyPackage."
+                    }
+                return WelcomeResult.Error(
                     "No matching KeyPackageBundle found for event $keyPackageEventId",
                 )
+            }
+            com.vitorpamplona.quartz.utils.Log
+                .d("MarmotDbg") { "MarmotInboundProcessor.processWelcome: bundle found — invoking groupManager.processWelcome" }
 
             // Join the group
             groupManager.processWelcome(nostrGroupId, welcomeBytes, bundle)
+            com.vitorpamplona.quartz.utils.Log
+                .d("MarmotDbg") { "MarmotInboundProcessor.processWelcome: groupManager.processWelcome succeeded for ${nostrGroupId.take(8)}…" }
 
             // Mark the KeyPackage as consumed — triggers rotation
-            keyPackageRotationManager.markConsumedByRef(hexToBytes(keyPackageEventId))
+            keyPackageRotationManager.markConsumedByEventId(keyPackageEventId)
 
             WelcomeResult.Joined(
                 nostrGroupId = nostrGroupId,
                 needsKeyPackageRotation = keyPackageRotationManager.needsRotation(),
             )
         } catch (e: Exception) {
+            com.vitorpamplona.quartz.utils.Log
+                .w("MarmotDbg", "MarmotInboundProcessor.processWelcome: exception ${e.message}", e)
             WelcomeResult.Error("Failed to process Welcome: ${e.message}", e)
         }
 
@@ -454,10 +480,5 @@ class MarmotInboundProcessor(
         throw IllegalStateException(
             "Outer decryption failed with current and ${retainedKeys.size} retained epoch key(s)",
         )
-    }
-
-    private fun hexToBytes(hex: HexKey?): ByteArray {
-        if (hex == null) return ByteArray(0)
-        return hex.hexToByteArray()
     }
 }

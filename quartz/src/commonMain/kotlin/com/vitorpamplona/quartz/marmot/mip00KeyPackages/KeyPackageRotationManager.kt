@@ -32,6 +32,7 @@ import com.vitorpamplona.quartz.marmot.mls.tree.Credential
 import com.vitorpamplona.quartz.marmot.mls.tree.LeafNode
 import com.vitorpamplona.quartz.marmot.mls.tree.LeafNodeSource
 import com.vitorpamplona.quartz.marmot.mls.tree.Lifetime
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.sync.Mutex
@@ -62,6 +63,19 @@ class KeyPackageRotationManager(
     private val pendingRotations = mutableSetOf<String>()
 
     /**
+     * Maps the Nostr event id (kind:30443) of a published KeyPackage to the
+     * d-tag slot whose bundle backs it. The welcome event references its
+     * consumed KeyPackage by Nostr event id (the MIP-02 "e" tag), but
+     * [activeBundles] is keyed by d-tag slot — so we need this side index
+     * to recover the matching bundle on the receive side.
+     *
+     * Populated by [recordPublishedEventId], which is called right after
+     * the kind:30443 event is signed (the event id is only known then).
+     * Also persisted in the snapshot so it survives app restart.
+     */
+    private val eventIdToSlot = mutableMapOf<String, String>()
+
+    /**
      * Restore previously persisted bundles + rotation state from [store].
      * Call once at startup before any other use of this manager.
      * Safe to call when no store is configured (no-op in that case).
@@ -79,17 +93,26 @@ class KeyPackageRotationManager(
             val decoded = decodeSnapshot(bytes)
             mutex.withLock {
                 activeBundles.clear()
-                activeBundles.putAll(decoded.first)
+                activeBundles.putAll(decoded.bundles)
                 pendingRotations.clear()
-                pendingRotations.addAll(decoded.second)
+                pendingRotations.addAll(decoded.pending)
+                eventIdToSlot.clear()
+                eventIdToSlot.putAll(decoded.eventIdToSlot)
             }
             Log.d("KeyPackageRotationManager") {
-                "Restored ${decoded.first.size} active KeyPackage bundle(s), ${decoded.second.size} pending rotation"
+                "Restored ${decoded.bundles.size} active KeyPackage bundle(s), " +
+                    "${decoded.pending.size} pending rotation, ${decoded.eventIdToSlot.size} eventId mapping(s)"
             }
         } catch (e: Exception) {
             Log.w("KeyPackageRotationManager", "Failed to decode persisted KeyPackages: ${e.message}")
         }
     }
+
+    private data class Snapshot(
+        val bundles: Map<String, KeyPackageBundle>,
+        val pending: Set<String>,
+        val eventIdToSlot: Map<String, String>,
+    )
 
     /**
      * Encode the current rotation manager state to opaque bytes for
@@ -113,16 +136,22 @@ class KeyPackageRotationManager(
         for (slot in pendingRotations) {
             writer.putOpaque2(slot.encodeToByteArray())
         }
+        // eventId → slot (added in v2)
+        writer.putUint32(eventIdToSlot.size.toLong())
+        for ((eventId, slot) in eventIdToSlot) {
+            writer.putOpaque2(eventId.encodeToByteArray())
+            writer.putOpaque2(slot.encodeToByteArray())
+        }
         return writer.toByteArray()
     }
 
     /**
-     * Decode the persisted snapshot. Returns (activeBundles, pendingRotations).
+     * Decode the persisted snapshot.
      */
-    private fun decodeSnapshot(bytes: ByteArray): Pair<Map<String, KeyPackageBundle>, Set<String>> {
+    private fun decodeSnapshot(bytes: ByteArray): Snapshot {
         val reader = TlsReader(bytes)
         val version = reader.readUint16()
-        require(version == SNAPSHOT_VERSION) {
+        require(version == 1 || version == SNAPSHOT_VERSION) {
             "Unsupported KeyPackage snapshot version: $version"
         }
         val numBundles = reader.readUint32().toInt()
@@ -141,7 +170,19 @@ class KeyPackageRotationManager(
         repeat(numPending) {
             pending.add(reader.readOpaque2().decodeToString())
         }
-        return bundles to pending
+        // eventId → slot map: only present in v2+. Older snapshots may
+        // not have this section, in which case the map starts empty and
+        // will be repopulated as KeyPackages are republished.
+        val eventIdMap = mutableMapOf<String, String>()
+        if (version >= SNAPSHOT_VERSION && reader.hasRemaining) {
+            val numEventIds = reader.readUint32().toInt()
+            repeat(numEventIds) {
+                val eventId = reader.readOpaque2().decodeToString()
+                val slot = reader.readOpaque2().decodeToString()
+                eventIdMap[eventId] = slot
+            }
+        }
+        return Snapshot(bundles, pending, eventIdMap)
     }
 
     /**
@@ -213,7 +254,13 @@ class KeyPackageRotationManager(
 
     /**
      * Find the bundle whose KeyPackage reference matches the given ref.
-     * Used when we receive a Welcome and need to find the matching bundle.
+     * Used when we receive a Welcome and need to find the matching bundle
+     * via the MLS-spec KeyPackageRef hash.
+     *
+     * NOTE: a Marmot Welcome's "e" tag actually carries the *Nostr event id*
+     * of the kind:30443 event, NOT the MLS reference hash, so the welcome
+     * receive path must use [findBundleByEventId] instead. This function
+     * remains for any callers that genuinely need the MLS-ref lookup.
      */
     suspend fun findBundleByRef(keyPackageRef: ByteArray): KeyPackageBundle? =
         mutex.withLock {
@@ -223,6 +270,35 @@ class KeyPackageRotationManager(
         }
 
     /**
+     * Find the bundle for a KeyPackage that was published as the given
+     * Nostr event id (kind:30443). This is the lookup used by Welcome
+     * processing — the "e" tag in a [WelcomeEvent] is the Nostr event id.
+     *
+     * Requires [recordPublishedEventId] to have been called for the slot
+     * after the kind:30443 event was signed.
+     */
+    suspend fun findBundleByEventId(eventId: HexKey): KeyPackageBundle? =
+        mutex.withLock {
+            val slot = eventIdToSlot[eventId] ?: return@withLock null
+            activeBundles[slot]
+        }
+
+    /**
+     * Record that the bundle for [dTagSlot] has been published as the
+     * kind:30443 event with [eventId]. Call this immediately after signing
+     * the event template (the Nostr event id is only known once the event
+     * has been signed). The mapping is persisted alongside the bundles so
+     * it survives app restart.
+     */
+    suspend fun recordPublishedEventId(
+        dTagSlot: String,
+        eventId: HexKey,
+    ) = mutex.withLock {
+        eventIdToSlot[eventId] = dTagSlot
+        persistUnlocked()
+    }
+
+    /**
      * Mark a KeyPackage slot as consumed (used in a Welcome).
      * The slot will be included in [pendingRotationSlots] and should be
      * rotated by the caller.
@@ -230,6 +306,9 @@ class KeyPackageRotationManager(
     suspend fun markConsumed(dTagSlot: String) =
         mutex.withLock {
             activeBundles.remove(dTagSlot)
+            // Drop any eventId mappings that pointed at this slot.
+            val staleEventIds = eventIdToSlot.entries.filter { it.value == dTagSlot }.map { it.key }
+            staleEventIds.forEach { eventIdToSlot.remove(it) }
             pendingRotations.add(dTagSlot)
             persistUnlocked()
         }
@@ -244,10 +323,27 @@ class KeyPackageRotationManager(
                     bundle.keyPackage.reference().contentEquals(keyPackageRef)
                 }
             if (entry != null) {
-                activeBundles.remove(entry.key)
-                pendingRotations.add(entry.key)
+                val consumedSlot = entry.key
+                activeBundles.remove(consumedSlot)
+                val staleEventIds = eventIdToSlot.entries.filter { it.value == consumedSlot }.map { it.key }
+                staleEventIds.forEach { eventIdToSlot.remove(it) }
+                pendingRotations.add(consumedSlot)
                 persistUnlocked()
             }
+        }
+
+    /**
+     * Mark a slot as consumed by Nostr event id (the value carried by the
+     * Welcome's "e" tag). Companion to [findBundleByEventId].
+     */
+    suspend fun markConsumedByEventId(eventId: HexKey) =
+        mutex.withLock {
+            val slot = eventIdToSlot[eventId] ?: return@withLock
+            activeBundles.remove(slot)
+            val staleEventIds = eventIdToSlot.entries.filter { it.value == slot }.map { it.key }
+            staleEventIds.forEach { eventIdToSlot.remove(it) }
+            pendingRotations.add(slot)
+            persistUnlocked()
         }
 
     /**
@@ -341,7 +437,11 @@ class KeyPackageRotationManager(
         /** Proactive rotation after 7 days even if not consumed */
         const val MAX_KEY_PACKAGE_AGE_SECONDS = 7L * 24 * 60 * 60
 
-        /** On-disk snapshot format version for [KeyPackageBundleStore]. */
-        private const val SNAPSHOT_VERSION = 1
+        /**
+         * On-disk snapshot format version for [KeyPackageBundleStore].
+         * v1: bundles + pendingRotations
+         * v2: + eventIdToSlot map (so welcome lookup by Nostr event id works)
+         */
+        private const val SNAPSHOT_VERSION = 2
     }
 }

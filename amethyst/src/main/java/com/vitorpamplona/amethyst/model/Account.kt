@@ -1737,15 +1737,27 @@ class Account(
         innerEvent: Event,
         groupRelays: Set<NormalizedRelayUrl>,
     ) {
+        Log.d("MarmotDbg") {
+            "sendMarmotGroupMessage: group=${nostrGroupId.take(8)}… innerKind=${innerEvent.kind} innerId=${innerEvent.id.take(8)}… " +
+                "→ ${groupRelays.size} relay(s): ${groupRelays.map { it.url }}"
+        }
         val manager = marmotManager ?: return
         if (!isWriteable()) return
 
         val outbound = manager.buildGroupMessage(nostrGroupId, innerEvent)
+        Log.d("MarmotDbg") {
+            "sendMarmotGroupMessage: built outer kind:${outbound.signedEvent.kind} id=${outbound.signedEvent.id.take(8)}…"
+        }
         cache.justConsumeMyOwnEvent(outbound.signedEvent)
         // Sending a message moves the group out of "New Requests" into
         // "Known" — do this eagerly before relay round-trip so the UI
         // updates immediately.
         marmotGroupList.markAsKnown(nostrGroupId)
+        if (groupRelays.isEmpty()) {
+            Log.w("MarmotDbg") {
+                "sendMarmotGroupMessage: NO group relays for group=${nostrGroupId.take(8)}… — message will be silently dropped"
+            }
+        }
         client.publish(outbound.signedEvent, groupRelays)
     }
 
@@ -1758,6 +1770,9 @@ class Account(
         nostrGroupId: HexKey,
         memberPubKey: HexKey,
     ): String {
+        Log.d("MarmotDbg") {
+            "fetchKeyPackageAndAddMember: group=${nostrGroupId.take(8)}… member=${memberPubKey.take(8)}…"
+        }
         val manager = marmotManager ?: return "Error: Marmot not initialized"
         if (!isWriteable()) return "Error: Account is read-only"
 
@@ -1778,6 +1793,11 @@ class Account(
                 .orEmpty()
         val fetchRelays = memberOutbox + myOutbox
 
+        Log.d("MarmotDbg") {
+            "fetchKeyPackageAndAddMember: querying ${fetchRelays.size} relay(s) for ${memberPubKey.take(8)}… KeyPackage " +
+                "(memberOutbox=${memberOutbox.size}, myOutbox=${myOutbox.size}): ${fetchRelays.map { it.url }}"
+        }
+
         // Query across the combined relay set
         val filterMap = fetchRelays.associateWith { listOf(filter) }
 
@@ -1787,15 +1807,24 @@ class Account(
             )
 
         if (event == null) {
+            Log.w("MarmotDbg") {
+                "fetchKeyPackageAndAddMember: NO KeyPackage found for ${memberPubKey.take(8)}… on any of ${fetchRelays.size} relay(s)"
+            }
             return "Error: No KeyPackage found for this user. They may not have published one yet."
         }
 
+        Log.d("MarmotDbg") {
+            "fetchKeyPackageAndAddMember: got KeyPackage event id=${event.id.take(8)}… kind=${event.kind} authored=${event.pubKey.take(8)}…"
+        }
+
         if (event !is com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent) {
+            Log.w("MarmotDbg") { "fetchKeyPackageAndAddMember: unexpected kind ${event.kind}" }
             return "Error: Unexpected event type received"
         }
 
         val keyPackageBase64 = event.keyPackageBase64()
         if (keyPackageBase64.isBlank()) {
+            Log.w("MarmotDbg") { "fetchKeyPackageAndAddMember: KeyPackage event has empty content" }
             return "Error: KeyPackage event has empty content"
         }
 
@@ -1807,6 +1836,10 @@ class Account(
         // where to subscribe for subsequent GroupEvents. Use our own
         // outbox — that's where we will publish them.
         val groupRelays = myOutbox.toList()
+
+        Log.d("MarmotDbg") {
+            "fetchKeyPackageAndAddMember: addMarmotGroupMember → groupRelays=${groupRelays.size}: ${groupRelays.map { it.url }}"
+        }
 
         addMarmotGroupMember(
             nostrGroupId = nostrGroupId,
@@ -1830,6 +1863,10 @@ class Account(
         keyPackageEventId: HexKey,
         groupRelays: List<NormalizedRelayUrl>,
     ) {
+        Log.d("MarmotDbg") {
+            "addMarmotGroupMember: group=${nostrGroupId.take(8)}… member=${memberPubKey.take(8)}… " +
+                "keyPackageBytes=${keyPackageBytes.size}B groupRelays=${groupRelays.size}"
+        }
         val manager = marmotManager ?: return
         if (!isWriteable()) return
 
@@ -1842,7 +1879,15 @@ class Account(
                 relays = groupRelays,
             )
 
+        Log.d("MarmotDbg") {
+            "addMarmotGroupMember: built commit kind=${commitEvent.signedEvent.kind} id=${commitEvent.signedEvent.id.take(8)}… " +
+                "welcomeDelivery=${if (welcomeDelivery != null) "present(giftWrapId=${welcomeDelivery.giftWrapEvent.id.take(8)}…)" else "null"}"
+        }
+
         // Publish commit first (critical ordering)
+        Log.d("MarmotDbg") {
+            "addMarmotGroupMember: publishing commit kind:${commitEvent.signedEvent.kind} to ${groupRelays.size} relay(s): ${groupRelays.map { it.url }}"
+        }
         client.publish(commitEvent.signedEvent, groupRelays.toSet())
 
         // Then send the Welcome gift wrap to the new member.
@@ -1862,16 +1907,26 @@ class Account(
                     .dmInboxRelays()
                     .orEmpty()
             val relayList = computed + outboxRelays.flow.value + recipientInbox
+            Log.d("MarmotDbg") {
+                "addMarmotGroupMember: welcome gift wrap relay sources " +
+                    "computeRelayListToBroadcast=${computed.size} myOutbox=${outboxRelays.flow.value.size} " +
+                    "recipientInbox=${recipientInbox.size} → union=${relayList.size}"
+            }
             if (relayList.isEmpty()) {
-                Log.w("Marmot") {
-                    "addMarmotGroupMember: no relays to deliver welcome gift wrap to ${memberPubKey.take(8)}…"
+                Log.w("MarmotDbg") {
+                    "addMarmotGroupMember: NO relays to deliver welcome gift wrap to ${memberPubKey.take(8)}… — welcome will be silently dropped"
                 }
             } else {
-                Log.d("Marmot") {
-                    "addMarmotGroupMember: publishing welcome gift wrap to ${relayList.size} relay(s) for ${memberPubKey.take(8)}…"
+                Log.d("MarmotDbg") {
+                    "addMarmotGroupMember: publishing welcome gift wrap id=${welcomeDelivery.giftWrapEvent.id.take(8)}… " +
+                        "kind:${welcomeDelivery.giftWrapEvent.kind} → ${relayList.size} relay(s): ${relayList.map { it.url }}"
                 }
             }
             client.publish(welcomeDelivery.giftWrapEvent, relayList)
+        } else {
+            Log.w("MarmotDbg") {
+                "addMarmotGroupMember: welcomeDelivery is NULL — invitee ${memberPubKey.take(8)}… will receive nothing!"
+            }
         }
     }
 
@@ -1901,7 +1956,13 @@ class Account(
         if (!isWriteable()) return
 
         val relays = outboxRelays.flow.value.toList()
+        Log.d("MarmotDbg") {
+            "publishMarmotKeyPackage: generating + publishing KeyPackage event → ${relays.size} relay(s): ${relays.map { it.url }}"
+        }
         val event = manager.generateKeyPackageEvent(relays)
+        Log.d("MarmotDbg") {
+            "publishMarmotKeyPackage: signed kind:${event.kind} id=${event.id.take(8)}… authored=${event.pubKey.take(8)}…"
+        }
         cache.justConsumeMyOwnEvent(event)
         client.publish(event, outboxRelays.flow.value)
     }
@@ -1927,19 +1988,20 @@ class Account(
         val manager = marmotManager ?: return
         if (!isWriteable()) return
         try {
-            if (manager.hasActiveKeyPackages()) {
-                Log.d("Account") {
-                    "ensureMarmotKeyPackagePublished: already have an active KeyPackage bundle"
-                }
+            val hasBundle = manager.hasActiveKeyPackages()
+            Log.d("MarmotDbg") {
+                "ensureMarmotKeyPackagePublished: hasActiveKeyPackages=$hasBundle for ${signer.pubKey.take(8)}…"
+            }
+            if (hasBundle) {
                 return
             }
-            Log.d("Account") {
-                "ensureMarmotKeyPackagePublished: no active bundle — generating + publishing"
+            Log.d("MarmotDbg") {
+                "ensureMarmotKeyPackagePublished: no active bundle — generating + publishing now"
             }
             publishMarmotKeyPackage()
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.w("Account", "ensureMarmotKeyPackagePublished failed: ${e.message}", e)
+            Log.w("MarmotDbg", "ensureMarmotKeyPackagePublished failed: ${e.message}", e)
         }
     }
 

@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -56,6 +57,9 @@ class MarmotGroupEventsEoseManager(
 
         // Per-group kind:445 filters — route each to the group's own relays
         val groupStates = manager.subscriptionManager.activeGroupIdsSnapshot()
+        Log.d("MarmotDbg") {
+            "MarmotGroupEventsEoseManager.updateFilter: ${groupStates.size} active group(s), fallbackRelays=${fallbackRelays.size}"
+        }
         for (groupId in groupStates) {
             val filter =
                 manager.subscriptionManager.let { sub ->
@@ -77,6 +81,10 @@ class MarmotGroupEventsEoseManager(
                             .normalizeOrNull(it)
                     }?.toSet()
             val relaysForGroup = if (!groupRelays.isNullOrEmpty()) groupRelays else fallbackRelays
+            Log.d("MarmotDbg") {
+                "MarmotGroupEventsEoseManager.updateFilter: group=${groupId.take(8)}… → ${relaysForGroup.size} relay(s) " +
+                    "(metadataRelays=${groupRelays?.size ?: 0}, usingFallback=${groupRelays.isNullOrEmpty()}): ${relaysForGroup.map { it.url }}"
+            }
             for (relay in relaysForGroup) {
                 result.add(RelayBasedFilter(relay = relay, filter = filter))
             }
@@ -90,6 +98,9 @@ class MarmotGroupEventsEoseManager(
             }
         }
 
+        Log.d("MarmotDbg") {
+            "MarmotGroupEventsEoseManager.updateFilter: emitting ${result.size} RelayBasedFilter(s)"
+        }
         return result
     }
 
@@ -112,7 +123,10 @@ class MarmotGroupEventsEoseManager(
                 // invitee that just joined a group would never actually
                 // receive any of its messages until the next app restart.
                 key.account.scope.launch(Dispatchers.IO) {
-                    key.account.marmotGroupList.groupListChanges.collect {
+                    key.account.marmotGroupList.groupListChanges.collect { changedGroupId ->
+                        Log.d("MarmotDbg") {
+                            "MarmotGroupEventsEoseManager: groupListChanges → ${changedGroupId.take(8)}… invalidating filters"
+                        }
                         invalidateFilters()
                     }
                 },

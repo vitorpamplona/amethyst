@@ -313,7 +313,12 @@ class MarmotManager(
                 relays = relays,
             )
 
-        return signer.sign(template)
+        val signed = signer.sign<KeyPackageEvent>(template)
+        // Welcome receivers identify the consumed KeyPackage by its Nostr
+        // event id (the MIP-02 "e" tag), not by the MLS reference hash, so
+        // remember the mapping right after we know the signed event id.
+        keyPackageRotationManager.recordPublishedEventId(dTagSlot, signed.id)
+        return signed
     }
 
     /**
@@ -339,7 +344,9 @@ class MarmotManager(
                     keyPackageRef = keyPackageRef,
                     relays = relays,
                 )
-            signer.sign<KeyPackageEvent>(template)
+            val signed = signer.sign<KeyPackageEvent>(template)
+            keyPackageRotationManager.recordPublishedEventId(slot, signed.id)
+            signed
         }
     }
 
