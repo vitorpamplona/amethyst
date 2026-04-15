@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
 import com.vitorpamplona.amethyst.ui.note.NoteUsernameDisplay
+import com.vitorpamplona.amethyst.ui.note.elements.MoreOptionsButton
 import com.vitorpamplona.amethyst.ui.note.elements.TimeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
@@ -74,5 +75,12 @@ fun UserCardHeader(
         }
 
         TimeAgo(baseNote)
+
+        MoreOptionsButton(
+            baseNote = baseNote,
+            editState = null,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
     }
 }

@@ -45,7 +45,6 @@ import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.ReactionsRow
-import com.vitorpamplona.amethyst.ui.note.observeEdits
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.UserCardHeader
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
@@ -59,7 +58,6 @@ fun PictureCardCompose(
 ) {
     val event = (baseNote.event as? PictureEvent) ?: return
     val backgroundColor = remember { mutableStateOf(Color.Transparent) }
-    val editState = observeEdits(baseNote = baseNote, accountViewModel = accountViewModel)
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -75,7 +73,7 @@ fun PictureCardCompose(
             baseNote = baseNote,
             showReactionDetail = true,
             addPadding = true,
-            editState = editState,
+            editState = null,
             accountViewModel = accountViewModel,
             nav = nav,
         )
