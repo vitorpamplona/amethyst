@@ -716,6 +716,8 @@
     <string name="call_failed_accept">Nem sikerült elfogadni a hívást</string>
     <string name="call_failed_session">Nem sikerült létrehozni a hívási munkamenetet</string>
     <string name="call_settings">Hívásbeállítások</string>
+    <string name="call_settings_enable_calls">Hang- és videóhívások engedélyezése</string>
+    <string name="call_settings_enable_calls_description">Letiltott állapotban a hívásgombok rejtve maradnak a csevegési képernyőkön, a bejövő hívásokat pedig a rendszer értesítés küldése nélkül figyelmen kívűl hagyja.</string>
     <string name="call_settings_video_quality">Videóminőség</string>
     <string name="call_settings_max_bitrate">Legmagasabb videó-bitsebesség</string>
     <string name="call_settings_turn_servers">TURN-/ STUN-kiszolgálók</string>
@@ -1822,6 +1824,7 @@
     <string name="profile_actions_dialog_title">Profilműveletek</string>
     <string name="media_actions_dialog_title">Médiaműveletek</string>
     <string name="playback_actions_dialog_title">Lejátszás</string>
+    <string name="video_quality_auto">Automatikus</string>
     <string name="pack_actions_dialog_title">Csomagműveletek</string>
     <string name="list_actions_dialog_title">Listaműveletek</string>
     <string name="bookmark_item_actions_dialog_title">Könyvjelző-műveletek</string>
