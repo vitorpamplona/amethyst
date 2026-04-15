@@ -2460,7 +2460,9 @@ class Account(
                         }
                         storedMessages.forEach { json ->
                             try {
-                                val innerEvent = com.vitorpamplona.quartz.nip01Core.core.Event.fromJson(json)
+                                val innerEvent =
+                                    com.vitorpamplona.quartz.nip01Core.core.Event
+                                        .fromJson(json)
                                 val isNew = cache.justConsume(innerEvent, null, false)
                                 val innerNote = cache.getOrCreateNote(innerEvent.id)
                                 if (isNew) {
