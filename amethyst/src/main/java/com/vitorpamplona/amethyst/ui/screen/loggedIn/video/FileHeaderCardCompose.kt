@@ -68,7 +68,7 @@ fun FileHeaderCardCompose(
         modifier = Modifier.fillMaxWidth(),
     ) {
         // Author header row
-        UserCardHeader(baseNote, accountViewModel, nav)
+        UserCardHeader(baseNote, accountViewModel, nav, editState)
 
         // Image content
         FileHeaderCardImage(baseNote, event, backgroundColor, accountViewModel)

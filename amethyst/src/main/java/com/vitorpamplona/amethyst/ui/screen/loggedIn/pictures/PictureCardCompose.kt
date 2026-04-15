@@ -65,7 +65,7 @@ fun PictureCardCompose(
         modifier = Modifier.fillMaxWidth(),
     ) {
         // Author header row
-        UserCardHeader(baseNote, accountViewModel, nav)
+        UserCardHeader(baseNote, accountViewModel, nav, editState)
 
         // Image content
         PictureCardImage(baseNote, event, backgroundColor, accountViewModel)

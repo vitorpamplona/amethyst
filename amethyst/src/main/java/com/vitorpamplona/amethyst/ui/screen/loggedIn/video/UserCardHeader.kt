@@ -27,15 +27,19 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
 import com.vitorpamplona.amethyst.ui.note.NoteUsernameDisplay
+import com.vitorpamplona.amethyst.ui.note.elements.MoreOptionsButton
 import com.vitorpamplona.amethyst.ui.note.elements.TimeAgo
+import com.vitorpamplona.amethyst.ui.note.types.EditState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 
@@ -44,6 +48,7 @@ fun UserCardHeader(
     baseNote: Note,
     accountViewModel: AccountViewModel,
     nav: INav,
+    editState: State<GenericLoadable<EditState>>? = null,
 ) {
     Row(
         modifier =
@@ -74,5 +79,12 @@ fun UserCardHeader(
         }
 
         TimeAgo(baseNote)
+
+        MoreOptionsButton(
+            baseNote = baseNote,
+            editState = editState,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
     }
 }

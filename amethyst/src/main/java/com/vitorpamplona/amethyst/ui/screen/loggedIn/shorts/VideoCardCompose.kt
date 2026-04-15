@@ -69,7 +69,7 @@ fun VideoCardCompose(
         modifier = Modifier.fillMaxWidth(),
     ) {
         // Author header row
-        UserCardHeader(baseNote, accountViewModel, nav)
+        UserCardHeader(baseNote, accountViewModel, nav, editState)
 
         // Image content
         VideoCardImage(baseNote, event, backgroundColor, accountViewModel)
