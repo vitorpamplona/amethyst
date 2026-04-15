@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.marmot.AndroidMlsGroupStateStore
+import com.vitorpamplona.amethyst.model.marmot.InMemoryMlsGroupStateStore
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentFilterAssembler
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -100,8 +101,13 @@ class AccountCacheState(
         val mlsStore =
             try {
                 AndroidMlsGroupStateStore(rootFilesDir())
-            } catch (_: Exception) {
-                null
+            } catch (e: Exception) {
+                Log.e(
+                    "AccountCacheState",
+                    "Failed to initialize AndroidMlsGroupStateStore, falling back to in-memory store (Marmot groups will not persist across restarts)",
+                    e,
+                )
+                InMemoryMlsGroupStateStore()
             }
 
         return Account(
