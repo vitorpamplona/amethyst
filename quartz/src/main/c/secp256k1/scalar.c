@@ -5,6 +5,11 @@
 #include "scalar.h"
 #include <string.h>
 
+/* 2^256 mod n — a ~129-bit constant. Used by scalar_add and scalar_mul. */
+static const uint64_t SCALAR_NC[4] = {
+    0x402DA1732FC9BEBFULL, 0x4551231950B75FC4ULL, 1, 0
+};
+
 int scalar_is_zero(const secp256k1_scalar *a) {
     return (a->d[0] | a->d[1] | a->d[2] | a->d[3]) == 0;
 }
@@ -52,14 +57,9 @@ void scalar_reduce(secp256k1_scalar *r) {
 void scalar_add(secp256k1_scalar *r, const secp256k1_scalar *a, const secp256k1_scalar *b) {
     int carry = add256(r->d, a->d, b->d);
     if (carry) {
-        /* Overflow: subtract n. n_complement = 2^256 - n */
-        uint64_t nc[4] = {
-            ~SCALAR_N.d[0] + 1,
-            ~SCALAR_N.d[1] + (!SCALAR_N.d[0] ? 1ULL : 0ULL),
-            ~SCALAR_N.d[2] + (!(SCALAR_N.d[0] | SCALAR_N.d[1]) ? 1ULL : 0ULL),
-            ~SCALAR_N.d[3]
-        };
-        add256(r->d, r->d, nc);
+        /* Overflow past 2^256: r_true = (a+b) - 2^256 + 2^256 = r + 2^256.
+         * Since 2^256 ≡ NC (mod n), adding NC undoes the wraparound mod n. */
+        add256(r->d, r->d, SCALAR_NC);
     }
     scalar_reduce(r);
 }
@@ -81,62 +81,50 @@ void scalar_sub(secp256k1_scalar *r, const secp256k1_scalar *a, const secp256k1_
 /* Use the field module's proven mul_wide for 4x4 → 8-limb product */
 extern void mul_wide(uint64_t out[8], const uint64_t a[4], const uint64_t b[4]);
 
-/* Multiply mod n: r = (a * b) mod n */
+/*
+ * Multiply mod n: r = (a * b) mod n.
+ *
+ * Fully reduces the 512-bit product via repeated folding: 2^256 ≡ NC (mod n).
+ * Because NC < 2^130, each round strictly shrinks the high half, so the fold
+ * converges in at most 3 iterations before hi is entirely zero. Loop-driven
+ * to avoid the subtle third-fold carry-drop bug the previous unrolled version
+ * had, and to give correct results in the portable (!HAVE_INT128) path too.
+ */
 void scalar_mul(secp256k1_scalar *r, const secp256k1_scalar *a, const secp256k1_scalar *b) {
-    /* 2^256 mod n */
-    static const uint64_t NC[4] = {
-        0x402DA1732FC9BEBFULL, 0x4551231950B75FC4ULL, 1, 0
-    };
-
     uint64_t t[8];
     mul_wide(t, a->d, b->d);
 
-    /* Reduce: r = t[0..3] + t[4..7]*NC. Use mul_wide for the hi*NC product. */
-    uint64_t hc[8];
-    mul_wide(hc, &t[4], NC);
+    uint64_t lo[4] = { t[0], t[1], t[2], t[3] };
+    uint64_t hi[4] = { t[4], t[5], t[6], t[7] };
 
-    /* Add lo + hc */
-#if HAVE_INT128
-    uint128_t acc = 0;
-    uint64_t sum[8];
-    for (int i = 0; i < 8; i++) {
-        acc += (uint128_t)(i < 4 ? t[i] : 0) + hc[i];
-        sum[i] = (uint64_t)acc;
-        acc >>= 64;
-    }
-    /* Second fold: sum[4..7] * NC + sum[0..3] */
-    if (sum[4] | sum[5] | sum[6] | sum[7]) {
-        uint64_t hc2[8];
-        mul_wide(hc2, &sum[4], NC);
-        acc = 0;
-        uint64_t sum2[8];
-        for (int i = 0; i < 8; i++) {
-            acc += (uint128_t)(i < 4 ? sum[i] : 0) + hc2[i];
-            sum2[i] = (uint64_t)acc;
-            acc >>= 64;
+    while ((hi[0] | hi[1] | hi[2] | hi[3]) != 0) {
+        /* wide = hi * NC (an 8-limb product), then wide += lo. */
+        uint64_t wide[8];
+        mul_wide(wide, hi, SCALAR_NC);
+        uint64_t carry = 0;
+        for (int i = 0; i < 4; i++) {
+            uint64_t s1 = lo[i] + wide[i];
+            uint64_t c1 = (s1 < lo[i]) ? 1ULL : 0ULL;
+            uint64_t s2 = s1 + carry;
+            uint64_t c2 = (s2 < s1) ? 1ULL : 0ULL;
+            wide[i] = s2;
+            carry = c1 + c2;
         }
-        /* Third fold if still > 256 bits (sum2 is at most ~130 bits above 256) */
-        if (sum2[4] | sum2[5] | sum2[6] | sum2[7]) {
-            /* sum2[4..7] is tiny (~2 limbs at most). Use reduce_wide pattern. */
-            acc = (uint128_t)sum2[0] + (uint128_t)sum2[4] * NC[0];
-            r->d[0] = (uint64_t)acc; acc >>= 64;
-            acc += (uint128_t)sum2[1] + (uint128_t)sum2[4] * NC[1] + (uint128_t)sum2[5] * NC[0];
-            r->d[1] = (uint64_t)acc; acc >>= 64;
-            acc += (uint128_t)sum2[2] + (uint128_t)sum2[4] * NC[2] + (uint128_t)sum2[5] * NC[1] + (uint128_t)sum2[6] * NC[0];
-            r->d[2] = (uint64_t)acc; acc >>= 64;
-            acc += (uint128_t)sum2[3] + (uint128_t)sum2[5] * NC[2] + (uint128_t)sum2[6] * NC[1] + (uint128_t)sum2[7] * NC[0];
-            r->d[3] = (uint64_t)acc;
-            /* Any remaining carry is negligible — handled by while loop below */
-        } else {
-            r->d[0] = sum2[0]; r->d[1] = sum2[1]; r->d[2] = sum2[2]; r->d[3] = sum2[3];
+        for (int i = 4; i < 8 && carry != 0; i++) {
+            uint64_t s = wide[i] + carry;
+            carry = (s < wide[i]) ? 1ULL : 0ULL;
+            wide[i] = s;
         }
-    } else {
-        r->d[0] = sum[0]; r->d[1] = sum[1]; r->d[2] = sum[2]; r->d[3] = sum[3];
+        /* carry out of wide[7] is impossible: NC < 2^130, so hi * NC is
+         * bounded by 2^256 * 2^130 = 2^386, fitting comfortably in wide[].
+         * Adding lo (< 2^256) and a tiny running carry stays inside wide[]. */
+
+        lo[0] = wide[0]; lo[1] = wide[1]; lo[2] = wide[2]; lo[3] = wide[3];
+        hi[0] = wide[4]; hi[1] = wide[5]; hi[2] = wide[6]; hi[3] = wide[7];
     }
-#else
-    /* Portable: just take low 4 limbs and subtract n repeatedly */
-    r->d[0] = t[0]; r->d[1] = t[1]; r->d[2] = t[2]; r->d[3] = t[3];
-#endif
+
+    r->d[0] = lo[0]; r->d[1] = lo[1]; r->d[2] = lo[2]; r->d[3] = lo[3];
+    /* At this point r < n + small-epsilon; a single subtract is enough. */
     while (scalar_cmp(r, &SCALAR_N) >= 0) {
         sub256(r->d, r->d, SCALAR_N.d);
     }

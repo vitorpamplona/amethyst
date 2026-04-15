@@ -31,6 +31,38 @@ static jbyteArray make_bytes(JNIEnv *env, const uint8_t *data, int len) {
     return arr;
 }
 
+/*
+ * Copy a variable-length Java byte[] into a native buffer without pinning.
+ *
+ * GetByteArrayElements pins the underlying Java array, blocking GC compaction
+ * for the duration of the call. For short-lived crypto operations (signing
+ * or verifying a Nostr event, almost always a 32-byte message digest), copying
+ * via GetByteArrayRegion into a stack or heap buffer is both cheaper and
+ * friendlier to the GC. Small messages (<=512 B) go on the stack; larger
+ * ones allocate via malloc. Caller frees `*out_buf` only if `*needs_free`.
+ */
+static int copy_msg_bytes(JNIEnv *env, jbyteArray arr,
+                          uint8_t *stack_buf, size_t stack_cap,
+                          uint8_t **out_buf, size_t *out_len,
+                          int *needs_free) {
+    if (!arr) return 0;
+    jint len = (*env)->GetArrayLength(env, arr);
+    if (len < 0) return 0;
+    *out_len = (size_t)len;
+    *needs_free = 0;
+    if ((size_t)len <= stack_cap) {
+        *out_buf = stack_buf;
+    } else {
+        *out_buf = (uint8_t *)malloc((size_t)len);
+        if (!*out_buf) return 0;
+        *needs_free = 1;
+    }
+    if (len > 0) {
+        (*env)->GetByteArrayRegion(env, arr, 0, len, (jbyte *)*out_buf);
+    }
+    return 1;
+}
+
 /* ==================== Library Init ==================== */
 
 JNIEXPORT void JNICALL
@@ -83,9 +115,14 @@ Java_com_vitorpamplona_quartz_utils_Secp256k1C_nativeSchnorrSign(
     uint8_t sk[32], aux[32], sig[64];
     if (!get_bytes(env, seckey, sk, 32)) return NULL;
 
-    jint msg_len = (*env)->GetArrayLength(env, msg);
-    uint8_t *msg_buf = (uint8_t *)(*env)->GetByteArrayElements(env, msg, NULL);
-    if (!msg_buf) return NULL;
+    uint8_t stack_msg[512];
+    uint8_t *msg_buf = NULL;
+    size_t msg_len = 0;
+    int needs_free = 0;
+    if (!copy_msg_bytes(env, msg, stack_msg, sizeof(stack_msg),
+                        &msg_buf, &msg_len, &needs_free)) {
+        return NULL;
+    }
 
     uint8_t *aux_ptr = NULL;
     if (auxrand) {
@@ -94,8 +131,8 @@ Java_com_vitorpamplona_quartz_utils_Secp256k1C_nativeSchnorrSign(
         }
     }
 
-    int ok = secp256k1c_schnorr_sign(sig, msg_buf, (size_t)msg_len, sk, aux_ptr);
-    (*env)->ReleaseByteArrayElements(env, msg, (jbyte *)msg_buf, JNI_ABORT);
+    int ok = secp256k1c_schnorr_sign(sig, msg_buf, msg_len, sk, aux_ptr);
+    if (needs_free) free(msg_buf);
 
     return ok ? make_bytes(env, sig, 64) : NULL;
 }
@@ -110,9 +147,14 @@ Java_com_vitorpamplona_quartz_utils_Secp256k1C_nativeSchnorrSignXOnly(
     if (!get_bytes(env, seckey, sk, 32)) return NULL;
     if (!get_bytes(env, xonlyPub, xonly, 32)) return NULL;
 
-    jint msg_len = (*env)->GetArrayLength(env, msg);
-    uint8_t *msg_buf = (uint8_t *)(*env)->GetByteArrayElements(env, msg, NULL);
-    if (!msg_buf) return NULL;
+    uint8_t stack_msg[512];
+    uint8_t *msg_buf = NULL;
+    size_t msg_len = 0;
+    int needs_free = 0;
+    if (!copy_msg_bytes(env, msg, stack_msg, sizeof(stack_msg),
+                        &msg_buf, &msg_len, &needs_free)) {
+        return NULL;
+    }
 
     uint8_t *aux_ptr = NULL;
     if (auxrand) {
@@ -121,8 +163,8 @@ Java_com_vitorpamplona_quartz_utils_Secp256k1C_nativeSchnorrSignXOnly(
         }
     }
 
-    int ok = secp256k1c_schnorr_sign_xonly(sig, msg_buf, (size_t)msg_len, sk, xonly, aux_ptr);
-    (*env)->ReleaseByteArrayElements(env, msg, (jbyte *)msg_buf, JNI_ABORT);
+    int ok = secp256k1c_schnorr_sign_xonly(sig, msg_buf, msg_len, sk, xonly, aux_ptr);
+    if (needs_free) free(msg_buf);
 
     return ok ? make_bytes(env, sig, 64) : NULL;
 }
@@ -138,12 +180,17 @@ Java_com_vitorpamplona_quartz_utils_Secp256k1C_nativeSchnorrVerify(
     if (!get_bytes(env, sig, s, 64)) return JNI_FALSE;
     if (!get_bytes(env, pub, p, 32)) return JNI_FALSE;
 
-    jint msg_len = (*env)->GetArrayLength(env, msg);
-    uint8_t *msg_buf = (uint8_t *)(*env)->GetByteArrayElements(env, msg, NULL);
-    if (!msg_buf) return JNI_FALSE;
+    uint8_t stack_msg[512];
+    uint8_t *msg_buf = NULL;
+    size_t msg_len = 0;
+    int needs_free = 0;
+    if (!copy_msg_bytes(env, msg, stack_msg, sizeof(stack_msg),
+                        &msg_buf, &msg_len, &needs_free)) {
+        return JNI_FALSE;
+    }
 
-    int ok = secp256k1c_schnorr_verify(s, msg_buf, (size_t)msg_len, p);
-    (*env)->ReleaseByteArrayElements(env, msg, (jbyte *)msg_buf, JNI_ABORT);
+    int ok = secp256k1c_schnorr_verify(s, msg_buf, msg_len, p);
+    if (needs_free) free(msg_buf);
     return ok ? JNI_TRUE : JNI_FALSE;
 }
 
@@ -156,12 +203,17 @@ Java_com_vitorpamplona_quartz_utils_Secp256k1C_nativeSchnorrVerifyFast(
     if (!get_bytes(env, sig, s, 64)) return JNI_FALSE;
     if (!get_bytes(env, pub, p, 32)) return JNI_FALSE;
 
-    jint msg_len = (*env)->GetArrayLength(env, msg);
-    uint8_t *msg_buf = (uint8_t *)(*env)->GetByteArrayElements(env, msg, NULL);
-    if (!msg_buf) return JNI_FALSE;
+    uint8_t stack_msg[512];
+    uint8_t *msg_buf = NULL;
+    size_t msg_len = 0;
+    int needs_free = 0;
+    if (!copy_msg_bytes(env, msg, stack_msg, sizeof(stack_msg),
+                        &msg_buf, &msg_len, &needs_free)) {
+        return JNI_FALSE;
+    }
 
-    int ok = secp256k1c_schnorr_verify_fast(s, msg_buf, (size_t)msg_len, p);
-    (*env)->ReleaseByteArrayElements(env, msg, (jbyte *)msg_buf, JNI_ABORT);
+    int ok = secp256k1c_schnorr_verify_fast(s, msg_buf, msg_len, p);
+    if (needs_free) free(msg_buf);
     return ok ? JNI_TRUE : JNI_FALSE;
 }
 
@@ -282,12 +334,17 @@ Java_com_vitorpamplona_quartz_utils_Secp256k1C_nativeSha256(
     JNIEnv *env, jclass cls, jbyteArray data
 ) {
     (void)cls;
-    jint len = (*env)->GetArrayLength(env, data);
-    uint8_t *buf = (uint8_t *)(*env)->GetByteArrayElements(env, data, NULL);
-    if (!buf) return NULL;
+    uint8_t stack_buf[1024];
+    uint8_t *buf = NULL;
+    size_t len = 0;
+    int needs_free = 0;
+    if (!copy_msg_bytes(env, data, stack_buf, sizeof(stack_buf),
+                        &buf, &len, &needs_free)) {
+        return NULL;
+    }
 
     uint8_t out[32];
-    secp256k1_sha256_hash(out, buf, (size_t)len);
-    (*env)->ReleaseByteArrayElements(env, data, (jbyte *)buf, JNI_ABORT);
+    secp256k1_sha256_hash(out, buf, len);
+    if (needs_free) free(buf);
     return make_bytes(env, out, 32);
 }

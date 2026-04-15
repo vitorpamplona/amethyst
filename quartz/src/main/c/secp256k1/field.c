@@ -32,7 +32,6 @@ void mul_wide(uint64_t out[8], const uint64_t a[4], const uint64_t b[4]) {
      * This avoids the column-based carry overflow problem.
      */
     uint128_t acc;
-    uint64_t carry;
 
     /* Row 0: out += a[0] * b */
     acc = (uint128_t)a[0] * b[0];
@@ -106,18 +105,29 @@ void reduce_wide(secp256k1_fe *r, const uint64_t w[8]) {
     r->d[3] = (uint64_t)acc;
     uint64_t carry = (uint64_t)(acc >> 64);
 
-    /* Round 2: fold remaining carry */
-    if (carry) {
+    /* Round 2+: fold remaining carry through C. Looped for correctness
+     * against any reachable input (see fe_mul for the detailed bound). */
+    while (carry) {
         acc = (uint128_t)r->d[0] + (uint128_t)carry * FIELD_C;
         r->d[0] = (uint64_t)acc;
-        carry = (uint64_t)(acc >> 64);
-        if (carry) {
-            r->d[1] += carry;
-            if (r->d[1] < carry) {
-                r->d[2]++;
-                if (r->d[2] == 0) r->d[3]++;
+        uint64_t c1 = (uint64_t)(acc >> 64);
+        if (c1) {
+            uint64_t s = r->d[1] + c1;
+            uint64_t cc = (s < c1) ? 1 : 0;
+            r->d[1] = s;
+            if (cc) {
+                s = r->d[2] + 1;
+                cc = (s == 0) ? 1 : 0;
+                r->d[2] = s;
+                if (cc) {
+                    s = r->d[3] + 1;
+                    r->d[3] = s;
+                    carry = (s == 0) ? 1 : 0;
+                    continue;
+                }
             }
         }
+        carry = 0;
     }
 
     /* No fe_normalize — lazy. Output is in [0, 2^256), possibly in [P, P+C).
@@ -186,10 +196,32 @@ void fe_mul(secp256k1_fe *r, const secp256k1_fe *a, const secp256k1_fe *b) {
     acc += (uint128_t)lo3 + (uint128_t)hi3 * FIELD_C;
     r->d[3] = (uint64_t)acc;
     uint64_t carry = (uint64_t)(acc >> 64);
-    if (carry) {
+    /* Final fold: carry * C back into the low limbs. In theory two rounds
+     * suffice because carry ≤ ~2^34 on the first pass and carry*C < 2^67
+     * produces at most a 3-bit secondary carry. The loop is cheap and makes
+     * the invariant "output < 2^256" hold for any reachable inputs — not
+     * only from fe_mul itself but also from chained lazy fe_add results. */
+    while (carry) {
         acc = (uint128_t)r->d[0] + (uint128_t)carry * FIELD_C;
-        r->d[0] = (uint64_t)acc; carry = (uint64_t)(acc >> 64);
-        if (carry) { r->d[1] += carry; if (r->d[1] < carry) { r->d[2]++; if (!r->d[2]) r->d[3]++; } }
+        r->d[0] = (uint64_t)acc;
+        uint64_t c1 = (uint64_t)(acc >> 64);
+        if (c1) {
+            uint64_t s = r->d[1] + c1;
+            uint64_t cc = (s < c1) ? 1 : 0;
+            r->d[1] = s;
+            if (cc) {
+                s = r->d[2] + 1;
+                cc = (s == 0) ? 1 : 0;
+                r->d[2] = s;
+                if (cc) {
+                    s = r->d[3] + 1;
+                    r->d[3] = s;
+                    carry = (s == 0) ? 1 : 0;
+                    continue;
+                }
+            }
+        }
+        carry = 0;
     }
     /* No fe_normalize — lazy. Output is in [0, 2^256), possibly in [P, P+C).
      * This is safe: mul/add/sub all handle unreduced inputs.
@@ -201,16 +233,9 @@ void fe_mul(secp256k1_fe *r, const secp256k1_fe *a, const secp256k1_fe *b) {
 #endif
 }
 
-/*
- * Squaring: just call fe_mul(r, a, a).
- * With 4x64 limbs, a dedicated sqr doesn't help because:
- * - Cross-product doubling overflows uint128 (64+64+1 > 128 bits)
- * - fe_mul is already inlined with optimal instruction scheduling
- * - Saves 0 products (still 16 MUL instructions either way)
- */
-void fe_sqr(secp256k1_fe *r, const secp256k1_fe *a) {
-    fe_mul(r, a, a);
-}
+/* fe_sqr is now defined as static inline in field.h (10-mul dedicated
+ * squaring using __int128). This routes through fe_sqr_inline to save 6
+ * multiplications per squaring compared to fe_mul(a, a). */
 #endif /* !FE_MUL_ASM */
 
 #else /* Portable fallback (no HAVE_INT128) */
@@ -246,17 +271,34 @@ void fe_mul(secp256k1_fe *r, const secp256k1_fe *a, const secp256k1_fe *b) {
         carry2 = c_hi + (sum < w[i] ? 1 : 0);
         r->d[i] = sum;
     }
-    if (carry2) {
+    while (carry2) {
         mul64(&c_hi, &c_lo, carry2, FIELD_C);
         uint64_t sum = r->d[0] + c_lo;
+        uint64_t new_carry = (sum < c_lo) ? 1 : 0;
         r->d[0] = sum;
-        if (sum < c_lo) { r->d[1]++; if (!r->d[1]) { r->d[2]++; if (!r->d[2]) r->d[3]++; } }
+        uint64_t s1 = r->d[1] + c_hi + new_carry;
+        uint64_t nc1 = (s1 < c_hi) || (new_carry && s1 == c_hi) ? 1 : 0;
+        r->d[1] = s1;
+        if (nc1) {
+            uint64_t s2 = r->d[2] + 1;
+            uint64_t nc2 = (s2 == 0) ? 1 : 0;
+            r->d[2] = s2;
+            if (nc2) {
+                uint64_t s3 = r->d[3] + 1;
+                r->d[3] = s3;
+                carry2 = (s3 == 0) ? 1 : 0;
+                continue;
+            }
+        }
+        carry2 = 0;
     }
     /* No fe_normalize — lazy. Output is in [0, 2^256), possibly in [P, P+C).
      * This is safe: mul/add/sub all handle unreduced inputs.
      * Only neg/half/isZero/cmp/toBytes need explicit normalize. */
 }
 
+/* Portable fallback squaring: use fe_mul(a, a) because the 10-mul inline path
+ * requires __int128 and this branch is for compilers without it. */
 void fe_sqr(secp256k1_fe *r, const secp256k1_fe *a) { fe_mul(r, a, a); }
 
 #endif /* HAVE_INT128 */

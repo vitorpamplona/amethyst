@@ -171,6 +171,10 @@ internal object FieldP {
      * out = -a mod p = P - a. Specialized for P = [P0, -1, -1, -1]:
      * P[i]-a[i] = ~a[i] for i>=1 (bitwise NOT), with borrow from limb 0.
      * Avoids generic U256.subTo + P field reads (~260 calls/verify).
+     *
+     * Branch-free for a == 0: P - 0 = P, which is then reduced to 0 by the
+     * trailing reduceSelf. Removing the early return matches the C fe_negate
+     * path and eliminates a data-dependent branch that the JIT can't optimize.
      */
     fun neg(
         out: Fe4,
@@ -178,13 +182,6 @@ internal object FieldP {
     ) {
         // Normalize input: P - a underflows if a > P (from lazy add)
         reduceSelf(a)
-        if (a.isZero()) {
-            out.l0 = 0L
-            out.l1 = 0L
-            out.l2 = 0L
-            out.l3 = 0L
-            return
-        }
         // P - a: limb 0 is P0 - a.l0, limbs 1-3 are (-1) - a[i] = ~a[i]
         out.l0 = P0 - a.l0
         val borrow = if (uLtInline(P0, a.l0)) 1L else 0L
@@ -194,6 +191,8 @@ internal object FieldP {
         out.l2 = a.l2.inv() - b1
         val b2 = if (a.l2 == -1L && b1 != 0L) 1L else 0L
         out.l3 = a.l3.inv() - b2
+        // a == 0 ⇒ out == P here; reduceSelf folds P back to 0.
+        reduceSelf(out)
     }
 
     /**

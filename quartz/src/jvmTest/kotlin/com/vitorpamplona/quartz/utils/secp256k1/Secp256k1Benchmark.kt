@@ -35,6 +35,26 @@ import fr.acinq.secp256k1.Secp256k1 as NativeSecp256k1
  * benefit from the pubkey decompression cache and P-table cache. This is realistic
  * for Nostr (feed from one author) but not representative of first-time verification.
  *
+ * ## Benchmark Fairness Notes
+ *
+ * The comparisons below are apples-to-apples wherever possible, but a few
+ * intentional asymmetries remain because the public APIs don't line up 1:1:
+ *
+ * - **signSchnorr (XPubKey)**: the Kotlin side uses `signSchnorrWithPubKey`,
+ *   which skips the internal pubkey derivation when the caller already has
+ *   the compressed pubkey cached. The ACINQ side always derives the pubkey
+ *   inside `signSchnorr`. A separate `signSchnorr` row below exercises the
+ *   same derivation path on both sides for a fair comparison.
+ *
+ * - **ecdhXOnly (NIP-44)**: ACINQ has no x-only ECDH API, so the native
+ *   baseline uses `pubKeyTweakMul` + x-coordinate extraction. Both paths
+ *   compute the same shared secret but the native side pays an extra
+ *   (de)serialization step that the Kotlin side skips.
+ *
+ * - **privKeyTweakAdd**: ACINQ mutates its first argument, so the native
+ *   side does `privKey.copyOf()` before each call, adding one allocation
+ *   to the native measurement that the Kotlin side doesn't incur.
+ *
  * Run with: ./gradlew :quartz:jvmTest --tests "*.Secp256k1Benchmark"
  */
 class Secp256k1Benchmark {
@@ -267,6 +287,35 @@ class Secp256k1Benchmark {
                 kotlinOp = {
                     com.vitorpamplona.quartz.utils.secp256k1.Secp256k1
                         .ecdhXOnly(pub2xOnly, privKey)
+                },
+            )
+
+        // --- taggedHash (BIP-340, heavily used by NIP-44 key derivation) ---
+        // The cached BIP-340 tag prefixes in Secp256k1.kt make each call
+        // exactly 1 SHA-256 over (64-byte prefix || message). ACINQ has no
+        // dedicated tagged-hash API, so we compose sha256(sha256(tag) ||
+        // sha256(tag) || msg) by hand on the native side using the same
+        // challenge prefix bytes. This measures raw SHA-256 throughput
+        // through the different SHA implementations.
+        val challengeTag = "BIP0340/challenge".toByteArray()
+        val tagHash =
+            java.security.MessageDigest
+                .getInstance("SHA-256")
+                .digest(challengeTag)
+        val nativeTaggedInput = tagHash + tagHash + msg32
+        val nativeDigest = java.security.MessageDigest.getInstance("SHA-256")
+        results +=
+            bench(
+                name = "taggedHash (NIP-44/BIP340)",
+                warmup = 5000,
+                iterations = 100000,
+                nativeOp = {
+                    nativeDigest.reset()
+                    nativeDigest.digest(nativeTaggedInput)
+                },
+                kotlinOp = {
+                    com.vitorpamplona.quartz.utils.secp256k1.Secp256k1
+                        .taggedHash("BIP0340/challenge", msg32)
                 },
             )
 
