@@ -139,6 +139,7 @@ fun ZoomableImageDialog(
     }
 
     val dismissWithAnimation: () -> Unit = { if (!isExiting) isExiting = true }
+    val progressProvider: () -> Float = { progress.value }
 
     Dialog(
         onDismissRequest = dismissWithAnimation,
@@ -164,46 +165,23 @@ fun ZoomableImageDialog(
             dialogWindow.attributes = attributes
         }
 
-        var fullBounds by remember { mutableStateOf<Rect?>(null) }
-
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .onGloballyPositioned { fullBounds = it.boundsInWindow() },
-        ) {
+        Box(modifier = Modifier.fillMaxSize()) {
             // Background surface that fades in as the content grows to fullscreen.
             Surface(
                 modifier =
                     Modifier
                         .fillMaxSize()
-                        .graphicsLayer { alpha = progress.value },
+                        .graphicsLayer { alpha = progressProvider() },
             ) {}
 
-            // Content layer that grows from the source bounds to fullscreen (and back on exit).
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .graphicsLayer {
-                            val src = sourceBounds
-                            val full = fullBounds
-                            if (src != null && full != null && full.width > 0f && full.height > 0f) {
-                                transformOrigin = TransformOrigin(0f, 0f)
-                                val startScaleX = src.width / full.width
-                                val startScaleY = src.height / full.height
-                                scaleX = lerp(startScaleX, 1f, progress.value)
-                                scaleY = lerp(startScaleY, 1f, progress.value)
-                                translationX = lerp(src.left - full.left, 0f, progress.value)
-                                translationY = lerp(src.top - full.top, 0f, progress.value)
-                            } else {
-                                // No source bounds provided: fall back to a simple fade.
-                                alpha = progress.value
-                            }
-                        },
-            ) {
-                DialogContent(allImages, imageUrl, dismissWithAnimation, accountViewModel)
-            }
+            DialogContent(
+                allImages = allImages,
+                imageUrl = imageUrl,
+                sourceBounds = sourceBounds,
+                progress = progressProvider,
+                onDismiss = dismissWithAnimation,
+                accountViewModel = accountViewModel,
+            )
         }
     }
 }
@@ -213,12 +191,19 @@ fun ZoomableImageDialog(
 private fun DialogContent(
     allImages: ImmutableList<BaseMediaContent>,
     imageUrl: BaseMediaContent,
+    sourceBounds: Rect?,
+    progress: () -> Float,
     onDismiss: () -> Unit,
     accountViewModel: AccountViewModel,
 ) {
     val pagerState: PagerState = rememberPagerState { allImages.size }
     val controllerVisible = remember { mutableStateOf(true) }
     val sharePopupExpanded = remember { mutableStateOf(false) }
+
+    // Natural layout bounds of the currently visible image/video inside the dialog.
+    // Used as the "target" of the grow animation so the image itself — not the dialog
+    // viewport — aligns with the source thumbnail at progress = 0.
+    var imageBounds by remember { mutableStateOf<Rect?>(null) }
 
     LaunchedEffect(key1 = pagerState, key2 = imageUrl) {
         launch {
@@ -255,31 +240,63 @@ private fun DialogContent(
             ),
         Alignment.TopCenter,
     ) {
-        if (allImages.size > 1) {
-            SlidingCarousel(
-                pagerState = pagerState,
-            ) { index ->
-                allImages.getOrNull(index)?.let {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        RenderImageOrVideo(
-                            content = it,
-                            roundedCorner = false,
-                            isFiniteHeight = true,
-                            controllerVisible = controllerVisible,
-                            accountViewModel = accountViewModel,
-                        )
+        // Transformed image/video container. Only this layer scales & translates so the
+        // image aligns with the tapped thumbnail on enter/exit. Controls stay put.
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        val src = sourceBounds
+                        val img = imageBounds
+                        if (src != null && img != null && img.width > 0f && img.height > 0f) {
+                            transformOrigin = TransformOrigin(0f, 0f)
+                            val startScaleX = src.width / img.width
+                            val startScaleY = src.height / img.height
+                            val p = progress()
+                            scaleX = lerp(startScaleX, 1f, p)
+                            scaleY = lerp(startScaleY, 1f, p)
+                            translationX = lerp(src.left - img.left * startScaleX, 0f, p)
+                            translationY = lerp(src.top - img.top * startScaleY, 0f, p)
+                        } else {
+                            // No source bounds: fall back to a plain fade.
+                            alpha = progress()
+                        }
+                    },
+        ) {
+            if (allImages.size > 1) {
+                SlidingCarousel(
+                    pagerState = pagerState,
+                ) { index ->
+                    allImages.getOrNull(index)?.let { pageContent ->
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            RenderImageOrVideo(
+                                content = pageContent,
+                                roundedCorner = false,
+                                isFiniteHeight = true,
+                                controllerVisible = controllerVisible,
+                                accountViewModel = accountViewModel,
+                                onContentBoundsChanged =
+                                    if (index == pagerState.currentPage) {
+                                        { imageBounds = it }
+                                    } else {
+                                        null
+                                    },
+                            )
+                        }
                     }
                 }
-            }
-        } else {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                RenderImageOrVideo(
-                    content = imageUrl,
-                    roundedCorner = false,
-                    isFiniteHeight = true,
-                    controllerVisible = controllerVisible,
-                    accountViewModel = accountViewModel,
-                )
+            } else {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    RenderImageOrVideo(
+                        content = imageUrl,
+                        roundedCorner = false,
+                        isFiniteHeight = true,
+                        controllerVisible = controllerVisible,
+                        accountViewModel = accountViewModel,
+                        onContentBoundsChanged = { imageBounds = it },
+                    )
+                }
             }
         }
 
@@ -287,6 +304,8 @@ private fun DialogContent(
             visible = controllerVisible.value,
             enter = remember { fadeIn() },
             exit = remember { fadeOut() },
+            // Also fade with the grow animation so controls appear/disappear alongside it.
+            modifier = Modifier.graphicsLayer { alpha = progress().coerceIn(0f, 1f) },
         ) {
             Row(
                 modifier =
@@ -449,6 +468,7 @@ private fun RenderImageOrVideo(
     isFiniteHeight: Boolean,
     controllerVisible: MutableState<Boolean>,
     accountViewModel: AccountViewModel,
+    onContentBoundsChanged: ((Rect) -> Unit)? = null,
 ) {
     val contentScale =
         if (isFiniteHeight) {
@@ -457,7 +477,16 @@ private fun RenderImageOrVideo(
             ContentScale.FillWidth
         }
 
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
+    val rowModifier =
+        if (onContentBoundsChanged != null) {
+            Modifier
+                .fillMaxWidth()
+                .onGloballyPositioned { onContentBoundsChanged(it.boundsInWindow()) }
+        } else {
+            Modifier.fillMaxWidth()
+        }
+
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center, modifier = rowModifier) {
         when (content) {
             is MediaUrlImage -> {
                 val mainModifier =
