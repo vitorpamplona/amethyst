@@ -1822,6 +1822,7 @@
     <string name="profile_actions_dialog_title">配置文件操作</string>
     <string name="media_actions_dialog_title">媒体操作</string>
     <string name="playback_actions_dialog_title">播放</string>
+    <string name="video_quality_auto">自动</string>
     <string name="pack_actions_dialog_title">包操作</string>
     <string name="list_actions_dialog_title">列表操作</string>
     <string name="bookmark_item_actions_dialog_title">书签操作</string>

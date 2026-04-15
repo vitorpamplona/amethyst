@@ -1817,6 +1817,7 @@
     <string name="profile_actions_dialog_title">Akcje profilu</string>
     <string name="media_actions_dialog_title">Akcje multimediów</string>
     <string name="playback_actions_dialog_title">Odtwarzanie</string>
+    <string name="video_quality_auto">Automatycznie</string>
     <string name="pack_actions_dialog_title">Akcje pakietu</string>
     <string name="list_actions_dialog_title">Akcje listy</string>
     <string name="bookmark_item_actions_dialog_title">Akcje zakładki</string>
