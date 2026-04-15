@@ -22,19 +22,20 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.video.hls
 
 import android.content.Context
 import android.net.Uri
+import com.davotoula.lightcompressor.hls.HlsContentTypes
+import com.davotoula.lightcompressor.hls.HlsUploadHelper
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.uploads.hls.HlsBlobUploaderFactory
-import com.vitorpamplona.amethyst.service.uploads.hls.HlsTranscoder
 import com.vitorpamplona.amethyst.service.uploads.hls.HlsVideoEventTemplate
 import kotlinx.coroutines.flow.MutableStateFlow
 import java.io.File
 
 /**
- * Production wiring for [HlsPublishOrchestrator]. Binds the transcode to [HlsTranscoder], the
- * uploader factory to [HlsBlobUploaderFactory], and the signAndPublish closure to the account's
- * signer + outbox publish path.
+ * Production wiring for [HlsPublishOrchestrator]. Binds the upload closure to
+ * [HlsUploadHelper.run], the uploader factory to [HlsBlobUploaderFactory], and the
+ * signAndPublish closure to the account's signer + outbox publish path.
  *
- * The Uri is read via [uriProvider] on each transcode invocation so the orchestrator can be built
+ * The Uri is read via [uriProvider] on each publish invocation so the orchestrator can be built
  * once (at VM load) before the user actually picks a video.
  */
 fun createProductionHlsPublishOrchestrator(
@@ -45,19 +46,28 @@ fun createProductionHlsPublishOrchestrator(
 ): HlsPublishOrchestrator =
     HlsPublishOrchestrator(
         _state = state,
-        runTranscode = { workDir, codec, ladder, onProgress ->
+        runUpload = { config, listener, uploadFile ->
             val uri = uriProvider() ?: error("No video picked")
-            HlsTranscoder.transcode(
+            HlsUploadHelper.run(
                 context = context,
                 uri = uri,
-                workDir = workDir,
-                codec = codec,
-                ladder = ladder,
-                onRenditionProgress = onProgress,
+                config = config,
+                listener = listener,
+                uploader = uploadFile,
             )
         },
         buildUploader = { server ->
             HlsBlobUploaderFactory.create(server, account, context)
+        },
+        uploadMaster = { uploader, masterPlaylist ->
+            val masterFile =
+                File(context.cacheDir, "hls-master-${System.currentTimeMillis()}.m3u8")
+            try {
+                masterFile.writeText(masterPlaylist)
+                uploader.upload(masterFile, HlsContentTypes.forPlaylist())
+            } finally {
+                masterFile.delete()
+            }
         },
         signAndPublish = { template ->
             val signed =
@@ -67,8 +77,5 @@ fun createProductionHlsPublishOrchestrator(
                 }
             account.sendAutomatic(signed)
             signed.id
-        },
-        workDirFactory = {
-            File(context.cacheDir, "hls-${System.currentTimeMillis()}").apply { mkdirs() }
         },
     )

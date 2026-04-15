@@ -20,7 +20,12 @@
  */
 package com.vitorpamplona.amethyst.service.uploads.hls
 
+import com.davotoula.lightcompressor.Resolution
 import com.davotoula.lightcompressor.VideoCodec
+import com.davotoula.lightcompressor.hls.HlsLadder
+import com.davotoula.lightcompressor.hls.HlsRenditionSummary
+import com.davotoula.lightcompressor.hls.HlsUploadResult
+import com.davotoula.lightcompressor.hls.Rendition
 import com.vitorpamplona.amethyst.service.uploads.MediaUploadResult
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
@@ -53,33 +58,48 @@ class HlsPublishOrchestratorTest {
         workDir.deleteRecursively()
     }
 
-    private fun fakeBundle(labels: List<String> = listOf("360p")): HlsBundle {
-        val renditions =
-            labels.map { label ->
-                val file = File(workDir, "$label.mp4").apply { writeText("bytes-$label") }
-                HlsBundleRendition(
-                    label = label,
-                    combinedFile = file,
-                    mediaPlaylist =
-                        """
-                        #EXTM3U
-                        #EXT-X-MAP:URI="$label.mp4",BYTERANGE="100@0"
-                        #EXTINF:6.0,
-                        $label.mp4
-                        """.trimIndent(),
-                    bitrateKbps = 500,
-                )
+    private fun landscapeSummary(
+        resolution: Resolution = Resolution.SD_360,
+        width: Int = 640,
+        height: Int = 360,
+    ): HlsRenditionSummary =
+        HlsRenditionSummary(
+            rendition = Rendition(resolution, bitrateKbps = 500),
+            mediaPlaylist = "",
+            playlistFilename = "${resolution.label}/media.m3u8",
+            width = width,
+            height = height,
+            codecString = "avc1.64001f",
+            combinedFilename = "${resolution.label}.mp4",
+        )
+
+    /**
+     * Simulates an HlsUploadHelper run: it calls [uploadFile] once per segment (combined .mp4)
+     * and once per media playlist, in the same order the real helper would, then returns a
+     * fake [HlsUploadResult] with the supplied rendition summaries.
+     */
+    private fun fakeRunUpload(renditions: List<HlsRenditionSummary> = listOf(landscapeSummary())): suspend (
+        config: com.davotoula.lightcompressor.hls.HlsConfig,
+        listener: com.davotoula.lightcompressor.hls.HlsListener,
+        uploadFile: suspend (File, String) -> String,
+    ) -> HlsUploadResult =
+        { _, listener, uploadFile ->
+            listener.onStart(renditions.size)
+            for (summary in renditions) {
+                listener.onRenditionStart(summary.rendition)
+                listener.onProgress(summary.rendition, 50f)
+                val combinedFile = File(workDir, summary.combinedFilename!!).apply { writeText("combined-${summary.rendition.resolution.label}") }
+                uploadFile(combinedFile, summary.combinedFilename!!)
+                val playlistFile =
+                    File(workDir, "${summary.rendition.resolution.label}-media.m3u8").apply { writeText("playlist-${summary.rendition.resolution.label}") }
+                uploadFile(playlistFile, summary.playlistFilename)
             }
-        val master =
-            buildString {
-                appendLine("#EXTM3U")
-                labels.forEachIndexed { i, label ->
-                    appendLine("#EXT-X-STREAM-INF:BANDWIDTH=${(i + 1) * 500000},RESOLUTION=${640 + i * 320}x${360 + i * 180}")
-                    appendLine("$label/media.m3u8")
-                }
-            }
-        return HlsBundle(workDir, master, renditions)
-    }
+            listener.onComplete("#EXTM3U\nfake-master-playlist")
+            HlsUploadResult(
+                masterPlaylist = "#EXTM3U\nrewritten-master-playlist",
+                renditions = renditions,
+            )
+        }
 
     private class CannedUploader : HlsBlobUploader {
         var count = 0
@@ -93,11 +113,22 @@ class HlsPublishOrchestratorTest {
         }
     }
 
+    private fun fakeUploadMaster(uploader: HlsBlobUploader): suspend (HlsBlobUploader, String) -> MediaUploadResult =
+        { _, masterPlaylist ->
+            val tmp = File(workDir, "master-${System.nanoTime()}.m3u8").apply { writeText(masterPlaylist) }
+            try {
+                uploader.upload(tmp, "application/vnd.apple.mpegurl")
+            } finally {
+                tmp.delete()
+            }
+        }
+
     private fun newRequest(
         title: String = "My HD Clip",
         description: String = "A test clip",
         sensitive: Boolean = false,
         warningReason: String = "",
+        ladder: HlsLadder = HlsLadder(listOf(Rendition(Resolution.SD_360, 500))),
     ) = HlsPublishRequest(
         title = title,
         description = description,
@@ -105,21 +136,23 @@ class HlsPublishOrchestratorTest {
         contentWarningReason = warningReason,
         codec = VideoCodec.H265,
         server = server,
+        ladder = ladder,
     )
 
     @Test
     fun happyPathEndsInSuccessWithMasterUrlAndEventId() {
         val publishedTemplates = mutableListOf<HlsVideoEventTemplate>()
+        val canned = CannedUploader()
         val orchestrator =
             HlsPublishOrchestrator(
                 _state = MutableStateFlow(HlsPublishState.Idle),
-                runTranscode = { _, _, _, _ -> fakeBundle() },
-                buildUploader = { CannedUploader() },
+                runUpload = fakeRunUpload(),
+                buildUploader = { canned },
+                uploadMaster = fakeUploadMaster(canned),
                 signAndPublish = { tpl ->
                     publishedTemplates += tpl
                     "signed-event-id"
                 },
-                workDirFactory = { File(workDir, "work").apply { mkdirs() } },
             )
 
         runBlocking { orchestrator.publish(newRequest()) }
@@ -144,24 +177,40 @@ class HlsPublishOrchestratorTest {
         val capturedDuringUpload = mutableListOf<HlsPublishState>()
         val capturedDuringPublish = mutableListOf<HlsPublishState>()
 
+        val canned = CannedUploader()
+        val capturingRunUpload: suspend (
+            com.davotoula.lightcompressor.hls.HlsConfig,
+            com.davotoula.lightcompressor.hls.HlsListener,
+            suspend (File, String) -> String,
+        ) -> HlsUploadResult = { _, listener, uploadFile ->
+            val summary = landscapeSummary()
+            listener.onStart(1)
+            listener.onRenditionStart(summary.rendition)
+            capturedDuringTranscode += orchestrator.state.value
+            listener.onProgress(summary.rendition, 42f)
+            capturedDuringTranscode += orchestrator.state.value
+            val combinedFile = File(workDir, "360p.mp4").apply { writeText("bytes") }
+            uploadFile(combinedFile, "360p.mp4")
+            capturedDuringUpload += orchestrator.state.value
+            val playlistFile = File(workDir, "360p-media.m3u8").apply { writeText("bytes") }
+            uploadFile(playlistFile, "360p/media.m3u8")
+            listener.onComplete("#EXTM3U\nmaster")
+            HlsUploadResult(
+                masterPlaylist = "#EXTM3U\nrewritten",
+                renditions = listOf(summary),
+            )
+        }
+
         orchestrator =
             HlsPublishOrchestrator(
                 _state = MutableStateFlow(HlsPublishState.Idle),
-                runTranscode = { _, _, _, onProgress ->
-                    capturedDuringTranscode += orchestrator.state.value
-                    onProgress("360p", 42)
-                    capturedDuringTranscode += orchestrator.state.value
-                    fakeBundle()
-                },
-                buildUploader = {
-                    capturedDuringUpload += orchestrator.state.value
-                    CannedUploader()
-                },
+                runUpload = capturingRunUpload,
+                buildUploader = { canned },
+                uploadMaster = fakeUploadMaster(canned),
                 signAndPublish = {
                     capturedDuringPublish += orchestrator.state.value
                     "event-id"
                 },
-                workDirFactory = { File(workDir, "work").apply { mkdirs() } },
             )
 
         runBlocking { orchestrator.publish(newRequest()) }
@@ -181,10 +230,10 @@ class HlsPublishOrchestratorTest {
         val orchestrator =
             HlsPublishOrchestrator(
                 _state = MutableStateFlow(HlsPublishState.Idle),
-                runTranscode = { _, _, _, _ -> throw RuntimeException("decode failed") },
+                runUpload = { _, _, _ -> throw RuntimeException("decode failed") },
                 buildUploader = { CannedUploader() },
+                uploadMaster = { _, _ -> MediaUploadResult(url = "never") },
                 signAndPublish = { "never" },
-                workDirFactory = { File(workDir, "work").apply { mkdirs() } },
             )
 
         runBlocking { orchestrator.publish(newRequest()) }
@@ -199,12 +248,12 @@ class HlsPublishOrchestratorTest {
         val orchestrator =
             HlsPublishOrchestrator(
                 _state = MutableStateFlow(HlsPublishState.Idle),
-                runTranscode = { _, _, _, _ -> fakeBundle() },
+                runUpload = fakeRunUpload(),
                 buildUploader = {
                     HlsBlobUploader { _, _ -> throw RuntimeException("server 500") }
                 },
+                uploadMaster = { _, _ -> MediaUploadResult(url = "never") },
                 signAndPublish = { "never" },
-                workDirFactory = { File(workDir, "work").apply { mkdirs() } },
             )
 
         runBlocking { orchestrator.publish(newRequest()) }
@@ -215,14 +264,34 @@ class HlsPublishOrchestratorTest {
     }
 
     @Test
-    fun publishExceptionTransitionsToFailure() {
+    fun masterUploadExceptionTransitionsToFailure() {
+        val canned = CannedUploader()
         val orchestrator =
             HlsPublishOrchestrator(
                 _state = MutableStateFlow(HlsPublishState.Idle),
-                runTranscode = { _, _, _, _ -> fakeBundle() },
-                buildUploader = { CannedUploader() },
+                runUpload = fakeRunUpload(),
+                buildUploader = { canned },
+                uploadMaster = { _, _ -> throw RuntimeException("master upload failed") },
+                signAndPublish = { "never" },
+            )
+
+        runBlocking { orchestrator.publish(newRequest()) }
+
+        val final = orchestrator.state.value
+        assertTrue(final is HlsPublishState.Failure)
+        assertEquals("master upload failed", (final as HlsPublishState.Failure).message)
+    }
+
+    @Test
+    fun publishExceptionTransitionsToFailure() {
+        val canned = CannedUploader()
+        val orchestrator =
+            HlsPublishOrchestrator(
+                _state = MutableStateFlow(HlsPublishState.Idle),
+                runUpload = fakeRunUpload(),
+                buildUploader = { canned },
+                uploadMaster = fakeUploadMaster(canned),
                 signAndPublish = { throw RuntimeException("relay rejected") },
-                workDirFactory = { File(workDir, "work").apply { mkdirs() } },
             )
 
         runBlocking { orchestrator.publish(newRequest()) }
@@ -235,16 +304,17 @@ class HlsPublishOrchestratorTest {
     @Test
     fun sensitiveContentPassesContentWarningIntoTemplate() {
         val captured = mutableListOf<HlsVideoEventTemplate>()
+        val canned = CannedUploader()
         val orchestrator =
             HlsPublishOrchestrator(
                 _state = MutableStateFlow(HlsPublishState.Idle),
-                runTranscode = { _, _, _, _ -> fakeBundle() },
-                buildUploader = { CannedUploader() },
+                runUpload = fakeRunUpload(),
+                buildUploader = { canned },
+                uploadMaster = fakeUploadMaster(canned),
                 signAndPublish = { tpl ->
                     captured += tpl
                     "event-id"
                 },
-                workDirFactory = { File(workDir, "work").apply { mkdirs() } },
             )
 
         runBlocking {
@@ -258,31 +328,31 @@ class HlsPublishOrchestratorTest {
     }
 
     @Test
-    fun portraitBundleProducesVerticalTemplate() {
-        val portraitMaster =
-            """
-            #EXTM3U
-            #EXT-X-STREAM-INF:BANDWIDTH=500000,RESOLUTION=360x640
-            360p/media.m3u8
-            """.trimIndent()
-        val rendition =
-            HlsBundleRendition(
-                label = "360p",
-                combinedFile = File(workDir, "360p.mp4").apply { writeText("bytes") },
-                mediaPlaylist = "#EXTM3U\n#EXT-X-MAP:URI=\"360p.mp4\"\n#EXTINF:6.0,\n360p.mp4\n",
-                bitrateKbps = 500,
+    fun portraitRenditionsProduceVerticalTemplate() {
+        val portrait =
+            listOf(
+                HlsRenditionSummary(
+                    rendition = Rendition(Resolution.SD_360, 500),
+                    mediaPlaylist = "",
+                    playlistFilename = "360p/media.m3u8",
+                    width = 360,
+                    height = 640,
+                    codecString = "avc1.64001f",
+                    combinedFilename = "360p.mp4",
+                ),
             )
         val captured = mutableListOf<HlsVideoEventTemplate>()
+        val canned = CannedUploader()
         val orchestrator =
             HlsPublishOrchestrator(
                 _state = MutableStateFlow(HlsPublishState.Idle),
-                runTranscode = { _, _, _, _ -> HlsBundle(workDir, portraitMaster, listOf(rendition)) },
-                buildUploader = { CannedUploader() },
+                runUpload = fakeRunUpload(portrait),
+                buildUploader = { canned },
+                uploadMaster = fakeUploadMaster(canned),
                 signAndPublish = { tpl ->
                     captured += tpl
                     "event-id"
                 },
-                workDirFactory = { File(workDir, "work").apply { mkdirs() } },
             )
 
         runBlocking { orchestrator.publish(newRequest()) }
@@ -295,10 +365,10 @@ class HlsPublishOrchestratorTest {
         val orchestrator =
             HlsPublishOrchestrator(
                 _state = MutableStateFlow(HlsPublishState.Idle),
-                runTranscode = { _, _, _, _ -> throw RuntimeException("boom") },
+                runUpload = { _, _, _ -> throw RuntimeException("boom") },
                 buildUploader = { CannedUploader() },
+                uploadMaster = { _, _ -> MediaUploadResult(url = "never") },
                 signAndPublish = { "never" },
-                workDirFactory = { File(workDir, "work").apply { mkdirs() } },
             )
 
         runBlocking { orchestrator.publish(newRequest()) }

@@ -20,30 +20,22 @@
  */
 package com.vitorpamplona.amethyst.service.uploads.hls
 
-object HlsPlaylistRewriter {
-    private val uriRegex = Regex("""URI="([^"]+)"""")
+import com.vitorpamplona.amethyst.service.uploads.MediaUploadResult
+import java.io.File
 
-    fun rewrite(
-        playlist: String,
-        urlMap: Map<String, String>,
-    ): String =
-        playlist.lines().joinToString("\n") { line ->
-            when {
-                line.isBlank() -> line
-                line.startsWith("#") -> rewriteUriInDirective(line, urlMap)
-                else -> urlMap[line] ?: missing(line)
-            }
-        }
-
-    private fun rewriteUriInDirective(
-        line: String,
-        urlMap: Map<String, String>,
-    ): String =
-        uriRegex.replace(line) { match ->
-            val original = match.groupValues[1]
-            val rewritten = urlMap[original] ?: missing(original)
-            """URI="$rewritten""""
-        }
-
-    private fun missing(reference: String): Nothing = throw IllegalArgumentException("No uploaded URL for playlist reference: $reference")
+/**
+ * Abstraction over a blob upload transport so the HLS publish orchestrator can stay
+ * unit-testable. Production wiring adapts this to either
+ * [com.vitorpamplona.amethyst.service.uploads.nip96.Nip96Uploader] or
+ * [com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader]. The HLS orchestrator
+ * wraps this in a String-returning lambda for
+ * [com.davotoula.lightcompressor.hls.HlsUploadHelper.run] and captures each
+ * [MediaUploadResult] in a side-channel map keyed by the library's suggested filename so the
+ * per-rendition sha256/size can flow into the NIP-71 event's imeta tags.
+ */
+fun interface HlsBlobUploader {
+    suspend fun upload(
+        file: File,
+        contentType: String,
+    ): MediaUploadResult
 }

@@ -20,7 +20,9 @@
  */
 package com.vitorpamplona.amethyst.service.uploads.hls
 
-import com.vitorpamplona.amethyst.service.uploads.hls.HlsUploadPipeline.Companion.CONTENT_TYPE_HLS
+import com.davotoula.lightcompressor.hls.HlsContentTypes
+import com.davotoula.lightcompressor.hls.HlsRenditionSummary
+import com.vitorpamplona.amethyst.service.uploads.MediaUploadResult
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
 import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
@@ -35,8 +37,10 @@ import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
 data class HlsVideoPublishInput(
-    val bundle: HlsBundle,
-    val uploadResult: HlsUploadResult,
+    val renditions: List<HlsRenditionSummary>,
+    val segmentUploads: Map<String, MediaUploadResult>,
+    val masterUrl: String,
+    val masterSha256: String?,
     val title: String,
     val description: String,
     val alt: String? = null,
@@ -58,42 +62,52 @@ sealed class HlsVideoEventTemplate {
 
 /**
  * Assembles a NIP-71 VideoHorizontalEvent / VideoVerticalEvent template from an HLS upload
- * result. Orientation is decided from the first `#EXT-X-STREAM-INF RESOLUTION` in the bundle's
- * master playlist: portrait (height > width) selects kind 34236, otherwise 34235.
+ * result. Orientation is decided from the first rendition's width/height: portrait
+ * (height > width) selects kind 34236, otherwise 34235.
  *
  * The template carries one `imeta` tag for the master playlist (primary) plus one per rendition
  * so HLS-unaware clients can still pick a specific variant. Every imeta is marked
- * `m application/vnd.apple.mpegurl`.
+ * `m application/vnd.apple.mpegurl`. The rendition imeta's `x`/`size` come from the combined
+ * fMP4 upload (single-file layout) while the `url` points at the rewritten media playlist.
  *
  * Returns the unsigned template wrapped in a sealed [HlsVideoEventTemplate]; the caller signs
  * via the account's signer and publishes via the relay client.
  */
 @OptIn(ExperimentalUuidApi::class)
 object HlsVideoEventBuilder {
-    private val streamInfRegex = Regex("""#EXT-X-STREAM-INF:[^\n]*RESOLUTION=(\d+)x(\d+)""")
-
     fun build(input: HlsVideoPublishInput): HlsVideoEventTemplate {
-        val renditionDimensions = parseRenditionDimensions(input.bundle.masterPlaylist)
-        val isVertical = renditionDimensions.firstOrNull()?.let { it.height > it.width } ?: false
+        val firstRendition = input.renditions.firstOrNull()
+        val isVertical = firstRendition != null && firstRendition.height > firstRendition.width
 
-        val masterDimension = renditionDimensions.maxByOrNull { it.width * it.height }?.toDimensionTag()
+        val largest = input.renditions.maxByOrNull { it.width * it.height }
+        val masterDimension = largest?.let { DimensionTag(it.width, it.height) }
         val masterVideoMeta =
             VideoMeta(
-                url = input.uploadResult.masterUrl,
-                mimeType = CONTENT_TYPE_HLS,
-                hash = input.uploadResult.masterSha256,
+                url = input.masterUrl,
+                mimeType = HlsContentTypes.HLS_PLAYLIST,
+                hash = input.masterSha256,
                 dimension = masterDimension,
                 alt = input.alt,
             )
 
         val renditionMetas =
-            input.uploadResult.renditions.mapIndexed { index, uploaded ->
+            input.renditions.map { summary ->
+                val combinedFilename =
+                    summary.combinedFilename
+                        ?: "${summary.rendition.resolution.label}.mp4"
+                val combinedUpload = input.segmentUploads[combinedFilename]
+                val playlistUpload =
+                    input.segmentUploads[summary.playlistFilename]
+                        ?: error("No upload recorded for media playlist ${summary.playlistFilename}")
+
                 VideoMeta(
-                    url = uploaded.playlistUrl,
-                    mimeType = CONTENT_TYPE_HLS,
-                    hash = uploaded.combinedSha256,
-                    size = uploaded.combinedSize?.toInt(),
-                    dimension = renditionDimensions.getOrNull(index)?.toDimensionTag(),
+                    url =
+                        playlistUpload.url
+                            ?: error("Uploader returned null URL for media playlist ${summary.playlistFilename}"),
+                    mimeType = HlsContentTypes.HLS_PLAYLIST,
+                    hash = combinedUpload?.sha256,
+                    size = combinedUpload?.size?.toInt(),
+                    dimension = DimensionTag(summary.width, summary.height),
                 )
             }
 
@@ -121,17 +135,4 @@ object HlsVideoEventBuilder {
             )
         }
     }
-
-    private data class RenditionDimension(
-        val width: Int,
-        val height: Int,
-    ) {
-        fun toDimensionTag(): DimensionTag = DimensionTag(width, height)
-    }
-
-    private fun parseRenditionDimensions(masterPlaylist: String): List<RenditionDimension> =
-        streamInfRegex
-            .findAll(masterPlaylist)
-            .map { RenditionDimension(it.groupValues[1].toInt(), it.groupValues[2].toInt()) }
-            .toList()
 }

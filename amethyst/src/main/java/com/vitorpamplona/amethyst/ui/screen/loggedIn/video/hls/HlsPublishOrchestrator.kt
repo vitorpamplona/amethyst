@@ -21,10 +21,17 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.video.hls
 
 import com.davotoula.lightcompressor.VideoCodec
+import com.davotoula.lightcompressor.hls.HlsConfig
+import com.davotoula.lightcompressor.hls.HlsContentTypes
 import com.davotoula.lightcompressor.hls.HlsLadder
+import com.davotoula.lightcompressor.hls.HlsListener
+import com.davotoula.lightcompressor.hls.HlsRenditionSummary
+import com.davotoula.lightcompressor.hls.HlsSegment
+import com.davotoula.lightcompressor.hls.HlsUploadResult
+import com.davotoula.lightcompressor.hls.Rendition
+import com.davotoula.lightcompressor.hls.SimpleHlsListener
+import com.vitorpamplona.amethyst.service.uploads.MediaUploadResult
 import com.vitorpamplona.amethyst.service.uploads.hls.HlsBlobUploader
-import com.vitorpamplona.amethyst.service.uploads.hls.HlsBundle
-import com.vitorpamplona.amethyst.service.uploads.hls.HlsUploadPipeline
 import com.vitorpamplona.amethyst.service.uploads.hls.HlsVideoEventBuilder
 import com.vitorpamplona.amethyst.service.uploads.hls.HlsVideoEventTemplate
 import com.vitorpamplona.amethyst.service.uploads.hls.HlsVideoPublishInput
@@ -47,50 +54,115 @@ data class HlsPublishRequest(
 
 /**
  * Orchestrates the transcode → upload → build → publish pipeline for a single HLS video publish.
+ * Delegates transcoding and segment/media-playlist upload plumbing to the library's
+ * [com.davotoula.lightcompressor.hls.HlsUploadHelper] via the injected [runUpload] closure, then
+ * uploads the rewritten master playlist itself, builds the NIP-71 event, signs, and publishes.
  * All Android/account-specific concerns are injected as suspending callbacks so the whole state
  * machine is unit-testable.
  *
- * State transitions: Idle → Transcoding → Uploading → Publishing → Success, or → Failure on any
- * exception. The [state] flow emits each transition as it happens so the UI can reflect progress.
+ * State transitions: Idle → Transcoding (per rendition, driven by listener) → Uploading (per
+ * segment/playlist upload, driven by the uploader lambda) → Publishing → Success, or → Failure
+ * on any exception.
  */
 class HlsPublishOrchestrator(
     private val _state: MutableStateFlow<HlsPublishState>,
-    private val runTranscode: suspend (
-        workDir: File,
-        codec: VideoCodec,
-        ladder: HlsLadder,
-        onProgress: (label: String, percent: Int) -> Unit,
-    ) -> HlsBundle,
+    private val runUpload: suspend (
+        config: HlsConfig,
+        listener: HlsListener,
+        uploadFile: suspend (File, String) -> String,
+    ) -> HlsUploadResult,
     private val buildUploader: (ServerName) -> HlsBlobUploader,
+    private val uploadMaster: suspend (HlsBlobUploader, String) -> MediaUploadResult,
     private val signAndPublish: suspend (HlsVideoEventTemplate) -> String,
-    private val workDirFactory: () -> File,
 ) {
     val state: StateFlow<HlsPublishState> = _state
 
     suspend fun publish(request: HlsPublishRequest) {
-        val workDir = workDirFactory()
         try {
             _state.value = HlsPublishState.Transcoding(currentLabel = "", percent = 0)
-            val bundle =
-                runTranscode(workDir, request.codec, request.ladder) { label, percent ->
-                    _state.value = HlsPublishState.Transcoding(label, percent)
+
+            val uploader = buildUploader(request.server)
+            val config =
+                HlsConfig(
+                    codec = request.codec,
+                    ladder = request.ladder,
+                )
+
+            val totalSegmentUploads = request.ladder.renditions.size * 2
+            val totalUploads = totalSegmentUploads + 1
+            var uploadsDone = 0
+            val segmentUploads = mutableMapOf<String, MediaUploadResult>()
+
+            val listener =
+                object : SimpleHlsListener() {
+                    override fun onRenditionStart(rendition: Rendition) {
+                        if (_state.value !is HlsPublishState.Uploading) {
+                            _state.value = HlsPublishState.Transcoding(rendition.resolution.label, 0)
+                        }
+                    }
+
+                    override fun onProgress(
+                        rendition: Rendition,
+                        percent: Float,
+                    ) {
+                        _state.value = HlsPublishState.Transcoding(rendition.resolution.label, percent.toInt())
+                    }
+
+                    override fun onSegmentReady(
+                        rendition: Rendition,
+                        segment: HlsSegment,
+                    ) {
+                        // The uploader lambda runs synchronously inside onSegmentReady; keep the
+                        // progress overlay on "transcoding" here because the state update from
+                        // the lambda itself will flip us into Uploading at upload time.
+                    }
+
+                    override fun onRenditionComplete(
+                        rendition: Rendition,
+                        summary: HlsRenditionSummary,
+                    ) = Unit
                 }
 
-            val uploadTotal = bundle.renditions.size * 2 + 1
-            _state.value = HlsPublishState.Uploading(done = 0, total = uploadTotal)
-            val uploader = buildUploader(request.server)
-            val pipeline = HlsUploadPipeline(uploader)
             val uploadResult =
-                pipeline.upload(bundle) { done, total, label ->
-                    _state.value = HlsPublishState.Uploading(done, total, label)
+                runUpload(config, listener) { file, suggestedFilename ->
+                    _state.value =
+                        HlsPublishState.Uploading(
+                            done = uploadsDone,
+                            total = totalUploads,
+                            currentLabel = suggestedFilename,
+                        )
+                    val contentType =
+                        if (suggestedFilename.endsWith(".m3u8")) {
+                            HlsContentTypes.forPlaylist()
+                        } else {
+                            HlsContentTypes.FMP4_SEGMENT
+                        }
+                    val result = uploader.upload(file, contentType)
+                    uploadsDone++
+                    segmentUploads[suggestedFilename] = result
+                    result.url
+                        ?: error("Uploader returned null URL for $suggestedFilename")
                 }
+
+            _state.value =
+                HlsPublishState.Uploading(
+                    done = uploadsDone,
+                    total = totalUploads,
+                    currentLabel = "master.m3u8",
+                )
+            val masterUpload = uploadMaster(uploader, uploadResult.masterPlaylist)
+            uploadsDone++
+            val masterUrl =
+                masterUpload.url ?: error("Uploader returned null URL for master playlist")
 
             _state.value = HlsPublishState.Publishing
             val template =
                 HlsVideoEventBuilder.build(
                     HlsVideoPublishInput(
-                        bundle = bundle,
-                        uploadResult = uploadResult,
+                        renditions = uploadResult.renditions,
+                        segmentUploads = segmentUploads,
+                        masterUrl = masterUrl,
+                        masterSha256 = masterUpload.sha256,
                         title = request.title,
                         description = request.description,
                         durationSeconds = request.durationSeconds,
@@ -102,7 +174,7 @@ class HlsPublishOrchestrator(
             _state.value =
                 HlsPublishState.Success(
                     eventId = eventId,
-                    masterUrl = uploadResult.masterUrl,
+                    masterUrl = masterUrl,
                 )
         } catch (e: CancellationException) {
             _state.value = HlsPublishState.Failure(message = "Cancelled")

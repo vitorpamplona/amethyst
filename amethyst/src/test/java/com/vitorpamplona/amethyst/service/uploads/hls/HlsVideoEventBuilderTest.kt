@@ -20,6 +20,10 @@
  */
 package com.vitorpamplona.amethyst.service.uploads.hls
 
+import com.davotoula.lightcompressor.Resolution
+import com.davotoula.lightcompressor.hls.HlsRenditionSummary
+import com.davotoula.lightcompressor.hls.Rendition
+import com.vitorpamplona.amethyst.service.uploads.MediaUploadResult
 import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
 import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
 import org.junit.Assert.assertEquals
@@ -27,75 +31,67 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 
 class HlsVideoEventBuilderTest {
-    private val landscapeMasterPlaylist =
-        """
-        #EXTM3U
-        #EXT-X-VERSION:7
-
-        #EXT-X-STREAM-INF:BANDWIDTH=500000,RESOLUTION=640x360,CODECS="avc1.64001e,mp4a.40.2"
-        360p/media.m3u8
-
-        #EXT-X-STREAM-INF:BANDWIDTH=2500000,RESOLUTION=1280x720,CODECS="avc1.64001f,mp4a.40.2"
-        720p/media.m3u8
-        """.trimIndent()
-
-    private val portraitMasterPlaylist =
-        """
-        #EXTM3U
-        #EXT-X-VERSION:7
-
-        #EXT-X-STREAM-INF:BANDWIDTH=500000,RESOLUTION=360x640,CODECS="avc1.64001e,mp4a.40.2"
-        360p/media.m3u8
-        """.trimIndent()
-
-    private fun bundle(master: String): HlsBundle {
-        val workDir = File("/tmp/unused-builder-test")
-        val labels = Regex("""(\d+p)/media\.m3u8""").findAll(master).map { it.groupValues[1] }.toList()
-        val renditions =
-            labels.mapIndexed { i, label ->
-                HlsBundleRendition(
-                    label = label,
-                    combinedFile = File(workDir, "$label.mp4"),
-                    mediaPlaylist = "", // not needed by the builder
-                    bitrateKbps = 500 + i * 2000,
-                )
-            }
-        return HlsBundle(workDir, master, renditions)
-    }
-
-    private fun uploadResult(renditions: List<HlsBundleRendition>): HlsUploadResult =
-        HlsUploadResult(
-            masterUrl = "https://cdn.test/master.m3u8",
-            masterSha256 = "master-sha",
-            renditions =
-                renditions.map {
-                    HlsUploadedRendition(
-                        label = it.label,
-                        combinedUrl = "https://cdn.test/${it.label}.mp4",
-                        combinedSha256 = "${it.label}-sha",
-                        combinedSize = 1_000_000L,
-                        playlistUrl = "https://cdn.test/${it.label}-media.m3u8",
-                        bitrateKbps = it.bitrateKbps,
-                    )
-                },
+    private val landscapeRenditions =
+        listOf(
+            summary(Resolution.SD_360, width = 640, height = 360),
+            summary(Resolution.HD_720, width = 1280, height = 720),
         )
 
+    private val portraitRenditions =
+        listOf(
+            summary(Resolution.SD_360, width = 360, height = 640),
+        )
+
+    private fun summary(
+        resolution: Resolution,
+        width: Int,
+        height: Int,
+    ): HlsRenditionSummary =
+        HlsRenditionSummary(
+            rendition = Rendition(resolution, bitrateKbps = 500),
+            mediaPlaylist = "", // not needed by the builder
+            playlistFilename = "${resolution.label}/media.m3u8",
+            width = width,
+            height = height,
+            codecString = "avc1.64001f",
+            combinedFilename = "${resolution.label}.mp4",
+        )
+
+    private fun segmentUploadsFor(renditions: List<HlsRenditionSummary>): Map<String, MediaUploadResult> {
+        val uploads = mutableMapOf<String, MediaUploadResult>()
+        renditions.forEach { r ->
+            val label = r.rendition.resolution.label
+            uploads["$label.mp4"] =
+                MediaUploadResult(
+                    url = "https://cdn.test/$label.mp4",
+                    sha256 = "$label-sha",
+                    size = 1_000_000L,
+                )
+            uploads["$label/media.m3u8"] =
+                MediaUploadResult(
+                    url = "https://cdn.test/$label-media.m3u8",
+                    sha256 = "$label-playlist-sha",
+                )
+        }
+        return uploads
+    }
+
     private fun input(
-        master: String,
+        renditions: List<HlsRenditionSummary>,
         title: String = "My HD Video",
         description: String = "A cool video",
         alt: String? = null,
         duration: Int? = null,
         contentWarning: String? = null,
         dTag: String? = "fixed-d-tag",
-    ): HlsVideoPublishInput {
-        val b = bundle(master)
-        return HlsVideoPublishInput(
-            bundle = b,
-            uploadResult = uploadResult(b.renditions),
+    ): HlsVideoPublishInput =
+        HlsVideoPublishInput(
+            renditions = renditions,
+            segmentUploads = segmentUploadsFor(renditions),
+            masterUrl = "https://cdn.test/master.m3u8",
+            masterSha256 = "master-sha",
             title = title,
             description = description,
             alt = alt,
@@ -104,15 +100,14 @@ class HlsVideoEventBuilderTest {
             dTag = dTag,
             createdAt = 1_700_000_000L,
         )
-    }
 
     private fun Array<Array<String>>.findTag(name: String): Array<String>? = firstOrNull { it.isNotEmpty() && it[0] == name }
 
     private fun Array<Array<String>>.findAllTags(name: String): List<Array<String>> = filter { it.isNotEmpty() && it[0] == name }
 
     @Test
-    fun landscapeMasterBuildsHorizontalTemplateKind34235() {
-        val result = HlsVideoEventBuilder.build(input(landscapeMasterPlaylist))
+    fun landscapeRenditionsBuildHorizontalTemplateKind34235() {
+        val result = HlsVideoEventBuilder.build(input(landscapeRenditions))
 
         assertTrue("expected Horizontal template", result is HlsVideoEventTemplate.Horizontal)
         val template = (result as HlsVideoEventTemplate.Horizontal).template
@@ -121,8 +116,8 @@ class HlsVideoEventBuilderTest {
     }
 
     @Test
-    fun portraitMasterBuildsVerticalTemplateKind34236() {
-        val result = HlsVideoEventBuilder.build(input(portraitMasterPlaylist))
+    fun portraitRenditionsBuildVerticalTemplateKind34236() {
+        val result = HlsVideoEventBuilder.build(input(portraitRenditions))
 
         assertTrue("expected Vertical template", result is HlsVideoEventTemplate.Vertical)
         val template = (result as HlsVideoEventTemplate.Vertical).template
@@ -131,7 +126,7 @@ class HlsVideoEventBuilderTest {
 
     @Test
     fun horizontalTemplateHasTitleAndDTag() {
-        val result = HlsVideoEventBuilder.build(input(landscapeMasterPlaylist))
+        val result = HlsVideoEventBuilder.build(input(landscapeRenditions))
         val tags = (result as HlsVideoEventTemplate.Horizontal).template.tags
 
         val title = tags.findTag("title")
@@ -145,7 +140,7 @@ class HlsVideoEventBuilderTest {
 
     @Test
     fun templateContainsOneImetaForMasterAndOnePerRendition() {
-        val result = HlsVideoEventBuilder.build(input(landscapeMasterPlaylist))
+        val result = HlsVideoEventBuilder.build(input(landscapeRenditions))
         val tags = (result as HlsVideoEventTemplate.Horizontal).template.tags
 
         val imetas = tags.findAllTags("imeta")
@@ -173,7 +168,7 @@ class HlsVideoEventBuilderTest {
     fun durationTagWhenDurationProvided() {
         val result =
             HlsVideoEventBuilder.build(
-                input(landscapeMasterPlaylist, duration = 123),
+                input(landscapeRenditions, duration = 123),
             )
         val tags = (result as HlsVideoEventTemplate.Horizontal).template.tags
 
@@ -184,7 +179,7 @@ class HlsVideoEventBuilderTest {
 
     @Test
     fun noDurationTagWhenNotProvided() {
-        val result = HlsVideoEventBuilder.build(input(landscapeMasterPlaylist))
+        val result = HlsVideoEventBuilder.build(input(landscapeRenditions))
         val tags = (result as HlsVideoEventTemplate.Horizontal).template.tags
         assertNull(tags.findTag("duration"))
     }
@@ -193,7 +188,7 @@ class HlsVideoEventBuilderTest {
     fun contentWarningTagWhenProvided() {
         val result =
             HlsVideoEventBuilder.build(
-                input(landscapeMasterPlaylist, contentWarning = "NSFW"),
+                input(landscapeRenditions, contentWarning = "NSFW"),
             )
         val tags = (result as HlsVideoEventTemplate.Horizontal).template.tags
 
@@ -204,14 +199,14 @@ class HlsVideoEventBuilderTest {
 
     @Test
     fun noContentWarningTagWhenNull() {
-        val result = HlsVideoEventBuilder.build(input(landscapeMasterPlaylist))
+        val result = HlsVideoEventBuilder.build(input(landscapeRenditions))
         val tags = (result as HlsVideoEventTemplate.Horizontal).template.tags
         assertNull(tags.findTag("content-warning"))
     }
 
     @Test
     fun horizontalTemplateCarriesAutoGeneratedAltTag() {
-        val result = HlsVideoEventBuilder.build(input(landscapeMasterPlaylist))
+        val result = HlsVideoEventBuilder.build(input(landscapeRenditions))
         val tags = (result as HlsVideoEventTemplate.Horizontal).template.tags
         val alt = tags.findTag("alt")
         assertNotNull(alt)
@@ -220,7 +215,7 @@ class HlsVideoEventBuilderTest {
 
     @Test
     fun verticalTemplateCarriesVerticalAltTag() {
-        val result = HlsVideoEventBuilder.build(input(portraitMasterPlaylist))
+        val result = HlsVideoEventBuilder.build(input(portraitRenditions))
         val tags = (result as HlsVideoEventTemplate.Vertical).template.tags
         val alt = tags.findTag("alt")
         assertNotNull(alt)
