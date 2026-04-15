@@ -64,9 +64,11 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -74,6 +76,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -488,6 +491,18 @@ private fun ProgressBody(
     vm: NewHlsVideoViewModel,
     state: HlsPublishState,
 ) {
+    // Keep the screen awake while transcoding/uploading/publishing. An HLS publish can take
+    // many minutes; if the default lock timer fires mid-flow, the app backgrounds, and
+    // MediaCodec + the OkHttp upload get throttled by the OS. Scoped to this composable so
+    // the flag clears automatically when publish completes or the user navigates away.
+    // Keyed on the view instance so that a configuration change (rotation, theme switch)
+    // that remounts the activity with a new view re-applies the flag to the fresh view.
+    val view = LocalView.current
+    DisposableEffect(view) {
+        view.keepScreenOn = true
+        onDispose { view.keepScreenOn = false }
+    }
+
     Column(
         modifier =
             Modifier
@@ -516,15 +531,22 @@ private fun ProgressBody(
         // monotonically: 1 of N → 2 of N → … → N of N as uploads actually complete.
         var lastDone by remember { mutableIntStateOf(0) }
         var lastTotal by remember { mutableIntStateOf(0) }
+        var lastFileFraction by remember { mutableFloatStateOf(0f) }
         LaunchedEffect(state) {
             if (state is HlsPublishState.Uploading) {
                 lastDone = state.done
                 lastTotal = state.total
+                lastFileFraction = state.currentFileFraction
             }
         }
 
+        // Per-file bar: each upload fills the whole 0→100% width, then the next upload
+        // starts fresh. Overall progress is carried by the "Uploaded X of N" counter text,
+        // so the bar can focus on showing strong visible motion for the currently in-flight
+        // file. The row is only active during actual uploads (PhaseRow hides the bar
+        // otherwise), so there's no transcoding-gap lingering to worry about.
         val uploadingFraction =
-            if (lastTotal > 0) lastDone.toFloat() / lastTotal else null
+            if (lastTotal > 0) lastFileFraction.coerceIn(0f, 1f) else null
         val uploadingLabel =
             when {
                 // Currently in flight: present-tense, file label in the line.

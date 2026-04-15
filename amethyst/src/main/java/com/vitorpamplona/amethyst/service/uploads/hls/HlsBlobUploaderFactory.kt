@@ -81,7 +81,7 @@ object HlsBlobUploaderFactory {
         account: Account,
         context: Context,
     ): HlsBlobUploader =
-        HlsBlobUploader { file, contentType ->
+        HlsBlobUploader { file, contentType, onProgress ->
             BlossomUploader().upload(
                 uri = file.toUri(),
                 contentType = contentType,
@@ -92,6 +92,7 @@ object HlsBlobUploaderFactory {
                 okHttpClient = ::okHttpClientForHlsUploads,
                 httpAuth = account::createBlossomUploadAuth,
                 context = context,
+                onProgress = onProgress,
             )
         }
 
@@ -100,16 +101,25 @@ object HlsBlobUploaderFactory {
         account: Account,
         context: Context,
     ): HlsBlobUploader =
-        HlsBlobUploader { file, contentType ->
+        HlsBlobUploader { file, contentType, onProgress ->
+            val totalBytes = file.length()
             Nip96Uploader().upload(
                 uri = file.toUri(),
                 contentType = contentType,
-                size = file.length(),
+                size = totalBytes,
                 alt = null,
                 sensitiveContent = null,
                 serverBaseUrl = serverBaseUrl,
                 okHttpClient = ::okHttpClientForHlsUploads,
-                onProgress = { /* pipeline reports progress per-upload; NIP-96 per-request progress is not forwarded */ },
+                onProgress = { percentage ->
+                    // Convert NIP-96's 0..1 fraction to the bytes/total shape the HLS
+                    // orchestrator expects; clamped so the written count never exceeds the file.
+                    val written =
+                        (percentage * totalBytes)
+                            .toLong()
+                            .coerceIn(0L, totalBytes)
+                    onProgress(written, totalBytes)
+                },
                 httpAuth = account::createHTTPAuthorization,
                 context = context,
             )

@@ -28,14 +28,20 @@ import java.io.File
  * unit-testable. Production wiring adapts this to either
  * [com.vitorpamplona.amethyst.service.uploads.nip96.Nip96Uploader] or
  * [com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader]. The HLS orchestrator
- * wraps this in a String-returning lambda for
- * [com.davotoula.lightcompressor.hls.HlsUploadHelper.run] and captures each
- * [MediaUploadResult] in a side-channel map keyed by the library's suggested filename so the
- * per-rendition sha256/size can flow into the NIP-71 event's imeta tags.
+ * wraps this in an [com.davotoula.lightcompressor.hls.HlsUploaded]-returning lambda for
+ * [com.davotoula.lightcompressor.hls.HlsUploadHelper.run]; the library itself drives the
+ * per-rendition map of [MediaUploadResult]s back into
+ * [com.davotoula.lightcompressor.hls.HlsUploadResult.uploads] so per-rendition sha256/size
+ * can flow into the NIP-71 event's imeta tags.
+ *
+ * The optional [onProgress] callback is invoked as bytes flow to the wire so the UI can show
+ * a smooth per-file progress bar instead of the coarse "file N of M" counter. Callers that
+ * don't need byte progress pass nothing — the default is a no-op.
  */
 fun interface HlsBlobUploader {
     suspend fun upload(
         file: File,
         contentType: String,
+        onProgress: (bytesWritten: Long, totalBytes: Long) -> Unit,
     ): MediaUploadResult
 }

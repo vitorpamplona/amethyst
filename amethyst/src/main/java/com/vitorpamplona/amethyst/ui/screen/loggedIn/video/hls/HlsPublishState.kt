@@ -32,6 +32,11 @@ sealed class HlsPublishState {
         val done: Int,
         val total: Int,
         val currentLabel: String = "",
+        // Fraction (0f..1f) through the currently-in-flight file, driven by the uploader's
+        // byte-progress callback. 0f when a new file starts, 1f when it finishes. Lets the
+        // progress bar move smoothly within a single file's slice instead of only ticking
+        // once per file.
+        val currentFileFraction: Float = 0f,
     ) : HlsPublishState()
 
     data object Publishing : HlsPublishState()

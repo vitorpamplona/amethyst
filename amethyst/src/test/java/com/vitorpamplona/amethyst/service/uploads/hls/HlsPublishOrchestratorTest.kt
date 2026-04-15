@@ -113,9 +113,14 @@ class HlsPublishOrchestratorTest {
         override suspend fun upload(
             file: File,
             contentType: String,
+            onProgress: (Long, Long) -> Unit,
         ): MediaUploadResult {
             count++
-            return MediaUploadResult(url = "https://cdn.test/$count", sha256 = "sha-$count", size = file.length())
+            // Emit a single end-of-file progress tick so tests can verify the callback is
+            // threaded through without coupling to throttling behaviour.
+            val length = file.length()
+            onProgress(length, length)
+            return MediaUploadResult(url = "https://cdn.test/$count", sha256 = "sha-$count", size = length)
         }
     }
 
@@ -123,7 +128,7 @@ class HlsPublishOrchestratorTest {
         { _, masterPlaylist ->
             val tmp = File(workDir, "master-${System.nanoTime()}.m3u8").apply { writeText(masterPlaylist) }
             try {
-                uploader.upload(tmp, "application/vnd.apple.mpegurl")
+                uploader.upload(tmp, "application/vnd.apple.mpegurl") { _, _ -> }
             } finally {
                 tmp.delete()
             }
@@ -258,7 +263,7 @@ class HlsPublishOrchestratorTest {
                 _state = MutableStateFlow(HlsPublishState.Idle),
                 runUpload = fakeRunUpload(),
                 buildUploader = {
-                    HlsBlobUploader { _, _ -> throw RuntimeException("server 500") }
+                    HlsBlobUploader { _, _, _ -> throw RuntimeException("server 500") }
                 },
                 uploadMaster = { _, _ -> MediaUploadResult(url = "never") },
                 signAndPublish = { "never" },

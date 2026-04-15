@@ -64,7 +64,10 @@ fun createProductionHlsPublishOrchestrator(
             val masterFile = File.createTempFile("hls-master-", ".m3u8", context.cacheDir)
             try {
                 masterFile.writeText(masterPlaylist)
-                uploader.upload(masterFile, HlsContentTypes.HLS_PLAYLIST)
+                // Master playlist is ~1-5 KB and uploads in milliseconds, so we don't
+                // bother piping byte progress for it — the file counter bar flipping from
+                // "N-1 of N" → "N of N" is enough signal.
+                uploader.upload(masterFile, HlsContentTypes.HLS_PLAYLIST) { _, _ -> }
             } finally {
                 masterFile.delete()
             }
