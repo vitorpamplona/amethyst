@@ -25,8 +25,6 @@ import com.davotoula.lightcompressor.hls.HlsConfig
 import com.davotoula.lightcompressor.hls.HlsContentTypes
 import com.davotoula.lightcompressor.hls.HlsLadder
 import com.davotoula.lightcompressor.hls.HlsListener
-import com.davotoula.lightcompressor.hls.HlsRenditionSummary
-import com.davotoula.lightcompressor.hls.HlsSegment
 import com.davotoula.lightcompressor.hls.HlsUploadResult
 import com.davotoula.lightcompressor.hls.HlsUploaded
 import com.davotoula.lightcompressor.hls.Rendition
@@ -89,15 +87,22 @@ class HlsPublishOrchestrator(
                     ladder = request.ladder,
                 )
 
-            val totalSegmentUploads = request.ladder.renditions.size * 2
-            val totalUploads = totalSegmentUploads + 1
+            val totalUploads = request.ladder.renditions.size * 2 + 1
             var uploadsDone = 0
+
+            // Dedup Transcoding state emissions so onProgress (which fires many times per
+            // integer percent) doesn't flood the StateFlow with identical values.
+            var lastTranscodingLabel: String? = null
+            var lastTranscodingPercent = -1
 
             val listener =
                 object : SimpleHlsListener() {
                     override fun onRenditionStart(rendition: Rendition) {
-                        if (_state.value !is HlsPublishState.Uploading) {
-                            _state.value = HlsPublishState.Transcoding(rendition.resolution.label, 0)
+                        val label = rendition.resolution.label
+                        if (lastTranscodingLabel != label || lastTranscodingPercent != 0) {
+                            lastTranscodingLabel = label
+                            lastTranscodingPercent = 0
+                            _state.value = HlsPublishState.Transcoding(label, 0)
                         }
                     }
 
@@ -105,31 +110,20 @@ class HlsPublishOrchestrator(
                         rendition: Rendition,
                         percent: Float,
                     ) {
-                        _state.value = HlsPublishState.Transcoding(rendition.resolution.label, percent.toInt())
+                        val label = rendition.resolution.label
+                        val p = percent.toInt()
+                        if (lastTranscodingLabel != label || lastTranscodingPercent != p) {
+                            lastTranscodingLabel = label
+                            lastTranscodingPercent = p
+                            _state.value = HlsPublishState.Transcoding(label, p)
+                        }
                     }
-
-                    override fun onSegmentReady(
-                        rendition: Rendition,
-                        segment: HlsSegment,
-                    ) {
-                        // The uploader lambda runs synchronously inside onSegmentReady; keep the
-                        // progress overlay on "transcoding" here because the state update from
-                        // the lambda itself will flip us into Uploading at upload time.
-                    }
-
-                    override fun onRenditionComplete(
-                        rendition: Rendition,
-                        summary: HlsRenditionSummary,
-                    ) = Unit
                 }
 
             val uploadResult =
                 runUpload(config, listener) { file, suggestedFilename ->
-                    // Pre-increment so `done` means "working on item N of total" rather than
-                    // "N completed, with N+1 silently in flight". Without this, the counter
-                    // is stuck on the previous value while the current upload runs, and
-                    // StateFlow conflation eats the post-upload increment before the UI
-                    // paints it — the net effect is a visibly stalled counter.
+                    // Pre-increment: `done` tracks the in-flight index, not the finished
+                    // count. StateFlow conflation would otherwise eat the post-upload tick.
                     uploadsDone++
                     _state.value =
                         HlsPublishState.Uploading(
@@ -139,7 +133,7 @@ class HlsPublishOrchestrator(
                         )
                     val contentType =
                         if (suggestedFilename.endsWith(".m3u8")) {
-                            HlsContentTypes.forPlaylist()
+                            HlsContentTypes.HLS_PLAYLIST
                         } else {
                             HlsContentTypes.FMP4_SEGMENT
                         }
@@ -185,7 +179,8 @@ class HlsPublishOrchestrator(
                     masterUrl = masterUrl,
                 )
         } catch (e: CancellationException) {
-            _state.value = HlsPublishState.Failure(message = "Cancelled")
+            // Cancellation is not a failure. Let the rethrow propagate up the coroutine
+            // scope; NewHlsVideoViewModel.cancel() calls reset() to put state back to Idle.
             throw e
         } catch (e: Throwable) {
             _state.value = HlsPublishState.Failure(message = e.message ?: e::class.simpleName.orEmpty())

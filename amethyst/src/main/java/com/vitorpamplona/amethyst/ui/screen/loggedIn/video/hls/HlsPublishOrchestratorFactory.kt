@@ -61,21 +61,21 @@ fun createProductionHlsPublishOrchestrator(
             HlsBlobUploaderFactory.create(server, account, context)
         },
         uploadMaster = { uploader, masterPlaylist ->
-            val masterFile =
-                File(context.cacheDir, "hls-master-${System.currentTimeMillis()}.m3u8")
+            val masterFile = File.createTempFile("hls-master-", ".m3u8", context.cacheDir)
             try {
                 masterFile.writeText(masterPlaylist)
-                uploader.upload(masterFile, HlsContentTypes.forPlaylist())
+                uploader.upload(masterFile, HlsContentTypes.HLS_PLAYLIST)
             } finally {
                 masterFile.delete()
             }
         },
         signAndPublish = { template ->
-            val signed =
+            val inner =
                 when (template) {
-                    is HlsVideoEventTemplate.Horizontal -> account.signer.sign(template.template)
-                    is HlsVideoEventTemplate.Vertical -> account.signer.sign(template.template)
+                    is HlsVideoEventTemplate.Horizontal -> template.template
+                    is HlsVideoEventTemplate.Vertical -> template.template
                 }
+            val signed = account.signer.sign(inner)
             account.sendAutomatic(signed)
             signed.id
         },

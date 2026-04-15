@@ -89,10 +89,12 @@ class HlsPublishOrchestratorTest {
             val uploads = linkedMapOf<String, HlsUploaded<MediaUploadResult>>()
             listener.onStart(renditions.size)
             for (summary in renditions) {
+                val combinedFilename =
+                    requireNotNull(summary.combinedFilename) { "test fixtures must use single-file mode" }
                 listener.onRenditionStart(summary.rendition)
                 listener.onProgress(summary.rendition, 50f)
-                val combinedFile = File(workDir, summary.combinedFilename!!).apply { writeText("combined-${summary.rendition.resolution.label}") }
-                uploads[summary.combinedFilename!!] = uploadFile(combinedFile, summary.combinedFilename!!)
+                val combinedFile = File(workDir, combinedFilename).apply { writeText("combined-${summary.rendition.resolution.label}") }
+                uploads[combinedFilename] = uploadFile(combinedFile, combinedFilename)
                 val playlistFile =
                     File(workDir, "${summary.rendition.resolution.label}-media.m3u8").apply { writeText("playlist-${summary.rendition.resolution.label}") }
                 uploads[summary.playlistFilename] = uploadFile(playlistFile, summary.playlistFilename)
