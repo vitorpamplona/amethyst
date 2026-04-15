@@ -143,7 +143,9 @@ class CallAudioManager(
             } else {
                 routeToEarpiece()
             }
-            registerBluetoothScoReceiver()
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+                registerBluetoothScoReceiver()
+            }
         } else {
             _isBluetoothAvailable.value = false
             routeToEarpiece()
@@ -301,6 +303,7 @@ class CallAudioManager(
         }
     }
 
+    @Suppress("DEPRECATION")
     private fun registerBluetoothScoReceiver() {
         if (scoReceiver != null) return
         scoReceiver =
