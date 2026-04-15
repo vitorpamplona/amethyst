@@ -41,6 +41,7 @@ fun LoadThumbAndThenVideoView(
     roundedCorner: Boolean,
     contentScale: ContentScale,
     nostrUriCallback: String? = null,
+    isLiveStream: Boolean = false,
     accountViewModel: AccountViewModel,
     onDialog: (() -> Unit)? = null,
 ) {
@@ -75,6 +76,7 @@ fun LoadThumbAndThenVideoView(
                 artworkUri = thumbUri,
                 authorName = authorName,
                 nostrUriCallback = nostrUriCallback,
+                isLiveStream = isLiveStream,
                 accountViewModel = accountViewModel,
                 onDialog = onDialog,
             )
@@ -89,6 +91,7 @@ fun LoadThumbAndThenVideoView(
                 artworkUri = thumbUri,
                 authorName = authorName,
                 nostrUriCallback = nostrUriCallback,
+                isLiveStream = isLiveStream,
                 accountViewModel = accountViewModel,
                 onDialog = onDialog,
             )

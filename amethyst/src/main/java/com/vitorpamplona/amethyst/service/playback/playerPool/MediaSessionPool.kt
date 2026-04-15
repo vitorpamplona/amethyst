@@ -35,6 +35,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
+import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.MediaItemCache
 import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CoroutineExceptionHandler
@@ -198,7 +199,7 @@ class MediaSessionPool(
             mediaItems: List<MediaItem>,
         ): ListenableFuture<List<MediaItem>> {
             // set up return call when clicking on the Notification bar
-            mediaItems.firstOrNull()?.mediaMetadata?.extras?.getString("callbackUri")?.let {
+            mediaItems.firstOrNull()?.mediaMetadata?.extras?.getString(MediaItemCache.EXTRA_CALLBACK_URI)?.let {
                 mediaSession.setSessionActivity(
                     PendingIntent.getActivity(
                         appContext,

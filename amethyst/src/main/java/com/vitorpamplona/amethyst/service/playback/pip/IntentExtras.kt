@@ -61,6 +61,7 @@ class IntentExtras {
                 proxyPort = if (port > 0) port else null,
                 keepPlaying = intent.getBoolean("keepPlaying", true),
                 waveformData = intent.getFloatArray("wavefrontData")?.toList()?.let { WaveformData(it) },
+                isLiveStream = intent.getBoolean("isLiveStream", false),
             )
         }
 
@@ -79,6 +80,7 @@ class IntentExtras {
                 data.proxyPort?.let { putInt("proxyPort", it) }
                 putBoolean("keepPlaying", data.keepPlaying)
                 data.waveformData?.let { putFloatArray("wavefrontData", it.wave.toFloatArray()) }
+                putBoolean("isLiveStream", data.isLiveStream)
 
                 bounds?.let { putInt("boundLeft", it.left) }
                 bounds?.let { putInt("boundRight", it.right) }
