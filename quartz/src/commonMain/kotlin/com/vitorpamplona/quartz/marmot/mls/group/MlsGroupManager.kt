@@ -127,13 +127,16 @@ class MlsGroupManager(
                         Log.d(TAG) { "restoreAll(): restored ${retained.size} retained epochs for $nostrGroupId" }
                     }
                 } catch (e: Exception) {
-                    // Corrupted state — log and remove it so it doesn't block future joins
+                    // Could be genuinely corrupted state, or a transient bug
+                    // (e.g. wrong cipher param spec). Skip but DO NOT delete —
+                    // a future restart after a fix should still be able to
+                    // recover the group. If it really is corrupted the user
+                    // can explicitly leave/delete the group from the UI.
                     Log.e(
                         TAG,
-                        "restoreAll(): Corrupted state for group $nostrGroupId, DELETING: ${e.message}",
+                        "restoreAll(): failed to restore group $nostrGroupId, skipping (file preserved): ${e.message}",
                         e,
                     )
-                    store.delete(nostrGroupId)
                 }
             }
             Log.d(TAG) { "restoreAll(): finished with ${groups.size} active groups in memory" }
