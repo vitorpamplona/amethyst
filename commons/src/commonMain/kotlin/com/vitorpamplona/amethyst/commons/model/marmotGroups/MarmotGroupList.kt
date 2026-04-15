@@ -46,8 +46,17 @@ class MarmotGroupList(
         msg: Note,
     ) {
         val chatroom = getOrCreateGroup(nostrGroupId)
-        if (chatroom.addMessageSync(msg)) {
-            if (msg.author?.pubkeyHex == ownerPubKey) {
+        val isSelfAuthored = msg.author?.pubkeyHex == ownerPubKey
+        // Use the quiet path for our own messages so the relay round-trip
+        // doesn't mark the user's own outgoing message as unread.
+        val added =
+            if (isSelfAuthored) {
+                chatroom.restoreMessageSync(msg)
+            } else {
+                chatroom.addMessageSync(msg)
+            }
+        if (added) {
+            if (isSelfAuthored) {
                 chatroom.ownerSentMessage = true
             }
             _groupListChanges.tryEmit(nostrGroupId)

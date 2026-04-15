@@ -148,13 +148,17 @@ fun MarmotGroupListScreen(
 
             if (visibleGroups.isEmpty()) {
                 Box(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 32.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
                             text = if (selectedTab == 0) "No groups yet" else "No invitations",
                             style = MaterialTheme.typography.titleMedium,
+                            textAlign = TextAlign.Center,
                         )
                         Text(
                             text =
@@ -165,6 +169,7 @@ fun MarmotGroupListScreen(
                                 },
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
                             modifier = Modifier.padding(top = 4.dp),
                         )
                     }
