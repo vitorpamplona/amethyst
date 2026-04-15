@@ -38,6 +38,7 @@ import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 import java.io.File
 
 data class HlsPublishRequest(
@@ -120,16 +121,49 @@ class HlsPublishOrchestrator(
                     }
                 }
 
+            // Throttle byte-progress state writes so the uploader's thousand-calls-per-second
+            // cadence doesn't flood StateFlow. At most one update per ~100ms or per 2% change,
+            // whichever happens first. Reset at the start of each file. The throttle state is
+            // held in a small wrapper so its fields can carry @Volatile — the onBytesProgress
+            // callback runs on OkHttp's worker thread while reset happens on the coroutine's
+            // IO thread, and we want explicit memory-model guarantees rather than relying on
+            // implicit happens-before edges from OkHttp + kotlinx.coroutines resumption.
+            val throttle = ProgressThrottleState()
+            val onBytesProgress: (Long, Long) -> Unit = { written, total ->
+                if (total > 0) {
+                    val fraction = (written.toFloat() / total).coerceIn(0f, 1f)
+                    val now = System.currentTimeMillis()
+                    val deltaMs = now - throttle.lastTick
+                    val deltaFraction = fraction - throttle.lastFraction
+                    if (deltaMs >= PROGRESS_THROTTLE_MS || deltaFraction >= PROGRESS_THROTTLE_FRACTION || fraction >= 1f) {
+                        throttle.lastTick = now
+                        throttle.lastFraction = fraction
+                        // Atomic check-then-set: if the state has already flipped to Transcoding
+                        // or Publishing by the time we land here, keep it — don't clobber a
+                        // more recent transition with a stale Uploading snapshot.
+                        _state.update { current ->
+                            if (current is HlsPublishState.Uploading) {
+                                current.copy(currentFileFraction = fraction)
+                            } else {
+                                current
+                            }
+                        }
+                    }
+                }
+            }
+
             val uploadResult =
                 runUpload(config, listener) { file, suggestedFilename ->
                     // Pre-increment: `done` tracks the in-flight index, not the finished
                     // count. StateFlow conflation would otherwise eat the post-upload tick.
                     uploadsDone++
+                    throttle.reset()
                     _state.value =
                         HlsPublishState.Uploading(
                             done = uploadsDone,
                             total = totalUploads,
                             currentLabel = suggestedFilename,
+                            currentFileFraction = 0f,
                         )
                     val contentType =
                         if (suggestedFilename.endsWith(".m3u8")) {
@@ -137,7 +171,7 @@ class HlsPublishOrchestrator(
                         } else {
                             HlsContentTypes.FMP4_SEGMENT
                         }
-                    val result = uploader.upload(file, contentType)
+                    val result = uploader.upload(file, contentType, onBytesProgress)
                     HlsUploaded(
                         url =
                             result.url
@@ -147,11 +181,16 @@ class HlsPublishOrchestrator(
                 }
 
             uploadsDone++
+            throttle.reset()
             _state.value =
                 HlsPublishState.Uploading(
                     done = uploadsDone,
                     total = totalUploads,
                     currentLabel = "master.m3u8",
+                    // Master upload isn't instrumented for byte progress (~1-5 KB, sub-second).
+                    // Show a full bar for its brief visible window so the row reads as "done"
+                    // rather than "empty + vanished" when state flips to Publishing.
+                    currentFileFraction = 1f,
                 )
             val masterUpload = uploadMaster(uploader, uploadResult.masterPlaylist)
             val masterUrl =
@@ -192,4 +231,25 @@ class HlsPublishOrchestrator(
     }
 
     private fun contentWarningOrNull(request: HlsPublishRequest): String? = if (request.sensitiveContent) request.contentWarningReason else null
+
+    // Per-publish throttle bookkeeping for byte-progress emissions. Wrapped in a tiny class
+    // so its fields can carry @Volatile — the onBytesProgress callback runs on OkHttp's
+    // worker thread while `throttle.reset()` runs on the coroutine's IO thread, and we want
+    // an explicit memory-model guarantee rather than relying on implicit happens-before
+    // edges from OkHttp + kotlinx.coroutines resumption.
+    private class ProgressThrottleState {
+        @Volatile var lastTick: Long = 0L
+
+        @Volatile var lastFraction: Float = -1f
+
+        fun reset() {
+            lastTick = 0L
+            lastFraction = -1f
+        }
+    }
+
+    private companion object {
+        private const val PROGRESS_THROTTLE_MS = 100L
+        private const val PROGRESS_THROTTLE_FRACTION = 0.02f
+    }
 }
