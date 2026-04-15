@@ -1817,6 +1817,7 @@
     <string name="media_actions_dialog_title">Medieåtgärder</string>
     <string name="playback_actions_dialog_title">Uppspelning</string>
     <string name="video_quality_auto">Auto</string>
+    <!-- HLS multi-resolution video sharing -->
     <string name="pack_actions_dialog_title">Paketåtgärder</string>
     <string name="list_actions_dialog_title">Liståtgärder</string>
     <string name="bookmark_item_actions_dialog_title">Bokmärkesåtgärder</string>

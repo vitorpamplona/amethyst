@@ -1822,6 +1822,7 @@
     <string name="profile_actions_dialog_title">परिचय कार्य</string>
     <string name="media_actions_dialog_title">अभिलेख कार्य</string>
     <string name="playback_actions_dialog_title">चालन</string>
+    <!-- HLS multi-resolution video sharing -->
     <string name="pack_actions_dialog_title">पोटली कार्य</string>
     <string name="list_actions_dialog_title">सूची कार्य</string>
     <string name="bookmark_item_actions_dialog_title">स्मर्त्तव्यचिह्न कार्य</string>
