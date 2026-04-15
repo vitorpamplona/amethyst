@@ -22,6 +22,8 @@ package com.vitorpamplona.quartz.marmot.mls.crypto
 
 import java.security.KeyFactory
 import java.security.KeyPairGenerator
+import java.security.Provider
+import java.security.Security
 import java.security.Signature
 import java.security.spec.EdECPrivateKeySpec
 import java.security.spec.EdECPublicKeySpec
@@ -40,9 +42,40 @@ actual object Ed25519 {
     private const val SEED_LENGTH = 32
     private const val PUBLIC_KEY_LENGTH = 32
 
+    /**
+     * Picks a non-AndroidKeyStore provider for the given JCA service.
+     *
+     * On Android, `KeyPairGenerator.getInstance("Ed25519")` can resolve to
+     * `AndroidKeyStoreKeyPairGeneratorSpi`, which rejects `NamedParameterSpec`
+     * and requires `KeyGenParameterSpec` instead. We need a software provider
+     * (Conscrypt / SunEC) that supports the standard JCA Ed25519 interface.
+     */
+    private fun findProvider(service: String): Provider? =
+        Security
+            .getProviders("$service.$ALGORITHM")
+            ?.firstOrNull { !it.name.contains("AndroidKeyStore", ignoreCase = true) }
+
+    private val keyPairGeneratorProvider: Provider? = findProvider("KeyPairGenerator")
+    private val keyFactoryProvider: Provider? = findProvider("KeyFactory")
+    private val signatureProvider: Provider? = findProvider("Signature")
+
+    private fun keyPairGenerator(): KeyPairGenerator =
+        keyPairGeneratorProvider?.let { KeyPairGenerator.getInstance(ALGORITHM, it) }
+            ?: KeyPairGenerator.getInstance(ALGORITHM)
+
+    private fun keyFactory(): KeyFactory =
+        keyFactoryProvider?.let { KeyFactory.getInstance(ALGORITHM, it) }
+            ?: KeyFactory.getInstance(ALGORITHM)
+
+    private fun signatureInstance(): Signature =
+        signatureProvider?.let { Signature.getInstance(ALGORITHM, it) }
+            ?: Signature.getInstance(ALGORITHM)
+
     actual fun generateKeyPair(): Ed25519KeyPair {
-        val kpg = KeyPairGenerator.getInstance(ALGORITHM)
-        kpg.initialize(NamedParameterSpec(ALGORITHM))
+        // Ed25519 is fully specified by its algorithm name, so no initialize()
+        // call is required. Calling initialize(NamedParameterSpec) would fail
+        // on Android's keystore provider (which requires KeyGenParameterSpec).
+        val kpg = keyPairGenerator()
         val kp = kpg.generateKeyPair()
 
         val publicKey = extractPublicKeyBytes(kp.public as java.security.interfaces.EdECPublicKey)
@@ -61,11 +94,11 @@ actual object Ed25519 {
         val seed = privateKey.copyOfRange(0, SEED_LENGTH)
         val pubBytes = privateKey.copyOfRange(SEED_LENGTH, SEED_LENGTH * 2)
 
-        val kf = KeyFactory.getInstance(ALGORITHM)
+        val kf = keyFactory()
         val privKeySpec = EdECPrivateKeySpec(NamedParameterSpec(ALGORITHM), seed)
         val jcaPrivateKey = kf.generatePrivate(privKeySpec)
 
-        val sig = Signature.getInstance(ALGORITHM)
+        val sig = signatureInstance()
         sig.initSign(jcaPrivateKey)
         sig.update(message)
         return sig.sign()
@@ -78,12 +111,12 @@ actual object Ed25519 {
     ): Boolean {
         require(publicKey.size == PUBLIC_KEY_LENGTH) { "Public key must be 32 bytes" }
 
-        val kf = KeyFactory.getInstance(ALGORITHM)
+        val kf = keyFactory()
         val point = bytesToEdECPoint(publicKey)
         val pubKeySpec = EdECPublicKeySpec(NamedParameterSpec(ALGORITHM), point)
         val jcaPublicKey = kf.generatePublic(pubKeySpec)
 
-        val sig = Signature.getInstance(ALGORITHM)
+        val sig = signatureInstance()
         sig.initVerify(jcaPublicKey)
         sig.update(message)
         return sig.verify(signature)
