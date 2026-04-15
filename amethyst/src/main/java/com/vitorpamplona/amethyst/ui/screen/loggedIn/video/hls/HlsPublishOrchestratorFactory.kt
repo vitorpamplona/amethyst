@@ -25,6 +25,7 @@ import android.net.Uri
 import com.davotoula.lightcompressor.hls.HlsContentTypes
 import com.davotoula.lightcompressor.hls.HlsUploadHelper
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.service.uploads.MediaUploadResult
 import com.vitorpamplona.amethyst.service.uploads.hls.HlsBlobUploaderFactory
 import com.vitorpamplona.amethyst.service.uploads.hls.HlsVideoEventTemplate
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -48,7 +49,7 @@ fun createProductionHlsPublishOrchestrator(
         _state = state,
         runUpload = { config, listener, uploadFile ->
             val uri = uriProvider() ?: error("No video picked")
-            HlsUploadHelper.run(
+            HlsUploadHelper.run<MediaUploadResult>(
                 context = context,
                 uri = uri,
                 config = config,

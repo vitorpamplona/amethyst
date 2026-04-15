@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.service.uploads.hls
 
 import com.davotoula.lightcompressor.hls.HlsContentTypes
 import com.davotoula.lightcompressor.hls.HlsRenditionSummary
+import com.davotoula.lightcompressor.hls.HlsUploaded
 import com.vitorpamplona.amethyst.service.uploads.MediaUploadResult
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
@@ -38,7 +39,7 @@ import kotlin.uuid.Uuid
 
 data class HlsVideoPublishInput(
     val renditions: List<HlsRenditionSummary>,
-    val segmentUploads: Map<String, MediaUploadResult>,
+    val uploads: Map<String, HlsUploaded<MediaUploadResult>>,
     val masterUrl: String,
     val masterSha256: String?,
     val title: String,
@@ -95,18 +96,16 @@ object HlsVideoEventBuilder {
                 val combinedFilename =
                     summary.combinedFilename
                         ?: "${summary.rendition.resolution.label}.mp4"
-                val combinedUpload = input.segmentUploads[combinedFilename]
+                val combinedMetadata = input.uploads[combinedFilename]?.metadata
                 val playlistUpload =
-                    input.segmentUploads[summary.playlistFilename]
+                    input.uploads[summary.playlistFilename]
                         ?: error("No upload recorded for media playlist ${summary.playlistFilename}")
 
                 VideoMeta(
-                    url =
-                        playlistUpload.url
-                            ?: error("Uploader returned null URL for media playlist ${summary.playlistFilename}"),
+                    url = playlistUpload.url,
                     mimeType = HlsContentTypes.HLS_PLAYLIST,
-                    hash = combinedUpload?.sha256,
-                    size = combinedUpload?.size?.toInt(),
+                    hash = combinedMetadata?.sha256,
+                    size = combinedMetadata?.size?.toInt(),
                     dimension = DimensionTag(summary.width, summary.height),
                 )
             }

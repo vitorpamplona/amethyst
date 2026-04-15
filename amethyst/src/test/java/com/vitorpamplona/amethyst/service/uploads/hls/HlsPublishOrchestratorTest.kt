@@ -25,6 +25,7 @@ import com.davotoula.lightcompressor.VideoCodec
 import com.davotoula.lightcompressor.hls.HlsLadder
 import com.davotoula.lightcompressor.hls.HlsRenditionSummary
 import com.davotoula.lightcompressor.hls.HlsUploadResult
+import com.davotoula.lightcompressor.hls.HlsUploaded
 import com.davotoula.lightcompressor.hls.Rendition
 import com.vitorpamplona.amethyst.service.uploads.MediaUploadResult
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
@@ -75,29 +76,32 @@ class HlsPublishOrchestratorTest {
 
     /**
      * Simulates an HlsUploadHelper run: it calls [uploadFile] once per segment (combined .mp4)
-     * and once per media playlist, in the same order the real helper would, then returns a
+     * and once per media playlist, in the same order the real helper would, collects every
+     * returned [HlsUploaded] into the `uploads` map the real helper surfaces, and returns a
      * fake [HlsUploadResult] with the supplied rendition summaries.
      */
     private fun fakeRunUpload(renditions: List<HlsRenditionSummary> = listOf(landscapeSummary())): suspend (
         config: com.davotoula.lightcompressor.hls.HlsConfig,
         listener: com.davotoula.lightcompressor.hls.HlsListener,
-        uploadFile: suspend (File, String) -> String,
-    ) -> HlsUploadResult =
+        uploadFile: suspend (File, String) -> HlsUploaded<MediaUploadResult>,
+    ) -> HlsUploadResult<MediaUploadResult> =
         { _, listener, uploadFile ->
+            val uploads = linkedMapOf<String, HlsUploaded<MediaUploadResult>>()
             listener.onStart(renditions.size)
             for (summary in renditions) {
                 listener.onRenditionStart(summary.rendition)
                 listener.onProgress(summary.rendition, 50f)
                 val combinedFile = File(workDir, summary.combinedFilename!!).apply { writeText("combined-${summary.rendition.resolution.label}") }
-                uploadFile(combinedFile, summary.combinedFilename!!)
+                uploads[summary.combinedFilename!!] = uploadFile(combinedFile, summary.combinedFilename!!)
                 val playlistFile =
                     File(workDir, "${summary.rendition.resolution.label}-media.m3u8").apply { writeText("playlist-${summary.rendition.resolution.label}") }
-                uploadFile(playlistFile, summary.playlistFilename)
+                uploads[summary.playlistFilename] = uploadFile(playlistFile, summary.playlistFilename)
             }
             listener.onComplete("#EXTM3U\nfake-master-playlist")
             HlsUploadResult(
                 masterPlaylist = "#EXTM3U\nrewritten-master-playlist",
                 renditions = renditions,
+                uploads = uploads,
             )
         }
 
@@ -181,23 +185,25 @@ class HlsPublishOrchestratorTest {
         val capturingRunUpload: suspend (
             com.davotoula.lightcompressor.hls.HlsConfig,
             com.davotoula.lightcompressor.hls.HlsListener,
-            suspend (File, String) -> String,
-        ) -> HlsUploadResult = { _, listener, uploadFile ->
+            suspend (File, String) -> HlsUploaded<MediaUploadResult>,
+        ) -> HlsUploadResult<MediaUploadResult> = { _, listener, uploadFile ->
             val summary = landscapeSummary()
+            val uploads = linkedMapOf<String, HlsUploaded<MediaUploadResult>>()
             listener.onStart(1)
             listener.onRenditionStart(summary.rendition)
             capturedDuringTranscode += orchestrator.state.value
             listener.onProgress(summary.rendition, 42f)
             capturedDuringTranscode += orchestrator.state.value
             val combinedFile = File(workDir, "360p.mp4").apply { writeText("bytes") }
-            uploadFile(combinedFile, "360p.mp4")
+            uploads["360p.mp4"] = uploadFile(combinedFile, "360p.mp4")
             capturedDuringUpload += orchestrator.state.value
             val playlistFile = File(workDir, "360p-media.m3u8").apply { writeText("bytes") }
-            uploadFile(playlistFile, "360p/media.m3u8")
+            uploads["360p/media.m3u8"] = uploadFile(playlistFile, "360p/media.m3u8")
             listener.onComplete("#EXTM3U\nmaster")
             HlsUploadResult(
                 masterPlaylist = "#EXTM3U\nrewritten",
                 renditions = listOf(summary),
+                uploads = uploads,
             )
         }
 

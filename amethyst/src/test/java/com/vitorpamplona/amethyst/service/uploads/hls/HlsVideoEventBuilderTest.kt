@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.service.uploads.hls
 
 import com.davotoula.lightcompressor.Resolution
 import com.davotoula.lightcompressor.hls.HlsRenditionSummary
+import com.davotoula.lightcompressor.hls.HlsUploaded
 import com.davotoula.lightcompressor.hls.Rendition
 import com.vitorpamplona.amethyst.service.uploads.MediaUploadResult
 import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
@@ -59,20 +60,28 @@ class HlsVideoEventBuilderTest {
             combinedFilename = "${resolution.label}.mp4",
         )
 
-    private fun segmentUploadsFor(renditions: List<HlsRenditionSummary>): Map<String, MediaUploadResult> {
-        val uploads = mutableMapOf<String, MediaUploadResult>()
+    private fun uploadsFor(renditions: List<HlsRenditionSummary>): Map<String, HlsUploaded<MediaUploadResult>> {
+        val uploads = linkedMapOf<String, HlsUploaded<MediaUploadResult>>()
         renditions.forEach { r ->
             val label = r.rendition.resolution.label
             uploads["$label.mp4"] =
-                MediaUploadResult(
+                HlsUploaded(
                     url = "https://cdn.test/$label.mp4",
-                    sha256 = "$label-sha",
-                    size = 1_000_000L,
+                    metadata =
+                        MediaUploadResult(
+                            url = "https://cdn.test/$label.mp4",
+                            sha256 = "$label-sha",
+                            size = 1_000_000L,
+                        ),
                 )
             uploads["$label/media.m3u8"] =
-                MediaUploadResult(
+                HlsUploaded(
                     url = "https://cdn.test/$label-media.m3u8",
-                    sha256 = "$label-playlist-sha",
+                    metadata =
+                        MediaUploadResult(
+                            url = "https://cdn.test/$label-media.m3u8",
+                            sha256 = "$label-playlist-sha",
+                        ),
                 )
         }
         return uploads
@@ -89,7 +98,7 @@ class HlsVideoEventBuilderTest {
     ): HlsVideoPublishInput =
         HlsVideoPublishInput(
             renditions = renditions,
-            segmentUploads = segmentUploadsFor(renditions),
+            uploads = uploadsFor(renditions),
             masterUrl = "https://cdn.test/master.m3u8",
             masterSha256 = "master-sha",
             title = title,

@@ -28,6 +28,7 @@ import com.davotoula.lightcompressor.hls.HlsListener
 import com.davotoula.lightcompressor.hls.HlsRenditionSummary
 import com.davotoula.lightcompressor.hls.HlsSegment
 import com.davotoula.lightcompressor.hls.HlsUploadResult
+import com.davotoula.lightcompressor.hls.HlsUploaded
 import com.davotoula.lightcompressor.hls.Rendition
 import com.davotoula.lightcompressor.hls.SimpleHlsListener
 import com.vitorpamplona.amethyst.service.uploads.MediaUploadResult
@@ -69,8 +70,8 @@ class HlsPublishOrchestrator(
     private val runUpload: suspend (
         config: HlsConfig,
         listener: HlsListener,
-        uploadFile: suspend (File, String) -> String,
-    ) -> HlsUploadResult,
+        uploadFile: suspend (File, String) -> HlsUploaded<MediaUploadResult>,
+    ) -> HlsUploadResult<MediaUploadResult>,
     private val buildUploader: (ServerName) -> HlsBlobUploader,
     private val uploadMaster: suspend (HlsBlobUploader, String) -> MediaUploadResult,
     private val signAndPublish: suspend (HlsVideoEventTemplate) -> String,
@@ -91,7 +92,6 @@ class HlsPublishOrchestrator(
             val totalSegmentUploads = request.ladder.renditions.size * 2
             val totalUploads = totalSegmentUploads + 1
             var uploadsDone = 0
-            val segmentUploads = mutableMapOf<String, MediaUploadResult>()
 
             val listener =
                 object : SimpleHlsListener() {
@@ -144,9 +144,12 @@ class HlsPublishOrchestrator(
                             HlsContentTypes.FMP4_SEGMENT
                         }
                     val result = uploader.upload(file, contentType)
-                    segmentUploads[suggestedFilename] = result
-                    result.url
-                        ?: error("Uploader returned null URL for $suggestedFilename")
+                    HlsUploaded(
+                        url =
+                            result.url
+                                ?: error("Uploader returned null URL for $suggestedFilename"),
+                        metadata = result,
+                    )
                 }
 
             uploadsDone++
@@ -165,7 +168,7 @@ class HlsPublishOrchestrator(
                 HlsVideoEventBuilder.build(
                     HlsVideoPublishInput(
                         renditions = uploadResult.renditions,
-                        segmentUploads = segmentUploads,
+                        uploads = uploadResult.uploads,
                         masterUrl = masterUrl,
                         masterSha256 = masterUpload.sha256,
                         title = request.title,
