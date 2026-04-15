@@ -71,8 +71,10 @@ import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import java.math.BigDecimal
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -699,11 +701,32 @@ class EventNotificationConsumer(
 
         if (TimeUtils.now() - event.createdAt > CallManager.MAX_EVENT_AGE_SECONDS) return
 
-        val callerUser = LocalCache.getUserIfExists(event.pubKey)
-        val callerName = callerUser?.toBestDisplayName() ?: event.pubKey.take(8) + "..."
+        val callerUser = LocalCache.getOrCreateUser(event.pubKey)
+
+        // If the caller's metadata hasn't been loaded yet (e.g. fresh process from
+        // a push notification), briefly subscribe to the user finder so we can
+        // resolve the user's display name instead of showing the raw pubkey.
+        if (callerUser.metadataOrNull()?.bestName() == null) {
+            val authorState = UserFinderQueryState(callerUser, account)
+            try {
+                Amethyst.instance.sources.userFinder
+                    .subscribe(authorState)
+                withTimeoutOrNull(5_000L) {
+                    callerUser
+                        .metadata()
+                        .flow
+                        .first { it?.info?.bestName() != null }
+                }
+            } finally {
+                Amethyst.instance.sources.userFinder
+                    .unsubscribe(authorState)
+            }
+        }
+
+        val callerName = callerUser.toBestDisplayName()
 
         val callerBitmap =
-            callerUser?.profilePicture()?.let { pictureUrl ->
+            callerUser.profilePicture()?.let { pictureUrl ->
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                     try {
                         val request =
