@@ -24,6 +24,7 @@ import android.content.ContentResolver
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.marmot.AndroidKeyPackageBundleStore
 import com.vitorpamplona.amethyst.model.marmot.AndroidMarmotMessageStore
 import com.vitorpamplona.amethyst.model.marmot.AndroidMlsGroupStateStore
 import com.vitorpamplona.amethyst.model.marmot.InMemoryMlsGroupStateStore
@@ -130,6 +131,18 @@ class AccountCacheState(
                 null
             }
 
+        val marmotKeyPackageStore =
+            try {
+                AndroidKeyPackageBundleStore(rootFilesDir())
+            } catch (e: Exception) {
+                Log.e(
+                    "AccountCacheState",
+                    "Failed to initialize AndroidKeyPackageBundleStore (Marmot KeyPackages will NOT persist across restarts)",
+                    e,
+                )
+                null
+            }
+
         return Account(
             settings = accountSettings,
             signer = signerWithClientTag,
@@ -148,6 +161,7 @@ class AccountCacheState(
                 ),
             mlsGroupStateStore = mlsStore,
             marmotMessageStore = marmotMessageStore,
+            marmotKeyPackageStore = marmotKeyPackageStore,
         ).also { newAccount ->
             accounts.update { existingAccounts ->
                 existingAccounts.plus(Pair(signer.pubKey, newAccount))

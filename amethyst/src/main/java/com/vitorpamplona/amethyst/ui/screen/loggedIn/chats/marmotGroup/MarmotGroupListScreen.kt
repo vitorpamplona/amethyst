@@ -89,16 +89,9 @@ fun MarmotGroupListScreen(
         }
     }
 
-    // Auto-publish KeyPackage if none exists yet
-    LaunchedEffect(Unit) {
-        if (!accountViewModel.hasPublishedKeyPackage()) {
-            try {
-                accountViewModel.publishMarmotKeyPackage()
-            } catch (_: Exception) {
-                // Silently retry on next screen visit
-            }
-        }
-    }
+    // KeyPackage publishing is handled at Account startup
+    // (Account.ensureMarmotKeyPackagePublished), so this screen no longer
+    // needs to do anything to make sure invitees can find a KeyPackage.
 
     val knownGroups = remember(groupList) { groupList.filter { it.second.ownerSentMessage } }
     val newRequestGroups = remember(groupList) { groupList.filter { !it.second.ownerSentMessage } }

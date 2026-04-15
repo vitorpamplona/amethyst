@@ -257,6 +257,7 @@ class Account(
     val scope: CoroutineScope,
     val mlsGroupStateStore: MlsGroupStateStore? = null,
     val marmotMessageStore: com.vitorpamplona.quartz.marmot.mls.group.MarmotMessageStore? = null,
+    val marmotKeyPackageStore: com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageBundleStore? = null,
 ) : IAccount {
     private var userProfileCache: User? = null
 
@@ -387,7 +388,7 @@ class Account(
 
     val otsState = OtsState(signer, cache, otsResolverBuilder, scope, settings)
 
-    val marmotManager: MarmotManager? = mlsGroupStateStore?.let { MarmotManager(signer, it, marmotMessageStore) }
+    val marmotManager: MarmotManager? = mlsGroupStateStore?.let { MarmotManager(signer, it, marmotMessageStore, marmotKeyPackageStore) }
 
     val paymentTargetsState = NipA3PaymentTargetsState(signer, cache, scope, settings)
 
@@ -1906,6 +1907,43 @@ class Account(
     }
 
     /**
+     * Ensure the local user has at least one active KeyPackage bundle and
+     * a published KeyPackage event on relays. Called from [init] after
+     * Marmot state has been restored from disk.
+     *
+     * - If [KeyPackageRotationManager] already has an active bundle (from
+     *   the persisted snapshot), we trust the previous session and do
+     *   nothing. The matching kind:30443 should already be on relays from
+     *   when the bundle was first generated.
+     * - Otherwise we generate a fresh bundle (which is now persisted to
+     *   disk by [KeyPackageRotationManager.generateKeyPackage]) and
+     *   publish the corresponding event.
+     *
+     * Best-effort: failures are logged but never propagated. We don't want
+     * a flaky relay or missing outbox config at startup to crash account
+     * initialization.
+     */
+    private suspend fun ensureMarmotKeyPackagePublished() {
+        val manager = marmotManager ?: return
+        if (!isWriteable()) return
+        try {
+            if (manager.hasActiveKeyPackages()) {
+                Log.d("Account") {
+                    "ensureMarmotKeyPackagePublished: already have an active KeyPackage bundle"
+                }
+                return
+            }
+            Log.d("Account") {
+                "ensureMarmotKeyPackagePublished: no active bundle — generating + publishing"
+            }
+            publishMarmotKeyPackage()
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.w("Account", "ensureMarmotKeyPackagePublished failed: ${e.message}", e)
+        }
+    }
+
+    /**
      * Check if a KeyPackage has been published, either locally generated
      * in this session or found in the local cache from a previous session.
      */
@@ -2451,6 +2489,21 @@ class Account(
         if (marmotManager != null) {
             scope.launch(Dispatchers.IO) {
                 marmotManager.restoreAll()
+
+                // Ensure the local user has a KeyPackage published to relays
+                // so other users can invite them to groups. Without this,
+                // freshly installed accounts (and accounts that never opened
+                // the Marmot Group screen) would never have an active
+                // KeyPackage on the relays, and any inviter trying to add
+                // them would fail with "No KeyPackage found".
+                //
+                // The KeyPackage bundle (private keys included) is persisted
+                // by KeyPackageRotationManager via marmotKeyPackageStore, so
+                // restoreAll() above has already restored any previously
+                // generated bundles. Only generate-and-publish if no active
+                // bundle exists in memory after restore.
+                ensureMarmotKeyPackagePublished()
+
                 // Sync MIP-01 metadata from restored groups to chatrooms and
                 // re-hydrate decrypted messages from persistent storage.
                 // Note: Marmot MLS application messages cannot be re-decrypted

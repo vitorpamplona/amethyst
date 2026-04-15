@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.quartz.marmot.mip00KeyPackages
 
+import com.vitorpamplona.quartz.marmot.mls.codec.TlsReader
+import com.vitorpamplona.quartz.marmot.mls.codec.TlsWriter
 import com.vitorpamplona.quartz.marmot.mls.crypto.Ed25519
 import com.vitorpamplona.quartz.marmot.mls.crypto.MlsCryptoProvider
 import com.vitorpamplona.quartz.marmot.mls.crypto.X25519
@@ -30,6 +32,7 @@ import com.vitorpamplona.quartz.marmot.mls.tree.Credential
 import com.vitorpamplona.quartz.marmot.mls.tree.LeafNode
 import com.vitorpamplona.quartz.marmot.mls.tree.LeafNodeSource
 import com.vitorpamplona.quartz.marmot.mls.tree.Lifetime
+import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -51,10 +54,109 @@ import kotlinx.coroutines.sync.withLock
  * Per MIP-00 spec, each user should maintain up to [KeyPackageUtils.MAX_SLOTS]
  * KeyPackage slots, rotating consumed ones promptly.
  */
-class KeyPackageRotationManager {
+class KeyPackageRotationManager(
+    private val store: KeyPackageBundleStore? = null,
+) {
     private val mutex = Mutex()
     private val activeBundles = mutableMapOf<String, KeyPackageBundle>()
     private val pendingRotations = mutableSetOf<String>()
+
+    /**
+     * Restore previously persisted bundles + rotation state from [store].
+     * Call once at startup before any other use of this manager.
+     * Safe to call when no store is configured (no-op in that case).
+     */
+    suspend fun restoreFromStore() {
+        val store = store ?: return
+        val bytes =
+            try {
+                store.load()
+            } catch (e: Exception) {
+                Log.w("KeyPackageRotationManager", "Failed to load persisted KeyPackages: ${e.message}")
+                null
+            } ?: return
+        try {
+            val decoded = decodeSnapshot(bytes)
+            mutex.withLock {
+                activeBundles.clear()
+                activeBundles.putAll(decoded.first)
+                pendingRotations.clear()
+                pendingRotations.addAll(decoded.second)
+            }
+            Log.d("KeyPackageRotationManager") {
+                "Restored ${decoded.first.size} active KeyPackage bundle(s), ${decoded.second.size} pending rotation"
+            }
+        } catch (e: Exception) {
+            Log.w("KeyPackageRotationManager", "Failed to decode persisted KeyPackages: ${e.message}")
+        }
+    }
+
+    /**
+     * Encode the current rotation manager state to opaque bytes for
+     * persistence. Caller must hold the mutex.
+     */
+    private fun snapshotBytesUnlocked(): ByteArray {
+        val writer = TlsWriter()
+        // version
+        writer.putUint16(SNAPSHOT_VERSION)
+        // active bundles
+        writer.putUint32(activeBundles.size.toLong())
+        for ((slot, bundle) in activeBundles) {
+            writer.putOpaque2(slot.encodeToByteArray())
+            writer.putOpaque4(bundle.keyPackage.toTlsBytes())
+            writer.putOpaque2(bundle.initPrivateKey)
+            writer.putOpaque2(bundle.encryptionPrivateKey)
+            writer.putOpaque2(bundle.signaturePrivateKey)
+        }
+        // pending rotations
+        writer.putUint32(pendingRotations.size.toLong())
+        for (slot in pendingRotations) {
+            writer.putOpaque2(slot.encodeToByteArray())
+        }
+        return writer.toByteArray()
+    }
+
+    /**
+     * Decode the persisted snapshot. Returns (activeBundles, pendingRotations).
+     */
+    private fun decodeSnapshot(bytes: ByteArray): Pair<Map<String, KeyPackageBundle>, Set<String>> {
+        val reader = TlsReader(bytes)
+        val version = reader.readUint16()
+        require(version == SNAPSHOT_VERSION) {
+            "Unsupported KeyPackage snapshot version: $version"
+        }
+        val numBundles = reader.readUint32().toInt()
+        val bundles = mutableMapOf<String, KeyPackageBundle>()
+        repeat(numBundles) {
+            val slot = reader.readOpaque2().decodeToString()
+            val kpBytes = reader.readOpaque4()
+            val keyPackage = MlsKeyPackage.decodeTls(TlsReader(kpBytes))
+            val initPriv = reader.readOpaque2()
+            val encPriv = reader.readOpaque2()
+            val sigPriv = reader.readOpaque2()
+            bundles[slot] = KeyPackageBundle(keyPackage, initPriv, encPriv, sigPriv)
+        }
+        val numPending = reader.readUint32().toInt()
+        val pending = mutableSetOf<String>()
+        repeat(numPending) {
+            pending.add(reader.readOpaque2().decodeToString())
+        }
+        return bundles to pending
+    }
+
+    /**
+     * Persist the current state to [store]. Caller must hold the mutex.
+     * Best-effort: persistence failures are logged but don't propagate, so
+     * a failing disk write never breaks an in-flight Welcome / addMember.
+     */
+    private suspend fun persistUnlocked() {
+        val store = store ?: return
+        try {
+            store.save(snapshotBytesUnlocked())
+        } catch (e: Exception) {
+            Log.w("KeyPackageRotationManager", "Failed to persist KeyPackages: ${e.message}")
+        }
+    }
 
     /**
      * Generate a new KeyPackage and its associated private bundle.
@@ -98,6 +200,7 @@ class KeyPackageRotationManager {
         val bundle = KeyPackageBundle(keyPackage, initKp.privateKey, encKp.privateKey, sigKp.privateKey)
         mutex.withLock {
             activeBundles[dTagSlot] = bundle
+            persistUnlocked()
         }
         return bundle
     }
@@ -128,6 +231,7 @@ class KeyPackageRotationManager {
         mutex.withLock {
             activeBundles.remove(dTagSlot)
             pendingRotations.add(dTagSlot)
+            persistUnlocked()
         }
 
     /**
@@ -142,6 +246,7 @@ class KeyPackageRotationManager {
             if (entry != null) {
                 activeBundles.remove(entry.key)
                 pendingRotations.add(entry.key)
+                persistUnlocked()
             }
         }
 
@@ -157,6 +262,7 @@ class KeyPackageRotationManager {
     suspend fun clearPendingRotation(dTagSlot: String) =
         mutex.withLock {
             pendingRotations.remove(dTagSlot)
+            persistUnlocked()
         }
 
     /**
@@ -184,6 +290,7 @@ class KeyPackageRotationManager {
         val bundle = generateKeyPackage(identity, dTagSlot)
         mutex.withLock {
             pendingRotations.remove(dTagSlot)
+            persistUnlocked()
         }
         return bundle
     }
@@ -233,5 +340,8 @@ class KeyPackageRotationManager {
 
         /** Proactive rotation after 7 days even if not consumed */
         const val MAX_KEY_PACKAGE_AGE_SECONDS = 7L * 24 * 60 * 60
+
+        /** On-disk snapshot format version for [KeyPackageBundleStore]. */
+        private const val SNAPSHOT_VERSION = 1
     }
 }

@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.marmot.MarmotWelcomeSender
 import com.vitorpamplona.quartz.marmot.OutboundGroupEvent
 import com.vitorpamplona.quartz.marmot.WelcomeDelivery
 import com.vitorpamplona.quartz.marmot.WelcomeResult
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageBundleStore
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRotationManager
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageUtils
@@ -65,9 +66,10 @@ class MarmotManager(
     val signer: NostrSigner,
     store: MlsGroupStateStore,
     val messageStore: MarmotMessageStore? = null,
+    val keyPackageStore: KeyPackageBundleStore? = null,
 ) {
     val groupManager = MlsGroupManager(store)
-    val keyPackageRotationManager = KeyPackageRotationManager()
+    val keyPackageRotationManager = KeyPackageRotationManager(keyPackageStore)
     val subscriptionManager = MarmotSubscriptionManager(signer.pubKey)
     val inboundProcessor = MarmotInboundProcessor(groupManager, keyPackageRotationManager)
     val outboundProcessor = MarmotOutboundProcessor(groupManager)
@@ -83,6 +85,9 @@ class MarmotManager(
             groupManager.restoreAll()
             val activeIds = groupManager.activeGroupIds()
             subscriptionManager.syncWithGroupManager(activeIds)
+            // Also restore previously-published KeyPackage bundles so that
+            // Welcomes referencing them remain processable across restarts.
+            keyPackageRotationManager.restoreFromStore()
             Log.d("MarmotManager") { "restoreAll(): done, ${activeIds.size} groups: $activeIds" }
         } catch (e: Exception) {
             Log.e("MarmotManager", "Failed to restore Marmot state", e)
