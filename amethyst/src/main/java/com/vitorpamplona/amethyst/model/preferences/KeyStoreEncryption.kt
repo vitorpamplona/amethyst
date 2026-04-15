@@ -38,6 +38,7 @@ class KeyStoreEncryption {
         private const val TRANSFORMATION = "$ALGORITHM/$BLOCK_MODE/$PADDING"
         private const val PURPOSE = KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
         private const val KEY_ALIAS = "AMETHYST_AES_KEY"
+        private const val GCM_IV_LENGTH = 12
     }
 
     private val cipher = Cipher.getInstance(TRANSFORMATION)
@@ -93,9 +94,11 @@ class KeyStoreEncryption {
     }
 
     fun decrypt(bytes: ByteArray): ByteArray? {
-        // Extracts IV and decrypts the data
-        val iv = bytes.copyOfRange(0, cipher.blockSize)
-        val data = bytes.copyOfRange(cipher.blockSize, bytes.size)
+        // Extracts IV and decrypts the data. GCM mode uses a 12-byte IV,
+        // which is what cipher.iv returns in encrypt() — not the AES block
+        // size (16), which is what cipher.blockSize would return.
+        val iv = bytes.copyOfRange(0, GCM_IV_LENGTH)
+        val data = bytes.copyOfRange(GCM_IV_LENGTH, bytes.size)
         cipher.init(Cipher.DECRYPT_MODE, getKey(), IvParameterSpec(iv))
         return cipher.doFinal(data)
     }
