@@ -32,6 +32,7 @@ import android.bluetooth.BluetoothGattServerCallback
 import android.bluetooth.BluetoothGattService
 import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothProfile
+import android.bluetooth.BluetoothStatusCodes
 import android.bluetooth.le.AdvertiseCallback
 import android.bluetooth.le.AdvertiseData
 import android.bluetooth.le.AdvertiseSettings
@@ -40,6 +41,7 @@ import android.bluetooth.le.ScanFilter
 import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
 import android.content.Context
+import android.os.Build
 import android.os.ParcelUuid
 import com.vitorpamplona.quartz.nipBEBle.AndroidBleTransportContract
 import com.vitorpamplona.quartz.nipBEBle.BleConfig
@@ -88,6 +90,11 @@ class AndroidBleTransport(
     private val readCharUuid = UUID.fromString(BleConfig.READ_CHARACTERISTIC_UUID)
 
     private var readCharacteristic: BluetoothGattCharacteristic? = null
+
+    // Caches the most recently notified payload so that GATT read requests on the
+    // read characteristic can return a meaningful value without relying on the
+    // deprecated BluetoothGattCharacteristic.value field.
+    private var lastNotifiedValue: ByteArray = ByteArray(0)
 
     /**
      * Sets the listener for transport events. Must be called before [startAdvertising] or [startScanning].
@@ -206,7 +213,14 @@ class AndroidBleTransport(
             }
 
         peerMap[peer.deviceUuid] = peer
-        val gatt = device.connectGatt(context, false, gattClientCallback, BluetoothDevice.TRANSPORT_LE)
+        val gatt =
+            device.connectGatt(
+                context,
+                false,
+                gattClientCallback,
+                BluetoothDevice.TRANSPORT_LE,
+                BluetoothDevice.PHY_LE_1M_MASK,
+            )
         gattConnections[peer.deviceUuid] = gatt
     }
 
@@ -227,8 +241,18 @@ class AndroidBleTransport(
         val service = gatt.getService(serviceUuid) ?: return false
         val char = service.getCharacteristic(writeCharUuid) ?: return false
 
-        char.value = chunk
-        return gatt.writeCharacteristic(char)
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            gatt.writeCharacteristic(
+                char,
+                chunk,
+                BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT,
+            ) == BluetoothStatusCodes.SUCCESS
+        } else {
+            @Suppress("DEPRECATION")
+            char.value = chunk
+            @Suppress("DEPRECATION")
+            gatt.writeCharacteristic(char)
+        }
     }
 
     override fun notifyChunk(
@@ -239,8 +263,15 @@ class AndroidBleTransport(
         val device = connectedDevices[peer.deviceUuid] ?: return false
         val char = readCharacteristic ?: return false
 
-        char.value = chunk
-        return server.notifyCharacteristicChanged(device, char, false)
+        lastNotifiedValue = chunk
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            server.notifyCharacteristicChanged(device, char, false, chunk) == BluetoothStatusCodes.SUCCESS
+        } else {
+            @Suppress("DEPRECATION")
+            char.value = chunk
+            @Suppress("DEPRECATION")
+            server.notifyCharacteristicChanged(device, char, false)
+        }
     }
 
     override fun requestMtu(
@@ -341,7 +372,7 @@ class AndroidBleTransport(
                         requestId,
                         BluetoothGatt.GATT_SUCCESS,
                         0,
-                        characteristic.value ?: ByteArray(0),
+                        lastNotifiedValue,
                     )
                 }
             }
@@ -398,13 +429,20 @@ class AndroidBleTransport(
 
                 val cccd = readChar.getDescriptor(UUID.fromString("00002902-0000-1000-8000-00805f9b34fb"))
                 cccd?.let {
-                    it.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
-                    gatt.writeDescriptor(it)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        gatt.writeDescriptor(it, BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)
+                    } else {
+                        @Suppress("DEPRECATION")
+                        it.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+                        @Suppress("DEPRECATION")
+                        gatt.writeDescriptor(it)
+                    }
                 }
 
                 listener?.onPeerConnected(peer)
             }
 
+            @Deprecated("Used on Android 12 and lower. API 33+ uses the overload with the value parameter.")
             override fun onCharacteristicChanged(
                 gatt: BluetoothGatt,
                 characteristic: BluetoothGattCharacteristic,
@@ -412,7 +450,21 @@ class AndroidBleTransport(
                 if (characteristic.uuid == readCharUuid) {
                     val peerUuid = deviceUuidMap[gatt.device.address] ?: return
                     val peer = peerMap[peerUuid] ?: return
+                    @Suppress("DEPRECATION")
                     val value = characteristic.value ?: return
+
+                    listener?.onChunkReceived(peer, value)
+                }
+            }
+
+            override fun onCharacteristicChanged(
+                gatt: BluetoothGatt,
+                characteristic: BluetoothGattCharacteristic,
+                value: ByteArray,
+            ) {
+                if (characteristic.uuid == readCharUuid) {
+                    val peerUuid = deviceUuidMap[gatt.device.address] ?: return
+                    val peer = peerMap[peerUuid] ?: return
 
                     listener?.onChunkReceived(peer, value)
                 }
