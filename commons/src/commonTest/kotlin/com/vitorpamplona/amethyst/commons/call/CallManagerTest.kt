@@ -1844,8 +1844,7 @@ class CallManagerTest {
     // observes the echo, detects a self-answer/self-reject in IncomingCall
     // state and transitions to Ended(ANSWERED_ELSEWHERE / REJECTED).
 
-    private fun EphemeralGiftWrapEvent.recipientPubKey(): HexKey? =
-        tags.firstOrNull { it.size >= 2 && it[0] == "p" }?.get(1)
+    private fun EphemeralGiftWrapEvent.recipientPubKey(): HexKey? = tags.firstOrNull { it.size >= 2 && it[0] == "p" }?.get(1)
 
     @Test
     fun acceptCallPublishesAnswerWrappedForSelfSoSiblingDeviceCanStopRinging() =
