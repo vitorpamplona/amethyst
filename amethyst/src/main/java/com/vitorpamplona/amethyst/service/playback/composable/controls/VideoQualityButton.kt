@@ -124,7 +124,7 @@ fun VideoQualityButton(
         ) {
             VideoQualityChoices(
                 videoGroup = videoGroup,
-                currentHeight = getCurrentPlayingHeight(tracks),
+                currentShortSide = getCurrentPlayingShortSide(tracks),
                 isAuto = !hasVideoOverride(player),
                 onSelectAuto = {
                     clearVideoOverride(player)
@@ -142,7 +142,7 @@ fun VideoQualityButton(
 @Composable
 private fun VideoQualityChoices(
     videoGroup: Tracks.Group,
-    currentHeight: Int?,
+    currentShortSide: Int?,
     isAuto: Boolean,
     onSelectAuto: () -> Unit,
     onSelectTrack: (Int) -> Unit,
@@ -162,7 +162,7 @@ private fun VideoQualityChoices(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         TextButton(colors = colors, onClick = onSelectAuto) {
-            val suffix = currentHeight?.let { " (${it}p)" } ?: ""
+            val suffix = currentShortSide?.let { " (${it}p)" } ?: ""
             Text(
                 stringRes(R.string.video_quality_auto) + suffix,
                 fontWeight = if (isAuto) FontWeight(1000) else FontWeight(400),
@@ -172,17 +172,20 @@ private fun VideoQualityChoices(
         choices.forEach { choice ->
             TextButton(colors = colors, onClick = { onSelectTrack(choice.trackIndex) }) {
                 Text(
-                    "${choice.height}p  ${formatBitrate(choice.bitrate)}",
-                    fontWeight = if (!isAuto && currentHeight == choice.height) FontWeight(1000) else FontWeight(400),
+                    "${choice.shortSide}p  ${formatBitrate(choice.bitrate)}",
+                    fontWeight = if (!isAuto && currentShortSide == choice.shortSide) FontWeight(1000) else FontWeight(400),
                 )
             }
         }
     }
 }
 
+// shortSide = min(width, height). Matches the streaming convention that "360p" means
+// 360 pixels on the short side regardless of orientation, so portrait videos get sensible
+// labels instead of "640p / 960p / 1280p" for the same ladder rungs.
 private data class QualityChoice(
     val trackIndex: Int,
-    val height: Int,
+    val shortSide: Int,
     val bitrate: Int,
 )
 
@@ -190,11 +193,12 @@ private fun buildQualityChoices(group: Tracks.Group): ImmutableList<QualityChoic
     val choices = mutableListOf<QualityChoice>()
     for (i in 0 until group.length) {
         val format = group.getTrackFormat(i)
-        if (format.height > 0) {
-            choices.add(QualityChoice(i, format.height, format.bitrate))
+        val shortSide = minOf(format.width, format.height)
+        if (shortSide > 0) {
+            choices.add(QualityChoice(i, shortSide, format.bitrate))
         }
     }
-    return choices.sortedByDescending { it.height }.toImmutableList()
+    return choices.sortedByDescending { it.shortSide }.toImmutableList()
 }
 
 private fun formatBitrate(bitrate: Int): String =

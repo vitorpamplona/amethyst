@@ -18,24 +18,30 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.playback.composable.controls
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.video.hls
 
-import androidx.media3.common.C
-import androidx.media3.common.Tracks
+sealed class HlsPublishState {
+    data object Idle : HlsPublishState()
 
-fun getVideoTrackGroup(tracks: Tracks): Tracks.Group? = tracks.groups.firstOrNull { it.type == C.TRACK_TYPE_VIDEO && it.length > 0 }
+    data class Transcoding(
+        val currentLabel: String,
+        val percent: Int,
+    ) : HlsPublishState()
 
-// Returns the "Xp" value for the currently selected video track. Uses min(width, height) so
-// that a portrait video's renditions get the same "360p / 540p / 720p" labels as a landscape
-// source — the streaming convention is to label by the short side, not format.height which is
-// the long side for portrait content.
-fun getCurrentPlayingShortSide(tracks: Tracks): Int? {
-    val group = getVideoTrackGroup(tracks) ?: return null
-    for (i in 0 until group.length) {
-        if (group.isTrackSelected(i)) {
-            val format = group.getTrackFormat(i)
-            return minOf(format.width, format.height).takeIf { it > 0 }
-        }
-    }
-    return null
+    data class Uploading(
+        val done: Int,
+        val total: Int,
+        val currentLabel: String = "",
+    ) : HlsPublishState()
+
+    data object Publishing : HlsPublishState()
+
+    data class Success(
+        val eventId: String,
+        val masterUrl: String,
+    ) : HlsPublishState()
+
+    data class Failure(
+        val message: String,
+    ) : HlsPublishState()
 }

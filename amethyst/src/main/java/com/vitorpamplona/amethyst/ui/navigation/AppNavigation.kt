@@ -146,6 +146,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.UserSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.shorts.ShortsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.ThreadScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.VideoScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.hls.NewHlsVideoScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.AddWalletScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.WalletDetailScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.WalletReceiveScreen
@@ -221,6 +222,7 @@ fun BuildNavigation(
         composableFromEnd<Route.Pictures> { PicturesScreen(accountViewModel, nav) }
         composableFromEnd<Route.Shorts> { ShortsScreen(accountViewModel, nav) }
         composableFromEnd<Route.Longs> { LongsScreen(accountViewModel, nav) }
+        composableFromEnd<Route.NewHlsVideo> { NewHlsVideoScreen(accountViewModel, nav) }
         composable<Route.Chess> { ChessLobbyScreen(accountViewModel, nav) }
 
         composableFromEnd<Route.Wallet> { WalletScreen(accountViewModel, nav) }

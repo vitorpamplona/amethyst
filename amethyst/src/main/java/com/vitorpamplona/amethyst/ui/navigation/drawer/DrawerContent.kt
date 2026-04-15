@@ -61,6 +61,7 @@ import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Photo
 import androidx.compose.material.icons.outlined.PlayCircle
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.SettingsInputAntenna
 import androidx.compose.material.icons.outlined.SmartDisplay
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -605,6 +606,14 @@ fun ListContent(
             tint = MaterialTheme.colorScheme.onBackground,
             nav = nav,
             route = Route.Longs,
+        )
+
+        NavigationRow(
+            title = R.string.share_hls_video,
+            icon = Icons.Outlined.SettingsInputAntenna,
+            tint = MaterialTheme.colorScheme.onBackground,
+            nav = nav,
+            route = Route.NewHlsVideo,
         )
 
         NavigationRow(
