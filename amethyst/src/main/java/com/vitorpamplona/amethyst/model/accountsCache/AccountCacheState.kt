@@ -100,15 +100,22 @@ class AccountCacheState(
 
         val mlsStore =
             try {
-                AndroidMlsGroupStateStore(rootFilesDir())
+                val dir = rootFilesDir()
+                Log.d("AccountCacheState") {
+                    "Initializing AndroidMlsGroupStateStore for ${signer.pubKey.take(8)}… at ${dir.absolutePath}"
+                }
+                AndroidMlsGroupStateStore(dir)
             } catch (e: Exception) {
                 Log.e(
                     "AccountCacheState",
-                    "Failed to initialize AndroidMlsGroupStateStore, falling back to in-memory store (Marmot groups will not persist across restarts)",
+                    "Failed to initialize AndroidMlsGroupStateStore, falling back to in-memory store (Marmot groups will NOT persist across restarts)",
                     e,
                 )
                 InMemoryMlsGroupStateStore()
             }
+        Log.d("AccountCacheState") {
+            "Account ${signer.pubKey.take(8)}… using Marmot store: ${mlsStore::class.simpleName}"
+        }
 
         return Account(
             settings = accountSettings,

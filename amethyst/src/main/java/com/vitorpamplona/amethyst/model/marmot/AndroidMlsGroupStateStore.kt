@@ -43,6 +43,13 @@ class AndroidMlsGroupStateStore(
     private val rootDir: File,
     private val encryption: KeyStoreEncryption = KeyStoreEncryption(),
 ) : MlsGroupStateStore {
+    init {
+        Log.d(TAG) {
+            "Initialized AndroidMlsGroupStateStore: rootDir=${rootDir.absolutePath}, " +
+                "mls_groups exists=${File(rootDir, "mls_groups").exists()}"
+        }
+    }
+
     private fun groupDir(nostrGroupId: String): File {
         // Validate nostrGroupId is a hex string to prevent path traversal
         require(nostrGroupId.matches(HEX_PATTERN)) {
@@ -52,6 +59,7 @@ class AndroidMlsGroupStateStore(
     }
 
     companion object {
+        private const val TAG = "AndroidMlsGroupStateStore"
         private val HEX_PATTERN = Regex("^[0-9a-fA-F]+$")
     }
 
@@ -64,20 +72,44 @@ class AndroidMlsGroupStateStore(
         state: ByteArray,
     ) = withContext(Dispatchers.IO) {
         val file = stateFile(nostrGroupId)
-        file.parentFile?.mkdirs()
-        atomicWrite(file, encryption.encrypt(state))
+        Log.d(TAG) { "save($nostrGroupId): ${state.size} bytes → ${file.absolutePath}" }
+        try {
+            file.parentFile?.mkdirs()
+            val encrypted = encryption.encrypt(state)
+            atomicWrite(file, encrypted)
+            Log.d(TAG) {
+                "save($nostrGroupId): wrote ${encrypted.size} encrypted bytes, " +
+                    "file exists=${file.exists()}, file size=${if (file.exists()) file.length() else -1}"
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "save($nostrGroupId) FAILED: ${e.message}", e)
+            throw e
+        }
     }
 
     override suspend fun load(nostrGroupId: String): ByteArray? =
         withContext(Dispatchers.IO) {
             val file = stateFile(nostrGroupId)
-            if (!file.exists()) return@withContext null
-            encryption.decrypt(file.readBytes())
+            if (!file.exists()) {
+                Log.d(TAG) { "load($nostrGroupId): file does not exist at ${file.absolutePath}" }
+                return@withContext null
+            }
+            try {
+                val bytes = file.readBytes()
+                Log.d(TAG) { "load($nostrGroupId): read ${bytes.size} encrypted bytes from ${file.absolutePath}" }
+                val decrypted = encryption.decrypt(bytes)
+                Log.d(TAG) { "load($nostrGroupId): decrypted to ${decrypted?.size ?: -1} bytes" }
+                decrypted
+            } catch (e: Exception) {
+                Log.e(TAG, "load($nostrGroupId) FAILED: ${e.message}", e)
+                throw e
+            }
         }
 
     override suspend fun delete(nostrGroupId: String) {
         withContext(Dispatchers.IO) {
             val dir = groupDir(nostrGroupId)
+            Log.w(TAG) { "delete($nostrGroupId): deleting ${dir.absolutePath}" }
             dir.deleteRecursively()
         }
     }
@@ -85,12 +117,20 @@ class AndroidMlsGroupStateStore(
     override suspend fun listGroups(): List<String> =
         withContext(Dispatchers.IO) {
             val baseDir = File(rootDir, "mls_groups")
-            if (!baseDir.exists()) return@withContext emptyList()
-            baseDir
-                .listFiles()
-                ?.filter { it.isDirectory && File(it, "state").exists() }
-                ?.map { it.name }
-                ?: emptyList()
+            if (!baseDir.exists()) {
+                Log.d(TAG) { "listGroups(): base dir does not exist at ${baseDir.absolutePath}" }
+                return@withContext emptyList()
+            }
+            val allEntries = baseDir.listFiles()?.toList() ?: emptyList()
+            val result =
+                allEntries
+                    .filter { it.isDirectory && File(it, "state").exists() }
+                    .map { it.name }
+            Log.d(TAG) {
+                "listGroups(): ${baseDir.absolutePath} has ${allEntries.size} entries, " +
+                    "${result.size} valid groups: $result"
+            }
+            result
         }
 
     override suspend fun saveRetainedEpochs(
