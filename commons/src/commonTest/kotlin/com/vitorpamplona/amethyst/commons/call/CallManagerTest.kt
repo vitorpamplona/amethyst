@@ -1162,8 +1162,9 @@ class CallManagerTest {
      * Regression: in an initial group call, the callees observing each other's
      * answers MUST NOT trip the mid-call expansion branch. The answering peer
      * was already part of the group membership set by [acceptCall] (via the
-     * IncomingCall.groupMembers → Connecting.peerPubKeys transition), so no
-     * additional insertion should occur.
+     * IncomingCall.groupMembers → Connecting.peerPubKeys/pendingPeerPubKeys
+     * transition), so the combined size must stay the same — the peer only
+     * moves out of pending into connected.
      */
     @Test
     fun initialCallAnswerFromKnownPeerDoesNotExpandMembership() =
@@ -1174,14 +1175,18 @@ class CallManagerTest {
             manager.onSignalingEvent(makeGroupOffer(from = alice, members = setOf(bob, carol)))
             assertIs<CallState.IncomingCall>(manager.state.value)
 
-            // Bob accepts. State becomes Connecting(peerPubKeys={alice, carol}).
+            // Bob accepts. State becomes
+            // Connecting(peerPubKeys={alice}, pendingPeerPubKeys={carol}).
             manager.acceptCall(sdpAnswer)
             val connecting = manager.state.value
             assertIs<CallState.Connecting>(connecting)
             assertTrue(alice in connecting.peerPubKeys)
-            assertTrue(carol in connecting.peerPubKeys)
+            assertTrue(
+                carol in connecting.pendingPeerPubKeys,
+                "Carol should start in pending until Bob observes her joining",
+            )
 
-            val sizeBefore = connecting.peerPubKeys.size
+            val totalBefore = connecting.peerPubKeys.size + connecting.pendingPeerPubKeys.size
 
             // Carol — who is already in Bob's tracked membership — answers.
             // This is the normal initial-call mesh observation path.
@@ -1189,7 +1194,10 @@ class CallManagerTest {
 
             val after = manager.state.value
             assertIs<CallState.Connecting>(after)
-            assertEquals(sizeBefore, after.peerPubKeys.size, "Known peer's answer must not grow peerPubKeys")
+            val totalAfter = after.peerPubKeys.size + after.pendingPeerPubKeys.size
+            assertEquals(totalBefore, totalAfter, "Known peer's answer must not grow the tracked membership")
+            assertTrue(carol in after.peerPubKeys, "Carol should move into peerPubKeys on answer")
+            assertTrue(carol !in after.pendingPeerPubKeys, "Carol should leave pendingPeerPubKeys on answer")
         }
 
     /**
@@ -1261,11 +1269,17 @@ class CallManagerTest {
 
             // Step 4: Carol accepts. Her Connecting state must include Bob
             // (so later mid-call offers from Bob are handled correctly).
+            // Alice (the caller) is placed directly into peerPubKeys; Bob
+            // is placed into pendingPeerPubKeys with a local watchdog
+            // timer until we observe him in the call.
             carolManager.acceptCall("carol-answer-sdp")
             val carolConnecting = carolManager.state.value
             assertIs<CallState.Connecting>(carolConnecting)
-            assertTrue(bob in carolConnecting.peerPubKeys, "Carol's Connecting state must include Bob as a peer")
             assertTrue(alice in carolConnecting.peerPubKeys, "Carol's Connecting state must include Alice as a peer")
+            assertTrue(
+                bob in carolConnecting.pendingPeerPubKeys,
+                "Carol's Connecting state must track Bob as a pending peer until he joins",
+            )
 
             // Step 5: Alice receives Carol's answer broadcast. Carol moves
             // out of pending into peerPubKeys.
@@ -1449,6 +1463,117 @@ class CallManagerTest {
                 publishedAfterReject,
                 published.size,
                 "No timeout hangup should be published after the peer rejected",
+            )
+        }
+
+    /**
+     * Callee-side group call: Bob accepts a group offer from Alice that
+     * also included Carol. Carol never joins. After 30 s Bob's local
+     * watchdog timer drops Carol from his Connecting state WITHOUT
+     * publishing any signaling (the caller is responsible for terminating
+     * Carol's ringing — not Bob).
+     */
+    @Test
+    fun perPeerTimeoutDropsUnresponsiveGroupMemberOnCalleeSide() =
+        runTest {
+            val (manager, published) = createManager(localPubKey = bob, followedKeys = setOf(alice, carol))
+
+            // Alice calls {bob, carol} as a group. Bob receives and accepts.
+            manager.onSignalingEvent(makeGroupOffer(from = alice, members = setOf(bob, carol)))
+            assertIs<CallState.IncomingCall>(manager.state.value)
+            manager.acceptCall(sdpAnswer)
+
+            // Bob's Connecting state: Alice (caller) is connected, Carol
+            // is pending with a watchdog timer.
+            val connecting = manager.state.value
+            assertIs<CallState.Connecting>(connecting)
+            assertTrue(alice in connecting.peerPubKeys, "Caller must be in peerPubKeys")
+            assertTrue(carol in connecting.pendingPeerPubKeys, "Unseen peer must be pending")
+            published.clear()
+
+            // Advance past the 30 s per-peer timeout. Carol never sent an
+            // answer or a mesh offer.
+            advanceTimeBy(CallManager.PEER_INVITE_TIMEOUT_MS + 100)
+
+            val state = manager.state.value
+            assertIs<CallState.Connecting>(state)
+            assertTrue(carol !in state.pendingPeerPubKeys, "Carol must be dropped from pending")
+            assertTrue(carol !in state.peerPubKeys, "Carol must not be silently promoted")
+            assertTrue(alice in state.peerPubKeys, "Alice leg must be untouched")
+
+            // The callee MUST NOT publish a hangup — Carol is still
+            // connected to Alice from the caller's perspective, and
+            // terminating her ringing is Alice's responsibility.
+            assertTrue(
+                published.isEmpty(),
+                "Callee watchdog timeout must not publish any signaling",
+            )
+        }
+
+    /**
+     * Callee-side group call: Bob accepts a group offer that included
+     * Carol. Carol publishes a mesh offer to Bob mid-call. Bob must move
+     * Carol out of pending into peerPubKeys and cancel her watchdog timer
+     * — the offer is proof she's in the call.
+     */
+    @Test
+    fun midCallOfferFromPendingPeerMovesThemIntoConnected() =
+        runTest {
+            val (manager, _) = createManager(localPubKey = bob, followedKeys = setOf(alice, carol))
+
+            manager.onSignalingEvent(makeGroupOffer(from = alice, members = setOf(bob, carol)))
+            manager.acceptCall(sdpAnswer)
+            val connecting = manager.state.value
+            assertIs<CallState.Connecting>(connecting)
+            assertTrue(carol in connecting.pendingPeerPubKeys)
+
+            // Carol publishes a mesh offer to Bob (same call-id).
+            var midCallOfferPeer: HexKey? = null
+            manager.onMidCallOfferReceived = { peer, _ -> midCallOfferPeer = peer }
+            manager.onSignalingEvent(makeGroupOffer(from = carol, members = setOf(alice, bob, carol)))
+
+            val after = manager.state.value
+            assertIs<CallState.Connecting>(after)
+            assertTrue(carol in after.peerPubKeys, "Carol should move into peerPubKeys")
+            assertTrue(carol !in after.pendingPeerPubKeys, "Carol should leave pending")
+            assertEquals(carol, midCallOfferPeer, "CallController must still receive the mid-call offer")
+
+            // And her watchdog should be cancelled — advancing past the
+            // 30 s budget must not further alter state.
+            advanceTimeBy(CallManager.PEER_INVITE_TIMEOUT_MS + 100)
+            val later = manager.state.value
+            assertIs<CallState.Connecting>(later)
+            assertTrue(carol in later.peerPubKeys, "Carol must remain connected after timeout budget")
+        }
+
+    /**
+     * Regression: the callee-side watchdog must be cancelled when a
+     * pending peer's answer arrives, so advancing past 30 s afterwards
+     * does not cause a phantom state change or publish.
+     */
+    @Test
+    fun calleeWatchdogIsCancelledOnAnswerFromPendingPeer() =
+        runTest {
+            val (manager, published) = createManager(localPubKey = bob, followedKeys = setOf(alice, carol))
+
+            manager.onSignalingEvent(makeGroupOffer(from = alice, members = setOf(bob, carol)))
+            manager.acceptCall(sdpAnswer)
+            assertTrue(carol in (manager.state.value as CallState.Connecting).pendingPeerPubKeys)
+
+            // Carol's answer reaches Bob well before her watchdog fires.
+            manager.onSignalingEvent(makeGroupAnswer(from = carol, members = setOf(alice, bob, carol)))
+            val afterAnswer = manager.state.value
+            assertIs<CallState.Connecting>(afterAnswer)
+            assertTrue(carol in afterAnswer.peerPubKeys)
+            assertTrue(carol !in afterAnswer.pendingPeerPubKeys)
+            published.clear()
+
+            // Advance past the 30 s watchdog — nothing should fire.
+            advanceTimeBy(CallManager.PEER_INVITE_TIMEOUT_MS * 2)
+            assertIs<CallState.Connecting>(manager.state.value)
+            assertTrue(
+                published.isEmpty(),
+                "Cancelled watchdog must not publish a hangup after the peer answered",
             )
         }
 
