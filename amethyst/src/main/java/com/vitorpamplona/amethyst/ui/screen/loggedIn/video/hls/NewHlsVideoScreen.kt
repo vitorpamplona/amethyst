@@ -67,7 +67,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -508,27 +510,50 @@ private fun ProgressBody(
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
 
-        val uploadingFraction =
-            (state as? HlsPublishState.Uploading)?.let { up ->
-                if (up.total == 0) 0f else up.done.toFloat() / up.total
+        // Persist the last-observed upload count across transitions so the Uploading row
+        // doesn't flicker back to "0 of 0" whenever state flips to Transcoding (between
+        // renditions) or Publishing (after the last upload). The counter should read
+        // monotonically: 1 of N → 2 of N → … → N of N as uploads actually complete.
+        var lastDone by remember { mutableIntStateOf(0) }
+        var lastTotal by remember { mutableIntStateOf(0) }
+        LaunchedEffect(state) {
+            if (state is HlsPublishState.Uploading) {
+                lastDone = state.done
+                lastTotal = state.total
             }
+        }
+
+        val uploadingFraction =
+            if (lastTotal > 0) lastDone.toFloat() / lastTotal else null
         val uploadingLabel =
-            when (state) {
-                is HlsPublishState.Uploading -> {
-                    if (state.currentLabel.isNotBlank()) {
-                        stringResource(
-                            R.string.hls_state_uploading_with_label_format,
-                            state.currentLabel,
-                            state.done,
-                            state.total,
-                        )
-                    } else {
-                        stringResource(R.string.hls_state_uploading_format, state.done, state.total)
-                    }
+            when {
+                // Currently in flight: present-tense, file label in the line.
+                state is HlsPublishState.Uploading && state.currentLabel.isNotBlank() -> {
+                    stringResource(
+                        R.string.hls_state_uploading_with_label_format,
+                        state.currentLabel,
+                        state.done,
+                        state.total,
+                    )
                 }
 
+                // Currently in flight, no file label (unreachable in practice — orchestrator
+                // always sets a label — but kept for completeness).
+                state is HlsPublishState.Uploading -> {
+                    stringResource(R.string.hls_state_uploading_format, state.done, state.total)
+                }
+
+                // Between uploads or after all uploads finish: past-tense, monotonic count.
+                // The last uploaded file's index sticks on screen while the transcoder
+                // works on the next rendition, and lands on "Uploaded N of N" when the row
+                // flips to its checkmark/done state.
+                lastTotal > 0 -> {
+                    stringResource(R.string.hls_state_uploaded_format, lastDone, lastTotal)
+                }
+
+                // Nothing has started uploading yet (very beginning of publish flow).
                 else -> {
-                    stringResource(R.string.hls_state_uploading_format, 0, 0)
+                    stringResource(R.string.hls_state_uploading_idle)
                 }
             }
         PhaseRow(
