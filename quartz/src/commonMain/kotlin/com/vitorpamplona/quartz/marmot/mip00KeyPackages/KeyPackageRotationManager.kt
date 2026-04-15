@@ -79,6 +79,14 @@ class KeyPackageRotationManager(
      * Restore previously persisted bundles + rotation state from [store].
      * Call once at startup before any other use of this manager.
      * Safe to call when no store is configured (no-op in that case).
+     *
+     * NOTE: v1 snapshots are deliberately NOT loaded. v1 predates the
+     * `eventIdToSlot` index, so any bundles it holds would be unreachable
+     * to the Welcome path (which looks up bundles by Nostr event id). The
+     * cleanest upgrade is to discard the v1 state, let
+     * `Account.ensureMarmotKeyPackagePublished` regenerate + republish
+     * fresh KeyPackages, and rely on d-tag replacement on relays to
+     * replace the stale kind:30443 events.
      */
     suspend fun restoreFromStore() {
         val store = store ?: return
@@ -91,6 +99,36 @@ class KeyPackageRotationManager(
             } ?: return
         try {
             val decoded = decodeSnapshot(bytes)
+            if (decoded == null) {
+                Log.w("KeyPackageRotationManager") {
+                    "Discarding legacy v1 KeyPackage snapshot — bundles will be regenerated and republished"
+                }
+                // Drop any state the caller may have set and force
+                // `ensureMarmotKeyPackagePublished` to publish fresh ones.
+                try {
+                    store.delete()
+                } catch (e: Exception) {
+                    Log.w("KeyPackageRotationManager", "Failed to delete legacy snapshot: ${e.message}")
+                }
+                return
+            }
+
+            // v2 snapshot: if bundles were restored but the eventId
+            // index is empty (upgrade corner case, or a corrupted save),
+            // the bundles are effectively unreachable — wipe them too
+            // so a fresh publish happens.
+            if (decoded.bundles.isNotEmpty() && decoded.eventIdToSlot.isEmpty()) {
+                Log.w("KeyPackageRotationManager") {
+                    "Restored ${decoded.bundles.size} bundle(s) but no eventId→slot mapping — discarding, will republish"
+                }
+                try {
+                    store.delete()
+                } catch (e: Exception) {
+                    Log.w("KeyPackageRotationManager", "Failed to delete stale snapshot: ${e.message}")
+                }
+                return
+            }
+
             mutex.withLock {
                 activeBundles.clear()
                 activeBundles.putAll(decoded.bundles)
@@ -146,13 +184,17 @@ class KeyPackageRotationManager(
     }
 
     /**
-     * Decode the persisted snapshot.
+     * Decode the persisted snapshot. Returns null if the on-disk version
+     * is older than the current [SNAPSHOT_VERSION] and should be discarded
+     * by the caller (see [restoreFromStore] for the rationale).
      */
-    private fun decodeSnapshot(bytes: ByteArray): Snapshot {
+    private fun decodeSnapshot(bytes: ByteArray): Snapshot? {
         val reader = TlsReader(bytes)
         val version = reader.readUint16()
-        require(version == 1 || version == SNAPSHOT_VERSION) {
-            "Unsupported KeyPackage snapshot version: $version"
+        if (version != SNAPSHOT_VERSION) {
+            // Older / unknown snapshot version — tell the caller to
+            // discard it rather than loading partial state.
+            return null
         }
         val numBundles = reader.readUint32().toInt()
         val bundles = mutableMapOf<String, KeyPackageBundle>()
@@ -170,11 +212,8 @@ class KeyPackageRotationManager(
         repeat(numPending) {
             pending.add(reader.readOpaque2().decodeToString())
         }
-        // eventId → slot map: only present in v2+. Older snapshots may
-        // not have this section, in which case the map starts empty and
-        // will be repopulated as KeyPackages are republished.
         val eventIdMap = mutableMapOf<String, String>()
-        if (version >= SNAPSHOT_VERSION && reader.hasRemaining) {
+        if (reader.hasRemaining) {
             val numEventIds = reader.readUint32().toInt()
             repeat(numEventIds) {
                 val eventId = reader.readOpaque2().decodeToString()
