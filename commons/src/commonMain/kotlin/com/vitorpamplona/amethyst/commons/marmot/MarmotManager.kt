@@ -76,10 +76,12 @@ class MarmotManager(
      * Call once during Account initialization.
      */
     suspend fun restoreAll() {
+        Log.d("MarmotManager") { "restoreAll(): begin for ${signer.pubKey.take(8)}…" }
         try {
             groupManager.restoreAll()
-            subscriptionManager.syncWithGroupManager(groupManager.activeGroupIds())
-            Log.d("MarmotManager", "Restored ${groupManager.activeGroupIds().size} groups")
+            val activeIds = groupManager.activeGroupIds()
+            subscriptionManager.syncWithGroupManager(activeIds)
+            Log.d("MarmotManager") { "restoreAll(): done, ${activeIds.size} groups: $activeIds" }
         } catch (e: Exception) {
             Log.e("MarmotManager", "Failed to restore Marmot state", e)
         }
@@ -194,9 +196,11 @@ class MarmotManager(
      * Create a new MLS group.
      */
     suspend fun createGroup(nostrGroupId: HexKey): HexKey {
+        Log.d("MarmotManager") { "createGroup($nostrGroupId): by ${signer.pubKey.take(8)}…" }
         val identity = signer.pubKey.hexToByteArray()
         groupManager.createGroup(nostrGroupId, identity)
         subscriptionManager.subscribeGroup(nostrGroupId)
+        Log.d("MarmotManager") { "createGroup($nostrGroupId): persisted and subscribed" }
         return nostrGroupId
     }
 

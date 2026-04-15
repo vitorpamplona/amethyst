@@ -105,11 +105,17 @@ class MlsGroupManager(
     suspend fun restoreAll() =
         mutex.withLock {
             val groupIds = store.listGroups()
+            Log.d(TAG) { "restoreAll(): store reports ${groupIds.size} groups: $groupIds" }
             for (nostrGroupId in groupIds) {
                 try {
-                    val stateBytes = store.load(nostrGroupId) ?: continue
+                    val stateBytes = store.load(nostrGroupId)
+                    if (stateBytes == null) {
+                        Log.w(TAG) { "restoreAll(): load returned null for $nostrGroupId, skipping" }
+                        continue
+                    }
                     val state = MlsGroupState.decodeTls(stateBytes)
                     groups[nostrGroupId] = MlsGroup.restore(state)
+                    Log.d(TAG) { "restoreAll(): restored group $nostrGroupId (${stateBytes.size} bytes)" }
 
                     // Restore retained epochs
                     val retained = store.loadRetainedEpochs(nostrGroupId)
@@ -118,17 +124,19 @@ class MlsGroupManager(
                             retained
                                 .map { RetainedEpochSecrets.decodeTls(TlsReader(it)) }
                                 .toMutableList()
+                        Log.d(TAG) { "restoreAll(): restored ${retained.size} retained epochs for $nostrGroupId" }
                     }
                 } catch (e: Exception) {
                     // Corrupted state — log and remove it so it doesn't block future joins
                     Log.e(
-                        "MlsGroupManager",
-                        "Corrupted state for group $nostrGroupId, deleting: ${e.message}",
+                        TAG,
+                        "restoreAll(): Corrupted state for group $nostrGroupId, DELETING: ${e.message}",
                         e,
                     )
                     store.delete(nostrGroupId)
                 }
             }
+            Log.d(TAG) { "restoreAll(): finished with ${groups.size} active groups in memory" }
         }
 
     /**
@@ -162,9 +170,11 @@ class MlsGroupManager(
         signingKey: ByteArray? = null,
     ): MlsGroup =
         mutex.withLock {
+            Log.d(TAG) { "createGroup($nostrGroupId): creating new MLS group" }
             val group = MlsGroup.create(identity, signingKey)
             groups[nostrGroupId] = group
             persistGroup(nostrGroupId)
+            Log.d(TAG) { "createGroup($nostrGroupId): done, in-memory group count=${groups.size}" }
             group
         }
 
@@ -467,20 +477,32 @@ class MlsGroupManager(
             ?: throw IllegalStateException("Not a member of group $nostrGroupId")
 
     private suspend fun persistGroup(nostrGroupId: HexKey) {
-        val group = groups[nostrGroupId] ?: return
-        val state = group.saveState()
-        store.save(nostrGroupId, state.encodeTls())
+        val group = groups[nostrGroupId]
+        if (group == null) {
+            Log.w(TAG) { "persistGroup($nostrGroupId): group not in memory, skipping" }
+            return
+        }
+        try {
+            val state = group.saveState()
+            val encoded = state.encodeTls()
+            Log.d(TAG) { "persistGroup($nostrGroupId): serialized ${encoded.size} bytes, calling store.save" }
+            store.save(nostrGroupId, encoded)
 
-        // Also persist retained epochs
-        val retained = retainedEpochs[nostrGroupId]
-        if (retained != null) {
-            val retainedBytes =
-                retained.map { epoch ->
-                    val writer = TlsWriter()
-                    epoch.encodeTls(writer)
-                    writer.toByteArray()
-                }
-            store.saveRetainedEpochs(nostrGroupId, retainedBytes)
+            // Also persist retained epochs
+            val retained = retainedEpochs[nostrGroupId]
+            if (retained != null) {
+                val retainedBytes =
+                    retained.map { epoch ->
+                        val writer = TlsWriter()
+                        epoch.encodeTls(writer)
+                        writer.toByteArray()
+                    }
+                store.saveRetainedEpochs(nostrGroupId, retainedBytes)
+                Log.d(TAG) { "persistGroup($nostrGroupId): persisted ${retainedBytes.size} retained epochs" }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "persistGroup($nostrGroupId) FAILED: ${e.message}", e)
+            throw e
         }
     }
 
@@ -581,6 +603,8 @@ class MlsGroupManager(
         }
 
     companion object {
+        private const val TAG = "MlsGroupManager"
+
         /**
          * Number of past epochs to retain for late-arriving message decryption.
          * MLS forward secrecy guarantees mean we want to limit this window.
