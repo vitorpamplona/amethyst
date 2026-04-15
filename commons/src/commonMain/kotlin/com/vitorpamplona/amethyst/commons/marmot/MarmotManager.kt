@@ -35,6 +35,7 @@ import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageUtils
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
 import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
+import com.vitorpamplona.quartz.marmot.mls.group.MarmotMessageStore
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupManager
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupStateStore
 import com.vitorpamplona.quartz.marmot.mls.tree.Credential
@@ -63,6 +64,7 @@ import kotlin.io.encoding.ExperimentalEncodingApi
 class MarmotManager(
     val signer: NostrSigner,
     store: MlsGroupStateStore,
+    val messageStore: MarmotMessageStore? = null,
 ) {
     val groupManager = MlsGroupManager(store)
     val keyPackageRotationManager = KeyPackageRotationManager()
@@ -219,8 +221,42 @@ class MarmotManager(
         // Now clean up group state
         groupManager.removeGroupState(nostrGroupId)
         subscriptionManager.unsubscribeGroup(nostrGroupId)
+        try {
+            messageStore?.delete(nostrGroupId)
+        } catch (e: Exception) {
+            Log.w("MarmotManager", "Failed to delete persisted messages for $nostrGroupId: ${e.message}")
+        }
         return outboundEvent
     }
+
+    /**
+     * Persist a freshly decrypted inner event for restart recovery.
+     * Marmot MLS application messages cannot be re-decrypted after the
+     * ratchet advances, so the only way to restore them across app restarts
+     * is to capture the plaintext at decryption time.
+     */
+    suspend fun persistDecryptedMessage(
+        nostrGroupId: HexKey,
+        innerEventJson: String,
+    ) {
+        try {
+            messageStore?.appendMessage(nostrGroupId, innerEventJson)
+        } catch (e: Exception) {
+            Log.w("MarmotManager", "Failed to persist Marmot message for $nostrGroupId: ${e.message}")
+        }
+    }
+
+    /**
+     * Load all persisted inner event JSONs for a group, in append order.
+     * Returns an empty list if no message store is configured or none exist.
+     */
+    suspend fun loadStoredMessages(nostrGroupId: HexKey): List<String> =
+        try {
+            messageStore?.loadMessages(nostrGroupId) ?: emptyList()
+        } catch (e: Exception) {
+            Log.w("MarmotManager", "Failed to load persisted messages for $nostrGroupId: ${e.message}")
+            emptyList()
+        }
 
     /**
      * Remove a member from a group.

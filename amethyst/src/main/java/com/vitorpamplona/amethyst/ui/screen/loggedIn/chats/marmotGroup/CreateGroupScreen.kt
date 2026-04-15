@@ -69,9 +69,15 @@ fun CreateGroupScreen(
                             val nostrGroupId = RandomInstance.bytes(32).toHexKey()
                             accountViewModel.createMarmotGroup(nostrGroupId)
                             if (groupName.isNotBlank()) {
-                                accountViewModel.account.marmotGroupList
-                                    .getOrCreateGroup(nostrGroupId)
-                                    .displayName.value = groupName
+                                // Persist the name into the MLS GroupContext extensions
+                                // via a GCE commit — otherwise it lives only in memory
+                                // and is lost on app restart, leaving the edit screen
+                                // unable to find any current metadata.
+                                accountViewModel.updateMarmotGroupMetadata(
+                                    nostrGroupId = nostrGroupId,
+                                    name = groupName.trim(),
+                                    description = "",
+                                )
                             }
                             nav.nav(Route.MarmotGroupChat(nostrGroupId))
                         } catch (e: Exception) {

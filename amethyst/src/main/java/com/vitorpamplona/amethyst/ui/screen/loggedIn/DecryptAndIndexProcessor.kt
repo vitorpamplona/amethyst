@@ -482,6 +482,12 @@ class GroupEventHandler(
 
                         // Track the message in the Marmot group chatroom
                         account.marmotGroupList.addMessage(result.groupId, innerNote)
+
+                        // Persist the decrypted plaintext so the message
+                        // survives an app restart. Marmot/MLS application
+                        // messages cannot be re-decrypted once the ratchet
+                        // has advanced, so we must capture them here.
+                        manager.persistDecryptedMessage(result.groupId, result.innerEventJson)
                     }
                 }
 

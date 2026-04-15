@@ -81,6 +81,29 @@ class MarmotGroupChatroom(
         return false
     }
 
+    /**
+     * Add a message that is being restored from persistent storage on app
+     * startup. Behaves like [addMessageSync] but does NOT bump the unread
+     * count — restored messages were already seen by the user in a previous
+     * session.
+     */
+    @Synchronized
+    fun restoreMessageSync(msg: Note): Boolean {
+        if (msg !in messages) {
+            messages = messages + msg
+            msg.addGatherer(this)
+
+            val createdAt = msg.createdAt() ?: 0L
+            if (createdAt > (newestMessage?.createdAt() ?: 0L)) {
+                newestMessage = msg
+            }
+
+            changesFlow.get()?.tryEmit(ListChange.Addition(msg))
+            return true
+        }
+        return false
+    }
+
     @Synchronized
     fun removeMessageSync(msg: Note): Boolean {
         if (msg in messages) {

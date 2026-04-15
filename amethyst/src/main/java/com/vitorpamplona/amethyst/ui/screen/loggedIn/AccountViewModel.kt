@@ -1509,14 +1509,25 @@ class AccountViewModel(
         name: String,
         description: String,
     ) {
-        val currentMetadata =
-            account.marmotManager?.groupMetadata(nostrGroupId)
-                ?: throw IllegalStateException("Group metadata not found")
+        val currentMetadata = account.marmotManager?.groupMetadata(nostrGroupId)
         val updatedMetadata =
-            currentMetadata.copy(
-                name = name,
-                description = description,
-            )
+            if (currentMetadata != null) {
+                currentMetadata.copy(
+                    name = name,
+                    description = description,
+                )
+            } else {
+                // No MarmotGroupData extension exists yet — this happens for groups
+                // created before initial metadata was persisted, or right after a
+                // fresh `createMarmotGroup`. Build a brand-new extension with the
+                // creator as the sole admin so the GCE proposal carries valid data.
+                com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData(
+                    nostrGroupId = nostrGroupId,
+                    name = name,
+                    description = description,
+                    adminPubkeys = listOf(account.signer.pubKey),
+                )
+            }
         val relays = marmotGroupRelays(nostrGroupId)
         account.updateMarmotGroupMetadata(nostrGroupId, updatedMetadata, relays)
     }

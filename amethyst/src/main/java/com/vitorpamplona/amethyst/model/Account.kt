@@ -256,6 +256,7 @@ class Account(
     val client: INostrClient,
     val scope: CoroutineScope,
     val mlsGroupStateStore: MlsGroupStateStore? = null,
+    val marmotMessageStore: com.vitorpamplona.quartz.marmot.mls.group.MarmotMessageStore? = null,
 ) : IAccount {
     private var userProfileCache: User? = null
 
@@ -386,7 +387,7 @@ class Account(
 
     val otsState = OtsState(signer, cache, otsResolverBuilder, scope, settings)
 
-    val marmotManager: MarmotManager? = mlsGroupStateStore?.let { MarmotManager(signer, it) }
+    val marmotManager: MarmotManager? = mlsGroupStateStore?.let { MarmotManager(signer, it, marmotMessageStore) }
 
     val paymentTargetsState = NipA3PaymentTargetsState(signer, cache, scope, settings)
 
@@ -1973,6 +1974,11 @@ class Account(
         if (!isWriteable()) return
 
         val outbound = manager.updateGroupMetadata(nostrGroupId, metadata)
+        // The MLS commit has already been applied locally — surface the new
+        // metadata in the chatroom now so the UI reflects it without waiting
+        // for the relay round-trip.
+        val chatroom = marmotGroupList.getOrCreateGroup(nostrGroupId)
+        manager.syncMetadataTo(nostrGroupId, chatroom)
         client.publish(outbound.signedEvent, groupRelays)
     }
 
@@ -2438,10 +2444,37 @@ class Account(
         if (marmotManager != null) {
             scope.launch(Dispatchers.IO) {
                 marmotManager.restoreAll()
-                // Sync MIP-01 metadata from restored groups to chatrooms
+                // Sync MIP-01 metadata from restored groups to chatrooms and
+                // re-hydrate decrypted messages from persistent storage.
+                // Note: Marmot MLS application messages cannot be re-decrypted
+                // after the ratchet advances, so persisted plaintext is the
+                // only way to restore group history across restarts.
                 marmotManager.activeGroupIds().forEach { groupId ->
                     val chatroom = marmotGroupList.getOrCreateGroup(groupId)
                     marmotManager.syncMetadataTo(groupId, chatroom)
+
+                    val storedMessages = marmotManager.loadStoredMessages(groupId)
+                    if (storedMessages.isNotEmpty()) {
+                        Log.d("Account") {
+                            "Restoring ${storedMessages.size} Marmot message(s) for group $groupId"
+                        }
+                        storedMessages.forEach { json ->
+                            try {
+                                val innerEvent = com.vitorpamplona.quartz.nip01Core.core.Event.fromJson(json)
+                                val isNew = cache.justConsume(innerEvent, null, false)
+                                val innerNote = cache.getOrCreateNote(innerEvent.id)
+                                if (isNew) {
+                                    innerNote.event = innerEvent
+                                }
+                                marmotGroupList.restoreMessage(groupId, innerNote)
+                            } catch (e: Exception) {
+                                Log.w(
+                                    "Account",
+                                    "Failed to restore persisted Marmot message for $groupId: ${e.message}",
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }

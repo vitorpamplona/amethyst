@@ -49,6 +49,20 @@ class MarmotGroupList {
         }
     }
 
+    /**
+     * Add a message that was restored from persistent storage at app startup.
+     * Does not bump the chatroom's unread counter.
+     */
+    fun restoreMessage(
+        nostrGroupId: HexKey,
+        msg: Note,
+    ) {
+        val chatroom = getOrCreateGroup(nostrGroupId)
+        if (chatroom.restoreMessageSync(msg)) {
+            _groupListChanges.tryEmit(nostrGroupId)
+        }
+    }
+
     fun removeMessage(
         nostrGroupId: HexKey,
         msg: Note,
