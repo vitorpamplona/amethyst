@@ -42,6 +42,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -118,6 +119,12 @@ private fun ChatroomEntry(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    val marmotGroup = lastMessage.inGatherers?.firstNotNullOfOrNull { it as? MarmotGroupChatroom }
+    if (marmotGroup != null) {
+        MarmotGroupRoomCompose(lastMessage, marmotGroup, accountViewModel, nav)
+        return
+    }
+
     val baseNoteEvent = lastMessage.event
     when (baseNoteEvent) {
         is ChannelMessageEvent -> {
@@ -231,6 +238,35 @@ private fun ChannelRoomCompose(
         loadProfilePicture = accountViewModel.settings.showProfilePictures(),
         loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
         onClick = { nav.nav(routeFor(channel)) },
+    )
+}
+
+@Composable
+private fun MarmotGroupRoomCompose(
+    lastMessage: Note,
+    chatroom: MarmotGroupChatroom,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val authorName by observeUserName(lastMessage.author!!, accountViewModel)
+    val displayName by chatroom.displayName.collectAsStateWithLifecycle()
+    val unread by chatroom.unreadCount.collectAsStateWithLifecycle()
+
+    val noteEvent = lastMessage.event
+    val description = noteEvent?.content?.take(200)
+
+    val groupName = displayName?.takeIf { it.isNotBlank() } ?: "Group ${chatroom.nostrGroupId.take(8)}"
+
+    ChannelName(
+        channelIdHex = chatroom.nostrGroupId,
+        channelPicture = null,
+        channelTitle = { modifier -> ChannelTitleWithLabelInfo(groupName, R.string.marmot_group, modifier) },
+        channelLastTime = lastMessage.createdAt(),
+        channelLastContent = "$authorName: $description",
+        hasNewMessages = unread > 0,
+        loadProfilePicture = accountViewModel.settings.showProfilePictures(),
+        loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+        onClick = { nav.nav(Route.MarmotGroupChat(chatroom.nostrGroupId)) },
     )
 }
 
