@@ -117,6 +117,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.newUser.ImportFollowListSel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NotificationScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.publicMessages.NewPublicMessageScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.pictures.PicturesScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.pinnednotes.PinnedNotesScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.PollPostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.PollsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.privacy.PrivacyOptionsScreen
@@ -258,6 +259,7 @@ fun BuildNavigation(
         composableFromEnd<Route.OtsSettings> { OtsSettingsScreen(nav) }
         composableFromEnd<Route.Bookmarks> { BookmarkListScreen(accountViewModel, nav) }
         composableFromEnd<Route.OldBookmarks> { OldBookmarkListScreen(accountViewModel, nav) }
+        composableFromEnd<Route.PinnedNotes> { PinnedNotesScreen(accountViewModel, nav) }
         composableFromEnd<Route.WebBookmarks> { WebBookmarksScreen(accountViewModel, nav) }
         composableFromEnd<Route.Drafts> { DraftListScreen(accountViewModel, nav) }
         composableFromEnd<Route.Settings> { SettingsScreen(accountViewModel, nav) }

@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "./gradlew spotlessApply 2>/dev/null || spotless-apply",
+            "command": "./gradlew spotlessApply 2>/dev/null",
             "timeout": 120
           }
         ]

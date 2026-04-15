@@ -430,6 +430,7 @@
     <string name="remove_from_public_bookmarks">Remove from Public Bookmarks</string>
 
     <string name="pinned_notes">Pinned Notes</string>
+    <string name="pinned_notes_explainer">Your pinned notes</string>
     <string name="pin_to_profile">Pin to Profile</string>
     <string name="unpin_from_profile">Unpin from Profile</string>
 
