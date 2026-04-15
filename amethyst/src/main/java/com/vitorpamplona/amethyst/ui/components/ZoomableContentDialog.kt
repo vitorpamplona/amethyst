@@ -60,11 +60,12 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
@@ -105,6 +106,8 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import net.engawapg.lib.zoomable.rememberZoomState
 import net.engawapg.lib.zoomable.zoomable
@@ -120,18 +123,23 @@ fun ZoomableImageDialog(
     // Animation progress: 0f = at source position/size, 1f = fullscreen.
     val progress = remember { Animatable(0f) }
     var isExiting by remember { mutableStateOf(false) }
-    var boundsReady by remember { mutableStateOf(false) }
 
-    // Wait for the image's natural bounds to be measured before starting the grow
-    // animation. Without this, the first frame may use placeholder bounds and snap
-    // to the real bounds mid-animation, producing a hiccup around the middle.
-    LaunchedEffect(boundsReady) {
-        if (boundsReady) {
-            progress.animateTo(
-                targetValue = 1f,
-                animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
-            )
-        }
+    // Natural layout bounds of the currently-visible image/video inside the dialog.
+    // Used as the "target" of the grow animation so the image itself — not the dialog
+    // viewport — aligns with the tapped thumbnail at progress = 0.
+    var imageBounds by remember { mutableStateOf<Rect?>(null) }
+
+    // Start the enter animation as soon as valid image bounds are available. Without
+    // this gate, the animation can begin before onGloballyPositioned has reported real
+    // bounds and the graphicsLayer falls back to its alpha-only branch.
+    LaunchedEffect(Unit) {
+        snapshotFlow { imageBounds }
+            .filter { it != null && it.width > 0f && it.height > 0f }
+            .first()
+        progress.animateTo(
+            targetValue = 1f,
+            animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
+        )
     }
 
     LaunchedEffect(isExiting) {
@@ -146,8 +154,21 @@ fun ZoomableImageDialog(
 
     val dismissWithAnimation: () -> Unit = { if (!isExiting) isExiting = true }
     val progressProvider: () -> Float = { progress.value }
-    val isAnimatingProvider: () -> Boolean = { progress.isRunning }
-    val onBoundsReady: () -> Unit = { if (!boundsReady) boundsReady = true }
+
+    // Accept the first set of valid bounds unconditionally. Subsequent updates are
+    // only accepted while the progress Animatable is idle, so a layout change
+    // mid-transition (e.g. an async image finishing loading, or a pager settling)
+    // can't re-target the transform and cause a hiccup.
+    val updateImageBounds: (Rect) -> Unit = { newBounds ->
+        if (newBounds.width > 0f && newBounds.height > 0f) {
+            val current = imageBounds
+            if (current == null) {
+                imageBounds = newBounds
+            } else if (!progress.isRunning && current != newBounds) {
+                imageBounds = newBounds
+            }
+        }
+    }
 
     Dialog(
         onDismissRequest = dismissWithAnimation,
@@ -186,9 +207,9 @@ fun ZoomableImageDialog(
                 allImages = allImages,
                 imageUrl = imageUrl,
                 sourceBounds = sourceBounds,
+                imageBounds = imageBounds,
+                onImageBoundsChanged = updateImageBounds,
                 progress = progressProvider,
-                isAnimating = isAnimatingProvider,
-                onBoundsReady = onBoundsReady,
                 onDismiss = dismissWithAnimation,
                 accountViewModel = accountViewModel,
             )
@@ -202,32 +223,15 @@ private fun DialogContent(
     allImages: ImmutableList<BaseMediaContent>,
     imageUrl: BaseMediaContent,
     sourceBounds: Rect?,
+    imageBounds: Rect?,
+    onImageBoundsChanged: (Rect) -> Unit,
     progress: () -> Float,
-    isAnimating: () -> Boolean,
-    onBoundsReady: () -> Unit,
     onDismiss: () -> Unit,
     accountViewModel: AccountViewModel,
 ) {
     val pagerState: PagerState = rememberPagerState { allImages.size }
     val controllerVisible = remember { mutableStateOf(true) }
     val sharePopupExpanded = remember { mutableStateOf(false) }
-
-    // Natural layout bounds of the currently visible image/video inside the dialog.
-    // Used as the "target" of the grow animation so the image itself — not the dialog
-    // viewport — aligns with the source thumbnail at progress = 0. We block updates
-    // while the progress animation is running so a mid-flight layout change (e.g. an
-    // async image finishing loading, or a pager settling) can't snap the transform
-    // target and cause a visible hiccup.
-    var imageBounds by remember { mutableStateOf<Rect?>(null) }
-
-    val updateImageBounds: (Rect) -> Unit = { newBounds ->
-        if (!isAnimating()) {
-            if (imageBounds != newBounds) {
-                imageBounds = newBounds
-            }
-            onBoundsReady()
-        }
-    }
 
     LaunchedEffect(key1 = pagerState, key2 = imageUrl) {
         launch {
@@ -302,7 +306,7 @@ private fun DialogContent(
                                 accountViewModel = accountViewModel,
                                 onContentBoundsChanged =
                                     if (index == pagerState.currentPage) {
-                                        updateImageBounds
+                                        onImageBoundsChanged
                                     } else {
                                         null
                                     },
@@ -318,7 +322,7 @@ private fun DialogContent(
                         isFiniteHeight = true,
                         controllerVisible = controllerVisible,
                         accountViewModel = accountViewModel,
-                        onContentBoundsChanged = updateImageBounds,
+                        onContentBoundsChanged = onImageBoundsChanged,
                     )
                 }
             }
