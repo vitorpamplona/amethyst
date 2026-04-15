@@ -47,7 +47,6 @@ import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.ReactionsRow
-import com.vitorpamplona.amethyst.ui.note.observeEdits
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip31Alts.alt
@@ -62,13 +61,12 @@ fun FileHeaderCardCompose(
 ) {
     val event = (baseNote.event as? FileHeaderEvent) ?: return
     val backgroundColor = remember { mutableStateOf(Color.Transparent) }
-    val editState = observeEdits(baseNote = baseNote, accountViewModel = accountViewModel)
 
     Column(
         modifier = Modifier.fillMaxWidth(),
     ) {
         // Author header row
-        UserCardHeader(baseNote, accountViewModel, nav, editState)
+        UserCardHeader(baseNote, accountViewModel, nav)
 
         // Image content
         FileHeaderCardImage(baseNote, event, backgroundColor, accountViewModel)
@@ -78,7 +76,7 @@ fun FileHeaderCardCompose(
             baseNote = baseNote,
             showReactionDetail = true,
             addPadding = true,
-            editState = editState,
+            editState = null,
             accountViewModel = accountViewModel,
             nav = nav,
         )
