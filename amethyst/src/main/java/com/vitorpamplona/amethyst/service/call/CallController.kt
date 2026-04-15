@@ -212,6 +212,9 @@ class CallController(
             val callId = UUID.randomUUID().toString()
             _errorMessage.value = null
 
+            // A new call session begins — arm cleanup() so it will run again
+            // for this session's Ended transition.
+            cleanedUp.set(false)
             applyCallSettings()
             try {
                 withContext(Dispatchers.IO) { mediaManager.initialize(callType) }
@@ -258,6 +261,9 @@ class CallController(
         scope.launch {
             _errorMessage.value = null
 
+            // A new call session begins — arm cleanup() so it will run again
+            // for this session's Ended transition.
+            cleanedUp.set(false)
             applyCallSettings()
             try {
                 withContext(Dispatchers.IO) { mediaManager.initialize(state.callType) }
@@ -304,8 +310,28 @@ class CallController(
             }
 
             AnswerRouteAction.NO_SESSION -> {
-                Log.d(TAG) { "Answer from unknown peer ${peerPubKey.take(8)} — triggering callee-to-callee" }
-                onNewPeerInGroupCall(peerPubKey)
+                // Unknown peer answering the current call. Two cases:
+                //
+                // 1. We are in Connected state — another participant invited a
+                //    new peer mid-call and the invitee is broadcasting their
+                //    acceptance to us. The invitee stays passive, so we MUST
+                //    unconditionally initiate a mesh offer to them. The
+                //    lower-pubkey tiebreaker does NOT apply here because only
+                //    one side (the existing Connected callee) reacts to the
+                //    broadcast answer.
+                //
+                // 2. We are still in Connecting state — both callees are
+                //    handshaking in parallel during an initial group call and
+                //    are observing each other's answers. Use the lower-pubkey
+                //    tiebreaker via onNewPeerInGroupCall() to avoid glare,
+                //    since the symmetric peer will apply the same rule.
+                if (callManager.state.value is CallState.Connected) {
+                    Log.d(TAG) { "Mid-call invite: ${peerPubKey.take(8)} joined — initiating mesh offer" }
+                    scope.launch { createAndOfferToPeer(peerPubKey) }
+                } else {
+                    Log.d(TAG) { "Answer from unknown peer ${peerPubKey.take(8)} — triggering callee-to-callee" }
+                    onNewPeerInGroupCall(peerPubKey)
+                }
             }
 
             AnswerRouteAction.IGNORED_WRONG_STATE -> {
@@ -612,6 +638,17 @@ class CallController(
 
     // ---- Cleanup ----
 
+    /**
+     * Releases all WebRTC, audio, and foreground-service resources for the
+     * current call session.
+     *
+     * Idempotent within a call session: calling this multiple times in a row
+     * (e.g. once from the Ended state collector and once from [CallActivity]'s
+     * onDestroy safety net) executes the body at most once. The guard is
+     * re-armed when a new call starts via [initiateGroupCall] or
+     * [acceptIncomingCall], so subsequent call sessions still clean up
+     * correctly.
+     */
     fun cleanup() {
         if (!cleanedUp.compareAndSet(false, true)) return
         unregisterNetworkCallback()
@@ -643,7 +680,10 @@ class CallController(
         videoPausedByProximity = false
         videoSenders.clear()
         pendingRenegotiation.clear()
-        cleanedUp.set(false)
+        // NOTE: cleanedUp intentionally stays true here so that a second,
+        // sequential cleanup() in the same call session is a no-op. The flag
+        // is re-armed in initiateGroupCall() / acceptIncomingCall() when a new
+        // call session begins.
     }
 
     // ---- Foreground service ----

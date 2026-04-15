@@ -203,6 +203,7 @@ class AccountSettings(
     var callTurnServers: List<CallTurnServer> = emptyList(),
     var callVideoResolution: CallVideoResolution = CallVideoResolution.HD_720,
     var callMaxBitrateBps: Int = 1_500_000,
+    val callsEnabled: MutableStateFlow<Boolean> = MutableStateFlow(true),
 ) : EphemeralChatRepository,
     PublicChatListRepository {
     val saveable = MutableStateFlow(AccountSettingsUpdater(null))
@@ -941,6 +942,13 @@ class AccountSettings(
     fun changeCallMaxBitrateBps(bitrate: Int) {
         callMaxBitrateBps = bitrate
         saveAccountSettings()
+    }
+
+    fun changeCallsEnabled(enabled: Boolean) {
+        if (callsEnabled.value != enabled) {
+            callsEnabled.tryEmit(enabled)
+            saveAccountSettings()
+        }
     }
 }
 

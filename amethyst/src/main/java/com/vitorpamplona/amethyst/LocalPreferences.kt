@@ -124,6 +124,7 @@ private object PrefKeys {
     const val LATEST_GEOHASH_LIST = "latestGeohashList"
     const val LATEST_EPHEMERAL_LIST = "latestEphemeralChatList"
     const val LATEST_TRUST_PROVIDER_LIST = "latestTrustProviderList"
+    const val CALLS_ENABLED = "calls_enabled"
     const val HIDE_DELETE_REQUEST_DIALOG = "hide_delete_request_dialog"
     const val HIDE_BLOCK_ALERT_DIALOG = "hide_block_alert_dialog"
     const val HIDE_NIP_17_WARNING_DIALOG = "hide_nip24_warning_dialog" // delete later
@@ -391,6 +392,7 @@ object LocalPreferences {
                     putBoolean(PrefKeys.HIDE_DELETE_REQUEST_DIALOG, settings.hideDeleteRequestDialog)
                     putBoolean(PrefKeys.HIDE_NIP_17_WARNING_DIALOG, settings.hideNIP17WarningDialog)
                     putBoolean(PrefKeys.HIDE_BLOCK_ALERT_DIALOG, settings.hideBlockAlertDialog)
+                    putBoolean(PrefKeys.CALLS_ENABLED, settings.callsEnabled.value)
 
                     // migrating from previous design
                     remove(PrefKeys.USE_PROXY)
@@ -494,6 +496,7 @@ object LocalPreferences {
                     val hideDeleteRequestDialog = getBoolean(PrefKeys.HIDE_DELETE_REQUEST_DIALOG, false)
                     val hideBlockAlertDialog = getBoolean(PrefKeys.HIDE_BLOCK_ALERT_DIALOG, false)
                     val hideNIP17WarningDialog = getBoolean(PrefKeys.HIDE_NIP_17_WARNING_DIALOG, false)
+                    val callsEnabled = getBoolean(PrefKeys.CALLS_ENABLED, true)
                     val hasDonatedInVersion = getStringSet(PrefKeys.HAS_DONATED_IN_VERSION, null) ?: setOf()
                     val dismissedPollNoteIds = getStringSet(PrefKeys.DISMISSED_POLL_NOTE_IDS, null) ?: setOf()
                     val viewedPollResultNoteIdsStr = getString(PrefKeys.VIEWED_POLL_RESULT_NOTE_IDS, null)
@@ -651,6 +654,7 @@ object LocalPreferences {
                         viewedPollResultNoteIds = MutableStateFlow(viewedPollResultNoteIds.await()),
                         pendingAttestations = MutableStateFlow(pendingAttestations.await()),
                         backupNipA3PaymentTargets = latestPaymentTargets.await(),
+                        callsEnabled = MutableStateFlow(callsEnabled),
                     )
                 }
             }
