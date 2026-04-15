@@ -125,6 +125,12 @@ class HlsPublishOrchestrator(
 
             val uploadResult =
                 runUpload(config, listener) { file, suggestedFilename ->
+                    // Pre-increment so `done` means "working on item N of total" rather than
+                    // "N completed, with N+1 silently in flight". Without this, the counter
+                    // is stuck on the previous value while the current upload runs, and
+                    // StateFlow conflation eats the post-upload increment before the UI
+                    // paints it — the net effect is a visibly stalled counter.
+                    uploadsDone++
                     _state.value =
                         HlsPublishState.Uploading(
                             done = uploadsDone,
@@ -138,12 +144,12 @@ class HlsPublishOrchestrator(
                             HlsContentTypes.FMP4_SEGMENT
                         }
                     val result = uploader.upload(file, contentType)
-                    uploadsDone++
                     segmentUploads[suggestedFilename] = result
                     result.url
                         ?: error("Uploader returned null URL for $suggestedFilename")
                 }
 
+            uploadsDone++
             _state.value =
                 HlsPublishState.Uploading(
                     done = uploadsDone,
@@ -151,7 +157,6 @@ class HlsPublishOrchestrator(
                     currentLabel = "master.m3u8",
                 )
             val masterUpload = uploadMaster(uploader, uploadResult.masterPlaylist)
-            uploadsDone++
             val masterUrl =
                 masterUpload.url ?: error("Uploader returned null URL for master playlist")
 
