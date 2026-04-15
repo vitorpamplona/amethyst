@@ -58,8 +58,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
@@ -139,6 +142,11 @@ fun ZoomableContentView(
     accountViewModel: AccountViewModel,
 ) {
     var dialogOpen by remember(content) { mutableStateOf(false) }
+    var sourceBounds by remember(content) { mutableStateOf<Rect?>(null) }
+    val boundsTrackingModifier =
+        Modifier.onGloballyPositioned { coordinates ->
+            sourceBounds = coordinates.boundsInWindow()
+        }
 
     when (content) {
         is MediaUrlImage -> {
@@ -147,6 +155,7 @@ fun ZoomableContentView(
                     val mainImageModifier =
                         Modifier
                             .fillMaxWidth()
+                            .then(boundsTrackingModifier)
                             .clickable { dialogOpen = true }
                     val loadedImageModifier = if (roundedCorner) MaterialTheme.colorScheme.imageModifier else Modifier.fillMaxWidth()
                     UrlImageView(content, contentScale, mainImageModifier, loadedImageModifier, controllerVisible, accountViewModel = accountViewModel)
@@ -156,7 +165,10 @@ fun ZoomableContentView(
 
         is MediaUrlVideo -> {
             SensitivityWarning(content.contentWarning, accountViewModel) {
-                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                Box(
+                    modifier = Modifier.fillMaxWidth().then(boundsTrackingModifier),
+                    contentAlignment = Alignment.Center,
+                ) {
                     VideoView(
                         videoUri = content.url,
                         mimeType = content.mimeType,
@@ -180,6 +192,7 @@ fun ZoomableContentView(
                 val mainImageModifier =
                     Modifier
                         .fillMaxWidth()
+                        .then(boundsTrackingModifier)
                         .clickable { dialogOpen = true }
                 val loadedImageModifier = if (roundedCorner) MaterialTheme.colorScheme.imageModifier else Modifier.fillMaxWidth()
 
@@ -189,7 +202,10 @@ fun ZoomableContentView(
 
         is MediaLocalVideo -> {
             content.localFile?.let {
-                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                Box(
+                    modifier = Modifier.fillMaxWidth().then(boundsTrackingModifier),
+                    contentAlignment = Alignment.Center,
+                ) {
                     VideoView(
                         videoUri = it.toUri().toString(),
                         mimeType = content.mimeType,
@@ -209,12 +225,13 @@ fun ZoomableContentView(
 
     if (dialogOpen) {
         ZoomableImageDialog(
-            content,
-            images,
+            imageUrl = content,
+            allImages = images,
+            sourceBounds = sourceBounds,
             onDismiss = {
                 dialogOpen = false
             },
-            accountViewModel,
+            accountViewModel = accountViewModel,
         )
     }
 }

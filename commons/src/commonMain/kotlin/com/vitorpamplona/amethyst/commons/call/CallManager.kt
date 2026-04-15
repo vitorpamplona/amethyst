@@ -96,6 +96,18 @@ class CallManager(
      *  whole call ends. */
     private val perPeerTimeoutJobs = mutableMapOf<HexKey, Job>()
 
+    /** Peers we have published a CallOffer to (either as the call initiator
+     *  or via a mid-call invitePeer). When their per-peer timer fires we
+     *  publish a CallHangup so their device stops ringing.
+     *
+     *  Peers we are merely *waiting* on (i.e. members of a group call we
+     *  accepted but who haven't yet joined via mesh) are tracked only with
+     *  their timer job — NOT in this set. When their timer fires we drop
+     *  them silently from local state without sending any further
+     *  signaling, because their ringing is the caller's responsibility to
+     *  terminate. */
+    private val peersInvitedByUs = mutableSetOf<HexKey>()
+
     /** Call IDs for which we have seen a hangup, reject, or answer-elsewhere
      *  signal.  Checked before transitioning to [CallState.IncomingCall] so
      *  that stale offer events replayed by relays after an app restart do not
@@ -159,6 +171,7 @@ class CallManager(
     ) = stateMutex.withLock {
         _state.value = CallState.Offering(callId, calleePubKeys, callType)
         cancelAllPeerTimeouts()
+        peersInvitedByUs.addAll(calleePubKeys)
         calleePubKeys.forEach { schedulePeerTimeout(it, callId) }
     }
 
@@ -221,6 +234,7 @@ class CallManager(
         stateMutex.withLock {
             _state.value = CallState.Offering(callId, setOf(calleePubKey), callType)
             cancelAllPeerTimeouts()
+            peersInvitedByUs.add(calleePubKey)
             schedulePeerTimeout(calleePubKey, callId)
         }
         publishEvent(result.wrap)
@@ -266,6 +280,35 @@ class CallManager(
                 }
             if (callId == currentCallId) {
                 Log.d("CallManager") { "Mid-call offer from ${callerPubKey.take(8)} for current call — callee-to-callee" }
+                // If this peer was in our pending set (we were waiting for
+                // them to join), move them into the connected set and
+                // cancel their watchdog timer — the offer is proof they're
+                // in the call.
+                when (currentState) {
+                    is CallState.Connecting -> {
+                        if (callerPubKey in currentState.pendingPeerPubKeys) {
+                            _state.value =
+                                currentState.copy(
+                                    peerPubKeys = currentState.peerPubKeys + callerPubKey,
+                                    pendingPeerPubKeys = currentState.pendingPeerPubKeys - callerPubKey,
+                                )
+                            cancelPeerTimeout(callerPubKey)
+                        }
+                    }
+
+                    is CallState.Connected -> {
+                        if (callerPubKey in currentState.pendingPeerPubKeys) {
+                            _state.value =
+                                currentState.copy(
+                                    peerPubKeys = currentState.peerPubKeys + callerPubKey,
+                                    pendingPeerPubKeys = currentState.pendingPeerPubKeys - callerPubKey,
+                                )
+                            cancelPeerTimeout(callerPubKey)
+                        }
+                    }
+
+                    else -> {}
+                }
                 onMidCallOfferReceived?.invoke(callerPubKey, event.sdpOffer())
                 return
             }
@@ -303,11 +346,39 @@ class CallManager(
             }
             current = s
 
-            Log.d("CallManager") { "acceptCall: callId=${current.callId}, transitioning to Connecting, sdpAnswerLength=${sdpAnswer.length}" }
-            _state.value = CallState.Connecting(current.callId, current.peerPubKeys() - signer.pubKey, current.callType)
-            cancelTimeout()
             discovered = discoveredCalleePeers.toSet()
             discoveredCalleePeers.clear()
+
+            // Split group members into "known to be in the call" vs "still
+            // waiting on". The caller is definitely in the call (they sent
+            // us the offer). Peers whose answer we observed while ringing
+            // are also confirmed. Everyone else is placed in
+            // pendingPeerPubKeys with a per-peer watchdog timer so that
+            // unresponsive group members are dropped from our local UI
+            // after the same 30-second budget the caller uses — otherwise
+            // we would wait for them forever (the caller's timeout hangup
+            // is addressed only to the unresponsive peer and never reaches
+            // the rest of us).
+            val knownPeers = (discovered + current.callerPubKey) - signer.pubKey
+            val pendingOnJoin = (current.peerPubKeys() - signer.pubKey) - knownPeers
+
+            Log.d("CallManager") {
+                "acceptCall: callId=${current.callId}, transitioning to Connecting, " +
+                    "known=${knownPeers.size}, pending=${pendingOnJoin.size}, " +
+                    "sdpAnswerLength=${sdpAnswer.length}"
+            }
+            _state.value =
+                CallState.Connecting(
+                    callId = current.callId,
+                    peerPubKeys = knownPeers,
+                    callType = current.callType,
+                    pendingPeerPubKeys = pendingOnJoin,
+                )
+            cancelTimeout()
+            // Local watchdog timers only — we are not the inviter for these
+            // peers, so [handlePeerTimeout] will silently drop them without
+            // publishing any hangup (see `peersInvitedByUs`).
+            pendingOnJoin.forEach { schedulePeerTimeout(it, current.callId) }
         }
 
         val allMembers = current.groupMembers + signer.pubKey
@@ -605,6 +676,8 @@ class CallManager(
 
         // Start the per-peer invite timer. If the invitee does not answer
         // within PEER_INVITE_TIMEOUT_MS, they are dropped from the call.
+        // We sent the offer, so a timeout must also publish a hangup.
+        peersInvitedByUs.add(peerPubKey)
         schedulePeerTimeout(peerPubKey, callId)
 
         val allMembers = existingMembers + peerPubKey + signer.pubKey
@@ -862,12 +935,14 @@ class CallManager(
     /** Cancels the per-peer timer for [peerPubKey], if any. */
     private fun cancelPeerTimeout(peerPubKey: HexKey) {
         perPeerTimeoutJobs.remove(peerPubKey)?.cancel()
+        peersInvitedByUs.remove(peerPubKey)
     }
 
     /** Cancels every per-peer timer. Called on terminal state transitions. */
     private fun cancelAllPeerTimeouts() {
         perPeerTimeoutJobs.values.forEach { it.cancel() }
         perPeerTimeoutJobs.clear()
+        peersInvitedByUs.clear()
     }
 
     /**
@@ -894,12 +969,17 @@ class CallManager(
         var shouldPublishHangup = false
         stateMutex.withLock {
             perPeerTimeoutJobs.remove(peerPubKey)
+            // Only publish a hangup if we were the peer's inviter. Pure
+            // "watchdog" timers started by a callee for group members who
+            // never joined must NOT publish anything — terminating the
+            // invitee's ringing is the caller's responsibility.
+            val wasInvitedByUs = peersInvitedByUs.remove(peerPubKey)
             when (val current = _state.value) {
                 is CallState.Offering -> {
                     if (callId != current.callId) return@withLock
                     if (peerPubKey !in current.peerPubKeys) return@withLock
                     Log.d("CallManager") { "Per-peer timeout: dropping ${peerPubKey.take(8)} from Offering" }
-                    shouldPublishHangup = true
+                    shouldPublishHangup = wasInvitedByUs
                     val remaining = current.peerPubKeys - peerPubKey
                     if (remaining.isEmpty()) {
                         transitionToEnded(current.callId, current.peerPubKeys, EndReason.TIMEOUT)
@@ -912,8 +992,8 @@ class CallManager(
                 is CallState.Connecting -> {
                     if (callId != current.callId) return@withLock
                     if (peerPubKey !in current.pendingPeerPubKeys) return@withLock
-                    Log.d("CallManager") { "Per-peer timeout: dropping ${peerPubKey.take(8)} from Connecting" }
-                    shouldPublishHangup = true
+                    Log.d("CallManager") { "Per-peer timeout: dropping ${peerPubKey.take(8)} from Connecting (invitedByUs=$wasInvitedByUs)" }
+                    shouldPublishHangup = wasInvitedByUs
                     val newPending = current.pendingPeerPubKeys - peerPubKey
                     if (current.peerPubKeys.isEmpty() && newPending.isEmpty()) {
                         transitionToEnded(
@@ -930,8 +1010,8 @@ class CallManager(
                 is CallState.Connected -> {
                     if (callId != current.callId) return@withLock
                     if (peerPubKey !in current.pendingPeerPubKeys) return@withLock
-                    Log.d("CallManager") { "Per-peer timeout: dropping ${peerPubKey.take(8)} from Connected" }
-                    shouldPublishHangup = true
+                    Log.d("CallManager") { "Per-peer timeout: dropping ${peerPubKey.take(8)} from Connected (invitedByUs=$wasInvitedByUs)" }
+                    shouldPublishHangup = wasInvitedByUs
                     _state.value = current.copy(pendingPeerPubKeys = current.pendingPeerPubKeys - peerPubKey)
                     onPeerLeft?.invoke(peerPubKey)
                 }
