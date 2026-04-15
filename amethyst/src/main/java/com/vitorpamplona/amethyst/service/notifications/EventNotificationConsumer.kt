@@ -46,6 +46,8 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinder
 import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.experimental.notifications.wake.WakeUpEvent
+import com.vitorpamplona.quartz.marmot.WelcomeResult
+import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
@@ -167,6 +169,10 @@ class EventNotificationConsumer(
 
                     is WakeUpEvent -> {
                         wakeUpFor(innerEvent, innerNote, account)
+                    }
+
+                    is WelcomeEvent -> {
+                        notify(innerEvent, account)
                     }
                 }
             }
@@ -431,6 +437,67 @@ class EventNotificationConsumer(
                 }
             }
         }
+    }
+
+    private suspend fun notify(
+        event: WelcomeEvent,
+        account: Account,
+    ) {
+        Log.d(TAG, "New Marmot Welcome to Notify")
+
+        // old event being re-broadcast
+        if (event.createdAt < TimeUtils.fifteenMinutesAgo()) return
+        // a welcome we ourselves emitted
+        if (event.pubKey == account.signer.pubKey) return
+
+        val nostrGroupId = event.nostrGroupId() ?: return
+        val manager = account.marmotManager ?: return
+
+        // Best-effort: process the welcome here so the chatroom is hydrated
+        // before composing the notification body. The push-notification
+        // background path does NOT go through Account.eventProcessor, so
+        // without this the invitee would only join the group later, when
+        // they next open the app and the relay subscription redelivers.
+        if (!manager.isMember(nostrGroupId)) {
+            try {
+                val result = manager.processWelcome(event, nostrGroupId)
+                if (result is WelcomeResult.Joined) {
+                    val chatroom = account.marmotGroupList.getOrCreateGroup(result.nostrGroupId)
+                    manager.syncMetadataTo(result.nostrGroupId, chatroom)
+                    account.marmotGroupList.notifyGroupChanged(result.nostrGroupId)
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.w(TAG) { "Failed to process Marmot Welcome from notification path: ${e.message}" }
+            }
+        }
+
+        val chatroom = account.marmotGroupList.getOrCreateGroup(nostrGroupId)
+        val groupName = chatroom.displayName.value?.takeIf { it.isNotBlank() } ?: "a private group"
+        val inviter = LocalCache.getOrCreateUser(event.pubKey)
+        val inviterName = inviter.toBestDisplayName()
+        val inviterPicture = inviter.profilePicture()
+
+        val accountNpub =
+            account.signer.pubKey
+                .hexToByteArray()
+                .toNpub()
+        // marmot:<groupHex>?account=<npub> — parsed by uriToRoute below.
+        val noteUri = "marmot:$nostrGroupId$ACCOUNT_QUERY_PARAM$accountNpub"
+
+        notificationManager()
+            .sendDMNotification(
+                id = event.id,
+                messageBody = "You've been added to $groupName",
+                senderName = inviterName,
+                time = event.createdAt,
+                pictureUrl = inviterPicture,
+                uri = noteUri,
+                applicationContext = applicationContext,
+                accountNpub = accountNpub,
+                accountPictureUrl = account.userProfile().profilePicture(),
+                chatroomMembers = null,
+            )
     }
 
     suspend fun decryptZapContentAuthor(

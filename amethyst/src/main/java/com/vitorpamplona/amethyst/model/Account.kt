@@ -381,7 +381,7 @@ class Account(
     override val chatroomList = cache.getOrCreateChatroomList(signer.pubKey)
     override val marmotGroupList =
         com.vitorpamplona.amethyst.commons.model.marmotGroups
-            .MarmotGroupList()
+            .MarmotGroupList(signer.pubKey)
 
     val newNotesPreProcessor = EventProcessor(this, cache)
 
@@ -1741,6 +1741,10 @@ class Account(
 
         val outbound = manager.buildGroupMessage(nostrGroupId, innerEvent)
         cache.justConsumeMyOwnEvent(outbound.signedEvent)
+        // Sending a message moves the group out of "New Requests" into
+        // "Known" — do this eagerly before relay round-trip so the UI
+        // updates immediately.
+        marmotGroupList.markAsKnown(nostrGroupId)
         client.publish(outbound.signedEvent, groupRelays)
     }
 
@@ -1928,6 +1932,9 @@ class Account(
         val manager = marmotManager ?: return
         if (!isWriteable()) return
         manager.createGroup(nostrGroupId)
+        // Creator owns the group — mark it as "known" immediately so it
+        // doesn't appear under "New Requests" before the first message.
+        marmotGroupList.markAsKnown(nostrGroupId)
     }
 
     /**

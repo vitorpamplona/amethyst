@@ -42,7 +42,9 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -73,6 +75,7 @@ fun MarmotGroupListScreen(
     nav: INav,
 ) {
     var groupList by remember { mutableStateOf(listOf<Pair<HexKey, MarmotGroupChatroom>>()) }
+    var selectedTab by remember { mutableStateOf(0) }
 
     // Load group list
     LaunchedEffect(Unit) {
@@ -97,6 +100,10 @@ fun MarmotGroupListScreen(
         }
     }
 
+    val knownGroups = remember(groupList) { groupList.filter { it.second.ownerSentMessage } }
+    val newRequestGroups = remember(groupList) { groupList.filter { !it.second.ownerSentMessage } }
+    val visibleGroups = if (selectedTab == 0) knownGroups else newRequestGroups
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -117,37 +124,65 @@ fun MarmotGroupListScreen(
             }
         },
     ) { padding ->
-        if (groupList.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize().padding(padding),
-                contentAlignment = Alignment.Center,
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        "No groups yet",
-                        style = MaterialTheme.typography.titleMedium,
-                    )
-                    Text(
-                        text = "Create a group or wait for an invitation.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 4.dp),
-                    )
-                }
+        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+            PrimaryTabRow(selectedTabIndex = selectedTab) {
+                Tab(
+                    selected = selectedTab == 0,
+                    onClick = { selectedTab = 0 },
+                    text = {
+                        Text(
+                            text = if (knownGroups.isEmpty()) "Known" else "Known (${knownGroups.size})",
+                        )
+                    },
+                )
+                Tab(
+                    selected = selectedTab == 1,
+                    onClick = { selectedTab = 1 },
+                    text = {
+                        Text(
+                            text = if (newRequestGroups.isEmpty()) "New Requests" else "New Requests (${newRequestGroups.size})",
+                        )
+                    },
+                )
             }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(padding),
-            ) {
-                items(groupList, key = { it.first }) { (groupId, chatroom) ->
-                    MarmotGroupListItem(
-                        groupId = groupId,
-                        chatroom = chatroom,
-                        onClick = {
-                            nav.nav(Route.MarmotGroupChat(groupId))
-                        },
-                    )
-                    HorizontalDivider()
+
+            if (visibleGroups.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = if (selectedTab == 0) "No groups yet" else "No invitations",
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                        Text(
+                            text =
+                                if (selectedTab == 0) {
+                                    "Create a group or accept an invitation."
+                                } else {
+                                    "When someone adds you to a group it will show up here until you reply."
+                                },
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 4.dp),
+                        )
+                    }
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    items(visibleGroups, key = { it.first }) { (groupId, chatroom) ->
+                        MarmotGroupListItem(
+                            groupId = groupId,
+                            chatroom = chatroom,
+                            onClick = {
+                                nav.nav(Route.MarmotGroupChat(groupId))
+                            },
+                        )
+                        HorizontalDivider()
+                    }
                 }
             }
         }

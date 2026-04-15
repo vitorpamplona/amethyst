@@ -330,6 +330,12 @@ class GiftWrapEventHandler(
                 val chatroom = account.marmotGroupList.getOrCreateGroup(result.nostrGroupId)
                 manager.syncMetadataTo(result.nostrGroupId, chatroom)
 
+                // Notify any open MarmotGroupListScreen that a new invited
+                // group has appeared so it can re-render (the screen
+                // re-runs `loadGroupList` on every emission). Without this,
+                // newly-joined groups only show up after a manual refresh.
+                account.marmotGroupList.notifyGroupChanged(result.nostrGroupId)
+
                 // Rotate KeyPackages if needed
                 if (result.needsKeyPackageRotation) {
                     account.publishMarmotKeyPackages()

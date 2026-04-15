@@ -49,6 +49,14 @@ class MarmotGroupChatroom(
     var newestMessage: Note? = null
     val unreadCount = MutableStateFlow(0)
 
+    /**
+     * True if the local user has ever sent an application message in this
+     * group, OR explicitly created/owns it. Used by list UIs to split groups
+     * into "Known" vs "New Requests" — invitees that have not yet replied
+     * stay in "New Requests" until they participate.
+     */
+    var ownerSentMessage: Boolean = false
+
     private var changesFlow: WeakReference<MutableSharedFlow<ListChange<Note>>> = WeakReference(null)
 
     fun changesFlow(): MutableSharedFlow<ListChange<Note>> {

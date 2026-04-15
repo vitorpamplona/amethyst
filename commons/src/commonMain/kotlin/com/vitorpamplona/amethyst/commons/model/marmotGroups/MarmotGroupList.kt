@@ -30,7 +30,9 @@ import kotlinx.coroutines.flow.MutableSharedFlow
  * Tracks all Marmot MLS group chatrooms for an account.
  * Follows the same pattern as [com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList].
  */
-class MarmotGroupList {
+class MarmotGroupList(
+    val ownerPubKey: HexKey,
+) {
     var rooms = LargeCache<HexKey, MarmotGroupChatroom>()
         private set
 
@@ -45,6 +47,9 @@ class MarmotGroupList {
     ) {
         val chatroom = getOrCreateGroup(nostrGroupId)
         if (chatroom.addMessageSync(msg)) {
+            if (msg.author?.pubkeyHex == ownerPubKey) {
+                chatroom.ownerSentMessage = true
+            }
             _groupListChanges.tryEmit(nostrGroupId)
         }
     }
@@ -59,9 +64,41 @@ class MarmotGroupList {
     ) {
         val chatroom = getOrCreateGroup(nostrGroupId)
         if (chatroom.restoreMessageSync(msg)) {
+            if (msg.author?.pubkeyHex == ownerPubKey) {
+                chatroom.ownerSentMessage = true
+            }
             _groupListChanges.tryEmit(nostrGroupId)
         }
     }
+
+    /**
+     * Mark a group as "known" by the local user — used right after the user
+     * creates a group, so the creator doesn't appear under "New Requests"
+     * until they post their first message.
+     */
+    fun markAsKnown(nostrGroupId: HexKey) {
+        val chatroom = getOrCreateGroup(nostrGroupId)
+        if (!chatroom.ownerSentMessage) {
+            chatroom.ownerSentMessage = true
+            _groupListChanges.tryEmit(nostrGroupId)
+        }
+    }
+
+    /**
+     * Notify subscribers that a group's state has changed (e.g., the invitee
+     * just joined via a Welcome and metadata was synced into the chatroom).
+     * Used when no message addition occurs but the list UI should refresh.
+     */
+    fun notifyGroupChanged(nostrGroupId: HexKey) {
+        _groupListChanges.tryEmit(nostrGroupId)
+    }
+
+    /**
+     * Whether the local user has ever sent a message in this group (or
+     * explicitly created it). Mirrors `ChatroomList.hasSentMessagesTo` for
+     * private DMs.
+     */
+    fun hasSentMessagesTo(nostrGroupId: HexKey): Boolean = rooms.get(nostrGroupId)?.ownerSentMessage == true
 
     fun removeMessage(
         nostrGroupId: HexKey,
