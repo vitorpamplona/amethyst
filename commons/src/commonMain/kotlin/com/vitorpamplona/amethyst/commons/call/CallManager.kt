@@ -719,7 +719,7 @@ class CallManager(
         result.wraps.forEach { publishEvent(it) }
     }
 
-    private fun onPeerHangup(event: CallHangupEvent) {
+    private suspend fun onPeerHangup(event: CallHangupEvent) {
         val current = _state.value
         val callId = event.callId() ?: return
         val leavingPeer = event.pubKey
@@ -732,8 +732,17 @@ class CallManager(
                 cancelPeerTimeout(leavingPeer)
                 val connectedRemaining = current.peerPubKeys - leavingPeer
                 val pendingRemaining = current.pendingPeerPubKeys - leavingPeer
-                if (connectedRemaining.isEmpty() && pendingRemaining.isEmpty()) {
-                    Log.d("CallManager") { "onPeerHangup: last peer left, ending call" }
+                if (connectedRemaining.isEmpty()) {
+                    // No connected peers left. Pending members we never
+                    // heard from can't sustain the call on their own, so
+                    // terminate — otherwise the caller (the only other
+                    // participant we were actually talking to) has hung up
+                    // and we'd be left staring at a black screen waiting
+                    // for someone who may never join.
+                    Log.d("CallManager") {
+                        "onPeerHangup: last connected peer left, ending call (pendingRemaining=${pendingRemaining.size})"
+                    }
+                    publishHangupToInvitedPendingPeers(callId, pendingRemaining)
                     transitionToEnded(callId, current.allPeerPubKeys, EndReason.PEER_HANGUP)
                 } else {
                     Log.d("CallManager") { "onPeerHangup: ${leavingPeer.take(8)} left, remaining=${connectedRemaining.map { it.take(8) }}, pending=${pendingRemaining.map { it.take(8) }}" }
@@ -751,8 +760,14 @@ class CallManager(
                 cancelPeerTimeout(leavingPeer)
                 val connectedRemaining = current.peerPubKeys - leavingPeer
                 val pendingRemaining = current.pendingPeerPubKeys - leavingPeer
-                if (connectedRemaining.isEmpty() && pendingRemaining.isEmpty()) {
-                    Log.d("CallManager") { "onPeerHangup: last peer left during connecting, ending call" }
+                if (connectedRemaining.isEmpty()) {
+                    // Same rule as Connected: without a single connected
+                    // peer the call can't keep running. Pending members
+                    // are dropped regardless of how many are left.
+                    Log.d("CallManager") {
+                        "onPeerHangup: last connected peer left during connecting, ending call (pendingRemaining=${pendingRemaining.size})"
+                    }
+                    publishHangupToInvitedPendingPeers(callId, pendingRemaining)
                     transitionToEnded(callId, current.peerPubKeys + current.pendingPeerPubKeys, EndReason.PEER_HANGUP)
                 } else {
                     Log.d("CallManager") { "onPeerHangup: ${leavingPeer.take(8)} left during connecting, remaining=${connectedRemaining.map { it.take(8) }}" }
@@ -794,6 +809,30 @@ class CallManager(
             else -> {
                 return
             }
+        }
+    }
+
+    /**
+     * When a call is ending because its last connected peer left, publish
+     * a CallHangup to every *pending* peer we had personally invited so
+     * their devices stop ringing. Peers we did NOT invite (e.g. callee-side
+     * group members) are the caller's responsibility and are left alone.
+     *
+     * Must be called while still inside the CallManager state mutex and
+     * BEFORE [transitionToEnded], which clears [peersInvitedByUs].
+     */
+    private suspend fun publishHangupToInvitedPendingPeers(
+        callId: String,
+        pendingPeers: Set<HexKey>,
+    ) {
+        val invitedPending = peersInvitedByUs.intersect(pendingPeers)
+        if (invitedPending.isEmpty()) return
+        Log.d("CallManager") {
+            "publishHangupToInvitedPendingPeers: notifying ${invitedPending.size} invited pending peers to stop ringing"
+        }
+        for (peer in invitedPending) {
+            val result = factory.createHangup(peer, callId, signer = signer)
+            publishEvent(result.wrap)
         }
     }
 
