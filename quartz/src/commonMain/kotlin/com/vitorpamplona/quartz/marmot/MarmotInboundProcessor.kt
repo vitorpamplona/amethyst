@@ -35,6 +35,8 @@ import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupManager
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
@@ -126,7 +128,7 @@ class MarmotInboundProcessor(
     private val keyPackageRotationManager: KeyPackageRotationManager,
 ) {
     private val commitTracker = CommitOrdering.EpochCommitTracker()
-    private val processedIdsLock = Any()
+    private val processedIdsMutex = Mutex()
     private val processedEventIds = LinkedHashSet<String>()
 
     companion object {
@@ -156,11 +158,12 @@ class MarmotInboundProcessor(
     suspend fun processGroupEvent(groupEvent: GroupEvent): GroupEventResult {
         // Deduplicate already-processed events (thread-safe)
         val eventId = groupEvent.id
-        synchronized(processedIdsLock) {
-            if (eventId in processedEventIds) {
-                val gId = groupEvent.groupId()
-                return GroupEventResult.Duplicate(gId ?: "")
+        val alreadyProcessed =
+            processedIdsMutex.withLock {
+                eventId in processedEventIds
             }
+        if (alreadyProcessed) {
+            return GroupEventResult.Duplicate(groupEvent.groupId() ?: "")
         }
 
         val groupId =
@@ -189,7 +192,7 @@ class MarmotInboundProcessor(
             }
 
         // Track ALL processed events for deduplication (including errors to prevent replay DoS)
-        synchronized(processedIdsLock) {
+        processedIdsMutex.withLock {
             processedEventIds.add(eventId)
             // Trim the set if it exceeds the max size
             if (processedEventIds.size > MAX_PROCESSED_IDS) {
@@ -288,12 +291,12 @@ class MarmotInboundProcessor(
     /**
      * Get all (group, epoch) keys that have pending unresolved commits.
      */
-    fun pendingCommitGroupEpochs(): Set<CommitOrdering.GroupEpochKey> = commitTracker.pendingGroupEpochs()
+    suspend fun pendingCommitGroupEpochs(): Set<CommitOrdering.GroupEpochKey> = commitTracker.pendingGroupEpochs()
 
     /**
      * Clear all pending commit state.
      */
-    fun clearPendingCommits() {
+    suspend fun clearPendingCommits() {
         commitTracker.clear()
     }
 
