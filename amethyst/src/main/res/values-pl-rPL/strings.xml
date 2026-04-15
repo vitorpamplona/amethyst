@@ -270,6 +270,7 @@
         Świetnie nadają się do tworzenia otwartych społeczności wokół określonych tematów. Niektóre z tych grup są efemeryczne
    i dlatego wiadomości czatu znikają z czasem</string>
     <string name="public_chat">Czat Publiczny</string>
+    <string name="marmot_group">Grupa MLS</string>
     <string name="public_chat_title">Metadane Czatu Publicznego</string>
     <string name="public_chat_explainer">Czaty publiczne są widoczne dla wszystkich użytkowników Nostr i każdy może w nich uczestniczyć. Są idealne dla otwartych społeczności skupionych wokół konkretnych tematów. Moderację można kontrolować, usuwając posty z transmiterów</string>
     <string name="public_chat_relays_title">Transmitery</string>
@@ -395,6 +396,7 @@
     <string name="remove_from_private_bookmarks">Usuń z prywatnych zakładek</string>
     <string name="remove_from_public_bookmarks">Usuń z publicznych zakładek</string>
     <string name="pinned_notes">Przypięte notatki</string>
+    <string name="pinned_notes_explainer">Twoje przypięte notatki</string>
     <string name="pin_to_profile">Przypnij do profilu</string>
     <string name="unpin_from_profile">Odepnij z profilu</string>
     <string name="bookmark_lists">Listy zakładek</string>
@@ -713,6 +715,8 @@
     <string name="call_failed_accept">Nie udało się przyjąć połączenia</string>
     <string name="call_failed_session">Nie udało się utworzyć sesji połączenia</string>
     <string name="call_settings">Ustawienia połączeń</string>
+    <string name="call_settings_enable_calls">Włącz połączenia głosowe i wideo</string>
+    <string name="call_settings_enable_calls_description">Gdy wyłączone, przyciski połączeń na ekranach czatu są ukryte, a wszystkie połączenia przychodzące są cicho ignorowane.</string>
     <string name="call_settings_video_quality">Jakość Wideo</string>
     <string name="call_settings_max_bitrate">Maks. przepływność wideo</string>
     <string name="call_settings_turn_servers">Serwery TURN / STUN</string>
@@ -1819,6 +1823,43 @@
     <string name="playback_actions_dialog_title">Odtwarzanie</string>
     <string name="video_quality_auto">Automatycznie</string>
     <!-- HLS multi-resolution video sharing -->
+    <string name="share_hls_video">Wgraj HLS</string>
+    <string name="share_hls_video_drawer_description">Publikuj strumień HLS na swoim serwerze multimedialnym</string>
+    <string name="hls_pick_video_primary">Wybierz wideo</string>
+    <string name="hls_pick_video_helper">Twoje wideo zostanie przekodowane do różnych rozdzielczości, dzięki czemu widzowie będą mogli cieszyć się płynnym odtwarzaniem niezależnie od szybkości połączenia.</string>
+    <string name="hls_change_video">Zmień</string>
+    <string name="hls_title_label">Tytuł</string>
+    <string name="hls_title_placeholder">Dodaj tytuł filmu</string>
+    <string name="hls_description_label">Opis</string>
+    <string name="hls_description_placeholder">O czym jest ten film?</string>
+    <string name="hls_content_warning_reason_placeholder">Powód (Opcjonalne)</string>
+    <string name="hls_codec_label">Kodek</string>
+    <string name="hls_codec_h265">H.265 (lepsza kompresja)</string>
+    <string name="hls_codec_h264">H.264</string>
+    <string name="hls_codec_fallback_notice">H.265 nie jest dostępny na tym urządzeniu – wróć do H.264.</string>
+    <string name="hls_renditions_label">Wersje</string>
+    <string name="hls_renditions_source_format">Rozdzielczość źródłowa: %1$d×%2$d</string>
+    <string name="hls_renditions_produce_format">Wygeneruje: %1$s</string>
+    <string name="hls_renditions_skipped_format">(%1$s pominięto — źródło powyżej)</string>
+    <string name="hls_rendition_bitrate_kbps_format">%1$d kbps</string>
+    <string name="hls_rendition_above_source">powyższe źródło — zostanie pominięte</string>
+    <string name="hls_publish_button">Opublikuj wideo HD</string>
+    <string name="hls_publishing_header_format">Publikowanie „%1$s”…</string>
+    <string name="hls_state_transcoding_format">Transkodowanie %1$s</string>
+    <string name="hls_state_uploading_idle">Wgraj</string>
+    <string name="hls_state_uploading_format">Wgrywanie %1$d z %2$d</string>
+    <string name="hls_state_uploading_with_label_format">Wgrywanie %1$s (%2$d z %3$d)</string>
+    <string name="hls_state_uploaded_format">Wgrano %1$d z %2$d</string>
+    <string name="hls_state_publishing">Publikowanie…</string>
+    <string name="hls_state_success_title">Wideo opublikowane</string>
+    <string name="hls_state_success_body">Twój film w jakości HD jest już dostępny na Nostr.</string>
+    <string name="hls_state_failure_title">Coś poszło nie tak</string>
+    <string name="hls_view_note">Zobacz publikację</string>
+    <string name="hls_done">Gotowe</string>
+    <string name="hls_try_again">Spróbuj ponownie</string>
+    <string name="hls_draft_note_after_upload">Szkic publikacji po wgraniu</string>
+    <string name="hls_draft_note_after_upload_explainer">Otwórz edytor publikacji z gotowym tytułem, opisem i linkiem do filmu, abyś mógł wprowadzić zmiany przed opublikowaniem.</string>
+    <string name="hls_draft_note_button">Szkic publikacji</string>
     <string name="pack_actions_dialog_title">Akcje pakietu</string>
     <string name="list_actions_dialog_title">Akcje listy</string>
     <string name="bookmark_item_actions_dialog_title">Akcje zakładki</string>
