@@ -105,6 +105,17 @@ class MarmotGroupEventsEoseManager(
                         invalidateFilters()
                     }
                 },
+                // Critical: invalidate the kind:445 filter set whenever a
+                // group is joined (via Welcome processing), created, or
+                // left. Without this the per-group h-tag subscription is
+                // never sent to relays after the initial connect, so an
+                // invitee that just joined a group would never actually
+                // receive any of its messages until the next app restart.
+                key.account.scope.launch(Dispatchers.IO) {
+                    key.account.marmotGroupList.groupListChanges.collect {
+                        invalidateFilters()
+                    }
+                },
             )
 
         return super.newSub(key)

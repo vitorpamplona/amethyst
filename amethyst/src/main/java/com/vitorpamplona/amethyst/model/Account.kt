@@ -1847,28 +1847,28 @@ class Account(
 
         // Then send the Welcome gift wrap to the new member.
         //
-        // We deliberately do NOT route this through
-        // computeRelayListToBroadcast(): its GiftWrap branch returns an
-        // empty relay set when the recipient has no NIP-17 kind:10050 and
-        // no cached NIP-65 inbox relays, which silently drops the welcome
-        // and leaves the invitee with no way to discover the group.
-        //
-        // Instead, mirror sendNip04PrivateMessage's delivery strategy:
-        // publish to our own outbox (so we keep a copy and the invitee
-        // may find it via a shared relay) unioned with the recipient's
-        // DM inbox relays — User.dmInboxRelays() already falls back
-        // through NIP-17 kind:10050 → NIP-65 read relays, which is where
-        // the invitee's AccountGiftWrapsEoseManager actually listens.
+        // Use the same delivery path that NIP-17 DMs (kind:1059) take —
+        // computeRelayListToBroadcast() — which has fallbacks for kind:10050
+        // → NIP-65 read → relay hints. Empirically, NIP-17 DMs reach the
+        // invitee, so this path is the one we know works. We also union
+        // with our own outbox + the recipient's dmInboxRelays() as a
+        // belt-and-braces measure in case the cache hasn't been hydrated
+        // yet for this contact.
         if (welcomeDelivery != null) {
+            val computed = computeRelayListToBroadcast(welcomeDelivery.giftWrapEvent)
             val recipientInbox =
                 cache
                     .getOrCreateUser(memberPubKey)
                     .dmInboxRelays()
                     .orEmpty()
-            val relayList = outboxRelays.flow.value + recipientInbox
+            val relayList = computed + outboxRelays.flow.value + recipientInbox
             if (relayList.isEmpty()) {
                 Log.w("Marmot") {
                     "addMarmotGroupMember: no relays to deliver welcome gift wrap to ${memberPubKey.take(8)}…"
+                }
+            } else {
+                Log.d("Marmot") {
+                    "addMarmotGroupMember: publishing welcome gift wrap to ${relayList.size} relay(s) for ${memberPubKey.take(8)}…"
                 }
             }
             client.publish(welcomeDelivery.giftWrapEvent, relayList)
@@ -2512,6 +2512,12 @@ class Account(
                 marmotManager.activeGroupIds().forEach { groupId ->
                     val chatroom = marmotGroupList.getOrCreateGroup(groupId)
                     marmotManager.syncMetadataTo(groupId, chatroom)
+                    // Force the kind:445 EOSE manager to re-poll its filter
+                    // set so the restored group's per-`h`-tag subscription
+                    // is actually sent to relays. Without this, restored
+                    // groups would never receive new messages until the user
+                    // explicitly created/joined another group.
+                    marmotGroupList.notifyGroupChanged(groupId)
 
                     val storedMessages = marmotManager.loadStoredMessages(groupId)
                     if (storedMessages.isNotEmpty()) {
