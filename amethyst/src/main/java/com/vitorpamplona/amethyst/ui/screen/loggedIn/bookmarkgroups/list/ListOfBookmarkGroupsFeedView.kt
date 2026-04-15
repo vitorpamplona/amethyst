@@ -31,6 +31,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.BookmarkBorder
+import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
@@ -44,6 +45,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.nip51Lists.BookmarkListState
 import com.vitorpamplona.amethyst.model.nip51Lists.OldBookmarkListState
+import com.vitorpamplona.amethyst.model.nip51Lists.PinListState
 import com.vitorpamplona.amethyst.model.nip51Lists.labeledBookmarkLists.LabeledBookmarkList
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.BookmarkType
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -57,9 +59,11 @@ import kotlinx.coroutines.flow.StateFlow
 fun ListOfBookmarkGroupsFeedView(
     defaultBookmarks: BookmarkListState,
     oldBookmarks: OldBookmarkListState,
+    pinnedNotes: PinListState,
     groupListFeedSource: StateFlow<List<LabeledBookmarkList>>,
     openDefaultBookmarks: () -> Unit,
     openOldBookmarks: () -> Unit,
+    openPinnedNotes: () -> Unit,
     onOpenItem: (String, BookmarkType) -> Unit,
     onRenameItem: (targetBookmarkGroup: LabeledBookmarkList) -> Unit,
     onItemDescriptionChange: (bookmarkGroup: LabeledBookmarkList) -> Unit,
@@ -79,6 +83,11 @@ fun ListOfBookmarkGroupsFeedView(
 
         item {
             OldBookmarkList(oldBookmarks, openOldBookmarks)
+            HorizontalDivider(thickness = DividerThickness)
+        }
+
+        item {
+            PinnedNotesList(pinnedNotes, openPinnedNotes)
             HorizontalDivider(thickness = DividerThickness)
         }
 
@@ -137,6 +146,50 @@ fun DefaultBookmarkList(
                 BookmarkMembershipStatusAndNumberDisplay(
                     modifier = Modifier.align(Alignment.CenterHorizontally),
                     postBookmarksSize = bookmarkState.public.size + bookmarkState.private.size,
+                    articleBookmarksSize = 0,
+                )
+            }
+        },
+    )
+}
+
+@Composable
+fun PinnedNotesList(
+    pinnedNotes: PinListState,
+    openPinnedNotes: () -> Unit,
+) {
+    val pinState by pinnedNotes.pinnedNotesList.collectAsStateWithLifecycle()
+
+    ListItem(
+        modifier = Modifier.clickable(onClick = openPinnedNotes),
+        headlineContent = {
+            Text(stringRes(R.string.pinned_notes), maxLines = 1, overflow = TextOverflow.Ellipsis)
+        },
+        supportingContent = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
+                    stringRes(R.string.pinned_notes_explainer),
+                    overflow = TextOverflow.Ellipsis,
+                    maxLines = 2,
+                )
+            }
+        },
+        leadingContent = {
+            Column(
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.PushPin,
+                    contentDescription = stringRes(R.string.bookmark_list_icon_label),
+                    modifier = Size40Modifier,
+                )
+                Spacer(StdVertSpacer)
+                BookmarkMembershipStatusAndNumberDisplay(
+                    modifier = Modifier.align(Alignment.CenterHorizontally),
+                    postBookmarksSize = pinState.size,
                     articleBookmarksSize = 0,
                 )
             }

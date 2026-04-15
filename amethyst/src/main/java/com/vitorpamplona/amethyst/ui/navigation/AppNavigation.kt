@@ -71,6 +71,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.list.metadat
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.membershipManagement.ArticleBookmarkListManagementScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.membershipManagement.PostBookmarkListManagementScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.old.OldBookmarkListScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.pinnednotes.PinnedNotesScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.AddMemberScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.CreateGroupScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.EditGroupInfoScreen
@@ -258,6 +259,7 @@ fun BuildNavigation(
         composableFromEnd<Route.OtsSettings> { OtsSettingsScreen(nav) }
         composableFromEnd<Route.Bookmarks> { BookmarkListScreen(accountViewModel, nav) }
         composableFromEnd<Route.OldBookmarks> { OldBookmarkListScreen(accountViewModel, nav) }
+        composableFromEnd<Route.PinnedNotes> { PinnedNotesScreen(accountViewModel, nav) }
         composableFromEnd<Route.WebBookmarks> { WebBookmarksScreen(accountViewModel, nav) }
         composableFromEnd<Route.Drafts> { DraftListScreen(accountViewModel, nav) }
         composableFromEnd<Route.Settings> { SettingsScreen(accountViewModel, nav) }
