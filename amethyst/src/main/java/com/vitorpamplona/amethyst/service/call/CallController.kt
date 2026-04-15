@@ -134,6 +134,15 @@ class CallController(
             callManager.state.collect { state ->
                 when (state) {
                     is CallState.IncomingCall -> {
+                        // A new call session begins — arm cleanup() so it will
+                        // run for this session's Ended transition. This MUST
+                        // happen for every incoming call (even ones the user
+                        // ends up rejecting), otherwise a stale cleanedUp flag
+                        // from the previous call session would turn cleanup()
+                        // into a no-op and leave the ringtone/notification
+                        // playing forever. See the bug where rejecting a
+                        // second consecutive call required killing the app.
+                        cleanedUp.set(false)
                         ensureForegroundService()
                         withContext(Dispatchers.IO) { audioManager.startRinging() }
                         scope.launch {
@@ -142,6 +151,10 @@ class CallController(
                     }
 
                     is CallState.Offering -> {
+                        // Same rationale as IncomingCall above: ensure cleanup
+                        // can run for this session even if the previous one
+                        // already ran cleanup().
+                        cleanedUp.set(false)
                         audioManager.startRingbackTone()
                         ensureForegroundService()
                     }
@@ -642,14 +655,46 @@ class CallController(
      * Releases all WebRTC, audio, and foreground-service resources for the
      * current call session.
      *
-     * Idempotent within a call session: calling this multiple times in a row
-     * (e.g. once from the Ended state collector and once from [CallActivity]'s
-     * onDestroy safety net) executes the body at most once. The guard is
-     * re-armed when a new call starts via [initiateGroupCall] or
-     * [acceptIncomingCall], so subsequent call sessions still clean up
-     * correctly.
+     * Stopping the ringtone, ringback tone, and incoming-call notification
+     * runs UNCONDITIONALLY on every invocation — even if the heavy teardown
+     * has already been done. These three operations are idempotent and must
+     * never be skipped, otherwise a stale [cleanedUp] flag could leave the
+     * ringtone playing and the notification stuck on screen until the app is
+     * force-killed.
+     *
+     * The remainder (peer-session disposal, media manager, network callbacks,
+     * etc.) is guarded by [cleanedUp] and runs at most once per call session.
+     * The guard is re-armed when a new call starts: outgoing calls re-arm in
+     * [initiateGroupCall], accepted incoming calls in [acceptIncomingCall],
+     * and any new IncomingCall/Offering state transition in the state
+     * collector. This last path is critical for incoming calls the user
+     * rejects (or that the remote party hangs up), since neither
+     * [initiateGroupCall] nor [acceptIncomingCall] is invoked for them.
      */
     fun cleanup() {
+        // Stop the ringtone, ringback tone, and incoming-call notification
+        // UNCONDITIONALLY — these are idempotent and absolutely critical for
+        // the user experience. They must run on every cleanup() call, even if
+        // the heavy resource teardown below is already complete (cleanedUp ==
+        // true). Otherwise an unexpected double-cleanup or a stale cleanedUp
+        // flag from a previous session could leave the ringtone playing and
+        // the notification stuck on screen until the app is force-killed.
+        try {
+            audioManager.stopRinging()
+        } catch (e: Exception) {
+            Log.e(TAG, "cleanup: audioManager.stopRinging() failed", e)
+        }
+        try {
+            audioManager.stopRingbackTone()
+        } catch (e: Exception) {
+            Log.e(TAG, "cleanup: audioManager.stopRingbackTone() failed", e)
+        }
+        try {
+            NotificationUtils.cancelCallNotification(context)
+        } catch (e: Exception) {
+            Log.e(TAG, "cleanup: cancelCallNotification() failed", e)
+        }
+
         if (!cleanedUp.compareAndSet(false, true)) return
         unregisterNetworkCallback()
         try {
@@ -663,7 +708,6 @@ class CallController(
             Log.e(TAG, "cleanup: stopForegroundService() failed", e)
         }
         foregroundServiceStarted = false
-        NotificationUtils.cancelCallNotification(context)
 
         videoMonitor.dispose()
 
@@ -681,9 +725,11 @@ class CallController(
         videoSenders.clear()
         pendingRenegotiation.clear()
         // NOTE: cleanedUp intentionally stays true here so that a second,
-        // sequential cleanup() in the same call session is a no-op. The flag
-        // is re-armed in initiateGroupCall() / acceptIncomingCall() when a new
-        // call session begins.
+        // sequential cleanup() in the same call session is a no-op for the
+        // heavy teardown above. The flag is re-armed when a new call session
+        // begins, in initiateGroupCall() / acceptIncomingCall() AND in the
+        // state collector for IncomingCall / Offering transitions, so
+        // subsequent sessions still clean up correctly.
     }
 
     // ---- Foreground service ----
