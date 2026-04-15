@@ -1578,6 +1578,108 @@ class CallManagerTest {
         }
 
     /**
+     * Regression: Alice calls {bob, carol} as a group, Bob accepts and
+     * talks to Alice, Carol never joins. Alice hangs up before Carol's
+     * watchdog timer fires. Bob must end the call immediately — NOT stay
+     * in a Connected state alone waiting for Carol.
+     */
+    @Test
+    fun callerHangupEndsCalleeCallEvenWhenPendingPeersRemain() =
+        runTest {
+            val (manager, published) = createManager(localPubKey = bob, followedKeys = setOf(alice, carol))
+
+            // Alice calls {bob, carol}. Bob accepts and reaches Connected.
+            manager.onSignalingEvent(makeGroupOffer(from = alice, members = setOf(bob, carol)))
+            manager.acceptCall(sdpAnswer)
+            manager.onPeerConnected()
+            val connected = manager.state.value
+            assertIs<CallState.Connected>(connected)
+            assertTrue(alice in connected.peerPubKeys, "Alice must be the sole connected peer")
+            assertTrue(carol in connected.pendingPeerPubKeys, "Carol must still be pending")
+            published.clear()
+
+            // Alice hangs up well before Carol's 30 s watchdog fires.
+            manager.onSignalingEvent(makeHangup(from = alice, to = bob))
+
+            // The call must terminate immediately — Bob has nobody left
+            // to talk to, so staying in Connected alone is wrong.
+            val after = manager.state.value
+            assertIs<CallState.Ended>(after)
+            assertEquals(EndReason.PEER_HANGUP, after.reason)
+
+            // Bob must not publish any hangup: Carol's ringing is Alice's
+            // responsibility (Alice already broadcast her hangup to Carol
+            // as part of her own group hangup).
+            assertTrue(
+                published.isEmpty(),
+                "Callee must not publish anything when ending due to caller hangup",
+            )
+        }
+
+    /**
+     * Regression: when Bob is alone in a Connecting state (haven't reached
+     * Connected yet) and the caller hangs up, the call must end rather
+     * than lingering in Connecting with an empty peerPubKeys until the
+     * watchdog fires.
+     */
+    @Test
+    fun callerHangupEndsCalleeCallInConnectingEvenWhenPendingPeersRemain() =
+        runTest {
+            val (manager, _) = createManager(localPubKey = bob, followedKeys = setOf(alice, carol))
+
+            manager.onSignalingEvent(makeGroupOffer(from = alice, members = setOf(bob, carol)))
+            manager.acceptCall(sdpAnswer)
+            // Intentionally NOT calling onPeerConnected — we want to stay in Connecting.
+            assertIs<CallState.Connecting>(manager.state.value)
+
+            manager.onSignalingEvent(makeHangup(from = alice, to = bob))
+
+            val after = manager.state.value
+            assertIs<CallState.Ended>(after)
+            assertEquals(EndReason.PEER_HANGUP, after.reason)
+        }
+
+    /**
+     * Regression: if Bob is in a Connected group call with Alice and has
+     * personally invited Dave mid-call, and then Alice hangs up, the call
+     * ends AND Bob publishes a hangup to Dave (who is still ringing on
+     * Bob's invitation) so Dave's device stops ringing.
+     */
+    @Test
+    fun callerHangupEndsCallAndNotifiesInvitedPendingPeers() =
+        runTest {
+            val (manager, published) = createManager(localPubKey = bob, followedKeys = setOf(alice, carol))
+
+            // Alice ↔ Bob Connected (1-1).
+            manager.onSignalingEvent(makeOffer(from = alice, to = bob))
+            manager.acceptCall(sdpAnswer)
+            manager.onPeerConnected()
+            assertIs<CallState.Connected>(manager.state.value)
+
+            // Bob invites Carol mid-call — Bob becomes Carol's inviter.
+            manager.invitePeer(carol, "bob-to-carol-sdp")
+            val afterInvite = manager.state.value
+            assertIs<CallState.Connected>(afterInvite)
+            assertTrue(carol in afterInvite.pendingPeerPubKeys)
+            published.clear()
+
+            // Alice hangs up before Carol accepts Bob's invite.
+            manager.onSignalingEvent(makeHangup(from = alice, to = bob))
+
+            val after = manager.state.value
+            assertIs<CallState.Ended>(after)
+            assertEquals(EndReason.PEER_HANGUP, after.reason)
+
+            // Bob must publish a hangup to Carol (his invitee) so her
+            // device stops ringing.
+            assertEquals(
+                1,
+                published.size,
+                "Must publish exactly one hangup to the invited-but-pending peer",
+            )
+        }
+
+    /**
      * When a group offer is made, each callee gets its own timer. If NEITHER
      * answers, both timers fire in turn and the whole call ends with
      * [EndReason.TIMEOUT] (the second timeout has no peers left, so it tips
