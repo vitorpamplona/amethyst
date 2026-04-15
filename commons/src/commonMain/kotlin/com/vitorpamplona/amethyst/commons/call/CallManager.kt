@@ -386,6 +386,20 @@ class CallManager(
         Log.d("CallManager") { "acceptCall: publishing answer to ${otherMembers.size} recipients" }
         val result = factory.createGroupCallAnswer(sdpAnswer, otherMembers, current.callId, signer)
         result.wraps.forEach { publishEvent(it) }
+
+        // Notify our own other devices so they stop ringing. We wrap the
+        // *same* signed answer event for our own pubkey and publish it as
+        // an extra gift wrap. A sibling device in IncomingCall will observe
+        // the self-answer and transition to Ended(ANSWERED_ELSEWHERE)
+        // locally (see onCallAnswered). This call is the only place the
+        // "answered elsewhere" signal is generated — without it, a second
+        // logged-in device keeps ringing until its 60-second local timeout.
+        //
+        // The echo that arrives back at *this* device is ignored in
+        // Connecting/Connected state by the self-answer guard at the top
+        // of onCallAnswered, so it cannot disturb the live call.
+        val selfWrap = EphemeralGiftWrapEvent.create(event = result.msg, recipientPubKey = signer.pubKey)
+        publishEvent(selfWrap)
         Log.d("CallManager") { "acceptCall: answer published, now in Connecting state" }
 
         // Trigger callee-to-callee mesh connections with peers we discovered
@@ -410,6 +424,12 @@ class CallManager(
         val otherMembers = current.groupMembers - signer.pubKey
         val result = factory.createGroupReject(otherMembers, current.callId, signer = signer)
         result.wraps.forEach { publishEvent(it) }
+
+        // Notify our own other devices so they stop ringing. See the
+        // matching comment in acceptCall — sibling devices in IncomingCall
+        // pick up this echo and transition to Ended(REJECTED) locally.
+        val selfWrap = EphemeralGiftWrapEvent.create(event = result.msg, recipientPubKey = signer.pubKey)
+        publishEvent(selfWrap)
     }
 
     private fun onCallAnswered(event: CallAnswerEvent) {
@@ -534,6 +554,23 @@ class CallManager(
         val callId = event.callId()
         val rejectingPeer = event.pubKey
 
+        // Self-reject: only meaningful as "rejected elsewhere" while we are
+        // still ringing (IncomingCall).  In every other state it is our own
+        // echo from a relay after a sibling device rejected a call that we
+        // have already accepted and are now actively in — treating it as a
+        // peer rejection would drop ourselves from the call (onPeerLeft
+        // would dispose our own PeerConnection, killing the live audio on
+        // the device that picked up).  Just drop the echo.
+        if (rejectingPeer == signer.pubKey) {
+            if (current is CallState.IncomingCall && callId == current.callId) {
+                Log.d("CallManager") { "onCallRejected: self-reject detected in IncomingCall — rejected elsewhere" }
+                transitionToEnded(current.callId, current.peerPubKeys(), EndReason.REJECTED)
+            } else {
+                Log.d("CallManager") { "onCallRejected: ignoring self-reject echo in ${current::class.simpleName}" }
+            }
+            return
+        }
+
         when (current) {
             is CallState.Offering -> {
                 if (callId != current.callId) return
@@ -565,10 +602,7 @@ class CallManager(
 
             is CallState.IncomingCall -> {
                 if (callId != current.callId) return
-                if (rejectingPeer == signer.pubKey) {
-                    // Own rejection from another device
-                    transitionToEnded(current.callId, current.peerPubKeys(), EndReason.REJECTED)
-                } else if (rejectingPeer == current.callerPubKey) {
+                if (rejectingPeer == current.callerPubKey) {
                     // Caller rejected/cancelled the call
                     transitionToEnded(current.callId, current.groupMembers, EndReason.PEER_REJECTED)
                 } else {
@@ -860,17 +894,20 @@ class CallManager(
 
             // Record call-ids from termination signals so that a later offer
             // for the same call is recognised as stale (common after app restart
-            // when relay replays events out of order).
-            if (event is CallHangupEvent || event is CallRejectEvent) {
-                val terminatedCallId =
-                    when (event) {
-                        is CallHangupEvent -> event.callId()
-                        is CallRejectEvent -> event.callId()
-                        else -> null
-                    }
-                if (terminatedCallId != null) {
-                    cappedAdd(completedCallIds, terminatedCallId, MAX_COMPLETED_CALL_IDS)
+            // when relay replays events out of order).  For answers, only
+            // *self*-answers count as a termination signal: they mean another
+            // of our devices picked up, so ringing on this device should never
+            // start for the same call-id.  Peer answers to our own offer are
+            // not terminal — they are what moves us into Connecting.
+            val terminatedCallId =
+                when (event) {
+                    is CallHangupEvent -> event.callId()
+                    is CallRejectEvent -> event.callId()
+                    is CallAnswerEvent -> if (event.pubKey == signer.pubKey) event.callId() else null
+                    else -> null
                 }
+            if (terminatedCallId != null) {
+                cappedAdd(completedCallIds, terminatedCallId, MAX_COMPLETED_CALL_IDS)
             }
 
             when (event) {
