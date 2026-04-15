@@ -199,6 +199,7 @@ class AccountViewModel(
                     account.publishCallSignaling(wrap)
                 }
             },
+            isCallsEnabled = { account.settings.callsEnabled.value },
         )
 
     var callController: CallController? = null

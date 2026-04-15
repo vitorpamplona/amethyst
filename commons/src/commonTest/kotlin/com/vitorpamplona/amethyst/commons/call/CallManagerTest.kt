@@ -85,6 +85,7 @@ class CallManagerTest {
     private fun TestScope.createManager(
         localPubKey: HexKey = bob,
         followedKeys: Set<HexKey> = setOf(alice, carol),
+        isCallsEnabled: () -> Boolean = { true },
     ): Pair<CallManager, MutableList<EphemeralGiftWrapEvent>> {
         val published = mutableListOf<EphemeralGiftWrapEvent>()
         val signer = signers[localPubKey] ?: error("Unknown test identity: $localPubKey")
@@ -94,6 +95,7 @@ class CallManagerTest {
                 scope = this,
                 isFollowing = { it in followedKeys },
                 publishEvent = { published.add(it) },
+                isCallsEnabled = isCallsEnabled,
             )
         return manager to published
     }
@@ -1533,5 +1535,72 @@ class CallManagerTest {
             advanceUntilIdle()
             assertIs<CallState.Idle>(aliceManager.state.value)
             assertIs<CallState.Idle>(bobManager.state.value)
+        }
+
+    // ========================================================================
+    // User has disabled calls in Settings
+    // ========================================================================
+
+    /**
+     * When [CallManager.isCallsEnabled] returns false, an incoming
+     * [CallOfferEvent] is silently dropped — no state change, no ringing,
+     * no published reject.
+     */
+    @Test
+    fun incomingOfferIgnoredWhenCallsDisabledInSettings() =
+        runTest {
+            val (manager, published) = createManager(localPubKey = bob, isCallsEnabled = { false })
+
+            manager.onSignalingEvent(makeOffer(from = alice, to = bob))
+
+            assertIs<CallState.Idle>(manager.state.value)
+            assertTrue(
+                published.isEmpty(),
+                "Disabled calls must not publish any signaling events in response to an incoming offer",
+            )
+        }
+
+    /**
+     * Toggling the flag to false after a call is already in progress does
+     * not affect the in-flight call — CallManager only gates *new* incoming
+     * offers. Signaling for the active call continues to flow so cleanup
+     * (hangups, answers, ICE candidates) can complete.
+     */
+    @Test
+    fun disablingCallsAfterStartDoesNotTearDownInProgressCall() =
+        runTest {
+            var enabled = true
+            val (manager, _) = createManager(localPubKey = bob, isCallsEnabled = { enabled })
+
+            manager.onSignalingEvent(makeOffer(from = alice, to = bob))
+            manager.acceptCall(sdpAnswer)
+            manager.onPeerConnected()
+            assertIs<CallState.Connected>(manager.state.value)
+
+            // User flips the toggle off mid-call.
+            enabled = false
+
+            // The existing call is unaffected — Bob can still receive
+            // hangup/answer/ICE traffic for the current call.
+            assertIs<CallState.Connected>(manager.state.value)
+
+            // But a *new* offer for a different call is silently ignored.
+            val newCall = makeOffer(from = carol, to = bob, callId = callId2)
+            manager.onSignalingEvent(newCall)
+            assertIs<CallState.Connected>(manager.state.value)
+        }
+
+    /**
+     * Regression: when calls are enabled (the default) the incoming-offer
+     * path still works exactly as before.
+     */
+    @Test
+    fun incomingOfferProcessedWhenCallsEnabled() =
+        runTest {
+            val (manager, _) = createManager(localPubKey = bob, isCallsEnabled = { true })
+
+            manager.onSignalingEvent(makeOffer(from = alice, to = bob))
+
+            assertIs<CallState.IncomingCall>(manager.state.value)
         }
 }

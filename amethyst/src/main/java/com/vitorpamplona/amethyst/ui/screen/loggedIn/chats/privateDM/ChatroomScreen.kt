@@ -25,6 +25,8 @@ import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import com.vitorpamplona.amethyst.service.call.CallSessionBridge
@@ -49,7 +51,9 @@ fun ChatroomScreen(
     nav: INav,
 ) {
     val context = LocalContext.current
-    val isCallSupported = roomId.users.size <= 5
+    val callsEnabled by accountViewModel.account.settings.callsEnabled
+        .collectAsState()
+    val isCallSupported = roomId.users.size <= 5 && callsEnabled
     val startVoiceCall =
         rememberCallWithPermission(context) {
             CallSessionBridge.set(accountViewModel.callManager, accountViewModel.callController, accountViewModel)

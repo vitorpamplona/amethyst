@@ -49,6 +49,15 @@ class CallManager(
     private val scope: CoroutineScope,
     private val isFollowing: (HexKey) -> Boolean,
     private val publishEvent: (EphemeralGiftWrapEvent) -> Unit,
+    /**
+     * Whether the user has enabled calls in Settings. When false, all
+     * incoming [CallOfferEvent]s are silently ignored so the device never
+     * rings and no `IncomingCall` state is entered. Signaling for calls that
+     * are already in progress is still processed so cleanup can complete.
+     * Defaults to `true` (enabled) so existing callers and tests keep their
+     * current behavior.
+     */
+    private val isCallsEnabled: () -> Boolean = { true },
 ) {
     private val factory = WebRtcCallFactory()
 
@@ -226,6 +235,15 @@ class CallManager(
         val callType = event.callType() ?: CallType.VOICE
 
         Log.d("CallManager") { "onIncomingCallEvent: from=${callerPubKey.take(8)}, callId=$callId, type=$callType, sdpOfferLength=${event.sdpOffer().length}" }
+
+        // User disabled calls in Settings — silently ignore new incoming
+        // offers so the device does not ring. Mid-call signaling for calls
+        // that are already in progress is still processed by the other
+        // branches in onSignalingEvent so cleanup can complete normally.
+        if (!isCallsEnabled()) {
+            Log.d("CallManager") { "onIncomingCallEvent: calls disabled in settings — ignoring" }
+            return
+        }
 
         if (!isFollowing(callerPubKey)) {
             Log.d("CallManager") { "onIncomingCallEvent: caller not followed — ignoring" }
