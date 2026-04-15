@@ -290,7 +290,10 @@ private fun UserSecondaryLine(user: User) {
                 val name = state.nip05.name
                 if (name == "_") state.nip05.domain else "$name@${state.nip05.domain}"
             }
-            else -> user.pubkeyDisplayHex()
+
+            else -> {
+                user.pubkeyDisplayHex()
+            }
         }
 
     Text(

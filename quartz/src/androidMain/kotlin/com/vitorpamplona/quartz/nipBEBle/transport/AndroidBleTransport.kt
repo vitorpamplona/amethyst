@@ -450,6 +450,7 @@ class AndroidBleTransport(
                 if (characteristic.uuid == readCharUuid) {
                     val peerUuid = deviceUuidMap[gatt.device.address] ?: return
                     val peer = peerMap[peerUuid] ?: return
+
                     @Suppress("DEPRECATION")
                     val value = characteristic.value ?: return
 
