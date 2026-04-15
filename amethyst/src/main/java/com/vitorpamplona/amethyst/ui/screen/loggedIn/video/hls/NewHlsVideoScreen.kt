@@ -30,6 +30,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -439,17 +440,19 @@ private fun RenditionsCheckboxes(vm: NewHlsVideoViewModel) {
         Spacer(Modifier.height(8.dp))
     }
 
-    HlsLadder.default().renditions.forEach { rendition ->
-        val label = rendition.resolution.label
-        val aboveSource = sourceShortSide != null && rendition.resolution.shortSide > sourceShortSide
-        val enabled = !aboveSource
-        val checked = label in vm.selectedRenditionLabels && !aboveSource
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        HlsLadder.default().renditions.forEach { rendition ->
+            val label = rendition.resolution.label
+            val aboveSource = sourceShortSide != null && rendition.resolution.shortSide > sourceShortSide
+            val enabled = !aboveSource
+            val checked = label in vm.selectedRenditionLabels && !aboveSource
 
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .clickable(enabled = enabled) {
+            Row(
+                modifier =
+                    Modifier.clickable(enabled = enabled) {
                         vm.selectedRenditionLabels =
                             if (checked) {
                                 vm.selectedRenditionLabels - label
@@ -457,33 +460,21 @@ private fun RenditionsCheckboxes(vm: NewHlsVideoViewModel) {
                                 vm.selectedRenditionLabels + label
                             }
                     },
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Checkbox(
-                checked = checked,
-                enabled = enabled,
-                onCheckedChange = {
-                    vm.selectedRenditionLabels =
-                        if (it) vm.selectedRenditionLabels + label else vm.selectedRenditionLabels - label
-                },
-            )
-            Column(modifier = Modifier.weight(1f)) {
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Checkbox(
+                    checked = checked,
+                    enabled = enabled,
+                    onCheckedChange = {
+                        vm.selectedRenditionLabels =
+                            if (it) vm.selectedRenditionLabels + label else vm.selectedRenditionLabels - label
+                    },
+                )
                 Text(
                     text = label,
                     style = MaterialTheme.typography.bodyLarge,
                     color =
                         if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                val subline =
-                    if (aboveSource) {
-                        stringResource(R.string.hls_rendition_above_source)
-                    } else {
-                        stringResource(R.string.hls_rendition_bitrate_kbps_format, rendition.bitrateKbps)
-                    }
-                Text(
-                    text = subline,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
