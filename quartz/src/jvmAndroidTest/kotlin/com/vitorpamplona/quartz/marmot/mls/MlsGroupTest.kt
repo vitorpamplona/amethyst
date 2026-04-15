@@ -173,7 +173,7 @@ class MlsGroupTest {
 
         assertTrue(result.commitBytes.isNotEmpty(), "Commit bytes should not be empty")
         assertNotNull(result.welcomeBytes, "Welcome bytes should be present for Add")
-        assertTrue(result.welcomeBytes!!.isNotEmpty(), "Welcome bytes should not be empty")
+        assertTrue(result.welcomeBytes.isNotEmpty(), "Welcome bytes should not be empty")
 
         // After commit, epoch should advance
         assertEquals(1L, aliceGroup.epoch)

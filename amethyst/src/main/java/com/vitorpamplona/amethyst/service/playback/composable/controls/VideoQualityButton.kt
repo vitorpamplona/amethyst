@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.playback.composable.controls
 
+import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -54,6 +55,7 @@ import androidx.media3.common.C
 import androidx.media3.common.Player
 import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.Tracks
+import androidx.media3.common.util.UnstableApi
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.PinBottomIconSize
@@ -189,6 +191,7 @@ private data class QualityChoice(
     val bitrate: Int,
 )
 
+@OptIn(UnstableApi::class)
 private fun buildQualityChoices(group: Tracks.Group): ImmutableList<QualityChoice> {
     val choices = mutableListOf<QualityChoice>()
     for (i in 0 until group.length) {
@@ -208,6 +211,7 @@ private fun formatBitrate(bitrate: Int): String =
         else -> String.format(Locale.US, "%.0f kbps", bitrate / 1_000.0)
     }
 
+@OptIn(UnstableApi::class)
 private fun hasVideoOverride(player: Player): Boolean = player.trackSelectionParameters.overrides.any { (key, _) -> key.type == C.TRACK_TYPE_VIDEO }
 
 private fun clearVideoOverride(player: Player) {

@@ -145,6 +145,9 @@ kotlin {
 
                 // Negentropy set reconciliation (NIP-77)
                 api(libs.negentropy.kmp)
+
+                implementation("io.github.andreypfau:kotlinx-crypto-hmac:0.0.4")
+                implementation("io.github.andreypfau:kotlinx-crypto-sha2:0.0.4")
             }
         }
 
@@ -323,8 +326,6 @@ kotlin {
                 dependencies {
                     implementation(libs.net.thauvin.erik.urlencoder.lib)
                     implementation(libs.dev.whyoleg.cryptography.provider.apple.optimal)
-                    implementation("io.github.andreypfau:kotlinx-crypto-hmac:0.0.4")
-                    implementation("io.github.andreypfau:kotlinx-crypto-sha2:0.0.4")
                 }
             }
 

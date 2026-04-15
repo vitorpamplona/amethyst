@@ -78,7 +78,7 @@ class MlsGroupLifecycleTest {
         assertEquals(2, alice.memberCount)
 
         // Bob processes the Welcome to join the group
-        val bob = MlsGroup.processWelcome(result.welcomeBytes!!, bobBundle)
+        val bob = MlsGroup.processWelcome(result.welcomeBytes, bobBundle)
         assertEquals(1L, bob.epoch, "Bob should be at same epoch as Alice after Welcome")
         assertEquals(2, bob.memberCount, "Bob should see 2 members")
     }
