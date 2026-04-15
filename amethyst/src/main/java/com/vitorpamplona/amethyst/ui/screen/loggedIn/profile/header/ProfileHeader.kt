@@ -51,6 +51,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
@@ -173,12 +176,15 @@ fun ZoomableUserPicture(
     val scope = rememberCoroutineScope()
 
     var zoomImageUrl by remember { mutableStateOf<String?>(null) }
+    var sourceBounds by remember { mutableStateOf<Rect?>(null) }
 
     ClickableUserPicture(
         baseUser = baseUser,
         accountViewModel = accountViewModel,
         size = size,
-        modifier = MaterialTheme.colorScheme.userProfileBorderModifier,
+        modifier =
+            MaterialTheme.colorScheme.userProfileBorderModifier
+                .onGloballyPositioned { sourceBounds = it.boundsInWindow() },
         onClick = {
             val pic = baseUser.profilePicture()
             if (pic != null) {
@@ -197,7 +203,8 @@ fun ZoomableUserPicture(
 
     zoomImageUrl?.let {
         ZoomableImageDialog(
-            RichTextParser.parseImageOrVideo(it),
+            imageUrl = RichTextParser.parseImageOrVideo(it),
+            sourceBounds = sourceBounds,
             onDismiss = { zoomImageUrl = null },
             accountViewModel = accountViewModel,
         )

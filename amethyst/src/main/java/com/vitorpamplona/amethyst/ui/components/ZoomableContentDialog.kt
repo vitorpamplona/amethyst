@@ -28,6 +28,9 @@ import android.os.Looper
 import android.view.WindowManager
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.clickable
@@ -59,12 +62,20 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.util.lerp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.net.toUri
@@ -102,11 +113,35 @@ import net.engawapg.lib.zoomable.zoomable
 fun ZoomableImageDialog(
     imageUrl: BaseMediaContent,
     allImages: ImmutableList<BaseMediaContent> = listOf(imageUrl).toImmutableList(),
+    sourceBounds: Rect? = null,
     onDismiss: () -> Unit,
     accountViewModel: AccountViewModel,
 ) {
+    // Animation progress: 0f = at source position/size, 1f = fullscreen.
+    val progress = remember { Animatable(0f) }
+    var isExiting by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        progress.animateTo(
+            targetValue = 1f,
+            animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
+        )
+    }
+
+    LaunchedEffect(isExiting) {
+        if (isExiting) {
+            progress.animateTo(
+                targetValue = 0f,
+                animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing),
+            )
+            onDismiss()
+        }
+    }
+
+    val dismissWithAnimation: () -> Unit = { if (!isExiting) isExiting = true }
+
     Dialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = dismissWithAnimation,
         properties =
             DialogProperties(
                 usePlatformDefaultWidth = true,
@@ -123,11 +158,52 @@ fun ZoomableImageDialog(
             val attributes = WindowManager.LayoutParams()
             attributes.copyFrom(activityWindow.attributes)
             attributes.type = dialogWindow.attributes.type
+            // Disable the system dim so the thumbnail stays visible behind the growing dialog.
+            attributes.dimAmount = 0f
+            attributes.flags = attributes.flags and WindowManager.LayoutParams.FLAG_DIM_BEHIND.inv()
             dialogWindow.attributes = attributes
         }
 
-        Surface(Modifier.fillMaxSize()) {
-            DialogContent(allImages, imageUrl, onDismiss, accountViewModel)
+        var fullBounds by remember { mutableStateOf<Rect?>(null) }
+
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .onGloballyPositioned { fullBounds = it.boundsInWindow() },
+        ) {
+            // Background surface that fades in as the content grows to fullscreen.
+            Surface(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .graphicsLayer { alpha = progress.value },
+            ) {}
+
+            // Content layer that grows from the source bounds to fullscreen (and back on exit).
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .graphicsLayer {
+                            val src = sourceBounds
+                            val full = fullBounds
+                            if (src != null && full != null && full.width > 0f && full.height > 0f) {
+                                transformOrigin = TransformOrigin(0f, 0f)
+                                val startScaleX = src.width / full.width
+                                val startScaleY = src.height / full.height
+                                scaleX = lerp(startScaleX, 1f, progress.value)
+                                scaleY = lerp(startScaleY, 1f, progress.value)
+                                translationX = lerp(src.left - full.left, 0f, progress.value)
+                                translationY = lerp(src.top - full.top, 0f, progress.value)
+                            } else {
+                                // No source bounds provided: fall back to a simple fade.
+                                alpha = progress.value
+                            }
+                        },
+            ) {
+                DialogContent(allImages, imageUrl, dismissWithAnimation, accountViewModel)
+            }
         }
     }
 }
