@@ -1834,6 +1834,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="profile_actions_dialog_title">Možnosti profila</string>
     <string name="media_actions_dialog_title">Možnosti predstavnosti</string>
     <string name="playback_actions_dialog_title">Predvajaj</string>
+    <!-- HLS multi-resolution video sharing -->
     <string name="pack_actions_dialog_title">Možnosti paketa</string>
     <string name="list_actions_dialog_title">Možnosti seznama</string>
     <string name="bookmark_item_actions_dialog_title">Možnosti zaznamkov</string>

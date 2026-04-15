@@ -1825,6 +1825,7 @@
     <string name="media_actions_dialog_title">Médiaműveletek</string>
     <string name="playback_actions_dialog_title">Lejátszás</string>
     <string name="video_quality_auto">Automatikus</string>
+    <!-- HLS multi-resolution video sharing -->
     <string name="pack_actions_dialog_title">Csomagműveletek</string>
     <string name="list_actions_dialog_title">Listaműveletek</string>
     <string name="bookmark_item_actions_dialog_title">Könyvjelző-műveletek</string>
