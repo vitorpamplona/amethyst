@@ -270,6 +270,7 @@
         这非常适合围绕特定主题而建立的开放社区。其中一些群组是临时的，
     因此聊天信息会随着时间的推移而消失。</string>
     <string name="public_chat">公共聊天</string>
+    <string name="marmot_group">MLS 组</string>
     <string name="public_chat_title">公开聊天元数据</string>
     <string name="public_chat_explainer">公开聊天对所有 Nostr 用户都是可见的，任何人都可以：
         参与这些聊天。这对特定话题建立的开放式社区来说很重要
@@ -398,6 +399,7 @@
     <string name="remove_from_private_bookmarks">从私人书签中移除</string>
     <string name="remove_from_public_bookmarks">从公开书签中移除</string>
     <string name="pinned_notes">置顶的笔记</string>
+    <string name="pinned_notes_explainer">您置顶的笔记</string>
     <string name="pin_to_profile">置顶到个人资料</string>
     <string name="unpin_from_profile">从个人资料中取消置顶</string>
     <string name="bookmark_lists">书签列表</string>
@@ -716,6 +718,8 @@
     <string name="call_failed_accept">未能接受通话</string>
     <string name="call_failed_session">创建通话会话失败</string>
     <string name="call_settings">通话设置</string>
+    <string name="call_settings_enable_calls">启用语音和视频通话</string>
+    <string name="call_settings_enable_calls_description">禁用时，通话按钮在聊天屏幕上隐藏，所有来电都被无声忽略。</string>
     <string name="call_settings_video_quality">画质</string>
     <string name="call_settings_max_bitrate">最大视频比特率</string>
     <string name="call_settings_turn_servers">TURN / STUN 服务器</string>
