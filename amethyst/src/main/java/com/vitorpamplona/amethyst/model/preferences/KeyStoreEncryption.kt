@@ -29,7 +29,7 @@ import java.security.KeyStore
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
-import javax.crypto.spec.IvParameterSpec
+import javax.crypto.spec.GCMParameterSpec
 
 class KeyStoreEncryption {
     companion object {
@@ -42,6 +42,7 @@ class KeyStoreEncryption {
         private const val PURPOSE = KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
         private const val KEY_ALIAS = "AMETHYST_AES_KEY"
         private const val GCM_IV_LENGTH = 12
+        private const val GCM_TAG_LENGTH_BITS = 128
     }
 
     private val cipher = Cipher.getInstance(TRANSFORMATION)
@@ -106,12 +107,12 @@ class KeyStoreEncryption {
 
     fun decrypt(bytes: ByteArray): ByteArray? {
         try {
-            // Extracts IV and decrypts the data. GCM mode uses a 12-byte IV,
-            // which is what cipher.iv returns in encrypt() — not the AES block
-            // size (16), which is what cipher.blockSize would return.
+            // Extract the 12-byte GCM IV prefix and decrypt the remainder. The
+            // AndroidKeyStore cipher only accepts GCMParameterSpec (not a plain
+            // IvParameterSpec), so we must pass the 128-bit auth tag length.
             val iv = bytes.copyOfRange(0, GCM_IV_LENGTH)
             val data = bytes.copyOfRange(GCM_IV_LENGTH, bytes.size)
-            cipher.init(Cipher.DECRYPT_MODE, getKey(), IvParameterSpec(iv))
+            cipher.init(Cipher.DECRYPT_MODE, getKey(), GCMParameterSpec(GCM_TAG_LENGTH_BITS, iv))
             return cipher.doFinal(data)
         } catch (e: Exception) {
             Log.e(TAG, "decrypt() failed (input ${bytes.size} bytes): ${e.message}", e)
