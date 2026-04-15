@@ -263,6 +263,28 @@ class CallActivity : AppCompatActivity() {
         // is safe.
         controller?.cleanup()
 
+        // Hard guarantee: the ringtone, ringback tone, and incoming-call
+        // notification are tied to this Activity's lifecycle. When the
+        // Activity is destroyed for ANY reason (user reject, hangup, finish,
+        // process recreation, etc.), they MUST be gone — even if the
+        // CallController is missing, its cleanup guard is stale, or the
+        // state-collector hasn't fired yet. We had a bug where rejecting a
+        // call left the ringtone playing until the user killed the entire
+        // app from settings; this block is the ultimate stop signal.
+        try {
+            controller?.audioManager?.stopRinging()
+        } catch (_: Exception) {
+        }
+        try {
+            controller?.audioManager?.stopRingbackTone()
+        } catch (_: Exception) {
+        }
+        try {
+            com.vitorpamplona.amethyst.service.notifications.NotificationUtils
+                .cancelCallNotification(this)
+        } catch (_: Exception) {
+        }
+
         super.onDestroy()
     }
 
