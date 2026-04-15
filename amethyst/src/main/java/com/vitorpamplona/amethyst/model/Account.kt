@@ -1757,10 +1757,23 @@ class Account(
 
         // Build filter for the member's KeyPackages
         val filter = manager.subscriptionManager.keyPackageFilter(memberPubKey)
-        val relays = outboxRelays.flow.value
 
-        // Query across outbox relays
-        val filterMap = relays.associateWith { listOf(filter) }
+        // KeyPackages are published by the invitee to *their own* outbox
+        // (see publishMarmotKeyPackage), so look there first. Union with
+        // our own outbox so we still find packages that ended up on a
+        // shared relay, and as a fallback when we don't know the
+        // invitee's outbox yet.
+        val myOutbox = outboxRelays.flow.value
+        val memberOutbox =
+            cache
+                .getOrCreateUser(memberPubKey)
+                .outboxRelays()
+                ?.toSet()
+                .orEmpty()
+        val fetchRelays = memberOutbox + myOutbox
+
+        // Query across the combined relay set
+        val filterMap = fetchRelays.associateWith { listOf(filter) }
 
         val event =
             client.fetchFirst(
@@ -1784,7 +1797,10 @@ class Account(
             kotlin.io.encoding.Base64
                 .decode(keyPackageBase64)
         val keyPackageEventId = event.id
-        val groupRelays = relays.toList()
+        // The relays embedded in the WelcomeEvent tell the new member
+        // where to subscribe for subsequent GroupEvents. Use our own
+        // outbox — that's where we will publish them.
+        val groupRelays = myOutbox.toList()
 
         addMarmotGroupMember(
             nostrGroupId = nostrGroupId,
@@ -1823,9 +1839,32 @@ class Account(
         // Publish commit first (critical ordering)
         client.publish(commitEvent.signedEvent, groupRelays.toSet())
 
-        // Then send Welcome gift wrap to the new member
+        // Then send the Welcome gift wrap to the new member.
+        //
+        // We deliberately do NOT route this through
+        // computeRelayListToBroadcast(): its GiftWrap branch returns an
+        // empty relay set when the recipient has no NIP-17 kind:10050 and
+        // no cached NIP-65 inbox relays, which silently drops the welcome
+        // and leaves the invitee with no way to discover the group.
+        //
+        // Instead, mirror sendNip04PrivateMessage's delivery strategy:
+        // publish to our own outbox (so we keep a copy and the invitee
+        // may find it via a shared relay) unioned with the recipient's
+        // DM inbox relays — User.dmInboxRelays() already falls back
+        // through NIP-17 kind:10050 → NIP-65 read relays, which is where
+        // the invitee's AccountGiftWrapsEoseManager actually listens.
         if (welcomeDelivery != null) {
-            val relayList = computeRelayListToBroadcast(welcomeDelivery.giftWrapEvent)
+            val recipientInbox =
+                cache
+                    .getOrCreateUser(memberPubKey)
+                    .dmInboxRelays()
+                    .orEmpty()
+            val relayList = outboxRelays.flow.value + recipientInbox
+            if (relayList.isEmpty()) {
+                Log.w("Marmot") {
+                    "addMarmotGroupMember: no relays to deliver welcome gift wrap to ${memberPubKey.take(8)}…"
+                }
+            }
             client.publish(welcomeDelivery.giftWrapEvent, relayList)
         }
     }
