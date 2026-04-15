@@ -630,12 +630,12 @@ object NotificationUtils {
         callerPubKey: String,
         context: Context,
     ) {
-        val callerUser = LocalCache.getUserIfExists(callerPubKey)
-        val callerName = callerUser?.toBestDisplayName() ?: callerPubKey.take(8) + "..."
+        val callerUser = LocalCache.getOrCreateUser(callerPubKey)
+        val callerName = callerUser.toBestDisplayName()
         val uri = "nostr:${callerPubKey.hexToByteArray().toNpub()}"
 
         val callerBitmap =
-            callerUser?.profilePicture()?.let { pictureUrl ->
+            callerUser.profilePicture()?.let { pictureUrl ->
                 withContext(Dispatchers.IO) {
                     try {
                         val request =
