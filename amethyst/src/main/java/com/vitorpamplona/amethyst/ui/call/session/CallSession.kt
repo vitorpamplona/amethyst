@@ -113,6 +113,7 @@ class CallSession(
     val isBluetoothAvailable: StateFlow<Boolean> = audioManager.isBluetoothAvailable
 
     @Volatile private var videoPausedByProximity = false
+    @Volatile private var closed = false
 
     @Volatile private var foregroundServiceStarted = false
     private val videoSenders = ConcurrentHashMap<HexKey, org.webrtc.RtpSender>()
@@ -145,12 +146,13 @@ class CallSession(
         // restarts.
         scope.launch {
             callManager.renegotiationEvents.collect { event ->
-                onRenegotiationOfferReceived(event)
+                if (!closed) onRenegotiationOfferReceived(event)
             }
         }
 
         scope.launch {
             callManager.state.collect { state ->
+                if (closed) return@collect
                 when (state) {
                     is CallState.IncomingCall -> {
                         ensureForegroundService()
@@ -660,6 +662,9 @@ class CallSession(
      * once from [onDestroy].
      */
     override fun close() {
+        // Signal the init collectors to stop touching resources.
+        closed = true
+
         try {
             audioManager.stopRinging()
         } catch (e: Exception) {
@@ -691,12 +696,16 @@ class CallSession(
 
         videoMonitor.dispose()
 
-        try {
-            peerSessionMgr.disposeAll()
-        } catch (e: Exception) {
-            Log.e(TAG, "close: sessionManager.disposeAll() failed", e)
+        // Synchronized to prevent a concurrent collector from reading
+        // the old manager after disposeAll() but before reassignment.
+        synchronized(this) {
+            try {
+                peerSessionMgr.disposeAll()
+            } catch (e: Exception) {
+                Log.e(TAG, "close: sessionManager.disposeAll() failed", e)
+            }
+            peerSessionMgr = PeerSessionManager(peerSessionMgr.localPubKey)
         }
-        peerSessionMgr = PeerSessionManager(peerSessionMgr.localPubKey)
 
         mediaManager.dispose()
 

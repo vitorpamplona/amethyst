@@ -231,8 +231,29 @@ class CallActivity : AppCompatActivity() {
     override fun onDestroy() {
         unregisterPipReceiver()
 
-        // Publish reject/hangup so the remote side stops ringing.
         val manager = CallSessionBridge.callManager
+
+        // Release all WebRTC/audio/notification resources FIRST, before
+        // the signaling hangup. close() is synchronous and runs before
+        // super.onDestroy() cancels lifecycleScope, so the init
+        // collectors are still alive but close() gets to run first.
+        session?.close()
+        session = null
+
+        // Null out callbacks so signaling events arriving after this
+        // Activity is gone don't route to a dead CallSession.
+        if (manager != null) {
+            manager.onAnswerReceived = null
+            manager.onIceCandidateReceived = null
+            manager.onNewPeerInGroupCall = null
+            manager.onMidCallOfferReceived = null
+            manager.onPeerLeft = null
+        }
+
+        // Publish reject/hangup so the remote side stops ringing.
+        // Use goAsync-style: the hangup is best-effort. If the process
+        // dies before it completes, the watchdog on the remote side
+        // (or our own CallManager watchdog) handles cleanup.
         if (manager != null) {
             when (manager.state.value) {
                 is CallState.IncomingCall -> {
@@ -251,11 +272,6 @@ class CallActivity : AppCompatActivity() {
                 else -> {}
             }
         }
-
-        // Single-shot release of all WebRTC/audio/notification resources.
-        // Guaranteed by Android lifecycle — when Activity dies, the call dies.
-        session?.close()
-        session = null
 
         super.onDestroy()
     }
