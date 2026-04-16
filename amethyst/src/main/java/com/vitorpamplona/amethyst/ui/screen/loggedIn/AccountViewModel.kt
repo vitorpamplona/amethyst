@@ -1469,9 +1469,11 @@ class AccountViewModel(
                 kind = 9,
                 description = url,
             ) {
-                com.vitorpamplona.quartz.nip92IMeta.imeta(imeta)
+                com.vitorpamplona.quartz.nip92IMeta
+                    .imeta(imeta)
                 if (!caption.isNullOrEmpty()) {
-                    com.vitorpamplona.quartz.nip31Alts.alt(caption)
+                    com.vitorpamplona.quartz.nip31Alts
+                        .alt(caption)
                 }
             }
         val innerEvent = account.signer.sign<com.vitorpamplona.quartz.nip01Core.core.Event>(template)
@@ -1479,8 +1481,7 @@ class AccountViewModel(
         account.sendMarmotGroupMessage(nostrGroupId, innerEvent, relays)
     }
 
-    fun marmotMediaExporterSecret(nostrGroupId: String): ByteArray? =
-        account.marmotManager?.mediaExporterSecret(nostrGroupId)
+    fun marmotMediaExporterSecret(nostrGroupId: String): ByteArray? = account.marmotManager?.mediaExporterSecret(nostrGroupId)
 
     suspend fun createMarmotGroup(nostrGroupId: String) {
         account.createMarmotGroup(nostrGroupId)

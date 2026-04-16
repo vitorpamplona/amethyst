@@ -161,14 +161,22 @@ object Mip04MediaEncryption {
         val result = ByteArray(size)
         var offset = 0
 
-        SCHEME_BYTES.copyInto(result, offset); offset += SCHEME_BYTES.size
-        NULL_SEPARATOR.copyInto(result, offset); offset += 1
-        fileHash.copyInto(result, offset); offset += fileHash.size
-        NULL_SEPARATOR.copyInto(result, offset); offset += 1
-        mimeBytes.copyInto(result, offset); offset += mimeBytes.size
-        NULL_SEPARATOR.copyInto(result, offset); offset += 1
-        filenameBytes.copyInto(result, offset); offset += filenameBytes.size
-        NULL_SEPARATOR.copyInto(result, offset); offset += 1
+        SCHEME_BYTES.copyInto(result, offset)
+        offset += SCHEME_BYTES.size
+        NULL_SEPARATOR.copyInto(result, offset)
+        offset += 1
+        fileHash.copyInto(result, offset)
+        offset += fileHash.size
+        NULL_SEPARATOR.copyInto(result, offset)
+        offset += 1
+        mimeBytes.copyInto(result, offset)
+        offset += mimeBytes.size
+        NULL_SEPARATOR.copyInto(result, offset)
+        offset += 1
+        filenameBytes.copyInto(result, offset)
+        offset += filenameBytes.size
+        NULL_SEPARATOR.copyInto(result, offset)
+        offset += 1
         suffix.copyInto(result, offset)
 
         return result
@@ -190,12 +198,18 @@ object Mip04MediaEncryption {
         val result = ByteArray(size)
         var offset = 0
 
-        SCHEME_BYTES.copyInto(result, offset); offset += SCHEME_BYTES.size
-        NULL_SEPARATOR.copyInto(result, offset); offset += 1
-        fileHash.copyInto(result, offset); offset += fileHash.size
-        NULL_SEPARATOR.copyInto(result, offset); offset += 1
-        mimeBytes.copyInto(result, offset); offset += mimeBytes.size
-        NULL_SEPARATOR.copyInto(result, offset); offset += 1
+        SCHEME_BYTES.copyInto(result, offset)
+        offset += SCHEME_BYTES.size
+        NULL_SEPARATOR.copyInto(result, offset)
+        offset += 1
+        fileHash.copyInto(result, offset)
+        offset += fileHash.size
+        NULL_SEPARATOR.copyInto(result, offset)
+        offset += 1
+        mimeBytes.copyInto(result, offset)
+        offset += mimeBytes.size
+        NULL_SEPARATOR.copyInto(result, offset)
+        offset += 1
         filenameBytes.copyInto(result, offset)
 
         return result
@@ -208,7 +222,11 @@ object Mip04MediaEncryption {
      * - Strip parameters (e.g., "; charset=utf-8")
      */
     fun canonicalizeMimeType(mimeType: String): String =
-        mimeType.trim().lowercase().substringBefore(";").trim()
+        mimeType
+            .trim()
+            .lowercase()
+            .substringBefore(";")
+            .trim()
 }
 
 class Mip04EncryptionResult(

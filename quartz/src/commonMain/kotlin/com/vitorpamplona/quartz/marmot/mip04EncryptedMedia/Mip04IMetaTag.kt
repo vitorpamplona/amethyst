@@ -99,12 +99,13 @@ fun buildMip04IMetaTag(
     dimensions: String? = null,
     blurhash: String? = null,
 ): IMetaTag =
-    IMetaTagBuilder(url).apply {
-        add(Mip04Fields.MIME_TYPE, Mip04MediaEncryption.canonicalizeMimeType(mimeType))
-        add(Mip04Fields.FILENAME, filename)
-        add(Mip04Fields.FILE_HASH, originalFileHash.toHexKey())
-        add(Mip04Fields.NONCE, nonce.toHexKey())
-        add(Mip04Fields.VERSION, Mip04MediaEncryption.VERSION)
-        dimensions?.let { add(Mip04Fields.DIMENSIONS, it) }
-        blurhash?.let { add(Mip04Fields.BLURHASH, it) }
-    }.build()
+    IMetaTagBuilder(url)
+        .apply {
+            add(Mip04Fields.MIME_TYPE, Mip04MediaEncryption.canonicalizeMimeType(mimeType))
+            add(Mip04Fields.FILENAME, filename)
+            add(Mip04Fields.FILE_HASH, originalFileHash.toHexKey())
+            add(Mip04Fields.NONCE, nonce.toHexKey())
+            add(Mip04Fields.VERSION, Mip04MediaEncryption.VERSION)
+            dimensions?.let { add(Mip04Fields.DIMENSIONS, it) }
+            blurhash?.let { add(Mip04Fields.BLURHASH, it) }
+        }.build()

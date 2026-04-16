@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.feeds.ChannelFeedContentState
 import com.vitorpamplona.amethyst.ui.screen.TopNavFilterState
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.articles.dal.ArticlesFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.dal.ChatroomListKnownFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.dal.ChatroomListNewFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip23LongForm.DiscoverLongFormFeedFilter
@@ -40,7 +41,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.drafts.dal.DraftEventsFeedF
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.dal.HomeConversationsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.dal.HomeLiveFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.dal.HomeNewThreadFeedFilter
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.articles.dal.ArticlesFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.longs.dal.LongsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CardFeedContentState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NotificationSummaryState
@@ -48,9 +48,9 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.OpenPollsStat
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.dal.NotificationFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.pictures.dal.PictureFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.dal.ClosedPollsFeedFilter
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.products.dal.ProductsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.dal.OpenPollsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.dal.PollsFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.products.dal.ProductsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.shorts.dal.ShortsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.dal.VideoFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.webBookmarks.dal.WebBookmarkFeedFilter
