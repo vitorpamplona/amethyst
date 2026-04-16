@@ -104,6 +104,7 @@ private object PrefKeys {
     const val DEFAULT_PRODUCTS_FOLLOW_LIST = "defaultProductsFollowList"
     const val DEFAULT_SHORTS_FOLLOW_LIST = "defaultShortsFollowList"
     const val DEFAULT_LONGS_FOLLOW_LIST = "defaultLongsFollowList"
+    const val DEFAULT_ARTICLES_FOLLOW_LIST = "defaultArticlesFollowList"
     const val ZAP_PAYMENT_REQUEST_SERVER = "zapPaymentServer" // legacy, kept for migration
     const val NWC_WALLETS = "nwcWallets"
     const val DEFAULT_NWC_WALLET_ID = "defaultNwcWalletId"
@@ -348,6 +349,7 @@ object LocalPreferences {
                     putString(PrefKeys.DEFAULT_PRODUCTS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultProductsFollowList.value))
                     putString(PrefKeys.DEFAULT_SHORTS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultShortsFollowList.value))
                     putString(PrefKeys.DEFAULT_LONGS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultLongsFollowList.value))
+                    putString(PrefKeys.DEFAULT_ARTICLES_FOLLOW_LIST, JsonMapper.toJson(settings.defaultArticlesFollowList.value))
 
                     val walletEntries = settings.nwcWallets.value.mapNotNull { it.denormalize() }
                     if (walletEntries.isNotEmpty()) {
@@ -514,6 +516,7 @@ object LocalPreferences {
                     val defaultProductsFollowListStr = getString(PrefKeys.DEFAULT_PRODUCTS_FOLLOW_LIST, null)
                     val defaultShortsFollowListStr = getString(PrefKeys.DEFAULT_SHORTS_FOLLOW_LIST, null)
                     val defaultLongsFollowListStr = getString(PrefKeys.DEFAULT_LONGS_FOLLOW_LIST, null)
+                    val defaultArticlesFollowListStr = getString(PrefKeys.DEFAULT_ARTICLES_FOLLOW_LIST, null)
 
                     val zapPaymentRequestServerStr = getString(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER, null)
                     val nwcWalletsStr = getString(PrefKeys.NWC_WALLETS, null)
@@ -554,6 +557,7 @@ object LocalPreferences {
                     val defaultProductsFollowList = async { parseOrNull<TopFilter>(defaultProductsFollowListStr) ?: TopFilter.AroundMe }
                     val defaultShortsFollowList = async { parseOrNull<TopFilter>(defaultShortsFollowListStr) ?: TopFilter.Global }
                     val defaultLongsFollowList = async { parseOrNull<TopFilter>(defaultLongsFollowListStr) ?: TopFilter.Global }
+                    val defaultArticlesFollowList = async { parseOrNull<TopFilter>(defaultArticlesFollowListStr) ?: TopFilter.AllFollows }
 
                     val nwcWalletsLoaded =
                         async {
@@ -630,6 +634,7 @@ object LocalPreferences {
                         defaultProductsFollowList = MutableStateFlow(defaultProductsFollowList.await()),
                         defaultShortsFollowList = MutableStateFlow(defaultShortsFollowList.await()),
                         defaultLongsFollowList = MutableStateFlow(defaultLongsFollowList.await()),
+                        defaultArticlesFollowList = MutableStateFlow(defaultArticlesFollowList.await()),
                         nwcWallets = MutableStateFlow(nwcWalletsLoaded.await().first),
                         defaultNwcWalletId = MutableStateFlow(nwcWalletsLoaded.await().second),
                         hideDeleteRequestDialog = hideDeleteRequestDialog,

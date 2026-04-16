@@ -53,6 +53,8 @@ sealed class Route {
 
     @Serializable object Longs : Route()
 
+    @Serializable object Articles : Route()
+
     @Serializable object Chess : Route()
 
     @Serializable object Wallet : Route()
