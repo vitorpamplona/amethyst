@@ -1,4 +1,8 @@
 [versions]
+# Amethyst app version — single source of truth consumed by both Android (amethyst/)
+# and Desktop (desktopApp/). Android versionCode is bumped independently in
+# amethyst/build.gradle because it must be a monotonic integer.
+app = "1.08.0"
 accompanistAdaptive = "0.37.3"
 cachemapVersion = "0.2.4"
 composeMultiplatform = "1.10.3"

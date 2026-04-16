@@ -1,0 +1,9 @@
+#!/bin/bash
+# AppImage launcher for Amethyst Desktop.
+# Sets LD_LIBRARY_PATH to find bundled VLC natives (vlcj dlopens libvlc.so at runtime).
+set -e
+HERE="$(dirname "$(readlink -f "${0}")")"
+export LD_LIBRARY_PATH="${HERE}/usr/lib:${HERE}/usr/lib/vlc:${HERE}/usr/lib/x86_64-linux-gnu:${LD_LIBRARY_PATH:-}"
+export PATH="${HERE}/usr/bin:${PATH}"
+export APPDIR="${HERE}"
+exec "${HERE}/usr/bin/Amethyst" "$@"
