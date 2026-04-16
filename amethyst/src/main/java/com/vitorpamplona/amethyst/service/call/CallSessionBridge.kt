@@ -21,11 +21,7 @@
 package com.vitorpamplona.amethyst.service.call
 
 import com.vitorpamplona.amethyst.commons.call.CallManager
-import com.vitorpamplona.amethyst.commons.call.CallState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.quartz.utils.Log
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Process-level singleton that bridges the active [CallManager] and
@@ -52,29 +48,18 @@ object CallSessionBridge {
     }
 
     /**
-     * Terminates any active call and clears all references. Called from
-     * [AccountViewModel.onCleared] during logout or account switch so
-     * that a stale CallSession cannot invoke signing/publishing lambdas
-     * on a disposed Account.
+     * Resets call state and clears all references. Called from
+     * [AccountViewModel.onCleared] during logout or account switch.
+     *
+     * Uses [CallManager.reset] (non-blocking, no mutex) instead of
+     * [CallManager.hangup] to avoid deadlocking on `stateMutex` if
+     * a cancelled coroutine on the dying `viewModelScope` still holds
+     * it. Hangup signaling to the remote peer is the responsibility
+     * of [CallActivity.onDestroy] and [CallForegroundService], not
+     * the bridge teardown.
      */
     fun clear() {
-        val mgr = callManager
-        if (mgr != null) {
-            val state = mgr.state.value
-            if (state is CallState.IncomingCall ||
-                state is CallState.Offering ||
-                state is CallState.Connecting ||
-                state is CallState.Connected
-            ) {
-                try {
-                    runBlocking {
-                        withTimeoutOrNull(3_000L) { mgr.hangup() }
-                    }
-                } catch (e: Exception) {
-                    Log.e("CallSessionBridge", "clear: hangup failed", e)
-                }
-            }
-        }
+        callManager?.reset()
         callManager = null
         accountViewModel = null
     }

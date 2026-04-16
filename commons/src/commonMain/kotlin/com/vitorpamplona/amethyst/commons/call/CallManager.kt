@@ -86,10 +86,13 @@ class CallManager(
      *    missing buffered events.
      *  - No null-check on every emit site.
      *
-     * Buffer size 16 covers bursts of ICE candidates + answers arriving
-     * in quick succession during call setup.
+     * Buffer size 256 handles worst-case bursts (20+ ICE candidates per
+     * peer × multiple peers + answers + peer-left events). tryEmit is
+     * used instead of emit to avoid suspending while holding stateMutex
+     * (which would block all signaling). Drops are logged but should
+     * never happen in practice with this buffer size.
      */
-    private val _sessionEvents = MutableSharedFlow<CallSessionEvent>(extraBufferCapacity = 16)
+    private val _sessionEvents = MutableSharedFlow<CallSessionEvent>(extraBufferCapacity = 256)
     val sessionEvents: SharedFlow<CallSessionEvent> = _sessionEvents.asSharedFlow()
 
     /**
@@ -97,7 +100,14 @@ class CallManager(
      * because renegotiation has its own glare-resolution logic in
      * CallSession and benefits from a dedicated collector.
      */
-    private val _renegotiationEvents = MutableSharedFlow<CallRenegotiateEvent>(extraBufferCapacity = 8)
+    /** Emits a session event, logging a warning if the buffer overflows. */
+    private fun emitSessionEvent(event: CallSessionEvent) {
+        if (!emitSessionEvent(event)) {
+            Log.e("CallManager") { "sessionEvents buffer overflow — dropped: $event" }
+        }
+    }
+
+    private val _renegotiationEvents = MutableSharedFlow<CallRenegotiateEvent>(extraBufferCapacity = 32)
     val renegotiationEvents: SharedFlow<CallRenegotiateEvent> = _renegotiationEvents.asSharedFlow()
 
     private var timeoutJob: Job? = null
@@ -350,7 +360,7 @@ class CallManager(
 
                     else -> {}
                 }
-                _sessionEvents.tryEmit(CallSessionEvent.MidCallOfferReceived(callerPubKey, event.sdpOffer()))
+                emitSessionEvent(CallSessionEvent.MidCallOfferReceived(callerPubKey, event.sdpOffer()))
                 return
             }
         }
@@ -451,7 +461,7 @@ class CallManager(
         if (discovered.isNotEmpty()) {
             Log.d("CallManager") { "acceptCall: triggering mesh setup with ${discovered.size} discovered peers: ${discovered.map { it.take(8) }}" }
             for (peer in discovered) {
-                _sessionEvents.tryEmit(CallSessionEvent.NewPeerInGroupCall(peer))
+                emitSessionEvent(CallSessionEvent.NewPeerInGroupCall(peer))
             }
         }
     }
@@ -518,7 +528,7 @@ class CallManager(
                 disarmRingingWatchdog()
                 armConnectingWatchdog(current.callId)
                 Log.d("CallManager") { "onCallAnswered: Offering -> Connecting, forwarding answer to CallSession" }
-                _sessionEvents.tryEmit(CallSessionEvent.AnswerReceived(event))
+                emitSessionEvent(CallSessionEvent.AnswerReceived(event))
             }
 
             is CallState.Connecting -> {
@@ -547,7 +557,7 @@ class CallManager(
                 // Forward to CallController — it routes to the correct PeerSession
                 // and internally triggers callee-to-callee mesh setup if needed.
                 Log.d("CallManager") { "onCallAnswered: additional peer ${answeringPeer.take(8)} in Connecting, forwarding to CallController" }
-                _sessionEvents.tryEmit(CallSessionEvent.AnswerReceived(event))
+                emitSessionEvent(CallSessionEvent.AnswerReceived(event))
             }
 
             is CallState.IncomingCall -> {
@@ -586,7 +596,7 @@ class CallManager(
                 // Forward to CallController — it routes to the correct PeerSession
                 // and internally triggers callee-to-callee mesh setup if needed.
                 Log.d("CallManager") { "onCallAnswered: peer ${answeringPeer.take(8)} answer in Connected, forwarding to CallController" }
-                _sessionEvents.tryEmit(CallSessionEvent.AnswerReceived(event))
+                emitSessionEvent(CallSessionEvent.AnswerReceived(event))
             }
 
             else -> {
@@ -626,7 +636,7 @@ class CallManager(
                     transitionToEnded(current.callId, current.peerPubKeys, EndReason.PEER_REJECTED)
                 } else {
                     _state.value = current.copy(peerPubKeys = remaining)
-                    _sessionEvents.tryEmit(CallSessionEvent.PeerLeft(rejectingPeer))
+                    emitSessionEvent(CallSessionEvent.PeerLeft(rejectingPeer))
                 }
             }
 
@@ -635,7 +645,7 @@ class CallManager(
                 cancelPeerTimeout(rejectingPeer)
                 _state.value =
                     current.copy(pendingPeerPubKeys = current.pendingPeerPubKeys - rejectingPeer)
-                _sessionEvents.tryEmit(CallSessionEvent.PeerLeft(rejectingPeer))
+                emitSessionEvent(CallSessionEvent.PeerLeft(rejectingPeer))
             }
 
             is CallState.Connected -> {
@@ -643,7 +653,7 @@ class CallManager(
                 cancelPeerTimeout(rejectingPeer)
                 _state.value =
                     current.copy(pendingPeerPubKeys = current.pendingPeerPubKeys - rejectingPeer)
-                _sessionEvents.tryEmit(CallSessionEvent.PeerLeft(rejectingPeer))
+                emitSessionEvent(CallSessionEvent.PeerLeft(rejectingPeer))
             }
 
             is CallState.IncomingCall -> {
@@ -670,7 +680,7 @@ class CallManager(
     }
 
     private fun onIceCandidate(event: CallIceCandidateEvent) {
-        _sessionEvents.tryEmit(CallSessionEvent.IceCandidateReceived(event))
+        emitSessionEvent(CallSessionEvent.IceCandidateReceived(event))
     }
 
     private fun onRenegotiate(event: CallRenegotiateEvent) {
@@ -683,7 +693,9 @@ class CallManager(
                 else -> return
             }
         if (callId != currentCallId) return
-        _renegotiationEvents.tryEmit(event)
+        if (!_renegotiationEvents.tryEmit(event)) {
+            Log.e("CallManager") { "renegotiationEvents buffer overflow — dropped renegotiation from ${event.pubKey.take(8)}" }
+        }
     }
 
     suspend fun sendRenegotiation(
@@ -832,7 +844,7 @@ class CallManager(
                             peerPubKeys = connectedRemaining,
                             pendingPeerPubKeys = pendingRemaining,
                         )
-                    _sessionEvents.tryEmit(CallSessionEvent.PeerLeft(leavingPeer))
+                    emitSessionEvent(CallSessionEvent.PeerLeft(leavingPeer))
                 }
             }
 
@@ -857,7 +869,7 @@ class CallManager(
                             peerPubKeys = connectedRemaining,
                             pendingPeerPubKeys = pendingRemaining,
                         )
-                    _sessionEvents.tryEmit(CallSessionEvent.PeerLeft(leavingPeer))
+                    emitSessionEvent(CallSessionEvent.PeerLeft(leavingPeer))
                 }
             }
 
@@ -869,7 +881,7 @@ class CallManager(
                     transitionToEnded(callId, current.peerPubKeys, EndReason.PEER_HANGUP)
                 } else {
                     _state.value = current.copy(peerPubKeys = remaining)
-                    _sessionEvents.tryEmit(CallSessionEvent.PeerLeft(leavingPeer))
+                    emitSessionEvent(CallSessionEvent.PeerLeft(leavingPeer))
                 }
             }
 
@@ -1187,7 +1199,7 @@ class CallManager(
                         transitionToEnded(current.callId, current.peerPubKeys, EndReason.TIMEOUT)
                     } else {
                         _state.value = current.copy(peerPubKeys = remaining)
-                        _sessionEvents.tryEmit(CallSessionEvent.PeerLeft(peerPubKey))
+                        emitSessionEvent(CallSessionEvent.PeerLeft(peerPubKey))
                     }
                 }
 
@@ -1205,7 +1217,7 @@ class CallManager(
                         )
                     } else {
                         _state.value = current.copy(pendingPeerPubKeys = newPending)
-                        _sessionEvents.tryEmit(CallSessionEvent.PeerLeft(peerPubKey))
+                        emitSessionEvent(CallSessionEvent.PeerLeft(peerPubKey))
                     }
                 }
 
@@ -1215,7 +1227,7 @@ class CallManager(
                     Log.d("CallManager") { "Per-peer timeout: dropping ${peerPubKey.take(8)} from Connected (invitedByUs=$wasInvitedByUs)" }
                     shouldPublishHangup = wasInvitedByUs
                     _state.value = current.copy(pendingPeerPubKeys = current.pendingPeerPubKeys - peerPubKey)
-                    _sessionEvents.tryEmit(CallSessionEvent.PeerLeft(peerPubKey))
+                    emitSessionEvent(CallSessionEvent.PeerLeft(peerPubKey))
                 }
 
                 else -> {

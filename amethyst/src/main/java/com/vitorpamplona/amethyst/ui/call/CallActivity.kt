@@ -231,11 +231,42 @@ class CallActivity : AppCompatActivity() {
         session?.close()
         session = null
 
-        // Hangup signaling is NOT published here. It is handled by
-        // CallForegroundService.onTaskRemoved() / onDestroy() which
-        // runs synchronously via runBlocking with a 3-second timeout.
-        // This is more reliable than the previous fire-and-forget
-        // CoroutineScope that could be killed before completing.
+        // Publish hangup/reject so the remote side stops ringing.
+        // This is the PRIMARY signaling path (covers PiP dismiss,
+        // back press, finish()). CallForegroundService.onTaskRemoved
+        // is the BACKUP for task-swipe-from-Recents where Activity
+        // onDestroy may not complete in time.
+        //
+        // hangup()/rejectCall() are idempotent — if the state is
+        // already Ended/Idle from a prior transition, they return
+        // immediately. So double-publishing from both Activity and
+        // Service is safe.
+        val manager = CallSessionBridge.callManager
+        if (manager != null) {
+            when (manager.state.value) {
+                is CallState.IncomingCall -> {
+                    // Best-effort on a detached scope. If the process
+                    // dies before completion, the remote 60s timeout
+                    // or our 65s watchdog handles it.
+                    kotlinx.coroutines.CoroutineScope(
+                        kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Main.immediate,
+                    ).launch {
+                        manager.rejectCall()
+                    }
+                }
+                is CallState.Offering,
+                is CallState.Connecting,
+                is CallState.Connected,
+                -> {
+                    kotlinx.coroutines.CoroutineScope(
+                        kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Main.immediate,
+                    ).launch {
+                        manager.hangup()
+                    }
+                }
+                else -> {}
+            }
+        }
 
         super.onDestroy()
     }
