@@ -120,7 +120,7 @@ class DesktopIAccount(
     override val chatroomList: ChatroomList = ChatroomList(accountState.pubKeyHex)
     override val marmotGroupList =
         com.vitorpamplona.amethyst.commons.model.marmotGroups
-            .MarmotGroupList()
+            .MarmotGroupList(signer.pubKey)
 
     override val nip47SignerState: INwcSignerState =
         object : INwcSignerState {
