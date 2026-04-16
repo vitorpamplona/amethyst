@@ -1,0 +1,44 @@
+name: Assert Stable Release
+description: >-
+  Defense-in-depth guard for package-manager bump workflows. Re-validates
+  tag format, prerelease flag, and draft status before invoking third-party
+  actions that hold write credentials to external package manager repos
+  (Homebrew, Winget, AUR, Scoop). Prevents RC builds from reaching stable
+  channels even if the `release.released` event gating is bypassed.
+
+runs:
+  using: composite
+  steps:
+    - name: Assert release is stable
+      shell: bash
+      env:
+        TAG: ${{ github.event.release.tag_name }}
+        IS_PRERELEASE: ${{ github.event.release.prerelease }}
+        IS_DRAFT: ${{ github.event.release.draft }}
+      run: |
+        set -euo pipefail
+        echo "tag=$TAG prerelease=$IS_PRERELEASE draft=$IS_DRAFT"
+
+        # Reject prerelease suffix even if GitHub's flag says false.
+        if [[ "$TAG" =~ -(rc|beta|alpha|dev|snapshot) ]]; then
+          echo "::error::Tag $TAG contains prerelease suffix; refusing bump"
+          exit 1
+        fi
+
+        # Enforce strict vMAJOR.MINOR.PATCH format.
+        if ! [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          echo "::error::Tag $TAG does not match vMAJOR.MINOR.PATCH"
+          exit 1
+        fi
+
+        # Draft releases must never trigger bumps.
+        if [[ "$IS_DRAFT" == "true" ]]; then
+          echo "::error::Release is draft; refusing bump"
+          exit 1
+        fi
+
+        # Prerelease flag cross-check (belt-and-suspenders with workflow-level `if:`).
+        if [[ "$IS_PRERELEASE" == "true" ]]; then
+          echo "::error::Release is prerelease; refusing bump"
+          exit 1
+        fi
