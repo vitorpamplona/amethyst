@@ -103,7 +103,7 @@ class CallManager(
 
     /** Emits a session event, logging a warning if the buffer overflows. */
     private fun emitSessionEvent(event: CallSessionEvent) {
-        if (!emitSessionEvent(event)) {
+        if (!_sessionEvents.tryEmit(event)) {
             Log.e("CallManager") { "sessionEvents buffer overflow — dropped: $event" }
         }
     }
