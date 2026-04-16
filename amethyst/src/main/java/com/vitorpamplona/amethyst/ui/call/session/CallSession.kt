@@ -589,22 +589,36 @@ class CallSession(
             WebRtcCallSession(
                 peerConnectionFactory = factory,
                 iceServers = IceServerConfig.buildIceServers(settingsProvider().callTurnServers),
-                onIceCandidate = { candidate -> onLocalIceCandidate(peerPubKey, candidate) },
+                onIceCandidate = { candidate ->
+                    if (!closed) onLocalIceCandidate(peerPubKey, candidate)
+                },
                 onPeerConnected = {
+                    if (closed) return@WebRtcCallSession
                     Log.d(TAG) { "Peer ${peerPubKey.take(8)} connected!" }
                     scope.launch {
+                        if (closed) return@launch
                         callManager.onPeerConnected()
                         if (callManager.state.value is CallState.Connected) {
                             ensureForegroundService()
                         }
                     }
                 },
-                onRemoteVideoTrack = { track -> videoMonitor.onRemoteVideoTrack(peerPubKey, track) },
-                onDisconnected = { scope.launch { onPeerDisconnected(peerPubKey) } },
-                onError = { error -> _errorMessage.value = error },
-                onRenegotiationNeeded = { performRenegotiation(peerPubKey) },
+                onRemoteVideoTrack = { track ->
+                    if (!closed) videoMonitor.onRemoteVideoTrack(peerPubKey, track)
+                },
+                onDisconnected = {
+                    if (!closed) scope.launch { onPeerDisconnected(peerPubKey) }
+                },
+                onError = { error ->
+                    if (!closed) _errorMessage.value = error
+                },
+                onRenegotiationNeeded = {
+                    if (!closed) performRenegotiation(peerPubKey)
+                },
                 onIceRestartOffer = { sdp ->
-                    scope.launch { callManager.sendRenegotiation(sdp.description, peerPubKey) }
+                    if (!closed) {
+                        scope.launch { callManager.sendRenegotiation(sdp.description, peerPubKey) }
+                    }
                 },
             )
         try {

@@ -21,7 +21,12 @@
 package com.vitorpamplona.amethyst.service.call
 
 import com.vitorpamplona.amethyst.commons.call.CallManager
+import com.vitorpamplona.amethyst.commons.call.CallState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 /**
  * Process-level singleton that bridges the active [CallManager] and
@@ -47,7 +52,26 @@ object CallSessionBridge {
         this.accountViewModel = accountViewModel
     }
 
+    /**
+     * Terminates any active call and clears all references. Called from
+     * [AccountViewModel.onCleared] during logout or account switch so
+     * that a stale CallSession cannot invoke signing/publishing lambdas
+     * on a disposed Account.
+     */
     fun clear() {
+        val mgr = callManager
+        if (mgr != null) {
+            val state = mgr.state.value
+            if (state is CallState.IncomingCall ||
+                state is CallState.Offering ||
+                state is CallState.Connecting ||
+                state is CallState.Connected
+            ) {
+                CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate).launch {
+                    mgr.hangup()
+                }
+            }
+        }
         callManager = null
         accountViewModel = null
     }

@@ -113,6 +113,7 @@ class CallManager(
      */
     private val watchdogScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var ringingWatchdogJob: Job? = null
+    private var connectingWatchdogJob: Job? = null
 
     /** Per-peer invite timeout jobs.  A separate 30-second timer is scheduled
      *  for each peer we are waiting on (initial group-call offerees and
@@ -152,6 +153,7 @@ class CallManager(
     companion object {
         const val CALL_TIMEOUT_MS = 60_000L // 60 seconds ringing timeout (callee side)
         const val PEER_INVITE_TIMEOUT_MS = 30_000L // 30 seconds per-peer invite timeout (caller side)
+        const val CONNECTING_TIMEOUT_MS = 30_000L // 30 seconds to establish ICE connection
         const val ENDED_DISPLAY_MS = 2_000L // show "call ended" briefly before resetting
         const val MAX_EVENT_AGE_SECONDS = 20L // discard signaling events older than this
         const val MAX_PROCESSED_EVENT_IDS = 2_000 // cap dedup set to prevent unbounded growth
@@ -415,6 +417,7 @@ class CallManager(
                 )
             cancelTimeout()
             disarmRingingWatchdog()
+            armConnectingWatchdog(current.callId)
             // Local watchdog timers only — we are not the inviter for these
             // peers, so [handlePeerTimeout] will silently drop them without
             // publishing any hangup (see `peersInvitedByUs`).
@@ -512,7 +515,8 @@ class CallManager(
                 // still in `pending` keep theirs (scheduled in beginOffering).
                 cancelPeerTimeout(answeringPeer)
                 disarmRingingWatchdog()
-                Log.d("CallManager") { "onCallAnswered: Offering -> Connecting, forwarding answer to CallController" }
+                armConnectingWatchdog(current.callId)
+                Log.d("CallManager") { "onCallAnswered: Offering -> Connecting, forwarding answer to CallSession" }
                 onAnswerReceived?.invoke(event)
             }
 
@@ -710,6 +714,7 @@ class CallManager(
             }
 
             Log.d("CallManager") { "onPeerConnected: Connecting -> Connected! callId=${current.callId}" }
+            disarmConnectingWatchdog()
             _state.value =
                 CallState.Connected(
                     callId = current.callId,
@@ -998,6 +1003,7 @@ class CallManager(
         cancelTimeout()
         cancelAllPeerTimeouts()
         disarmRingingWatchdog()
+        disarmConnectingWatchdog()
         resetJob?.cancel()
         resetJob = null
         processedEventIds.clear()
@@ -1017,6 +1023,7 @@ class CallManager(
         cancelTimeout()
         cancelAllPeerTimeouts()
         disarmRingingWatchdog()
+        disarmConnectingWatchdog()
         resetJob?.cancel()
         resetJob =
             scope.launch {
@@ -1065,12 +1072,41 @@ class CallManager(
         ringingWatchdogJob = null
     }
 
+    // ---- Connecting watchdog ----
+
+    /**
+     * Arms a timer for [callId] in `Connecting` state. If ICE negotiation
+     * does not promote the state to `Connected` within
+     * [CONNECTING_TIMEOUT_MS], the call ends with [EndReason.TIMEOUT].
+     * Disarmed when entering `Connected`, `Ended`, or `Idle`.
+     */
+    private fun armConnectingWatchdog(callId: String) {
+        connectingWatchdogJob?.cancel()
+        connectingWatchdogJob =
+            watchdogScope.launch {
+                delay(CONNECTING_TIMEOUT_MS)
+                stateMutex.withLock {
+                    val cur = _state.value
+                    if (cur is CallState.Connecting && cur.callId == callId) {
+                        Log.d("CallManager") { "Connecting watchdog fired for $callId — forcing Ended(TIMEOUT)" }
+                        transitionToEnded(callId, cur.peerPubKeys + cur.pendingPeerPubKeys, EndReason.TIMEOUT)
+                    }
+                }
+            }
+    }
+
+    private fun disarmConnectingWatchdog() {
+        connectingWatchdogJob?.cancel()
+        connectingWatchdogJob = null
+    }
+
     /**
      * Cancels all long-lived coroutines owned by this manager. Called when
      * the owning account scope is torn down (logout / process shutdown).
      */
     fun dispose() {
         disarmRingingWatchdog()
+        disarmConnectingWatchdog()
         watchdogScope.cancel()
     }
 
