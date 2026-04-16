@@ -39,6 +39,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.datasource.HashtagF
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.HomeFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.longs.datasource.LongsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.pictures.datasource.PicturesFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.products.datasource.ProductsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.datasource.PollsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.datasource.UserProfileFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relay.datasource.RelayFeedFilterAssembler
@@ -91,6 +92,7 @@ class RelaySubscriptionsCoordinator(
 
     val polls = PollsFilterAssembler(client)
     val pictures = PicturesFilterAssembler(client)
+    val products = ProductsFilterAssembler(client)
     val shorts = ShortsFilterAssembler(client)
     val longs = LongsFilterAssembler(client)
 
@@ -106,6 +108,7 @@ class RelaySubscriptionsCoordinator(
             discovery,
             polls,
             pictures,
+            products,
             shorts,
             longs,
             channelFinder,

@@ -101,6 +101,7 @@ private object PrefKeys {
     const val DEFAULT_DISCOVERY_FOLLOW_LIST = "defaultDiscoveryFollowList"
     const val DEFAULT_POLLS_FOLLOW_LIST = "defaultPollsFollowList"
     const val DEFAULT_PICTURES_FOLLOW_LIST = "defaultPicturesFollowList"
+    const val DEFAULT_PRODUCTS_FOLLOW_LIST = "defaultProductsFollowList"
     const val DEFAULT_SHORTS_FOLLOW_LIST = "defaultShortsFollowList"
     const val DEFAULT_LONGS_FOLLOW_LIST = "defaultLongsFollowList"
     const val ZAP_PAYMENT_REQUEST_SERVER = "zapPaymentServer" // legacy, kept for migration
@@ -344,6 +345,7 @@ object LocalPreferences {
 
                     putString(PrefKeys.DEFAULT_POLLS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultPollsFollowList.value))
                     putString(PrefKeys.DEFAULT_PICTURES_FOLLOW_LIST, JsonMapper.toJson(settings.defaultPicturesFollowList.value))
+                    putString(PrefKeys.DEFAULT_PRODUCTS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultProductsFollowList.value))
                     putString(PrefKeys.DEFAULT_SHORTS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultShortsFollowList.value))
                     putString(PrefKeys.DEFAULT_LONGS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultLongsFollowList.value))
 
@@ -509,6 +511,7 @@ object LocalPreferences {
 
                     val defaultPollsFollowListStr = getString(PrefKeys.DEFAULT_POLLS_FOLLOW_LIST, null)
                     val defaultPicturesFollowListStr = getString(PrefKeys.DEFAULT_PICTURES_FOLLOW_LIST, null)
+                    val defaultProductsFollowListStr = getString(PrefKeys.DEFAULT_PRODUCTS_FOLLOW_LIST, null)
                     val defaultShortsFollowListStr = getString(PrefKeys.DEFAULT_SHORTS_FOLLOW_LIST, null)
                     val defaultLongsFollowListStr = getString(PrefKeys.DEFAULT_LONGS_FOLLOW_LIST, null)
 
@@ -548,6 +551,7 @@ object LocalPreferences {
 
                     val defaultPollsFollowList = async { parseOrNull<TopFilter>(defaultPollsFollowListStr) ?: TopFilter.Global }
                     val defaultPicturesFollowList = async { parseOrNull<TopFilter>(defaultPicturesFollowListStr) ?: TopFilter.Global }
+                    val defaultProductsFollowList = async { parseOrNull<TopFilter>(defaultProductsFollowListStr) ?: TopFilter.AroundMe }
                     val defaultShortsFollowList = async { parseOrNull<TopFilter>(defaultShortsFollowListStr) ?: TopFilter.Global }
                     val defaultLongsFollowList = async { parseOrNull<TopFilter>(defaultLongsFollowListStr) ?: TopFilter.Global }
 
@@ -623,6 +627,7 @@ object LocalPreferences {
                         defaultDiscoveryFollowList = MutableStateFlow(defaultDiscoveryFollowList.await()),
                         defaultPollsFollowList = MutableStateFlow(defaultPollsFollowList.await()),
                         defaultPicturesFollowList = MutableStateFlow(defaultPicturesFollowList.await()),
+                        defaultProductsFollowList = MutableStateFlow(defaultProductsFollowList.await()),
                         defaultShortsFollowList = MutableStateFlow(defaultShortsFollowList.await()),
                         defaultLongsFollowList = MutableStateFlow(defaultLongsFollowList.await()),
                         nwcWallets = MutableStateFlow(nwcWalletsLoaded.await().first),

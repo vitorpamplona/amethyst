@@ -47,6 +47,8 @@ sealed class Route {
 
     @Serializable object Pictures : Route()
 
+    @Serializable object Products : Route()
+
     @Serializable object Shorts : Route()
 
     @Serializable object Longs : Route()

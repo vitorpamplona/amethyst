@@ -117,6 +117,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.newUser.ImportFollowListSel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NotificationScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.publicMessages.NewPublicMessageScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.pictures.PicturesScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.products.ProductsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.pinnednotes.PinnedNotesScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.PollPostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.PollsScreen
@@ -220,6 +221,7 @@ fun BuildNavigation(
         composableArgs<Route.Notification> { NotificationScreen(it.scrollToEventId, accountViewModel, nav) }
         composableFromEnd<Route.Polls> { PollsScreen(accountViewModel, nav) }
         composableFromEnd<Route.Pictures> { PicturesScreen(accountViewModel, nav) }
+        composableFromEnd<Route.Products> { ProductsScreen(accountViewModel, nav) }
         composableFromEnd<Route.Shorts> { ShortsScreen(accountViewModel, nav) }
         composableFromEnd<Route.Longs> { LongsScreen(accountViewModel, nav) }
         composableFromEnd<Route.NewHlsVideo> { NewHlsVideoScreen(accountViewModel, nav) }
