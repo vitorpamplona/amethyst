@@ -111,6 +111,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.list.ListOfPeopleList
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.list.metadata.FollowPackMetadataScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.list.metadata.PeopleListMetadataScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.memberEdit.FollowListAndPackAndUserScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.articles.ArticlesScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.longs.LongsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.newUser.ImportFollowListPickFollowsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.newUser.ImportFollowListSelectUserScreen
@@ -222,6 +223,7 @@ fun BuildNavigation(
         composableFromEnd<Route.Pictures> { PicturesScreen(accountViewModel, nav) }
         composableFromEnd<Route.Shorts> { ShortsScreen(accountViewModel, nav) }
         composableFromEnd<Route.Longs> { LongsScreen(accountViewModel, nav) }
+        composableFromEnd<Route.Articles> { ArticlesScreen(accountViewModel, nav) }
         composableFromEnd<Route.NewHlsVideo> { NewHlsVideoScreen(accountViewModel, nav) }
         composable<Route.Chess> { ChessLobbyScreen(accountViewModel, nav) }
 

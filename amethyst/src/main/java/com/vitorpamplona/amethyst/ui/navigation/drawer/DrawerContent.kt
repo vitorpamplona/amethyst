@@ -609,6 +609,14 @@ fun ListContent(
         )
 
         NavigationRow(
+            title = R.string.articles,
+            icon = Icons.Outlined.Article,
+            tint = MaterialTheme.colorScheme.onBackground,
+            nav = nav,
+            route = Route.Articles,
+        )
+
+        NavigationRow(
             title = R.string.share_hls_video,
             icon = Icons.Outlined.SettingsInputAntenna,
             tint = MaterialTheme.colorScheme.onBackground,

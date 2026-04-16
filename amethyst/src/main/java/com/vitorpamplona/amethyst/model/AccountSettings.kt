@@ -171,6 +171,7 @@ class AccountSettings(
     val defaultPicturesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultShortsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultLongsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
+    val defaultArticlesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.AllFollows),
     val nwcWallets: MutableStateFlow<List<NwcWalletEntryNorm>> = MutableStateFlow(emptyList()),
     val defaultNwcWalletId: MutableStateFlow<String?> = MutableStateFlow(null),
     var hideDeleteRequestDialog: Boolean = false,
@@ -473,6 +474,17 @@ class AccountSettings(
     fun changeDefaultLongsFollowList(name: TopFilter) {
         if (defaultLongsFollowList.value != name) {
             defaultLongsFollowList.tryEmit(name)
+            saveAccountSettings()
+        }
+    }
+
+    fun changeDefaultArticlesFollowList(name: FeedDefinition) {
+        changeDefaultArticlesFollowList(name.code)
+    }
+
+    fun changeDefaultArticlesFollowList(name: TopFilter) {
+        if (defaultArticlesFollowList.value != name) {
+            defaultArticlesFollowList.tryEmit(name)
             saveAccountSettings()
         }
     }

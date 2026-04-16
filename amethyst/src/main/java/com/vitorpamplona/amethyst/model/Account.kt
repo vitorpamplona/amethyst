@@ -441,6 +441,9 @@ class Account(
     val liveLongsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultLongsFollowList)
     val liveLongsFollowListsPerRelay = OutboxLoaderState(liveLongsFollowLists, cache, scope).flow
 
+    val liveArticlesFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultArticlesFollowList)
+    val liveArticlesFollowListsPerRelay = OutboxLoaderState(liveArticlesFollowLists, cache, scope).flow
+
     override fun isWriteable(): Boolean = settings.isWriteable()
 
     suspend fun updateWarnReports(warnReports: Boolean): Boolean {
