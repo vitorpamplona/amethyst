@@ -26,7 +26,7 @@
 #include <string.h>
 
 /*
- * libsecp256k1-nostr internal types and platform detection.
+ * libschnorr256k1 internal types and platform detection.
  *
  * This header defines the internal data structures (field elements, scalars,
  * points) and platform-specific macros. It is NOT part of the public API.
@@ -92,8 +92,8 @@ typedef struct {
     secp256k1_fe y;
 } secp256k1_ge;
 
-/* ==================== Public API (see include/secp256k1_nostr.h) ==================== */
+/* ==================== Public API (see include/schnorr256k1.h) ==================== */
 
-#include "secp256k1_nostr.h"
+#include "schnorr256k1.h"
 
 #endif /* SECP256K1_INTERNAL_H */

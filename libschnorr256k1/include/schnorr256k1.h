@@ -20,15 +20,15 @@
  */
 
 /*
- * libsecp256k1-nostr: High-performance secp256k1 for Nostr.
+ * libschnorr256k1: High-performance secp256k1 for Nostr.
  *
  * A purpose-built secp256k1 implementation optimized for Nostr/BIP-340
  * workflows: Schnorr signing/verification, batch verification for
  * same-pubkey events, x-only ECDH for NIP-44, and hardware-accelerated
  * SHA-256 on ARM64 and x86_64.
  */
-#ifndef SECP256K1_NOSTR_H
-#define SECP256K1_NOSTR_H
+#ifndef SCHNORR256K1_H
+#define SCHNORR256K1_H
 
 #include <stdint.h>
 #include <stddef.h>
@@ -142,4 +142,4 @@ void secp256k1c_tagged_hash(uint8_t *out32, const char *tag,
 }
 #endif
 
-#endif /* SECP256K1_NOSTR_H */
+#endif /* SCHNORR256K1_H */

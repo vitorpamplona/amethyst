@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.18)
-project(secp256k1_nostr C)
+project(schnorr256k1 C)
 
 set(CMAKE_C_STANDARD 11)
 
@@ -50,8 +50,8 @@ set(SECP256K1_SOURCES
     src/sha256.c
 )
 
-add_library(secp256k1_nostr STATIC ${SECP256K1_SOURCES})
-target_include_directories(secp256k1_nostr
+add_library(schnorr256k1 STATIC ${SECP256K1_SOURCES})
+target_include_directories(schnorr256k1
     PUBLIC  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
             $<INSTALL_INTERFACE:include>
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src
@@ -70,8 +70,8 @@ endif()
 
 # ==================== Install rules ====================
 
-install(TARGETS secp256k1_nostr
+install(TARGETS schnorr256k1
     ARCHIVE DESTINATION lib
     LIBRARY DESTINATION lib
 )
-install(FILES include/secp256k1_nostr.h DESTINATION include)
+install(FILES include/schnorr256k1.h DESTINATION include)

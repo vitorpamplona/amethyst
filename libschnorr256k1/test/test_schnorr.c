@@ -4,7 +4,7 @@
  * Ported from SchnorrTest.kt
  */
 #include "test_framework.h"
-#include "secp256k1_nostr.h"
+#include "schnorr256k1.h"
 
 /* ==================== BIP-340 Signing Vectors ==================== */
 

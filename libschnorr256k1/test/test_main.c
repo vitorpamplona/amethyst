@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2025 Vitor Pamplona
  *
- * Minimal test framework for libsecp256k1-nostr.
+ * Minimal test framework for libschnorr256k1.
  * No external dependencies — just compile and run.
  */
 #include <stdio.h>
@@ -9,7 +9,7 @@
 #include <string.h>
 #include <stdint.h>
 
-#include "secp256k1_nostr.h"
+#include "schnorr256k1.h"
 
 /* ==================== Test Framework ==================== */
 
@@ -100,7 +100,7 @@ extern void run_sha256_tests(void);
 
 int main(void) {
     printf("================================================================\n");
-    printf("  libsecp256k1-nostr Test Suite\n");
+    printf("  libschnorr256k1 Test Suite\n");
     printf("================================================================\n\n");
 
     printf("Initializing...\n");

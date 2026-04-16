@@ -3,7 +3,7 @@
  * SHA-256 known-answer tests and tagged hash consistency.
  */
 #include "test_framework.h"
-#include "secp256k1_nostr.h"
+#include "schnorr256k1.h"
 #include "sha256.h"
 
 /* ==================== Known-Answer Tests ==================== */

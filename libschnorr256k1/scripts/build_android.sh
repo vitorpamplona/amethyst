@@ -1,9 +1,9 @@
 #!/bin/bash
 #
-# Cross-compile libsecp256k1-nostr as a static library for Android.
+# Cross-compile libschnorr256k1 as a static library for Android.
 #
 # Usage:
-#   cd libsecp256k1-nostr
+#   cd libschnorr256k1
 #   ./scripts/build_android.sh [OUTPUT_DIR]
 #
 # The output directory defaults to ./build/android/
@@ -51,9 +51,9 @@ $CC_ARM64 -O3 -march=armv8-a+crypto -fomit-frame-pointer -fPIC -c \
     -I"$SRC_DIR" -I"$PROJECT_ROOT/include" \
     $(cd "$SRC_DIR" && for f in $SOURCES; do echo "$SRC_DIR/$f"; done) \
 cd "$OUTPUT_DIR/arm64-v8a"
-ar rcs "$OUTPUT_DIR/arm64-v8a/libsecp256k1_nostr.a" *.o 2>/dev/null || \
-    (cd "$OUTPUT_DIR/arm64-v8a" && ar rcs libsecp256k1_nostr.a field.o scalar.o point.o schnorr.o sha256.o)
-echo "  → $(wc -c < "$OUTPUT_DIR/arm64-v8a/libsecp256k1_nostr.a") bytes"
+ar rcs "$OUTPUT_DIR/arm64-v8a/libschnorr256k1.a" *.o 2>/dev/null || \
+    (cd "$OUTPUT_DIR/arm64-v8a" && ar rcs libschnorr256k1.a field.o scalar.o point.o schnorr.o sha256.o)
+echo "  → $(wc -c < "$OUTPUT_DIR/arm64-v8a/libschnorr256k1.a") bytes"
 
 # Build x86_64 static library (for emulator)
 if [ -f "$CC_X86" ]; then
@@ -63,8 +63,8 @@ if [ -f "$CC_X86" ]; then
         -I"$SRC_DIR" -I"$PROJECT_ROOT/include" \
         $(cd "$SRC_DIR" && for f in $SOURCES; do echo "$SRC_DIR/$f"; done) \
     cd "$OUTPUT_DIR/x86_64"
-    ar rcs "$OUTPUT_DIR/x86_64/libsecp256k1_nostr.a" field.o scalar.o point.o schnorr.o sha256.o
-    echo "  → $(wc -c < "$OUTPUT_DIR/x86_64/libsecp256k1_nostr.a") bytes"
+    ar rcs "$OUTPUT_DIR/x86_64/libschnorr256k1.a" field.o scalar.o point.o schnorr.o sha256.o
+    echo "  → $(wc -c < "$OUTPUT_DIR/x86_64/libschnorr256k1.a") bytes"
 fi
 
 echo ""

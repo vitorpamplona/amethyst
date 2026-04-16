@@ -7,7 +7,7 @@
  * Build: mkdir build && cd build && cmake .. && make
  * Run:   ./secp256k1_bench
  */
-#include "secp256k1_nostr.h"
+#include "schnorr256k1.h"
 #include "sha256.h"
 #include <stdio.h>
 #include <stdlib.h>
