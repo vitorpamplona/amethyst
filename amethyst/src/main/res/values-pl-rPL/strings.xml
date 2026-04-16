@@ -389,6 +389,7 @@
     <string name="pictures">Zdjęcia</string>
     <string name="shorts">Filmiki</string>
     <string name="longs">Filmy wideo</string>
+    <string name="articles">Artykuły</string>
     <string name="private_bookmarks">Prywatne Zakładki</string>
     <string name="public_bookmarks">Publiczne zakładki</string>
     <string name="add_to_private_bookmarks">Dodaj do prywatnych zakładek</string>
@@ -950,6 +951,7 @@
     <string name="new_feature_nip17_might_not_be_available_description">Aktywacja tego trybu wymaga wysłania wiadomości NIP-17 przez Ametyst. (Prezent, Zapieczętowane wiadomości bezpośrednie i grupowe). NIP-17 jest nowy, a większość klientów jeszcze go nie zaimplementowała. Upewnij się, że odbiorca używa kompatybilnego klienta.</string>
     <string name="new_feature_nip17_activate">Aktywuj</string>
     <string name="messages_create_public_chat">Publiczna</string>
+    <string name="messages_create_group">Grupa</string>
     <string name="messages_create_public_private_chat_description">Nowa Grupa Publiczna lub Prywatna</string>
     <string name="messages_relay_based">Transmiter</string>
     <string name="messages_new_message">Prywatna</string>
