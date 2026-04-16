@@ -1458,6 +1458,30 @@ class AccountViewModel(
         account.sendMarmotGroupMessage(nostrGroupId, innerEvent, relays)
     }
 
+    suspend fun sendMarmotGroupMediaMessage(
+        nostrGroupId: String,
+        url: String,
+        imeta: com.vitorpamplona.quartz.nip92IMeta.IMetaTag,
+        caption: String? = null,
+    ) {
+        val template =
+            com.vitorpamplona.quartz.nip01Core.signers.eventTemplate<com.vitorpamplona.quartz.nip01Core.core.Event>(
+                kind = 9,
+                description = url,
+            ) {
+                com.vitorpamplona.quartz.nip92IMeta.imeta(imeta)
+                if (!caption.isNullOrEmpty()) {
+                    com.vitorpamplona.quartz.nip31Alts.alt(caption)
+                }
+            }
+        val innerEvent = account.signer.sign<com.vitorpamplona.quartz.nip01Core.core.Event>(template)
+        val relays = marmotGroupRelays(nostrGroupId)
+        account.sendMarmotGroupMessage(nostrGroupId, innerEvent, relays)
+    }
+
+    fun marmotMediaExporterSecret(nostrGroupId: String): ByteArray? =
+        account.marmotManager?.mediaExporterSecret(nostrGroupId)
+
     suspend fun createMarmotGroup(nostrGroupId: String) {
         account.createMarmotGroup(nostrGroupId)
     }

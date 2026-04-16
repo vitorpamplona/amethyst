@@ -64,7 +64,9 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderChan
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderCreateChannelNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderDraftEvent
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderEncryptedFile
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderMarmotEncryptedMedia
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderRegularTextNote
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.hasMip04Media
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.IncognitoBadge
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.ReactionRowHeightChat
@@ -405,11 +407,12 @@ fun NoteRow(
     nav: INav,
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        when (note.event) {
-            is ChannelCreateEvent -> RenderCreateChannelNote(note, bgColor, accountViewModel, nav)
-            is ChannelMetadataEvent -> RenderChangeChannelMetadataNote(note, bgColor, accountViewModel, nav)
-            is DraftWrapEvent -> RenderDraftEvent(note, canPreview, innerQuote, onWantsToReply, onWantsToEditDraft, bgColor, accountViewModel, nav)
-            is ChatMessageEncryptedFileHeaderEvent -> RenderEncryptedFile(note, bgColor, accountViewModel, nav)
+        when {
+            note.event is ChannelCreateEvent -> RenderCreateChannelNote(note, bgColor, accountViewModel, nav)
+            note.event is ChannelMetadataEvent -> RenderChangeChannelMetadataNote(note, bgColor, accountViewModel, nav)
+            note.event is DraftWrapEvent -> RenderDraftEvent(note, canPreview, innerQuote, onWantsToReply, onWantsToEditDraft, bgColor, accountViewModel, nav)
+            note.event is ChatMessageEncryptedFileHeaderEvent -> RenderEncryptedFile(note, bgColor, accountViewModel, nav)
+            hasMip04Media(note.event) -> RenderMarmotEncryptedMedia(note, bgColor, accountViewModel, nav)
             else -> RenderRegularTextNote(note, canPreview, innerQuote, bgColor, accountViewModel, nav)
         }
     }
