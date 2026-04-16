@@ -214,7 +214,7 @@
         <activity
             android:name=".ui.call.CallActivity"
             android:autoRemoveFromRecents="true"
-            android:configChanges="orientation|screenLayout|screenSize|smallestScreenSize|keyboardHidden|keyboard|uiMode"
+            android:configChanges="orientation|screenLayout|screenSize|smallestScreenSize|keyboardHidden|keyboard|uiMode|navigation|fontScale|density"
             android:supportsPictureInPicture="true"
             android:launchMode="singleTop"
             android:exported="false"

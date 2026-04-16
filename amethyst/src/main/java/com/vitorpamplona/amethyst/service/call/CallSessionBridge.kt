@@ -24,31 +24,31 @@ import com.vitorpamplona.amethyst.commons.call.CallManager
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 /**
- * Process-level singleton that bridges the active call state between
- * the main activity (which owns [AccountViewModel]) and [com.vitorpamplona.amethyst.ui.call.CallActivity]
- * (which runs in its own window but in the same process).
+ * Process-level singleton that bridges the active [CallManager] and
+ * [AccountViewModel] between the main activity and
+ * [com.vitorpamplona.amethyst.ui.call.CallActivity] (which runs in its
+ * own window but in the same process).
+ *
+ * No call controller / session is held here — each [CallActivity]
+ * creates and owns its own [com.vitorpamplona.amethyst.ui.call.session.CallSession]
+ * whose lifetime is tied to the Activity's lifecycle.
  */
 object CallSessionBridge {
     var callManager: CallManager? = null
-        private set
-    var callController: CallController? = null
         private set
     var accountViewModel: AccountViewModel? = null
         private set
 
     fun set(
         callManager: CallManager,
-        callController: CallController?,
         accountViewModel: AccountViewModel,
     ) {
         this.callManager = callManager
-        this.callController = callController
         this.accountViewModel = accountViewModel
     }
 
     fun clear() {
         callManager = null
-        callController = null
         accountViewModel = null
     }
 }

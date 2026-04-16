@@ -40,12 +40,15 @@ import androidx.lifecycle.lifecycleScope
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.call.CallState
 import com.vitorpamplona.amethyst.service.call.CallSessionBridge
+import com.vitorpamplona.amethyst.service.call.notification.CallNotifier
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.compose.RelayAuthSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.StringResSetup
+import com.vitorpamplona.amethyst.ui.call.session.CallSession
 import com.vitorpamplona.amethyst.ui.screen.ManageRelayServices
 import com.vitorpamplona.amethyst.ui.screen.ManageWebOkHttp
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
+import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -54,9 +57,8 @@ import kotlinx.coroutines.launch
 class CallActivity : AppCompatActivity() {
     val isInPipMode = mutableStateOf(false)
 
-    // Tracks whether we entered PiP at least once, so we can distinguish
-    // "user swiped PiP away" from "user pressed Home from full-screen call".
-    private var wasInPipMode = false
+    /** Activity-owned call session. Created in [onCreate], released in [onDestroy]. */
+    private var session: CallSession? = null
 
     // Launcher for requesting call permissions when accepting from notification
     private val permissionLauncher =
@@ -67,7 +69,6 @@ class CallActivity : AppCompatActivity() {
         }
 
     private var pendingAcceptIsVideo = false
-    private var hangupInitiated = false
 
     private val pipActionReceiver =
         object : BroadcastReceiver() {
@@ -81,7 +82,7 @@ class CallActivity : AppCompatActivity() {
                     }
 
                     ACTION_PIP_TOGGLE_MUTE -> {
-                        CallSessionBridge.callController?.toggleAudioMute()
+                        session?.toggleMute()
                         updatePipParams()
                     }
                 }
@@ -105,7 +106,6 @@ class CallActivity : AppCompatActivity() {
         }
 
         val callManager = CallSessionBridge.callManager
-        val callController = CallSessionBridge.callController
         val accountViewModel = CallSessionBridge.accountViewModel
 
         if (callManager == null || accountViewModel == null) {
@@ -113,9 +113,29 @@ class CallActivity : AppCompatActivity() {
             return
         }
 
+        // Create the Activity-owned call session.
+        val callSession =
+            CallSession(
+                context = applicationContext,
+                callManager = callManager,
+                scope = lifecycleScope,
+                publishWrap = { wrap -> accountViewModel.account.publishCallSignaling(wrap) },
+                signerProvider = { accountViewModel.account.signer },
+                localPubKey = accountViewModel.account.signer.pubKey,
+                settingsProvider = { accountViewModel.account.settings },
+            )
+        session = callSession
+
+        // Wire CallManager callbacks to this session's handlers.
+        callManager.onAnswerReceived = { event -> callSession.onCallAnswerReceived(event.pubKey, event.sdpAnswer()) }
+        callManager.onIceCandidateReceived = { event -> callSession.onIceCandidateReceived(event) }
+        callManager.onNewPeerInGroupCall = { peerPubKey -> callSession.onNewPeerInGroupCall(peerPubKey) }
+        callManager.onMidCallOfferReceived = { peerPubKey, sdpOffer -> callSession.onMidCallOfferReceived(peerPubKey, sdpOffer) }
+        callManager.onPeerLeft = { peerPubKey -> callSession.disposePeerSession(peerPubKey) }
+
         registerPipReceiver()
-        observeVideoStateForPip(callController)
-        handleAcceptCallIntent(intent)
+        observeVideoStateForPip(callSession)
+        handleIntent(intent)
 
         setContent {
             AmethystTheme {
@@ -133,7 +153,7 @@ class CallActivity : AppCompatActivity() {
 
                 CallScreen(
                     callManager = callManager,
-                    callController = callController,
+                    callSession = callSession,
                     accountViewModel = accountViewModel,
                     onCallEnded = { finish() },
                     isInPipMode = isInPipMode.value,
@@ -144,37 +164,57 @@ class CallActivity : AppCompatActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        handleAcceptCallIntent(intent)
+        handleIntent(intent)
     }
 
-    private fun handleAcceptCallIntent(intent: Intent?) {
-        if (intent?.getBooleanExtra(EXTRA_ACCEPT_CALL, false) != true) return
-        // Clear the extra so it doesn't re-trigger on config changes
-        intent.removeExtra(EXTRA_ACCEPT_CALL)
+    private fun handleIntent(intent: Intent?) {
+        intent ?: return
 
-        com.vitorpamplona.amethyst.service.notifications.NotificationUtils
-            .cancelCallNotification(this)
+        // Accept an incoming call (from notification action)
+        if (intent.getBooleanExtra(EXTRA_ACCEPT_CALL, false)) {
+            intent.removeExtra(EXTRA_ACCEPT_CALL)
+            CallNotifier.cancelIncomingCall(this)
 
-        val callManager = CallSessionBridge.callManager ?: return
-        val state = callManager.state.value
-        if (state !is CallState.IncomingCall) return
+            val callManager = CallSessionBridge.callManager ?: return
+            val state = callManager.state.value
+            if (state !is CallState.IncomingCall) return
 
-        val isVideo = state.callType == com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType.VIDEO
-        pendingAcceptIsVideo = isVideo
+            val isVideo = state.callType == CallType.VIDEO
+            pendingAcceptIsVideo = isVideo
 
-        if (hasCallPermissions(this, isVideo)) {
-            acceptCall()
-        } else {
-            permissionLauncher.launch(buildCallPermissions(isVideo))
+            if (hasCallPermissions(this, isVideo)) {
+                acceptCall()
+            } else {
+                permissionLauncher.launch(buildCallPermissions(isVideo))
+            }
+            return
+        }
+
+        // Initiate an outgoing call (from ChatroomScreen)
+        if (intent.getBooleanExtra(EXTRA_INITIATE_CALL, false)) {
+            intent.removeExtra(EXTRA_INITIATE_CALL)
+            val peerPubKeys = intent.getStringArrayExtra(EXTRA_PEER_PUB_KEYS)?.toSet() ?: return
+            val callTypeName = intent.getStringExtra(EXTRA_CALL_TYPE) ?: return
+            val callType = CallType.valueOf(callTypeName)
+
+            pendingAcceptIsVideo = callType == CallType.VIDEO
+
+            if (hasCallPermissions(this, callType == CallType.VIDEO)) {
+                session?.initiate(peerPubKeys, callType)
+            } else {
+                // Store for after permission grant — will need separate handling
+                permissionLauncher.launch(buildCallPermissions(callType == CallType.VIDEO))
+            }
+            return
         }
     }
 
     private fun acceptCall() {
-        val callController = CallSessionBridge.callController ?: return
+        val session = session ?: return
         val callManager = CallSessionBridge.callManager ?: return
         val state = callManager.state.value
         if (state is CallState.IncomingCall) {
-            callController.acceptIncomingCall(state.sdpOffer)
+            session.accept(state.sdpOffer)
         }
     }
 
@@ -186,61 +226,20 @@ class CallActivity : AppCompatActivity() {
     override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean) {
         super.onPictureInPictureModeChanged(isInPictureInPictureMode)
         isInPipMode.value = isInPictureInPictureMode
-
-        if (isInPictureInPictureMode) {
-            wasInPipMode = true
-        }
-    }
-
-    override fun onStop() {
-        super.onStop()
-        // Only hang up if the user dismissed PiP (swiped it away).
-        // When PiP is dismissed, Android calls onStop with isInPictureInPictureMode == false
-        // after the activity was previously in PiP mode.
-        // We must NOT hang up when the user simply presses Home from the full-screen
-        // call UI (that enters PiP via onUserLeaveHint instead).
-        if (wasInPipMode && !isInPictureInPictureMode) {
-            hangupInitiated = true
-            val manager = CallSessionBridge.callManager
-            val controller = CallSessionBridge.callController
-            val state = manager?.state?.value
-            if (state is CallState.Connected || state is CallState.Connecting || state is CallState.Offering) {
-                // Publish the hangup signaling event on a detached scope so
-                // it survives activity teardown.
-                CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate).launch {
-                    manager.hangup()
-                }
-            }
-            // Synchronously release all WebRTC/audio resources before the
-            // activity is torn down so we don't leak a PeerConnection,
-            // camera capturer, wake lock, or audio mode change. cleanup() is
-            // idempotent within a call session, so the state-collector path
-            // triggered by hangup() above will be a no-op.
-            controller?.cleanup()
-            finishAndRemoveTask()
-        }
     }
 
     override fun onDestroy() {
         unregisterPipReceiver()
 
+        // Publish reject/hangup so the remote side stops ringing.
         val manager = CallSessionBridge.callManager
-        val controller = CallSessionBridge.callController
-
-        // Safety net: if the Activity is destroyed while a call is still
-        // ringing/offering, publish the reject/hangup signaling so the other
-        // side stops ringing. Skip if onStop already initiated the hangup to
-        // avoid double signaling.
-        if (!hangupInitiated && manager != null) {
+        if (manager != null) {
             when (manager.state.value) {
                 is CallState.IncomingCall -> {
-                    // Publish on a detached scope so the reject event goes out
-                    // even after the activity is gone.
                     CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate).launch {
                         manager.rejectCall()
                     }
                 }
-
                 is CallState.Offering,
                 is CallState.Connecting,
                 is CallState.Connected,
@@ -249,49 +248,22 @@ class CallActivity : AppCompatActivity() {
                         manager.hangup()
                     }
                 }
-
                 else -> {}
             }
         }
 
-        // Ultimate safety net: synchronously release all WebRTC/audio
-        // resources before the Activity reference goes away. The normal
-        // Ended → state-collector → cleanup() path runs asynchronously on
-        // viewModelScope and is not guaranteed to finish before this method
-        // returns. CallController.cleanup() is idempotent within a call
-        // session, so calling it here in addition to the state-collector path
-        // is safe.
-        controller?.cleanup()
-
-        // Hard guarantee: the ringtone, ringback tone, and incoming-call
-        // notification are tied to this Activity's lifecycle. When the
-        // Activity is destroyed for ANY reason (user reject, hangup, finish,
-        // process recreation, etc.), they MUST be gone — even if the
-        // CallController is missing, its cleanup guard is stale, or the
-        // state-collector hasn't fired yet. We had a bug where rejecting a
-        // call left the ringtone playing until the user killed the entire
-        // app from settings; this block is the ultimate stop signal.
-        try {
-            controller?.audioManager?.stopRinging()
-        } catch (_: Exception) {
-        }
-        try {
-            controller?.audioManager?.stopRingbackTone()
-        } catch (_: Exception) {
-        }
-        try {
-            com.vitorpamplona.amethyst.service.notifications.NotificationUtils
-                .cancelCallNotification(this)
-        } catch (_: Exception) {
-        }
+        // Single-shot release of all WebRTC/audio/notification resources.
+        // Guaranteed by Android lifecycle — when Activity dies, the call dies.
+        session?.close()
+        session = null
 
         super.onDestroy()
     }
 
-    private fun observeVideoStateForPip(controller: com.vitorpamplona.amethyst.service.call.CallController?) {
-        controller ?: return
+    private fun observeVideoStateForPip(callSession: CallSession?) {
+        callSession ?: return
         lifecycleScope.launch {
-            controller.isRemoteVideoActive.collect {
+            callSession.isRemoteVideoActive.collect {
                 updatePipParams()
             }
         }
@@ -336,9 +308,9 @@ class CallActivity : AppCompatActivity() {
     }
 
     private fun computePipAspectRatio(): Rational {
-        val controller = CallSessionBridge.callController ?: return Rational(9, 16)
-        val isVideoActive = controller.isRemoteVideoActive.value
-        val videoRatio = controller.remoteVideoAspectRatio.value
+        val s = session ?: return Rational(9, 16)
+        val isVideoActive = s.isRemoteVideoActive.value
+        val videoRatio = s.remoteVideoAspectRatio.value
 
         if (isVideoActive && videoRatio != null && videoRatio > 0f) {
             // Clamp to Android's allowed PiP range (roughly 1:2.39 to 2.39:1)
@@ -355,7 +327,7 @@ class CallActivity : AppCompatActivity() {
         val actions = mutableListOf<RemoteAction>()
 
         // Mute / Unmute toggle
-        val isMuted = CallSessionBridge.callController?.isAudioMuted?.value == true
+        val isMuted = session?.isAudioMuted?.value == true
         val muteIntent =
             PendingIntent.getBroadcast(
                 this,
@@ -413,6 +385,9 @@ class CallActivity : AppCompatActivity() {
 
     companion object {
         const val EXTRA_ACCEPT_CALL = "com.vitorpamplona.amethyst.EXTRA_ACCEPT_CALL"
+        const val EXTRA_INITIATE_CALL = "com.vitorpamplona.amethyst.EXTRA_INITIATE_CALL"
+        const val EXTRA_PEER_PUB_KEYS = "com.vitorpamplona.amethyst.EXTRA_PEER_PUB_KEYS"
+        const val EXTRA_CALL_TYPE = "com.vitorpamplona.amethyst.EXTRA_CALL_TYPE"
         private const val ACTION_PIP_HANGUP = "com.vitorpamplona.amethyst.PIP_HANGUP"
         private const val ACTION_PIP_TOGGLE_MUTE = "com.vitorpamplona.amethyst.PIP_TOGGLE_MUTE"
         private const val PIP_HANGUP_REQUEST_CODE = 0x60001
@@ -422,6 +397,21 @@ class CallActivity : AppCompatActivity() {
             context.startActivity(
                 Intent(context, CallActivity::class.java).apply {
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                },
+            )
+        }
+
+        fun launchForOutgoingCall(
+            context: Context,
+            peerPubKeys: Set<String>,
+            callType: CallType,
+        ) {
+            context.startActivity(
+                Intent(context, CallActivity::class.java).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    putExtra(EXTRA_INITIATE_CALL, true)
+                    putExtra(EXTRA_PEER_PUB_KEYS, peerPubKeys.toTypedArray())
+                    putExtra(EXTRA_CALL_TYPE, callType.name)
                 },
             )
         }

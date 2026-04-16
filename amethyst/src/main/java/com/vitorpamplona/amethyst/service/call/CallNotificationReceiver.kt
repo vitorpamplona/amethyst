@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.service.call
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import com.vitorpamplona.amethyst.service.notifications.NotificationUtils
+import com.vitorpamplona.amethyst.service.call.notification.CallNotifier
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
@@ -48,7 +48,7 @@ class CallNotificationReceiver : BroadcastReceiver() {
             try {
                 when (intent.action) {
                     ACTION_REJECT_CALL -> {
-                        NotificationUtils.cancelCallNotification(context)
+                        CallNotifier.cancelIncomingCall(context)
                         callManager.rejectCall()
                     }
 

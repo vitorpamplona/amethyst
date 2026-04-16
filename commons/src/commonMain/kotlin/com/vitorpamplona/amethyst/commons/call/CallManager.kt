@@ -35,10 +35,16 @@ import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -73,7 +79,16 @@ class CallManager(
     /** Called for every answer that should be applied to a PeerConnection (includes peer pubkey). */
     var onAnswerReceived: ((CallAnswerEvent) -> Unit)? = null
     var onIceCandidateReceived: ((CallIceCandidateEvent) -> Unit)? = null
-    var onRenegotiationOfferReceived: ((CallRenegotiateEvent) -> Unit)? = null
+
+    /**
+     * Renegotiation offers from remote peers are emitted as flow events so the
+     * Activity-scoped `CallSession` can (re)subscribe via `repeatOnLifecycle`
+     * without losing messages across Activity restarts. Buffered so a short
+     * gap between Activity teardown and re-collection cannot drop a
+     * renegotiation.
+     */
+    private val _renegotiationEvents = MutableSharedFlow<CallRenegotiateEvent>(extraBufferCapacity = 8)
+    val renegotiationEvents: SharedFlow<CallRenegotiateEvent> = _renegotiationEvents.asSharedFlow()
 
     /** Called when a new peer joins the group call (callee-to-callee mesh setup). */
     var onNewPeerInGroupCall: ((peerPubKey: HexKey) -> Unit)? = null
@@ -87,6 +102,17 @@ class CallManager(
     private var timeoutJob: Job? = null
     private var resetJob: Job? = null
     private val processedEventIds = LinkedHashSet<String>()
+
+    /**
+     * Detached scope for the ringing watchdog so the timer survives the
+     * `scope` being cancelled by the owning ViewModel. The watchdog is a
+     * fail-safe that unconditionally forces an `Ended(TIMEOUT)` transition
+     * if the state stays in `IncomingCall`/`Offering` past
+     * `RINGING_WATCHDOG_MS`, regardless of whether any collector observes
+     * the state. Cancelled explicitly via [dispose].
+     */
+    private val watchdogScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private var ringingWatchdogJob: Job? = null
 
     /** Per-peer invite timeout jobs.  A separate 30-second timer is scheduled
      *  for each peer we are waiting on (initial group-call offerees and
@@ -130,6 +156,16 @@ class CallManager(
         const val MAX_EVENT_AGE_SECONDS = 20L // discard signaling events older than this
         const val MAX_PROCESSED_EVENT_IDS = 2_000 // cap dedup set to prevent unbounded growth
         const val MAX_COMPLETED_CALL_IDS = 200 // cap completed-call set
+
+        /**
+         * Hard ceiling on how long a call may remain in a ringing state
+         * (`IncomingCall` or `Offering`). Deliberately longer than
+         * [CALL_TIMEOUT_MS] (60s) so the normal timeout path gets a chance
+         * to fire first; this is purely the fail-safe for when that path
+         * never runs (e.g. a stuck coroutine, a canceled `scope`, or a
+         * dropped state transition).
+         */
+        const val RINGING_WATCHDOG_MS = 65_000L
     }
 
     /** Adds [value] to a [LinkedHashSet], evicting the oldest entries when
@@ -173,6 +209,7 @@ class CallManager(
         cancelAllPeerTimeouts()
         peersInvitedByUs.addAll(calleePubKeys)
         calleePubKeys.forEach { schedulePeerTimeout(it, callId) }
+        armRingingWatchdog(callId)
     }
 
     /**
@@ -236,6 +273,7 @@ class CallManager(
             cancelAllPeerTimeouts()
             peersInvitedByUs.add(calleePubKey)
             schedulePeerTimeout(calleePubKey, callId)
+            armRingingWatchdog(callId)
         }
         publishEvent(result.wrap)
         Log.d("CallManager") { "initiateCall: offer published, per-peer timeout started" }
@@ -332,6 +370,7 @@ class CallManager(
                 callType = callType,
                 sdpOffer = event.sdpOffer(),
             )
+        armRingingWatchdog(callId)
         startTimeout(callId)
     }
 
@@ -375,6 +414,7 @@ class CallManager(
                     pendingPeerPubKeys = pendingOnJoin,
                 )
             cancelTimeout()
+            disarmRingingWatchdog()
             // Local watchdog timers only — we are not the inviter for these
             // peers, so [handlePeerTimeout] will silently drop them without
             // publishing any hangup (see `peersInvitedByUs`).
@@ -471,6 +511,7 @@ class CallManager(
                 // The answered peer no longer needs its invite timer. Peers
                 // still in `pending` keep theirs (scheduled in beginOffering).
                 cancelPeerTimeout(answeringPeer)
+                disarmRingingWatchdog()
                 Log.d("CallManager") { "onCallAnswered: Offering -> Connecting, forwarding answer to CallController" }
                 onAnswerReceived?.invoke(event)
             }
@@ -637,7 +678,7 @@ class CallManager(
                 else -> return
             }
         if (callId != currentCallId) return
-        onRenegotiationOfferReceived?.invoke(event)
+        _renegotiationEvents.tryEmit(event)
     }
 
     suspend fun sendRenegotiation(
@@ -956,6 +997,7 @@ class CallManager(
         _state.value = CallState.Idle
         cancelTimeout()
         cancelAllPeerTimeouts()
+        disarmRingingWatchdog()
         resetJob?.cancel()
         resetJob = null
         processedEventIds.clear()
@@ -974,6 +1016,7 @@ class CallManager(
         _state.value = CallState.Ended(callId, peerPubKeys, reason)
         cancelTimeout()
         cancelAllPeerTimeouts()
+        disarmRingingWatchdog()
         resetJob?.cancel()
         resetJob =
             scope.launch {
@@ -983,6 +1026,52 @@ class CallManager(
                     processedEventIds.clear()
                 }
             }
+    }
+
+    // ---- Ringing watchdog ----
+
+    /**
+     * Arms the watchdog for [callId]. If the state is still
+     * `IncomingCall(callId)` or `Offering(callId)` when the watchdog
+     * fires, forces `Ended(TIMEOUT)` so nothing can keep ringing
+     * indefinitely. Calling this replaces any previously armed watchdog.
+     */
+    private fun armRingingWatchdog(callId: String) {
+        ringingWatchdogJob?.cancel()
+        ringingWatchdogJob =
+            watchdogScope.launch {
+                delay(RINGING_WATCHDOG_MS)
+                stateMutex.withLock {
+                    val cur = _state.value
+                    val hit =
+                        (cur is CallState.IncomingCall && cur.callId == callId) ||
+                            (cur is CallState.Offering && cur.callId == callId)
+                    if (hit) {
+                        Log.d("CallManager") { "Ringing watchdog fired for $callId — forcing Ended(TIMEOUT)" }
+                        val peers =
+                            when (cur) {
+                                is CallState.IncomingCall -> cur.peerPubKeys()
+                                is CallState.Offering -> cur.peerPubKeys
+                                else -> emptySet()
+                            }
+                        transitionToEnded(callId, peers, EndReason.TIMEOUT)
+                    }
+                }
+            }
+    }
+
+    private fun disarmRingingWatchdog() {
+        ringingWatchdogJob?.cancel()
+        ringingWatchdogJob = null
+    }
+
+    /**
+     * Cancels all long-lived coroutines owned by this manager. Called when
+     * the owning account scope is torn down (logout / process shutdown).
+     */
+    fun dispose() {
+        disarmRingingWatchdog()
+        watchdogScope.cancel()
     }
 
     // ---- Per-peer invite timeout ----
