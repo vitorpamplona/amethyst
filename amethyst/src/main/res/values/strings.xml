@@ -1090,6 +1090,7 @@
     <string name="new_feature_nip17_activate">Activate</string>
 
     <string name="messages_create_public_chat">Public</string>
+    <string name="messages_create_group">Group</string>
     <string name="messages_create_public_private_chat_description">New Public or Private Group</string>
     <string name="messages_relay_based">Relay</string>
     <string name="messages_new_message">Private</string>

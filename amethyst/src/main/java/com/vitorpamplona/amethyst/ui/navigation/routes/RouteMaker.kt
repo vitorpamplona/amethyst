@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.navigation.routes
 
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.model.Account
@@ -61,6 +62,12 @@ fun routeFor(
     note: Note,
     loggedIn: Account,
 ): Route? {
+    // Marmot group messages should navigate to the group chat
+    val marmotGroup = note.inGatherers?.firstNotNullOfOrNull { it as? MarmotGroupChatroom }
+    if (marmotGroup != null) {
+        return Route.MarmotGroupChat(marmotGroup.nostrGroupId)
+    }
+
     val noteEvent = note.event ?: return Route.EventRedirect(note.idHex)
 
     return routeFor(noteEvent, loggedIn)

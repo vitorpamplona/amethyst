@@ -24,6 +24,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateOf
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.amethyst.commons.ui.feeds.InvalidatableContent
 import com.vitorpamplona.amethyst.commons.ui.feeds.LoadedFeedState
 import com.vitorpamplona.amethyst.commons.ui.notifications.Card
@@ -306,7 +307,7 @@ class CardFeedContentState(
                         it.event !is GenericRepostEvent &&
                         it.event !is LnZapEvent
                 }.map {
-                    if (it.event is PrivateDmEvent || it.event is NIP17Group) {
+                    if (it.event is PrivateDmEvent || it.event is NIP17Group || it.isInMarmotGroup()) {
                         MessageSetCard(it)
                     } else if (it.event is BadgeAwardEvent) {
                         BadgeCard(it)
@@ -475,3 +476,5 @@ data class CombinedZap(
 
     fun idHex() = response.idHex
 }
+
+private fun Note.isInMarmotGroup(): Boolean = inGatherers?.any { it is MarmotGroupChatroom } == true
