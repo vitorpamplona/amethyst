@@ -31,7 +31,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
 import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
-import com.vitorpamplona.quartz.nip51Lists.muteList.tags.UserTag
+import com.vitorpamplona.quartz.nip51Lists.gitAuthorList.tags.GitAuthorTag
 import com.vitorpamplona.quartz.nip51Lists.remove
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -45,13 +45,13 @@ class GitAuthorListEvent(
     sig: HexKey,
 ) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     PubKeyHintProvider {
-    override fun pubKeyHints() = tags.mapNotNull(UserTag::parseAsHint)
+    override fun pubKeyHints() = tags.mapNotNull(GitAuthorTag::parseAsHint)
 
-    override fun linkedPubKeys() = tags.mapNotNull(UserTag::parseKey)
+    override fun linkedPubKeys() = tags.mapNotNull(GitAuthorTag::parseKey)
 
-    fun publicAuthors() = tags.mapNotNull(UserTag::parse)
+    fun publicAuthors() = tags.mapNotNull(GitAuthorTag::parse)
 
-    suspend fun privateAuthors(signer: NostrSigner) = privateTags(signer)?.mapNotNull(UserTag::parse)
+    suspend fun privateAuthors(signer: NostrSigner) = privateTags(signer)?.mapNotNull(GitAuthorTag::parse)
 
     companion object {
         const val KIND = 10017
@@ -60,8 +60,8 @@ class GitAuthorListEvent(
         fun createAddress(pubKey: HexKey) = Address(KIND, pubKey, "")
 
         suspend fun create(
-            publicAuthors: List<UserTag> = emptyList(),
-            privateAuthors: List<UserTag> = emptyList(),
+            publicAuthors: List<GitAuthorTag> = emptyList(),
+            privateAuthors: List<GitAuthorTag> = emptyList(),
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
         ): GitAuthorListEvent =
@@ -74,7 +74,7 @@ class GitAuthorListEvent(
 
         suspend fun add(
             earlierVersion: GitAuthorListEvent,
-            author: UserTag,
+            author: GitAuthorTag,
             isPrivate: Boolean,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
@@ -98,7 +98,7 @@ class GitAuthorListEvent(
 
         suspend fun remove(
             earlierVersion: GitAuthorListEvent,
-            author: UserTag,
+            author: GitAuthorTag,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
         ): GitAuthorListEvent {

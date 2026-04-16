@@ -98,10 +98,18 @@ import com.vitorpamplona.quartz.nip29RelayGroups.request.LeaveRequestEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiPackSelectionEvent
 import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
+import com.vitorpamplona.quartz.nip34Git.grasp.UserGraspListEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
+import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
+import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
 import com.vitorpamplona.quartz.nip34Git.reply.GitReplyEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
+import com.vitorpamplona.quartz.nip34Git.state.GitRepositoryStateEvent
+import com.vitorpamplona.quartz.nip34Git.status.GitStatusAppliedEvent
+import com.vitorpamplona.quartz.nip34Git.status.GitStatusClosedEvent
+import com.vitorpamplona.quartz.nip34Git.status.GitStatusDraftEvent
+import com.vitorpamplona.quartz.nip34Git.status.GitStatusOpenEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
@@ -402,7 +410,15 @@ class EventFactory {
                 GitIssueEvent.KIND -> GitIssueEvent(id, pubKey, createdAt, tags, content, sig)
                 GitReplyEvent.KIND -> GitReplyEvent(id, pubKey, createdAt, tags, content, sig)
                 GitPatchEvent.KIND -> GitPatchEvent(id, pubKey, createdAt, tags, content, sig)
+                GitPullRequestEvent.KIND -> GitPullRequestEvent(id, pubKey, createdAt, tags, content, sig)
+                GitPullRequestUpdateEvent.KIND -> GitPullRequestUpdateEvent(id, pubKey, createdAt, tags, content, sig)
                 GitRepositoryEvent.KIND -> GitRepositoryEvent(id, pubKey, createdAt, tags, content, sig)
+                GitRepositoryStateEvent.KIND -> GitRepositoryStateEvent(id, pubKey, createdAt, tags, content, sig)
+                GitStatusOpenEvent.KIND -> GitStatusOpenEvent(id, pubKey, createdAt, tags, content, sig)
+                GitStatusAppliedEvent.KIND -> GitStatusAppliedEvent(id, pubKey, createdAt, tags, content, sig)
+                GitStatusClosedEvent.KIND -> GitStatusClosedEvent(id, pubKey, createdAt, tags, content, sig)
+                GitStatusDraftEvent.KIND -> GitStatusDraftEvent(id, pubKey, createdAt, tags, content, sig)
+                UserGraspListEvent.KIND -> UserGraspListEvent(id, pubKey, createdAt, tags, content, sig)
                 GoodWikiAuthorListEvent.KIND -> GoodWikiAuthorListEvent(id, pubKey, createdAt, tags, content, sig)
                 GoodWikiRelayListEvent.KIND -> GoodWikiRelayListEvent(id, pubKey, createdAt, tags, content, sig)
                 GoalEvent.KIND -> GoalEvent(id, pubKey, createdAt, tags, content, sig)
