@@ -23,10 +23,9 @@ package com.vitorpamplona.amethyst.service.call
 import com.vitorpamplona.amethyst.commons.call.CallManager
 import com.vitorpamplona.amethyst.commons.call.CallState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
+import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Process-level singleton that bridges the active [CallManager] and
@@ -67,8 +66,12 @@ object CallSessionBridge {
                 state is CallState.Connecting ||
                 state is CallState.Connected
             ) {
-                CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate).launch {
-                    mgr.hangup()
+                try {
+                    runBlocking {
+                        withTimeoutOrNull(3_000L) { mgr.hangup() }
+                    }
+                } catch (e: Exception) {
+                    Log.e("CallSessionBridge", "clear: hangup failed", e)
                 }
             }
         }

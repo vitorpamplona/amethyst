@@ -49,9 +49,6 @@ import com.vitorpamplona.amethyst.ui.screen.ManageRelayServices
 import com.vitorpamplona.amethyst.ui.screen.ManageWebOkHttp
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
 class CallActivity : AppCompatActivity() {
@@ -228,40 +225,17 @@ class CallActivity : AppCompatActivity() {
     override fun onDestroy() {
         unregisterPipReceiver()
 
-        val manager = CallSessionBridge.callManager
-
-        // Release all WebRTC/audio/notification resources FIRST, before
-        // the signaling hangup. close() is synchronous and runs before
-        // super.onDestroy() cancels lifecycleScope, so the init
-        // collectors are still alive but close() gets to run first.
+        // Release all WebRTC/audio/notification resources. close() is
+        // synchronous and runs before super.onDestroy() cancels
+        // lifecycleScope.
         session?.close()
         session = null
 
-        // No callback nulling needed — CallSession collects from
-        // SharedFlows; the `closed` flag prevents processing after close().
-
-        // Publish reject/hangup so the remote side stops ringing.
-        // Use goAsync-style: the hangup is best-effort. If the process
-        // dies before it completes, the watchdog on the remote side
-        // (or our own CallManager watchdog) handles cleanup.
-        if (manager != null) {
-            when (manager.state.value) {
-                is CallState.IncomingCall -> {
-                    CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate).launch {
-                        manager.rejectCall()
-                    }
-                }
-                is CallState.Offering,
-                is CallState.Connecting,
-                is CallState.Connected,
-                -> {
-                    CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate).launch {
-                        manager.hangup()
-                    }
-                }
-                else -> {}
-            }
-        }
+        // Hangup signaling is NOT published here. It is handled by
+        // CallForegroundService.onTaskRemoved() / onDestroy() which
+        // runs synchronously via runBlocking with a 3-second timeout.
+        // This is more reliable than the previous fire-and-forget
+        // CoroutineScope that could be killed before completing.
 
         super.onDestroy()
     }

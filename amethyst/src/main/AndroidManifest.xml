@@ -250,7 +250,7 @@
         <service
             android:name=".service.call.CallForegroundService"
             android:foregroundServiceType="microphone|camera|phoneCall"
-            android:stopWithTask="true"
+            android:stopWithTask="false"
             android:exported="false" />
 
         <provider
