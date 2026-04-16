@@ -169,6 +169,7 @@ class AccountSettings(
     val defaultDiscoveryFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultPollsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultPicturesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
+    val defaultProductsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.AroundMe),
     val defaultShortsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultLongsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val nwcWallets: MutableStateFlow<List<NwcWalletEntryNorm>> = MutableStateFlow(emptyList()),
@@ -451,6 +452,17 @@ class AccountSettings(
     fun changeDefaultPicturesFollowList(name: TopFilter) {
         if (defaultPicturesFollowList.value != name) {
             defaultPicturesFollowList.tryEmit(name)
+            saveAccountSettings()
+        }
+    }
+
+    fun changeDefaultProductsFollowList(name: FeedDefinition) {
+        changeDefaultProductsFollowList(name.code)
+    }
+
+    fun changeDefaultProductsFollowList(name: TopFilter) {
+        if (defaultProductsFollowList.value != name) {
+            defaultProductsFollowList.tryEmit(name)
             saveAccountSettings()
         }
     }
