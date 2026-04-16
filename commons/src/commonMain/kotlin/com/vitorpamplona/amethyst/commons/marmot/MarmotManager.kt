@@ -404,6 +404,12 @@ class MarmotManager(
     fun groupEpoch(nostrGroupId: HexKey): Long? = groupManager.getGroup(nostrGroupId)?.epoch
 
     /**
+     * Get the MIP-04 media exporter secret for a group.
+     * MLS-Exporter("marmot", "encrypted-media", 32)
+     */
+    fun mediaExporterSecret(nostrGroupId: HexKey): ByteArray = groupManager.mediaExporterSecret(nostrGroupId)
+
+    /**
      * Get the MIP-01 group metadata from the MLS GroupContext extensions.
      * Returns null if the group doesn't exist or has no MarmotGroupData extension.
      */

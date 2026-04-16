@@ -447,6 +447,17 @@ class MlsGroupManager(
         )
 
     /**
+     * Export the MIP-04 encrypted media key for a group.
+     * MLS-Exporter("marmot", "encrypted-media", 32)
+     */
+    fun mediaExporterSecret(nostrGroupId: HexKey): ByteArray =
+        requireGroup(nostrGroupId).exporterSecret(
+            "marmot",
+            "encrypted-media".encodeToByteArray(),
+            32,
+        )
+
+    /**
      * Return exporter secrets from retained epochs for a group.
      *
      * Used by the inbound processor to attempt outer decryption with

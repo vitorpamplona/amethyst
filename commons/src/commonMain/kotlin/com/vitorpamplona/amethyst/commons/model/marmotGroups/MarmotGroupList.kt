@@ -36,6 +36,8 @@ class MarmotGroupList(
     var rooms = LargeCache<HexKey, MarmotGroupChatroom>()
         private set
 
+    private val noteToGroupIndex = LargeCache<HexKey, HexKey>()
+
     private val _groupListChanges = MutableSharedFlow<HexKey>(0, 20, BufferOverflow.DROP_OLDEST)
     val groupListChanges = _groupListChanges
 
@@ -56,6 +58,7 @@ class MarmotGroupList(
                 chatroom.addMessageSync(msg)
             }
         if (added) {
+            noteToGroupIndex.getOrCreate(msg.idHex) { nostrGroupId }
             if (isSelfAuthored) {
                 chatroom.ownerSentMessage = true
             }
@@ -73,12 +76,15 @@ class MarmotGroupList(
     ) {
         val chatroom = getOrCreateGroup(nostrGroupId)
         if (chatroom.restoreMessageSync(msg)) {
+            noteToGroupIndex.getOrCreate(msg.idHex) { nostrGroupId }
             if (msg.author?.pubkeyHex == ownerPubKey) {
                 chatroom.ownerSentMessage = true
             }
             _groupListChanges.tryEmit(nostrGroupId)
         }
     }
+
+    fun groupIdForNote(noteId: HexKey): HexKey? = noteToGroupIndex.get(noteId)
 
     /**
      * Mark a group as "known" by the local user — used right after the user
