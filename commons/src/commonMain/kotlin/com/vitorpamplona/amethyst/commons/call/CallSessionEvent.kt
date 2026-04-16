@@ -31,17 +31,28 @@ import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallIceCandidateEvent
  */
 sealed interface CallSessionEvent {
     /** A peer answered our offer (or we received an answer in a group call). */
-    data class AnswerReceived(val event: CallAnswerEvent) : CallSessionEvent
+    data class AnswerReceived(
+        val event: CallAnswerEvent,
+    ) : CallSessionEvent
 
     /** An ICE candidate arrived from a peer. */
-    data class IceCandidateReceived(val event: CallIceCandidateEvent) : CallSessionEvent
+    data class IceCandidateReceived(
+        val event: CallIceCandidateEvent,
+    ) : CallSessionEvent
 
     /** A new peer joined the group call and needs callee-to-callee mesh setup. */
-    data class NewPeerInGroupCall(val peerPubKey: HexKey) : CallSessionEvent
+    data class NewPeerInGroupCall(
+        val peerPubKey: HexKey,
+    ) : CallSessionEvent
 
     /** A mid-call offer arrived from another callee in a group call. */
-    data class MidCallOfferReceived(val peerPubKey: HexKey, val sdpOffer: String) : CallSessionEvent
+    data class MidCallOfferReceived(
+        val peerPubKey: HexKey,
+        val sdpOffer: String,
+    ) : CallSessionEvent
 
     /** A peer left the call (hangup/reject/timeout) but the call continues. */
-    data class PeerLeft(val peerPubKey: HexKey) : CallSessionEvent
+    data class PeerLeft(
+        val peerPubKey: HexKey,
+    ) : CallSessionEvent
 }

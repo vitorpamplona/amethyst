@@ -248,22 +248,26 @@ class CallActivity : AppCompatActivity() {
                     // Best-effort on a detached scope. If the process
                     // dies before completion, the remote 60s timeout
                     // or our 65s watchdog handles it.
-                    kotlinx.coroutines.CoroutineScope(
-                        kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Main.immediate,
-                    ).launch {
-                        manager.rejectCall()
-                    }
+                    kotlinx.coroutines
+                        .CoroutineScope(
+                            kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Main.immediate,
+                        ).launch {
+                            manager.rejectCall()
+                        }
                 }
+
                 is CallState.Offering,
                 is CallState.Connecting,
                 is CallState.Connected,
                 -> {
-                    kotlinx.coroutines.CoroutineScope(
-                        kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Main.immediate,
-                    ).launch {
-                        manager.hangup()
-                    }
+                    kotlinx.coroutines
+                        .CoroutineScope(
+                            kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Main.immediate,
+                        ).launch {
+                            manager.hangup()
+                        }
                 }
+
                 else -> {}
             }
         }

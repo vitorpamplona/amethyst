@@ -176,6 +176,7 @@ object CallNotifier {
     ) {
         val callerUser = LocalCache.getOrCreateUser(callerPubKey)
         val callerName = callerUser.toBestDisplayName()
+
         @Suppress("UNUSED_VARIABLE")
         val uri = "nostr:${callerPubKey.hexToByteArray().toNpub()}"
 

@@ -1167,7 +1167,12 @@ class CallManagerTest {
             assertIs<CallState.Connected>(state)
             assertTrue(carol in state.peerPubKeys, "Mid-call joiner must be added to peerPubKeys")
             assertTrue(alice in state.peerPubKeys, "Existing peer must still be present")
-            val forwardedPeer = events.filterIsInstance<CallSessionEvent.AnswerReceived>().firstOrNull()?.event?.pubKey
+            val forwardedPeer =
+                events
+                    .filterIsInstance<CallSessionEvent.AnswerReceived>()
+                    .firstOrNull()
+                    ?.event
+                    ?.pubKey
             assertEquals(carol, forwardedPeer, "Answer must still be emitted to CallSession")
             job.cancel()
         }
@@ -1318,7 +1323,12 @@ class CallManagerTest {
             val bobAfterCarolAnswer = bobManager.state.value
             assertIs<CallState.Connected>(bobAfterCarolAnswer)
             assertTrue(carol in bobAfterCarolAnswer.peerPubKeys, "Bob should add Carol to his membership")
-            val bobForwardedAnswer = bobEvents.filterIsInstance<CallSessionEvent.AnswerReceived>().firstOrNull()?.event?.pubKey
+            val bobForwardedAnswer =
+                bobEvents
+                    .filterIsInstance<CallSessionEvent.AnswerReceived>()
+                    .firstOrNull()
+                    ?.event
+                    ?.pubKey
             assertEquals(carol, bobForwardedAnswer, "Bob must emit Carol's answer to his CallSession")
             bobJob.cancel()
         }

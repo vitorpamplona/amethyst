@@ -113,6 +113,7 @@ class CallSession(
     val isBluetoothAvailable: StateFlow<Boolean> = audioManager.isBluetoothAvailable
 
     @Volatile private var videoPausedByProximity = false
+
     @Volatile private var closed = false
 
     @Volatile private var foregroundServiceStarted = false
@@ -147,16 +148,25 @@ class CallSession(
             callManager.sessionEvents.collect { event ->
                 if (closed) return@collect
                 when (event) {
-                    is com.vitorpamplona.amethyst.commons.call.CallSessionEvent.AnswerReceived ->
+                    is com.vitorpamplona.amethyst.commons.call.CallSessionEvent.AnswerReceived -> {
                         onCallAnswerReceived(event.event.pubKey, event.event.sdpAnswer())
-                    is com.vitorpamplona.amethyst.commons.call.CallSessionEvent.IceCandidateReceived ->
+                    }
+
+                    is com.vitorpamplona.amethyst.commons.call.CallSessionEvent.IceCandidateReceived -> {
                         onIceCandidateReceived(event.event)
-                    is com.vitorpamplona.amethyst.commons.call.CallSessionEvent.NewPeerInGroupCall ->
+                    }
+
+                    is com.vitorpamplona.amethyst.commons.call.CallSessionEvent.NewPeerInGroupCall -> {
                         onNewPeerInGroupCall(event.peerPubKey)
-                    is com.vitorpamplona.amethyst.commons.call.CallSessionEvent.MidCallOfferReceived ->
+                    }
+
+                    is com.vitorpamplona.amethyst.commons.call.CallSessionEvent.MidCallOfferReceived -> {
                         onMidCallOfferReceived(event.peerPubKey, event.sdpOffer)
-                    is com.vitorpamplona.amethyst.commons.call.CallSessionEvent.PeerLeft ->
+                    }
+
+                    is com.vitorpamplona.amethyst.commons.call.CallSessionEvent.PeerLeft -> {
                         disposePeerSession(event.peerPubKey)
+                    }
                 }
             }
         }

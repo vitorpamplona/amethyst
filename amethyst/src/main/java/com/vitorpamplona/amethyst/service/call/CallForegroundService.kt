@@ -166,11 +166,17 @@ class CallForegroundService : Service() {
             runBlocking {
                 withTimeoutOrNull(3_000L) {
                     when (state) {
-                        is CallState.IncomingCall -> manager.rejectCall()
+                        is CallState.IncomingCall -> {
+                            manager.rejectCall()
+                        }
+
                         is CallState.Offering,
                         is CallState.Connecting,
                         is CallState.Connected,
-                        -> manager.hangup()
+                        -> {
+                            manager.hangup()
+                        }
+
                         else -> { /* nothing to do */ }
                     }
                 }

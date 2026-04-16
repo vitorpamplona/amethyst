@@ -95,11 +95,12 @@ class CallManager(
     private val _sessionEvents = MutableSharedFlow<CallSessionEvent>(extraBufferCapacity = 256)
     val sessionEvents: SharedFlow<CallSessionEvent> = _sessionEvents.asSharedFlow()
 
-    /**
+    /*
      * Renegotiation offers from remote peers. Separate from [sessionEvents]
      * because renegotiation has its own glare-resolution logic in
      * CallSession and benefits from a dedicated collector.
      */
+
     /** Emits a session event, logging a warning if the buffer overflows. */
     private fun emitSessionEvent(event: CallSessionEvent) {
         if (!emitSessionEvent(event)) {
