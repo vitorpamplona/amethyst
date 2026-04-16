@@ -113,7 +113,7 @@ class CallActivity : AppCompatActivity() {
         // Create the Activity-owned call session.
         val callSession =
             CallSession(
-                context = applicationContext,
+                context = this,
                 callManager = callManager,
                 scope = lifecycleScope,
                 publishWrap = { wrap -> accountViewModel.account.publishCallSignaling(wrap) },
