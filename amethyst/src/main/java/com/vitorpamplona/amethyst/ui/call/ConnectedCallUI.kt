@@ -71,7 +71,7 @@ import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.call.CallState
 import com.vitorpamplona.amethyst.service.call.AudioRoute
-import com.vitorpamplona.amethyst.service.call.CallController
+import com.vitorpamplona.amethyst.ui.call.session.CallSession
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -83,7 +83,7 @@ import org.webrtc.VideoTrack
 @Composable
 fun ConnectedCallUI(
     state: CallState.Connected,
-    callController: CallController?,
+    callSession: CallSession?,
     accountViewModel: AccountViewModel,
     onHangup: () -> Unit,
     onToggleMute: () -> Unit,
@@ -103,15 +103,15 @@ fun ConnectedCallUI(
     val emptyVideoFlow = remember { kotlinx.coroutines.flow.MutableStateFlow<VideoTrack?>(null) }
     val emptyTracksFlow = remember { kotlinx.coroutines.flow.MutableStateFlow<Map<String, VideoTrack>>(emptyMap()) }
     val emptySetFlow = remember { kotlinx.coroutines.flow.MutableStateFlow<Set<String>>(emptySet()) }
-    val remoteVideoTracks by (callController?.remoteVideoTracks ?: emptyTracksFlow).collectAsState()
-    val activePeerVideos by (callController?.activePeerVideos ?: emptySetFlow).collectAsState()
-    val localVideoTrack by (callController?.localVideoTrack ?: emptyVideoFlow).collectAsState()
+    val remoteVideoTracks by (callSession?.remoteVideoTracks ?: emptyTracksFlow).collectAsState()
+    val activePeerVideos by (callSession?.activePeerVideos ?: emptySetFlow).collectAsState()
+    val localVideoTrack by (callSession?.localVideoTrack ?: emptyVideoFlow).collectAsState()
     val defaultFalse = remember { kotlinx.coroutines.flow.MutableStateFlow(false) }
     val defaultTrue = remember { kotlinx.coroutines.flow.MutableStateFlow(true) }
-    val isAudioMuted by (callController?.isAudioMuted ?: defaultFalse).collectAsState()
-    val isVideoEnabled by (callController?.isVideoEnabled ?: defaultTrue).collectAsState()
-    val isFrontCamera by (callController?.isFrontCamera ?: defaultTrue).collectAsState()
-    val currentAudioRoute by (callController?.audioRoute ?: remember { kotlinx.coroutines.flow.MutableStateFlow(AudioRoute.EARPIECE) }).collectAsState()
+    val isAudioMuted by (callSession?.isAudioMuted ?: defaultFalse).collectAsState()
+    val isVideoEnabled by (callSession?.isVideoEnabled ?: defaultTrue).collectAsState()
+    val isFrontCamera by (callSession?.isFrontCamera ?: defaultTrue).collectAsState()
+    val currentAudioRoute by (callSession?.audioRoute ?: remember { kotlinx.coroutines.flow.MutableStateFlow(AudioRoute.EARPIECE) }).collectAsState()
     val hasActiveVideo =
         state.callType == com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType.VIDEO ||
             isVideoEnabled ||
@@ -148,7 +148,7 @@ fun ConnectedCallUI(
                 pendingPeerPubKeys = state.pendingPeerPubKeys,
                 remoteVideoTracks = remoteVideoTracks,
                 activePeerVideos = activePeerVideos,
-                eglBase = callController?.getEglBase(),
+                eglBase = callSession?.getEglBase(),
                 accountViewModel = accountViewModel,
                 modifier = Modifier.fillMaxSize(),
             )
@@ -157,7 +157,7 @@ fun ConnectedCallUI(
                 localVideoTrack?.let { track ->
                     VideoRenderer(
                         videoTrack = track,
-                        eglBase = callController?.getEglBase(),
+                        eglBase = callSession?.getEglBase(),
                         modifier =
                             Modifier
                                 .size(120.dp, 160.dp)
@@ -220,7 +220,7 @@ fun ConnectedCallUI(
             currentAudioRoute = currentAudioRoute,
             onToggleMute = onToggleMute,
             onToggleVideo = onToggleVideo,
-            onSwitchCamera = { callController?.switchCamera() },
+            onSwitchCamera = { callSession?.switchCamera() },
             onCycleAudioRoute = onCycleAudioRoute,
             onAddParticipant = { showAddParticipant = true },
             onHangup = onHangup,

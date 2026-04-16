@@ -41,7 +41,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.call.CallState
-import com.vitorpamplona.amethyst.service.call.CallSessionBridge
 import com.vitorpamplona.amethyst.service.crashreports.DisplayCrashMessages
 import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.compose.DisplayNotifyMessages
 import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataScreen
@@ -192,8 +191,7 @@ private fun ObserveIncomingCalls(accountViewModel: AccountViewModel) {
 
     LaunchedEffect(callState) {
         val state = callState
-        if (state is CallState.IncomingCall) {
-            CallSessionBridge.set(accountViewModel.callManager, accountViewModel.callController, accountViewModel)
+        if (state is CallState.IncomingCall || state is CallState.Offering) {
             CallActivity.launch(context)
         }
     }
@@ -204,11 +202,6 @@ fun BuildNavigation(
     accountViewModel: AccountViewModel,
     nav: Nav,
 ) {
-    val context = androidx.compose.ui.platform.LocalContext.current
-    androidx.compose.runtime.LaunchedEffect(Unit) {
-        accountViewModel.initCallController(context)
-    }
-
     NavHost(
         navController = nav.controller,
         startDestination = Route.Home,

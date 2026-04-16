@@ -33,6 +33,8 @@ import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallRenegotiateEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -98,6 +100,16 @@ class CallManagerTest {
                 isCallsEnabled = isCallsEnabled,
             )
         return manager to published
+    }
+
+    /**
+     * Starts collecting [CallManager.sessionEvents] into a list.
+     * Returns (events, job) — cancel the job when done.
+     */
+    private fun TestScope.collectSessionEvents(manager: CallManager): Pair<MutableList<CallSessionEvent>, Job> {
+        val events = mutableListOf<CallSessionEvent>()
+        val job = launch { manager.sessionEvents.collect { events.add(it) } }
+        return events to job
     }
 
     // ---- Event construction helpers ----
@@ -323,15 +335,15 @@ class CallManagerTest {
             manager.initiateCall(bob, CallType.VOICE, callId, sdpOffer)
             assertIs<CallState.Offering>(manager.state.value)
 
-            var answerReceived = false
-            manager.onAnswerReceived = { answerReceived = true }
+            val (events, job) = collectSessionEvents(manager)
 
             val answer = makeAnswer(from = bob, to = alice)
             manager.onSignalingEvent(answer)
 
             val state = manager.state.value
             assertIs<CallState.Connecting>(state)
-            assertTrue(answerReceived, "onAnswerReceived callback should fire")
+            assertTrue(events.any { it is CallSessionEvent.AnswerReceived }, "AnswerReceived event should be emitted")
+            job.cancel()
         }
 
     // ========================================================================
@@ -461,14 +473,14 @@ class CallManagerTest {
             manager.onSignalingEvent(makeOffer(from = alice, to = bob))
             manager.acceptCall(sdpAnswer)
 
-            var iceCalled = false
-            manager.onIceCandidateReceived = { iceCalled = true }
+            val (events, job) = collectSessionEvents(manager)
 
             // ICE candidate from self (echoed back by relay)
             val selfIce = makeIceCandidate(from = bob, to = alice)
             manager.onSignalingEvent(selfIce)
 
-            assertTrue(!iceCalled, "Self ICE candidates MUST be ignored")
+            assertTrue(events.none { it is CallSessionEvent.IceCandidateReceived }, "Self ICE candidates MUST be ignored")
+            job.cancel()
         }
 
     @Test
@@ -533,13 +545,14 @@ class CallManagerTest {
             manager.onSignalingEvent(makeOffer(from = alice, to = bob))
             manager.acceptCall(sdpAnswer)
 
-            var receivedIce: CallIceCandidateEvent? = null
-            manager.onIceCandidateReceived = { receivedIce = it }
+            val (events, job) = collectSessionEvents(manager)
 
             val ice = makeIceCandidate(from = alice, to = bob)
             manager.onSignalingEvent(ice)
 
-            assertNotNull(receivedIce, "ICE candidate should be forwarded via callback")
+            val iceEvent = events.filterIsInstance<CallSessionEvent.IceCandidateReceived>().firstOrNull()
+            assertNotNull(iceEvent, "ICE candidate should be emitted via sessionEvents")
+            job.cancel()
         }
 
     // ========================================================================
@@ -794,15 +807,16 @@ class CallManagerTest {
             // Bob still ringing
             assertIs<CallState.IncomingCall>(manager.state.value)
 
-            // Track mesh setup callback
-            val newPeers = mutableListOf<HexKey>()
-            manager.onNewPeerInGroupCall = { newPeers.add(it) }
+            // Track mesh setup events
+            val (events, job) = collectSessionEvents(manager)
 
             // Bob accepts
             manager.acceptCall(sdpAnswer)
 
             // Should trigger callee-to-callee mesh setup with carol
+            val newPeers = events.filterIsInstance<CallSessionEvent.NewPeerInGroupCall>().map { it.peerPubKey }
             assertTrue(carol in newPeers, "Should discover carol for mesh setup after accepting")
+            job.cancel()
         }
 
     // ========================================================================
@@ -819,19 +833,17 @@ class CallManagerTest {
             manager.onPeerConnected()
             assertIs<CallState.Connected>(manager.state.value)
 
-            var midCallPeer: HexKey? = null
-            var midCallSdp: String? = null
-            manager.onMidCallOfferReceived = { peer, sdp ->
-                midCallPeer = peer
-                midCallSdp = sdp
-            }
+            val (events, job) = collectSessionEvents(manager)
 
             // Carol sends a mid-call offer (callee-to-callee mesh)
             val carolOffer = makeOffer(from = carol, to = bob, callId = callId, sdp = "carol-sdp")
             manager.onSignalingEvent(carolOffer)
 
-            assertEquals(carol, midCallPeer)
-            assertEquals("carol-sdp", midCallSdp)
+            val midCallEvent = events.filterIsInstance<CallSessionEvent.MidCallOfferReceived>().firstOrNull()
+            assertNotNull(midCallEvent)
+            assertEquals(carol, midCallEvent.peerPubKey)
+            assertEquals("carol-sdp", midCallEvent.sdpOffer)
+            job.cancel()
         }
 
     // ========================================================================
@@ -882,12 +894,13 @@ class CallManagerTest {
             manager.onPeerConnected()
             manager.onSignalingEvent(makeAnswer(from = carol, to = alice))
 
-            val leftPeers = mutableListOf<HexKey>()
-            manager.onPeerLeft = { leftPeers.add(it) }
+            val (events, job) = collectSessionEvents(manager)
 
             manager.onSignalingEvent(makeHangup(from = bob, to = alice))
 
-            assertTrue(bob in leftPeers, "onPeerLeft should fire when a peer hangs up")
+            val leftPeers = events.filterIsInstance<CallSessionEvent.PeerLeft>().map { it.peerPubKey }
+            assertTrue(bob in leftPeers, "PeerLeft should be emitted when a peer hangs up")
+            job.cancel()
         }
 
     // ========================================================================
@@ -1128,8 +1141,8 @@ class CallManagerTest {
      * Bob is already in a Connected group call with Alice. Alice invites Carol.
      * Carol's broadcast CallAnswer reaches Bob. Bob's state must expand to
      * include Carol in [CallState.Connected.peerPubKeys] and the answer must
-     * still be forwarded via [CallManager.onAnswerReceived] so the caller-side
-     * [CallController] can unconditionally initiate a mesh offer to Carol.
+     * still be emitted via [CallManager.sessionEvents] so the caller-side
+     * CallSession can unconditionally initiate a mesh offer to Carol.
      */
     @Test
     fun midCallInviteAnswerFromUnknownPeerInConnectedExpandsMembership() =
@@ -1142,8 +1155,7 @@ class CallManagerTest {
             manager.onPeerConnected()
             assertIs<CallState.Connected>(manager.state.value)
 
-            var forwardedPeer: HexKey? = null
-            manager.onAnswerReceived = { event -> forwardedPeer = event.pubKey }
+            val (events, job) = collectSessionEvents(manager)
 
             // Alice invited Carol mid-call; Carol broadcasts her acceptance.
             // Bob sees a CallAnswer from Carol (unknown peer, same call-id)
@@ -1155,7 +1167,14 @@ class CallManagerTest {
             assertIs<CallState.Connected>(state)
             assertTrue(carol in state.peerPubKeys, "Mid-call joiner must be added to peerPubKeys")
             assertTrue(alice in state.peerPubKeys, "Existing peer must still be present")
-            assertEquals(carol, forwardedPeer, "Answer must still be forwarded to CallController")
+            val forwardedPeer =
+                events
+                    .filterIsInstance<CallSessionEvent.AnswerReceived>()
+                    .firstOrNull()
+                    ?.event
+                    ?.pubKey
+            assertEquals(carol, forwardedPeer, "Answer must still be emitted to CallSession")
+            job.cancel()
         }
 
     /**
@@ -1296,16 +1315,22 @@ class CallManagerTest {
 
             // Step 6: Bob receives Carol's answer broadcast. Bob's state must
             // expand to include Carol (mid-call join), and the answer must be
-            // forwarded so Bob's CallController can initiate a mesh offer.
-            var bobForwardedAnswer: HexKey? = null
-            bobManager.onAnswerReceived = { event -> bobForwardedAnswer = event.pubKey }
+            // emitted so Bob's CallSession can initiate a mesh offer.
+            val (bobEvents, bobJob) = collectSessionEvents(bobManager)
             bobManager.onSignalingEvent(
                 makeGroupAnswer(from = carol, members = setOf(alice, bob, carol), sdp = "carol-answer-sdp"),
             )
             val bobAfterCarolAnswer = bobManager.state.value
             assertIs<CallState.Connected>(bobAfterCarolAnswer)
             assertTrue(carol in bobAfterCarolAnswer.peerPubKeys, "Bob should add Carol to his membership")
-            assertEquals(carol, bobForwardedAnswer, "Bob must forward Carol's answer to his CallController")
+            val bobForwardedAnswer =
+                bobEvents
+                    .filterIsInstance<CallSessionEvent.AnswerReceived>()
+                    .firstOrNull()
+                    ?.event
+                    ?.pubKey
+            assertEquals(carol, bobForwardedAnswer, "Bob must emit Carol's answer to his CallSession")
+            bobJob.cancel()
         }
 
     // ========================================================================
@@ -1528,15 +1553,16 @@ class CallManagerTest {
             assertTrue(carol in connecting.pendingPeerPubKeys)
 
             // Carol publishes a mesh offer to Bob (same call-id).
-            var midCallOfferPeer: HexKey? = null
-            manager.onMidCallOfferReceived = { peer, _ -> midCallOfferPeer = peer }
+            val (events, job) = collectSessionEvents(manager)
             manager.onSignalingEvent(makeGroupOffer(from = carol, members = setOf(alice, bob, carol)))
 
             val after = manager.state.value
             assertIs<CallState.Connecting>(after)
             assertTrue(carol in after.peerPubKeys, "Carol should move into peerPubKeys")
             assertTrue(carol !in after.pendingPeerPubKeys, "Carol should leave pending")
-            assertEquals(carol, midCallOfferPeer, "CallController must still receive the mid-call offer")
+            val midCallOfferPeer = events.filterIsInstance<CallSessionEvent.MidCallOfferReceived>().firstOrNull()?.peerPubKey
+            assertEquals(carol, midCallOfferPeer, "CallSession must still receive the mid-call offer")
+            job.cancel()
 
             // And her watchdog should be cancelled — advancing past the
             // 30 s budget must not further alter state.
@@ -1929,7 +1955,7 @@ class CallManagerTest {
 
     /**
      * Regression for the subtle bug where a self-reject echo would trigger
-     * onPeerLeft(signer.pubKey) on a device that had already accepted,
+     * PeerLeft(signer.pubKey) on a device that had already accepted,
      * disposing its own PeerSession and killing the live call.
      */
     @Test
@@ -1937,8 +1963,7 @@ class CallManagerTest {
         runTest {
             val (manager, _) = createManager(localPubKey = bob, followedKeys = setOf(alice))
 
-            var peerLeftCalled = false
-            manager.onPeerLeft = { peerLeftCalled = true }
+            val (events, job) = collectSessionEvents(manager)
 
             manager.onSignalingEvent(makeOffer(from = alice, to = bob))
             manager.acceptCall(sdpAnswer)
@@ -1950,29 +1975,29 @@ class CallManagerTest {
             val siblingReject = makeReject(from = bob, to = alice)
             manager.onSignalingEvent(siblingReject)
 
-            // Our live call must survive — the echo must not fire
-            // onPeerLeft (which would dispose our own PeerSession) and must
+            // Our live call must survive — the echo must not emit
+            // PeerLeft (which would dispose our own PeerSession) and must
             // not change state.
             assertIs<CallState.Connected>(manager.state.value)
             assertTrue(
-                !peerLeftCalled,
-                "onPeerLeft must not fire for a self-reject echo — the UI would " +
+                events.none { it is CallSessionEvent.PeerLeft },
+                "PeerLeft must not be emitted for a self-reject echo — the UI would " +
                     "tear down our own PeerSession, killing the live call audio.",
             )
+            job.cancel()
         }
 
     /**
      * Same guard for the Connecting state: a self-reject arriving during
      * the connection handshake must not drop us from our own pending set
-     * and must not invoke onPeerLeft(self).
+     * and must not emit PeerLeft(self).
      */
     @Test
     fun selfRejectEchoDuringConnectingDoesNotFireOnPeerLeft() =
         runTest {
             val (manager, _) = createManager(localPubKey = bob, followedKeys = setOf(alice))
 
-            var peerLeftCalled = false
-            manager.onPeerLeft = { peerLeftCalled = true }
+            val (events, job) = collectSessionEvents(manager)
 
             manager.onSignalingEvent(makeOffer(from = alice, to = bob))
             manager.acceptCall(sdpAnswer)
@@ -1982,7 +2007,8 @@ class CallManagerTest {
             manager.onSignalingEvent(siblingReject)
 
             assertIs<CallState.Connecting>(manager.state.value)
-            assertTrue(!peerLeftCalled, "onPeerLeft must not fire for a self-reject echo during Connecting")
+            assertTrue(events.none { it is CallSessionEvent.PeerLeft }, "PeerLeft must not be emitted for a self-reject echo during Connecting")
+            job.cancel()
         }
 
     /**

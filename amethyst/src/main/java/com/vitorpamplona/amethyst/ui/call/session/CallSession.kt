@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.call
+package com.vitorpamplona.amethyst.ui.call.session
 
 import android.content.Context
 import android.content.Intent
@@ -35,7 +35,15 @@ import com.vitorpamplona.amethyst.commons.call.PeerSession
 import com.vitorpamplona.amethyst.commons.call.PeerSessionManager
 import com.vitorpamplona.amethyst.commons.call.SdpType
 import com.vitorpamplona.amethyst.commons.call.SignalingState
-import com.vitorpamplona.amethyst.service.notifications.NotificationUtils
+import com.vitorpamplona.amethyst.service.call.AudioRoute
+import com.vitorpamplona.amethyst.service.call.CallAudioManager
+import com.vitorpamplona.amethyst.service.call.CallForegroundService
+import com.vitorpamplona.amethyst.service.call.CallMediaManager
+import com.vitorpamplona.amethyst.service.call.IceServerConfig
+import com.vitorpamplona.amethyst.service.call.RemoteVideoMonitor
+import com.vitorpamplona.amethyst.service.call.WebRtcCallSession
+import com.vitorpamplona.amethyst.service.call.WebRtcPeerSessionAdapter
+import com.vitorpamplona.amethyst.service.call.notification.CallNotifier
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.EphemeralGiftWrapEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.WebRtcCallFactory
@@ -55,13 +63,18 @@ import org.webrtc.IceCandidate
 import org.webrtc.VideoTrack
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicBoolean
 
-private const val TAG = "CallController"
+private const val TAG = "CallSession"
 private const val VIDEO_MAX_BITRATE_BPS_DEFAULT = 1_500_000
 
+/**
+ * One-per-Activity call session. Created in [CallActivity.onCreate],
+ * destroyed in [CallActivity.onDestroy] via [close]. This guarantees
+ * that every WebRTC/audio/notification resource is released when the
+ * Activity dies — no guard flags, no race-sensitive state observing.
+ */
 @Stable
-class CallController(
+class CallSession(
     private val context: Context,
     val callManager: CallManager,
     private val scope: CoroutineScope,
@@ -69,7 +82,7 @@ class CallController(
     private val signerProvider: suspend () -> com.vitorpamplona.quartz.nip01Core.signers.NostrSigner,
     localPubKey: HexKey,
     private val settingsProvider: () -> com.vitorpamplona.amethyst.model.AccountSettings,
-) {
+) : AutoCloseable {
     private var peerSessionMgr = PeerSessionManager(localPubKey)
 
     private fun webRtcSession(peerPubKey: HexKey): WebRtcCallSession? = (peerSessionMgr.getSession(peerPubKey)?.session as? WebRtcPeerSessionAdapter)?.webRtcSession
@@ -101,8 +114,9 @@ class CallController(
 
     @Volatile private var videoPausedByProximity = false
 
+    @Volatile private var closed = false
+
     @Volatile private var foregroundServiceStarted = false
-    private val cleanedUp = AtomicBoolean(false)
     private val videoSenders = ConcurrentHashMap<HexKey, org.webrtc.RtpSender>()
 
     private val pendingRenegotiation = ConcurrentHashMap<HexKey, Boolean>()
@@ -128,33 +142,57 @@ class CallController(
     // ---- Initialization ----
 
     init {
-        callManager.onRenegotiationOfferReceived = { event -> onRenegotiationOfferReceived(event) }
+        // Collect all session-level events (answers, ICE candidates,
+        // peer joins/leaves, mid-call offers) from the single SharedFlow.
+        scope.launch {
+            callManager.sessionEvents.collect { event ->
+                if (closed) return@collect
+                when (event) {
+                    is com.vitorpamplona.amethyst.commons.call.CallSessionEvent.AnswerReceived -> {
+                        onCallAnswerReceived(event.event.pubKey, event.event.sdpAnswer())
+                    }
+
+                    is com.vitorpamplona.amethyst.commons.call.CallSessionEvent.IceCandidateReceived -> {
+                        onIceCandidateReceived(event.event)
+                    }
+
+                    is com.vitorpamplona.amethyst.commons.call.CallSessionEvent.NewPeerInGroupCall -> {
+                        onNewPeerInGroupCall(event.peerPubKey)
+                    }
+
+                    is com.vitorpamplona.amethyst.commons.call.CallSessionEvent.MidCallOfferReceived -> {
+                        onMidCallOfferReceived(event.peerPubKey, event.sdpOffer)
+                    }
+
+                    is com.vitorpamplona.amethyst.commons.call.CallSessionEvent.PeerLeft -> {
+                        disposePeerSession(event.peerPubKey)
+                    }
+                }
+            }
+        }
+
+        // Renegotiation events have their own flow because they go
+        // through dedicated glare-resolution logic.
+        scope.launch {
+            callManager.renegotiationEvents.collect { event ->
+                if (!closed) onRenegotiationOfferReceived(event)
+            }
+        }
 
         scope.launch {
             callManager.state.collect { state ->
+                Log.d(TAG) { "state collector received: ${state::class.simpleName} closed=$closed thread=${Thread.currentThread().name}" }
+                if (closed) return@collect
                 when (state) {
                     is CallState.IncomingCall -> {
-                        // A new call session begins — arm cleanup() so it will
-                        // run for this session's Ended transition. This MUST
-                        // happen for every incoming call (even ones the user
-                        // ends up rejecting), otherwise a stale cleanedUp flag
-                        // from the previous call session would turn cleanup()
-                        // into a no-op and leave the ringtone/notification
-                        // playing forever. See the bug where rejecting a
-                        // second consecutive call required killing the app.
-                        cleanedUp.set(false)
                         ensureForegroundService()
                         withContext(Dispatchers.IO) { audioManager.startRinging() }
                         scope.launch {
-                            NotificationUtils.showIncomingCallNotification(state.callerPubKey, context)
+                            CallNotifier.showIncomingCall(state.callerPubKey, context)
                         }
                     }
 
                     is CallState.Offering -> {
-                        // Same rationale as IncomingCall above: ensure cleanup
-                        // can run for this session even if the previous one
-                        // already ran cleanup().
-                        cleanedUp.set(false)
                         audioManager.startRingbackTone()
                         ensureForegroundService()
                     }
@@ -164,7 +202,7 @@ class CallController(
                         audioManager.stopRingbackTone()
                         withContext(Dispatchers.IO) { audioManager.switchToCallAudioMode() }
                         audioManager.acquireProximityWakeLock()
-                        NotificationUtils.cancelCallNotification(context)
+                        CallNotifier.cancelIncomingCall(context)
                         updateForegroundServiceNotification()
                         registerNetworkCallback()
                     }
@@ -174,19 +212,21 @@ class CallController(
                         audioManager.stopRingbackTone()
                         withContext(Dispatchers.IO) { audioManager.switchToCallAudioMode() }
                         audioManager.acquireProximityWakeLock()
-                        NotificationUtils.cancelCallNotification(context)
+                        CallNotifier.cancelIncomingCall(context)
                         updateForegroundServiceNotification()
                         registerNetworkCallback()
                     }
 
                     is CallState.Ended -> {
-                        cleanup()
+                        // Stop ringing/ringback — close() handles the
+                        // full teardown when the Activity is destroyed.
+                        audioManager.stopRinging()
+                        audioManager.stopRingbackTone()
+                        CallNotifier.cancelIncomingCall(context)
                     }
 
                     is CallState.Idle -> {
-                        // No cleanup here — Ended already handled it.
-                        // Ended auto-resets to Idle after 2 seconds;
-                        // running cleanup twice is wasteful and logs errors.
+                        // No action — Ended already stopped audio/notification.
                     }
                 }
             }
@@ -216,18 +256,14 @@ class CallController(
 
     // ---- Call initiation (caller side) ----
 
-    fun initiateGroupCall(
+    fun initiate(
         peerPubKeys: Set<String>,
         callType: CallType,
     ) {
-        Log.d(TAG) { "initiateCallInternal: peers=${peerPubKeys.map { it.take(8) }}, callType=$callType" }
+        Log.d(TAG) { "initiate: peers=${peerPubKeys.map { it.take(8) }}, callType=$callType" }
         scope.launch {
             val callId = UUID.randomUUID().toString()
             _errorMessage.value = null
-
-            // A new call session begins — arm cleanup() so it will run again
-            // for this session's Ended transition.
-            cleanedUp.set(false)
             applyCallSettings()
             try {
                 withContext(Dispatchers.IO) { mediaManager.initialize(callType) }
@@ -266,17 +302,13 @@ class CallController(
 
     // ---- Accept incoming call (callee side) ----
 
-    fun acceptIncomingCall(sdpOffer: String) {
+    fun accept(sdpOffer: String) {
         val state = callManager.state.value
         if (state !is CallState.IncomingCall) return
 
         val callerPubKey = state.callerPubKey
         scope.launch {
             _errorMessage.value = null
-
-            // A new call session begins — arm cleanup() so it will run again
-            // for this session's Ended transition.
-            cleanedUp.set(false)
             applyCallSettings()
             try {
                 withContext(Dispatchers.IO) { mediaManager.initialize(state.callType) }
@@ -505,7 +537,7 @@ class CallController(
 
     // ---- UI toggle controls ----
 
-    fun toggleAudioMute() {
+    fun toggleMute() {
         val muted = !_isAudioMuted.value
         _isAudioMuted.value = muted
         mediaManager.setAudioMuted(muted)
@@ -587,22 +619,36 @@ class CallController(
             WebRtcCallSession(
                 peerConnectionFactory = factory,
                 iceServers = IceServerConfig.buildIceServers(settingsProvider().callTurnServers),
-                onIceCandidate = { candidate -> onLocalIceCandidate(peerPubKey, candidate) },
+                onIceCandidate = { candidate ->
+                    if (!closed) onLocalIceCandidate(peerPubKey, candidate)
+                },
                 onPeerConnected = {
+                    if (closed) return@WebRtcCallSession
                     Log.d(TAG) { "Peer ${peerPubKey.take(8)} connected!" }
                     scope.launch {
+                        if (closed) return@launch
                         callManager.onPeerConnected()
                         if (callManager.state.value is CallState.Connected) {
                             ensureForegroundService()
                         }
                     }
                 },
-                onRemoteVideoTrack = { track -> videoMonitor.onRemoteVideoTrack(peerPubKey, track) },
-                onDisconnected = { scope.launch { onPeerDisconnected(peerPubKey) } },
-                onError = { error -> _errorMessage.value = error },
-                onRenegotiationNeeded = { performRenegotiation(peerPubKey) },
+                onRemoteVideoTrack = { track ->
+                    if (!closed) videoMonitor.onRemoteVideoTrack(peerPubKey, track)
+                },
+                onDisconnected = {
+                    if (!closed) scope.launch { onPeerDisconnected(peerPubKey) }
+                },
+                onError = { error ->
+                    if (!closed) _errorMessage.value = error
+                },
+                onRenegotiationNeeded = {
+                    if (!closed) performRenegotiation(peerPubKey)
+                },
                 onIceRestartOffer = { sdp ->
-                    scope.launch { callManager.sendRenegotiation(sdp.description, peerPubKey) }
+                    if (!closed) {
+                        scope.launch { callManager.sendRenegotiation(sdp.description, peerPubKey) }
+                    }
                 },
             )
         try {
@@ -649,74 +695,62 @@ class CallController(
         }
     }
 
-    // ---- Cleanup ----
+    // ---- Close (AutoCloseable) ----
 
     /**
-     * Releases all WebRTC, audio, and foreground-service resources for the
-     * current call session.
-     *
-     * Stopping the ringtone, ringback tone, and incoming-call notification
-     * runs UNCONDITIONALLY on every invocation — even if the heavy teardown
-     * has already been done. These three operations are idempotent and must
-     * never be skipped, otherwise a stale [cleanedUp] flag could leave the
-     * ringtone playing and the notification stuck on screen until the app is
-     * force-killed.
-     *
-     * The remainder (peer-session disposal, media manager, network callbacks,
-     * etc.) is guarded by [cleanedUp] and runs at most once per call session.
-     * The guard is re-armed when a new call starts: outgoing calls re-arm in
-     * [initiateGroupCall], accepted incoming calls in [acceptIncomingCall],
-     * and any new IncomingCall/Offering state transition in the state
-     * collector. This last path is critical for incoming calls the user
-     * rejects (or that the remote party hangs up), since neither
-     * [initiateGroupCall] nor [acceptIncomingCall] is invoked for them.
+     * Single-shot teardown tied to Activity destruction. Unconditionally
+     * releases every resource this session owns: audio, ringtone, ringback,
+     * notification, WebRTC peer connections, network callback, foreground
+     * service, and proximity wake lock. No guard flags — each Activity
+     * instance creates exactly one [CallSession] and calls [close] exactly
+     * once from [onDestroy].
      */
-    fun cleanup() {
-        // Stop the ringtone, ringback tone, and incoming-call notification
-        // UNCONDITIONALLY — these are idempotent and absolutely critical for
-        // the user experience. They must run on every cleanup() call, even if
-        // the heavy resource teardown below is already complete (cleanedUp ==
-        // true). Otherwise an unexpected double-cleanup or a stale cleanedUp
-        // flag from a previous session could leave the ringtone playing and
-        // the notification stuck on screen until the app is force-killed.
+    override fun close() {
+        Log.d(TAG) { "close() called on ${Thread.currentThread().name} state=${callManager.state.value::class.simpleName}" }
+        // Signal the init collectors to stop touching resources.
+        closed = true
+
         try {
             audioManager.stopRinging()
         } catch (e: Exception) {
-            Log.e(TAG, "cleanup: audioManager.stopRinging() failed", e)
+            Log.e(TAG, "close: audioManager.stopRinging() failed", e)
         }
         try {
             audioManager.stopRingbackTone()
         } catch (e: Exception) {
-            Log.e(TAG, "cleanup: audioManager.stopRingbackTone() failed", e)
+            Log.e(TAG, "close: audioManager.stopRingbackTone() failed", e)
         }
         try {
-            NotificationUtils.cancelCallNotification(context)
+            CallNotifier.cancelIncomingCall(context)
         } catch (e: Exception) {
-            Log.e(TAG, "cleanup: cancelCallNotification() failed", e)
+            Log.e(TAG, "close: cancelIncomingCall() failed", e)
         }
 
-        if (!cleanedUp.compareAndSet(false, true)) return
         unregisterNetworkCallback()
         try {
             audioManager.release()
         } catch (e: Exception) {
-            Log.e(TAG, "cleanup: audioManager.release() failed", e)
+            Log.e(TAG, "close: audioManager.release() failed", e)
         }
         try {
             stopForegroundService()
         } catch (e: Exception) {
-            Log.e(TAG, "cleanup: stopForegroundService() failed", e)
+            Log.e(TAG, "close: stopForegroundService() failed", e)
         }
         foregroundServiceStarted = false
 
         videoMonitor.dispose()
 
-        try {
-            peerSessionMgr.disposeAll()
-        } catch (e: Exception) {
-            Log.e(TAG, "cleanup: sessionManager.disposeAll() failed", e)
+        // Synchronized to prevent a concurrent collector from reading
+        // the old manager after disposeAll() but before reassignment.
+        synchronized(this) {
+            try {
+                peerSessionMgr.disposeAll()
+            } catch (e: Exception) {
+                Log.e(TAG, "close: sessionManager.disposeAll() failed", e)
+            }
+            peerSessionMgr = PeerSessionManager(peerSessionMgr.localPubKey)
         }
-        peerSessionMgr = PeerSessionManager(peerSessionMgr.localPubKey)
 
         mediaManager.dispose()
 
@@ -724,12 +758,6 @@ class CallController(
         videoPausedByProximity = false
         videoSenders.clear()
         pendingRenegotiation.clear()
-        // NOTE: cleanedUp intentionally stays true here so that a second,
-        // sequential cleanup() in the same call session is a no-op for the
-        // heavy teardown above. The flag is re-armed when a new call session
-        // begins, in initiateGroupCall() / acceptIncomingCall() AND in the
-        // state collector for IncomingCall / Offering transitions, so
-        // subsequent sessions still clean up correctly.
     }
 
     // ---- Foreground service ----

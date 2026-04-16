@@ -67,7 +67,6 @@ import com.vitorpamplona.amethyst.model.privacyOptions.RoleBasedHttpClientBuilde
 import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.service.broadcast.BroadcastTracker
-import com.vitorpamplona.amethyst.service.call.CallController
 import com.vitorpamplona.amethyst.service.cashu.CashuToken
 import com.vitorpamplona.amethyst.service.cashu.melt.MeltProcessor
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
@@ -205,39 +204,17 @@ class AccountViewModel(
             isCallsEnabled = { account.settings.callsEnabled.value },
         )
 
-    var callController: CallController? = null
-        private set
-
-    @Synchronized
-    fun initCallController(context: Context) {
-        if (callController != null) return
-
-        // Wire EventProcessor before creating CallController so events aren't dropped
+    init {
+        // Wire the signaling event processor eagerly so incoming call
+        // events are routed to CallManager even before any CallActivity
+        // is launched. Previously this was deferred to initCallController,
+        // which could miss events if the UI hadn't mounted yet.
         account.newNotesPreProcessor.callManager = callManager
 
-        val controller =
-            CallController(
-                context = context,
-                callManager = callManager,
-                scope = viewModelScope,
-                publishWrap = { wrap -> account.publishCallSignaling(wrap) },
-                signerProvider = { account.signer },
-                localPubKey = account.signer.pubKey,
-                settingsProvider = { account.settings },
-            )
-
-        // Set callbacks before exposing controller to avoid timing races
-        callManager.onAnswerReceived = { event -> controller.onCallAnswerReceived(event.pubKey, event.sdpAnswer()) }
-        callManager.onIceCandidateReceived = { event -> controller.onIceCandidateReceived(event) }
-        callManager.onNewPeerInGroupCall = { peerPubKey -> controller.onNewPeerInGroupCall(peerPubKey) }
-        callManager.onMidCallOfferReceived = { peerPubKey, sdpOffer -> controller.onMidCallOfferReceived(peerPubKey, sdpOffer) }
-        callManager.onPeerLeft = { peerPubKey -> controller.disposePeerSession(peerPubKey) }
-        callController = controller
-
-        // Populate CallSessionBridge so CallActivity can launch even when the app
-        // is in the background (e.g. full-screen incoming call intent).
+        // Populate CallSessionBridge so CallActivity and background
+        // receivers can reach callManager + accountViewModel.
         com.vitorpamplona.amethyst.service.call.CallSessionBridge
-            .set(callManager, controller, this)
+            .set(callManager, this)
     }
 
     val eventSync =
@@ -1575,7 +1552,7 @@ class AccountViewModel(
 
     override fun onCleared() {
         Log.d("AccountViewModel", "onCleared")
-        callController?.cleanup()
+        callManager.dispose()
         com.vitorpamplona.amethyst.service.call.CallSessionBridge
             .clear()
         feedStates.destroy()

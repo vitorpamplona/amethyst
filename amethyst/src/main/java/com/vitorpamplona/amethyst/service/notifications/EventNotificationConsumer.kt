@@ -36,6 +36,7 @@ import com.vitorpamplona.amethyst.commons.call.CallManager
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.call.notification.CallNotifier
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.sendChessNotification
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.sendDMNotification
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.sendReactionNotification
@@ -810,13 +811,11 @@ class EventNotificationConsumer(
                 }
             }
 
-        NotificationUtils
-            .sendCallNotification(
-                callerName = callerName,
-                callerBitmap = callerBitmap,
-                uri = "nostr:${event.pubKey.hexToByteArray().toNpub()}",
-                applicationContext = applicationContext,
-            )
+        CallNotifier.send(
+            callerName = callerName,
+            callerBitmap = callerBitmap,
+            applicationContext = applicationContext,
+        )
     }
 
     fun notificationManager(): NotificationManager =

@@ -35,10 +35,16 @@ import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -70,23 +76,56 @@ class CallManager(
     private val _state = MutableStateFlow<CallState>(CallState.Idle)
     val state: StateFlow<CallState> = _state.asStateFlow()
 
-    /** Called for every answer that should be applied to a PeerConnection (includes peer pubkey). */
-    var onAnswerReceived: ((CallAnswerEvent) -> Unit)? = null
-    var onIceCandidateReceived: ((CallIceCandidateEvent) -> Unit)? = null
-    var onRenegotiationOfferReceived: ((CallRenegotiateEvent) -> Unit)? = null
+    /**
+     * All events that the Activity-scoped `CallSession` must handle are
+     * emitted through this single flow. Using a SharedFlow instead of
+     * mutable `var` callbacks means:
+     *  - No stale references to a dead CallSession between Activity
+     *    destroy and recreate.
+     *  - The collector can (re)subscribe via `repeatOnLifecycle` without
+     *    missing buffered events.
+     *  - No null-check on every emit site.
+     *
+     * Buffer size 256 handles worst-case bursts (20+ ICE candidates per
+     * peer × multiple peers + answers + peer-left events). tryEmit is
+     * used instead of emit to avoid suspending while holding stateMutex
+     * (which would block all signaling). Drops are logged but should
+     * never happen in practice with this buffer size.
+     */
+    private val _sessionEvents = MutableSharedFlow<CallSessionEvent>(extraBufferCapacity = 256)
+    val sessionEvents: SharedFlow<CallSessionEvent> = _sessionEvents.asSharedFlow()
 
-    /** Called when a new peer joins the group call (callee-to-callee mesh setup). */
-    var onNewPeerInGroupCall: ((peerPubKey: HexKey) -> Unit)? = null
+    /*
+     * Renegotiation offers from remote peers. Separate from [sessionEvents]
+     * because renegotiation has its own glare-resolution logic in
+     * CallSession and benefits from a dedicated collector.
+     */
 
-    /** Called when a mid-call offer is received from another callee in a group call. */
-    var onMidCallOfferReceived: ((peerPubKey: HexKey, sdpOffer: String) -> Unit)? = null
+    /** Emits a session event, logging a warning if the buffer overflows. */
+    private fun emitSessionEvent(event: CallSessionEvent) {
+        if (!_sessionEvents.tryEmit(event)) {
+            Log.e("CallManager") { "sessionEvents buffer overflow — dropped: $event" }
+        }
+    }
 
-    /** Called when a peer leaves the call (hangup) but the call continues with remaining peers. */
-    var onPeerLeft: ((peerPubKey: HexKey) -> Unit)? = null
+    private val _renegotiationEvents = MutableSharedFlow<CallRenegotiateEvent>(extraBufferCapacity = 32)
+    val renegotiationEvents: SharedFlow<CallRenegotiateEvent> = _renegotiationEvents.asSharedFlow()
 
     private var timeoutJob: Job? = null
     private var resetJob: Job? = null
     private val processedEventIds = LinkedHashSet<String>()
+
+    /**
+     * Detached scope for the ringing watchdog so the timer survives the
+     * `scope` being cancelled by the owning ViewModel. The watchdog is a
+     * fail-safe that unconditionally forces an `Ended(TIMEOUT)` transition
+     * if the state stays in `IncomingCall`/`Offering` past
+     * `RINGING_WATCHDOG_MS`, regardless of whether any collector observes
+     * the state. Cancelled explicitly via [dispose].
+     */
+    private val watchdogScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private var ringingWatchdogJob: Job? = null
+    private var connectingWatchdogJob: Job? = null
 
     /** Per-peer invite timeout jobs.  A separate 30-second timer is scheduled
      *  for each peer we are waiting on (initial group-call offerees and
@@ -126,10 +165,21 @@ class CallManager(
     companion object {
         const val CALL_TIMEOUT_MS = 60_000L // 60 seconds ringing timeout (callee side)
         const val PEER_INVITE_TIMEOUT_MS = 30_000L // 30 seconds per-peer invite timeout (caller side)
+        const val CONNECTING_TIMEOUT_MS = 30_000L // 30 seconds to establish ICE connection
         const val ENDED_DISPLAY_MS = 2_000L // show "call ended" briefly before resetting
         const val MAX_EVENT_AGE_SECONDS = 20L // discard signaling events older than this
         const val MAX_PROCESSED_EVENT_IDS = 2_000 // cap dedup set to prevent unbounded growth
         const val MAX_COMPLETED_CALL_IDS = 200 // cap completed-call set
+
+        /**
+         * Hard ceiling on how long a call may remain in a ringing state
+         * (`IncomingCall` or `Offering`). Deliberately longer than
+         * [CALL_TIMEOUT_MS] (60s) so the normal timeout path gets a chance
+         * to fire first; this is purely the fail-safe for when that path
+         * never runs (e.g. a stuck coroutine, a canceled `scope`, or a
+         * dropped state transition).
+         */
+        const val RINGING_WATCHDOG_MS = 65_000L
     }
 
     /** Adds [value] to a [LinkedHashSet], evicting the oldest entries when
@@ -173,6 +223,7 @@ class CallManager(
         cancelAllPeerTimeouts()
         peersInvitedByUs.addAll(calleePubKeys)
         calleePubKeys.forEach { schedulePeerTimeout(it, callId) }
+        armRingingWatchdog(callId)
     }
 
     /**
@@ -236,6 +287,7 @@ class CallManager(
             cancelAllPeerTimeouts()
             peersInvitedByUs.add(calleePubKey)
             schedulePeerTimeout(calleePubKey, callId)
+            armRingingWatchdog(callId)
         }
         publishEvent(result.wrap)
         Log.d("CallManager") { "initiateCall: offer published, per-peer timeout started" }
@@ -309,7 +361,7 @@ class CallManager(
 
                     else -> {}
                 }
-                onMidCallOfferReceived?.invoke(callerPubKey, event.sdpOffer())
+                emitSessionEvent(CallSessionEvent.MidCallOfferReceived(callerPubKey, event.sdpOffer()))
                 return
             }
         }
@@ -332,6 +384,7 @@ class CallManager(
                 callType = callType,
                 sdpOffer = event.sdpOffer(),
             )
+        armRingingWatchdog(callId)
         startTimeout(callId)
     }
 
@@ -375,6 +428,8 @@ class CallManager(
                     pendingPeerPubKeys = pendingOnJoin,
                 )
             cancelTimeout()
+            disarmRingingWatchdog()
+            armConnectingWatchdog(current.callId)
             // Local watchdog timers only — we are not the inviter for these
             // peers, so [handlePeerTimeout] will silently drop them without
             // publishing any hangup (see `peersInvitedByUs`).
@@ -407,18 +462,23 @@ class CallManager(
         if (discovered.isNotEmpty()) {
             Log.d("CallManager") { "acceptCall: triggering mesh setup with ${discovered.size} discovered peers: ${discovered.map { it.take(8) }}" }
             for (peer in discovered) {
-                onNewPeerInGroupCall?.invoke(peer)
+                emitSessionEvent(CallSessionEvent.NewPeerInGroupCall(peer))
             }
         }
     }
 
     suspend fun rejectCall() {
+        Log.d("CallManager") { "rejectCall: enter state=${_state.value::class.simpleName}" }
         val current: CallState.IncomingCall
         stateMutex.withLock {
             val s = _state.value
-            if (s !is CallState.IncomingCall) return
+            if (s !is CallState.IncomingCall) {
+                Log.d("CallManager") { "rejectCall: state is ${s::class.simpleName}, not IncomingCall — ignoring" }
+                return
+            }
             current = s
             transitionToEnded(current.callId, current.peerPubKeys(), EndReason.REJECTED)
+            Log.d("CallManager") { "rejectCall: transitioned to Ended, publishing reject events" }
         }
 
         val otherMembers = current.groupMembers - signer.pubKey
@@ -471,8 +531,10 @@ class CallManager(
                 // The answered peer no longer needs its invite timer. Peers
                 // still in `pending` keep theirs (scheduled in beginOffering).
                 cancelPeerTimeout(answeringPeer)
-                Log.d("CallManager") { "onCallAnswered: Offering -> Connecting, forwarding answer to CallController" }
-                onAnswerReceived?.invoke(event)
+                disarmRingingWatchdog()
+                armConnectingWatchdog(current.callId)
+                Log.d("CallManager") { "onCallAnswered: Offering -> Connecting, forwarding answer to CallSession" }
+                emitSessionEvent(CallSessionEvent.AnswerReceived(event))
             }
 
             is CallState.Connecting -> {
@@ -501,7 +563,7 @@ class CallManager(
                 // Forward to CallController — it routes to the correct PeerSession
                 // and internally triggers callee-to-callee mesh setup if needed.
                 Log.d("CallManager") { "onCallAnswered: additional peer ${answeringPeer.take(8)} in Connecting, forwarding to CallController" }
-                onAnswerReceived?.invoke(event)
+                emitSessionEvent(CallSessionEvent.AnswerReceived(event))
             }
 
             is CallState.IncomingCall -> {
@@ -540,7 +602,7 @@ class CallManager(
                 // Forward to CallController — it routes to the correct PeerSession
                 // and internally triggers callee-to-callee mesh setup if needed.
                 Log.d("CallManager") { "onCallAnswered: peer ${answeringPeer.take(8)} answer in Connected, forwarding to CallController" }
-                onAnswerReceived?.invoke(event)
+                emitSessionEvent(CallSessionEvent.AnswerReceived(event))
             }
 
             else -> {
@@ -558,7 +620,7 @@ class CallManager(
         // still ringing (IncomingCall).  In every other state it is our own
         // echo from a relay after a sibling device rejected a call that we
         // have already accepted and are now actively in — treating it as a
-        // peer rejection would drop ourselves from the call (onPeerLeft
+        // peer rejection would drop ourselves from the call (PeerLeft
         // would dispose our own PeerConnection, killing the live audio on
         // the device that picked up).  Just drop the echo.
         if (rejectingPeer == signer.pubKey) {
@@ -580,7 +642,7 @@ class CallManager(
                     transitionToEnded(current.callId, current.peerPubKeys, EndReason.PEER_REJECTED)
                 } else {
                     _state.value = current.copy(peerPubKeys = remaining)
-                    onPeerLeft?.invoke(rejectingPeer)
+                    emitSessionEvent(CallSessionEvent.PeerLeft(rejectingPeer))
                 }
             }
 
@@ -589,7 +651,7 @@ class CallManager(
                 cancelPeerTimeout(rejectingPeer)
                 _state.value =
                     current.copy(pendingPeerPubKeys = current.pendingPeerPubKeys - rejectingPeer)
-                onPeerLeft?.invoke(rejectingPeer)
+                emitSessionEvent(CallSessionEvent.PeerLeft(rejectingPeer))
             }
 
             is CallState.Connected -> {
@@ -597,7 +659,7 @@ class CallManager(
                 cancelPeerTimeout(rejectingPeer)
                 _state.value =
                     current.copy(pendingPeerPubKeys = current.pendingPeerPubKeys - rejectingPeer)
-                onPeerLeft?.invoke(rejectingPeer)
+                emitSessionEvent(CallSessionEvent.PeerLeft(rejectingPeer))
             }
 
             is CallState.IncomingCall -> {
@@ -624,7 +686,7 @@ class CallManager(
     }
 
     private fun onIceCandidate(event: CallIceCandidateEvent) {
-        onIceCandidateReceived?.invoke(event)
+        emitSessionEvent(CallSessionEvent.IceCandidateReceived(event))
     }
 
     private fun onRenegotiate(event: CallRenegotiateEvent) {
@@ -637,7 +699,9 @@ class CallManager(
                 else -> return
             }
         if (callId != currentCallId) return
-        onRenegotiationOfferReceived?.invoke(event)
+        if (!_renegotiationEvents.tryEmit(event)) {
+            Log.e("CallManager") { "renegotiationEvents buffer overflow — dropped renegotiation from ${event.pubKey.take(8)}" }
+        }
     }
 
     suspend fun sendRenegotiation(
@@ -669,6 +733,7 @@ class CallManager(
             }
 
             Log.d("CallManager") { "onPeerConnected: Connecting -> Connected! callId=${current.callId}" }
+            disarmConnectingWatchdog()
             _state.value =
                 CallState.Connected(
                     callId = current.callId,
@@ -785,7 +850,7 @@ class CallManager(
                             peerPubKeys = connectedRemaining,
                             pendingPeerPubKeys = pendingRemaining,
                         )
-                    onPeerLeft?.invoke(leavingPeer)
+                    emitSessionEvent(CallSessionEvent.PeerLeft(leavingPeer))
                 }
             }
 
@@ -810,7 +875,7 @@ class CallManager(
                             peerPubKeys = connectedRemaining,
                             pendingPeerPubKeys = pendingRemaining,
                         )
-                    onPeerLeft?.invoke(leavingPeer)
+                    emitSessionEvent(CallSessionEvent.PeerLeft(leavingPeer))
                 }
             }
 
@@ -822,7 +887,7 @@ class CallManager(
                     transitionToEnded(callId, current.peerPubKeys, EndReason.PEER_HANGUP)
                 } else {
                     _state.value = current.copy(peerPubKeys = remaining)
-                    onPeerLeft?.invoke(leavingPeer)
+                    emitSessionEvent(CallSessionEvent.PeerLeft(leavingPeer))
                 }
             }
 
@@ -956,6 +1021,8 @@ class CallManager(
         _state.value = CallState.Idle
         cancelTimeout()
         cancelAllPeerTimeouts()
+        disarmRingingWatchdog()
+        disarmConnectingWatchdog()
         resetJob?.cancel()
         resetJob = null
         processedEventIds.clear()
@@ -969,11 +1036,14 @@ class CallManager(
         peerPubKeys: Set<HexKey>,
         reason: EndReason,
     ) {
+        Log.d("CallManager") { "transitionToEnded: callId=$callId reason=$reason peers=${peerPubKeys.size}" }
         cappedAdd(completedCallIds, callId, MAX_COMPLETED_CALL_IDS)
         discoveredCalleePeers.clear()
         _state.value = CallState.Ended(callId, peerPubKeys, reason)
         cancelTimeout()
         cancelAllPeerTimeouts()
+        disarmRingingWatchdog()
+        disarmConnectingWatchdog()
         resetJob?.cancel()
         resetJob =
             scope.launch {
@@ -983,6 +1053,81 @@ class CallManager(
                     processedEventIds.clear()
                 }
             }
+    }
+
+    // ---- Ringing watchdog ----
+
+    /**
+     * Arms the watchdog for [callId]. If the state is still
+     * `IncomingCall(callId)` or `Offering(callId)` when the watchdog
+     * fires, forces `Ended(TIMEOUT)` so nothing can keep ringing
+     * indefinitely. Calling this replaces any previously armed watchdog.
+     */
+    private fun armRingingWatchdog(callId: String) {
+        ringingWatchdogJob?.cancel()
+        ringingWatchdogJob =
+            watchdogScope.launch {
+                delay(RINGING_WATCHDOG_MS)
+                stateMutex.withLock {
+                    val cur = _state.value
+                    val hit =
+                        (cur is CallState.IncomingCall && cur.callId == callId) ||
+                            (cur is CallState.Offering && cur.callId == callId)
+                    if (hit) {
+                        Log.d("CallManager") { "Ringing watchdog fired for $callId — forcing Ended(TIMEOUT)" }
+                        val peers =
+                            when (cur) {
+                                is CallState.IncomingCall -> cur.peerPubKeys()
+                                is CallState.Offering -> cur.peerPubKeys
+                                else -> emptySet()
+                            }
+                        transitionToEnded(callId, peers, EndReason.TIMEOUT)
+                    }
+                }
+            }
+    }
+
+    private fun disarmRingingWatchdog() {
+        ringingWatchdogJob?.cancel()
+        ringingWatchdogJob = null
+    }
+
+    // ---- Connecting watchdog ----
+
+    /**
+     * Arms a timer for [callId] in `Connecting` state. If ICE negotiation
+     * does not promote the state to `Connected` within
+     * [CONNECTING_TIMEOUT_MS], the call ends with [EndReason.TIMEOUT].
+     * Disarmed when entering `Connected`, `Ended`, or `Idle`.
+     */
+    private fun armConnectingWatchdog(callId: String) {
+        connectingWatchdogJob?.cancel()
+        connectingWatchdogJob =
+            watchdogScope.launch {
+                delay(CONNECTING_TIMEOUT_MS)
+                stateMutex.withLock {
+                    val cur = _state.value
+                    if (cur is CallState.Connecting && cur.callId == callId) {
+                        Log.d("CallManager") { "Connecting watchdog fired for $callId — forcing Ended(TIMEOUT)" }
+                        transitionToEnded(callId, cur.peerPubKeys + cur.pendingPeerPubKeys, EndReason.TIMEOUT)
+                    }
+                }
+            }
+    }
+
+    private fun disarmConnectingWatchdog() {
+        connectingWatchdogJob?.cancel()
+        connectingWatchdogJob = null
+    }
+
+    /**
+     * Cancels all long-lived coroutines owned by this manager. Called when
+     * the owning account scope is torn down (logout / process shutdown).
+     */
+    fun dispose() {
+        disarmRingingWatchdog()
+        disarmConnectingWatchdog()
+        watchdogScope.cancel()
     }
 
     // ---- Per-peer invite timeout ----
@@ -1035,7 +1180,7 @@ class CallManager(
      *   at least one other peer is connected by definition, so the call
      *   always continues.
      *
-     * Fires [onPeerLeft] so the CallController disposes the per-peer
+     * Emits [CallSessionEvent.PeerLeft] so the CallSession disposes the per-peer
      * PeerConnection (and any pending ICE buffers) for the dropped peer.
      */
     private suspend fun handlePeerTimeout(
@@ -1061,7 +1206,7 @@ class CallManager(
                         transitionToEnded(current.callId, current.peerPubKeys, EndReason.TIMEOUT)
                     } else {
                         _state.value = current.copy(peerPubKeys = remaining)
-                        onPeerLeft?.invoke(peerPubKey)
+                        emitSessionEvent(CallSessionEvent.PeerLeft(peerPubKey))
                     }
                 }
 
@@ -1079,7 +1224,7 @@ class CallManager(
                         )
                     } else {
                         _state.value = current.copy(pendingPeerPubKeys = newPending)
-                        onPeerLeft?.invoke(peerPubKey)
+                        emitSessionEvent(CallSessionEvent.PeerLeft(peerPubKey))
                     }
                 }
 
@@ -1089,7 +1234,7 @@ class CallManager(
                     Log.d("CallManager") { "Per-peer timeout: dropping ${peerPubKey.take(8)} from Connected (invitedByUs=$wasInvitedByUs)" }
                     shouldPublishHangup = wasInvitedByUs
                     _state.value = current.copy(pendingPeerPubKeys = current.pendingPeerPubKeys - peerPubKey)
-                    onPeerLeft?.invoke(peerPubKey)
+                    emitSessionEvent(CallSessionEvent.PeerLeft(peerPubKey))
                 }
 
                 else -> {
