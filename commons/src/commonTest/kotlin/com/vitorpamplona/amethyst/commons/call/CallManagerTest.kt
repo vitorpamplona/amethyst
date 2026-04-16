@@ -1831,21 +1831,6 @@ class CallManagerTest {
             assertIs<CallState.IncomingCall>(manager.state.value)
         }
 
-    // ========================================================================
-    // Multi-Device: Second Logged-In Device Must Stop Ringing
-    // ========================================================================
-    // When the user is logged in on two phones and Alice calls them, both
-    // devices ring.  When one picks up (or rejects), the other must stop
-    // ringing without disturbing the device that answered.
-    //
-    // Mechanism: acceptCall / rejectCall publish an extra gift wrap of the
-    // same signed answer/reject event addressed to the user's own pubkey,
-    // so a sibling device (subscribed to gift wraps for its own pubkey)
-    // observes the echo, detects a self-answer/self-reject in IncomingCall
-    // state and transitions to Ended(ANSWERED_ELSEWHERE / REJECTED).
-
-    private fun EphemeralGiftWrapEvent.recipientPubKey(): HexKey? = tags.firstOrNull { it.size >= 2 && it[0] == "p" }?.get(1)
-
     @Test
     fun acceptCallPublishesAnswerWrappedForSelfSoSiblingDeviceCanStopRinging() =
         runTest {

@@ -67,7 +67,7 @@ class MarmotGroupEventsEoseManager(
                     val groupFilters = sub.activeGroupFiltersSnapshot()
                     // activeGroupFilters() returns one filter per group; match by tag content
                     groupFilters.find { f ->
-                        f.tags?.any { it.value?.contains(groupId) == true } == true
+                        f.tags?.any { it.value.contains(groupId) } == true
                     }
                 } ?: continue
 
