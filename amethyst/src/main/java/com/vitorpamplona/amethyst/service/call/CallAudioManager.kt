@@ -78,7 +78,9 @@ class CallAudioManager(
     }
 
     companion object {
-        private val nextInstanceId = java.util.concurrent.atomic.AtomicInteger(0)
+        private val nextInstanceId =
+            java.util.concurrent.atomic
+                .AtomicInteger(0)
     }
 
     private val _audioRoute = MutableStateFlow(AudioRoute.EARPIECE)
