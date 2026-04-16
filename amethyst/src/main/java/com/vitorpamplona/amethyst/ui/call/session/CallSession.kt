@@ -141,9 +141,28 @@ class CallSession(
     // ---- Initialization ----
 
     init {
-        // Subscribe to renegotiation events via SharedFlow instead of a
-        // mutable callback, so we never miss an event across Activity
-        // restarts.
+        // Collect all session-level events (answers, ICE candidates,
+        // peer joins/leaves, mid-call offers) from the single SharedFlow.
+        scope.launch {
+            callManager.sessionEvents.collect { event ->
+                if (closed) return@collect
+                when (event) {
+                    is com.vitorpamplona.amethyst.commons.call.CallSessionEvent.AnswerReceived ->
+                        onCallAnswerReceived(event.event.pubKey, event.event.sdpAnswer())
+                    is com.vitorpamplona.amethyst.commons.call.CallSessionEvent.IceCandidateReceived ->
+                        onIceCandidateReceived(event.event)
+                    is com.vitorpamplona.amethyst.commons.call.CallSessionEvent.NewPeerInGroupCall ->
+                        onNewPeerInGroupCall(event.peerPubKey)
+                    is com.vitorpamplona.amethyst.commons.call.CallSessionEvent.MidCallOfferReceived ->
+                        onMidCallOfferReceived(event.peerPubKey, event.sdpOffer)
+                    is com.vitorpamplona.amethyst.commons.call.CallSessionEvent.PeerLeft ->
+                        disposePeerSession(event.peerPubKey)
+                }
+            }
+        }
+
+        // Renegotiation events have their own flow because they go
+        // through dedicated glare-resolution logic.
         scope.launch {
             callManager.renegotiationEvents.collect { event ->
                 if (!closed) onRenegotiationOfferReceived(event)

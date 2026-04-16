@@ -126,12 +126,9 @@ class CallActivity : AppCompatActivity() {
             )
         session = callSession
 
-        // Wire CallManager callbacks to this session's handlers.
-        callManager.onAnswerReceived = { event -> callSession.onCallAnswerReceived(event.pubKey, event.sdpAnswer()) }
-        callManager.onIceCandidateReceived = { event -> callSession.onIceCandidateReceived(event) }
-        callManager.onNewPeerInGroupCall = { peerPubKey -> callSession.onNewPeerInGroupCall(peerPubKey) }
-        callManager.onMidCallOfferReceived = { peerPubKey, sdpOffer -> callSession.onMidCallOfferReceived(peerPubKey, sdpOffer) }
-        callManager.onPeerLeft = { peerPubKey -> callSession.disposePeerSession(peerPubKey) }
+        // No callback wiring needed — CallSession collects from
+        // callManager.sessionEvents and renegotiationEvents SharedFlows
+        // in its init block.
 
         registerPipReceiver()
         observeVideoStateForPip(callSession)
@@ -240,15 +237,8 @@ class CallActivity : AppCompatActivity() {
         session?.close()
         session = null
 
-        // Null out callbacks so signaling events arriving after this
-        // Activity is gone don't route to a dead CallSession.
-        if (manager != null) {
-            manager.onAnswerReceived = null
-            manager.onIceCandidateReceived = null
-            manager.onNewPeerInGroupCall = null
-            manager.onMidCallOfferReceived = null
-            manager.onPeerLeft = null
-        }
+        // No callback nulling needed — CallSession collects from
+        // SharedFlows; the `closed` flag prevents processing after close().
 
         // Publish reject/hangup so the remote side stops ringing.
         // Use goAsync-style: the hangup is best-effort. If the process
