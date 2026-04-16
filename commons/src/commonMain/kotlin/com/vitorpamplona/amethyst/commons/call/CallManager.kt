@@ -468,12 +468,17 @@ class CallManager(
     }
 
     suspend fun rejectCall() {
+        Log.d("CallManager") { "rejectCall: enter state=${_state.value::class.simpleName}" }
         val current: CallState.IncomingCall
         stateMutex.withLock {
             val s = _state.value
-            if (s !is CallState.IncomingCall) return
+            if (s !is CallState.IncomingCall) {
+                Log.d("CallManager") { "rejectCall: state is ${s::class.simpleName}, not IncomingCall — ignoring" }
+                return
+            }
             current = s
             transitionToEnded(current.callId, current.peerPubKeys(), EndReason.REJECTED)
+            Log.d("CallManager") { "rejectCall: transitioned to Ended, publishing reject events" }
         }
 
         val otherMembers = current.groupMembers - signer.pubKey
@@ -1031,6 +1036,7 @@ class CallManager(
         peerPubKeys: Set<HexKey>,
         reason: EndReason,
     ) {
+        Log.d("CallManager") { "transitionToEnded: callId=$callId reason=$reason peers=${peerPubKeys.size}" }
         cappedAdd(completedCallIds, callId, MAX_COMPLETED_CALL_IDS)
         discoveredCalleePeers.clear()
         _state.value = CallState.Ended(callId, peerPubKeys, reason)

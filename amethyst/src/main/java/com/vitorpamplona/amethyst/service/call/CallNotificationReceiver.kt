@@ -24,10 +24,13 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import com.vitorpamplona.amethyst.service.call.notification.CallNotifier
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+
+private const val TAG = "CallNotificationReceiver"
 
 /**
  * Handles the Reject action from the incoming call notification.
@@ -41,19 +44,28 @@ class CallNotificationReceiver : BroadcastReceiver() {
         context: Context,
         intent: Intent,
     ) {
-        val callManager = CallSessionBridge.callManager ?: return
+        Log.d(TAG) { "onReceive action=${intent.action} thread=${Thread.currentThread().name}" }
+        val callManager = CallSessionBridge.callManager
+        if (callManager == null) {
+            Log.e(TAG) { "onReceive: callManager is null — cannot process ${intent.action}" }
+            return
+        }
         val pendingResult = goAsync()
         val scope = CoroutineScope(SupervisorJob() + kotlinx.coroutines.Dispatchers.Main.immediate)
         scope.launch {
             try {
                 when (intent.action) {
                     ACTION_REJECT_CALL -> {
+                        Log.d(TAG) { "REJECT_CALL: state=${callManager.state.value::class.simpleName}" }
                         CallNotifier.cancelIncomingCall(context)
                         callManager.rejectCall()
+                        Log.d(TAG) { "REJECT_CALL: after rejectCall(), state=${callManager.state.value::class.simpleName}" }
                     }
 
                     ACTION_HANGUP_CALL -> {
+                        Log.d(TAG) { "HANGUP_CALL: state=${callManager.state.value::class.simpleName}" }
                         callManager.hangup()
+                        Log.d(TAG) { "HANGUP_CALL: after hangup(), state=${callManager.state.value::class.simpleName}" }
                     }
                 }
             } finally {

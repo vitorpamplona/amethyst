@@ -181,6 +181,7 @@ class CallSession(
 
         scope.launch {
             callManager.state.collect { state ->
+                Log.d(TAG) { "state collector received: ${state::class.simpleName} closed=$closed thread=${Thread.currentThread().name}" }
                 if (closed) return@collect
                 when (state) {
                     is CallState.IncomingCall -> {
@@ -705,6 +706,7 @@ class CallSession(
      * once from [onDestroy].
      */
     override fun close() {
+        Log.d(TAG) { "close() called on ${Thread.currentThread().name} state=${callManager.state.value::class.simpleName}" }
         // Signal the init collectors to stop touching resources.
         closed = true
 
