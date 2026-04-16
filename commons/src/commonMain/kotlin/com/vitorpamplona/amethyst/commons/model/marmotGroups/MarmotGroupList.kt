@@ -30,7 +30,9 @@ import kotlinx.coroutines.flow.MutableSharedFlow
  * Tracks all Marmot MLS group chatrooms for an account.
  * Follows the same pattern as [com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList].
  */
-class MarmotGroupList {
+class MarmotGroupList(
+    val ownerPubKey: HexKey,
+) {
     var rooms = LargeCache<HexKey, MarmotGroupChatroom>()
         private set
 
@@ -44,10 +46,68 @@ class MarmotGroupList {
         msg: Note,
     ) {
         val chatroom = getOrCreateGroup(nostrGroupId)
-        if (chatroom.addMessageSync(msg)) {
+        val isSelfAuthored = msg.author?.pubkeyHex == ownerPubKey
+        // Use the quiet path for our own messages so the relay round-trip
+        // doesn't mark the user's own outgoing message as unread.
+        val added =
+            if (isSelfAuthored) {
+                chatroom.restoreMessageSync(msg)
+            } else {
+                chatroom.addMessageSync(msg)
+            }
+        if (added) {
+            if (isSelfAuthored) {
+                chatroom.ownerSentMessage = true
+            }
             _groupListChanges.tryEmit(nostrGroupId)
         }
     }
+
+    /**
+     * Add a message that was restored from persistent storage at app startup.
+     * Does not bump the chatroom's unread counter.
+     */
+    fun restoreMessage(
+        nostrGroupId: HexKey,
+        msg: Note,
+    ) {
+        val chatroom = getOrCreateGroup(nostrGroupId)
+        if (chatroom.restoreMessageSync(msg)) {
+            if (msg.author?.pubkeyHex == ownerPubKey) {
+                chatroom.ownerSentMessage = true
+            }
+            _groupListChanges.tryEmit(nostrGroupId)
+        }
+    }
+
+    /**
+     * Mark a group as "known" by the local user — used right after the user
+     * creates a group, so the creator doesn't appear under "New Requests"
+     * until they post their first message.
+     */
+    fun markAsKnown(nostrGroupId: HexKey) {
+        val chatroom = getOrCreateGroup(nostrGroupId)
+        if (!chatroom.ownerSentMessage) {
+            chatroom.ownerSentMessage = true
+            _groupListChanges.tryEmit(nostrGroupId)
+        }
+    }
+
+    /**
+     * Notify subscribers that a group's state has changed (e.g., the invitee
+     * just joined via a Welcome and metadata was synced into the chatroom).
+     * Used when no message addition occurs but the list UI should refresh.
+     */
+    fun notifyGroupChanged(nostrGroupId: HexKey) {
+        _groupListChanges.tryEmit(nostrGroupId)
+    }
+
+    /**
+     * Whether the local user has ever sent a message in this group (or
+     * explicitly created it). Mirrors `ChatroomList.hasSentMessagesTo` for
+     * private DMs.
+     */
+    fun hasSentMessagesTo(nostrGroupId: HexKey): Boolean = rooms.get(nostrGroupId)?.ownerSentMessage == true
 
     fun removeMessage(
         nostrGroupId: HexKey,

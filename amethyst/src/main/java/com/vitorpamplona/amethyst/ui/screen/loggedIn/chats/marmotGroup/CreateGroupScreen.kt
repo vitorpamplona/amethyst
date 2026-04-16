@@ -68,11 +68,19 @@ fun CreateGroupScreen(
                         try {
                             val nostrGroupId = RandomInstance.bytes(32).toHexKey()
                             accountViewModel.createMarmotGroup(nostrGroupId)
-                            if (groupName.isNotBlank()) {
-                                accountViewModel.account.marmotGroupList
-                                    .getOrCreateGroup(nostrGroupId)
-                                    .displayName.value = groupName
-                            }
+                            // Always commit an initial metadata extension so that
+                            // (a) the name (if any) is persisted in MLS extensions
+                            //     and survives app restarts,
+                            // (b) the inviter's outbox relays land in the group
+                            //     metadata so every member ends up with the same
+                            //     canonical relay set for kind:445 — without this,
+                            //     invitees would never receive the group's messages.
+                            // Both are handled inside `updateMarmotGroupMetadata`.
+                            accountViewModel.updateMarmotGroupMetadata(
+                                nostrGroupId = nostrGroupId,
+                                name = groupName.trim(),
+                                description = "",
+                            )
                             nav.nav(Route.MarmotGroupChat(nostrGroupId))
                         } catch (e: Exception) {
                             isCreating = false

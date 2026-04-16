@@ -125,6 +125,10 @@ fun isHashtagRoute(uri: String) = uri.startsWith("hashtag?id=") || uri.startsWit
 
 fun isWalletConnectRoute(uri: String) = uri.startsWith("dlnwc?value=") || uri.startsWith("amethyst+walletconnect:dlnwc?value=") || uri.startsWith("amethyst+walletconnect://dlnwc?value=")
 
+fun isMarmotGroupRoute(uri: String) = uri.startsWith("marmot:")
+
+private val MARMOT_HEX = Regex("^[0-9a-fA-F]+$")
+
 fun uriToRoute(
     uri: String,
     account: Account,
@@ -191,6 +195,18 @@ fun uriToRoute(
 
         if (route != null) {
             return route
+        }
+    }
+
+    if (isMarmotGroupRoute(uri)) {
+        // marmot:<groupHex>?account=<npub>
+        val groupHex =
+            uri
+                .removePrefix("marmot:")
+                .substringBefore("?")
+                .substringBefore("&")
+        if (groupHex.matches(MARMOT_HEX)) {
+            return Route.MarmotGroupChat(groupHex)
         }
     }
 

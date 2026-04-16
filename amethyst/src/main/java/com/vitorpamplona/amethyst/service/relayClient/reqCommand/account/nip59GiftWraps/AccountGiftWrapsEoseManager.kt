@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
@@ -45,7 +46,12 @@ class AccountGiftWrapsEoseManager(
     ): List<RelayBasedFilter> {
         // Only loads DMs if the account is writeable
         return if (key.account.isWriteable()) {
-            key.account.dmRelays.flow.value.flatMap { relay ->
+            val relays = key.account.dmRelays.flow.value
+            Log.d("MarmotDbg") {
+                "AccountGiftWrapsEoseManager.updateFilter: pubkey=${user(key).pubkeyHex.take(8)}… " +
+                    "subscribing kind:1059 on ${relays.size} dmRelay(s): ${relays.map { it.url }}"
+            }
+            relays.flatMap { relay ->
                 filterGiftWrapsToPubkey(
                     relay = relay,
                     pubkey = user(key).pubkeyHex,
@@ -53,6 +59,7 @@ class AccountGiftWrapsEoseManager(
                 )
             }
         } else {
+            Log.d("MarmotDbg") { "AccountGiftWrapsEoseManager.updateFilter: account not writeable, skipping" }
             emptyList()
         }
     }

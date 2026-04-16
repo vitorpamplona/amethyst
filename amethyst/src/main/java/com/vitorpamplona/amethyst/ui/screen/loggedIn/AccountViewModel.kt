@@ -1509,14 +1509,40 @@ class AccountViewModel(
         name: String,
         description: String,
     ) {
-        val currentMetadata =
-            account.marmotManager?.groupMetadata(nostrGroupId)
-                ?: throw IllegalStateException("Group metadata not found")
+        val currentMetadata = account.marmotManager?.groupMetadata(nostrGroupId)
+        // Stamp the inviter's outbox relays into the group metadata so that
+        // every member ends up with a single canonical relay set for kind:445
+        // GroupEvents. Without this, both the inviter and the invitee fall
+        // back to their *own* home/outbox relays — which usually do not
+        // overlap, so kind:445 messages never reach the other side. The
+        // welcome carries the metadata, so the invitee learns the relays at
+        // join time.
+        val outboxRelayStrings =
+            account.outboxRelays.flow.value
+                .map { it.url }
+        val mergedRelays =
+            (currentMetadata?.relays.orEmpty() + outboxRelayStrings)
+                .distinct()
         val updatedMetadata =
-            currentMetadata.copy(
-                name = name,
-                description = description,
-            )
+            if (currentMetadata != null) {
+                currentMetadata.copy(
+                    name = name,
+                    description = description,
+                    relays = mergedRelays,
+                )
+            } else {
+                // No MarmotGroupData extension exists yet — this happens for groups
+                // created before initial metadata was persisted, or right after a
+                // fresh `createMarmotGroup`. Build a brand-new extension with the
+                // creator as the sole admin so the GCE proposal carries valid data.
+                com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData(
+                    nostrGroupId = nostrGroupId,
+                    name = name,
+                    description = description,
+                    adminPubkeys = listOf(account.signer.pubKey),
+                    relays = mergedRelays,
+                )
+            }
         val relays = marmotGroupRelays(nostrGroupId)
         account.updateMarmotGroupMetadata(nostrGroupId, updatedMetadata, relays)
     }

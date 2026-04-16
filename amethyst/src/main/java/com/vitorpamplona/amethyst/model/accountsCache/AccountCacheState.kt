@@ -24,6 +24,8 @@ import android.content.ContentResolver
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.marmot.AndroidKeyPackageBundleStore
+import com.vitorpamplona.amethyst.model.marmot.AndroidMarmotMessageStore
 import com.vitorpamplona.amethyst.model.marmot.AndroidMlsGroupStateStore
 import com.vitorpamplona.amethyst.model.marmot.InMemoryMlsGroupStateStore
 import com.vitorpamplona.amethyst.service.location.LocationState
@@ -117,6 +119,30 @@ class AccountCacheState(
             "Account ${signer.pubKey.take(8)}… using Marmot store: ${mlsStore::class.simpleName}"
         }
 
+        val marmotMessageStore =
+            try {
+                AndroidMarmotMessageStore(rootFilesDir())
+            } catch (e: Exception) {
+                Log.e(
+                    "AccountCacheState",
+                    "Failed to initialize AndroidMarmotMessageStore (Marmot messages will NOT persist across restarts)",
+                    e,
+                )
+                null
+            }
+
+        val marmotKeyPackageStore =
+            try {
+                AndroidKeyPackageBundleStore(rootFilesDir())
+            } catch (e: Exception) {
+                Log.e(
+                    "AccountCacheState",
+                    "Failed to initialize AndroidKeyPackageBundleStore (Marmot KeyPackages will NOT persist across restarts)",
+                    e,
+                )
+                null
+            }
+
         return Account(
             settings = accountSettings,
             signer = signerWithClientTag,
@@ -134,6 +160,8 @@ class AccountCacheState(
                         },
                 ),
             mlsGroupStateStore = mlsStore,
+            marmotMessageStore = marmotMessageStore,
+            marmotKeyPackageStore = marmotKeyPackageStore,
         ).also { newAccount ->
             accounts.update { existingAccounts ->
                 existingAccounts.plus(Pair(signer.pubKey, newAccount))

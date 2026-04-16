@@ -293,12 +293,27 @@ class GiftWrapEventHandler(
         eventNote: Note,
         publicNote: Note,
     ) {
-        val innerGift = event.unwrapOrNull(account.signer) ?: return
+        Log.d("MarmotDbg") {
+            "GiftWrapEventHandler.processNewGiftWrap: id=${event.id.take(8)}… recipient=${event.recipientPubKey()?.take(8)}…"
+        }
+        val innerGift = event.unwrapOrNull(account.signer)
+        if (innerGift == null) {
+            Log.w("MarmotDbg") {
+                "GiftWrapEventHandler.processNewGiftWrap: unwrap returned null (decrypt failed) for id=${event.id.take(8)}…"
+            }
+            return
+        }
+        Log.d("MarmotDbg") {
+            "GiftWrapEventHandler.processNewGiftWrap: unwrapped innerKind=${innerGift.kind} innerId=${innerGift.id.take(8)}…"
+        }
 
         eventNote.event = event.copyNoContent()
 
         // Check if the unwrapped event is a Marmot WelcomeEvent (kind:444)
         if (MarmotInboundProcessor.isWelcomeEvent(innerGift)) {
+            Log.d("MarmotDbg") {
+                "GiftWrapEventHandler: detected Marmot WelcomeEvent — routing to processMarmotWelcome"
+            }
             processMarmotWelcome(innerGift, eventNote, publicNote)
             return
         }
@@ -315,31 +330,7 @@ class GiftWrapEventHandler(
         eventNote: Note,
         publicNote: Note,
     ) {
-        val manager = account.marmotManager ?: return
-        if (innerEvent !is WelcomeEvent) return
-
-        val nostrGroupId = innerEvent.nostrGroupId() ?: return
-
-        val result = manager.processWelcome(innerEvent, nostrGroupId)
-
-        when (result) {
-            is WelcomeResult.Joined -> {
-                Log.d("GiftWrapEventHandler", "Joined Marmot group ${result.nostrGroupId}")
-
-                // Sync MIP-01 metadata from group extensions to chatroom
-                val chatroom = account.marmotGroupList.getOrCreateGroup(result.nostrGroupId)
-                manager.syncMetadataTo(result.nostrGroupId, chatroom)
-
-                // Rotate KeyPackages if needed
-                if (result.needsKeyPackageRotation) {
-                    account.publishMarmotKeyPackages()
-                }
-            }
-
-            is WelcomeResult.Error -> {
-                Log.w("GiftWrapEventHandler") { "Failed to process Marmot Welcome: ${result.message}" }
-            }
-        }
+        processMarmotWelcomeFlow(innerEvent, account)
     }
 
     private suspend fun processExistingGiftWrap(
@@ -350,6 +341,71 @@ class GiftWrapEventHandler(
         val innerGiftNote = cache.getOrCreateNote(innerGiftId)
         innerGiftNote.event?.let { innerGift ->
             eventProcessor.consumeEvent(innerGift, innerGiftNote, publicNote)
+        }
+    }
+}
+
+/**
+ * Shared Marmot Welcome handler used by both [GiftWrapEventHandler]
+ * (in case a Welcome arrives directly inside a kind:1059 with no Seal
+ * layer) and [SealedRumorEventHandler] (the actual production path —
+ * Welcomes are wrapped GiftWrap → Seal → Welcome per
+ * [com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeGiftWrap]).
+ */
+private suspend fun processMarmotWelcomeFlow(
+    innerEvent: Event,
+    account: Account,
+) {
+    Log.d("MarmotDbg") {
+        "processMarmotWelcomeFlow: innerKind=${innerEvent.kind} innerId=${innerEvent.id.take(8)}…"
+    }
+    val manager = account.marmotManager
+    if (manager == null) {
+        Log.w("MarmotDbg") { "processMarmotWelcomeFlow: marmotManager is null — Marmot store probably failed to init" }
+        return
+    }
+    if (innerEvent !is WelcomeEvent) {
+        Log.w("MarmotDbg") { "processMarmotWelcomeFlow: inner is not WelcomeEvent (kind=${innerEvent.kind})" }
+        return
+    }
+
+    val nostrGroupId = innerEvent.nostrGroupId()
+    if (nostrGroupId == null) {
+        Log.w("MarmotDbg") { "processMarmotWelcomeFlow: WelcomeEvent missing 'h' tag (nostrGroupId)" }
+        return
+    }
+    Log.d("MarmotDbg") { "processMarmotWelcomeFlow: invoking manager.processWelcome group=${nostrGroupId.take(8)}…" }
+
+    val result = manager.processWelcome(innerEvent, nostrGroupId)
+
+    when (result) {
+        is WelcomeResult.Joined -> {
+            Log.d("MarmotDbg") {
+                "processMarmotWelcomeFlow: Joined ${result.nostrGroupId.take(8)}… needsKeyPackageRotation=${result.needsKeyPackageRotation}"
+            }
+
+            // Sync MIP-01 metadata from group extensions to chatroom
+            val chatroom = account.marmotGroupList.getOrCreateGroup(result.nostrGroupId)
+            manager.syncMetadataTo(result.nostrGroupId, chatroom)
+            Log.d("MarmotDbg") {
+                "processMarmotWelcomeFlow: synced metadata name=${chatroom.displayName.value} " +
+                    "members=${chatroom.memberCount.value} relays=${chatroom.relays.value}"
+            }
+
+            // Notify any open MarmotGroupListScreen that a new invited
+            // group has appeared so it can re-render (the screen
+            // re-runs `loadGroupList` on every emission). Without this,
+            // newly-joined groups only show up after a manual refresh.
+            account.marmotGroupList.notifyGroupChanged(result.nostrGroupId)
+
+            // Rotate KeyPackages if needed
+            if (result.needsKeyPackageRotation) {
+                account.publishMarmotKeyPackages()
+            }
+        }
+
+        is WelcomeResult.Error -> {
+            Log.w("MarmotDbg") { "processMarmotWelcomeFlow: ERROR ${result.message}" }
         }
     }
 }
@@ -389,9 +445,34 @@ class SealedRumorEventHandler(
         eventNote: Note,
         publicNote: Note,
     ) {
-        val innerRumor = event.unsealOrNull(account.signer) ?: return
+        Log.d("MarmotDbg") {
+            "SealedRumorEventHandler.processNewSealedRumor: id=${event.id.take(8)}…"
+        }
+        val innerRumor = event.unsealOrNull(account.signer)
+        if (innerRumor == null) {
+            Log.w("MarmotDbg") {
+                "SealedRumorEventHandler.processNewSealedRumor: unseal returned null for ${event.id.take(8)}…"
+            }
+            return
+        }
+        Log.d("MarmotDbg") {
+            "SealedRumorEventHandler.processNewSealedRumor: unsealed innerKind=${innerRumor.kind} innerId=${innerRumor.id.take(8)}…"
+        }
 
         eventNote.event = event.copyNoContent()
+
+        // Marmot Welcome: GiftWrap → Seal → WelcomeEvent. The Seal handler
+        // is the actual point at which we see the kind:444 inner. Route it
+        // straight to the shared flow — there's no normal LocalCache event
+        // handler for kind:444, so otherwise it would be silently dropped.
+        if (MarmotInboundProcessor.isWelcomeEvent(innerRumor)) {
+            Log.d("MarmotDbg") {
+                "SealedRumorEventHandler: detected Marmot WelcomeEvent inside seal — routing to processMarmotWelcomeFlow"
+            }
+            processMarmotWelcomeFlow(innerRumor, account)
+            return
+        }
+
         cache.justConsume(innerRumor, null, true)
         cache.copyRelaysFromTo(publicNote, innerRumor)
 
@@ -464,49 +545,84 @@ class GroupEventHandler(
         eventNote: Note,
         publicNote: Note,
     ) {
-        val manager = account.marmotManager ?: return
+        Log.d("MarmotDbg") {
+            "GroupEventHandler.add: kind:445 id=${event.id.take(8)}… groupId=${event.groupId()?.take(8)}…"
+        }
+        val manager = account.marmotManager
+        if (manager == null) {
+            Log.w("MarmotDbg") { "GroupEventHandler.add: marmotManager is null" }
+            return
+        }
 
-        val groupId = event.groupId() ?: return
-        if (!manager.isMember(groupId)) return
+        val groupId = event.groupId()
+        if (groupId == null) {
+            Log.w("MarmotDbg") { "GroupEventHandler.add: kind:445 missing 'h' tag" }
+            return
+        }
+        if (!manager.isMember(groupId)) {
+            Log.w("MarmotDbg") {
+                "GroupEventHandler.add: not a member of group=${groupId.take(8)}… — dropping kind:445 ${event.id.take(8)}…"
+            }
+            return
+        }
 
         try {
             val result = manager.processGroupEvent(event)
+            Log.d("MarmotDbg") {
+                "GroupEventHandler.add: processGroupEvent returned ${result::class.simpleName} for group=${groupId.take(8)}…"
+            }
 
             when (result) {
                 is GroupEventResult.ApplicationMessage -> {
                     // Parse the inner event JSON and index it
                     val innerEvent = Event.fromJson(result.innerEventJson)
+                    Log.d("MarmotDbg") {
+                        "GroupEventHandler.add: ApplicationMessage decrypted innerKind=${innerEvent.kind} " +
+                            "innerId=${innerEvent.id.take(8)}… author=${innerEvent.pubKey.take(8)}…"
+                    }
                     if (cache.justConsume(innerEvent, null, false)) {
                         val innerNote = cache.getOrCreateNote(innerEvent.id)
                         innerNote.event = innerEvent
 
                         // Track the message in the Marmot group chatroom
                         account.marmotGroupList.addMessage(result.groupId, innerNote)
+
+                        // Persist the decrypted plaintext so the message
+                        // survives an app restart. Marmot/MLS application
+                        // messages cannot be re-decrypted once the ratchet
+                        // has advanced, so we must capture them here.
+                        manager.persistDecryptedMessage(result.groupId, result.innerEventJson)
+                    } else {
+                        Log.d("MarmotDbg") { "GroupEventHandler.add: inner event already in cache (duplicate)" }
                     }
                 }
 
                 is GroupEventResult.CommitProcessed -> {
-                    Log.d("GroupEventHandler", "Commit processed for group ${result.groupId}, epoch=${result.newEpoch}")
+                    Log.d("MarmotDbg") {
+                        "GroupEventHandler.add: CommitProcessed group=${result.groupId.take(8)}… newEpoch=${result.newEpoch}"
+                    }
                     // Sync MIP-01 metadata after epoch advance (extensions may have changed)
                     val chatroom = account.marmotGroupList.getOrCreateGroup(result.groupId)
                     manager.syncMetadataTo(result.groupId, chatroom)
                 }
 
                 is GroupEventResult.CommitPending -> {
-                    Log.d("GroupEventHandler", "Commit pending for group ${result.groupId}, epoch=${result.epoch}")
+                    Log.d("MarmotDbg") {
+                        "GroupEventHandler.add: CommitPending group=${result.groupId.take(8)}… epoch=${result.epoch}"
+                    }
                 }
 
                 is GroupEventResult.Duplicate -> {
-                    Log.d("GroupEventHandler") { "Duplicate GroupEvent for group ${result.groupId}" }
+                    Log.d("MarmotDbg") { "GroupEventHandler.add: Duplicate kind:445 for group=${result.groupId.take(8)}…" }
                 }
 
                 is GroupEventResult.Error -> {
-                    Log.w("GroupEventHandler") { "Error processing GroupEvent: ${result.message}" }
+                    Log.w("MarmotDbg") { "GroupEventHandler.add: ERROR ${result.message}" }
                 }
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.e("GroupEventHandler", "Failed to process GroupEvent", e)
+            Log.e("MarmotDbg", "GroupEventHandler.add: exception processing kind:445", e)
         }
     }
 }

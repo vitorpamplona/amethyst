@@ -29,12 +29,14 @@ import com.vitorpamplona.quartz.marmot.MarmotWelcomeSender
 import com.vitorpamplona.quartz.marmot.OutboundGroupEvent
 import com.vitorpamplona.quartz.marmot.WelcomeDelivery
 import com.vitorpamplona.quartz.marmot.WelcomeResult
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageBundleStore
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRotationManager
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageUtils
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
 import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
+import com.vitorpamplona.quartz.marmot.mls.group.MarmotMessageStore
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupManager
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupStateStore
 import com.vitorpamplona.quartz.marmot.mls.tree.Credential
@@ -63,9 +65,11 @@ import kotlin.io.encoding.ExperimentalEncodingApi
 class MarmotManager(
     val signer: NostrSigner,
     store: MlsGroupStateStore,
+    val messageStore: MarmotMessageStore? = null,
+    val keyPackageStore: KeyPackageBundleStore? = null,
 ) {
     val groupManager = MlsGroupManager(store)
-    val keyPackageRotationManager = KeyPackageRotationManager()
+    val keyPackageRotationManager = KeyPackageRotationManager(keyPackageStore)
     val subscriptionManager = MarmotSubscriptionManager(signer.pubKey)
     val inboundProcessor = MarmotInboundProcessor(groupManager, keyPackageRotationManager)
     val outboundProcessor = MarmotOutboundProcessor(groupManager)
@@ -81,6 +85,9 @@ class MarmotManager(
             groupManager.restoreAll()
             val activeIds = groupManager.activeGroupIds()
             subscriptionManager.syncWithGroupManager(activeIds)
+            // Also restore previously-published KeyPackage bundles so that
+            // Welcomes referencing them remain processable across restarts.
+            keyPackageRotationManager.restoreFromStore()
             Log.d("MarmotManager") { "restoreAll(): done, ${activeIds.size} groups: $activeIds" }
         } catch (e: Exception) {
             Log.e("MarmotManager", "Failed to restore Marmot state", e)
@@ -219,8 +226,42 @@ class MarmotManager(
         // Now clean up group state
         groupManager.removeGroupState(nostrGroupId)
         subscriptionManager.unsubscribeGroup(nostrGroupId)
+        try {
+            messageStore?.delete(nostrGroupId)
+        } catch (e: Exception) {
+            Log.w("MarmotManager", "Failed to delete persisted messages for $nostrGroupId: ${e.message}")
+        }
         return outboundEvent
     }
+
+    /**
+     * Persist a freshly decrypted inner event for restart recovery.
+     * Marmot MLS application messages cannot be re-decrypted after the
+     * ratchet advances, so the only way to restore them across app restarts
+     * is to capture the plaintext at decryption time.
+     */
+    suspend fun persistDecryptedMessage(
+        nostrGroupId: HexKey,
+        innerEventJson: String,
+    ) {
+        try {
+            messageStore?.appendMessage(nostrGroupId, innerEventJson)
+        } catch (e: Exception) {
+            Log.w("MarmotManager", "Failed to persist Marmot message for $nostrGroupId: ${e.message}")
+        }
+    }
+
+    /**
+     * Load all persisted inner event JSONs for a group, in append order.
+     * Returns an empty list if no message store is configured or none exist.
+     */
+    suspend fun loadStoredMessages(nostrGroupId: HexKey): List<String> =
+        try {
+            messageStore?.loadMessages(nostrGroupId) ?: emptyList()
+        } catch (e: Exception) {
+            Log.w("MarmotManager", "Failed to load persisted messages for $nostrGroupId: ${e.message}")
+            emptyList()
+        }
 
     /**
      * Remove a member from a group.
@@ -272,7 +313,12 @@ class MarmotManager(
                 relays = relays,
             )
 
-        return signer.sign(template)
+        val signed = signer.sign<KeyPackageEvent>(template)
+        // Welcome receivers identify the consumed KeyPackage by its Nostr
+        // event id (the MIP-02 "e" tag), not by the MLS reference hash, so
+        // remember the mapping right after we know the signed event id.
+        keyPackageRotationManager.recordPublishedEventId(dTagSlot, signed.id)
+        return signed
     }
 
     /**
@@ -298,7 +344,9 @@ class MarmotManager(
                     keyPackageRef = keyPackageRef,
                     relays = relays,
                 )
-            signer.sign<KeyPackageEvent>(template)
+            val signed = signer.sign<KeyPackageEvent>(template)
+            keyPackageRotationManager.recordPublishedEventId(slot, signed.id)
+            signed
         }
     }
 

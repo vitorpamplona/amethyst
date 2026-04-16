@@ -256,6 +256,8 @@ class Account(
     val client: INostrClient,
     val scope: CoroutineScope,
     val mlsGroupStateStore: MlsGroupStateStore? = null,
+    val marmotMessageStore: com.vitorpamplona.quartz.marmot.mls.group.MarmotMessageStore? = null,
+    val marmotKeyPackageStore: com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageBundleStore? = null,
 ) : IAccount {
     private var userProfileCache: User? = null
 
@@ -380,13 +382,13 @@ class Account(
     override val chatroomList = cache.getOrCreateChatroomList(signer.pubKey)
     override val marmotGroupList =
         com.vitorpamplona.amethyst.commons.model.marmotGroups
-            .MarmotGroupList()
+            .MarmotGroupList(signer.pubKey)
 
     val newNotesPreProcessor = EventProcessor(this, cache)
 
     val otsState = OtsState(signer, cache, otsResolverBuilder, scope, settings)
 
-    val marmotManager: MarmotManager? = mlsGroupStateStore?.let { MarmotManager(signer, it) }
+    val marmotManager: MarmotManager? = mlsGroupStateStore?.let { MarmotManager(signer, it, marmotMessageStore, marmotKeyPackageStore) }
 
     val paymentTargetsState = NipA3PaymentTargetsState(signer, cache, scope, settings)
 
@@ -1735,11 +1737,27 @@ class Account(
         innerEvent: Event,
         groupRelays: Set<NormalizedRelayUrl>,
     ) {
+        Log.d("MarmotDbg") {
+            "sendMarmotGroupMessage: group=${nostrGroupId.take(8)}… innerKind=${innerEvent.kind} innerId=${innerEvent.id.take(8)}… " +
+                "→ ${groupRelays.size} relay(s): ${groupRelays.map { it.url }}"
+        }
         val manager = marmotManager ?: return
         if (!isWriteable()) return
 
         val outbound = manager.buildGroupMessage(nostrGroupId, innerEvent)
+        Log.d("MarmotDbg") {
+            "sendMarmotGroupMessage: built outer kind:${outbound.signedEvent.kind} id=${outbound.signedEvent.id.take(8)}…"
+        }
         cache.justConsumeMyOwnEvent(outbound.signedEvent)
+        // Sending a message moves the group out of "New Requests" into
+        // "Known" — do this eagerly before relay round-trip so the UI
+        // updates immediately.
+        marmotGroupList.markAsKnown(nostrGroupId)
+        if (groupRelays.isEmpty()) {
+            Log.w("MarmotDbg") {
+                "sendMarmotGroupMessage: NO group relays for group=${nostrGroupId.take(8)}… — message will be silently dropped"
+            }
+        }
         client.publish(outbound.signedEvent, groupRelays)
     }
 
@@ -1752,6 +1770,9 @@ class Account(
         nostrGroupId: HexKey,
         memberPubKey: HexKey,
     ): String {
+        Log.d("MarmotDbg") {
+            "fetchKeyPackageAndAddMember: group=${nostrGroupId.take(8)}… member=${memberPubKey.take(8)}…"
+        }
         val manager = marmotManager ?: return "Error: Marmot not initialized"
         if (!isWriteable()) return "Error: Account is read-only"
 
@@ -1772,6 +1793,11 @@ class Account(
                 .orEmpty()
         val fetchRelays = memberOutbox + myOutbox
 
+        Log.d("MarmotDbg") {
+            "fetchKeyPackageAndAddMember: querying ${fetchRelays.size} relay(s) for ${memberPubKey.take(8)}… KeyPackage " +
+                "(memberOutbox=${memberOutbox.size}, myOutbox=${myOutbox.size}): ${fetchRelays.map { it.url }}"
+        }
+
         // Query across the combined relay set
         val filterMap = fetchRelays.associateWith { listOf(filter) }
 
@@ -1781,15 +1807,24 @@ class Account(
             )
 
         if (event == null) {
+            Log.w("MarmotDbg") {
+                "fetchKeyPackageAndAddMember: NO KeyPackage found for ${memberPubKey.take(8)}… on any of ${fetchRelays.size} relay(s)"
+            }
             return "Error: No KeyPackage found for this user. They may not have published one yet."
         }
 
+        Log.d("MarmotDbg") {
+            "fetchKeyPackageAndAddMember: got KeyPackage event id=${event.id.take(8)}… kind=${event.kind} authored=${event.pubKey.take(8)}…"
+        }
+
         if (event !is com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent) {
+            Log.w("MarmotDbg") { "fetchKeyPackageAndAddMember: unexpected kind ${event.kind}" }
             return "Error: Unexpected event type received"
         }
 
         val keyPackageBase64 = event.keyPackageBase64()
         if (keyPackageBase64.isBlank()) {
+            Log.w("MarmotDbg") { "fetchKeyPackageAndAddMember: KeyPackage event has empty content" }
             return "Error: KeyPackage event has empty content"
         }
 
@@ -1801,6 +1836,10 @@ class Account(
         // where to subscribe for subsequent GroupEvents. Use our own
         // outbox — that's where we will publish them.
         val groupRelays = myOutbox.toList()
+
+        Log.d("MarmotDbg") {
+            "fetchKeyPackageAndAddMember: addMarmotGroupMember → groupRelays=${groupRelays.size}: ${groupRelays.map { it.url }}"
+        }
 
         addMarmotGroupMember(
             nostrGroupId = nostrGroupId,
@@ -1824,6 +1863,10 @@ class Account(
         keyPackageEventId: HexKey,
         groupRelays: List<NormalizedRelayUrl>,
     ) {
+        Log.d("MarmotDbg") {
+            "addMarmotGroupMember: group=${nostrGroupId.take(8)}… member=${memberPubKey.take(8)}… " +
+                "keyPackageBytes=${keyPackageBytes.size}B groupRelays=${groupRelays.size}"
+        }
         val manager = marmotManager ?: return
         if (!isWriteable()) return
 
@@ -1836,36 +1879,54 @@ class Account(
                 relays = groupRelays,
             )
 
+        Log.d("MarmotDbg") {
+            "addMarmotGroupMember: built commit kind=${commitEvent.signedEvent.kind} id=${commitEvent.signedEvent.id.take(8)}… " +
+                "welcomeDelivery=${if (welcomeDelivery != null) "present(giftWrapId=${welcomeDelivery.giftWrapEvent.id.take(8)}…)" else "null"}"
+        }
+
         // Publish commit first (critical ordering)
+        Log.d("MarmotDbg") {
+            "addMarmotGroupMember: publishing commit kind:${commitEvent.signedEvent.kind} to ${groupRelays.size} relay(s): ${groupRelays.map { it.url }}"
+        }
         client.publish(commitEvent.signedEvent, groupRelays.toSet())
 
         // Then send the Welcome gift wrap to the new member.
         //
-        // We deliberately do NOT route this through
-        // computeRelayListToBroadcast(): its GiftWrap branch returns an
-        // empty relay set when the recipient has no NIP-17 kind:10050 and
-        // no cached NIP-65 inbox relays, which silently drops the welcome
-        // and leaves the invitee with no way to discover the group.
-        //
-        // Instead, mirror sendNip04PrivateMessage's delivery strategy:
-        // publish to our own outbox (so we keep a copy and the invitee
-        // may find it via a shared relay) unioned with the recipient's
-        // DM inbox relays — User.dmInboxRelays() already falls back
-        // through NIP-17 kind:10050 → NIP-65 read relays, which is where
-        // the invitee's AccountGiftWrapsEoseManager actually listens.
+        // Use the same delivery path that NIP-17 DMs (kind:1059) take —
+        // computeRelayListToBroadcast() — which has fallbacks for kind:10050
+        // → NIP-65 read → relay hints. Empirically, NIP-17 DMs reach the
+        // invitee, so this path is the one we know works. We also union
+        // with our own outbox + the recipient's dmInboxRelays() as a
+        // belt-and-braces measure in case the cache hasn't been hydrated
+        // yet for this contact.
         if (welcomeDelivery != null) {
+            val computed = computeRelayListToBroadcast(welcomeDelivery.giftWrapEvent)
             val recipientInbox =
                 cache
                     .getOrCreateUser(memberPubKey)
                     .dmInboxRelays()
                     .orEmpty()
-            val relayList = outboxRelays.flow.value + recipientInbox
+            val relayList = computed + outboxRelays.flow.value + recipientInbox
+            Log.d("MarmotDbg") {
+                "addMarmotGroupMember: welcome gift wrap relay sources " +
+                    "computeRelayListToBroadcast=${computed.size} myOutbox=${outboxRelays.flow.value.size} " +
+                    "recipientInbox=${recipientInbox.size} → union=${relayList.size}"
+            }
             if (relayList.isEmpty()) {
-                Log.w("Marmot") {
-                    "addMarmotGroupMember: no relays to deliver welcome gift wrap to ${memberPubKey.take(8)}…"
+                Log.w("MarmotDbg") {
+                    "addMarmotGroupMember: NO relays to deliver welcome gift wrap to ${memberPubKey.take(8)}… — welcome will be silently dropped"
+                }
+            } else {
+                Log.d("MarmotDbg") {
+                    "addMarmotGroupMember: publishing welcome gift wrap id=${welcomeDelivery.giftWrapEvent.id.take(8)}… " +
+                        "kind:${welcomeDelivery.giftWrapEvent.kind} → ${relayList.size} relay(s): ${relayList.map { it.url }}"
                 }
             }
             client.publish(welcomeDelivery.giftWrapEvent, relayList)
+        } else {
+            Log.w("MarmotDbg") {
+                "addMarmotGroupMember: welcomeDelivery is NULL — invitee ${memberPubKey.take(8)}… will receive nothing!"
+            }
         }
     }
 
@@ -1895,9 +1956,53 @@ class Account(
         if (!isWriteable()) return
 
         val relays = outboxRelays.flow.value.toList()
+        Log.d("MarmotDbg") {
+            "publishMarmotKeyPackage: generating + publishing KeyPackage event → ${relays.size} relay(s): ${relays.map { it.url }}"
+        }
         val event = manager.generateKeyPackageEvent(relays)
+        Log.d("MarmotDbg") {
+            "publishMarmotKeyPackage: signed kind:${event.kind} id=${event.id.take(8)}… authored=${event.pubKey.take(8)}…"
+        }
         cache.justConsumeMyOwnEvent(event)
         client.publish(event, outboxRelays.flow.value)
+    }
+
+    /**
+     * Ensure the local user has at least one active KeyPackage bundle and
+     * a published KeyPackage event on relays. Called from [init] after
+     * Marmot state has been restored from disk.
+     *
+     * - If [KeyPackageRotationManager] already has an active bundle (from
+     *   the persisted snapshot), we trust the previous session and do
+     *   nothing. The matching kind:30443 should already be on relays from
+     *   when the bundle was first generated.
+     * - Otherwise we generate a fresh bundle (which is now persisted to
+     *   disk by [KeyPackageRotationManager.generateKeyPackage]) and
+     *   publish the corresponding event.
+     *
+     * Best-effort: failures are logged but never propagated. We don't want
+     * a flaky relay or missing outbox config at startup to crash account
+     * initialization.
+     */
+    private suspend fun ensureMarmotKeyPackagePublished() {
+        val manager = marmotManager ?: return
+        if (!isWriteable()) return
+        try {
+            val hasBundle = manager.hasActiveKeyPackages()
+            Log.d("MarmotDbg") {
+                "ensureMarmotKeyPackagePublished: hasActiveKeyPackages=$hasBundle for ${signer.pubKey.take(8)}…"
+            }
+            if (hasBundle) {
+                return
+            }
+            Log.d("MarmotDbg") {
+                "ensureMarmotKeyPackagePublished: no active bundle — generating + publishing now"
+            }
+            publishMarmotKeyPackage()
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.w("MarmotDbg", "ensureMarmotKeyPackagePublished failed: ${e.message}", e)
+        }
     }
 
     /**
@@ -1927,6 +2032,9 @@ class Account(
         val manager = marmotManager ?: return
         if (!isWriteable()) return
         manager.createGroup(nostrGroupId)
+        // Creator owns the group — mark it as "known" immediately so it
+        // doesn't appear under "New Requests" before the first message.
+        marmotGroupList.markAsKnown(nostrGroupId)
     }
 
     /**
@@ -1973,6 +2081,11 @@ class Account(
         if (!isWriteable()) return
 
         val outbound = manager.updateGroupMetadata(nostrGroupId, metadata)
+        // The MLS commit has already been applied locally — surface the new
+        // metadata in the chatroom now so the UI reflects it without waiting
+        // for the relay round-trip.
+        val chatroom = marmotGroupList.getOrCreateGroup(nostrGroupId)
+        manager.syncMetadataTo(nostrGroupId, chatroom)
         client.publish(outbound.signedEvent, groupRelays)
     }
 
@@ -2438,10 +2551,60 @@ class Account(
         if (marmotManager != null) {
             scope.launch(Dispatchers.IO) {
                 marmotManager.restoreAll()
-                // Sync MIP-01 metadata from restored groups to chatrooms
+
+                // Ensure the local user has a KeyPackage published to relays
+                // so other users can invite them to groups. Without this,
+                // freshly installed accounts (and accounts that never opened
+                // the Marmot Group screen) would never have an active
+                // KeyPackage on the relays, and any inviter trying to add
+                // them would fail with "No KeyPackage found".
+                //
+                // The KeyPackage bundle (private keys included) is persisted
+                // by KeyPackageRotationManager via marmotKeyPackageStore, so
+                // restoreAll() above has already restored any previously
+                // generated bundles. Only generate-and-publish if no active
+                // bundle exists in memory after restore.
+                ensureMarmotKeyPackagePublished()
+
+                // Sync MIP-01 metadata from restored groups to chatrooms and
+                // re-hydrate decrypted messages from persistent storage.
+                // Note: Marmot MLS application messages cannot be re-decrypted
+                // after the ratchet advances, so persisted plaintext is the
+                // only way to restore group history across restarts.
                 marmotManager.activeGroupIds().forEach { groupId ->
                     val chatroom = marmotGroupList.getOrCreateGroup(groupId)
                     marmotManager.syncMetadataTo(groupId, chatroom)
+                    // Force the kind:445 EOSE manager to re-poll its filter
+                    // set so the restored group's per-`h`-tag subscription
+                    // is actually sent to relays. Without this, restored
+                    // groups would never receive new messages until the user
+                    // explicitly created/joined another group.
+                    marmotGroupList.notifyGroupChanged(groupId)
+
+                    val storedMessages = marmotManager.loadStoredMessages(groupId)
+                    if (storedMessages.isNotEmpty()) {
+                        Log.d("Account") {
+                            "Restoring ${storedMessages.size} Marmot message(s) for group $groupId"
+                        }
+                        storedMessages.forEach { json ->
+                            try {
+                                val innerEvent =
+                                    com.vitorpamplona.quartz.nip01Core.core.Event
+                                        .fromJson(json)
+                                val isNew = cache.justConsume(innerEvent, null, false)
+                                val innerNote = cache.getOrCreateNote(innerEvent.id)
+                                if (isNew) {
+                                    innerNote.event = innerEvent
+                                }
+                                marmotGroupList.restoreMessage(groupId, innerNote)
+                            } catch (e: Exception) {
+                                Log.w(
+                                    "Account",
+                                    "Failed to restore persisted Marmot message for $groupId: ${e.message}",
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }

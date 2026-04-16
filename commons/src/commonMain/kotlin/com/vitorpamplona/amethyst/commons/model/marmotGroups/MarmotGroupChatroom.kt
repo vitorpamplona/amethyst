@@ -49,6 +49,14 @@ class MarmotGroupChatroom(
     var newestMessage: Note? = null
     val unreadCount = MutableStateFlow(0)
 
+    /**
+     * True if the local user has ever sent an application message in this
+     * group, OR explicitly created/owns it. Used by list UIs to split groups
+     * into "Known" vs "New Requests" — invitees that have not yet replied
+     * stay in "New Requests" until they participate.
+     */
+    var ownerSentMessage: Boolean = false
+
     private var changesFlow: WeakReference<MutableSharedFlow<ListChange<Note>>> = WeakReference(null)
 
     fun changesFlow(): MutableSharedFlow<ListChange<Note>> {
@@ -75,6 +83,29 @@ class MarmotGroupChatroom(
             }
 
             unreadCount.value += 1
+            changesFlow.get()?.tryEmit(ListChange.Addition(msg))
+            return true
+        }
+        return false
+    }
+
+    /**
+     * Add a message that is being restored from persistent storage on app
+     * startup. Behaves like [addMessageSync] but does NOT bump the unread
+     * count — restored messages were already seen by the user in a previous
+     * session.
+     */
+    @Synchronized
+    fun restoreMessageSync(msg: Note): Boolean {
+        if (msg !in messages) {
+            messages = messages + msg
+            msg.addGatherer(this)
+
+            val createdAt = msg.createdAt() ?: 0L
+            if (createdAt > (newestMessage?.createdAt() ?: 0L)) {
+                newestMessage = msg
+            }
+
             changesFlow.get()?.tryEmit(ListChange.Addition(msg))
             return true
         }
