@@ -392,6 +392,7 @@
     <string name="pictures">图片</string>
     <string name="shorts">短视频</string>
     <string name="longs">视频</string>
+    <string name="articles">文章</string>
     <string name="private_bookmarks">私人书签</string>
     <string name="public_bookmarks">公开书签</string>
     <string name="add_to_private_bookmarks">添加到私人书签</string>
@@ -953,6 +954,7 @@
     <string name="new_feature_nip17_might_not_be_available_description">启用此模式需要 Amethyst 发送一条 NIP-17 消息（包装的、密封的私信和群聊消息）。因为 NIP-17 是新的，大多数客户端尚未执行。请确保接收方正在使用兼容的客户端。</string>
     <string name="new_feature_nip17_activate">启用</string>
     <string name="messages_create_public_chat">公开</string>
+    <string name="messages_create_group">组</string>
     <string name="messages_create_public_private_chat_description">新建公开或私人群组</string>
     <string name="messages_relay_based">中继</string>
     <string name="messages_new_message">私人</string>
