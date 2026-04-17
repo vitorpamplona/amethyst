@@ -946,6 +946,7 @@
     <string name="geohash_exclusive_explainer">只有处于同一地理位置的关注者才能看到贴文。其他追随者无法看到。</string>
     <string name="hashtag_exclusive">话题限定贴文</string>
     <string name="hashtag_exclusive_explainer">只有关注了话题的人才能看到贴文，您的普通关注者也无法看到。</string>
+    <string name="long_form_reading_minutes">需 %1$d 分钟读完</string>
     <string name="loading_location">加载位置中</string>
     <string name="lack_location_permissions">没有位置信息权限</string>
     <string name="add_sensitive_content_explainer">在显示你的内容之前添加敏感的内容警告。针对任何 NSFW 内容或一些人可能觉得有冒犯性或令人不安的内容。</string>
