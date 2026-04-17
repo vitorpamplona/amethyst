@@ -65,6 +65,7 @@ import com.vitorpamplona.quartz.experimental.notifications.wake.WakeUpEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
@@ -2627,6 +2628,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is RelayFeedsListEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is JesterEvent -> consumeRegularEvent(event, relay, wasVerified)
                 is KeyPackageEvent -> consumeBaseReplaceable(event, relay, wasVerified)
+                is KeyPackageRelayListEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is LiveChessGameChallengeEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is LiveChessGameAcceptEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is LiveChessMoveEvent -> consumeBaseReplaceable(event, relay, wasVerified)
