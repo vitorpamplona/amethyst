@@ -943,6 +943,7 @@
     <string name="geohash_exclusive_explainer">Tylko obserwatorzy z twojej lokalizacji to zobaczą. Twoi ogólni obserwatorzy nie zobaczą tego.</string>
     <string name="hashtag_exclusive">Wpis hashtagowy</string>
     <string name="hashtag_exclusive_explainer">Tylko obserwujący ten hashtag to zobaczą. Twoi ogólni obserwujący nie zobaczą tego.</string>
+    <string name="long_form_reading_minutes">Czas czytania: %1$d min.</string>
     <string name="loading_location">Pobieranie lokalizacji</string>
     <string name="lack_location_permissions">Brak dostępu do lokalizacji</string>
     <string name="add_sensitive_content_explainer">Dodaje ostrzeżenie o wrażliwych treściach przed wyświetleniem treści. Jest to idealne dla dowolnych treści NSFW lub treści, które niektóre osoby mogą uznać za obraźliwe lub przeszkadzające</string>
