@@ -21,14 +21,17 @@
 package com.vitorpamplona.quartz.marmot
 
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
+import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsReader
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroup
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupManager
 import com.vitorpamplona.quartz.marmot.mls.messages.KeyPackageBundle
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
@@ -292,6 +295,98 @@ class MarmotMipBehaviorTest {
             assertTrue(
                 result.message.contains("inner event pubkey"),
                 "Expected inner-event-sender mismatch error, got: ${result.message}",
+            )
+        }
+
+    // ----------------------------------------------------------------------
+    // MIP-02 Welcome rumor structure after NIP-59 unwrap
+    // ----------------------------------------------------------------------
+
+    /**
+     * Unwraps a gift-wrapped Welcome all the way down to the kind:444 rumor
+     * and asserts the normative MIP-02 §Inner Rumor Structure requirements:
+     *   - kind == 444
+     *   - the rumor is **unsigned** (sig == "")
+     *   - content is base64
+     *   - ["encoding", "base64"] tag present
+     *   - ["e", <KeyPackage event id>] tag present
+     *   - ["relays", ...] tag present
+     *
+     * This protects against silent wire-format drift that would otherwise
+     * only be visible to external Marmot clients.
+     */
+    @Test
+    fun welcomePipeline_innerRumorMatchesMip02Requirements() =
+        runBlocking<Unit> {
+            val manager = createGroupManager()
+            manager.createGroup(groupId, aliceId.hexToByteArray())
+            val bobBundle = createStandaloneKeyPackage(bobId)
+            val commitResult = manager.addMember(groupId, bobBundle.keyPackage.toTlsBytes())
+
+            val aliceSigner = NostrSignerInternal(KeyPair())
+            val bobKeyPair = KeyPair()
+            val bobSigner = NostrSignerInternal(bobKeyPair)
+            val bobPubKeyHex = bobKeyPair.pubKey.toHexKey()
+
+            val keyPackageEventId = "c".repeat(64)
+            val sender = MarmotWelcomeSender(aliceSigner)
+            val delivery =
+                sender.wrapWelcome(
+                    commitResult = commitResult,
+                    recipientPubKey = bobPubKeyHex,
+                    keyPackageEventId = keyPackageEventId,
+                    relays = emptyList(),
+                    nostrGroupId = groupId,
+                )
+            assertNotNull(delivery)
+            assertEquals(GiftWrapEvent.KIND, delivery.giftWrapEvent.kind)
+
+            // Bob unwraps: kind:1059 → kind:13 (Seal) → kind:444 (Rumor).
+            val sealed = delivery.giftWrapEvent.unwrapThrowing(bobSigner)
+            assertEquals(SealedRumorEvent.KIND, sealed.kind, "Middle layer MUST be NIP-59 Seal kind:13")
+            assertIs<SealedRumorEvent>(sealed)
+
+            val rumor = sealed.unsealThrowing(bobSigner)
+            assertEquals(WelcomeEvent.KIND, rumor.kind, "Innermost rumor MUST be kind:444")
+            assertEquals("", rumor.sig, "MIP-02: kind:444 rumor MUST NOT carry a signature")
+
+            val encodingTag = rumor.tags.find { it.isNotEmpty() && it[0] == "encoding" }
+            assertNotNull(encodingTag, "MIP-02: rumor MUST carry [encoding, base64]")
+            assertEquals("base64", encodingTag[1])
+
+            val eTag = rumor.tags.find { it.isNotEmpty() && it[0] == "e" }
+            assertNotNull(eTag, "MIP-02: rumor MUST carry [e, <KeyPackage event id>]")
+            assertEquals(keyPackageEventId, eTag[1])
+
+            val relaysTag = rumor.tags.find { it.isNotEmpty() && it[0] == "relays" }
+            assertNotNull(relaysTag, "MIP-02: rumor MUST carry a relays tag")
+        }
+
+    // ----------------------------------------------------------------------
+    // MIP-03 group event h-tag shape
+    // ----------------------------------------------------------------------
+
+    /**
+     * MIP-03 §Core Event Fields requires the `h` tag on kind:445 events to
+     * be a 32-byte hex (64 lowercase hex chars). This locks in the tag
+     * format so an accidental truncation or encoding change surfaces here.
+     */
+    @Test
+    fun buildGroupEvent_hTagIs32ByteHex() =
+        runBlocking<Unit> {
+            val manager = createGroupManager()
+            manager.createGroup(groupId, aliceId.hexToByteArray())
+
+            val outbound = MarmotOutboundProcessor(manager)
+            val result = outbound.buildGroupEventFromBytes(groupId, "hi".encodeToByteArray())
+
+            val hTag = result.signedEvent.tags.find { it.isNotEmpty() && it[0] == "h" }
+            assertNotNull(hTag, "kind:445 MUST carry an h tag with the Nostr group id")
+            assertEquals(64, hTag[1].length, "h tag value MUST be 32 bytes hex (64 chars)")
+            assertEquals(groupId, hTag[1])
+            assertTrue(
+                hTag[1].all { it in '0'..'9' || it in 'a'..'f' },
+                "h tag MUST be lowercase hex",
             )
         }
 
