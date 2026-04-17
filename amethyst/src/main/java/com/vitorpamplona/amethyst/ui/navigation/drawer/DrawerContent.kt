@@ -578,12 +578,11 @@ fun ListContent(
         )
 
         NavigationRow(
-            title = R.string.polls,
-            icon = R.drawable.ic_poll,
-            iconReference = 1,
+            title = R.string.discover_reads,
+            icon = Icons.AutoMirrored.Outlined.Article,
             tint = MaterialTheme.colorScheme.onBackground,
             nav = nav,
-            route = Route.Polls,
+            route = Route.Articles,
         )
 
         NavigationRow(
@@ -592,6 +591,15 @@ fun ListContent(
             tint = MaterialTheme.colorScheme.onBackground,
             nav = nav,
             route = Route.Pictures,
+        )
+
+        NavigationRow(
+            title = R.string.polls,
+            icon = R.drawable.ic_poll,
+            iconReference = 1,
+            tint = MaterialTheme.colorScheme.onBackground,
+            nav = nav,
+            route = Route.Polls,
         )
 
         NavigationRow(
@@ -619,11 +627,11 @@ fun ListContent(
         )
 
         NavigationRow(
-            title = R.string.articles,
-            icon = Icons.AutoMirrored.Outlined.Article,
+            title = R.string.wallet,
+            icon = Icons.Outlined.AccountBalanceWallet,
             tint = MaterialTheme.colorScheme.onBackground,
             nav = nav,
-            route = Route.Articles,
+            route = Route.Wallet,
         )
 
         NavigationRow(
@@ -632,14 +640,6 @@ fun ListContent(
             tint = MaterialTheme.colorScheme.onBackground,
             nav = nav,
             route = Route.NewHlsVideo,
-        )
-
-        NavigationRow(
-            title = R.string.wallet,
-            icon = Icons.Outlined.AccountBalanceWallet,
-            tint = MaterialTheme.colorScheme.onBackground,
-            nav = nav,
-            route = Route.Wallet,
         )
 
         if (isDebug) {
