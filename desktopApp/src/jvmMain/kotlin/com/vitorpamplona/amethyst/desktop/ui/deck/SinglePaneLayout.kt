@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Article
+import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Extension
@@ -49,9 +50,7 @@ import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
@@ -106,6 +105,8 @@ fun SinglePaneLayout(
     highlightStore: DesktopHighlightStore,
     draftStore: com.vitorpamplona.amethyst.desktop.service.drafts.DesktopDraftStore,
     appScope: CoroutineScope,
+    singlePaneState: SinglePaneState,
+    onOpenAppDrawer: () -> Unit,
     onShowComposeDialog: () -> Unit,
     onShowReplyDialog: (com.vitorpamplona.quartz.nip01Core.core.Event) -> Unit,
     onZapFeedback: (ZapFeedback) -> Unit,
@@ -114,7 +115,7 @@ fun SinglePaneLayout(
     lastRelayEventAt: Long? = null,
     modifier: Modifier = Modifier,
 ) {
-    var currentColumnType by remember { mutableStateOf<DeckColumnType>(DeckColumnType.HomeFeed) }
+    val currentColumnType by singlePaneState.currentScreen.collectAsState()
     val navState = remember { ColumnNavigationState() }
     val navStack by navState.stack.collectAsState()
     val currentOverlay = navStack.lastOrNull()
@@ -131,7 +132,7 @@ fun SinglePaneLayout(
                     NavigationRailItem(
                         selected = currentColumnType == item.type && navStack.isEmpty(),
                         onClick = {
-                            currentColumnType = item.type
+                            singlePaneState.navigate(item.type)
                             navState.clear()
                         },
                         icon = {
@@ -152,6 +153,25 @@ fun SinglePaneLayout(
                     )
                 }
 
+                NavigationRailItem(
+                    selected = false,
+                    onClick = onOpenAppDrawer,
+                    icon = {
+                        Icon(
+                            Icons.Default.Apps,
+                            contentDescription = "App Drawer",
+                            modifier = Modifier.size(22.dp),
+                        )
+                    },
+                    label = {
+                        Text(
+                            "More",
+                            style = MaterialTheme.typography.labelSmall,
+                            maxLines = 1,
+                        )
+                    },
+                )
+
                 Spacer(Modifier.weight(1f))
 
                 // Relay health — shows elapsed time since last event (hidden when <30s)
@@ -171,7 +191,7 @@ fun SinglePaneLayout(
                 TorStatusIndicator(
                     status = torState.status,
                     onClick = {
-                        currentColumnType = DeckColumnType.Settings
+                        singlePaneState.navigate(DeckColumnType.Settings)
                         navState.clear()
                     },
                     modifier = Modifier.padding(bottom = 12.dp),
