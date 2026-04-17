@@ -45,6 +45,7 @@ import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material3.Button
@@ -214,6 +215,7 @@ private class AppDrawerState {
 @Composable
 fun AppDrawer(
     openColumnTypes: Set<String>,
+    pinnedNavBarState: PinnedNavBarState,
     onSelectScreen: (DeckColumnType) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -304,7 +306,7 @@ fun AppDrawer(
                 if (state.awaitingHashtag) {
                     HashtagInputSection(state, onSelectScreen, onDismiss)
                 } else {
-                    DrawerGrid(state, openColumnTypes, onSelectScreen, onDismiss)
+                    DrawerGrid(state, openColumnTypes, pinnedNavBarState, onSelectScreen, onDismiss)
                 }
             }
         }
@@ -316,6 +318,7 @@ fun AppDrawer(
 private fun DrawerGrid(
     state: AppDrawerState,
     openColumnTypes: Set<String>,
+    pinnedNavBarState: PinnedNavBarState,
     onSelectScreen: (DeckColumnType) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -349,7 +352,15 @@ private fun DrawerGrid(
                             type = screen,
                             isSelected = (startIndex + localIdx) == state.selectedIndex,
                             isOpen = openColumnTypes.contains(screen.typeKey()),
+                            isPinned = pinnedNavBarState.isPinned(screen),
                             onClick = { state.select(screen, onSelectScreen, onDismiss) },
+                            onTogglePin = {
+                                if (pinnedNavBarState.isPinned(screen)) {
+                                    pinnedNavBarState.unpin(screen)
+                                } else {
+                                    pinnedNavBarState.pin(screen)
+                                }
+                            },
                             onHover = { state.selectedIndex = startIndex + localIdx },
                         )
                     }
@@ -366,46 +377,93 @@ private fun DrawerScreenCard(
     type: DeckColumnType,
     isSelected: Boolean,
     isOpen: Boolean,
+    isPinned: Boolean,
     onClick: () -> Unit,
+    onTogglePin: () -> Unit,
     onHover: () -> Unit,
 ) {
-    Surface(
-        modifier =
-            Modifier
-                .size(80.dp)
-                .clickable(onClick = onClick)
-                .onPointerEvent(PointerEventType.Enter) { onHover() },
-        shape = RoundedCornerShape(12.dp),
-        tonalElevation = if (isSelected) 8.dp else 2.dp,
-        color =
-            if (isSelected) {
-                MaterialTheme.colorScheme.primaryContainer
-            } else {
-                MaterialTheme.colorScheme.surface
-            },
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(
-                    type.icon(),
-                    contentDescription = type.title(),
-                    modifier = Modifier.size(28.dp),
-                )
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    type.title(),
-                    style = MaterialTheme.typography.labelSmall,
-                    maxLines = 1,
-                )
+    var showMenu by remember { mutableStateOf(false) }
+
+    Box {
+        Surface(
+            modifier =
+                Modifier
+                    .size(80.dp)
+                    .clickable(onClick = onClick)
+                    .onPointerEvent(PointerEventType.Enter) { onHover() }
+                    .onPointerEvent(PointerEventType.Press) { event ->
+                        // Right-click opens context menu
+                        if (event.changes.any { it.pressed && event.button?.index == 2 }) {
+                            showMenu = true
+                        }
+                    },
+            shape = RoundedCornerShape(12.dp),
+            tonalElevation = if (isSelected) 8.dp else 2.dp,
+            color =
+                if (isSelected) {
+                    MaterialTheme.colorScheme.primaryContainer
+                } else {
+                    MaterialTheme.colorScheme.surface
+                },
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        type.icon(),
+                        contentDescription = type.title(),
+                        modifier = Modifier.size(28.dp),
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        type.title(),
+                        style = MaterialTheme.typography.labelSmall,
+                        maxLines = 1,
+                    )
+                }
+                // Open indicator (top-end dot)
+                if (isOpen) {
+                    Box(
+                        modifier =
+                            Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(4.dp)
+                                .size(6.dp)
+                                .background(MaterialTheme.colorScheme.primary, CircleShape),
+                    )
+                }
+                // Pinned indicator (top-start dot)
+                if (isPinned) {
+                    Box(
+                        modifier =
+                            Modifier
+                                .align(Alignment.TopStart)
+                                .padding(4.dp)
+                                .size(6.dp)
+                                .background(MaterialTheme.colorScheme.tertiary, CircleShape),
+                    )
+                }
             }
-            if (isOpen) {
-                Box(
-                    modifier =
-                        Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(4.dp)
-                            .size(6.dp)
-                            .background(MaterialTheme.colorScheme.primary, CircleShape),
+        }
+
+        // Context menu for pin/unpin
+        androidx.compose.material3.DropdownMenu(
+            expanded = showMenu,
+            onDismissRequest = { showMenu = false },
+        ) {
+            if (PinnedNavBarState.isPinnable(type)) {
+                androidx.compose.material3.DropdownMenuItem(
+                    text = { Text(if (isPinned) "Unpin from sidebar" else "Pin to sidebar") },
+                    onClick = {
+                        onTogglePin()
+                        showMenu = false
+                    },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Default.PushPin,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                        )
+                    },
                 )
             }
         }

@@ -69,6 +69,14 @@ object DesktopPreferences {
             prefs.put(KEY_LAYOUT_MODE, value)
         }
 
+    private const val KEY_PINNED_NAV_ITEMS = "pinned_nav_items"
+
+    var pinnedNavItems: String
+        get() = prefs.get(KEY_PINNED_NAV_ITEMS, "")
+        set(value) {
+            prefs.put(KEY_PINNED_NAV_ITEMS, value)
+        }
+
     private const val KEY_BLOSSOM_SERVERS = "blossom_servers"
     private const val DEFAULT_BLOSSOM_SERVER = "https://blossom.primal.net"
 

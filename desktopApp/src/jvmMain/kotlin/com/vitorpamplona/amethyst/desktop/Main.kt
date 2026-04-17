@@ -93,6 +93,7 @@ import com.vitorpamplona.amethyst.desktop.ui.deck.DeckColumnType
 import com.vitorpamplona.amethyst.desktop.ui.deck.DeckLayout
 import com.vitorpamplona.amethyst.desktop.ui.deck.DeckSidebar
 import com.vitorpamplona.amethyst.desktop.ui.deck.DeckState
+import com.vitorpamplona.amethyst.desktop.ui.deck.PinnedNavBarState
 import com.vitorpamplona.amethyst.desktop.ui.deck.SinglePaneLayout
 import com.vitorpamplona.amethyst.desktop.ui.deck.SinglePaneState
 import com.vitorpamplona.amethyst.desktop.ui.media.LocalAwtWindow
@@ -492,6 +493,7 @@ fun App(
     initialTorSettings: com.vitorpamplona.amethyst.commons.tor.TorSettings,
 ) {
     val singlePaneState = remember { SinglePaneState() }
+    val pinnedNavBarState = remember { PinnedNavBarState().also { it.load() } }
 
     // Always reload from prefs — after key() rebuild, prefs have the latest saved settings
     var torSettings by remember {
@@ -698,6 +700,7 @@ fun App(
                             layoutMode = layoutMode,
                             deckState = deckState,
                             singlePaneState = singlePaneState,
+                            pinnedNavBarState = pinnedNavBarState,
                             relayManager = relayManager,
                             localCache = localCache,
                             accountManager = accountManager,
@@ -732,6 +735,7 @@ fun App(
                                 } else {
                                     emptySet()
                                 },
+                            pinnedNavBarState = pinnedNavBarState,
                             onSelectScreen = { type ->
                                 when (layoutMode) {
                                     LayoutMode.DECK -> {
@@ -770,6 +774,7 @@ fun MainContent(
     layoutMode: LayoutMode,
     deckState: DeckState,
     singlePaneState: SinglePaneState,
+    pinnedNavBarState: PinnedNavBarState,
     relayManager: DesktopRelayConnectionManager,
     localCache: DesktopLocalCache,
     accountManager: AccountManager,
@@ -928,6 +933,7 @@ fun MainContent(
                             draftStore = draftStore,
                             appScope = appScope,
                             singlePaneState = singlePaneState,
+                            pinnedNavBarState = pinnedNavBarState,
                             onOpenAppDrawer = onShowAppDrawer,
                             onShowComposeDialog = onShowComposeDialog,
                             onShowReplyDialog = onShowReplyDialog,
