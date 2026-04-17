@@ -1870,6 +1870,17 @@
 
     <string name="search_by_hashtag">Search hashtag: #%1$s</string>
 
+    <string name="search_scope_all">All</string>
+    <string name="search_scope_people">People</string>
+    <string name="search_scope_notes">Notes</string>
+    <string name="search_source_local">Local</string>
+    <string name="search_source_relays">Relays</string>
+    <string name="search_follows_only">Follows only</string>
+    <string name="search_sort_newest">Newest</string>
+    <string name="search_sort_oldest">Oldest</string>
+    <string name="search_sort_relevance">Relevance</string>
+    <string name="search_sort_popular">Popular</string>
+
     <string name="dont_translate_from">Don\'t Translate From</string>
     <string name="dont_translate_from_description">Languages shown here will not be translated. Select a language to remove it and have it translated again.</string>
     <string name="translate_to">Translate To</string>

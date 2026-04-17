@@ -30,12 +30,16 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.search.SearchScope
+import com.vitorpamplona.amethyst.commons.search.SearchSortOrder
+import com.vitorpamplona.amethyst.commons.search.SearchSource
 import com.vitorpamplona.amethyst.commons.ui.feeds.InvalidatableContent
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.SearchQueryState
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.userUriPrefixes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
@@ -45,6 +49,9 @@ import com.vitorpamplona.quartz.nip05DnsIdentifiers.INip05Client
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Id
 import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
+import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
+import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
+import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
 import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
@@ -79,6 +86,11 @@ class SearchBarViewModel(
     val invalidations = MutableStateFlow(0)
     val searchValueFlow = MutableStateFlow("")
 
+    val scope = MutableStateFlow(SearchScope.ALL)
+    val source = MutableStateFlow(SearchSource.RELAYS)
+    val followsOnly = MutableStateFlow(false)
+    val sortOrder = MutableStateFlow(SearchSortOrder.DEFAULT_EVENT)
+
     val searchTerm =
         searchValueFlow
             .debounce(300)
@@ -87,6 +99,12 @@ class SearchBarViewModel(
             .stateIn(viewModelScope, SharingStarted.Eagerly, searchValue)
 
     val searchDataSourceState = SearchQueryState(MutableStateFlow(searchValue), account)
+
+    @Suppress("unused")
+    val sourceWatcher =
+        source
+            .onEach { updateDataSource(searchValue) }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, SearchSource.RELAYS)
 
     val listState: LazyListState = LazyListState(0, 0)
 
@@ -152,21 +170,45 @@ class SearchBarViewModel(
                 }
             }.flowOn(Dispatchers.IO)
 
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val directEventResolver: Flow<Route?> =
+        searchTerm
+            .debounce(200)
+            .mapLatest { term ->
+                if (term.isBlank()) return@mapLatest null
+                runCatching {
+                    when (val parsed = Nip19Parser.uriToRoute(term)?.entity) {
+                        is NEvent -> Route.Note(parsed.hex)
+                        is NNote -> Route.Note(parsed.hex)
+                        is NAddress -> Route.Note(parsed.aTag())
+                        else -> null
+                    }
+                }.getOrNull()
+            }.flowOn(Dispatchers.IO)
+
     val searchResultsUsers =
         combine(
             searchValueFlow.debounce(100),
             invalidations.debounce(100),
             directNip05Resolver,
-        ) { term, version, nip05Resolver ->
+            scope,
+            combine(followsOnly, account.kind3FollowList.flow) { only, follows ->
+                if (only) follows.authorsPlusMe else null
+            },
+        ) { term, _, nip05Resolver, currentScope, follows ->
+            if (currentScope == SearchScope.NOTES) return@combine emptyList<User>()
+
             if (nip05Resolver != null) {
-                return@combine listOf(nip05Resolver)
+                return@combine if (follows == null || nip05Resolver.pubkeyHex in follows) {
+                    listOf(nip05Resolver)
+                } else {
+                    emptyList()
+                }
             }
 
-            if (term.isNotBlank()) {
-                LocalCache.findUsersStartingWith(term, account)
-            } else {
-                emptyList()
-            }
+            if (term.isBlank()) return@combine emptyList<User>()
+            val users = LocalCache.findUsersStartingWith(term, account)
+            if (follows != null) users.filter { it.pubkeyHex in follows } else users
         }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
 
@@ -174,10 +216,31 @@ class SearchBarViewModel(
         combine(
             searchValueFlow.debounce(100),
             invalidations,
-        ) { term, version ->
-            LocalCache
-                .findNotesStartingWith(term, account.hiddenUsers)
-                .sortedWith(DefaultFeedOrder)
+            scope,
+            sortOrder,
+            combine(followsOnly, account.kind3FollowList.flow) { only, follows ->
+                if (only) follows.authorsPlusMe else null
+            },
+        ) { term, _, currentScope, order, follows ->
+            if (currentScope == SearchScope.PEOPLE) return@combine emptyList()
+
+            val raw = LocalCache.findNotesStartingWith(term, account.hiddenUsers)
+            val filtered = if (follows != null) raw.filter { it.author?.pubkeyHex in follows } else raw
+
+            when (order) {
+                SearchSortOrder.POPULAR ->
+                    filtered.sortedWith(
+                        compareByDescending<com.vitorpamplona.amethyst.model.Note> { it.zapsAmount }
+                            .thenByDescending { it.createdAt() ?: 0L },
+                    )
+
+                SearchSortOrder.OLDEST ->
+                    filtered.sortedBy { it.createdAt() ?: 0L }
+
+                SearchSortOrder.RELEVANCE, SearchSortOrder.NEWEST -> filtered.sortedWith(DefaultFeedOrder)
+
+                else -> filtered.sortedWith(DefaultFeedOrder)
+            }
         }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
 
@@ -185,8 +248,9 @@ class SearchBarViewModel(
         combine(
             searchValueFlow.debounce(100),
             invalidations,
-        ) { term, version ->
-            LocalCache.findPublicChatChannelsStartingWith(term)
+            scope,
+        ) { term, _, currentScope ->
+            if (currentScope != SearchScope.ALL) emptyList() else LocalCache.findPublicChatChannelsStartingWith(term)
         }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
 
@@ -194,8 +258,9 @@ class SearchBarViewModel(
         combine(
             searchValueFlow.debounce(100),
             invalidations,
-        ) { term, version ->
-            LocalCache.findEphemeralChatChannelsStartingWith(term)
+            scope,
+        ) { term, _, currentScope ->
+            if (currentScope != SearchScope.ALL) emptyList() else LocalCache.findEphemeralChatChannelsStartingWith(term)
         }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
 
@@ -203,8 +268,9 @@ class SearchBarViewModel(
         combine(
             searchValueFlow.debounce(100),
             invalidations,
-        ) { term, version ->
-            LocalCache.findLiveActivityChannelsStartingWith(term)
+            scope,
+        ) { term, _, currentScope ->
+            if (currentScope != SearchScope.ALL) emptyList() else LocalCache.findLiveActivityChannelsStartingWith(term)
         }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
 
@@ -212,8 +278,9 @@ class SearchBarViewModel(
         combine(
             searchValueFlow.debounce(100),
             invalidations,
-        ) { term, version ->
-            findHashtags(term)
+            scope,
+        ) { term, _, currentScope ->
+            if (currentScope == SearchScope.PEOPLE) emptyList() else findHashtags(term)
         }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
 
@@ -221,7 +288,9 @@ class SearchBarViewModel(
         combine(
             searchValueFlow.debounce(100),
             invalidations,
-        ) { term, version ->
+            scope,
+        ) { term, _, currentScope ->
+            if (currentScope != SearchScope.ALL) return@combine emptyList()
             if (term.length > 1) {
                 val isTypingRelay = term.length > 7 && (term.startsWith("wss://") || term.startsWith("ws://"))
                 val relayUrl =
@@ -263,12 +332,28 @@ class SearchBarViewModel(
     fun clear() = updateSearchValue("")
 
     suspend fun updateDataSource(searchTerm: String) {
-        if (searchTerm.isBlank()) {
+        if (searchTerm.isBlank() || source.value == SearchSource.LOCAL) {
             searchDataSourceState.searchQuery.tryEmit("")
         } else {
             searchDataSourceState.searchQuery.tryEmit(searchTerm)
             listState.scrollToItem(0, 0)
         }
+    }
+
+    fun updateScope(newScope: SearchScope) {
+        scope.value = newScope
+    }
+
+    fun updateSource(newSource: SearchSource) {
+        source.value = newSource
+    }
+
+    fun updateFollowsOnly(value: Boolean) {
+        followsOnly.value = value
+    }
+
+    fun updateSortOrder(order: SearchSortOrder) {
+        sortOrder.value = order
     }
 
     fun isSearchingFun() = searchValue.isNotBlank()
