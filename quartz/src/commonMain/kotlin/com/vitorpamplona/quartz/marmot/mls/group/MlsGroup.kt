@@ -1249,9 +1249,14 @@ class MlsGroup private constructor(
      * still listed in `admin_pubkeys` (MIP-03 admin depletion guard).
      *
      * We simulate the post-commit member set and the post-commit `admin_pubkeys`
-     * list, then require a non-empty intersection.
+     * list, then require a non-empty intersection. The guard is only active
+     * once the group has a configured admin set — it does not kick in during
+     * bootstrap before any admin is named.
      */
     private fun enforceNoAdminDepletion(proposals: List<PendingProposal>) {
+        val currentAdmins = currentMarmotData()?.adminPubkeys?.toSet().orEmpty()
+        if (currentAdmins.isEmpty()) return // Bootstrap: no admins yet, nothing to deplete.
+
         // Resolve the effective admin list after any GroupContextExtensions
         // proposal in this commit. If none is present, keep the current list.
         val gce =
@@ -1267,7 +1272,9 @@ class MlsGroup private constructor(
                 currentMarmotData()
             }
         val adminSet = projectedMarmot?.adminPubkeys?.toSet().orEmpty()
-        if (adminSet.isEmpty()) return // No admins configured — nothing to protect.
+        check(adminSet.isNotEmpty()) {
+            "MIP-03: commit would empty admin_pubkeys (admin depletion)"
+        }
 
         // Compute which leaves remain after applying Removes/SelfRemoves.
         val removedLeaves = mutableSetOf<Int>()
