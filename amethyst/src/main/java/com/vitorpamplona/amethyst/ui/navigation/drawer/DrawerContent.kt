@@ -121,7 +121,6 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.Font18SP
-import com.vitorpamplona.amethyst.ui.theme.IconRowModifier
 import com.vitorpamplona.amethyst.ui.theme.IconRowTextModifier
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size22Modifier
@@ -751,9 +750,12 @@ fun IconRow(
 
     Row(
         modifier =
-            IconRowModifier.clickable(
-                onClick = onClick,
-            ),
+            Modifier
+                .fillMaxWidth()
+                .clickable(
+                    onClick = onClick,
+                    onClickLabel = title,
+                ).padding(vertical = 15.dp, horizontal = 25.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
@@ -781,10 +783,12 @@ fun IconRow(
 
     Row(
         modifier =
-            IconRowModifier.clickable(
-                onClickLabel = title,
-                onClick = onClick,
-            ),
+            Modifier
+                .fillMaxWidth()
+                .clickable(
+                    onClick = onClick,
+                    onClickLabel = title,
+                ).padding(vertical = 15.dp, horizontal = 25.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
@@ -811,8 +815,8 @@ fun IconRowRelays(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(vertical = 15.dp, horizontal = 25.dp)
-                .clickable(onClick = onClick),
+                .clickable(onClick = onClick)
+                .padding(vertical = 15.dp, horizontal = 25.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
