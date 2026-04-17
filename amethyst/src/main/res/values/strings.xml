@@ -1079,6 +1079,8 @@
     <string name="hashtag_exclusive">Hashtag-exclusive Post</string>
     <string name="hashtag_exclusive_explainer">Only followers of the hashtag will see it. Your general followers won\'t see it.</string>
 
+    <string name="long_form_reading_minutes">%1$d min read</string>
+
 
     <string name="loading_location">Loading location</string>
     <string name="lack_location_permissions">No Location Permissions</string>

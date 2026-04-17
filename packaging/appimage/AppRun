@@ -1,0 +1,11 @@
+#!/bin/bash
+# AppImage launcher for Amethyst Desktop.
+# Sets LD_LIBRARY_PATH so vlcj finds bundled libvlc.so at runtime.
+# jpackage puts app resources at usr/lib/app/<platform>/vlc/ inside the AppDir.
+set -eu
+HERE="$(dirname "$(readlink -f "${0}")")"
+export LD_LIBRARY_PATH="${HERE}/usr/lib/app/linux/vlc:${HERE}/usr/lib:${HERE}/usr/lib/x86_64-linux-gnu:${LD_LIBRARY_PATH:-}"
+export VLC_PLUGIN_PATH="${HERE}/usr/lib/app/linux/vlc/plugins"
+export PATH="${HERE}/usr/bin:${PATH}"
+export APPDIR="${HERE}"
+exec "${HERE}/usr/bin/Amethyst" "$@"
