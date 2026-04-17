@@ -65,7 +65,7 @@ jobs:
         if: ${{ always() && matrix.os == 'ubuntu-latest' }}
 
       - name: Upload Test Results
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: ${{ always() && matrix.os == 'ubuntu-latest' }}
         with:
           name: Test Reports
@@ -90,13 +90,13 @@ jobs:
         run: ./gradlew assembleDebug
 
       - name: Upload Play APK
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: Play Debug APK
           path: amethyst/build/outputs/apk/play/debug/amethyst-play-universal-debug.apk
 
       - name: Upload FDroid APK
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: FDroid Debug APK
           path: amethyst/build/outputs/apk/fdroid/debug/amethyst-fdroid-universal-debug.apk
@@ -105,19 +105,19 @@ jobs:
         run: ./gradlew assembleBenchmark
 
       - name: Upload Play APK Benchmark
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: Play Benchmark APK
           path: amethyst/build/outputs/apk/play/benchmark/amethyst-play-universal-benchmark.apk
 
       - name: Upload FDroid APK Benchmark
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: FDroid Benchmark APK
           path: amethyst/build/outputs/apk/fdroid/benchmark/amethyst-fdroid-universal-benchmark.apk
 
       - name: Upload Compose Reports
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: Compose Reports
           path: amethyst/build/compose_compiler
@@ -164,7 +164,7 @@ jobs:
         run: ./gradlew --stop
 
       - name: Upload Desktop Distribution
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.artifact-name }}
           path: ${{ matrix.artifact-path }}

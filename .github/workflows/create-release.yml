@@ -97,7 +97,7 @@ jobs:
           chmod +x packaging/appimage/linuxdeploy-x86_64.AppImage
 
       - name: Build desktop artifacts
-        uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08  # v3.0.2
+        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60  # v4.0.0
         with:
           max_attempts: 2
           timeout_minutes: 15
@@ -155,7 +155,7 @@ jobs:
 
       - name: Upload to GH Release (skip on dry-run)
         if: github.event_name != 'workflow_dispatch' || github.event.inputs.dry_run != 'true'
-        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65  # v2.6.2
+        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda  # v3.0.0
         with:
           files: dist/*
           tag_name: ${{ steps.ver.outputs.tag }}
@@ -288,7 +288,7 @@ jobs:
           fi
 
       - name: Upload Android assets to GH Release
-        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65  # v2.6.2
+        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda  # v3.0.0
         with:
           files: dist/*
           tag_name: ${{ github.ref_name }}
