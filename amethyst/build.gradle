@@ -55,7 +55,7 @@ android {
         minSdk = libs.versions.android.minSdk.get().toInteger()
         targetSdk = libs.versions.android.targetSdk.get().toInteger()
         versionCode = 442
-        versionName = generateVersionName("1.08.0")
+        versionName = generateVersionName(libs.versions.app.get())
         buildConfigField "String", "RELEASE_NOTES_ID", "\"be99e8c8d4df0f54b44eb6c96976ccb38baeea0192436a1c6fc8bc5e930da6b0\""
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"

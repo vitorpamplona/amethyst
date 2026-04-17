@@ -1,4 +1,6 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
+import java.io.File
+import java.nio.file.Files
 
 plugins {
     alias(libs.plugins.jetbrainsKotlinJvm)
@@ -6,6 +8,10 @@ plugins {
     alias(libs.plugins.jetbrainsComposeCompiler)
     id("ir.mahozad.vlc-setup") version "0.1.0"
 }
+
+// RPM rejects dashes in version strings — replace with tilde (~) which RPM uses
+// for prerelease ordering: 1.08.0~rc1 < 1.08.0 per RPM version comparison rules.
+val appVersion: String = project.version.toString()
 
 sourceSets {
     main {
@@ -88,11 +94,11 @@ compose.desktop {
 
         nativeDistributions {
             appResourcesRootDir.set(project.layout.projectDirectory.dir("src/jvmMain/appResources"))
-            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
+            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb, TargetFormat.Rpm)
             modules("java.management") // Required by kmp-tor TorRuntime
 
             packageName = "Amethyst"
-            packageVersion = "1.0.0"
+            packageVersion = appVersion
             description = "Nostr client for desktop"
             vendor = "Amethyst Contributors"
 
@@ -109,6 +115,12 @@ compose.desktop {
 
             linux {
                 iconFile.set(project.file("src/jvmMain/resources/icon.png"))
+                menuGroup = "Network"
+                appCategory = "Network"
+                debMaintainer = "vitor@vitorpamplona.com"
+                rpmLicenseType = "MIT"
+                // RPM version: replace dashes with tilde (1.08.0~rc1 < 1.08.0 per RPM ordering).
+                rpmPackageVersion = appVersion.replace("-", "~")
             }
         }
     }
@@ -125,4 +137,70 @@ vlcSetup {
 
 tasks.named("spotlessKotlin") {
     mustRunAfter("vlcSetup")
+}
+
+// --- AppImage packaging (Linux) ---
+//
+// Compose Multiplatform's TargetFormat.AppImage is known-broken in 1.10.x (CMP-7101).
+// Instead: wrap `createReleaseDistributable` output with `linuxdeploy` (which
+// auto-bundles libraries, handles rpath, and calls appimagetool internally).
+//
+// Build inputs live in packaging/appimage/:
+//   - AppRun              shell launcher (sets LD_LIBRARY_PATH including bundled VLC)
+//   - amethyst.desktop    XDG desktop entry
+//   - amethyst.png        512x512 icon
+//
+// linuxdeploy binary is fetched by CI (SHA-verified) into packaging/appimage/
+// as linuxdeploy-x86_64.AppImage. BUILDING.md documents local-dev fetch.
+val createReleaseAppImage by tasks.registering(Exec::class) {
+    group = "compose desktop"
+    description = "Bundle createReleaseDistributable output into a Linux AppImage via linuxdeploy."
+    dependsOn("createReleaseDistributable")
+
+    val distDir = layout.buildDirectory.dir("compose/binaries/main-release/app/Amethyst")
+    val appDir = layout.buildDirectory.dir("appimage/Amethyst.AppDir")
+    val outFile = layout.buildDirectory.file("appimage/Amethyst-$appVersion-x86_64.AppImage")
+    val toolRoot = layout.projectDirectory.dir("../packaging/appimage")
+    val linuxdeployTool = toolRoot.file("linuxdeploy-x86_64.AppImage")
+
+    inputs.dir(distDir)
+    inputs.dir(toolRoot)
+    outputs.file(outFile)
+
+    doFirst {
+        val dir = appDir.get().asFile
+        dir.deleteRecursively()
+        dir.mkdirs()
+        copy {
+            from(distDir) { into("usr") }
+            from(toolRoot.file("AppRun")) {
+                rename { "AppRun" }
+                filePermissions { unix("0755") }
+            }
+            from(toolRoot.file("amethyst.desktop"))
+            from(toolRoot.file("amethyst.png"))
+            into(dir)
+        }
+        // DirIcon is used by desktop integrations (file managers, AppImageLauncher)
+        val dirIcon = File(dir, ".DirIcon")
+        if (dirIcon.exists()) dirIcon.delete()
+        Files.createSymbolicLink(dirIcon.toPath(), File("amethyst.png").toPath())
+
+        if (!linuxdeployTool.asFile.canExecute()) {
+            linuxdeployTool.asFile.setExecutable(true)
+        }
+    }
+
+    commandLine(
+        linuxdeployTool.asFile.absolutePath,
+        "--appdir", appDir.get().asFile.absolutePath,
+        "--output", "appimage",
+        "--desktop-file", "${appDir.get().asFile}/amethyst.desktop",
+        "--icon-file", "${appDir.get().asFile}/amethyst.png",
+    )
+    environment("OUTPUT", outFile.get().asFile.absolutePath)
+    environment("ARCH", "x86_64")
+    // Bypass FUSE requirement on CI runners (ubuntu-latest lacks libfuse.so.2).
+    // AppImage standard env var: extracts + runs without mounting.
+    environment("APPIMAGE_EXTRACT_AND_RUN", "1")
 }
