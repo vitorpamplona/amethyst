@@ -44,6 +44,15 @@ import com.vitorpamplona.quartz.utils.sha256.sha256
  */
 object Mip04MediaEncryption {
     const val VERSION = "mip04-v2"
+
+    /**
+     * Deprecated v1 version string.
+     *
+     * Kept for detection only — MIP-04 requires clients to REJECT blobs tagged
+     * with this version. v1 derived the ChaCha20 nonce deterministically and
+     * is vulnerable to nonce-reuse attacks.
+     */
+    const val LEGACY_VERSION_V1 = "mip04-v1"
     const val EXPORTER_LABEL = "marmot"
     const val EXPORTER_CONTEXT = "encrypted-media"
     const val EXPORTER_KEY_LENGTH = 32

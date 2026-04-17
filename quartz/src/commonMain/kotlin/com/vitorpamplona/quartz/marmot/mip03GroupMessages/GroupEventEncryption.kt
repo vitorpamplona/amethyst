@@ -29,34 +29,37 @@ import kotlin.io.encoding.ExperimentalEncodingApi
  * Handles the outer ChaCha20-Poly1305 encryption layer for Marmot GroupEvents (MIP-03).
  *
  * The encryption flow:
- *   Encrypt: content = base64(randomNonce(12) || ChaCha20-Poly1305.encrypt(key, nonce, mlsMessageBytes, aad=""))
+ *   Encrypt: content = base64(randomNonce(12) || ChaCha20-Poly1305.encrypt(key, nonce, mlsMessageBytes, aad=empty))
  *   Decrypt: decode base64, split nonce (first 12 bytes) from ciphertext+tag, decrypt with empty AAD
  *
+ * Per MIP-03, the AAD is the empty byte string. Earlier versions of this
+ * implementation bound `nostr_group_id` into the AAD; that was corrected to
+ * match the spec, which necessarily breaks decryption of messages produced
+ * by the old (non-compliant) encoder.
+ *
  * The key is derived from MLS-Exporter("marmot", "group-event", 32) by the MLS engine.
- * Since the MLS engine is not yet integrated, this helper accepts the 32-byte key as a parameter.
  */
 object GroupEventEncryption {
+    private val EMPTY_AAD = ByteArray(0)
+
     /**
      * Encrypts an MLS message for a GroupEvent.
      *
      * @param mlsMessageBytes the raw MLS message bytes to encrypt
      * @param groupKey 32-byte key derived from MLS-Exporter("marmot", "group-event", 32)
-     * @param nostrGroupId hex-encoded group ID bound to the ciphertext via AAD
      * @return base64-encoded string containing nonce(12) || ciphertext || tag(16)
      */
     @OptIn(ExperimentalEncodingApi::class)
     fun encrypt(
         mlsMessageBytes: ByteArray,
         groupKey: ByteArray,
-        nostrGroupId: String = "",
     ): String {
         require(groupKey.size == GroupEvent.EXPORTER_KEY_LENGTH) {
             "Group key must be ${GroupEvent.EXPORTER_KEY_LENGTH} bytes"
         }
 
-        val aad = nostrGroupId.encodeToByteArray()
         val nonce = RandomInstance.bytes(GroupEvent.NONCE_LENGTH)
-        val ciphertextWithTag = ChaCha20Poly1305.encrypt(mlsMessageBytes, aad, nonce, groupKey)
+        val ciphertextWithTag = ChaCha20Poly1305.encrypt(mlsMessageBytes, EMPTY_AAD, nonce, groupKey)
 
         // Prepend nonce to ciphertext+tag
         val payload = ByteArray(nonce.size + ciphertextWithTag.size)
@@ -71,7 +74,6 @@ object GroupEventEncryption {
      *
      * @param encryptedContentBase64 base64-encoded content from the GroupEvent
      * @param groupKey 32-byte key derived from MLS-Exporter("marmot", "group-event", 32)
-     * @param nostrGroupId hex-encoded group ID bound to the ciphertext via AAD
      * @return decrypted MLS message bytes
      * @throws IllegalStateException if authentication fails
      * @throws IllegalArgumentException if content is malformed
@@ -80,7 +82,6 @@ object GroupEventEncryption {
     fun decrypt(
         encryptedContentBase64: String,
         groupKey: ByteArray,
-        nostrGroupId: String = "",
     ): ByteArray {
         require(groupKey.size == GroupEvent.EXPORTER_KEY_LENGTH) {
             "Group key must be ${GroupEvent.EXPORTER_KEY_LENGTH} bytes"
@@ -91,10 +92,9 @@ object GroupEventEncryption {
             "Payload too short: ${payload.size} bytes, minimum ${GroupEvent.MIN_CONTENT_LENGTH}"
         }
 
-        val aad = nostrGroupId.encodeToByteArray()
         val nonce = payload.copyOfRange(0, GroupEvent.NONCE_LENGTH)
         val ciphertextWithTag = payload.copyOfRange(GroupEvent.NONCE_LENGTH, payload.size)
 
-        return ChaCha20Poly1305.decrypt(ciphertextWithTag, aad, nonce, groupKey)
+        return ChaCha20Poly1305.decrypt(ciphertextWithTag, EMPTY_AAD, nonce, groupKey)
     }
 }

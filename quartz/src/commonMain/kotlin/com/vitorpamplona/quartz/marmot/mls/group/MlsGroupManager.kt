@@ -391,6 +391,13 @@ class MlsGroupManager(
     /**
      * Update group extensions (e.g., MIP-01 metadata) via a GroupContextExtensions proposal.
      * Creates the proposal, commits it, and persists the new state.
+     *
+     * Authorization (MIP-01): extension updates require admin privileges once
+     * the group has at least one admin. During bootstrap — before any
+     * `admin_pubkeys` are configured — any member may seed the initial
+     * extension set (e.g. the creator installing the first
+     * [com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData] with
+     * themselves as admin).
      */
     suspend fun updateGroupExtensions(
         nostrGroupId: HexKey,
@@ -398,6 +405,11 @@ class MlsGroupManager(
     ): CommitResult =
         mutex.withLock {
             val group = requireGroup(nostrGroupId)
+            val currentMarmot = group.currentMarmotData()
+            val adminsConfigured = currentMarmot != null && currentMarmot.adminPubkeys.isNotEmpty()
+            check(!adminsConfigured || group.isLocalAdmin()) {
+                "MIP-01: only admins may update group extensions"
+            }
             retainEpochSecrets(nostrGroupId, group)
             group.proposeGroupContextExtensions(extensions)
             val result = group.commit()
@@ -434,6 +446,20 @@ class MlsGroupManager(
     }
 
     // --- Key Export ---
+
+    /**
+     * Hex-encoded BasicCredential identity of the member at [leafIndex] in
+     * the given group, or null if the group is unknown or the leaf is blank /
+     * not a Basic credential.
+     *
+     * Used by MIP-03 inner-event sender verification to confirm that the
+     * `pubkey` in a decrypted application message matches the MLS sender's
+     * credential identity.
+     */
+    fun memberIdentityHex(
+        nostrGroupId: HexKey,
+        leafIndex: Int,
+    ): String? = groups[nostrGroupId]?.memberIdentityHex(leafIndex)
 
     /**
      * Export the Marmot outer encryption key for GroupEvent wrapping.

@@ -38,25 +38,28 @@ import com.vitorpamplona.quartz.nip01Core.core.toHexKey
  * The actual TLS serialization/deserialization is handled by the MLS engine.
  * This class provides a Kotlin-friendly representation for the application layer.
  *
- * Wire format (TLS presentation language):
+ * Wire format (TLS presentation language, v3):
  * ```
  * struct {
- *     uint16 version;                    // Current: 2
- *     opaque nostr_group_id[32];         // Nostr routing ID (distinct from MLS group ID)
+ *     uint16 version;                       // Current: 3 (v0 reserved/invalid)
+ *     opaque nostr_group_id[32];            // Nostr routing ID (distinct from MLS group ID)
  *     opaque name<0..2^16-1>;
  *     opaque description<0..2^16-1>;
- *     opaque admin_pubkeys<0..2^16-1>;   // Concatenated raw 32-byte x-only pubkeys
+ *     opaque admin_pubkeys<0..2^16-1>;      // Concatenated raw 32-byte x-only pubkeys
  *     RelayUrl relays<0..2^16-1>;
  *     opaque image_hash<0..32>;
- *     opaque image_key<0..32>;           // HKDF seed for encryption key derivation
+ *     opaque image_key<0..32>;              // HKDF seed for encryption key derivation
  *     opaque image_nonce<0..12>;
- *     opaque image_upload_key<0..32>;    // HKDF seed for upload keypair derivation
+ *     opaque image_upload_key<0..32>;       // HKDF seed for upload keypair derivation
+ *     opaque disappearing_message_secs<0..8>; // v3+: 0 bytes = persist forever,
+ *                                             // 8 bytes big-endian uint64 = expiration secs
+ *                                             // (value 0 is rejected)
  * } NostrGroupData;
  * ```
  */
 @Immutable
 data class MarmotGroupData(
-    /** Extension format version. Current: 2 */
+    /** Extension format version. Current: 3 (v0 reserved/invalid). */
     val version: Int = CURRENT_VERSION,
     /**
      * 32-byte Nostr routing ID (hex-encoded).
@@ -84,7 +87,21 @@ data class MarmotGroupData(
     val imageNonce: ByteArray? = null,
     /** HKDF seed for deriving the Blossom upload keypair. Empty if no image. */
     val imageUploadKey: ByteArray? = null,
+    /**
+     * Disappearing-message duration in seconds (v3+).
+     * `null` means messages persist forever. A positive value auto-applies a
+     * NIP-40 `expiration` tag to kind:445 events at `created_at + secs`.
+     * Per MIP-01, a value of `0` MUST be rejected.
+     */
+    val disappearingMessageSecs: ULong? = null,
 ) {
+    init {
+        require(version > 0) { "MarmotGroupData version 0 is reserved/invalid" }
+        require(disappearingMessageSecs == null || disappearingMessageSecs > 0UL) {
+            "disappearing_message_secs must be > 0 when set (MIP-01)"
+        }
+    }
+
     /** Whether the given pubkey is an admin of this group */
     fun isAdmin(pubKey: HexKey): Boolean = adminPubkeys.contains(pubKey)
 
@@ -122,6 +139,19 @@ data class MarmotGroupData(
         writer.putOpaque2(imageNonce ?: ByteArray(0))
         writer.putOpaque2(imageUploadKey ?: ByteArray(0))
 
+        // v3+: disappearing_message_secs (0 bytes = none, 8 bytes big-endian uint64 = secs)
+        val disappearingBytes =
+            disappearingMessageSecs?.let { secs ->
+                val out = ByteArray(8)
+                var v = secs.toLong()
+                for (i in 7 downTo 0) {
+                    out[i] = (v and 0xFF).toByte()
+                    v = v ushr 8
+                }
+                out
+            } ?: ByteArray(0)
+        writer.putOpaque2(disappearingBytes)
+
         return writer.toByteArray()
     }
 
@@ -131,7 +161,10 @@ data class MarmotGroupData(
     fun toExtension(): Extension = Extension(EXTENSION_ID_INT, encodeTls())
 
     companion object {
-        const val CURRENT_VERSION = 2
+        const val CURRENT_VERSION = 3
+
+        /** Versions this implementation understands. v0 is reserved/invalid per MIP-01. */
+        val SUPPORTED_VERSIONS: Set<Int> = setOf(1, 2, 3)
 
         /** MLS extension type identifier for marmot_group_data */
         const val EXTENSION_ID: UShort = 0xF2EEu
@@ -139,7 +172,7 @@ data class MarmotGroupData(
 
         /**
          * Find and decode the MarmotGroupData extension from a list of MLS extensions.
-         * Returns null if no extension with type 0xF2EE is present.
+         * Returns null if no extension with type 0xF2EE is present or if decoding fails.
          */
         fun fromExtensions(extensions: List<Extension>): MarmotGroupData? {
             val ext = extensions.find { it.extensionType == EXTENSION_ID_INT } ?: return null
@@ -149,24 +182,29 @@ data class MarmotGroupData(
         /**
          * Decode MarmotGroupData from TLS wire format bytes.
          *
-         * Wire format:
+         * Wire format (v3):
          * ```
-         * uint16 version
+         * uint16 version                     // rejected if 0 or unsupported
          * opaque nostr_group_id[32]
          * opaque name<0..2^16-1>
          * opaque description<0..2^16-1>
-         * opaque admin_pubkeys<0..2^16-1>   // concatenated 32-byte keys
-         * RelayUrl relays<0..2^16-1>        // length-prefixed UTF-8 strings
+         * opaque admin_pubkeys<0..2^16-1>    // concatenated 32-byte keys
+         * RelayUrl relays<0..2^16-1>         // length-prefixed UTF-8 strings
          * opaque image_hash<0..32>
          * opaque image_key<0..32>
          * opaque image_nonce<0..12>
          * opaque image_upload_key<0..32>
+         * opaque disappearing_message_secs<0..8>  // v3+: 0 bytes or 8-byte uint64 (reject 0)
          * ```
+         *
+         * Unknown trailing bytes from future versions are silently ignored for
+         * forward compatibility (MIP-01).
          */
         fun decodeTls(data: ByteArray): MarmotGroupData? =
             try {
                 val reader = TlsReader(data)
                 val version = reader.readUint16()
+                require(version in SUPPORTED_VERSIONS) { "Unsupported MarmotGroupData version: $version" }
 
                 val nostrGroupIdBytes = reader.readBytes(32)
                 val nostrGroupId = nostrGroupIdBytes.toHexKey()
@@ -201,6 +239,30 @@ data class MarmotGroupData(
                 val imageNonce = if (reader.hasRemaining) reader.readOpaque2().takeIf { it.isNotEmpty() } else null
                 val imageUploadKey = if (reader.hasRemaining) reader.readOpaque2().takeIf { it.isNotEmpty() } else null
 
+                // v3+: disappearing_message_secs
+                val disappearingBytes = if (reader.hasRemaining) reader.readOpaque2() else ByteArray(0)
+                val disappearingMessageSecs: ULong? =
+                    when (disappearingBytes.size) {
+                        0 -> {
+                            null
+                        }
+
+                        8 -> {
+                            var v = 0UL
+                            for (b in disappearingBytes) {
+                                v = (v shl 8) or (b.toInt() and 0xFF).toULong()
+                            }
+                            require(v > 0UL) { "disappearing_message_secs value 0 is rejected (MIP-01)" }
+                            v
+                        }
+
+                        else -> {
+                            throw IllegalArgumentException(
+                                "disappearing_message_secs must be 0 or 8 bytes, got ${disappearingBytes.size}",
+                            )
+                        }
+                    }
+
                 MarmotGroupData(
                     version = version,
                     nostrGroupId = nostrGroupId,
@@ -212,8 +274,9 @@ data class MarmotGroupData(
                     imageKey = imageKey,
                     imageNonce = imageNonce,
                     imageUploadKey = imageUploadKey,
+                    disappearingMessageSecs = disappearingMessageSecs,
                 )
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 null
             }
     }
