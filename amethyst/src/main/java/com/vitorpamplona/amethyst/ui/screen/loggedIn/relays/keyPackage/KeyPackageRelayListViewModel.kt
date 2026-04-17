@@ -39,7 +39,7 @@ class KeyPackageRelayListViewModel : BasicRelaySetupInfoModel() {
     override fun countFilters(relayUrl: NormalizedRelayUrl): List<CountFilter> =
         listOf(
             CountFilter(
-                label = R.string.keypackage_section,
+                label = R.string.keypackages,
                 filter =
                     Filter(
                         kinds = listOf(KeyPackageEvent.KIND),
