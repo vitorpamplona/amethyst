@@ -287,6 +287,11 @@ class DeckState(
 
         private val mapper = jacksonObjectMapper()
 
+        fun parseColumnTypeFromKey(
+            typeKey: String,
+            param: String? = null,
+        ): DeckColumnType? = parseColumnType(mapOf("type" to typeKey, "param" to param))
+
         private fun parseColumnType(entry: Map<String, Any?>): DeckColumnType? {
             val typeKey = entry["type"] as? String ?: return null
             val param = entry["param"] as? String

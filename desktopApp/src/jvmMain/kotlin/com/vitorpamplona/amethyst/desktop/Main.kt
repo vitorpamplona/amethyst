@@ -96,6 +96,7 @@ import com.vitorpamplona.amethyst.desktop.ui.deck.DeckState
 import com.vitorpamplona.amethyst.desktop.ui.deck.PinnedNavBarState
 import com.vitorpamplona.amethyst.desktop.ui.deck.SinglePaneLayout
 import com.vitorpamplona.amethyst.desktop.ui.deck.SinglePaneState
+import com.vitorpamplona.amethyst.desktop.ui.deck.Workspace
 import com.vitorpamplona.amethyst.desktop.ui.deck.WorkspaceManager
 import com.vitorpamplona.amethyst.desktop.ui.media.LocalAwtWindow
 import com.vitorpamplona.amethyst.desktop.ui.media.LocalIsImmersiveFullscreen
@@ -240,6 +241,44 @@ fun main() {
                                 KeyShortcut(Key.N, ctrl = true)
                             },
                         onClick = { showComposeDialog = true },
+                    )
+                    Item(
+                        "Save as Workspace",
+                        shortcut =
+                            if (isMacOS) {
+                                KeyShortcut(Key.S, meta = true, shift = true)
+                            } else {
+                                KeyShortcut(Key.S, ctrl = true, shift = true)
+                            },
+                        onClick = {
+                            if (workspaceManager.workspaces.value.size < WorkspaceManager.MAX_WORKSPACES) {
+                                val columns =
+                                    deckState.columns.value.map { col ->
+                                        Workspace.WorkspaceColumn(
+                                            typeKey = col.type.typeKey(),
+                                            param =
+                                                when (col.type) {
+                                                    is DeckColumnType.Hashtag -> col.type.tag
+                                                    is DeckColumnType.Editor -> col.type.draftSlug
+                                                    is DeckColumnType.Article -> col.type.addressTag
+                                                    is DeckColumnType.Profile -> col.type.pubKeyHex
+                                                    is DeckColumnType.Thread -> col.type.noteId
+                                                    else -> null
+                                                },
+                                            width = col.width,
+                                        )
+                                    }
+                                val ws =
+                                    Workspace(
+                                        name = "Workspace ${workspaceManager.workspaces.value.size + 1}",
+                                        iconName = "Star",
+                                        layoutMode = layoutMode,
+                                        columns = columns,
+                                    )
+                                workspaceManager.addWorkspace(ws)
+                            }
+                        },
+                        enabled = workspaceManager.workspaces.value.size < WorkspaceManager.MAX_WORKSPACES,
                     )
                     Separator()
                     Item(
@@ -447,6 +486,10 @@ fun main() {
                 key(appRestartKey) {
                     App(
                         layoutMode = layoutMode,
+                        onLayoutModeChange = { newMode ->
+                            layoutMode = newMode
+                            DesktopPreferences.layoutMode = newMode.name
+                        },
                         deckState = deckState,
                         workspaceManager = workspaceManager,
                         accountManager = accountManager,
@@ -479,6 +522,7 @@ fun main() {
 @Composable
 fun App(
     layoutMode: LayoutMode,
+    onLayoutModeChange: (LayoutMode) -> Unit,
     deckState: DeckState,
     workspaceManager: WorkspaceManager,
     accountManager: AccountManager,
@@ -743,7 +787,23 @@ fun App(
                             pinnedNavBarState = pinnedNavBarState,
                             workspaceManager = workspaceManager,
                             onSwitchWorkspace = { ws ->
-                                deckState.loadFromWorkspace(ws.columns)
+                                // Switch layout mode to match workspace
+                                onLayoutModeChange(ws.layoutMode)
+                                // Load columns or single pane screen
+                                when (ws.layoutMode) {
+                                    LayoutMode.DECK -> {
+                                        deckState.loadFromWorkspace(ws.columns)
+                                    }
+
+                                    LayoutMode.SINGLE_PANE -> {
+                                        val screenKey =
+                                            ws.singlePaneScreen
+                                                ?: ws.columns.firstOrNull()?.typeKey
+                                                ?: "home"
+                                        val type = DeckState.parseColumnTypeFromKey(screenKey)
+                                        if (type != null) singlePaneState.navigate(type)
+                                    }
+                                }
                             },
                             onSelectScreen = { type ->
                                 when (layoutMode) {
