@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.screen.FeedDefinition
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
@@ -181,6 +182,7 @@ class AccountSettings(
     var backupUserMetadata: MetadataEvent? = null,
     var backupContactList: ContactListEvent? = null,
     var backupDMRelayList: ChatMessageRelayListEvent? = null,
+    var backupKeyPackageRelayList: KeyPackageRelayListEvent? = null,
     var backupNIP65RelayList: AdvertisedRelayListEvent? = null,
     var backupSearchRelayList: SearchRelayListEvent? = null,
     var backupIndexRelayList: IndexerRelayListEvent? = null,
@@ -590,6 +592,16 @@ class AccountSettings(
         // Events might be different objects, we have to compare their ids.
         if (backupDMRelayList?.id != newDMRelayList.id) {
             backupDMRelayList = newDMRelayList
+            saveAccountSettings()
+        }
+    }
+
+    fun updateKeyPackageRelayList(newKeyPackageRelayList: KeyPackageRelayListEvent?) {
+        if (newKeyPackageRelayList == null || newKeyPackageRelayList.tags.isEmpty()) return
+
+        // Events might be different objects, we have to compare their ids.
+        if (backupKeyPackageRelayList?.id != newKeyPackageRelayList.id) {
+            backupKeyPackageRelayList = newKeyPackageRelayList
             saveAccountSettings()
         }
     }

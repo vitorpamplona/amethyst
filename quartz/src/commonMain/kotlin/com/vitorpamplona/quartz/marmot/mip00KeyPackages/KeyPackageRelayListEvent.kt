@@ -69,6 +69,21 @@ class KeyPackageRelayListEvent(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
         ): KeyPackageRelayListEvent = signer.sign(createdAt, KIND, createTagArray(relays), "")
+
+        suspend fun updateRelayList(
+            earlierVersion: KeyPackageRelayListEvent,
+            relays: List<NormalizedRelayUrl>,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+        ): KeyPackageRelayListEvent {
+            val tags =
+                earlierVersion.tags
+                    .filter { it.isEmpty() || it[0] != RelayTag.TAG_NAME }
+                    .plus(relays.map { RelayTag.assemble(it) })
+                    .toTypedArray()
+
+            return signer.sign(createdAt, KIND, tags, earlierVersion.content)
+        }
     }
 }
 

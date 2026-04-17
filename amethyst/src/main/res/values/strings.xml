@@ -1562,6 +1562,8 @@
     <string name="private_inbox_section">DM Inbox Relays</string>
     <string name="private_inbox_section_explainer_profile">User receives DMs on these relays</string>
     <string name="private_inbox_section_explainer">Insert between 1–3 relays to serve as your private inbox. Others will use these relays to send DMs to you. DM Inbox relays should accept any message from anyone, but only allow you to download them. Good options are:\n - inbox.nostr.wine (paid)\n - auth.nostr1.com (free)\n - you.nostr1.com (personal relays - paid)</string>
+    <string name="keypackage_section">KeyPackage Relays</string>
+    <string name="keypackage_section_explainer">Relays where your MLS KeyPackages are published (MIP-00). Other users fetch these KeyPackages to invite you into Marmot group chats. Insert between 1–3 relays that accept KeyPackage events from you and allow public reads.</string>
     <string name="private_outbox_section">Private Home Relays</string>
     <string name="private_outbox_section_explainer">Insert between 1–3 relays to store events no one else can see, like your Drafts and/or app settings. Ideally, these relays are either local or require authentication before downloading each user\'s content.</string>
     <string name="kind_3_section">General Relays</string>

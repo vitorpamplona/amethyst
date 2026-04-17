@@ -42,6 +42,7 @@ import com.vitorpamplona.amethyst.model.edits.PrivateStorageRelayListDecryptionC
 import com.vitorpamplona.amethyst.model.edits.PrivateStorageRelayListState
 import com.vitorpamplona.amethyst.model.localRelays.ForwardKind0ToLocalRelayState
 import com.vitorpamplona.amethyst.model.localRelays.LocalRelayListState
+import com.vitorpamplona.amethyst.model.marmot.KeyPackageRelayListState
 import com.vitorpamplona.amethyst.model.nip01UserMetadata.AccountHomeRelayState
 import com.vitorpamplona.amethyst.model.nip01UserMetadata.AccountOutboxRelayState
 import com.vitorpamplona.amethyst.model.nip01UserMetadata.NotificationInboxRelayState
@@ -280,6 +281,8 @@ class Account(
     val forwardKind0ToLocalRelay = ForwardKind0ToLocalRelayState(client, localRelayList, settings)
 
     val dmRelayList = DmRelayListState(signer, cache, scope, settings)
+
+    val keyPackageRelayList = KeyPackageRelayListState(signer, cache, scope, settings)
 
     val privateStorageDecryptionCache = PrivateStorageRelayListDecryptionCache(signer)
     val privateStorageRelayList = PrivateStorageRelayListState(signer, cache, privateStorageDecryptionCache, scope, settings)
@@ -2470,6 +2473,8 @@ class Account(
     }
 
     suspend fun saveDMRelayList(dmRelays: List<NormalizedRelayUrl>) = sendLiterallyEverywhere(dmRelayList.saveRelayList(dmRelays))
+
+    suspend fun saveKeyPackageRelayList(keyPackageRelays: List<NormalizedRelayUrl>) = sendLiterallyEverywhere(keyPackageRelayList.saveRelayList(keyPackageRelays))
 
     suspend fun savePrivateOutboxRelayList(relays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(privateStorageRelayList.saveRelayList(relays))
 
