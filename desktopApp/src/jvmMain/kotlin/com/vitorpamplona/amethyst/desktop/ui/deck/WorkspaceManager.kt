@@ -68,6 +68,8 @@ class WorkspaceManager(
                                             is DeckColumnType.Profile -> col.type.pubKeyHex
                                             is DeckColumnType.Thread -> col.type.noteId
                                             is DeckColumnType.Hashtag -> col.type.tag
+                                            is DeckColumnType.Editor -> col.type.draftSlug
+                                            is DeckColumnType.Article -> col.type.addressTag
                                             else -> null
                                         },
                                     width = col.width,
@@ -97,14 +99,15 @@ class WorkspaceManager(
 
     fun deleteWorkspace(id: String) {
         if (_workspaces.value.size <= 1) return
-        val idx = _workspaces.value.indexOfFirst { it.id == id }
+        val deletedIdx = _workspaces.value.indexOfFirst { it.id == id }
+        if (deletedIdx < 0) return
         _workspaces.update { it.filter { ws -> ws.id != id } }
-        if (_activeIndex.value >= _workspaces.value.size) {
-            _activeIndex.value = _workspaces.value.size - 1
-        }
-        if (idx == _activeIndex.value || _activeIndex.value >= _workspaces.value.size) {
-            _activeIndex.value = 0
-        }
+        _activeIndex.value =
+            when {
+                deletedIdx < _activeIndex.value -> _activeIndex.value - 1
+                deletedIdx == _activeIndex.value -> 0
+                else -> _activeIndex.value
+            }.coerceIn(_workspaces.value.indices)
         scheduleSave()
     }
 

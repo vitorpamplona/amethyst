@@ -226,6 +226,8 @@ class DeckState(
                                 is DeckColumnType.Profile -> col.type.pubKeyHex
                                 is DeckColumnType.Thread -> col.type.noteId
                                 is DeckColumnType.Hashtag -> col.type.tag
+                                is DeckColumnType.Editor -> col.type.draftSlug
+                                is DeckColumnType.Article -> col.type.addressTag
                                 else -> null
                             },
                     )
@@ -299,6 +301,10 @@ class DeckState(
                 "my_profile" -> DeckColumnType.MyProfile
                 "chess" -> DeckColumnType.Chess
                 "settings" -> DeckColumnType.Settings
+                "drafts" -> DeckColumnType.Drafts
+                "highlights" -> DeckColumnType.MyHighlights
+                "editor" -> DeckColumnType.Editor(param)
+                "article" -> param?.let { DeckColumnType.Article(it) }
                 "profile" -> param?.let { DeckColumnType.Profile(it) }
                 "thread" -> param?.let { DeckColumnType.Thread(it) }
                 "hashtag" -> param?.let { DeckColumnType.Hashtag(it) }

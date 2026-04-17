@@ -78,6 +78,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.isSecondaryPressed
 import androidx.compose.ui.input.pointer.onPointerEvent
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
@@ -405,8 +406,9 @@ private fun DrawerScreenCard(
                     .clickable(onClick = onClick)
                     .onPointerEvent(PointerEventType.Enter) { onHover() }
                     .onPointerEvent(PointerEventType.Press) { event ->
-                        // Right-click opens context menu
-                        if (event.changes.any { it.pressed && event.button?.index == 2 }) {
+                        if (event.buttons.isSecondaryPressed &&
+                            event.changes.any { it.pressed && !it.previousPressed }
+                        ) {
                             showMenu = true
                         }
                     },
