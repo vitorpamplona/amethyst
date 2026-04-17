@@ -42,6 +42,7 @@ import com.vitorpamplona.amethyst.model.edits.PrivateStorageRelayListDecryptionC
 import com.vitorpamplona.amethyst.model.edits.PrivateStorageRelayListState
 import com.vitorpamplona.amethyst.model.localRelays.ForwardKind0ToLocalRelayState
 import com.vitorpamplona.amethyst.model.localRelays.LocalRelayListState
+import com.vitorpamplona.amethyst.model.marmot.KeyPackageRelayListState
 import com.vitorpamplona.amethyst.model.nip01UserMetadata.AccountHomeRelayState
 import com.vitorpamplona.amethyst.model.nip01UserMetadata.AccountOutboxRelayState
 import com.vitorpamplona.amethyst.model.nip01UserMetadata.NotificationInboxRelayState
@@ -280,6 +281,8 @@ class Account(
     val forwardKind0ToLocalRelay = ForwardKind0ToLocalRelayState(client, localRelayList, settings)
 
     val dmRelayList = DmRelayListState(signer, cache, scope, settings)
+
+    val keyPackageRelayList = KeyPackageRelayListState(signer, cache, scope, settings)
 
     val privateStorageDecryptionCache = PrivateStorageRelayListDecryptionCache(signer)
     val privateStorageRelayList = PrivateStorageRelayListState(signer, cache, privateStorageDecryptionCache, scope, settings)
@@ -1785,23 +1788,32 @@ class Account(
         // Build filter for the member's KeyPackages
         val filter = manager.subscriptionManager.keyPackageFilter(memberPubKey)
 
-        // KeyPackages are published by the invitee to *their own* outbox
-        // (see publishMarmotKeyPackage), so look there first. Union with
-        // our own outbox so we still find packages that ended up on a
-        // shared relay, and as a fallback when we don't know the
-        // invitee's outbox yet.
+        // Per MIP-00, invitees advertise the relays that host their
+        // KeyPackages in a kind:10051 KeyPackageRelayListEvent. Look
+        // there first, then fall back to the invitee's NIP-65 outbox
+        // (where KeyPackages typically also land), and finally union
+        // with our own outbox so we still find packages that ended up
+        // on a shared relay.
         val myOutbox = outboxRelays.flow.value
+        val memberKeyPackageRelays =
+            (
+                cache
+                    .getAddressableNoteIfExists(
+                        com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
+                            .createAddress(memberPubKey),
+                    )?.event as? com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
+            )?.relays()?.toSet().orEmpty()
         val memberOutbox =
             cache
                 .getOrCreateUser(memberPubKey)
                 .outboxRelays()
                 ?.toSet()
                 .orEmpty()
-        val fetchRelays = memberOutbox + myOutbox
+        val fetchRelays = memberKeyPackageRelays + memberOutbox + myOutbox
 
         Log.d("MarmotDbg") {
             "fetchKeyPackageAndAddMember: querying ${fetchRelays.size} relay(s) for ${memberPubKey.take(8)}… KeyPackage " +
-                "(memberOutbox=${memberOutbox.size}, myOutbox=${myOutbox.size}): ${fetchRelays.map { it.url }}"
+                "(memberKeyPackageRelays=${memberKeyPackageRelays.size}, memberOutbox=${memberOutbox.size}, myOutbox=${myOutbox.size}): ${fetchRelays.map { it.url }}"
         }
 
         // Query across the combined relay set
@@ -1937,19 +1949,33 @@ class Account(
     }
 
     /**
+     * Relays where this account publishes kind:30443 KeyPackage events.
+     *
+     * Per MIP-00, these should match the relays advertised in the user's
+     * kind:10051 KeyPackage Relay List so that other clients can discover
+     * and fetch them. Falls back to the standard outbox set when no list
+     * has been configured yet, since that's also where the user's other
+     * write-oriented events land.
+     */
+    fun keyPackagePublishRelays(): Set<NormalizedRelayUrl> {
+        val list = keyPackageRelayList.flow.value
+        return if (list.isNotEmpty()) list else outboxRelays.flow.value
+    }
+
+    /**
      * Publish or rotate KeyPackage events.
      */
     suspend fun publishMarmotKeyPackages() {
         val manager = marmotManager ?: return
         if (!isWriteable()) return
 
-        val relays = outboxRelays.flow.value.toList()
+        val relays = keyPackagePublishRelays()
 
         if (manager.needsKeyPackageRotation()) {
-            val rotatedEvents = manager.rotateConsumedKeyPackages(relays)
+            val rotatedEvents = manager.rotateConsumedKeyPackages(relays.toList())
             rotatedEvents.forEach { event ->
                 cache.justConsumeMyOwnEvent(event)
-                client.publish(event, outboxRelays.flow.value)
+                client.publish(event, relays)
             }
         }
     }
@@ -1961,16 +1987,16 @@ class Account(
         val manager = marmotManager ?: return
         if (!isWriteable()) return
 
-        val relays = outboxRelays.flow.value.toList()
+        val relays = keyPackagePublishRelays()
         Log.d("MarmotDbg") {
             "publishMarmotKeyPackage: generating + publishing KeyPackage event → ${relays.size} relay(s): ${relays.map { it.url }}"
         }
-        val event = manager.generateKeyPackageEvent(relays)
+        val event = manager.generateKeyPackageEvent(relays.toList())
         Log.d("MarmotDbg") {
             "publishMarmotKeyPackage: signed kind:${event.kind} id=${event.id.take(8)}… authored=${event.pubKey.take(8)}…"
         }
         cache.justConsumeMyOwnEvent(event)
-        client.publish(event, outboxRelays.flow.value)
+        client.publish(event, relays)
     }
 
     /**
@@ -2470,6 +2496,8 @@ class Account(
     }
 
     suspend fun saveDMRelayList(dmRelays: List<NormalizedRelayUrl>) = sendLiterallyEverywhere(dmRelayList.saveRelayList(dmRelays))
+
+    suspend fun saveKeyPackageRelayList(keyPackageRelays: List<NormalizedRelayUrl>) = sendLiterallyEverywhere(keyPackageRelayList.saveRelayList(keyPackageRelays))
 
     suspend fun savePrivateOutboxRelayList(relays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(privateStorageRelayList.saveRelayList(relays))
 

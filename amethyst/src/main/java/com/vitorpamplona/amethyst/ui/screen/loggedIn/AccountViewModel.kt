@@ -1471,6 +1471,27 @@ class AccountViewModel(
 
     suspend fun hasPublishedKeyPackage(): Boolean = account.hasPublishedKeyPackage()
 
+    /**
+     * Whether this account has a kind:10051 KeyPackage Relay List (MIP-00)
+     * advertising where it publishes KeyPackages.
+     */
+    fun hasKeyPackageRelayList(): Boolean =
+        account.keyPackageRelayList.flow.value
+            .isNotEmpty()
+
+    /**
+     * Publishes a kind:10051 KeyPackage Relay List seeded from the account's
+     * current outbox relays. Used when the user opts in from the
+     * "Create Group" warning dialog.
+     */
+    suspend fun saveKeyPackageRelayListFromOutbox() {
+        val outbox =
+            account.outboxRelays.flow.value
+                .toList()
+        if (outbox.isEmpty()) return
+        account.saveKeyPackageRelayList(outbox)
+    }
+
     suspend fun leaveMarmotGroup(nostrGroupId: String) {
         val relays = marmotGroupRelays(nostrGroupId)
         account.leaveMarmotGroup(nostrGroupId, relays)
