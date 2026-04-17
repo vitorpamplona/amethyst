@@ -63,15 +63,7 @@ class WorkspaceManager(
                             columns.map { col ->
                                 Workspace.WorkspaceColumn(
                                     typeKey = col.type.typeKey(),
-                                    param =
-                                        when (col.type) {
-                                            is DeckColumnType.Profile -> col.type.pubKeyHex
-                                            is DeckColumnType.Thread -> col.type.noteId
-                                            is DeckColumnType.Hashtag -> col.type.tag
-                                            is DeckColumnType.Editor -> col.type.draftSlug
-                                            is DeckColumnType.Article -> col.type.addressTag
-                                            else -> null
-                                        },
+                                    param = col.type.param(),
                                     width = col.width,
                                 )
                             },

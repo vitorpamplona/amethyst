@@ -221,15 +221,7 @@ class DeckState(
                         "id" to col.id,
                         "type" to col.type.typeKey(),
                         "width" to col.width,
-                        "param" to
-                            when (col.type) {
-                                is DeckColumnType.Profile -> col.type.pubKeyHex
-                                is DeckColumnType.Thread -> col.type.noteId
-                                is DeckColumnType.Hashtag -> col.type.tag
-                                is DeckColumnType.Editor -> col.type.draftSlug
-                                is DeckColumnType.Article -> col.type.addressTag
-                                else -> null
-                            },
+                        "param" to col.type.param(),
                     )
                 }
             DesktopPreferences.deckColumns = mapper.writeValueAsString(data)

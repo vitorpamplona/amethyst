@@ -155,6 +155,16 @@ fun DeckColumnType.requiresInput(): Boolean =
         else -> false
     }
 
+fun DeckColumnType.param(): String? =
+    when (this) {
+        is DeckColumnType.Profile -> pubKeyHex
+        is DeckColumnType.Thread -> noteId
+        is DeckColumnType.Hashtag -> tag
+        is DeckColumnType.Editor -> draftSlug
+        is DeckColumnType.Article -> addressTag
+        else -> null
+    }
+
 val LAUNCHABLE_SCREENS: List<DeckColumnType> =
     listOf(
         DeckColumnType.HomeFeed,
@@ -189,7 +199,6 @@ private class AppDrawerState {
     var activeTab by mutableStateOf(AppDrawerTab.SCREENS)
     var hashtagInput by mutableStateOf("")
     var awaitingHashtag by mutableStateOf(false)
-    private var consumed by mutableStateOf(false)
 
     val filteredScreens: List<DeckColumnType> by derivedStateOf {
         if (searchQuery.isBlank()) {
@@ -223,17 +232,22 @@ private class AppDrawerState {
             }
         }
 
-    fun moveSelection(delta: Int) {
-        val size = filteredScreens.size
-        if (size > 0) selectedIndex = (selectedIndex + delta).coerceIn(0, size - 1)
+    fun switchTab(tab: AppDrawerTab) {
+        activeTab = tab
+        selectedIndex = 0
     }
 
-    fun moveSelectionUnified(
+    fun moveSelection(
         delta: Int,
-        wsCount: Int,
+        wsCount: Int = 0,
     ) {
-        val total = wsCount + filteredScreens.size
-        if (total > 0) selectedIndex = (selectedIndex + delta).coerceIn(0, total - 1)
+        val size =
+            when {
+                isSearching -> wsCount + filteredScreens.size
+                activeTab == AppDrawerTab.WORKSPACES -> wsCount
+                else -> filteredScreens.size
+            }
+        if (size > 0) selectedIndex = (selectedIndex + delta).coerceIn(0, size - 1)
     }
 
     fun select(
@@ -241,12 +255,10 @@ private class AppDrawerState {
         onSelectScreen: (DeckColumnType) -> Unit,
         onDismiss: () -> Unit,
     ) {
-        if (consumed) return
         if (screen.requiresInput()) {
             awaitingHashtag = true
             hashtagInput = ""
         } else {
-            consumed = true
             onSelectScreen(screen)
             onDismiss()
         }
@@ -258,21 +270,29 @@ private class AppDrawerState {
         onSwitchWorkspace: (Workspace) -> Unit,
         onDismiss: () -> Unit,
     ) {
-        if (consumed) return
-        if (!isSearching) {
-            // Tab-based: only screens use Enter
-            filteredScreens.getOrNull(selectedIndex)?.let { select(it, onSelectScreen, onDismiss) }
-            return
-        }
-        // Unified: workspaces first, then screens
-        val wsCount = filteredWs.size
-        if (selectedIndex < wsCount) {
-            consumed = true
-            onSwitchWorkspace(filteredWs[selectedIndex])
-            onDismiss()
+        if (isSearching) {
+            // Unified: workspaces first, then screens
+            val wsCount = filteredWs.size
+            if (selectedIndex < wsCount) {
+                onSwitchWorkspace(filteredWs[selectedIndex])
+                onDismiss()
+            } else {
+                val screenIdx = selectedIndex - wsCount
+                filteredScreens.getOrNull(screenIdx)?.let { select(it, onSelectScreen, onDismiss) }
+            }
         } else {
-            val screenIdx = selectedIndex - wsCount
-            filteredScreens.getOrNull(screenIdx)?.let { select(it, onSelectScreen, onDismiss) }
+            when (activeTab) {
+                AppDrawerTab.SCREENS -> {
+                    filteredScreens.getOrNull(selectedIndex)?.let { select(it, onSelectScreen, onDismiss) }
+                }
+
+                AppDrawerTab.WORKSPACES -> {
+                    filteredWs.getOrNull(selectedIndex)?.let {
+                        onSwitchWorkspace(it)
+                        onDismiss()
+                    }
+                }
+            }
         }
     }
 
@@ -280,8 +300,7 @@ private class AppDrawerState {
         onSelectScreen: (DeckColumnType) -> Unit,
         onDismiss: () -> Unit,
     ) {
-        if (consumed || hashtagInput.isBlank()) return
-        consumed = true
+        if (hashtagInput.isBlank()) return
         onSelectScreen(DeckColumnType.Hashtag(hashtagInput.removePrefix("#").trim()))
         onDismiss()
     }
@@ -329,20 +348,12 @@ fun AppDrawer(
                         }
 
                         Key.DirectionDown -> {
-                            if (state.isSearching) {
-                                state.moveSelectionUnified(1, filteredWs.size)
-                            } else {
-                                state.moveSelection(1)
-                            }
+                            state.moveSelection(1, filteredWs.size)
                             true
                         }
 
                         Key.DirectionUp -> {
-                            if (state.isSearching) {
-                                state.moveSelectionUnified(-1, filteredWs.size)
-                            } else {
-                                state.moveSelection(-1)
-                            }
+                            state.moveSelection(-1, filteredWs.size)
                             true
                         }
 
@@ -419,7 +430,7 @@ fun AppDrawer(
                         AppDrawerTab.entries.forEach { tab ->
                             Tab(
                                 selected = state.activeTab == tab,
-                                onClick = { state.activeTab = tab },
+                                onClick = { state.switchTab(tab) },
                                 text = {
                                     Text(
                                         tab.name.lowercase().replaceFirstChar { it.uppercase() },
@@ -704,7 +715,13 @@ private fun WorkspacesGrid(
                     editTarget = ws
                     showEditor = true
                 },
-                onDelete = { workspaceManager.deleteWorkspace(ws.id) },
+                onDelete = {
+                    val wasActive = index == activeIndex
+                    workspaceManager.deleteWorkspace(ws.id)
+                    if (wasActive) {
+                        onSwitchWorkspace(workspaceManager.activeWorkspace)
+                    }
+                },
                 canDelete = workspaces.size > 1,
             )
         }
@@ -1082,8 +1099,14 @@ private fun UnifiedSearchResults(
                                 onDismiss()
                             }
                         },
-                        onEdit = { /* not supported in search results */ },
-                        onDelete = { workspaceManager.deleteWorkspace(ws.id) },
+                        onEdit = { /* edit via Workspaces tab */ },
+                        onDelete = {
+                            val wasActive = wsIdx == activeIndex
+                            workspaceManager.deleteWorkspace(ws.id)
+                            if (wasActive) {
+                                onSwitchWorkspace(workspaceManager.activeWorkspace)
+                            }
+                        },
                         canDelete = allWorkspaces.size > 1,
                     )
                 }

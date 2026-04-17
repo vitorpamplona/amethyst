@@ -98,6 +98,7 @@ import com.vitorpamplona.amethyst.desktop.ui.deck.SinglePaneLayout
 import com.vitorpamplona.amethyst.desktop.ui.deck.SinglePaneState
 import com.vitorpamplona.amethyst.desktop.ui.deck.Workspace
 import com.vitorpamplona.amethyst.desktop.ui.deck.WorkspaceManager
+import com.vitorpamplona.amethyst.desktop.ui.deck.param
 import com.vitorpamplona.amethyst.desktop.ui.media.LocalAwtWindow
 import com.vitorpamplona.amethyst.desktop.ui.media.LocalIsImmersiveFullscreen
 import com.vitorpamplona.amethyst.desktop.ui.media.LocalWindowState
@@ -256,15 +257,7 @@ fun main() {
                                     deckState.columns.value.map { col ->
                                         Workspace.WorkspaceColumn(
                                             typeKey = col.type.typeKey(),
-                                            param =
-                                                when (col.type) {
-                                                    is DeckColumnType.Hashtag -> col.type.tag
-                                                    is DeckColumnType.Editor -> col.type.draftSlug
-                                                    is DeckColumnType.Article -> col.type.addressTag
-                                                    is DeckColumnType.Profile -> col.type.pubKeyHex
-                                                    is DeckColumnType.Thread -> col.type.noteId
-                                                    else -> null
-                                                },
+                                            param = col.type.param(),
                                             width = col.width,
                                         )
                                     }
