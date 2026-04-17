@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isLocalHost
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -67,6 +68,12 @@ class KeyPackageRelayListEvent(
         suspend fun create(
             relays: List<NormalizedRelayUrl>,
             signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+        ): KeyPackageRelayListEvent = signer.sign(createdAt, KIND, createTagArray(relays), "")
+
+        fun create(
+            relays: List<NormalizedRelayUrl>,
+            signer: NostrSignerSync,
             createdAt: Long = TimeUtils.now(),
         ): KeyPackageRelayListEvent = signer.sign(createdAt, KIND, createTagArray(relays), "")
 

@@ -34,6 +34,7 @@ import com.vitorpamplona.amethyst.model.DefaultNIP65RelaySet
 import com.vitorpamplona.amethyst.model.DefaultSearchRelayList
 import com.vitorpamplona.amethyst.model.accountsCache.AccountCacheState
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
@@ -293,6 +294,7 @@ class AccountSessionManager(
                 accountSettings.backupContactList?.let { client.publish(it, toPost) }
                 accountSettings.backupNIP65RelayList?.let { client.publish(it, toPost) }
                 accountSettings.backupDMRelayList?.let { client.publish(it, toPost) }
+                accountSettings.backupKeyPackageRelayList?.let { client.publish(it, toPost) }
                 accountSettings.backupSearchRelayList?.let { client.publish(it, toPost) }
                 accountSettings.backupIndexRelayList?.let { client.publish(it, toPost) }
                 accountSettings.backupRelayFeedsList?.let { client.publish(it, toPost) }
@@ -317,6 +319,10 @@ class AccountSessionManager(
                 ),
             backupNIP65RelayList = AdvertisedRelayListEvent.create(DefaultNIP65List, tempSigner),
             backupDMRelayList = ChatMessageRelayListEvent.create(DefaultDMRelayList, tempSigner),
+            // MIP-00: advertise the default outbox relays as KeyPackage hosts
+            // so other users can discover and fetch this account's KeyPackage
+            // events without having to guess where they were published.
+            backupKeyPackageRelayList = KeyPackageRelayListEvent.create(DefaultNIP65RelaySet.toList(), tempSigner),
             backupSearchRelayList = SearchRelayListEvent.create(DefaultSearchRelayList.toList(), tempSigner),
             backupIndexRelayList = IndexerRelayListEvent.create(DefaultIndexerRelayList.toList(), tempSigner),
             backupChannelList = ChannelListEvent.create(emptyList(), DefaultChannels, tempSigner),
