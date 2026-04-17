@@ -270,6 +270,7 @@
         Remekül alkalmasak nyitott közösségek kialakítására bizonyos témák körül. Néhány ilyen csoport
     rövid élettartamú, ezért a csevegési üzenetek idővel eltűnnek</string>
     <string name="public_chat">Nyilvános csevegés</string>
+    <string name="marmot_group">MLS-csoport</string>
     <string name="public_chat_title">Nyilvános csevegés metaadatai</string>
     <string name="public_chat_explainer">A nyilvános csevegések mindenki számára láthatóak a Nostr-on, és bárki
         részt vehet bennük. Ezek kiválóan alkalmasak bizonyos témák köré szerveződő nyílt közösségek számára.
@@ -391,6 +392,7 @@
     <string name="pictures">Képek</string>
     <string name="shorts">Rövidek</string>
     <string name="longs">Videók</string>
+    <string name="articles">Cikkek</string>
     <string name="private_bookmarks">Privát könyvjelzők</string>
     <string name="public_bookmarks">Nyilvános könyvjelzők</string>
     <string name="add_to_private_bookmarks">Hozzáadás a privát könyvjelzőkhöz</string>
@@ -398,6 +400,7 @@
     <string name="remove_from_private_bookmarks">Törlés a privát könyvjelzőkből</string>
     <string name="remove_from_public_bookmarks">Törlés a nyilvános könyvjelzőkből</string>
     <string name="pinned_notes">Rögzített bejegyzések</string>
+    <string name="pinned_notes_explainer">Saját kitűzött bejegyzések</string>
     <string name="pin_to_profile">Rögzítés a profilhoz</string>
     <string name="unpin_from_profile">Rögzítés megszüntetése a profiltól</string>
     <string name="bookmark_lists">Könyvjelzőlisták</string>
@@ -698,7 +701,7 @@
     <string name="call_hangup">Hívás befejezése</string>
     <string name="call_accept">Elfogadás</string>
     <string name="call_reject">Elutasítás</string>
-    <string name="call_dismiss">Elvetés</string>
+    <string name="call_dismiss">Eltüntetés</string>
     <string name="call_mute">Némítás</string>
     <string name="call_unmute">Némítás megszüntetése</string>
     <string name="call_camera_on">Kamera bekapcsolása</string>
@@ -943,6 +946,7 @@
     <string name="geohash_exclusive_explainer">Csak a helyszín követői láthatják. Az általános követők nem fogják látni.</string>
     <string name="hashtag_exclusive">Kulcsszó-exkluzív bejegyzés</string>
     <string name="hashtag_exclusive_explainer">Csak a kulcsszó követői fogják látni, de az Ön általános követői viszont nem.</string>
+    <string name="long_form_reading_minutes">Olvasási idő: %1$d perc</string>
     <string name="loading_location">Helyszín betöltése…</string>
     <string name="lack_location_permissions">A helyszín-meghatározás nincs engedélyezve</string>
     <string name="add_sensitive_content_explainer">Hozzáadja az érzékeny tartalomra vonatkozó figyelmeztetést a tartalom megjelenítése előtt. Ez ideális bármilyen NSFW tartalom vagy olyan tartalom esetén, amelyet egyesek sértőnek vagy zavarónak találhatnak</string>
@@ -951,6 +955,7 @@
     <string name="new_feature_nip17_might_not_be_available_description">Ennek az üzemmódnak az aktiválásához az Amethystnek NIP-17 üzenetet kell küldenie (GiftWrapped, Sealed Direct és csoport-üzenetek). A NIP-17 új, és a legtöbb kliens még nem implementálta. Győződjön meg arról is, hogy a kedvezményezett kompatibilis klienst használ.</string>
     <string name="new_feature_nip17_activate">Aktiválás</string>
     <string name="messages_create_public_chat">Nyilvános</string>
+    <string name="messages_create_group">Csoport</string>
     <string name="messages_create_public_private_chat_description">Új nyilvános vagy privát csoport</string>
     <string name="messages_relay_based">Átjátszó</string>
     <string name="messages_new_message">Privát</string>
@@ -1559,7 +1564,7 @@
     <string name="retrying">Újrapróbálkozás…</string>
     <string name="retry">Újrapróbálkozás</string>
     <string name="view">Megtekintés</string>
-    <string name="dismiss">Elutasítás</string>
+    <string name="dismiss">Eltüntetés</string>
     <string name="share_of">%1$d/%2$d</string>
     <string name="broadcasting">Közvetítés</string>
     <string name="broadcasting_name">%1$s közvetítése</string>
@@ -1826,6 +1831,43 @@
     <string name="playback_actions_dialog_title">Lejátszás</string>
     <string name="video_quality_auto">Automatikus</string>
     <!-- HLS multi-resolution video sharing -->
+    <string name="share_hls_video">HLS-feltöltés</string>
+    <string name="share_hls_video_drawer_description">Többféle felbontású HLS- videó közzététele a médiakiszolgálókon</string>
+    <string name="hls_pick_video_primary">Videó kiválasztása</string>
+    <string name="hls_pick_video_helper">A videó több felbontásba lesz átkódolva, így a nézők bármilyen internet-kapcsolaton zökkenőmentes lejátszást kapnak.</string>
+    <string name="hls_change_video">Módosítás</string>
+    <string name="hls_title_label">Cím</string>
+    <string name="hls_title_placeholder">Adjon egy címet a videónak</string>
+    <string name="hls_description_label">Leírás</string>
+    <string name="hls_description_placeholder">Miról szól ez a video?</string>
+    <string name="hls_content_warning_reason_placeholder">Indoklás (nem kötelező)</string>
+    <string name="hls_codec_label">Kodek</string>
+    <string name="hls_codec_h265">H.265 (jobb tömörítés)</string>
+    <string name="hls_codec_h264">H.264</string>
+    <string name="hls_codec_fallback_notice">A H.265 nem érhető el ezen az eszközön – visszaállás H.264-re.</string>
+    <string name="hls_renditions_label">Felbontás-változatok</string>
+    <string name="hls_renditions_source_format">Forrás felbontása: %1$d×%2$d</string>
+    <string name="hls_renditions_produce_format">Létrehozásra kerül: %1$s</string>
+    <string name="hls_renditions_skipped_format">(%1$s kihagyva – forrás feletti)</string>
+    <string name="hls_rendition_bitrate_kbps_format">%1$d kbps</string>
+    <string name="hls_rendition_above_source">forrás feletti – ki lesz hagyva</string>
+    <string name="hls_publish_button">HD-videó közzététele</string>
+    <string name="hls_publishing_header_format">„%1$s” közzététele…</string>
+    <string name="hls_state_transcoding_format">%1$s átkódolása</string>
+    <string name="hls_state_uploading_idle">Feltöltés</string>
+    <string name="hls_state_uploading_format">%1$d/%2$d feltöltés</string>
+    <string name="hls_state_uploading_with_label_format">%1$s feltöltés (%2$d/%3$d)</string>
+    <string name="hls_state_uploaded_format">%1$d/%2$d feltöltve</string>
+    <string name="hls_state_publishing">Esemény közzététele…</string>
+    <string name="hls_state_success_title">Videó közzétéve</string>
+    <string name="hls_state_success_body">A HD-videó élesedett a Nostr-on.</string>
+    <string name="hls_state_failure_title">Valami hiba történt</string>
+    <string name="hls_view_note">Bejegyzés megtekintése</string>
+    <string name="hls_done">Kész</string>
+    <string name="hls_try_again">Próbálja újra</string>
+    <string name="hls_draft_note_after_upload">Bejegyzéspiszkozat feltöltés után</string>
+    <string name="hls_draft_note_after_upload_explainer">Bejegyzésszerkesztő megnyitása a címmel, leírással és videóhivatkozásokkal előre kitöltve, hogy a közzététel előtt finomíthasson rajta.</string>
+    <string name="hls_draft_note_button">Bejegyzéspiszkozat</string>
     <string name="pack_actions_dialog_title">Csomagműveletek</string>
     <string name="list_actions_dialog_title">Listaműveletek</string>
     <string name="bookmark_item_actions_dialog_title">Könyvjelző-műveletek</string>
@@ -1927,7 +1969,7 @@
     <string name="relay_management_loading">Átjátszókezelési funkciók betöltése…</string>
     <string name="relay_management_error">Nem sikerült kapcsolódni az átjátszókezeléshez</string>
     <string name="relay_management_no_methods">Nem érhető el kezelési eljárás</string>
-    <string name="relay_management_dismiss">Elvetés</string>
+    <string name="relay_management_dismiss">Eltüntetés</string>
     <string name="relay_management_tab_pubkeys">Felhasználók</string>
     <string name="relay_management_tab_events">Események</string>
     <string name="relay_management_tab_kinds">Típusok</string>
@@ -1988,7 +2030,7 @@
     <string name="ai_writing_setting_title">Javaslatok a szöveg javítására</string>
     <string name="ai_writing_setting_description">Az eszközön futó LLM-modell segítségével szövegjavításokkal és hangnemváltoztatásokkal kapcsolatos javaslatokat kaphat.</string>
     <string name="ai_writing_use_this">Ennek használata</string>
-    <string name="ai_writing_dismiss">Elvetés</string>
+    <string name="ai_writing_dismiss">Eltüntetés</string>
     <string name="ai_tone_correct">Javítás</string>
     <string name="ai_tone_rephrase">Újrafogalmazás</string>
     <string name="ai_tone_shorter">Rövidebb</string>
