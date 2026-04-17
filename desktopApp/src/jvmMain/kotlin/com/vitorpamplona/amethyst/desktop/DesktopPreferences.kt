@@ -69,6 +69,14 @@ object DesktopPreferences {
             prefs.put(KEY_LAYOUT_MODE, value)
         }
 
+    private const val KEY_WORKSPACES = "workspaces"
+
+    var workspaces: String
+        get() = prefs.get(KEY_WORKSPACES, "")
+        set(value) {
+            prefs.put(KEY_WORKSPACES, value)
+        }
+
     private const val KEY_PINNED_NAV_ITEMS = "pinned_nav_items"
 
     var pinnedNavItems: String

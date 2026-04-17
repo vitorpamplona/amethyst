@@ -256,6 +256,20 @@ class DeckState(
         }
     }
 
+    fun loadFromWorkspace(workspaceColumns: List<Workspace.WorkspaceColumn>) {
+        val loaded =
+            workspaceColumns.mapNotNull { col ->
+                val entry = mapOf("type" to col.typeKey, "param" to col.param)
+                val type = parseColumnType(entry) ?: return@mapNotNull null
+                DeckColumn(
+                    type = type,
+                    width = col.width.coerceIn(MIN_COLUMN_WIDTH, MAX_COLUMN_WIDTH),
+                )
+            }
+        _columns.value = loaded.ifEmpty { DEFAULT_COLUMNS }
+        _focusedColumnIndex.value = 0
+    }
+
     companion object {
         const val MIN_COLUMN_WIDTH = 300f
         const val MAX_COLUMN_WIDTH = 800f

@@ -59,6 +59,7 @@ import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -216,6 +217,8 @@ private class AppDrawerState {
 fun AppDrawer(
     openColumnTypes: Set<String>,
     pinnedNavBarState: PinnedNavBarState,
+    workspaceManager: WorkspaceManager,
+    onSwitchWorkspace: (Workspace) -> Unit,
     onSelectScreen: (DeckColumnType) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -306,7 +309,17 @@ fun AppDrawer(
                 if (state.awaitingHashtag) {
                     HashtagInputSection(state, onSelectScreen, onDismiss)
                 } else {
-                    DrawerGrid(state, openColumnTypes, pinnedNavBarState, onSelectScreen, onDismiss)
+                    Box(Modifier.weight(1f)) {
+                        DrawerGrid(state, openColumnTypes, pinnedNavBarState, onSelectScreen, onDismiss)
+                    }
+                    // Workspace bar at the bottom
+                    WorkspaceBar(
+                        workspaceManager = workspaceManager,
+                        onSwitchWorkspace = { ws ->
+                            onSwitchWorkspace(ws)
+                            onDismiss()
+                        },
+                    )
                 }
             }
         }
@@ -525,6 +538,50 @@ private fun HashtagInputSection(
             ) {
                 Text("Open")
             }
+        }
+    }
+}
+
+@Composable
+private fun WorkspaceBar(
+    workspaceManager: WorkspaceManager,
+    onSwitchWorkspace: (Workspace) -> Unit,
+) {
+    val workspaces by workspaceManager.workspaces.collectAsState()
+    val activeIndex by workspaceManager.activeIndex.collectAsState()
+
+    androidx.compose.material3.HorizontalDivider()
+
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            "Workspaces",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        workspaces.forEachIndexed { index, ws ->
+            val isActive = index == activeIndex
+            androidx.compose.material3.FilterChip(
+                selected = isActive,
+                onClick = {
+                    if (!isActive) {
+                        val switched = workspaceManager.switchTo(index)
+                        if (switched != null) onSwitchWorkspace(switched)
+                    }
+                },
+                label = { Text(ws.name, style = MaterialTheme.typography.labelSmall) },
+                leadingIcon = {
+                    Icon(
+                        WorkspaceIcons.resolve(ws.iconName),
+                        contentDescription = ws.name,
+                        modifier = Modifier.size(16.dp),
+                    )
+                },
+            )
         }
     }
 }

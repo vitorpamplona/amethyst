@@ -96,6 +96,7 @@ import com.vitorpamplona.amethyst.desktop.ui.deck.DeckState
 import com.vitorpamplona.amethyst.desktop.ui.deck.PinnedNavBarState
 import com.vitorpamplona.amethyst.desktop.ui.deck.SinglePaneLayout
 import com.vitorpamplona.amethyst.desktop.ui.deck.SinglePaneState
+import com.vitorpamplona.amethyst.desktop.ui.deck.WorkspaceManager
 import com.vitorpamplona.amethyst.desktop.ui.media.LocalAwtWindow
 import com.vitorpamplona.amethyst.desktop.ui.media.LocalIsImmersiveFullscreen
 import com.vitorpamplona.amethyst.desktop.ui.media.LocalWindowState
@@ -192,6 +193,7 @@ fun main() {
         var replyToNote by remember { mutableStateOf<com.vitorpamplona.quartz.nip01Core.core.Event?>(null) }
         val deckScope = rememberCoroutineScope()
         val deckState = remember { DeckState(deckScope).also { it.load() } }
+        val workspaceManager = remember { WorkspaceManager(deckScope).also { it.load() } }
         val accountManager = remember { AccountManager.create() }
         val accountState by accountManager.accountState.collectAsState()
         var showAppDrawer by remember { mutableStateOf(false) }
@@ -446,6 +448,7 @@ fun main() {
                     App(
                         layoutMode = layoutMode,
                         deckState = deckState,
+                        workspaceManager = workspaceManager,
                         accountManager = accountManager,
                         showComposeDialog = showComposeDialog,
                         showAppDrawer = showAppDrawer,
@@ -477,6 +480,7 @@ fun main() {
 fun App(
     layoutMode: LayoutMode,
     deckState: DeckState,
+    workspaceManager: WorkspaceManager,
     accountManager: AccountManager,
     showComposeDialog: Boolean,
     showAppDrawer: Boolean,
@@ -699,6 +703,7 @@ fun App(
                         MainContent(
                             layoutMode = layoutMode,
                             deckState = deckState,
+                            workspaceManager = workspaceManager,
                             singlePaneState = singlePaneState,
                             pinnedNavBarState = pinnedNavBarState,
                             relayManager = relayManager,
@@ -736,6 +741,10 @@ fun App(
                                     emptySet()
                                 },
                             pinnedNavBarState = pinnedNavBarState,
+                            workspaceManager = workspaceManager,
+                            onSwitchWorkspace = { ws ->
+                                deckState.loadFromWorkspace(ws.columns)
+                            },
                             onSelectScreen = { type ->
                                 when (layoutMode) {
                                     LayoutMode.DECK -> {
@@ -773,6 +782,7 @@ fun App(
 fun MainContent(
     layoutMode: LayoutMode,
     deckState: DeckState,
+    workspaceManager: WorkspaceManager,
     singlePaneState: SinglePaneState,
     pinnedNavBarState: PinnedNavBarState,
     relayManager: DesktopRelayConnectionManager,
