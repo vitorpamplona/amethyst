@@ -31,8 +31,11 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Re-assert stable release
-        if: github.event_name == 'release'
         uses: ./.github/actions/assert-stable-release
+        with:
+          tag: ${{ github.event.release.tag_name || inputs.tag }}
+          is_prerelease: ${{ github.event.release.prerelease || 'false' }}
+          is_draft: ${{ github.event.release.draft || 'false' }}
 
       - name: Bump cask (push-or-update PR)
         uses: macauley/action-homebrew-bump-cask@ad984534de44a9489a53aefd81eb77f87c70dc60  # v4.0.0

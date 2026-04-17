@@ -80,8 +80,8 @@ jobs:
           echo "version=$VER"   >> "$GITHUB_OUTPUT"
           echo "toml=$TOML_VER" >> "$GITHUB_OUTPUT"
 
-      - name: Install RPM tooling (linux families)
-        if: startsWith(matrix.family, 'linux')
+      - name: Install RPM tooling (deb+rpm leg only)
+        if: matrix.family == 'linux'
         run: sudo apt-get update && sudo apt-get install -y rpm fakeroot
 
       - name: Fetch linuxdeploy (linux-portable only, SHA-verified)
@@ -95,18 +95,12 @@ jobs:
             exit 1
           fi
           chmod +x packaging/appimage/linuxdeploy-x86_64.AppImage
-          # linuxdeploy needs FUSE; on newer runners, --appimage-extract-and-run is required.
-          # Bypass FUSE requirement by pre-extracting the AppImage.
-          (cd packaging/appimage && ./linuxdeploy-x86_64.AppImage --appimage-extract >/dev/null && \
-            mv squashfs-root linuxdeploy-extracted && \
-            ln -sf linuxdeploy-extracted/AppRun linuxdeploy-x86_64.bin && \
-            chmod +x linuxdeploy-x86_64.bin)
 
       - name: Build desktop artifacts
         uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08  # v3.0.2
         with:
           max_attempts: 2
-          timeout_minutes: 40
+          timeout_minutes: 15
           command: ./gradlew --no-daemon :desktopApp:${{ matrix.tasks }}
 
       - name: Build portable archives (windows + linux-portable)
@@ -127,11 +121,8 @@ jobs:
           set -euo pipefail
           # shellcheck source=scripts/asset-name.sh
           source scripts/asset-name.sh
-          # linux-portable family holds AppImage + tar.gz, but we re-tag with plain `linux` for the asset name.
-          FAMILY="${{ matrix.family }}"
-          [[ "$FAMILY" == "linux-portable" ]] && FAMILY="linux"
-          mkdir -p dist
-          collect_assets "$FAMILY" "${{ matrix.arch }}" "${{ steps.ver.outputs.version }}" dist
+          # collect_assets normalizes linux-portable → linux internally.
+          collect_assets "${{ matrix.family }}" "${{ matrix.arch }}" "${{ steps.ver.outputs.version }}" dist
 
       - name: Enforce asset size budget (1 GB per asset)
         run: |
@@ -155,10 +146,11 @@ jobs:
         id: classify
         run: |
           TAG="${{ steps.ver.outputs.tag }}"
-          if [[ "$TAG" =~ -(rc|beta|alpha|dev|dryrun|snapshot) ]]; then
-            echo "prerelease=true" >> "$GITHUB_OUTPUT"
-          else
+          # Stable = exactly vMAJOR.MINOR.PATCH; everything else is prerelease.
+          if [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Upload to GH Release (skip on dry-run)
@@ -170,7 +162,7 @@ jobs:
           prerelease: ${{ steps.classify.outputs.prerelease }}
           draft: false
           fail_on_unmatched_files: true
-          generate_release_notes: true
+          generate_release_notes: false  # Android job writes release notes (last-writer-wins race)
 
       - name: Dry-run summary
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run == 'true'
@@ -205,7 +197,7 @@ jobs:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: ${{ runner.os }}-android-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          key: ${{ runner.os }}-android-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties', 'gradle/libs.versions.toml') }}
           restore-keys: |
             ${{ runner.os }}-android-gradle-
 
@@ -213,7 +205,7 @@ jobs:
         run: ./gradlew clean bundleRelease --stacktrace
 
       - name: Sign AAB (Google Play)
-        uses: r0adkll/sign-android-release@v1
+        uses: r0adkll/sign-android-release@349ebdef58775b1e0d8099458af0816dc79b6407  # v1
         with:
           releaseDirectory: amethyst/build/outputs/bundle/playRelease
           signingKeyBase64: ${{ secrets.SIGNING_KEY }}
@@ -224,7 +216,7 @@ jobs:
           BUILD_TOOLS_VERSION: "36.0.0"
 
       - name: Sign AAB (F-Droid)
-        uses: r0adkll/sign-android-release@v1
+        uses: r0adkll/sign-android-release@349ebdef58775b1e0d8099458af0816dc79b6407  # v1
         with:
           releaseDirectory: amethyst/build/outputs/bundle/fdroidRelease
           signingKeyBase64: ${{ secrets.SIGNING_KEY }}
@@ -238,7 +230,7 @@ jobs:
         run: ./gradlew assembleRelease --stacktrace
 
       - name: Sign APK (Google Play)
-        uses: r0adkll/sign-android-release@v1
+        uses: r0adkll/sign-android-release@349ebdef58775b1e0d8099458af0816dc79b6407  # v1
         with:
           releaseDirectory: amethyst/build/outputs/apk/play/release
           signingKeyBase64: ${{ secrets.SIGNING_KEY }}
@@ -249,7 +241,7 @@ jobs:
           BUILD_TOOLS_VERSION: "36.0.0"
 
       - name: Sign APK (F-Droid)
-        uses: r0adkll/sign-android-release@v1
+        uses: r0adkll/sign-android-release@349ebdef58775b1e0d8099458af0816dc79b6407  # v1
         with:
           releaseDirectory: amethyst/build/outputs/apk/fdroid/release
           signingKeyBase64: ${{ secrets.SIGNING_KEY }}
@@ -288,10 +280,11 @@ jobs:
         id: classify
         run: |
           TAG="${GITHUB_REF_NAME}"
-          if [[ "$TAG" =~ -(rc|beta|alpha|dev|snapshot) ]]; then
-            echo "prerelease=true" >> "$GITHUB_OUTPUT"
-          else
+          # Stable = exactly vMAJOR.MINOR.PATCH; everything else is prerelease.
+          if [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Upload Android assets to GH Release

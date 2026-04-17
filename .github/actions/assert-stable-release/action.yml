@@ -2,9 +2,20 @@ name: Assert Stable Release
 description: >-
   Defense-in-depth guard for package-manager bump workflows. Re-validates
   tag format, prerelease flag, and draft status before invoking third-party
-  actions that hold write credentials to external package manager repos
-  (Homebrew, Winget, AUR, Scoop). Prevents RC builds from reaching stable
-  channels even if the `release.released` event gating is bypassed.
+  actions that hold write credentials to external package manager repos.
+
+inputs:
+  tag:
+    description: "Tag to validate (e.g. v1.08.0)"
+    required: true
+  is_prerelease:
+    description: "Whether the release is marked as prerelease (empty string treated as false)"
+    required: false
+    default: "false"
+  is_draft:
+    description: "Whether the release is a draft (empty string treated as false)"
+    required: false
+    default: "false"
 
 runs:
   using: composite
@@ -12,22 +23,16 @@ runs:
     - name: Assert release is stable
       shell: bash
       env:
-        TAG: ${{ github.event.release.tag_name }}
-        IS_PRERELEASE: ${{ github.event.release.prerelease }}
-        IS_DRAFT: ${{ github.event.release.draft }}
+        TAG: ${{ inputs.tag }}
+        IS_PRERELEASE: ${{ inputs.is_prerelease }}
+        IS_DRAFT: ${{ inputs.is_draft }}
       run: |
         set -euo pipefail
         echo "tag=$TAG prerelease=$IS_PRERELEASE draft=$IS_DRAFT"
 
-        # Reject prerelease suffix even if GitHub's flag says false.
-        if [[ "$TAG" =~ -(rc|beta|alpha|dev|snapshot) ]]; then
-          echo "::error::Tag $TAG contains prerelease suffix; refusing bump"
-          exit 1
-        fi
-
-        # Enforce strict vMAJOR.MINOR.PATCH format.
+        # Stable = exactly vMAJOR.MINOR.PATCH; reject everything else.
         if ! [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-          echo "::error::Tag $TAG does not match vMAJOR.MINOR.PATCH"
+          echo "::error::Tag $TAG does not match stable vMAJOR.MINOR.PATCH format; refusing bump"
           exit 1
         fi
 

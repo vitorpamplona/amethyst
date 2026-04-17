@@ -38,6 +38,8 @@ asset_name() {
 # Expects build outputs under desktopApp/build/... (Compose binaries + custom tasks + portable archives).
 collect_assets() {
     local family="$1" arch="$2" version="$3" dest="$4"
+    # Normalize internal matrix family aliases to canonical asset-name families.
+    [[ "$family" == "linux-portable" ]] && family="linux"
     mkdir -p "$dest"
     shopt -s nullglob
 

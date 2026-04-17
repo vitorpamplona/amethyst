@@ -9,10 +9,9 @@ plugins {
     id("ir.mahozad.vlc-setup") version "0.1.0"
 }
 
-// RPM rejects dashes in version strings — strip prerelease suffix for Linux RPM only.
-// Other formats accept full semver (DEB uses ~rc1, DMG/MSI accept bare versions).
+// RPM rejects dashes in version strings — replace with tilde (~) which RPM uses
+// for prerelease ordering: 1.08.0~rc1 < 1.08.0 per RPM version comparison rules.
 val appVersion: String = project.version.toString()
-val appVersionRpm: String = appVersion.substringBefore("-")
 
 sourceSets {
     main {
@@ -120,8 +119,8 @@ compose.desktop {
                 appCategory = "Network"
                 debMaintainer = "vitor@vitorpamplona.com"
                 rpmLicenseType = "MIT"
-                // RPM version field rejects dashes; strip prerelease suffix for RPM builds.
-                rpmPackageVersion = appVersionRpm
+                // RPM version: replace dashes with tilde (1.08.0~rc1 < 1.08.0 per RPM ordering).
+                rpmPackageVersion = appVersion.replace("-", "~")
             }
         }
     }
@@ -201,6 +200,7 @@ val createReleaseAppImage by tasks.registering(Exec::class) {
     )
     environment("OUTPUT", outFile.get().asFile.absolutePath)
     environment("ARCH", "x86_64")
-    // Suppress linuxdeploy's verbose library-scanner output; keep errors.
-    environment("LINUXDEPLOY_OUTPUT_VERSION", appVersion)
+    // Bypass FUSE requirement on CI runners (ubuntu-latest lacks libfuse.so.2).
+    // AppImage standard env var: extracts + runs without mounting.
+    environment("APPIMAGE_EXTRACT_AND_RUN", "1")
 }
