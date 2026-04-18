@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen
 
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -29,12 +30,14 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.feeds.FeedEmpty
 import com.vitorpamplona.amethyst.ui.feeds.FeedError
 import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
+import com.vitorpamplona.amethyst.ui.layouts.rememberMergedPadding
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.UserCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -47,13 +50,15 @@ fun RefreshingFeedUserFeedView(
     accountViewModel: AccountViewModel,
     nav: INav,
     enablePullRefresh: Boolean = true,
+    scaffoldPadding: PaddingValues = PaddingValues(0.dp),
 ) {
-    RefresheableBox(viewModel, enablePullRefresh) { UserFeedView(viewModel, accountViewModel, nav) }
+    RefresheableBox(viewModel, enablePullRefresh) { UserFeedView(viewModel, scaffoldPadding, accountViewModel, nav) }
 }
 
 @Composable
 fun UserFeedView(
     viewModel: UserFeedViewModel,
+    scaffoldPadding: PaddingValues = PaddingValues(0.dp),
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -70,7 +75,7 @@ fun UserFeedView(
             }
 
             is UserFeedState.Loaded -> {
-                FeedLoaded(state, accountViewModel, nav)
+                FeedLoaded(state, scaffoldPadding, accountViewModel, nav)
             }
 
             is UserFeedState.Loading -> {
@@ -83,6 +88,7 @@ fun UserFeedView(
 @Composable
 private fun FeedLoaded(
     state: UserFeedState.Loaded,
+    scaffoldPadding: PaddingValues,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -91,7 +97,7 @@ private fun FeedLoaded(
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = FeedPadding,
+        contentPadding = rememberMergedPadding(scaffoldPadding, FeedPadding),
         state = listState,
     ) {
         itemsIndexed(items, key = { _, item -> item.pubkeyHex }) { _, item ->

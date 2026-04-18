@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.default
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.MaterialTheme
@@ -37,7 +36,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
@@ -101,7 +99,7 @@ private fun RenderBookmarkScreen(
             Column {
                 TopBarWithBackButton(stringRes(id = R.string.bookmarks_title), nav::popBack)
                 SecondaryTabRow(
-                    containerColor = Color.Transparent,
+                    containerColor = MaterialTheme.colorScheme.background,
                     contentColor = MaterialTheme.colorScheme.onBackground,
                     selectedTabIndex = pagerState.currentPage,
                     modifier = TabRowHeight,
@@ -121,26 +119,26 @@ private fun RenderBookmarkScreen(
         },
         accountViewModel = accountViewModel,
     ) {
-        Column(Modifier.padding(it).fillMaxHeight()) {
-            HorizontalPager(state = pagerState) { page ->
-                when (page) {
-                    0 -> {
-                        RefresheableFeedView(
-                            privateFeedViewModel,
-                            null,
-                            accountViewModel = accountViewModel,
-                            nav = nav,
-                        )
-                    }
+        HorizontalPager(state = pagerState, modifier = Modifier.fillMaxHeight()) { page ->
+            when (page) {
+                0 -> {
+                    RefresheableFeedView(
+                        privateFeedViewModel,
+                        null,
+                        scaffoldPadding = it,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                }
 
-                    1 -> {
-                        RefresheableFeedView(
-                            publicFeedViewModel,
-                            null,
-                            accountViewModel = accountViewModel,
-                            nav = nav,
-                        )
-                    }
+                1 -> {
+                    RefresheableFeedView(
+                        publicFeedViewModel,
+                        null,
+                        scaffoldPadding = it,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
                 }
             }
         }

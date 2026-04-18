@@ -27,8 +27,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.calculateEndPadding
-import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
@@ -53,7 +51,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -78,6 +75,7 @@ import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.feeds.rememberForeverPagerState
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.layouts.rememberMergedPadding
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -314,16 +312,7 @@ fun FeedLoaded(
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
 
-    val layoutDirection = LocalLayoutDirection.current
-    val listPadding =
-        remember(scaffoldPadding, layoutDirection) {
-            PaddingValues(
-                start = scaffoldPadding.calculateStartPadding(layoutDirection),
-                top = scaffoldPadding.calculateTopPadding() + FeedPadding.calculateTopPadding(),
-                end = scaffoldPadding.calculateEndPadding(layoutDirection),
-                bottom = scaffoldPadding.calculateBottomPadding() + FeedPadding.calculateBottomPadding(),
-            )
-        }
+    val listPadding = rememberMergedPadding(scaffoldPadding, FeedPadding)
 
     LazyColumn(
         contentPadding = listPadding,

@@ -161,7 +161,6 @@ private fun PollsPages(
         accountViewModel = accountViewModel,
     ) {
         HorizontalPager(
-            contentPadding = it,
             state = pagerState,
             userScrollEnabled = true,
         ) { page ->
@@ -173,6 +172,7 @@ private fun PollsPages(
                         listState = listState,
                         nav = nav,
                         routeForLastRead = tabs[page].routeForLastRead,
+                        scaffoldPadding = it,
                     )
                 }
             }

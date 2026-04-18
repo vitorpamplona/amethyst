@@ -20,12 +20,9 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.pictures
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
@@ -81,25 +78,24 @@ fun PicturesScreen(
         },
         accountViewModel = accountViewModel,
     ) { paddingValues ->
-        Column(Modifier.padding(paddingValues)) {
-            RefresheableBox(picturesFeedContentState, true) {
-                SaveableFeedContentState(picturesFeedContentState, scrollStateKey = ScrollStateKeys.PICTURES_SCREEN) { listState ->
-                    RenderFeedContentState(
-                        feedContentState = picturesFeedContentState,
-                        accountViewModel = accountViewModel,
-                        listState = listState,
-                        nav = nav,
-                        routeForLastRead = "PicturesFeed",
-                        onLoaded = { loaded ->
-                            PictureFeedLoaded(
-                                loaded = loaded,
-                                listState = listState,
-                                accountViewModel = accountViewModel,
-                                nav = nav,
-                            )
-                        },
-                    )
-                }
+        RefresheableBox(picturesFeedContentState, true) {
+            SaveableFeedContentState(picturesFeedContentState, scrollStateKey = ScrollStateKeys.PICTURES_SCREEN) { listState ->
+                RenderFeedContentState(
+                    feedContentState = picturesFeedContentState,
+                    accountViewModel = accountViewModel,
+                    listState = listState,
+                    nav = nav,
+                    routeForLastRead = "PicturesFeed",
+                    onLoaded = { loaded ->
+                        PictureFeedLoaded(
+                            loaded = loaded,
+                            listState = listState,
+                            scaffoldPadding = paddingValues,
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                        )
+                    },
+                )
             }
         }
     }

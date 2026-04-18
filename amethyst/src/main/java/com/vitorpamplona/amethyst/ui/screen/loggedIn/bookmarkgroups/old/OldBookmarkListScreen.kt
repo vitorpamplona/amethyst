@@ -25,7 +25,6 @@ import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
@@ -154,26 +153,26 @@ private fun RenderOldBookmarkScreen(
         },
         accountViewModel = accountViewModel,
     ) {
-        Column(Modifier.padding(it).fillMaxHeight()) {
-            HorizontalPager(state = pagerState) { page ->
-                when (page) {
-                    0 -> {
-                        RefresheableFeedView(
-                            privateFeedViewModel,
-                            null,
-                            accountViewModel = accountViewModel,
-                            nav = nav,
-                        )
-                    }
+        HorizontalPager(state = pagerState, modifier = Modifier.fillMaxHeight()) { page ->
+            when (page) {
+                0 -> {
+                    RefresheableFeedView(
+                        privateFeedViewModel,
+                        null,
+                        scaffoldPadding = it,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                }
 
-                    1 -> {
-                        RefresheableFeedView(
-                            publicFeedViewModel,
-                            null,
-                            accountViewModel = accountViewModel,
-                            nav = nav,
-                        )
-                    }
+                1 -> {
+                    RefresheableFeedView(
+                        publicFeedViewModel,
+                        null,
+                        scaffoldPadding = it,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
                 }
             }
         }

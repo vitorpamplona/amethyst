@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.articles
 
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
@@ -29,8 +30,10 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
+import com.vitorpamplona.amethyst.ui.layouts.rememberMergedPadding
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.ChannelCardCompose
@@ -42,13 +45,14 @@ import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 fun ArticlesFeedLoaded(
     loaded: FeedState.Loaded,
     listState: LazyListState,
+    scaffoldPadding: PaddingValues = PaddingValues(0.dp),
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
 
     LazyColumn(
-        contentPadding = FeedPadding,
+        contentPadding = rememberMergedPadding(scaffoldPadding, FeedPadding),
         state = listState,
     ) {
         itemsIndexed(

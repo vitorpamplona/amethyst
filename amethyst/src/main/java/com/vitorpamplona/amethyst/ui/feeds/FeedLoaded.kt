@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.feeds
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
@@ -30,8 +31,10 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
+import com.vitorpamplona.amethyst.ui.layouts.rememberMergedPadding
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -46,11 +49,12 @@ fun FeedLoaded(
     routeForLastRead: String?,
     accountViewModel: AccountViewModel,
     nav: INav,
+    scaffoldPadding: PaddingValues = PaddingValues(0.dp),
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
 
     LazyColumn(
-        contentPadding = FeedPadding,
+        contentPadding = rememberMergedPadding(scaffoldPadding, FeedPadding),
         state = listState,
     ) {
         itemsIndexed(

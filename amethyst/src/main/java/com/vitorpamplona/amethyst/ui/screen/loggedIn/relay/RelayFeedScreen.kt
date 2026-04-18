@@ -21,8 +21,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relay
 
 import android.annotation.SuppressLint
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -105,14 +103,13 @@ fun RelayFeedScreen(
         },
         accountViewModel = accountViewModel,
     ) {
-        Column(Modifier.padding(it)) {
-            RefresheableFeedView(
-                feedViewModel,
-                null,
-                accountViewModel = accountViewModel,
-                nav = nav,
-            )
-        }
+        RefresheableFeedView(
+            feedViewModel,
+            null,
+            scaffoldPadding = it,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
     }
 }
 

@@ -23,9 +23,9 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.webBookmarks
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -81,6 +81,7 @@ import com.vitorpamplona.amethyst.ui.feeds.RenderFeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.layouts.rememberMergedPadding
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.ShorterTopAppBar
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
@@ -154,19 +155,17 @@ private fun RenderWebBookmarksScreen(
             }
         },
         accountViewModel = accountViewModel,
-    ) {
-        Column(Modifier.padding(it).fillMaxHeight()) {
-            RefresheableBox(feedState) {
-                SaveableFeedState(feedState, ScrollStateKeys.WEB_BOOKMARKS) { listState ->
-                    RenderFeedContentState(
-                        feedContentState = feedState,
-                        accountViewModel = accountViewModel,
-                        listState = listState,
-                        nav = nav,
-                        routeForLastRead = null,
-                        onLoaded = { WebBookmarksFeedLoaded(it, listState, accountViewModel, nav) },
-                    )
-                }
+    ) { scaffoldPadding ->
+        RefresheableBox(feedState) {
+            SaveableFeedState(feedState, ScrollStateKeys.WEB_BOOKMARKS) { listState ->
+                RenderFeedContentState(
+                    feedContentState = feedState,
+                    accountViewModel = accountViewModel,
+                    listState = listState,
+                    nav = nav,
+                    routeForLastRead = null,
+                    onLoaded = { WebBookmarksFeedLoaded(it, listState, scaffoldPadding, accountViewModel, nav) },
+                )
             }
         }
     }
@@ -176,13 +175,14 @@ private fun RenderWebBookmarksScreen(
 private fun WebBookmarksFeedLoaded(
     loaded: FeedState.Loaded,
     listState: LazyListState,
+    scaffoldPadding: PaddingValues,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
 
     LazyColumn(
-        contentPadding = FeedPadding,
+        contentPadding = rememberMergedPadding(scaffoldPadding, FeedPadding),
         state = listState,
     ) {
         itemsIndexed(items.list, key = { _, item -> item.idHex }) { _, item ->

@@ -20,15 +20,11 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.pinnednotes
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
@@ -79,14 +75,13 @@ private fun RenderPinnedNotesScreen(
         },
         accountViewModel = accountViewModel,
     ) {
-        Column(Modifier.padding(it).fillMaxHeight()) {
-            RefresheableFeedView(
-                pinnedNotesFeedViewModel,
-                null,
-                accountViewModel = accountViewModel,
-                nav = nav,
-            )
-        }
+        RefresheableFeedView(
+            pinnedNotesFeedViewModel,
+            null,
+            scaffoldPadding = it,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
     }
 }
 

@@ -21,12 +21,9 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications
 
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.consumeWindowInsets
-import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.ui.components.SelectNotificationProvider
@@ -92,17 +89,22 @@ fun NotificationScreen(
         },
         accountViewModel = accountViewModel,
     ) {
-        Column(
-            modifier = Modifier.padding(it).consumeWindowInsets(it),
-        ) {
-            ObserveInboxRelayListAndDisplayIfNotFound(accountViewModel, nav)
-            RefresheableBox(notifFeedContentState, true) {
-                val listState = rememberForeverLazyListState(ScrollStateKeys.NOTIFICATION_SCREEN)
+        RefresheableBox(notifFeedContentState, true) {
+            val listState = rememberForeverLazyListState(ScrollStateKeys.NOTIFICATION_SCREEN)
 
-                WatchScrollToTop(notifFeedContentState, listState)
+            WatchScrollToTop(notifFeedContentState, listState)
 
-                RenderCardFeed(notifFeedContentState, notifPolls, accountViewModel, listState, nav, "Notification", scrollToEventId)
-            }
+            RenderCardFeed(
+                feedContent = notifFeedContentState,
+                pollContent = notifPolls,
+                accountViewModel = accountViewModel,
+                listState = listState,
+                nav = nav,
+                routeForLastRead = "Notification",
+                scrollToEventId = scrollToEventId,
+                scaffoldPadding = it,
+                headerContent = { ObserveInboxRelayListAndDisplayIfNotFound(accountViewModel, nav) },
+            )
         }
     }
 }

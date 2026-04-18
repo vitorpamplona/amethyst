@@ -191,7 +191,6 @@ fun CommunityScreen(
         accountViewModel = accountViewModel,
     ) {
         HorizontalPager(
-            contentPadding = it,
             state = pagerState,
         ) { page ->
             when (page) {
@@ -199,6 +198,7 @@ fun CommunityScreen(
                     RefresheableFeedView(
                         feedViewModel,
                         null,
+                        scaffoldPadding = it,
                         accountViewModel = accountViewModel,
                         nav = nav,
                     )
@@ -208,6 +208,7 @@ fun CommunityScreen(
                     RefresheableFeedView(
                         modFeedViewModel,
                         null,
+                        scaffoldPadding = it,
                         accountViewModel = accountViewModel,
                         nav = nav,
                     )

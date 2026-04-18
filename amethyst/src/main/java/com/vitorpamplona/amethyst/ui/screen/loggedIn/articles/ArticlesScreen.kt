@@ -20,12 +20,9 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.articles
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
@@ -81,25 +78,24 @@ fun ArticlesScreen(
         },
         accountViewModel = accountViewModel,
     ) { paddingValues ->
-        Column(Modifier.padding(paddingValues)) {
-            RefresheableBox(articlesFeedContentState, true) {
-                SaveableFeedContentState(articlesFeedContentState, scrollStateKey = ScrollStateKeys.ARTICLES_SCREEN) { listState ->
-                    RenderFeedContentState(
-                        feedContentState = articlesFeedContentState,
-                        accountViewModel = accountViewModel,
-                        listState = listState,
-                        nav = nav,
-                        routeForLastRead = "ArticlesFeed",
-                        onLoaded = { loaded ->
-                            ArticlesFeedLoaded(
-                                loaded = loaded,
-                                listState = listState,
-                                accountViewModel = accountViewModel,
-                                nav = nav,
-                            )
-                        },
-                    )
-                }
+        RefresheableBox(articlesFeedContentState, true) {
+            SaveableFeedContentState(articlesFeedContentState, scrollStateKey = ScrollStateKeys.ARTICLES_SCREEN) { listState ->
+                RenderFeedContentState(
+                    feedContentState = articlesFeedContentState,
+                    accountViewModel = accountViewModel,
+                    listState = listState,
+                    nav = nav,
+                    routeForLastRead = "ArticlesFeed",
+                    onLoaded = { loaded ->
+                        ArticlesFeedLoaded(
+                            loaded = loaded,
+                            listState = listState,
+                            scaffoldPadding = paddingValues,
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                        )
+                    },
+                )
             }
         }
     }

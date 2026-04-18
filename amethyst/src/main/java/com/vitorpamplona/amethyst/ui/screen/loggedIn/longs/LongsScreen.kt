@@ -20,12 +20,9 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.longs
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
@@ -81,25 +78,24 @@ fun LongsScreen(
         },
         accountViewModel = accountViewModel,
     ) { paddingValues ->
-        Column(Modifier.padding(paddingValues)) {
-            RefresheableBox(longsFeedContentState, true) {
-                SaveableFeedContentState(longsFeedContentState, scrollStateKey = ScrollStateKeys.LONGS_SCREEN) { listState ->
-                    RenderFeedContentState(
-                        feedContentState = longsFeedContentState,
-                        accountViewModel = accountViewModel,
-                        listState = listState,
-                        nav = nav,
-                        routeForLastRead = "LongsFeed",
-                        onLoaded = { loaded ->
-                            LongsFeedLoaded(
-                                loaded = loaded,
-                                listState = listState,
-                                accountViewModel = accountViewModel,
-                                nav = nav,
-                            )
-                        },
-                    )
-                }
+        RefresheableBox(longsFeedContentState, true) {
+            SaveableFeedContentState(longsFeedContentState, scrollStateKey = ScrollStateKeys.LONGS_SCREEN) { listState ->
+                RenderFeedContentState(
+                    feedContentState = longsFeedContentState,
+                    accountViewModel = accountViewModel,
+                    listState = listState,
+                    nav = nav,
+                    routeForLastRead = "LongsFeed",
+                    onLoaded = { loaded ->
+                        LongsFeedLoaded(
+                            loaded = loaded,
+                            listState = listState,
+                            scaffoldPadding = paddingValues,
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                        )
+                    },
+                )
             }
         }
     }
