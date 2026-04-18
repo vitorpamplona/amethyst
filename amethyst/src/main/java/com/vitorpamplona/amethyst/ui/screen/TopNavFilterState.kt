@@ -34,6 +34,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
+import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -140,6 +141,7 @@ class TopNavFilterState(
         geotagList: Set<String>,
         communityList: List<AddressableNote>,
         relayList: Set<NormalizedRelayUrl>,
+        favoriteDvmList: List<AddressableNote>,
     ): List<FeedDefinition> {
         val hashtags =
             hashtagList.map {
@@ -173,7 +175,15 @@ class TopNavFilterState(
                 )
             }
 
-        return (communities + hashtags + geotags + relays).sortedBy { it.name.name() }
+        val favoriteDvms =
+            favoriteDvmList.map { dvmNote ->
+                FeedDefinition(
+                    TopFilter.FavoriteDvm(dvmNote.address),
+                    FavoriteDvmName(dvmNote),
+                )
+            }
+
+        return (communities + hashtags + geotags + relays + favoriteDvms).sortedBy { it.name.name() }
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -183,6 +193,7 @@ class TopNavFilterState(
             account.geohashList.flow,
             account.communityList.flowNotes,
             account.relayFeedsList.flow,
+            account.favoriteDvmList.flowNotes,
             ::mergeInterests,
         ).onStart {
             emit(
@@ -191,6 +202,7 @@ class TopNavFilterState(
                     account.geohashList.flow.value,
                     account.communityList.flowNotes.value,
                     account.relayFeedsList.flow.value,
+                    account.favoriteDvmList.flowNotes.value,
                 ),
             )
         }
@@ -296,6 +308,15 @@ class CommunityName(
     val note: AddressableNote,
 ) : Name() {
     override fun name() = "/n/${(note.dTag())}"
+}
+
+@Stable
+class FavoriteDvmName(
+    val note: AddressableNote,
+) : Name() {
+    override fun name(): String =
+        (note.event as? AppDefinitionEvent)?.appMetaData()?.name?.takeIf { it.isNotBlank() }
+            ?: note.dTag()
 }
 
 @Immutable

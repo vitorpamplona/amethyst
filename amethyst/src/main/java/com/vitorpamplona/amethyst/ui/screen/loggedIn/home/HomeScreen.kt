@@ -179,6 +179,7 @@ private fun HomePages(
         topBar = {
             Column {
                 HomeTopBar(accountViewModel, nav)
+                HomeDvmStatusBanner(accountViewModel, nav)
                 SecondaryTabRow(
                     containerColor = Color.Transparent,
                     contentColor = MaterialTheme.colorScheme.onBackground,

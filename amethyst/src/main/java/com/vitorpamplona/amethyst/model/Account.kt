@@ -38,6 +38,7 @@ import com.vitorpamplona.amethyst.commons.model.nip38UserStatuses.UserStatusActi
 import com.vitorpamplona.amethyst.commons.model.nip56Reports.ReportAction
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.logTime
+import com.vitorpamplona.amethyst.model.dvms.FavoriteDvmOrchestrator
 import com.vitorpamplona.amethyst.model.edits.PrivateStorageRelayListDecryptionCache
 import com.vitorpamplona.amethyst.model.edits.PrivateStorageRelayListState
 import com.vitorpamplona.amethyst.model.localRelays.ForwardKind0ToLocalRelayState
@@ -66,6 +67,8 @@ import com.vitorpamplona.amethyst.model.nip51Lists.blockedRelays.BlockedRelayLis
 import com.vitorpamplona.amethyst.model.nip51Lists.blockedRelays.BlockedRelayListState
 import com.vitorpamplona.amethyst.model.nip51Lists.broadcastRelays.BroadcastRelayListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.broadcastRelays.BroadcastRelayListState
+import com.vitorpamplona.amethyst.model.nip51Lists.favoriteDvmLists.FavoriteDvmListDecryptionCache
+import com.vitorpamplona.amethyst.model.nip51Lists.favoriteDvmLists.FavoriteDvmListState
 import com.vitorpamplona.amethyst.model.nip51Lists.geohashLists.GeohashListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.geohashLists.GeohashListState
 import com.vitorpamplona.amethyst.model.nip51Lists.hashtagLists.HashtagListDecryptionCache
@@ -134,6 +137,7 @@ import com.vitorpamplona.quartz.experimental.profileGallery.mimeType
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageUtils
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupStateStore
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -186,6 +190,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Request
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
@@ -322,6 +327,10 @@ class Account(
     val hashtagListDecryptionCache = HashtagListDecryptionCache(signer)
     val hashtagList = HashtagListState(signer, cache, hashtagListDecryptionCache, scope, settings)
 
+    val favoriteDvmListDecryptionCache = FavoriteDvmListDecryptionCache(signer)
+    val favoriteDvmList = FavoriteDvmListState(signer, cache, favoriteDvmListDecryptionCache, scope, settings)
+    val favoriteDvmOrchestrator = FavoriteDvmOrchestrator(this, scope)
+
     val geohashListDecryptionCache = GeohashListDecryptionCache(signer)
     val geohashList = GeohashListState(signer, cache, geohashListDecryptionCache, scope, settings)
 
@@ -417,6 +426,7 @@ class Account(
             caches = feedDecryptionCaches,
             signer = signer,
             scope = scope,
+            favoriteDvmOrchestrator = favoriteDvmOrchestrator,
         ).flow
 
     // App-ready Feeds
@@ -1011,6 +1021,12 @@ class Account(
     suspend fun followHashtag(tag: String) = sendMyPublicAndPrivateOutbox(hashtagList.follow(tag))
 
     suspend fun unfollowHashtag(tag: String) = sendMyPublicAndPrivateOutbox(hashtagList.unfollow(tag))
+
+    suspend fun followFavoriteDvm(dvm: AddressBookmark) = sendMyPublicAndPrivateOutbox(favoriteDvmList.follow(dvm))
+
+    suspend fun unfollowFavoriteDvm(dvm: Address) = sendMyPublicAndPrivateOutbox(favoriteDvmList.unfollow(dvm))
+
+    fun isFavoriteDvm(dvm: Address): Boolean = favoriteDvmList.flow.value.contains(dvm)
 
     suspend fun followGeohash(geohash: String) = sendMyPublicAndPrivateOutbox(geohashList.follow(geohash))
 

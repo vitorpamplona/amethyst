@@ -1728,7 +1728,16 @@
     <string name="feed_group_locations">Locations</string>
     <string name="feed_group_communities">Communities</string>
     <string name="feed_group_lists">Lists</string>
+    <string name="feed_group_dvms">DVMs</string>
     <string name="feed_group_relays">Relays</string>
+
+    <string name="add_dvm_to_favorites">Add DVM to favorites</string>
+    <string name="remove_dvm_from_favorites">Remove from favorites</string>
+    <string name="dvm_home_status_requesting">Asking %1$s for a feed…</string>
+    <string name="dvm_home_status_processing">Processing your feed…</string>
+    <string name="dvm_home_status_payment_required">This DVM requires payment</string>
+    <string name="dvm_home_status_error">DVM returned an error</string>
+    <string name="dvm_home_retry">Retry</string>
 
     <string name="temporary_account">Log off on device lock</string>
     <string name="private_message">Private Message</string>

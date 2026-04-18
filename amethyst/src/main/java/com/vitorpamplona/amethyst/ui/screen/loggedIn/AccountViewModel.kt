@@ -138,6 +138,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
 import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
@@ -1087,6 +1088,12 @@ class AccountViewModel(
     fun followHashtag(tag: String) = launchSigner { account.followHashtag(tag) }
 
     fun unfollowHashtag(tag: String) = launchSigner { account.unfollowHashtag(tag) }
+
+    fun followFavoriteDvm(dvm: AddressBookmark) = launchSigner { account.followFavoriteDvm(dvm) }
+
+    fun unfollowFavoriteDvm(dvm: Address) = launchSigner { account.unfollowFavoriteDvm(dvm) }
+
+    fun refreshFavoriteDvm(dvm: Address) = account.favoriteDvmOrchestrator.refresh(dvm)
 
     fun followRelayFeed(url: NormalizedRelayUrl) = launchSigner { account.followRelayFeed(url) }
 

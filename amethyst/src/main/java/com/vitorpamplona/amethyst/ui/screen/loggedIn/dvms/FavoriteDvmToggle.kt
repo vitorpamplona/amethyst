@@ -1,0 +1,82 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms
+
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.StarBorder
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
+
+@Composable
+fun FavoriteDvmToggle(
+    appDefinitionNote: AddressableNote,
+    accountViewModel: AccountViewModel,
+    modifier: Modifier = Modifier,
+) {
+    val favorites by accountViewModel.account.favoriteDvmList.flow
+        .collectAsStateWithLifecycle()
+
+    val isFavorite = favorites.contains(appDefinitionNote.address)
+
+    IconButton(
+        onClick = {
+            if (isFavorite) {
+                accountViewModel.unfollowFavoriteDvm(appDefinitionNote.address)
+            } else {
+                accountViewModel.followFavoriteDvm(
+                    AddressBookmark(
+                        address = appDefinitionNote.address,
+                        relayHint = appDefinitionNote.relayHintUrl(),
+                    ),
+                )
+            }
+        },
+        modifier = modifier,
+    ) {
+        if (isFavorite) {
+            Icon(
+                imageVector = Icons.Filled.Star,
+                contentDescription = stringRes(R.string.remove_dvm_from_favorites),
+                modifier = Size20Modifier,
+                tint = MaterialTheme.colorScheme.primary,
+            )
+        } else {
+            Icon(
+                imageVector = Icons.Outlined.StarBorder,
+                contentDescription = stringRes(R.string.add_dvm_to_favorites),
+                modifier = Size20Modifier,
+                tint = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+    }
+}

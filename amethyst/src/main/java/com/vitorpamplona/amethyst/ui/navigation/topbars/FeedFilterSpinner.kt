@@ -40,6 +40,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ViewList
 import androidx.compose.material.icons.automirrored.outlined.VolumeOff
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.Person
@@ -84,6 +85,7 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNo
 import com.vitorpamplona.amethyst.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.ui.note.creators.location.LoadCityName
 import com.vitorpamplona.amethyst.ui.screen.CommunityName
+import com.vitorpamplona.amethyst.ui.screen.FavoriteDvmName
 import com.vitorpamplona.amethyst.ui.screen.FeedDefinition
 import com.vitorpamplona.amethyst.ui.screen.GeoHashName
 import com.vitorpamplona.amethyst.ui.screen.HashtagName
@@ -100,6 +102,7 @@ import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
+import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import kotlinx.collections.immutable.ImmutableList
 
 @OptIn(ExperimentalPermissionsApi::class)
@@ -329,6 +332,20 @@ fun RenderOption(
                 color = MaterialTheme.colorScheme.onSurface,
             )
         }
+
+        is FavoriteDvmName -> {
+            val noteState by observeNote(option.note, accountViewModel)
+            val name =
+                (noteState.note.event as? AppDefinitionEvent)
+                    ?.appMetaData()
+                    ?.name
+                    ?.takeIf { it.isNotBlank() } ?: option.note.dTag()
+            Text(
+                text = name,
+                fontSize = Font14SP,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+        }
     }
 }
 
@@ -346,6 +363,7 @@ private enum class FeedGroup(
     COMMUNITIES(R.string.feed_group_communities),
     LOCATIONS(R.string.feed_group_locations),
     LISTS(R.string.feed_group_lists),
+    DVMS(R.string.feed_group_dvms),
     RELAYS(R.string.feed_group_relays),
 }
 
@@ -371,6 +389,10 @@ private fun groupFeedDefinitions(options: ImmutableList<FeedDefinition>): Map<Fe
 
             is GeoHashName -> {
                 FeedGroup.LOCATIONS
+            }
+
+            is FavoriteDvmName -> {
+                FeedGroup.DVMS
             }
 
             is ResourceName -> {
@@ -541,12 +563,17 @@ private fun FeedIcon(
                 Icons.AutoMirrored.Outlined.ViewList
             }
 
+            is TopFilter.FavoriteDvm -> {
+                Icons.Outlined.AutoAwesome
+            }
+
             else -> {
                 when (item.name) {
                     is GeoHashName -> Icons.Outlined.LocationOn
                     is RelayName -> Icons.Outlined.Storage
                     is CommunityName -> Icons.Outlined.Groups
                     is PeopleListName -> Icons.AutoMirrored.Outlined.ViewList
+                    is FavoriteDvmName -> Icons.Outlined.AutoAwesome
                     else -> Icons.Outlined.Person
                 }
             }

@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.model.topNavFeeds
 
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.TopFilter
+import com.vitorpamplona.amethyst.model.dvms.FavoriteDvmOrchestrator
 import com.vitorpamplona.amethyst.model.nip02FollowLists.Kind3FollowListState
 import com.vitorpamplona.amethyst.model.serverList.MergedFollowListsState
 import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsFeedFlow
@@ -30,6 +31,7 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.allUserFollows.Kind3UserFoll
 import com.vitorpamplona.amethyst.model.topNavFeeds.aroundMe.AroundMeFeedFlow
 import com.vitorpamplona.amethyst.model.topNavFeeds.aroundMe.GeohashFeedFlow
 import com.vitorpamplona.amethyst.model.topNavFeeds.chess.ChessFeedFlow
+import com.vitorpamplona.amethyst.model.topNavFeeds.favoriteDvm.FavoriteDvmFeedFlow
 import com.vitorpamplona.amethyst.model.topNavFeeds.global.GlobalFeedFlow
 import com.vitorpamplona.amethyst.model.topNavFeeds.hashtag.HashtagFeedFlow
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.NoteFeedFlow
@@ -62,6 +64,7 @@ class FeedTopNavFilterState(
     val caches: FeedDecryptionCaches,
     val signer: NostrSigner,
     val scope: CoroutineScope,
+    val favoriteDvmOrchestrator: FavoriteDvmOrchestrator,
 ) {
     fun loadFlowsFor(listName: TopFilter): IFeedFlowsType =
         when (listName) {
@@ -141,6 +144,15 @@ class FeedTopNavFilterState(
 
             is TopFilter.Relay -> {
                 RelayFeedFlow(listName.url.normalizeRelayUrl())
+            }
+
+            is TopFilter.FavoriteDvm -> {
+                FavoriteDvmFeedFlow(
+                    dvmAddress = listName.address,
+                    orchestrator = favoriteDvmOrchestrator,
+                    outboxRelays = followsRelays,
+                    proxyRelays = proxyRelays,
+                )
             }
         }
 
