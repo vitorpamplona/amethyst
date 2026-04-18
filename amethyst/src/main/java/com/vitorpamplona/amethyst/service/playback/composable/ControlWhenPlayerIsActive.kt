@@ -55,7 +55,7 @@ fun ControlWhenPlayerIsActive(
                 }
                 controller.play()
             }
-        } else {
+        } else if (controller.isPlaying) {
             // Pauses the video when it becomes invisible.
             // Destroys the video later when it Disposes the element
             // meanwhile if the user comes back, the position in the track is saved.
