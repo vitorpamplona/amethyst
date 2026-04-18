@@ -58,7 +58,7 @@ private fun PicturesTopNavFilterBar(
     accountViewModel: AccountViewModel,
     onChange: (FeedDefinition) -> Unit,
 ) {
-    val allLists by followListsModel.kind3GlobalPeople.collectAsStateWithLifecycle()
+    val allLists by followListsModel.kind3GlobalPeopleRoutes.collectAsStateWithLifecycle()
 
     FeedFilterSpinner(
         placeholderCode = listName,

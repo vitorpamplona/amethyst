@@ -59,10 +59,22 @@ class MarmotWelcomeSender(
     /**
      * Wrap Welcome bytes from a CommitResult for delivery to a new member.
      *
+     * ## MIP-02 ordering requirement
+     *
+     * The Commit that adds [recipientPubKey] to the group MUST be confirmed by
+     * relays BEFORE the Welcome leaves this machine, otherwise the new member
+     * can join at a stale epoch and the group forks. [awaitCommitAck] is called
+     * immediately before the gift-wrap step so callers can plumb their own
+     * relay-OK wait (or equivalent guarantee) through this function. Passing
+     * an empty block skips the wait and is only appropriate when the caller
+     * has already awaited Commit confirmation externally.
+     *
      * @param commitResult the result from MlsGroupManager.addMember()
      * @param recipientPubKey public key of the new member being invited
      * @param keyPackageEventId event ID of the KeyPackage that was consumed
      * @param relays relays where the new member should subscribe for GroupEvents
+     * @param awaitCommitAck suspend block invoked before wrapping; MUST not
+     *        return until relays have confirmed receipt of the Commit
      * @return the gift-wrapped event ready for publishing, or null if no Welcome in CommitResult
      */
     @OptIn(ExperimentalEncodingApi::class)
@@ -72,10 +84,13 @@ class MarmotWelcomeSender(
         keyPackageEventId: HexKey,
         relays: List<NormalizedRelayUrl>,
         nostrGroupId: HexKey? = null,
+        awaitCommitAck: suspend () -> Unit = {},
     ): WelcomeDelivery? {
         val welcomeBytes = commitResult.welcomeBytes ?: return null
 
         val welcomeBase64 = Base64.encode(welcomeBytes)
+
+        awaitCommitAck()
 
         val giftWrap =
             WelcomeGiftWrap.wrapForRecipient(
@@ -98,11 +113,14 @@ class MarmotWelcomeSender(
      *
      * Useful when the Welcome bytes are available separately from the
      * commit flow (e.g., re-sending a Welcome after a failed delivery).
+     * See [wrapWelcome] for the MIP-02 ordering contract on [awaitCommitAck].
      *
      * @param welcomeBytes raw MLS Welcome message bytes
      * @param recipientPubKey public key of the new member
      * @param keyPackageEventId event ID of the consumed KeyPackage
      * @param relays relays for the new member to subscribe to
+     * @param awaitCommitAck suspend block invoked before wrapping; MUST not
+     *        return until relays have confirmed receipt of the Commit
      * @return the gift-wrapped event ready for publishing
      */
     @OptIn(ExperimentalEncodingApi::class)
@@ -112,8 +130,11 @@ class MarmotWelcomeSender(
         keyPackageEventId: HexKey,
         relays: List<NormalizedRelayUrl>,
         nostrGroupId: HexKey? = null,
+        awaitCommitAck: suspend () -> Unit = {},
     ): WelcomeDelivery {
         val welcomeBase64 = Base64.encode(welcomeBytes)
+
+        awaitCommitAck()
 
         val giftWrap =
             WelcomeGiftWrap.wrapForRecipient(

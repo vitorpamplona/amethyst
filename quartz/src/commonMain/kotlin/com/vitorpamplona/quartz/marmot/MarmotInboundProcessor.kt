@@ -338,9 +338,30 @@ class MarmotInboundProcessor(
             ContentType.APPLICATION -> {
                 // MLS decrypt to get the inner plaintext
                 val decrypted = groupManager.decrypt(groupId, mlsMessage.toTlsBytes())
+                val innerJson = decrypted.content.decodeToString()
+
+                // MIP-03: if the inner application payload is a Nostr event,
+                // its `pubkey` field MUST equal the MLS sender's credential
+                // identity. Reject any mismatch — otherwise a group member
+                // could mint events claiming a different author. Non-event
+                // payloads (raw bytes via buildGroupEventFromBytes) bypass
+                // this check since there is no author field to verify.
+                val innerEvent =
+                    com.vitorpamplona.quartz.nip01Core.core.Event
+                        .fromJsonOrNull(innerJson)
+                if (innerEvent != null) {
+                    val senderIdentity = groupManager.memberIdentityHex(groupId, decrypted.senderLeafIndex)
+                    if (senderIdentity == null || innerEvent.pubKey != senderIdentity) {
+                        return GroupEventResult.Error(
+                            groupId,
+                            "MIP-03: inner event pubkey (${innerEvent.pubKey}) does not match MLS sender identity ($senderIdentity)",
+                        )
+                    }
+                }
+
                 GroupEventResult.ApplicationMessage(
                     groupId = groupId,
-                    innerEventJson = decrypted.content.decodeToString(),
+                    innerEventJson = innerJson,
                     senderLeafIndex = decrypted.senderLeafIndex,
                     epoch = decrypted.epoch,
                 )
@@ -461,7 +482,7 @@ class MarmotInboundProcessor(
         // Try current epoch key first
         try {
             val exporterKey = groupManager.exporterSecret(groupId)
-            return GroupEventEncryption.decrypt(encryptedContent, exporterKey, groupId)
+            return GroupEventEncryption.decrypt(encryptedContent, exporterKey)
         } catch (_: Exception) {
             // Current epoch key failed — try retained epoch keys
         }
@@ -470,7 +491,7 @@ class MarmotInboundProcessor(
         val retainedKeys = groupManager.retainedExporterSecrets(groupId)
         for (retainedKey in retainedKeys) {
             try {
-                return GroupEventEncryption.decrypt(encryptedContent, retainedKey, groupId)
+                return GroupEventEncryption.decrypt(encryptedContent, retainedKey)
             } catch (_: Exception) {
                 // This retained key didn't work — try the next one
             }
