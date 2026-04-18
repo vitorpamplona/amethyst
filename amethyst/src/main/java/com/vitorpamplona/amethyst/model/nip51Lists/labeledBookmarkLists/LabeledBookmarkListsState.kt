@@ -29,10 +29,13 @@ import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.filter
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.update
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.BookmarkIdTag
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.EventBookmark
 import com.vitorpamplona.quartz.nip51Lists.labeledBookmarkList.LabeledBookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.labeledBookmarkList.description
 import com.vitorpamplona.quartz.nip51Lists.labeledBookmarkList.image
@@ -296,6 +299,57 @@ class LabeledBookmarkListsState(
                 isPrivate = isBookmarkPrivate,
                 signer = account.signer,
             )
+        account.sendMyPublicAndPrivateOutbox(updatedList)
+    }
+
+    suspend fun removeDeletedBookmarksFromList(
+        bookmarkListIdentifier: String,
+        deletedEventIds: Set<String>,
+        deletedAddresses: Set<Address>,
+        account: Account,
+    ) {
+        if (deletedEventIds.isEmpty() && deletedAddresses.isEmpty()) return
+
+        val currentList = getLabeledBookmarkListNote(bookmarkListIdentifier)?.event as? LabeledBookmarkListEvent ?: return
+
+        val newPublicTags =
+            currentList.tags
+                .filter { tag ->
+                    when (val bookmark = BookmarkIdTag.parse(tag)) {
+                        is EventBookmark -> bookmark.eventId !in deletedEventIds
+                        is AddressBookmark -> bookmark.address !in deletedAddresses
+                        null -> true
+                    }
+                }.toTypedArray()
+
+        val oldPrivateTags = currentList.privateTags(account.signer)
+
+        val updatedList =
+            if (oldPrivateTags == null) {
+                if (newPublicTags.size == currentList.tags.size) return
+                LabeledBookmarkListEvent.resign(
+                    content = currentList.content,
+                    tags = newPublicTags,
+                    signer = account.signer,
+                )
+            } else {
+                val newPrivateTags =
+                    oldPrivateTags
+                        .filter { tag ->
+                            when (val bookmark = BookmarkIdTag.parse(tag)) {
+                                is EventBookmark -> bookmark.eventId !in deletedEventIds
+                                is AddressBookmark -> bookmark.address !in deletedAddresses
+                                null -> true
+                            }
+                        }.toTypedArray()
+                if (newPublicTags.size == currentList.tags.size && newPrivateTags.size == oldPrivateTags.size) return
+                LabeledBookmarkListEvent.resign(
+                    tags = newPublicTags,
+                    privateTags = newPrivateTags,
+                    signer = account.signer,
+                )
+            }
+
         account.sendMyPublicAndPrivateOutbox(updatedList)
     }
 }

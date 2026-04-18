@@ -919,6 +919,10 @@ class AccountViewModel(
         }
     }
 
+    fun removeDeletedPins(deletedNotes: Set<Note>) {
+        launchSigner { account.removeDeletedPins(deletedNotes) }
+    }
+
     fun addPrivateBookmark(note: Note) {
         if (settings.isCompleteUIMode()) {
             launchSigner {
@@ -986,6 +990,20 @@ class AccountViewModel(
         } else {
             launchSigner { account.removeBookmark(note, false) }
         }
+    }
+
+    fun removeDeletedBookmarks(
+        deletedEventIds: Set<String>,
+        deletedAddresses: Set<Address>,
+    ) {
+        launchSigner { account.removeDeletedBookmarks(deletedEventIds, deletedAddresses) }
+    }
+
+    fun removeDeletedOldBookmarks(
+        deletedEventIds: Set<String>,
+        deletedAddresses: Set<Address>,
+    ) {
+        launchSigner { account.removeDeletedOldBookmarks(deletedEventIds, deletedAddresses) }
     }
 
     fun broadcast(note: Note) = launchSigner { account.broadcast(note) }

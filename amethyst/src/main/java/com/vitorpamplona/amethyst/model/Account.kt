@@ -134,6 +134,7 @@ import com.vitorpamplona.quartz.experimental.profileGallery.mimeType
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageUtils
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupStateStore
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -2195,6 +2196,24 @@ class Account(
         }
     }
 
+    suspend fun removeDeletedBookmarks(
+        deletedEventIds: Set<String>,
+        deletedAddresses: Set<Address>,
+    ) {
+        if (!isWriteable()) return
+        val event = bookmarkState.removeDeletedBookmarks(deletedEventIds, deletedAddresses) ?: return
+        sendMyPublicAndPrivateOutbox(event)
+    }
+
+    suspend fun removeDeletedOldBookmarks(
+        deletedEventIds: Set<String>,
+        deletedAddresses: Set<Address>,
+    ) {
+        if (!isWriteable()) return
+        val event = oldBookmarkState.removeDeletedBookmarks(deletedEventIds, deletedAddresses) ?: return
+        sendMyPublicAndPrivateOutbox(event)
+    }
+
     /**
      * Creates a bookmark event without sending it.
      * Returns the event and target relays for tracked broadcasting.
@@ -2681,7 +2700,6 @@ class Account(
                     peopleLists.deletedNotes(deletedNotes)
                     followLists.deletedNotes(deletedNotes)
                     labeledBookmarkLists.deletedNotes(deletedNotes)
-                    removeDeletedPins(deletedNotes)
                 }
             }
         }
