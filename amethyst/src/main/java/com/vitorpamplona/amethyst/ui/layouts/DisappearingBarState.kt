@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.layouts
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
@@ -68,12 +69,15 @@ class DisappearingBarState(
 
     /**
      * Snaps both bars to the nearest edge (fully shown or fully hidden).
-     * Used after a fling to resolve the "mid-way" state without a decay animation.
+     *
+     * If [initialVelocityY] is non-zero the spring continues the fling's motion rather than
+     * starting from rest, avoiding the "extra animation at the end of the fling" feel. The
+     * velocity is in content-space (negative = hide direction, positive = reveal direction).
      */
-    suspend fun snapToNearestEdge() {
+    suspend fun settleToNearestEdge(initialVelocityY: Float = 0f) {
         coroutineScope {
-            launch { snapOne(topHeightLimit, { topHeightOffset }) { topHeightOffset = it } }
-            launch { snapOne(bottomHeightLimit, { bottomHeightOffset }) { bottomHeightOffset = it } }
+            launch { settleOne({ topHeightOffset }, topHeightLimit, initialVelocityY) { topHeightOffset = it } }
+            launch { settleOne({ bottomHeightOffset }, bottomHeightLimit, initialVelocityY) { bottomHeightOffset = it } }
         }
     }
 
@@ -82,37 +86,60 @@ class DisappearingBarState(
      */
     suspend fun resetToVisible() {
         coroutineScope {
-            launch { animateOne({ topHeightOffset }, 0f) { topHeightOffset = it } }
-            launch { animateOne({ bottomHeightOffset }, 0f) { bottomHeightOffset = it } }
+            launch { animateOne({ topHeightOffset }, 0f, 0f) { topHeightOffset = it } }
+            launch { animateOne({ bottomHeightOffset }, 0f, 0f) { bottomHeightOffset = it } }
         }
     }
 
-    private suspend fun snapOne(
-        limit: Float,
+    private suspend fun settleOne(
         get: () -> Float,
+        limit: Float,
+        initialVelocityY: Float,
         set: (Float) -> Unit,
     ) {
         if (limit <= 0f) return
         val current = get()
         if (current >= 0f || current <= -limit) return
-        val target = if (-current < limit / 2f) 0f else -limit
-        animateOne(get, target, set)
+
+        // Decide target edge from position by default, but let a strong velocity bias it.
+        val positionBiasToHide = -current > limit / 2f
+        val target =
+            when {
+                initialVelocityY < -VELOCITY_BIAS_THRESHOLD -> -limit
+                initialVelocityY > VELOCITY_BIAS_THRESHOLD -> 0f
+                positionBiasToHide -> -limit
+                else -> 0f
+            }
+        animateOne(get, target, initialVelocityY, set)
     }
 
     private suspend fun animateOne(
         get: () -> Float,
         target: Float,
+        initialVelocity: Float,
         set: (Float) -> Unit,
     ) {
         val start = get()
-        if (start == target) return
+        if (start == target && initialVelocity == 0f) return
         Animatable(start)
-            .animateTo(target, animationSpec = spring(stiffness = 600f)) {
+            .animateTo(
+                targetValue = target,
+                animationSpec = SETTLE_SPRING,
+                initialVelocity = initialVelocity,
+            ) {
                 set(value)
             }
     }
 
     companion object {
+        private const val VELOCITY_BIAS_THRESHOLD = 200f
+
+        private val SETTLE_SPRING =
+            spring<Float>(
+                dampingRatio = Spring.DampingRatioNoBouncy,
+                stiffness = Spring.StiffnessMediumLow,
+            )
+
         val Saver: Saver<DisappearingBarState, *> =
             Saver(
                 save = { listOf(it.topHeightOffset, it.bottomHeightOffset) },

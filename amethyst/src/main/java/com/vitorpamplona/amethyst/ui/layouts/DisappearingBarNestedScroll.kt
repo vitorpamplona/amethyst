@@ -29,13 +29,12 @@ import androidx.compose.ui.unit.Velocity
  * Single nested-scroll connection that hides/reveals the top and bottom bars together.
  *
  * Behaviour:
- *  - onPreScroll: on "hide" deltas, consumes exactly the amount used to shift the bars
- *    (never over-claims the available delta). This avoids the list "swallowing" pixels
- *    at the edge of the bars' travel range.
- *  - onPostScroll: on "reveal" deltas still available after the list consumed its share,
- *    moves the bars back in; again consumes only what it used.
- *  - onPostFling: snaps mid-way bars to the nearest edge. No additional decay. No
- *    phantom velocity is returned upward.
+ *  - onPreScroll: consumes the portion of the scroll delta used to move the bars
+ *    (both hide and reveal), returning the exact amount absorbed so the list never
+ *    "loses pixels" at the edge of the bars' travel range.
+ *  - onPostFling: snaps a mid-way bar to the nearest edge, continuing the fling's
+ *    tail velocity so the settle motion feels like part of the fling, not a second
+ *    animation after it. No velocity is returned upward.
  */
 class DisappearingBarNestedScroll(
     private val state: DisappearingBarState,
@@ -47,25 +46,9 @@ class DisappearingBarNestedScroll(
         source: NestedScrollSource,
     ): Offset {
         if (!canScroll()) return Offset.Zero
+        if (available.y == 0f) return Offset.Zero
+
         val deltaY = if (reverseLayout) -available.y else available.y
-        // Only hide on "hide" direction in the pre-scroll phase.
-        if (deltaY >= 0f) return Offset.Zero
-
-        val consumed = applyDelta(deltaY)
-        if (consumed == 0f) return Offset.Zero
-        return Offset(0f, if (reverseLayout) -consumed else consumed)
-    }
-
-    override fun onPostScroll(
-        consumed: Offset,
-        available: Offset,
-        source: NestedScrollSource,
-    ): Offset {
-        if (!canScroll()) return Offset.Zero
-        val deltaY = if (reverseLayout) -available.y else available.y
-        // Only reveal on "reveal" direction in the post-scroll phase.
-        if (deltaY <= 0f) return Offset.Zero
-
         val applied = applyDelta(deltaY)
         if (applied == 0f) return Offset.Zero
         return Offset(0f, if (reverseLayout) -applied else applied)
@@ -75,17 +58,23 @@ class DisappearingBarNestedScroll(
         consumed: Velocity,
         available: Velocity,
     ): Velocity {
-        if (canScroll()) state.snapToNearestEdge()
-        // Do not propagate phantom velocity back up the nested-scroll tree.
+        if (canScroll()) {
+            // Feed the fling's remaining velocity into the settle so the bar keeps
+            // moving in the same direction rather than starting a fresh animation.
+            val velocityY = if (reverseLayout) -available.y else available.y
+            state.settleToNearestEdge(initialVelocityY = velocityY)
+        }
+        // Swallow any residual velocity so parents don't get a phantom fling kick.
         return Velocity.Zero
     }
 
     /**
-     * Applies the given delta (in "content-space" – negative hides, positive reveals) to
+     * Applies the given delta (in content-space – negative hides, positive reveals) to
      * both bar offsets, clamped to their travel range.
      *
-     * Returns the delta that was actually absorbed (in the same sign convention) so the
-     * caller can report accurate consumption upward.
+     * Returns the delta that was actually absorbed, using the side with the larger
+     * absorption so consumption reporting remains accurate when the two bars have
+     * different remaining travel.
      */
     private fun applyDelta(deltaY: Float): Float {
         val prevTop = state.topHeightOffset
@@ -98,8 +87,6 @@ class DisappearingBarNestedScroll(
         state.topHeightOffset = newTop
         state.bottomHeightOffset = newBottom
 
-        // If either bar moved we consider that portion consumed. Use the largest absorbed
-        // magnitude so we don't claim more than one bar's worth of pixels.
         val topDelta = newTop - prevTop
         val bottomDelta = newBottom - prevBottom
         return if (deltaY < 0f) minOf(topDelta, bottomDelta) else maxOf(topDelta, bottomDelta)
