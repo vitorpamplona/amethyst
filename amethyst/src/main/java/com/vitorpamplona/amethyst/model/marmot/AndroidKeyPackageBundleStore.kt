@@ -100,8 +100,9 @@ class AndroidKeyPackageBundleStore(
             mutex.withLock {
                 val file = stateFile()
                 if (file.exists()) {
-                    Log.w(TAG) { "delete(): removing ${file.absolutePath}" }
-                    file.delete()
+                    if (!file.delete()) {
+                        Log.w(TAG) { "delete(): failed to remove ${file.absolutePath}" }
+                    }
                 }
             }
         }

@@ -28,8 +28,11 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.uploads.MediaUploadResult
 import com.vitorpamplona.amethyst.service.uploads.hls.HlsBlobUploaderFactory
 import com.vitorpamplona.amethyst.service.uploads.hls.HlsVideoEventTemplate
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.flow.MutableStateFlow
 import java.io.File
+
+private const val TAG = "HlsPublishOrchestratorFactory"
 
 /**
  * Production wiring for [HlsPublishOrchestrator]. Binds the upload closure to
@@ -69,7 +72,9 @@ fun createProductionHlsPublishOrchestrator(
                 // "N-1 of N" → "N of N" is enough signal.
                 uploader.upload(masterFile, HlsContentTypes.HLS_PLAYLIST) { _, _ -> }
             } finally {
-                masterFile.delete()
+                if (!masterFile.delete()) {
+                    Log.w(TAG) { "uploadMaster: failed to delete temp file ${masterFile.absolutePath}" }
+                }
             }
         },
         signAndPublish = { template ->
