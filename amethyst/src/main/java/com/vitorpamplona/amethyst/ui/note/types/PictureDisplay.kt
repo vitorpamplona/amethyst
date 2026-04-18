@@ -39,12 +39,13 @@ import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.AutoNonlazyGrid
+import com.vitorpamplona.amethyst.ui.components.SensitivityWarningOverBlurhashGrid
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
+import com.vitorpamplona.amethyst.ui.components.collectPictureReasons
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
-import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarningReason
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitiveOrNSFW
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import kotlinx.collections.immutable.toImmutableList
@@ -62,7 +63,8 @@ fun PictureDisplay(
     val event = (note.event as? PictureEvent) ?: return
     val uri = note.toNostrUri()
     val isSensitive = event.isSensitiveOrNSFW()
-    val contentWarning = event.contentWarningReason()
+    val reasons = collectPictureReasons(event)
+    val inGrid = event.imetaTags().size > 1
 
     val images by
         remember(note) {
@@ -77,8 +79,8 @@ fun PictureDisplay(
                             blurhash = it.blurhash,
                             dim = it.dimension,
                             uri = uri,
-                            contentWarning = contentWarning,
-                            isSensitive = isSensitive,
+                            contentWarning = reasons.firstOrNull(),
+                            isSensitive = isSensitive && !inGrid,
                             mimeType = it.mimeType,
                         )
                     }.toImmutableList(),
@@ -112,14 +114,21 @@ fun PictureDisplay(
                     accountViewModel = accountViewModel,
                 )
             } else {
-                AutoNonlazyGrid(images.size) {
-                    ZoomableContentView(
-                        content = images[it],
-                        images = images,
-                        roundedCorner = roundedCorner,
-                        contentScale = ContentScale.Crop,
-                        accountViewModel = accountViewModel,
-                    )
+                SensitivityWarningOverBlurhashGrid(
+                    isSensitive = isSensitive,
+                    reasons = reasons,
+                    media = images,
+                    accountViewModel = accountViewModel,
+                ) {
+                    AutoNonlazyGrid(images.size) {
+                        ZoomableContentView(
+                            content = images[it],
+                            images = images,
+                            roundedCorner = roundedCorner,
+                            contentScale = ContentScale.Crop,
+                            accountViewModel = accountViewModel,
+                        )
+                    }
                 }
             }
 

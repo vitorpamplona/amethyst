@@ -153,7 +153,7 @@ fun ZoomableContentView(
             val ratio = content.dim?.aspectRatio() ?: MediaAspectRatioCache.get(content.url)
             SensitivityWarningOverBlurhash(
                 isSensitive = content.isSensitive,
-                reason = content.contentWarning,
+                reasons = setOfNotNull(content.contentWarning),
                 blurhash = content.blurhash,
                 ratio = ratio,
                 description = content.description,
@@ -177,7 +177,7 @@ fun ZoomableContentView(
             val ratio = content.dim?.aspectRatio() ?: MediaAspectRatioCache.get(content.url)
             SensitivityWarningOverBlurhash(
                 isSensitive = content.isSensitive,
-                reason = content.contentWarning,
+                reasons = setOfNotNull(content.contentWarning),
                 blurhash = content.blurhash,
                 ratio = ratio,
                 description = content.description,

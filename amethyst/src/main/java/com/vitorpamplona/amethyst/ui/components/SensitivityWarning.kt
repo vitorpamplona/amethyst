@@ -24,6 +24,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -35,6 +36,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.rounded.Warning
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -60,6 +63,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.imageLoader
 import coil3.request.ImageRequest
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -69,8 +73,10 @@ import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
 import com.vitorpamplona.amethyst.ui.theme.PaddingHorizontal12Modifier
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip36SensitiveContent.ContentWarningTag
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarningReason
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitiveOrNSFW
+import com.vitorpamplona.quartz.nip92IMeta.imetas
 
 @Composable
 fun SensitivityWarning(
@@ -113,7 +119,7 @@ fun SensitivityWarning(
 @Composable
 fun SensitivityWarningOverBlurhash(
     isSensitive: Boolean,
-    reason: String?,
+    reasons: Set<String>,
     blurhash: String?,
     ratio: Float?,
     description: String?,
@@ -143,10 +149,47 @@ fun SensitivityWarningOverBlurhash(
     CrossfadeIfEnabled(targetState = showContentWarningNote, accountViewModel = accountViewModel) {
         if (it) {
             if (blurhash != null) {
-                ContentWarningOverBlurhash(reason, blurhash, ratio, description, contentScale) { showContentWarningNote = false }
+                ContentWarningOverBlurhash(reasons, blurhash, ratio, description, contentScale) { showContentWarningNote = false }
             } else {
-                ContentWarningNote(reason) { showContentWarningNote = false }
+                ContentWarningNote(reasons.firstOrNull()) { showContentWarningNote = false }
             }
+        } else {
+            content()
+        }
+    }
+}
+
+@Composable
+fun SensitivityWarningOverBlurhashGrid(
+    isSensitive: Boolean,
+    reasons: Set<String>,
+    media: List<MediaUrlImage>,
+    accountViewModel: AccountViewModel,
+    content: @Composable () -> Unit,
+) {
+    if (!isSensitive || media.isEmpty()) {
+        content()
+        return
+    }
+
+    val accountState = accountViewModel.showSensitiveContent().collectAsStateWithLifecycle()
+
+    var showContentWarningNote by remember(accountState) { mutableStateOf(accountState.value != true) }
+
+    if (showContentWarningNote) {
+        val context = LocalContext.current
+        LaunchedEffect(media) {
+            media.forEach { item ->
+                runCatching {
+                    context.imageLoader.enqueue(ImageRequest.Builder(context).data(item.url).build())
+                }
+            }
+        }
+    }
+
+    CrossfadeIfEnabled(targetState = showContentWarningNote, accountViewModel = accountViewModel) {
+        if (it) {
+            ContentWarningOverBlurhashGrid(reasons, media) { showContentWarningNote = false }
         } else {
             content()
         }
@@ -201,7 +244,22 @@ fun ContentWarningNoteWithBigReasonPreview() {
 fun ContentWarningOverBlurhashPreview() {
     ThemeComparisonColumn {
         ContentWarningOverBlurhash(
-            reason = "Spoilers",
+            reasons = setOf("Spoilers"),
+            blurhash = "LEHV6nWB2yk8pyo0adR*.7kCMdnj",
+            ratio = 16f / 9f,
+            description = null,
+            contentScale = ContentScale.FillWidth,
+            onDismiss = {},
+        )
+    }
+}
+
+@Preview
+@Composable
+fun ContentWarningOverBlurhashMultiReasonPreview() {
+    ThemeComparisonColumn {
+        ContentWarningOverBlurhash(
+            reasons = setOf("Spoilers", "Violence", "Nudity"),
             blurhash = "LEHV6nWB2yk8pyo0adR*.7kCMdnj",
             ratio = 16f / 9f,
             description = null,
@@ -213,7 +271,7 @@ fun ContentWarningOverBlurhashPreview() {
 
 @Composable
 fun ContentWarningOverBlurhash(
-    reason: String?,
+    reasons: Set<String>,
     blurhash: String,
     ratio: Float?,
     description: String?,
@@ -234,67 +292,118 @@ fun ContentWarningOverBlurhash(
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize(),
         )
+        ContentWarningOverlayBody(reasons, onDismiss)
+    }
+}
 
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.35f)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Column(
-                modifier = Modifier.padding(horizontal = 12.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Box(
-                    Modifier
-                        .height(80.dp)
-                        .width(90.dp),
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Visibility,
-                        contentDescription = stringRes(R.string.content_warning),
-                        modifier =
-                            Modifier
-                                .size(70.dp)
-                                .align(Alignment.BottomStart),
-                        tint = Color.White,
-                    )
-                    Icon(
-                        imageVector = Icons.Rounded.Warning,
-                        contentDescription = stringRes(R.string.content_warning),
-                        modifier =
-                            Modifier
-                                .size(30.dp)
-                                .align(Alignment.TopEnd),
-                        tint = Color.White,
-                    )
-                }
-
-                Text(
-                    text =
-                        if (reason.isNullOrBlank()) {
-                            stringRes(R.string.content_warning)
-                        } else {
-                            stringRes(R.string.content_warning_with_reason, reason)
-                        },
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp,
-                    color = Color.White,
-                    softWrap = true,
-                    textAlign = TextAlign.Center,
+@Composable
+fun ContentWarningOverBlurhashGrid(
+    reasons: Set<String>,
+    media: List<MediaUrlImage>,
+    onDismiss: () -> Unit,
+) {
+    Box(modifier = Modifier.fillMaxWidth().aspectRatio(1f).clipToBounds()) {
+        AutoNonlazyGrid(media.size) { idx ->
+            val item = media[idx]
+            if (item.blurhash != null) {
+                DisplayBlurHash(
+                    blurhash = item.blurhash,
+                    description = item.description,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
                 )
+            }
+        }
+        ContentWarningOverlayBody(reasons, onDismiss)
+    }
+}
 
-                FilledTonalButton(
-                    modifier = Modifier.padding(top = 10.dp),
-                    onClick = onDismiss,
-                    shape = ButtonBorder,
-                    contentPadding = ButtonPadding,
+@Composable
+private fun ContentWarningOverlayBody(
+    reasons: Set<String>,
+    onDismiss: () -> Unit,
+) {
+    Box(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.35f)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Box(
+                Modifier
+                    .height(80.dp)
+                    .width(90.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Visibility,
+                    contentDescription = stringRes(R.string.content_warning),
+                    modifier =
+                        Modifier
+                            .size(70.dp)
+                            .align(Alignment.BottomStart),
+                    tint = Color.White,
+                )
+                Icon(
+                    imageVector = Icons.Rounded.Warning,
+                    contentDescription = stringRes(R.string.content_warning),
+                    modifier =
+                        Modifier
+                            .size(30.dp)
+                            .align(Alignment.TopEnd),
+                    tint = Color.White,
+                )
+            }
+
+            Text(
+                text = stringRes(R.string.content_warning),
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp,
+                color = Color.White,
+                softWrap = true,
+                textAlign = TextAlign.Center,
+            )
+
+            if (reasons.isNotEmpty()) {
+                FlowRow(
+                    modifier = Modifier.padding(top = 6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    Text(
-                        text = stringRes(R.string.show_anyway),
-                    )
+                    reasons.forEach { reason ->
+                        AssistChip(
+                            onClick = {},
+                            enabled = false,
+                            label = {
+                                Text(
+                                    text = reason,
+                                    color = Color.White,
+                                )
+                            },
+                            colors =
+                                AssistChipDefaults.assistChipColors(
+                                    disabledContainerColor = Color.White.copy(alpha = 0.15f),
+                                    disabledLabelColor = Color.White,
+                                ),
+                            border = null,
+                        )
+                    }
                 }
+            }
+
+            FilledTonalButton(
+                modifier = Modifier.padding(top = 10.dp),
+                onClick = onDismiss,
+                shape = ButtonBorder,
+                contentPadding = ButtonPadding,
+            ) {
+                Text(
+                    text = stringRes(R.string.show_anyway),
+                )
             }
         }
     }
@@ -376,4 +485,16 @@ fun ContentWarningNote(
             }
         }
     }
+}
+
+fun collectPictureReasons(event: Event): Set<String> {
+    val reasons = linkedSetOf<String>()
+    event.contentWarningReason()?.takeIf { it.isNotBlank() }?.let { reasons.add(it) }
+    event.imetas().forEach { iMeta ->
+        iMeta.properties[ContentWarningTag.TAG_NAME]
+            ?.firstOrNull()
+            ?.takeIf { it.isNotBlank() }
+            ?.let { reasons.add(it) }
+    }
+    return reasons
 }

@@ -41,12 +41,13 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.AutoNonlazyGrid
+import com.vitorpamplona.amethyst.ui.components.SensitivityWarningOverBlurhashGrid
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
+import com.vitorpamplona.amethyst.ui.components.collectPictureReasons
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.UserCardHeader
-import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarningReason
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitiveOrNSFW
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import kotlinx.collections.immutable.toImmutableList
@@ -93,7 +94,8 @@ private fun PictureCardImage(
 ) {
     val uri = note.toNostrUri()
     val isSensitive = event.isSensitiveOrNSFW()
-    val contentWarning = event.contentWarningReason()
+    val reasons = collectPictureReasons(event)
+    val inGrid = event.imetaTags().size > 1
 
     val images by
         remember(note) {
@@ -108,8 +110,10 @@ private fun PictureCardImage(
                             blurhash = it.blurhash,
                             dim = it.dimension,
                             uri = uri,
-                            contentWarning = contentWarning,
-                            isSensitive = isSensitive,
+                            contentWarning = reasons.firstOrNull(),
+                            // In grid mode the warning is handled at the grid level to avoid
+                            // one overlay per image. Single-image posts still warn per media.
+                            isSensitive = isSensitive && !inGrid,
                             mimeType = it.mimeType,
                         )
                     }.toImmutableList(),
@@ -126,14 +130,21 @@ private fun PictureCardImage(
                 accountViewModel = accountViewModel,
             )
         } else {
-            AutoNonlazyGrid(images.size) {
-                ZoomableContentView(
-                    content = images[it],
-                    images = images,
-                    roundedCorner = false,
-                    contentScale = ContentScale.Crop,
-                    accountViewModel = accountViewModel,
-                )
+            SensitivityWarningOverBlurhashGrid(
+                isSensitive = isSensitive,
+                reasons = reasons,
+                media = images,
+                accountViewModel = accountViewModel,
+            ) {
+                AutoNonlazyGrid(images.size) {
+                    ZoomableContentView(
+                        content = images[it],
+                        images = images,
+                        roundedCorner = false,
+                        contentScale = ContentScale.Crop,
+                        accountViewModel = accountViewModel,
+                    )
+                }
             }
         }
     }
