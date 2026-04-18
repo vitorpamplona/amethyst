@@ -224,7 +224,7 @@ private fun DiscoverPages(
             Column {
                 DiscoveryTopBar(accountViewModel, nav)
                 SecondaryScrollableTabRow(
-                    containerColor = Color.Transparent,
+                    containerColor = MaterialTheme.colorScheme.background,
                     contentColor = MaterialTheme.colorScheme.onBackground,
                     selectedTabIndex = pagerState.currentPage,
                     modifier = TabRowHeight,
