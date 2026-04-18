@@ -150,7 +150,15 @@ fun ZoomableContentView(
 
     when (content) {
         is MediaUrlImage -> {
-            SensitivityWarning(content.contentWarning, accountViewModel) {
+            val ratio = content.dim?.aspectRatio() ?: MediaAspectRatioCache.get(content.url)
+            SensitivityWarningOverBlurhash(
+                isSensitive = content.isSensitive,
+                reason = content.contentWarning,
+                blurhash = content.blurhash,
+                ratio = ratio,
+                description = content.description,
+                accountViewModel = accountViewModel,
+            ) {
                 TwoSecondController(content) { controllerVisible ->
                     val mainImageModifier =
                         Modifier
@@ -164,7 +172,15 @@ fun ZoomableContentView(
         }
 
         is MediaUrlVideo -> {
-            SensitivityWarning(content.contentWarning, accountViewModel) {
+            val ratio = content.dim?.aspectRatio() ?: MediaAspectRatioCache.get(content.url)
+            SensitivityWarningOverBlurhash(
+                isSensitive = content.isSensitive,
+                reason = content.contentWarning,
+                blurhash = content.blurhash,
+                ratio = ratio,
+                description = content.description,
+                accountViewModel = accountViewModel,
+            ) {
                 Box(
                     modifier = Modifier.fillMaxWidth().then(boundsTrackingModifier),
                     contentAlignment = Alignment.Center,

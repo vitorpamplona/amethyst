@@ -78,31 +78,6 @@ fun SensitivityWarning(
 
 @Composable
 fun SensitivityWarning(
-    note: Note,
-    blurhash: String?,
-    ratio: Float?,
-    description: String?,
-    accountViewModel: AccountViewModel,
-    content: @Composable () -> Unit,
-) {
-    val event = note.event
-    if (event == null) {
-        content()
-        return
-    }
-
-    val hasSensitiveContent = remember(event) { event.isSensitiveOrNSFW() }
-
-    if (hasSensitiveContent) {
-        val reason = remember(event) { event.contentWarningReason() }
-        ObserveSensitivityWarningOverBlurhash(reason, blurhash, ratio, description, accountViewModel, content)
-    } else {
-        content()
-    }
-}
-
-@Composable
-fun SensitivityWarning(
     event: Event,
     accountViewModel: AccountViewModel,
     content: @Composable () -> Unit,
@@ -131,6 +106,38 @@ fun SensitivityWarning(
 }
 
 @Composable
+fun SensitivityWarningOverBlurhash(
+    isSensitive: Boolean,
+    reason: String?,
+    blurhash: String?,
+    ratio: Float?,
+    description: String?,
+    accountViewModel: AccountViewModel,
+    content: @Composable () -> Unit,
+) {
+    if (!isSensitive) {
+        content()
+        return
+    }
+
+    val accountState = accountViewModel.showSensitiveContent().collectAsStateWithLifecycle()
+
+    var showContentWarningNote by remember(accountState) { mutableStateOf(accountState.value != true) }
+
+    CrossfadeIfEnabled(targetState = showContentWarningNote, accountViewModel = accountViewModel) {
+        if (it) {
+            if (blurhash != null) {
+                ContentWarningOverBlurhash(reason, blurhash, ratio, description) { showContentWarningNote = false }
+            } else {
+                ContentWarningNote(reason) { showContentWarningNote = false }
+            }
+        } else {
+            content()
+        }
+    }
+}
+
+@Composable
 fun ObserveSensitivityWarning(
     reason: String?,
     accountViewModel: AccountViewModel,
@@ -143,32 +150,6 @@ fun ObserveSensitivityWarning(
     CrossfadeIfEnabled(targetState = showContentWarningNote, accountViewModel = accountViewModel) {
         if (it) {
             ContentWarningNote(reason) { showContentWarningNote = false }
-        } else {
-            content()
-        }
-    }
-}
-
-@Composable
-fun ObserveSensitivityWarningOverBlurhash(
-    reason: String?,
-    blurhash: String?,
-    ratio: Float?,
-    description: String?,
-    accountViewModel: AccountViewModel,
-    content: @Composable () -> Unit,
-) {
-    val accountState = accountViewModel.showSensitiveContent().collectAsStateWithLifecycle()
-
-    var showContentWarningNote by remember(accountState) { mutableStateOf(accountState.value != true) }
-
-    CrossfadeIfEnabled(targetState = showContentWarningNote, accountViewModel = accountViewModel) {
-        if (it) {
-            if (blurhash != null) {
-                ContentWarningOverBlurhash(reason, blurhash, ratio, description) { showContentWarningNote = false }
-            } else {
-                ContentWarningNote(reason) { showContentWarningNote = false }
-            }
         } else {
             content()
         }

@@ -39,12 +39,13 @@ import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.AutoNonlazyGrid
-import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
+import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarningReason
+import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitiveOrNSFW
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import kotlinx.collections.immutable.toImmutableList
 
@@ -60,6 +61,8 @@ fun PictureDisplay(
 ) {
     val event = (note.event as? PictureEvent) ?: return
     val uri = note.toNostrUri()
+    val isSensitive = event.isSensitiveOrNSFW()
+    val contentWarning = event.contentWarningReason()
 
     val images by
         remember(note) {
@@ -74,6 +77,8 @@ fun PictureDisplay(
                             blurhash = it.blurhash,
                             dim = it.dimension,
                             uri = uri,
+                            contentWarning = contentWarning,
+                            isSensitive = isSensitive,
                             mimeType = it.mimeType,
                         )
                     }.toImmutableList(),
@@ -85,53 +90,51 @@ fun PictureDisplay(
     if (first != null) {
         val title = event.title()
 
-        SensitivityWarning(note = note, accountViewModel = accountViewModel) {
-            Column {
-                if (title != null) {
-                    Text(
-                        modifier = Modifier.padding(padding),
-                        text = title,
-                        style = MaterialTheme.typography.bodyLarge,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                } else {
-                    Spacer(StdVertSpacer)
-                }
+        Column {
+            if (title != null) {
+                Text(
+                    modifier = Modifier.padding(padding),
+                    text = title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            } else {
+                Spacer(StdVertSpacer)
+            }
 
-                if (images.size == 1) {
+            if (images.size == 1) {
+                ZoomableContentView(
+                    content = images.first(),
+                    images = images,
+                    roundedCorner = roundedCorner,
+                    contentScale = ContentScale.FillWidth,
+                    accountViewModel = accountViewModel,
+                )
+            } else {
+                AutoNonlazyGrid(images.size) {
                     ZoomableContentView(
-                        content = images.first(),
+                        content = images[it],
                         images = images,
                         roundedCorner = roundedCorner,
-                        contentScale = ContentScale.FillWidth,
+                        contentScale = ContentScale.Crop,
                         accountViewModel = accountViewModel,
                     )
-                } else {
-                    AutoNonlazyGrid(images.size) {
-                        ZoomableContentView(
-                            content = images[it],
-                            images = images,
-                            roundedCorner = roundedCorner,
-                            contentScale = ContentScale.Crop,
-                            accountViewModel = accountViewModel,
-                        )
-                    }
                 }
-
-                TranslatableRichTextViewer(
-                    content = event.content,
-                    canPreview = false,
-                    quotesLeft = 0,
-                    modifier = Modifier.padding(padding),
-                    tags = EmptyTagList,
-                    backgroundColor = backgroundColor,
-                    id = note.idHex,
-                    callbackUri = uri,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                )
             }
+
+            TranslatableRichTextViewer(
+                content = event.content,
+                canPreview = false,
+                quotesLeft = 0,
+                modifier = Modifier.padding(padding),
+                tags = EmptyTagList,
+                backgroundColor = backgroundColor,
+                id = note.idHex,
+                callbackUri = uri,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
         }
     }
 }

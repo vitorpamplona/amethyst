@@ -43,13 +43,14 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarningReason
+import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitiveOrNSFW
 import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
 import kotlin.text.ifEmpty
 
@@ -103,6 +104,8 @@ private fun FileHeaderCardImage(
         val isImage = event.mimeType()?.startsWith("image/") == true || RichTextParser.isImageUrl(fullUrl)
         val uri = note.toNostrUri()
         val mimeType = event.mimeType()
+        val isSensitive = event.isSensitiveOrNSFW()
+        val contentWarning = event.contentWarningReason()
 
         mutableStateOf<BaseMediaContent>(
             if (isImage) {
@@ -113,6 +116,8 @@ private fun FileHeaderCardImage(
                     blurhash = blurHash,
                     dim = dimensions,
                     uri = uri,
+                    contentWarning = contentWarning,
+                    isSensitive = isSensitive,
                     mimeType = mimeType,
                 )
             } else {
@@ -124,20 +129,20 @@ private fun FileHeaderCardImage(
                     dim = dimensions,
                     uri = uri,
                     authorName = note.author?.toBestDisplayName(),
+                    contentWarning = contentWarning,
+                    isSensitive = isSensitive,
                     mimeType = mimeType,
                 )
             },
         )
     }
 
-    SensitivityWarning(note = note, accountViewModel = accountViewModel) {
-        ZoomableContentView(
-            content = content,
-            roundedCorner = false,
-            contentScale = ContentScale.FillWidth,
-            accountViewModel = accountViewModel,
-        )
-    }
+    ZoomableContentView(
+        content = content,
+        roundedCorner = false,
+        contentScale = ContentScale.FillWidth,
+        accountViewModel = accountViewModel,
+    )
 }
 
 @Composable

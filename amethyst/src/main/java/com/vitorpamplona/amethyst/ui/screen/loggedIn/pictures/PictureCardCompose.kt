@@ -39,15 +39,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
-import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.AutoNonlazyGrid
-import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.UserCardHeader
+import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarningReason
+import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitiveOrNSFW
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import kotlinx.collections.immutable.toImmutableList
 
@@ -92,6 +92,8 @@ private fun PictureCardImage(
     accountViewModel: AccountViewModel,
 ) {
     val uri = note.toNostrUri()
+    val isSensitive = event.isSensitiveOrNSFW()
+    val contentWarning = event.contentWarningReason()
 
     val images by
         remember(note) {
@@ -106,6 +108,8 @@ private fun PictureCardImage(
                             blurhash = it.blurhash,
                             dim = it.dimension,
                             uri = uri,
+                            contentWarning = contentWarning,
+                            isSensitive = isSensitive,
                             mimeType = it.mimeType,
                         )
                     }.toImmutableList(),
@@ -113,34 +117,23 @@ private fun PictureCardImage(
         }
 
     if (images.isNotEmpty()) {
-        val first = images.first()
-        val ratio = first.dim?.aspectRatio() ?: MediaAspectRatioCache.get(first.url)
-
-        SensitivityWarning(
-            note = note,
-            blurhash = first.blurhash,
-            ratio = ratio,
-            description = first.description,
-            accountViewModel = accountViewModel,
-        ) {
-            if (images.size == 1) {
+        if (images.size == 1) {
+            ZoomableContentView(
+                content = images.first(),
+                images = images,
+                roundedCorner = false,
+                contentScale = ContentScale.FillWidth,
+                accountViewModel = accountViewModel,
+            )
+        } else {
+            AutoNonlazyGrid(images.size) {
                 ZoomableContentView(
-                    content = first,
+                    content = images[it],
                     images = images,
                     roundedCorner = false,
-                    contentScale = ContentScale.FillWidth,
+                    contentScale = ContentScale.Crop,
                     accountViewModel = accountViewModel,
                 )
-            } else {
-                AutoNonlazyGrid(images.size) {
-                    ZoomableContentView(
-                        content = images[it],
-                        images = images,
-                        roundedCorner = false,
-                        contentScale = ContentScale.Crop,
-                        accountViewModel = accountViewModel,
-                    )
-                }
             }
         }
     }
