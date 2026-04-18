@@ -145,24 +145,43 @@ ensure_identity() {
   local who="$1" cmd
   if [[ "$who" == "B" ]]; then cmd=wn_b; else cmd=wn_c; fi
   step "ensuring Identity $who"
-  local npub
-  npub=$("$cmd" --json whoami 2>/dev/null | jq -r '.pubkey // .npub // empty' 2>/dev/null || true)
-  if [[ -z "${npub:-}" || "$npub" == "null" ]]; then
-    info "creating new identity for $who"
-    "$cmd" create-identity 2>&1 | tee -a "$LOG_FILE" >&2
-    npub=$("$cmd" --json whoami 2>/dev/null | jq -r '.pubkey // .npub // empty' || true)
-  fi
+
+  # First try whoami (will be empty if no account yet). Try --json, then the
+  # yaml-ish pretty form as a fallback.
+  local out npub=""
+  out=$("$cmd" --json whoami 2>/dev/null || true)
+  npub=$(extract_pubkey "$out")
   if [[ -z "${npub:-}" ]]; then
-    fail_msg "could not determine npub for $who"; exit 1
+    out=$("$cmd" whoami 2>/dev/null || true)
+    npub=$(extract_pubkey "$out")
   fi
+
+  if [[ -z "${npub:-}" ]]; then
+    info "creating new identity for $who"
+    out=$("$cmd" create-identity 2>&1 | tee -a "$LOG_FILE")
+    npub=$(extract_pubkey "$out")
+    # Some builds only print the npub on whoami after create, not on
+    # create-identity itself — re-query as a last resort.
+    if [[ -z "${npub:-}" ]]; then
+      out=$("$cmd" whoami 2>/dev/null || true)
+      npub=$(extract_pubkey "$out")
+    fi
+  fi
+
+  if [[ -z "${npub:-}" ]]; then
+    fail_msg "could not determine npub for $who — raw output below:"
+    printf '%s\n' "$out" | tee -a "$LOG_FILE" >&2
+    exit 1
+  fi
+
   local hex
-  hex=$("$cmd" --json users show "$npub" 2>/dev/null | jq -r '.pubkey // .public_key // .hex // empty' 2>/dev/null || true)
-  [[ -z "$hex" ]] && hex="$npub"
+  hex=$(npub_to_hex "$npub")
   if [[ "$who" == "B" ]]; then B_NPUB="$npub"; B_HEX="$hex"
   else                         C_NPUB="$npub"; C_HEX="$hex"; fi
   save_state "${who}_NPUB" "$npub"
   save_state "${who}_HEX"  "$hex"
   info "$who npub: $npub"
+  [[ "$hex" != "$npub" ]] && info "$who hex:  $hex"
 }
 
 prompt_for_a_npub() {
@@ -174,11 +193,10 @@ prompt_for_a_npub() {
     read -r A_NPUB
     save_state "A_NPUB" "$A_NPUB"
   fi
-  A_HEX=$(wn_b --json users show "$A_NPUB" 2>/dev/null \
-            | jq -r '.pubkey // .public_key // .hex // empty' 2>/dev/null || true)
-  [[ -z "$A_HEX" ]] && A_HEX="$A_NPUB"
+  A_HEX=$(npub_to_hex "$A_NPUB")
   save_state "A_HEX" "$A_HEX"
-  info "A hex:  $A_HEX"
+  info "A npub: $A_NPUB"
+  [[ "$A_HEX" != "$A_NPUB" ]] && info "A hex:  $A_HEX"
 }
 
 # --- relays ------------------------------------------------------------------

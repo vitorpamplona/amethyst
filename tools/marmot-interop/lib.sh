@@ -212,16 +212,42 @@ wait_for_member() {
     return 1
 }
 
-# ------- npub <-> hex conversion helpers -------------------------------------
-# whitenoise's `wn` accepts both, but we use hex internally for JSON comparisons.
-# We rely on `wn debug` (or fall back to a python one-liner) — but to keep zero
-# extra deps we do the conversion via wn itself by round-tripping through
-# `wn users show <npub>` which prints both forms.
+# ------- output parsing ------------------------------------------------------
+# `wn` prints either JSON (with --json) or a yaml-ish "key: value" pretty form.
+# This helper extracts the pubkey (npub) from whichever form we got.
+extract_pubkey() {
+    local raw="$1" v=""
+    # JSON: single object
+    v=$(printf '%s' "$raw" | jq -r '.pubkey // .npub // .public_key // empty' 2>/dev/null || true)
+    if [[ -n "$v" && "$v" != "null" ]]; then printf '%s' "$v"; return; fi
+    # JSON: array of accounts (whoami may return a list)
+    v=$(printf '%s' "$raw" | jq -r '.[0].pubkey // .[0].npub // .[0].public_key // empty' 2>/dev/null || true)
+    if [[ -n "$v" && "$v" != "null" ]]; then printf '%s' "$v"; return; fi
+    # yaml-ish "pubkey: npub1..."
+    v=$(printf '%s\n' "$raw" | sed -n 's/^[[:space:]]*pubkey[[:space:]]*:[[:space:]]*//p' | head -n1)
+    if [[ -n "$v" ]]; then printf '%s' "$v"; return; fi
+    # yaml-ish "npub: npub1..." (alternative key)
+    v=$(printf '%s\n' "$raw" | sed -n 's/^[[:space:]]*npub[[:space:]]*:[[:space:]]*//p' | head -n1)
+    if [[ -n "$v" ]]; then printf '%s' "$v"; return; fi
+}
+
+# Best-effort npub -> hex conversion via `wn users show`. If the lookup fails
+# (e.g. --json not supported or user not resolvable), returns the input
+# unchanged — downstream comparisons tolerate either form.
 npub_to_hex() {
-    local npub="$1"
-    wn_b --json users show "$npub" 2>/dev/null \
-        | jq -r '.pubkey // .public_key // empty' 2>/dev/null \
-        || printf '%s' "$npub"
+    local npub="$1" raw hex
+    raw=$(wn_b --json users show "$npub" 2>/dev/null || true)
+    hex=$(printf '%s' "$raw" | jq -r '.pubkey // .public_key // .hex // empty' 2>/dev/null || true)
+    if [[ -z "$hex" || "$hex" == "null" ]]; then
+        # fallback to yaml-ish output
+        raw=$(wn_b users show "$npub" 2>/dev/null || true)
+        hex=$(printf '%s\n' "$raw" | sed -n 's/^[[:space:]]*\(public_key\|hex\)[[:space:]]*:[[:space:]]*//p' | head -n1)
+    fi
+    if [[ -n "$hex" && "$hex" != "null" ]]; then
+        printf '%s' "$hex"
+    else
+        printf '%s' "$npub"
+    fi
 }
 
 # ------- state file ----------------------------------------------------------
