@@ -444,6 +444,9 @@
     <string name="award_badge_recipients_label">Recipients (npub or hex, one per line)</string>
     <string name="award_badge_recipients_placeholder">npub1…\nnpub1…</string>
     <string name="award_badge_recipient_count">%1$d recipient(s) will receive this badge</string>
+    <string name="badge_untitled">Untitled badge</string>
+    <string name="badge_awardees_label">Awarded to %1$d</string>
+    <string name="badge_award_received_title">You received a badge</string>
     <string name="pictures">Pictures</string>
     <string name="shorts">Shorts</string>
     <string name="longs">Videos</string>
