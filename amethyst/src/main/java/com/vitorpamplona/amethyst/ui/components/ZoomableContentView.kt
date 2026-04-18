@@ -86,6 +86,7 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaLocalVideo
 import com.vitorpamplona.amethyst.commons.richtext.MediaPreloadedContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
+import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.service.images.BlurhashWrapper
@@ -93,6 +94,8 @@ import com.vitorpamplona.amethyst.service.playback.composable.VideoView
 import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.openBlossomUriAsIntent
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.actions.InformationDialog
+import com.vitorpamplona.amethyst.ui.components.pdf.PdfPreviewCard
+import com.vitorpamplona.amethyst.ui.components.pdf.PdfViewerDialog
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.note.BlankNote
 import com.vitorpamplona.amethyst.ui.note.DownloadForOfflineIcon
@@ -221,18 +224,36 @@ fun ZoomableContentView(
                 }
             }
         }
+
+        is MediaUrlPdf -> {
+            Box(modifier = Modifier.fillMaxWidth().then(boundsTrackingModifier)) {
+                PdfPreviewCard(
+                    content = content,
+                    accountViewModel = accountViewModel,
+                    onOpen = { dialogOpen = true },
+                )
+            }
+        }
     }
 
     if (dialogOpen) {
-        ZoomableImageDialog(
-            imageUrl = content,
-            allImages = images,
-            sourceBounds = sourceBounds,
-            onDismiss = {
-                dialogOpen = false
-            },
-            accountViewModel = accountViewModel,
-        )
+        if (content is MediaUrlPdf) {
+            PdfViewerDialog(
+                content = content,
+                accountViewModel = accountViewModel,
+                onDismiss = { dialogOpen = false },
+            )
+        } else {
+            ZoomableImageDialog(
+                imageUrl = content,
+                allImages = images,
+                sourceBounds = sourceBounds,
+                onDismiss = {
+                    dialogOpen = false
+                },
+                accountViewModel = accountViewModel,
+            )
+        }
     }
 }
 
