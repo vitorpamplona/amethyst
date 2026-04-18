@@ -23,38 +23,71 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.dal
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.TopFilter
+import com.vitorpamplona.amethyst.model.filterIntoSet
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
+import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
 import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
 
-class BadgesMineFeedFilter(
+class BadgesFeedFilter(
     val account: Account,
 ) : AdditiveFeedFilter<Note>() {
-    override fun feedKey(): String = "badges-mine-" + account.userProfile().pubkeyHex
+    override fun feedKey(): String = account.userProfile().pubkeyHex + "-badges-" + followList().code
 
-    override fun limit() = 200
+    override fun limit() = 100
 
-    override fun showHiddenKey(): Boolean = false
+    fun followList(): TopFilter = account.settings.defaultBadgesFollowList.value
+
+    fun TopFilter.isMuteList() = this is TopFilter.MuteList
+
+    fun TopFilter.isBlockList() = this is TopFilter.PeopleList && this.address == account.blockPeopleList.getBlockListAddress()
+
+    fun TopFilter.wantsToSeeNegativeStuff() = isMuteList() || isBlockList()
+
+    override fun showHiddenKey(): Boolean = followList().wantsToSeeNegativeStuff()
 
     private fun myPubkey(): String = account.userProfile().pubkeyHex
 
     override fun feed(): List<Note> {
-        val me = myPubkey()
         val notes =
-            LocalCache.addressables.filterIntoSet { _, it ->
-                val noteEvent = it.event
-                noteEvent is BadgeDefinitionEvent && noteEvent.pubKey == me
+            if (followList() == TopFilter.Mine) {
+                val me = myPubkey()
+                LocalCache.addressables.filterIntoSet(BadgeDefinitionEvent.KIND) { _, it ->
+                    val noteEvent = it.event
+                    noteEvent is BadgeDefinitionEvent && noteEvent.pubKey == me
+                }
+            } else {
+                val params = buildFilterParams(account)
+                LocalCache.addressables.filterIntoSet(BadgeDefinitionEvent.KIND) { _, it ->
+                    val noteEvent = it.event
+                    noteEvent is BadgeDefinitionEvent && params.match(noteEvent, it.relays)
+                }
             }
         return sort(notes)
     }
 
     override fun applyFilter(newItems: Set<Note>): Set<Note> {
-        val me = myPubkey()
+        if (followList() == TopFilter.Mine) {
+            val me = myPubkey()
+            return newItems.filterTo(HashSet()) {
+                val noteEvent = it.event
+                noteEvent is BadgeDefinitionEvent && noteEvent.pubKey == me
+            }
+        }
+
+        val params = buildFilterParams(account)
         return newItems.filterTo(HashSet()) {
             val noteEvent = it.event
-            noteEvent is BadgeDefinitionEvent && noteEvent.pubKey == me
+            noteEvent is BadgeDefinitionEvent && params.match(noteEvent, it.relays)
         }
     }
+
+    fun buildFilterParams(account: Account): FilterByListParams =
+        FilterByListParams.create(
+            account.liveBadgesFollowLists.value,
+            account.hiddenUsers.flow.value,
+        )
 
     override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder)
 }

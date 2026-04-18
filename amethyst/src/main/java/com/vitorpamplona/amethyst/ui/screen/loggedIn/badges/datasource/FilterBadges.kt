@@ -20,40 +20,129 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.datasource
 
-import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.global.GlobalTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
+import com.vitorpamplona.quartz.utils.TimeUtils
 
-/**
- * Subscribes to:
- * - Badge definitions (kind 30009) authored by me — covers "Mine" tab.
- * - Badge awards (kind 8) authored by me — covers "Awarded" tab.
- *
- * Received badges (kind 8 with `#p`=me) are already pulled via the standard
- * notifications subscription (FilterNotificationsToPubkey), so we do not
- * duplicate that here.
- */
-fun filterMyBadges(
-    user: User,
+private const val BADGE_FEED_LIMIT = 100
+
+fun makeBadgesFilter(
+    feedSettings: IFeedTopNavPerRelayFilterSet,
+    since: SincePerRelayMap?,
+    defaultSince: Long? = null,
+): List<RelayBasedFilter> =
+    when (feedSettings) {
+        is AllFollowsTopNavPerRelayFilterSet -> filterBadgesByFollows(feedSettings, since, defaultSince)
+        is AuthorsTopNavPerRelayFilterSet -> filterBadgesByAuthors(feedSettings, since, defaultSince)
+        is MutedAuthorsTopNavPerRelayFilterSet -> filterBadgesByMutedAuthors(feedSettings, since, defaultSince)
+        is GlobalTopNavPerRelayFilterSet -> filterBadgesGlobal(feedSettings, since, defaultSince)
+        else -> emptyList()
+    }
+
+fun filterBadgesMine(
+    pubkey: HexKey,
+    relays: Set<NormalizedRelayUrl>,
     since: SincePerRelayMap?,
 ): List<RelayBasedFilter> {
-    val relays =
-        user.outboxRelays()?.ifEmpty { null }
-            ?: user.allUsedRelaysOrNull()
-            ?: return emptyList()
-
+    if (relays.isEmpty() || pubkey.isEmpty()) return emptyList()
+    val authors = listOf(pubkey)
     return relays.map { relay ->
         RelayBasedFilter(
             relay = relay,
             filter =
                 Filter(
-                    kinds = listOf(BadgeDefinitionEvent.KIND, BadgeAwardEvent.KIND),
-                    authors = listOf(user.pubkeyHex),
-                    limit = 500,
+                    kinds = listOf(BadgeDefinitionEvent.KIND),
+                    authors = authors,
+                    limit = BADGE_FEED_LIMIT,
                     since = since?.get(relay)?.time,
+                ),
+        )
+    }
+}
+
+private fun filterBadgesByAuthorsOnRelay(
+    relay: NormalizedRelayUrl,
+    authors: Set<HexKey>,
+    since: Long? = null,
+): List<RelayBasedFilter> {
+    if (authors.isEmpty()) return emptyList()
+    return listOf(
+        RelayBasedFilter(
+            relay = relay,
+            filter =
+                Filter(
+                    kinds = listOf(BadgeDefinitionEvent.KIND),
+                    authors = authors.sorted(),
+                    limit = BADGE_FEED_LIMIT,
+                    since = since,
+                ),
+        ),
+    )
+}
+
+private fun filterBadgesByFollows(
+    followsSet: AllFollowsTopNavPerRelayFilterSet,
+    since: SincePerRelayMap?,
+    defaultSince: Long? = null,
+): List<RelayBasedFilter> {
+    if (followsSet.set.isEmpty()) return emptyList()
+    return followsSet.set.flatMap {
+        val sinceValue = since?.get(it.key)?.time ?: defaultSince
+        val authors = it.value.authors
+        if (authors == null || authors.isEmpty()) {
+            emptyList()
+        } else {
+            filterBadgesByAuthorsOnRelay(it.key, authors, sinceValue)
+        }
+    }
+}
+
+private fun filterBadgesByAuthors(
+    authorSet: AuthorsTopNavPerRelayFilterSet,
+    since: SincePerRelayMap?,
+    defaultSince: Long? = null,
+): List<RelayBasedFilter> {
+    if (authorSet.set.isEmpty()) return emptyList()
+    return authorSet.set.flatMap {
+        filterBadgesByAuthorsOnRelay(it.key, it.value.authors, since?.get(it.key)?.time ?: defaultSince)
+    }
+}
+
+private fun filterBadgesByMutedAuthors(
+    authorSet: MutedAuthorsTopNavPerRelayFilterSet,
+    since: SincePerRelayMap?,
+    defaultSince: Long? = null,
+): List<RelayBasedFilter> {
+    if (authorSet.set.isEmpty()) return emptyList()
+    return authorSet.set.flatMap {
+        filterBadgesByAuthorsOnRelay(it.key, it.value.authors, since?.get(it.key)?.time ?: defaultSince)
+    }
+}
+
+private fun filterBadgesGlobal(
+    relays: GlobalTopNavPerRelayFilterSet,
+    since: SincePerRelayMap?,
+    defaultSince: Long? = null,
+): List<RelayBasedFilter> {
+    if (relays.set.isEmpty()) return emptyList()
+    return relays.set.map {
+        val sinceValue = since?.get(it.key)?.time ?: defaultSince ?: TimeUtils.oneMonthAgo()
+        RelayBasedFilter(
+            relay = it.key,
+            filter =
+                Filter(
+                    kinds = listOf(BadgeDefinitionEvent.KIND),
+                    limit = BADGE_FEED_LIMIT,
+                    since = sinceValue,
                 ),
         )
     }

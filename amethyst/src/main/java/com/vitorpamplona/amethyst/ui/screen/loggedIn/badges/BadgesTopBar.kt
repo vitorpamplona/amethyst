@@ -20,11 +20,16 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.badges
 
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.topbars.FeedFilterSpinner
 import com.vitorpamplona.amethyst.ui.navigation.topbars.UserDrawerSearchTopBar
+import com.vitorpamplona.amethyst.ui.screen.FeedDefinition
+import com.vitorpamplona.amethyst.ui.screen.TopNavFilterState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 
@@ -34,6 +39,32 @@ fun BadgesTopBar(
     nav: INav,
 ) {
     UserDrawerSearchTopBar(accountViewModel, nav) {
-        Text(text = stringRes(R.string.badges))
+        val list by accountViewModel.account.settings.defaultBadgesFollowList
+            .collectAsStateWithLifecycle()
+
+        BadgesTopNavFilterBar(
+            followListsModel = accountViewModel.feedStates.feedListOptions,
+            listName = list,
+            accountViewModel = accountViewModel,
+            onChange = accountViewModel.account.settings::changeDefaultBadgesFollowList,
+        )
     }
+}
+
+@Composable
+private fun BadgesTopNavFilterBar(
+    followListsModel: TopNavFilterState,
+    listName: TopFilter,
+    accountViewModel: AccountViewModel,
+    onChange: (FeedDefinition) -> Unit,
+) {
+    val allLists by followListsModel.badgeRoutes.collectAsStateWithLifecycle()
+
+    FeedFilterSpinner(
+        placeholderCode = listName,
+        explainer = stringRes(R.string.select_list_to_filter),
+        options = allLists,
+        onSelect = { onChange(allLists.getOrNull(it) ?: followListsModel.allFollows) },
+        accountViewModel = accountViewModel,
+    )
 }

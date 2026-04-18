@@ -58,10 +58,7 @@ object ScrollStateKeys {
     const val POLLS_SCREEN = "PollsFeed"
     const val POLLS_OPEN = "PollsOpenFeed"
     const val POLLS_CLOSED = "PollsClosedFeed"
-    const val BADGES_RECEIVED = "BadgesReceivedFeed"
-    const val BADGES_MINE = "BadgesMineFeed"
-    const val BADGES_AWARDED = "BadgesAwardedFeed"
-    const val BADGES_DISCOVER = "BadgesDiscoverFeed"
+    const val BADGES_SCREEN = "BadgesFeed"
     const val PICTURES_SCREEN = "PicturesFeed"
     const val PRODUCTS_SCREEN = "ProductsFeed"
     const val SHORTS_SCREEN = "ShortsFeed"
@@ -77,7 +74,6 @@ object PagerStateKeys {
     const val HOME_SCREEN = "PagerHome"
     const val DISCOVER_SCREEN = "PagerDiscover"
     const val POLLS_SCREEN = "PagerPolls"
-    const val BADGES_SCREEN = "PagerBadges"
 }
 
 @Composable

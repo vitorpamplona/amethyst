@@ -447,6 +447,9 @@
     <string name="badge_untitled">Untitled badge</string>
     <string name="badge_awardees_label">Awarded to %1$d</string>
     <string name="badge_award_received_title">You received a badge</string>
+    <string name="profile_badges_title">Profile badges</string>
+    <string name="profile_badges_description">Choose which of the badges you\'ve received appear on your profile.</string>
+    <string name="profile_badges_empty">You haven\'t received any badges yet.</string>
     <string name="pictures">Pictures</string>
     <string name="shorts">Shorts</string>
     <string name="longs">Videos</string>
@@ -652,6 +655,7 @@
     <string name="follow_list_aroundme">Around Me</string>
     <string name="follow_list_global">Global</string>
     <string name="follow_list_chess">Chess</string>
+    <string name="follow_list_mine">Mine</string>
     <string name="follow_list_mute_list">Mute List</string>
 
     <string name="follow_sets">Follow Lists</string>

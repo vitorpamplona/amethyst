@@ -47,6 +47,8 @@ sealed class Route {
 
     @Serializable object Badges : Route()
 
+    @Serializable object ProfileBadges : Route()
+
     @Serializable data class NewBadge(
         val editDTag: String? = null,
     ) : Route()

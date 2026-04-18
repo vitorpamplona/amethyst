@@ -36,6 +36,7 @@ import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.GroupAdd
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Key
+import androidx.compose.material.icons.outlined.MilitaryTech
 import androidx.compose.material.icons.outlined.Phone
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Security
@@ -120,6 +121,13 @@ fun AllSettingsScreen(
                 icon = Icons.Outlined.CloudUpload,
                 tint = tint,
                 onClick = { nav.nav(Route.EditMediaServers) },
+            )
+            HorizontalDivider()
+            SettingsNavigationRow(
+                title = R.string.profile_badges_title,
+                icon = Icons.Outlined.MilitaryTech,
+                tint = tint,
+                onClick = { nav.nav(Route.ProfileBadges) },
             )
             HorizontalDivider()
             SettingsNavigationRow(
