@@ -24,10 +24,13 @@ import com.vitorpamplona.amethyst.service.okhttp.OkHttpClientFactoryForRelays.Co
 import com.vitorpamplona.amethyst.service.okhttp.OkHttpClientFactoryForRelays.Companion.DEFAULT_SOCKS_PORT
 import com.vitorpamplona.amethyst.service.okhttp.OkHttpClientFactoryForRelays.Companion.DEFAULT_TIMEOUT_ON_MOBILE_SECS
 import com.vitorpamplona.amethyst.service.okhttp.OkHttpClientFactoryForRelays.Companion.DEFAULT_TIMEOUT_ON_WIFI_SECS
+import okhttp3.ConnectionPool
+import okhttp3.Dispatcher
 import okhttp3.OkHttpClient
 import java.net.InetSocketAddress
 import java.net.Proxy
 import java.time.Duration
+import java.util.concurrent.TimeUnit
 
 class OkHttpClientFactory(
     keyCache: EncryptionKeyCache,
@@ -36,9 +39,30 @@ class OkHttpClientFactory(
     // val logging = LoggingInterceptor()
     val keyDecryptor = EncryptedBlobInterceptor(keyCache)
 
+    // Most images/videos in a feed come from a small set of hosts (e.g. a single
+    // Blossom/imgproxy server). OkHttp's default dispatcher caps inflight requests
+    // per host at 5, which serializes feed loading. Raise the limits so the feed
+    // can parallelize downloads the way a browser does.
+    private val dispatcher =
+        Dispatcher().apply {
+            if (!isEmulator()) {
+                maxRequestsPerHost = 16
+                maxRequests = 128
+            } else {
+                maxRequestsPerHost = 5
+                maxRequests = 64
+            }
+        }
+
+    // Keep more HTTP/2 connections warm so scrolling doesn't repeatedly re-TLS
+    // to the same media host.
+    private val connectionPool = ConnectionPool(32, 5, TimeUnit.MINUTES)
+
     private val rootClient =
         OkHttpClient
             .Builder()
+            .dispatcher(dispatcher)
+            .connectionPool(connectionPool)
             .followRedirects(true)
             .followSslRedirects(true)
             .addInterceptor(DefaultContentTypeInterceptor(userAgent))
