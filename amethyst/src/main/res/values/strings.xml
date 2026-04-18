@@ -1733,6 +1733,9 @@
 
     <string name="add_dvm_to_favorites">Add DVM to favorites</string>
     <string name="remove_dvm_from_favorites">Remove from favorites</string>
+    <string name="favorite_dvms_title">Favourite DVMs</string>
+    <string name="favorite_dvms_explainer">Content-discovery DVMs you starred here appear as filter chips on the Home feed. Open Discover to add more.</string>
+    <string name="favorite_dvms_empty">No favourite DVMs yet. Open Discover, tap a content-discovery DVM, and star it to add it here.</string>
     <string name="dvm_home_status_requesting">Asking %1$s for a feed…</string>
     <string name="dvm_home_status_processing">Processing your feed…</string>
     <string name="dvm_home_status_payment_required">This DVM requires payment</string>

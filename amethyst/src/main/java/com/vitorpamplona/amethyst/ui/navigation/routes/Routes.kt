@@ -171,6 +171,8 @@ sealed class Route {
 
     @Serializable object EditMediaServers : Route()
 
+    @Serializable object EditFavoriteDvms : Route()
+
     @Serializable object EditPaymentTargets : Route()
 
     @Serializable object UpdateReactionType : Route()
