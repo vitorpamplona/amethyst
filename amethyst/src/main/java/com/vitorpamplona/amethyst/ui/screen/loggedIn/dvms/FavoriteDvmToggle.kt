@@ -24,7 +24,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -33,6 +32,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteAndMap
+import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
@@ -40,14 +40,24 @@ import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest.NIP90ContentDiscoveryRequestEvent
 
+/**
+ * Inline star toggle that follows / unfollows a NIP-90 content-discovery DVM.
+ *
+ * Uses [ClickableBox] (no [androidx.compose.material3.IconButton] padding) so it
+ * fits in a `LeftPictureLayout` title row alongside other compact reactions
+ * without inflating the row to 48dp.
+ *
+ * Hidden until the underlying [AppDefinitionEvent] loads and we can confirm the
+ * DVM advertises kind 5300 — favouriting any other DVM type would only stall on
+ * a 6300 reply that never comes.
+ */
 @Composable
 fun FavoriteDvmToggle(
     appDefinitionNote: AddressableNote,
     accountViewModel: AccountViewModel,
     modifier: Modifier = Modifier,
+    iconSizeModifier: Modifier = Size20Modifier,
 ) {
-    // Only NIP-90 content-discovery DVMs (kind 5300) produce a feed; hide the toggle
-    // for any other DVM type so users don't favourite something that would never reply.
     val supportsContentDiscovery by
         observeNoteAndMap(appDefinitionNote, accountViewModel) { note ->
             (note.event as? AppDefinitionEvent)?.includeKind(NIP90ContentDiscoveryRequestEvent.KIND) == true
@@ -60,7 +70,8 @@ fun FavoriteDvmToggle(
 
     val isFavorite = favorites.contains(appDefinitionNote.address)
 
-    IconButton(
+    ClickableBox(
+        modifier = modifier,
         onClick = {
             if (isFavorite) {
                 accountViewModel.unfollowFavoriteDvm(appDefinitionNote.address)
@@ -73,20 +84,19 @@ fun FavoriteDvmToggle(
                 )
             }
         },
-        modifier = modifier,
     ) {
         if (isFavorite) {
             Icon(
                 imageVector = Icons.Filled.Star,
                 contentDescription = stringRes(R.string.remove_dvm_from_favorites),
-                modifier = Size20Modifier,
+                modifier = iconSizeModifier,
                 tint = MaterialTheme.colorScheme.primary,
             )
         } else {
             Icon(
                 imageVector = Icons.Outlined.StarBorder,
                 contentDescription = stringRes(R.string.add_dvm_to_favorites),
-                modifier = Size20Modifier,
+                modifier = iconSizeModifier,
                 tint = MaterialTheme.colorScheme.onSurface,
             )
         }
