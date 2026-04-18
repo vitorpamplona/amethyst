@@ -127,4 +127,22 @@ class PinListState(
             signer = signer,
         )
     }
+
+    suspend fun removeDeletedPins(deletedNotes: Set<Note>): PinListEvent? {
+        val currentList = getPinList() ?: return null
+        val deletedIds = deletedNotes.mapTo(HashSet()) { it.idHex }
+        val pinsToRemove = currentList.pinnedEvents().filter { it.eventId in deletedIds }
+        if (pinsToRemove.isEmpty()) return null
+
+        var working: PinListEvent = currentList
+        for (pin in pinsToRemove) {
+            working =
+                PinListEvent.remove(
+                    earlierVersion = working,
+                    pin = pin,
+                    signer = signer,
+                )
+        }
+        return working
+    }
 }

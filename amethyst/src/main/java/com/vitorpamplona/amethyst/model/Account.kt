@@ -2293,6 +2293,13 @@ class Account(
         }
     }
 
+    suspend fun removeDeletedPins(deletedNotes: Set<Note>) {
+        if (!isWriteable()) return
+
+        val event = pinState.removeDeletedPins(deletedNotes) ?: return
+        sendMyPublicAndPrivateOutbox(event)
+    }
+
     suspend fun createAddPinEvent(note: Note): Pair<Event, Set<NormalizedRelayUrl>>? {
         if (!isWriteable() || note.isDraft()) return null
 
@@ -2674,6 +2681,7 @@ class Account(
                     peopleLists.deletedNotes(deletedNotes)
                     followLists.deletedNotes(deletedNotes)
                     labeledBookmarkLists.deletedNotes(deletedNotes)
+                    removeDeletedPins(deletedNotes)
                 }
             }
         }
