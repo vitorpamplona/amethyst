@@ -14,8 +14,11 @@ STATE_DIR="$SCRIPT_DIR/state"
 LOG_DIR="$STATE_DIR/logs"
 B_DIR="$STATE_DIR/B"
 C_DIR="$STATE_DIR/C"
-B_SOCKET="$B_DIR/wnd.sock"
-C_SOCKET="$C_DIR/wnd.sock"
+# wnd derives its socket path as "{data_dir}/release/wnd.sock" for release
+# builds (and ".../dev/wnd.sock" for debug); our preflight always uses
+# --release, so we hardcode the "release" suffix here.
+B_SOCKET="$B_DIR/release/wnd.sock"
+C_SOCKET="$C_DIR/release/wnd.sock"
 
 RUN_TS="$(date +%Y%m%d-%H%M%S)"
 LOG_FILE="$LOG_DIR/run-$RUN_TS.log"
@@ -102,12 +105,14 @@ start_daemon() {
     return 0
   fi
   rm -f "$socket"
-  mkdir -p "$data_dir/logs"
-  nohup "$WND_BIN" --data-dir "$data_dir" --logs-dir "$data_dir/logs" --socket "$socket" \
+  mkdir -p "$data_dir/logs" "$data_dir/release"
+  # wnd puts its socket at {data_dir}/release/wnd.sock (release build) — we
+  # don't pass --socket because the daemon doesn't accept that flag.
+  nohup "$WND_BIN" --data-dir "$data_dir" --logs-dir "$data_dir/logs" \
     >"$data_dir/logs/stdout.log" 2>"$data_dir/logs/stderr.log" &
   local pid=$!
   echo "$pid" > "$data_dir/pid"
-  info "$name pid $pid; waiting for socket..."
+  info "$name pid $pid; waiting for socket at $socket ..."
   local deadline=$(( $(date +%s) + 30 ))
   while [[ $(date +%s) -lt $deadline ]]; do
     if [[ -S "$socket" ]] && "$WN_BIN" --socket "$socket" whoami >/dev/null 2>&1; then
