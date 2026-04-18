@@ -23,7 +23,10 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -52,6 +55,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
@@ -264,7 +268,7 @@ private fun DiscoverPages(
         },
         accountViewModel = accountViewModel,
     ) {
-        HorizontalPager(state = pagerState, contentPadding = it) { page ->
+        HorizontalPager(state = pagerState) { page ->
             if (page >= 0 && page < feedTabs.size) {
                 val tab = feedTabs[page]
                 RefresheableBox(tab.feedState, true) {
@@ -275,6 +279,7 @@ private fun DiscoverPages(
                                 routeForLastRead = tab.routeForLastRead,
                                 forceEventKind = tab.forceEventKind,
                                 listState = listState,
+                                scaffoldPadding = it,
                                 accountViewModel = accountViewModel,
                                 nav = nav,
                             )
@@ -286,6 +291,7 @@ private fun DiscoverPages(
                                 routeForLastRead = tab.routeForLastRead,
                                 forceEventKind = tab.forceEventKind,
                                 listState = listState,
+                                scaffoldPadding = it,
                                 accountViewModel = accountViewModel,
                                 nav = nav,
                             )
@@ -303,6 +309,7 @@ private fun RenderDiscoverFeed(
     routeForLastRead: String?,
     forceEventKind: Int?,
     listState: LazyGridState,
+    scaffoldPadding: PaddingValues,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -329,6 +336,7 @@ private fun RenderDiscoverFeed(
                     routeForLastRead,
                     listState,
                     forceEventKind,
+                    scaffoldPadding,
                     accountViewModel,
                     nav,
                 )
@@ -391,6 +399,7 @@ private fun RenderDiscoverFeed(
     routeForLastRead: String?,
     forceEventKind: Int?,
     listState: LazyListState,
+    scaffoldPadding: PaddingValues,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -417,6 +426,7 @@ private fun RenderDiscoverFeed(
                     routeForLastRead,
                     listState,
                     forceEventKind,
+                    scaffoldPadding,
                     accountViewModel,
                     nav,
                 )
@@ -460,13 +470,25 @@ private fun DiscoverFeedLoaded(
     routeForLastRead: String?,
     listState: LazyListState,
     forceEventKind: Int?,
+    scaffoldPadding: PaddingValues,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
 
+    val layoutDirection = LocalLayoutDirection.current
+    val listPadding =
+        remember(scaffoldPadding, layoutDirection) {
+            PaddingValues(
+                start = scaffoldPadding.calculateStartPadding(layoutDirection),
+                top = scaffoldPadding.calculateTopPadding() + FeedPadding.calculateTopPadding(),
+                end = scaffoldPadding.calculateEndPadding(layoutDirection),
+                bottom = scaffoldPadding.calculateBottomPadding() + FeedPadding.calculateBottomPadding(),
+            )
+        }
+
     LazyColumn(
-        contentPadding = FeedPadding,
+        contentPadding = listPadding,
         state = listState,
     ) {
         itemsIndexed(items.list, key = { _, item -> item.idHex }) { _, item ->
@@ -495,14 +517,26 @@ private fun DiscoverFeedColumnsLoaded(
     routeForLastRead: String?,
     listState: LazyGridState,
     forceEventKind: Int?,
+    scaffoldPadding: PaddingValues,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
 
+    val layoutDirection = LocalLayoutDirection.current
+    val gridPadding =
+        remember(scaffoldPadding, layoutDirection) {
+            PaddingValues(
+                start = scaffoldPadding.calculateStartPadding(layoutDirection),
+                top = scaffoldPadding.calculateTopPadding() + FeedPadding.calculateTopPadding(),
+                end = scaffoldPadding.calculateEndPadding(layoutDirection),
+                bottom = scaffoldPadding.calculateBottomPadding() + FeedPadding.calculateBottomPadding(),
+            )
+        }
+
     LazyVerticalGrid(
         columns = GridCells.Fixed(2),
-        contentPadding = FeedPadding,
+        contentPadding = gridPadding,
         state = listState,
     ) {
         itemsIndexed(items.list, key = { _, item -> item.idHex }) { _, item ->
