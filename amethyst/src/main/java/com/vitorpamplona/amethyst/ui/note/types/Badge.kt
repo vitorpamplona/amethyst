@@ -21,13 +21,18 @@
 package com.vitorpamplona.amethyst.ui.note.types
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -42,6 +47,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
@@ -53,13 +59,16 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
+import com.vitorpamplona.quartz.nip58Badges.accepted.AcceptedBadgeSetEvent
 import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
 import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
+import com.vitorpamplona.quartz.nip58Badges.profile.ProfileBadgesEvent
 
 @Composable
 fun BadgeDisplay(
     baseNote: Note,
     accountViewModel: AccountViewModel,
+    nav: INav? = null,
 ) {
     val badgeData by observeNoteEvent<BadgeDefinitionEvent>(baseNote, accountViewModel)
 
@@ -71,6 +80,27 @@ fun BadgeDisplay(
             MaterialTheme.colorScheme.onBackground,
             it.description(),
         )
+
+        if (nav != null && it.pubKey == accountViewModel.userProfile().pubkeyHex) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                horizontalArrangement = Arrangement.End,
+            ) {
+                Button(
+                    onClick = {
+                        nav.nav(
+                            com.vitorpamplona.amethyst.ui.navigation.routes.Route.AwardBadge(
+                                kind = it.kind,
+                                pubKeyHex = it.pubKey,
+                                dTag = it.dTag(),
+                            ),
+                        )
+                    },
+                ) {
+                    Text(stringRes(R.string.award_badge))
+                }
+            }
+        }
     }
 }
 
@@ -178,5 +208,82 @@ fun RenderBadgeAward(
 
     note.replyTo?.firstOrNull()?.let {
         BadgeDisplay(baseNote = it, accountViewModel)
+    }
+
+    AcceptBadgeControls(noteEvent, accountViewModel)
+}
+
+@Composable
+private fun AcceptBadgeControls(
+    award: BadgeAwardEvent,
+    accountViewModel: AccountViewModel,
+) {
+    val myPubkey = accountViewModel.userProfile().pubkeyHex
+    val amAwardee = remember(award, myPubkey) { award.awardeeIds().contains(myPubkey) }
+    if (!amAwardee) return
+
+    val newNote = accountViewModel.getOrCreateAddressableNote(ProfileBadgesEvent.createAddress(myPubkey))
+    val oldNote = accountViewModel.getOrCreateAddressableNote(AcceptedBadgeSetEvent.createAddress(myPubkey))
+
+    val newState by newNote
+        .flow()
+        .metadata.stateFlow
+        .collectAsStateWithLifecycle()
+    val oldState by oldNote
+        .flow()
+        .metadata.stateFlow
+        .collectAsStateWithLifecycle()
+
+    val isAccepted =
+        remember(newState, oldState, award.id) {
+            val newEvent = newState.note.event as? ProfileBadgesEvent
+            val oldEvent = oldState.note.event as? AcceptedBadgeSetEvent
+            val awardIds =
+                newEvent?.badgeAwardEvents()?.map { it.eventId }
+                    ?: oldEvent?.badgeAwardEvents()?.map { it.eventId }
+                    ?: emptyList()
+            awardIds.contains(award.id)
+        }
+
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+        horizontalArrangement = Arrangement.End,
+    ) {
+        if (isAccepted) {
+            OutlinedButton(
+                onClick = {
+                    accountViewModel.launchSigner {
+                        accountViewModel.account.removeAcceptedBadge(award)
+                    }
+                },
+            ) {
+                Text(stringRes(R.string.unaccept_badge))
+            }
+        } else {
+            OutlinedButton(
+                onClick = {
+                    accountViewModel.launchSigner {
+                        accountViewModel.account.removeAcceptedBadge(award)
+                    }
+                },
+            ) {
+                Text(stringRes(R.string.reject_badge))
+            }
+            Spacer(modifier = Modifier.size(8.dp))
+            Button(
+                onClick = {
+                    accountViewModel.launchSigner {
+                        val defAddr = award.awardDefinition().firstOrNull() ?: return@launchSigner
+                        val defNote =
+                            com.vitorpamplona.amethyst.model.LocalCache
+                                .getAddressableNoteIfExists(defAddr)
+                        val defEvent = defNote?.event as? BadgeDefinitionEvent ?: return@launchSigner
+                        accountViewModel.account.addAcceptedBadge(award, defEvent)
+                    }
+                },
+            ) {
+                Text(stringRes(R.string.accept_badge))
+            }
+        }
     }
 }

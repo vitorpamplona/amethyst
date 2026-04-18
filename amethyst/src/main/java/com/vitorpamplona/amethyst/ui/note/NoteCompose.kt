@@ -397,7 +397,7 @@ fun AcceptableNote(
             }
 
             is BadgeDefinitionEvent -> {
-                BadgeDisplay(baseNote = baseNote, accountViewModel)
+                BadgeDisplay(baseNote = baseNote, accountViewModel = accountViewModel, nav = nav)
             }
 
             else -> {
@@ -455,7 +455,7 @@ fun AcceptableNote(
             }
 
             is BadgeDefinitionEvent -> {
-                BadgeDisplay(baseNote, accountViewModel)
+                BadgeDisplay(baseNote = baseNote, accountViewModel = accountViewModel, nav = nav)
             }
 
             else -> {

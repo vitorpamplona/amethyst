@@ -28,6 +28,10 @@ import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.feeds.ChannelFeedContentState
 import com.vitorpamplona.amethyst.ui.screen.TopNavFilterState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.articles.dal.ArticlesFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.dal.BadgesAwardedFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.dal.BadgesDiscoverFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.dal.BadgesMineFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.dal.BadgesReceivedFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.dal.ChatroomListKnownFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.dal.ChatroomListNewFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip23LongForm.DiscoverLongFormFeedFilter
@@ -81,6 +85,11 @@ class AccountFeedContentStates(
     val openPollsFeed = FeedContentState(OpenPollsFeedFilter(account), scope, LocalCache)
     val closedPollsFeed = FeedContentState(ClosedPollsFeedFilter(account), scope, LocalCache)
 
+    val badgesReceived = FeedContentState(BadgesReceivedFeedFilter(account), scope, LocalCache)
+    val badgesMine = FeedContentState(BadgesMineFeedFilter(account), scope, LocalCache)
+    val badgesAwarded = FeedContentState(BadgesAwardedFeedFilter(account), scope, LocalCache)
+    val badgesDiscover = FeedContentState(BadgesDiscoverFeedFilter(account), scope, LocalCache)
+
     val picturesFeed = FeedContentState(PictureFeedFilter(account), scope, LocalCache)
     val productsFeed = FeedContentState(ProductsFeedFilter(account), scope, LocalCache)
     val shortsFeed = FeedContentState(ShortsFeedFilter(account), scope, LocalCache)
@@ -125,6 +134,11 @@ class AccountFeedContentStates(
         openPollsFeed.updateFeedWith(newNotes)
         closedPollsFeed.updateFeedWith(newNotes)
 
+        badgesReceived.updateFeedWith(newNotes)
+        badgesMine.updateFeedWith(newNotes)
+        badgesAwarded.updateFeedWith(newNotes)
+        badgesDiscover.updateFeedWith(newNotes)
+
         picturesFeed.updateFeedWith(newNotes)
         productsFeed.updateFeedWith(newNotes)
         shortsFeed.updateFeedWith(newNotes)
@@ -162,6 +176,11 @@ class AccountFeedContentStates(
         pollsFeed.deleteFromFeed(newNotes)
         openPollsFeed.deleteFromFeed(newNotes)
         closedPollsFeed.deleteFromFeed(newNotes)
+
+        badgesReceived.deleteFromFeed(newNotes)
+        badgesMine.deleteFromFeed(newNotes)
+        badgesAwarded.deleteFromFeed(newNotes)
+        badgesDiscover.deleteFromFeed(newNotes)
 
         picturesFeed.deleteFromFeed(newNotes)
         productsFeed.deleteFromFeed(newNotes)

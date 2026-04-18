@@ -150,8 +150,11 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.countHashtags
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
 import com.vitorpamplona.quartz.nip01Core.tags.references.references
 import com.vitorpamplona.quartz.nip03Timestamp.OtsResolver
@@ -194,6 +197,12 @@ import com.vitorpamplona.quartz.nip57Zaps.PrivateZapCache
 import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetup
 import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplits
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiser
+import com.vitorpamplona.quartz.nip58Badges.accepted.AcceptedBadgeSetEvent
+import com.vitorpamplona.quartz.nip58Badges.accepted.tags.AcceptedBadge
+import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
+import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
+import com.vitorpamplona.quartz.nip58Badges.definition.tags.ThumbTag
+import com.vitorpamplona.quartz.nip58Badges.profile.ProfileBadgesEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.EphemeralGiftWrapEvent
@@ -1065,6 +1074,109 @@ class Account(
 
         cache.justConsumeMyOwnEvent(signedEvent)
         client.publish(signedEvent, computeRelayListToBroadcast(signedEvent))
+    }
+
+    suspend fun sendBadgeDefinition(
+        badgeId: String,
+        name: String?,
+        imageUrl: String?,
+        imageDim: DimensionTag?,
+        description: String?,
+        thumbs: List<ThumbTag> = emptyList(),
+    ) {
+        if (!isWriteable()) return
+
+        val template =
+            BadgeDefinitionEvent.build(
+                badgeId = badgeId,
+                name = name,
+                imageUrl = imageUrl,
+                imageDimensions = imageDim,
+                description = description,
+                thumbs = thumbs,
+            )
+        val signedEvent = signer.sign(template)
+
+        cache.justConsumeMyOwnEvent(signedEvent)
+        client.publish(signedEvent, outboxRelays.flow.value)
+    }
+
+    suspend fun deleteBadgeDefinition(event: BadgeDefinitionEvent) {
+        if (!isWriteable()) return
+        if (event.pubKey != signer.pubKey) return
+
+        val template = DeletionEvent.build(listOf(event))
+        val signedEvent = signer.sign(template)
+
+        cache.justConsumeMyOwnEvent(signedEvent)
+        client.publish(signedEvent, computeRelayListToBroadcast(signedEvent))
+    }
+
+    suspend fun sendBadgeAward(
+        definition: BadgeDefinitionEvent,
+        awardees: List<PTag>,
+    ) {
+        if (!isWriteable()) return
+        if (awardees.isEmpty()) return
+
+        val aTag = ATag(definition.kind, definition.pubKey, definition.dTag(), null)
+        val template = BadgeAwardEvent.build(aTag, awardees)
+        val signedEvent = signer.sign(template)
+
+        val relays =
+            outboxRelays.flow.value +
+                awardees
+                    .flatMap { cache.getOrCreateUser(it.pubKey).inboxRelays() ?: emptyList() }
+                    .toSet()
+
+        cache.justConsumeMyOwnEvent(signedEvent)
+        client.publish(signedEvent, relays)
+    }
+
+    private fun loadCurrentAcceptedBadges(): List<AcceptedBadge> {
+        val newNote = cache.getAddressableNoteIfExists(ProfileBadgesEvent.createAddress(signer.pubKey))
+        val newEvent = newNote?.event as? ProfileBadgesEvent
+        if (newEvent != null) return newEvent.acceptedBadges()
+
+        val oldNote = cache.getAddressableNoteIfExists(AcceptedBadgeSetEvent.createAddress(signer.pubKey))
+        val oldEvent = oldNote?.event as? AcceptedBadgeSetEvent
+        return oldEvent?.acceptedBadges() ?: emptyList()
+    }
+
+    suspend fun addAcceptedBadge(
+        award: BadgeAwardEvent,
+        definition: BadgeDefinitionEvent,
+    ) {
+        if (!isWriteable()) return
+
+        val aTag = ATag(definition.kind, definition.pubKey, definition.dTag(), null)
+        val eTag = ETag(award.id)
+
+        val current = loadCurrentAcceptedBadges()
+        val alreadyAccepted = current.any { it.badgeAward.eventId == award.id }
+        if (alreadyAccepted) return
+
+        val updated = current + AcceptedBadge(aTag, eTag)
+
+        val template = ProfileBadgesEvent.build(updated)
+        val signedEvent = signer.sign(template)
+
+        cache.justConsumeMyOwnEvent(signedEvent)
+        client.publish(signedEvent, outboxRelays.flow.value)
+    }
+
+    suspend fun removeAcceptedBadge(award: BadgeAwardEvent) {
+        if (!isWriteable()) return
+
+        val current = loadCurrentAcceptedBadges()
+        val updated = current.filterNot { it.badgeAward.eventId == award.id }
+        if (updated.size == current.size) return
+
+        val template = ProfileBadgesEvent.build(updated)
+        val signedEvent = signer.sign(template)
+
+        cache.justConsumeMyOwnEvent(signedEvent)
+        client.publish(signedEvent, outboxRelays.flow.value)
     }
 
     fun sendMyPublicAndPrivateOutbox(event: Event?) {
