@@ -1809,8 +1809,8 @@ class AccountViewModel(
         onReady: (event: Note) -> Unit,
     ) {
         launchSigner {
-            account.requestDVMContentDiscovery(dvmPublicKey) {
-                onReady(LocalCache.getOrCreateNote(it.id))
+            account.requestDVMContentDiscovery(dvmPublicKey) { request, _ ->
+                onReady(LocalCache.getOrCreateNote(request.id))
             }
         }
     }

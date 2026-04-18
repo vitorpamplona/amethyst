@@ -21,8 +21,19 @@
 package com.vitorpamplona.amethyst.model.topNavFeeds.favoriteDvm
 
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavPerRelayFilterSet
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
+/**
+ * Two relay sets, two distinct subscriptions:
+ *
+ * - [contentFetches] — for each user-configured content relay, the ids/addresses
+ *   we want to pull (the actual notes the DVM curated).
+ * - [listenRelays] — the DVM's own publish relays (where it will deliver future
+ *   kind 6300 / 7000 events for this request).
+ */
 class FavoriteDvmTopNavPerRelayFilterSet(
-    val set: Map<NormalizedRelayUrl, FavoriteDvmTopNavPerRelayFilter>,
+    val contentFetches: Map<NormalizedRelayUrl, FavoriteDvmTopNavPerRelayFilter>,
+    val listenRelays: Set<NormalizedRelayUrl>,
+    val requestId: HexKey?,
 ) : IFeedTopNavPerRelayFilterSet

@@ -26,8 +26,6 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 @Immutable
 class FavoriteDvmTopNavPerRelayFilter(
-    val dvmPubkey: HexKey,
-    val requestId: HexKey?,
     val ids: Set<HexKey>,
     val addresses: Set<String>,
 ) : IFeedTopNavPerRelayFilter

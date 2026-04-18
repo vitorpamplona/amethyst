@@ -43,7 +43,8 @@ class FavoriteDvmTopNavFilter(
     val dvmAddress: Address,
     val acceptedIds: Set<HexKey>,
     val acceptedAddresses: Set<String>,
-    val relayList: Set<NormalizedRelayUrl>,
+    val contentRelays: Set<NormalizedRelayUrl>,
+    val listenRelays: Set<NormalizedRelayUrl>,
     val requestId: HexKey?,
 ) : IFeedTopNavFilter {
     override fun matchAuthor(pubkey: HexKey): Boolean = true
@@ -56,13 +57,14 @@ class FavoriteDvmTopNavFilter(
 
     override fun startValue(cache: LocalCache): FavoriteDvmTopNavPerRelayFilterSet =
         FavoriteDvmTopNavPerRelayFilterSet(
-            relayList.associateWith {
-                FavoriteDvmTopNavPerRelayFilter(
-                    dvmPubkey = dvmAddress.pubKeyHex,
-                    requestId = requestId,
-                    ids = acceptedIds,
-                    addresses = acceptedAddresses,
-                )
-            },
+            contentFetches =
+                contentRelays.associateWith {
+                    FavoriteDvmTopNavPerRelayFilter(
+                        ids = acceptedIds,
+                        addresses = acceptedAddresses,
+                    )
+                },
+            listenRelays = listenRelays,
+            requestId = requestId,
         )
 }

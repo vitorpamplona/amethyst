@@ -282,7 +282,20 @@ fun HomeFeeds(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    RefresheableBox(feedState, enablePullRefresh) {
+    val activeFilter by accountViewModel.account.settings.defaultHomeFollowList
+        .collectAsStateWithLifecycle()
+    val activeDvm = activeFilter as? TopFilter.FavoriteDvm
+
+    val onRefresh: () -> Unit = {
+        feedState.invalidateData()
+        if (activeDvm != null) {
+            // Swiping down on Home should also re-issue the kind-5300 request so the
+            // DVM produces a fresh feed, not just re-render whatever's cached.
+            accountViewModel.refreshFavoriteDvm(activeDvm.address)
+        }
+    }
+
+    RefresheableHomeBox(onRefresh, enablePullRefresh) {
         SaveableFeedContentState(feedState, scrollStateKey) { listState ->
             RenderFeedContentState(
                 feedContentState = feedState,
@@ -291,9 +304,25 @@ fun HomeFeeds(
                 nav = nav,
                 routeForLastRead = routeForLastRead,
                 onLoaded = { FeedLoaded(it, listState, routeForLastRead, liveSection, accountViewModel, nav) },
-                onEmpty = { HomeFeedEmpty(feedState::invalidateData) },
+                onEmpty = { HomeFeedEmpty(onRefresh) },
             )
         }
+    }
+}
+
+@Composable
+private fun RefresheableHomeBox(
+    onRefresh: () -> Unit,
+    enablePullRefresh: Boolean,
+    content: @Composable androidx.compose.foundation.layout.BoxScope.() -> Unit,
+) {
+    if (enablePullRefresh) {
+        RefresheableBox(onRefresh = onRefresh, content = content)
+    } else {
+        androidx.compose.foundation.layout.Box(
+            Modifier.fillMaxSize(),
+            content = content,
+        )
     }
 }
 

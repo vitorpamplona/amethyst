@@ -43,12 +43,13 @@ class FavoriteDvmFeedFlow(
 
     private fun buildFilter(
         snapshot: com.vitorpamplona.amethyst.model.dvms.FavoriteDvmSnapshot,
-        relays: Set<NormalizedRelayUrl>,
+        contentRelays: Set<NormalizedRelayUrl>,
     ) = FavoriteDvmTopNavFilter(
         dvmAddress = dvmAddress,
         acceptedIds = snapshot.ids,
         acceptedAddresses = snapshot.addresses,
-        relayList = relays,
+        contentRelays = contentRelays,
+        listenRelays = snapshot.responseRelays,
         requestId = snapshot.requestId,
     )
 
@@ -60,7 +61,7 @@ class FavoriteDvmFeedFlow(
     override fun startValue(): FavoriteDvmTopNavFilter =
         buildFilter(
             snapshot = orchestrator.observe(dvmAddress).value,
-            relays = resolveRelays(outboxRelays.value, proxyRelays.value),
+            contentRelays = resolveRelays(outboxRelays.value, proxyRelays.value),
         )
 
     override suspend fun startValue(collector: FlowCollector<IFeedTopNavFilter>) {

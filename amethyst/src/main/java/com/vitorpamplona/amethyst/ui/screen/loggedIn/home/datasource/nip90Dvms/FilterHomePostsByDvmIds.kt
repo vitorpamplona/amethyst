@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip90Dvms
 import com.vitorpamplona.amethyst.model.topNavFeeds.favoriteDvm.FavoriteDvmTopNavPerRelayFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.favoriteDvm.FavoriteDvmTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -32,22 +33,40 @@ import com.vitorpamplona.quartz.nip90Dvms.status.NIP90StatusEvent
 /**
  * Builds relay REQ filters for a favourite-DVM home feed.
  *
- * Three filters are issued per relay:
- * - fetch notes whose ids are in the DVM's latest kind-6300 response
- * - fetch addressable notes referenced by `a` tags in the DVM's response
- * - subscribe to the DVM's future kind 6300 / 7000 events so the filter snapshot
- *   keeps up to date while this filter is active
+ * Two distinct subscription kinds with two distinct relay sets:
+ *
+ * - **Content fetch** — for each of the user's outbox/proxy relays, request the
+ *   note IDs and addressable references the DVM curated. Notes typically live on
+ *   the user's normal relays, so this is where we fetch them.
+ *
+ * - **Response listen** — for each relay the DVM advertised (where it received
+ *   the kind-5300 request and will publish its 6300/7000 reply), subscribe to
+ *   future kind 6300 / 7000 events tagged with the request id. The DVM almost
+ *   never publishes responses on the user's outbox, so listening anywhere else
+ *   would silently miss them.
  */
 fun filterHomePostsByDvmIds(
     set: FavoriteDvmTopNavPerRelayFilterSet,
     @Suppress("UNUSED_PARAMETER") since: SincePerRelayMap?,
     @Suppress("UNUSED_PARAMETER") defaultSince: Long?,
-): List<RelayBasedFilter> =
-    set.set.flatMap { (relay, filter) ->
-        buildFiltersFor(relay, filter)
+): List<RelayBasedFilter> {
+    val out = mutableListOf<RelayBasedFilter>()
+
+    set.contentFetches.forEach { (relay, filter) ->
+        out += contentFetchFilters(relay, filter)
     }
 
-private fun buildFiltersFor(
+    val requestId = set.requestId
+    if (requestId != null) {
+        set.listenRelays.forEach { relay ->
+            out += responseListenFilter(relay, requestId)
+        }
+    }
+
+    return out
+}
+
+private fun contentFetchFilters(
     relay: NormalizedRelayUrl,
     filter: FavoriteDvmTopNavPerRelayFilter,
 ): List<RelayBasedFilter> {
@@ -77,23 +96,22 @@ private fun buildFiltersFor(
             )
     }
 
-    val requestId = filter.requestId
-    if (requestId != null) {
-        out +=
-            RelayBasedFilter(
-                relay = relay,
-                filter =
-                    Filter(
-                        kinds =
-                            listOf(
-                                NIP90ContentDiscoveryResponseEvent.KIND,
-                                NIP90StatusEvent.KIND,
-                            ),
-                        tags = mapOf("e" to listOf(requestId)),
-                        limit = 10,
-                    ),
-            )
-    }
-
     return out
 }
+
+private fun responseListenFilter(
+    relay: NormalizedRelayUrl,
+    requestId: HexKey,
+) = RelayBasedFilter(
+    relay = relay,
+    filter =
+        Filter(
+            kinds =
+                listOf(
+                    NIP90ContentDiscoveryResponseEvent.KIND,
+                    NIP90StatusEvent.KIND,
+                ),
+            tags = mapOf("e" to listOf(requestId)),
+            limit = 10,
+        ),
+)

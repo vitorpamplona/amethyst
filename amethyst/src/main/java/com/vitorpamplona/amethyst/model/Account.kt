@@ -2357,7 +2357,7 @@ class Account(
 
     suspend fun requestDVMContentDiscovery(
         dvmPublicKey: User,
-        onReady: (event: NIP90ContentDiscoveryRequestEvent) -> Unit,
+        onReady: (event: NIP90ContentDiscoveryRequestEvent, relays: Set<NormalizedRelayUrl>) -> Unit,
     ) {
         val relays = nip65RelayList.inboxFlow.value.toSet()
         val request = signer.sign<NIP90ContentDiscoveryRequestEvent>(NIP90ContentDiscoveryRequestEvent.build(dvmPublicKey.pubkeyHex, signer.pubKey, relays))
@@ -2367,7 +2367,7 @@ class Account(
                 ?: (dvmPublicKey.allUsedRelays() + cache.relayHints.hintsForKey(dvmPublicKey.pubkeyHex))
 
         cache.justConsumeMyOwnEvent(request)
-        onReady(request)
+        onReady(request, relayList.toSet())
         delay(100)
         client.publish(request, relayList)
     }

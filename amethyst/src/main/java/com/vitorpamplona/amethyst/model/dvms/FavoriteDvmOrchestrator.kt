@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.NIP90ContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.status.NIP90StatusEvent
 import com.vitorpamplona.quartz.utils.Log
@@ -44,12 +45,16 @@ import kotlinx.coroutines.sync.withLock
  * Immutable snapshot of a favourite DVM's current request/response state.
  *
  * - [requestId] is the id of the most recently published kind-5300 request.
+ * - [responseRelays] is the relay set the kind-5300 was sent to — the same set on
+ *   which the DVM will publish its 6300/7000 responses, so the home subscription
+ *   manager must listen there (not on the user's own outbox).
  * - [ids] and [addresses] are the note references returned by the latest kind-6300 response.
  * - [latestStatus] is the latest kind-7000 status event (processing, payment-required, error, …).
  * - [errorMessage] captures any client-side failure while publishing the request.
  */
 data class FavoriteDvmSnapshot(
     val requestId: HexKey? = null,
+    val responseRelays: Set<NormalizedRelayUrl> = emptySet(),
     val ids: Set<HexKey> = emptySet(),
     val addresses: Set<String> = emptySet(),
     val latestStatus: NIP90StatusEvent? = null,
@@ -114,10 +119,11 @@ class FavoriteDvmOrchestrator(
         val job =
             scope.launch(Dispatchers.IO) {
                 try {
-                    account.requestDVMContentDiscovery(user) { request ->
+                    account.requestDVMContentDiscovery(user) { request, relays ->
                         seed.update {
                             it.copy(
                                 requestId = request.id,
+                                responseRelays = relays,
                                 ids = emptySet(),
                                 addresses = emptySet(),
                                 latestStatus = null,
