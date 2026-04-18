@@ -87,6 +87,7 @@ fun RenderVideoPlayer(
     videoModifier: Modifier,
     onDialog: (() -> Unit)? = null,
     controllerVisible: MutableState<Boolean> = remember { mutableStateOf(false) },
+    hasBlurhash: Boolean = false,
     accountViewModel: AccountViewModel,
 ) {
     val containerSize = remember { mutableStateOf(IntSize.Zero) }
@@ -123,6 +124,7 @@ fun RenderVideoPlayer(
             controllerState,
             mediaItem.src.waveformData,
             Modifier.fillMaxSize().align(Alignment.Center),
+            hasBlurhash = hasBlurhash,
         )
 
         if (showControls) {
