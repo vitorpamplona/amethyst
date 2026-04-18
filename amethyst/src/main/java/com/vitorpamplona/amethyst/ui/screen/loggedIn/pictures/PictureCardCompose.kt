@@ -39,6 +39,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
+import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.AutoNonlazyGrid
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
@@ -112,10 +113,19 @@ private fun PictureCardImage(
         }
 
     if (images.isNotEmpty()) {
-        SensitivityWarning(note = note, accountViewModel = accountViewModel) {
+        val first = images.first()
+        val ratio = first.dim?.aspectRatio() ?: MediaAspectRatioCache.get(first.url)
+
+        SensitivityWarning(
+            note = note,
+            blurhash = first.blurhash,
+            ratio = ratio,
+            description = first.description,
+            accountViewModel = accountViewModel,
+        ) {
             if (images.size == 1) {
                 ZoomableContentView(
-                    content = images.first(),
+                    content = first,
                     images = images,
                     roundedCorner = false,
                     contentScale = ContentScale.FillWidth,

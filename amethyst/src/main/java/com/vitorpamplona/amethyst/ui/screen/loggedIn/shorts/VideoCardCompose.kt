@@ -42,6 +42,7 @@ import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
@@ -130,7 +131,15 @@ private fun VideoCardImage(
             )
         }
 
-    SensitivityWarning(note = note, accountViewModel = accountViewModel) {
+    val ratio = imeta.dimension?.aspectRatio() ?: MediaAspectRatioCache.get(imeta.url)
+
+    SensitivityWarning(
+        note = note,
+        blurhash = imeta.blurhash,
+        ratio = ratio,
+        description = content.description,
+        accountViewModel = accountViewModel,
+    ) {
         ZoomableContentView(
             content = content,
             roundedCorner = false,

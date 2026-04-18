@@ -20,10 +20,13 @@
  */
 package com.vitorpamplona.amethyst.ui.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -44,6 +47,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -70,6 +74,31 @@ fun SensitivityWarning(
     content: @Composable () -> Unit,
 ) {
     note.event?.let { SensitivityWarning(it, accountViewModel, content) }
+}
+
+@Composable
+fun SensitivityWarning(
+    note: Note,
+    blurhash: String?,
+    ratio: Float?,
+    description: String?,
+    accountViewModel: AccountViewModel,
+    content: @Composable () -> Unit,
+) {
+    val event = note.event
+    if (event == null) {
+        content()
+        return
+    }
+
+    val hasSensitiveContent = remember(event) { event.isSensitiveOrNSFW() }
+
+    if (hasSensitiveContent) {
+        val reason = remember(event) { event.contentWarningReason() }
+        ObserveSensitivityWarningOverBlurhash(reason, blurhash, ratio, description, accountViewModel, content)
+    } else {
+        content()
+    }
 }
 
 @Composable
@@ -120,6 +149,32 @@ fun ObserveSensitivityWarning(
     }
 }
 
+@Composable
+fun ObserveSensitivityWarningOverBlurhash(
+    reason: String?,
+    blurhash: String?,
+    ratio: Float?,
+    description: String?,
+    accountViewModel: AccountViewModel,
+    content: @Composable () -> Unit,
+) {
+    val accountState = accountViewModel.showSensitiveContent().collectAsStateWithLifecycle()
+
+    var showContentWarningNote by remember(accountState) { mutableStateOf(accountState.value != true) }
+
+    CrossfadeIfEnabled(targetState = showContentWarningNote, accountViewModel = accountViewModel) {
+        if (it) {
+            if (blurhash != null) {
+                ContentWarningOverBlurhash(reason, blurhash, ratio, description) { showContentWarningNote = false }
+            } else {
+                ContentWarningNote(reason) { showContentWarningNote = false }
+            }
+        } else {
+            content()
+        }
+    }
+}
+
 @Preview
 @Composable
 fun ContentWarningNotePreview() {
@@ -141,6 +196,108 @@ fun ContentWarningNoteWithReasonPreview() {
 fun ContentWarningNoteWithBigReasonPreview() {
     ThemeComparisonColumn {
         ContentWarningNote("Spoilers, monkeys, bannanas, and other things") {}
+    }
+}
+
+@Preview
+@Composable
+fun ContentWarningOverBlurhashPreview() {
+    ThemeComparisonColumn {
+        ContentWarningOverBlurhash(
+            reason = "Spoilers",
+            blurhash = "LEHV6nWB2yk8pyo0adR*.7kCMdnj",
+            ratio = 16f / 9f,
+            description = null,
+            onDismiss = {},
+        )
+    }
+}
+
+@Composable
+fun ContentWarningOverBlurhash(
+    reason: String?,
+    blurhash: String,
+    ratio: Float?,
+    description: String?,
+    onDismiss: () -> Unit,
+) {
+    val sizingModifier =
+        if (ratio != null) {
+            Modifier.fillMaxWidth().aspectRatio(ratio)
+        } else {
+            Modifier.fillMaxWidth()
+        }
+
+    Box(modifier = sizingModifier) {
+        DisplayBlurHash(
+            blurhash = blurhash,
+            description = description,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize(),
+        )
+
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.35f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Column(
+                modifier = Modifier.padding(horizontal = 12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Box(
+                    Modifier
+                        .height(80.dp)
+                        .width(90.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Visibility,
+                        contentDescription = stringRes(R.string.content_warning),
+                        modifier =
+                            Modifier
+                                .size(70.dp)
+                                .align(Alignment.BottomStart),
+                        tint = Color.White,
+                    )
+                    Icon(
+                        imageVector = Icons.Rounded.Warning,
+                        contentDescription = stringRes(R.string.content_warning),
+                        modifier =
+                            Modifier
+                                .size(30.dp)
+                                .align(Alignment.TopEnd),
+                        tint = Color.White,
+                    )
+                }
+
+                Text(
+                    text =
+                        if (reason.isNullOrBlank()) {
+                            stringRes(R.string.content_warning)
+                        } else {
+                            stringRes(R.string.content_warning_with_reason, reason)
+                        },
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                    color = Color.White,
+                    softWrap = true,
+                    textAlign = TextAlign.Center,
+                )
+
+                FilledTonalButton(
+                    modifier = Modifier.padding(top = 10.dp),
+                    onClick = onDismiss,
+                    shape = ButtonBorder,
+                    contentPadding = ButtonPadding,
+                ) {
+                    Text(
+                        text = stringRes(R.string.show_anyway),
+                    )
+                }
+            }
+        }
     }
 }
 
