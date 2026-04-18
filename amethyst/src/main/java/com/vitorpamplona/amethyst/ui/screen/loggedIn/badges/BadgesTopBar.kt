@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.badges
 
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import com.vitorpamplona.amethyst.R
@@ -35,9 +34,6 @@ fun BadgesTopBar(
     nav: INav,
 ) {
     UserDrawerSearchTopBar(accountViewModel, nav) {
-        Text(
-            text = stringRes(R.string.badges),
-            style = MaterialTheme.typography.titleMedium,
-        )
+        Text(text = stringRes(R.string.badges))
     }
 }
