@@ -60,9 +60,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import coil3.disk.DiskCache
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
 import com.vitorpamplona.amethyst.ui.components.ShareMediaAction
@@ -80,10 +80,12 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import net.engawapg.lib.zoomable.rememberZoomState
 import net.engawapg.lib.zoomable.zoomable
-import java.io.File
+
+// Hard ceiling on each rendered page bitmap, in pixels. Prevents OOM on very large pages.
+private const val VIEWER_MAX_DIM_PX = 2048
 
 private class PdfDocumentHandle(
-    val file: File,
+    val snapshot: DiskCache.Snapshot,
     val pfd: ParcelFileDescriptor,
     val renderer: PdfRenderer,
 ) {
@@ -91,18 +93,9 @@ private class PdfDocumentHandle(
     val mutex: Mutex = Mutex()
 
     fun close() {
-        try {
-            renderer.close()
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Log.w("PdfViewerDialog", "Failed to close PdfRenderer", e)
-        }
-        try {
-            pfd.close()
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Log.w("PdfViewerDialog", "Failed to close ParcelFileDescriptor", e)
-        }
+        runCatching { renderer.close() }.onFailure { Log.w("PdfViewerDialog", "renderer close failed", it) }
+        runCatching { pfd.close() }.onFailure { Log.w("PdfViewerDialog", "pfd close failed", it) }
+        runCatching { snapshot.close() }.onFailure { Log.w("PdfViewerDialog", "snapshot close failed", it) }
     }
 }
 
@@ -136,20 +129,23 @@ private fun PdfViewerContent(
     accountViewModel: AccountViewModel,
     onDismiss: () -> Unit,
 ) {
-    val context = LocalContext.current
-
     @Suppress("ProduceStateDoesNotAssignValue")
     val handleState by produceState<PdfDocumentHandle?>(initialValue = null, key1 = content.url) {
         value =
             try {
-                val file =
-                    PdfFetcher.fetch(context, content.url) { url ->
-                        accountViewModel.httpClientBuilder.okHttpClientForPreview(url)
-                    }
                 withContext(Dispatchers.IO) {
-                    val pfd = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
-                    val renderer = PdfRenderer(pfd)
-                    PdfDocumentHandle(file, pfd, renderer)
+                    val snapshot =
+                        PdfFetcher.fetchSnapshot(content.url) { url ->
+                            accountViewModel.httpClientBuilder.okHttpClientForPreview(url)
+                        }
+                    try {
+                        val pfd = ParcelFileDescriptor.open(snapshot.data.toFile(), ParcelFileDescriptor.MODE_READ_ONLY)
+                        val renderer = PdfRenderer(pfd)
+                        PdfDocumentHandle(snapshot, pfd, renderer)
+                    } catch (t: Throwable) {
+                        runCatching { snapshot.close() }
+                        throw t
+                    }
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
@@ -265,9 +261,7 @@ private fun PdfPageView(
                 handle.mutex.withLock {
                     withContext(Dispatchers.IO) {
                         handle.renderer.openPage(pageIndex).use { page ->
-                            val scale = 2f
-                            val width = (page.width * scale).toInt().coerceAtLeast(1)
-                            val height = (page.height * scale).toInt().coerceAtLeast(1)
+                            val (width, height) = cappedRenderSize(page.width, page.height, VIEWER_MAX_DIM_PX)
                             val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
                             bmp.eraseColor(android.graphics.Color.WHITE)
                             page.render(bmp, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)

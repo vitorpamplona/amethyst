@@ -20,70 +20,56 @@
  */
 package com.vitorpamplona.amethyst.ui.components.pdf
 
-import android.content.Context
-import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import com.vitorpamplona.quartz.utils.sha256.sha256
+import coil3.disk.DiskCache
+import com.vitorpamplona.amethyst.Amethyst
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.coroutines.executeAsync
-import okio.sink
-import java.io.File
 import java.io.IOException
 
 object PdfFetcher {
-    private const val CACHE_DIR_NAME = "pdf_cache"
-
-    private fun cacheDir(context: Context): File = File(context.cacheDir, CACHE_DIR_NAME).also { it.mkdirs() }
-
-    fun cachedFileOrNull(
-        context: Context,
-        url: String,
-    ): File? {
-        val file = cacheFile(context, url)
-        return if (file.exists() && file.length() > 0) file else null
-    }
-
-    fun cacheFile(
-        context: Context,
-        url: String,
-    ): File {
-        val key = sha256(url.toByteArray()).toHexKey()
-        return File(cacheDir(context), "$key.pdf")
-    }
-
-    suspend fun fetch(
-        context: Context,
+    /**
+     * Returns a snapshot of the cached PDF for [url], downloading it if necessary. The caller is
+     * responsible for closing the returned snapshot; while it's open the cache entry cannot be
+     * evicted, so the underlying file stays valid for `PdfRenderer`.
+     *
+     * Reuses the Coil disk cache (`Amethyst.instance.diskCache`) so PDFs share the same LRU
+     * eviction and disk budget as images.
+     */
+    suspend fun fetchSnapshot(
         url: String,
         okHttpClient: (String) -> OkHttpClient,
-    ): File =
-        withContext(Dispatchers.IO) {
-            val file = cacheFile(context, url)
-            if (file.exists() && file.length() > 0) return@withContext file
+    ): DiskCache.Snapshot {
+        val diskCache = Amethyst.instance.diskCache
+        diskCache.openSnapshot(url)?.let { return it }
 
-            val request =
-                Request
-                    .Builder()
-                    .url(url)
-                    .get()
-                    .build()
+        return withContext(Dispatchers.IO) {
+            val editor = diskCache.openEditor(url) ?: throw IOException("Unable to open cache editor for $url")
+            try {
+                val request =
+                    Request
+                        .Builder()
+                        .url(url)
+                        .get()
+                        .build()
 
-            okHttpClient(url).newCall(request).executeAsync().use { response ->
-                if (!response.isSuccessful) {
-                    throw IOException("PDF download failed: ${response.code}")
+                okHttpClient(url).newCall(request).executeAsync().use { response ->
+                    if (!response.isSuccessful) {
+                        throw IOException("PDF download failed: ${response.code}")
+                    }
+                    diskCache.fileSystem.write(editor.data) {
+                        val bytes = writeAll(response.body.source())
+                        if (bytes == 0L) throw IOException("PDF download failed: empty response body")
+                    }
                 }
-                val tmp = File(file.parentFile, "${file.name}.tmp")
-                tmp.outputStream().use { out ->
-                    val bytes = response.body.source().readAll(out.sink())
-                    if (bytes == 0L) throw IOException("PDF download failed: empty response body")
-                }
-                if (!tmp.renameTo(file)) {
-                    tmp.copyTo(file, overwrite = true)
-                    tmp.delete()
-                }
+
+                editor.commitAndOpenSnapshot() ?: throw IOException("Unable to commit cache editor for $url")
+            } catch (t: Throwable) {
+                runCatching { editor.abort() }
+                throw t
             }
-
-            file
         }
+    }
 }

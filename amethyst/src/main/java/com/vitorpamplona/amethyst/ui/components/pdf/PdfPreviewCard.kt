@@ -47,14 +47,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
 import com.vitorpamplona.amethyst.ui.components.ClickableUrl
-import com.vitorpamplona.amethyst.ui.components.DisplayUrlWithLoadingSymbol
 import com.vitorpamplona.amethyst.ui.components.ShareMediaAction
-import com.vitorpamplona.amethyst.ui.components.WaitAndDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.MaxWidthWithHorzPadding
@@ -64,6 +63,9 @@ import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+
+// Hard ceiling on the inline thumbnail bitmap, in pixels. Prevents OOM on very tall/large pages.
+private const val THUMBNAIL_MAX_DIM_PX = 1600
 
 data class PdfPreview(
     val thumbnail: Bitmap,
@@ -81,47 +83,55 @@ private sealed class PdfLoadState {
     data object Failed : PdfLoadState()
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun PdfPreviewCard(
     content: MediaUrlPdf,
     accountViewModel: AccountViewModel,
     onOpen: () -> Unit,
 ) {
-    val context = LocalContext.current
+    val showPdf = remember { mutableStateOf(accountViewModel.settings.showImages()) }
+
+    if (showPdf.value) {
+        LoadedPdfPreviewCard(content, accountViewModel, onOpen)
+    } else {
+        PlaceholderPdfCard(content) { showPdf.value = true }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun LoadedPdfPreviewCard(
+    content: MediaUrlPdf,
+    accountViewModel: AccountViewModel,
+    onOpen: () -> Unit,
+) {
     val sharePopupExpanded = remember { mutableStateOf(false) }
 
+    val density = LocalDensity.current
+    val configuration = LocalConfiguration.current
+    val targetWidthPx =
+        remember(density, configuration) {
+            val screenPx =
+                with(density) {
+                    configuration.screenWidthDp.dp
+                        .toPx()
+                        .toInt()
+                }
+            screenPx.coerceAtMost(THUMBNAIL_MAX_DIM_PX).coerceAtLeast(1)
+        }
+
     @Suppress("ProduceStateDoesNotAssignValue")
-    val state by produceState<PdfLoadState>(initialValue = PdfLoadState.Loading, key1 = content.url) {
+    val state by produceState<PdfLoadState>(initialValue = PdfLoadState.Loading, key1 = content.url, key2 = targetWidthPx) {
         value =
             try {
-                val file =
-                    PdfFetcher.fetch(context, content.url) { url ->
+                PdfFetcher
+                    .fetchSnapshot(content.url) { url ->
                         accountViewModel.httpClientBuilder.okHttpClientForPreview(url)
-                    }
-                withContext(Dispatchers.IO) {
-                    ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { pfd ->
-                        PdfRenderer(pfd).use { renderer ->
-                            val pageCount = renderer.pageCount
-                            if (pageCount <= 0) {
-                                PdfLoadState.Failed
-                            } else {
-                                renderer.openPage(0).use { page ->
-                                    val bitmap = Bitmap.createBitmap(page.width, page.height, Bitmap.Config.ARGB_8888)
-                                    bitmap.eraseColor(android.graphics.Color.WHITE)
-                                    page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-                                    PdfLoadState.Ready(
-                                        PdfPreview(
-                                            thumbnail = bitmap,
-                                            pageCount = pageCount,
-                                            aspectRatio = page.width.toFloat() / page.height.toFloat(),
-                                        ),
-                                    )
-                                }
-                            }
+                    }.use { snapshot ->
+                        withContext(Dispatchers.IO) {
+                            renderFirstPage(snapshot.data.toFile(), targetWidthPx)
                         }
                     }
-                }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 Log.w("PdfPreviewCard", "Failed to render PDF preview: ${content.url}", e)
@@ -136,11 +146,11 @@ fun PdfPreviewCard(
         onDismiss = { sharePopupExpanded.value = false },
     )
 
+    val filename = remember(content.url) { extractFilename(content.url) }
+
     when (val current = state) {
         is PdfLoadState.Loading -> {
-            WaitAndDisplay {
-                DisplayUrlWithLoadingSymbol(content, accountViewModel.toastManager::toast)
-            }
+            PdfSkeletonCard(filename)
         }
 
         is PdfLoadState.Failed -> {
@@ -148,7 +158,6 @@ fun PdfPreviewCard(
         }
 
         is PdfLoadState.Ready -> {
-            val filename = remember(content.url) { extractFilename(content.url) }
             Column(
                 modifier =
                     MaterialTheme.colorScheme.innerPostModifier
@@ -167,33 +176,7 @@ fun PdfPreviewCard(
                             .aspectRatio(current.preview.aspectRatio.coerceAtLeast(0.2f)),
                 )
 
-                Row(
-                    modifier = MaxWidthWithHorzPadding.padding(vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.PictureAsPdf,
-                        contentDescription = null,
-                        modifier = Size20Modifier,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = filename,
-                            style = MaterialTheme.typography.bodyMedium,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                        Text(
-                            text = pageCountLabel(current.preview.pageCount),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                        )
-                    }
-                }
+                FilenameRow(filename = filename, subtitle = pageCountLabel(current.preview.pageCount))
 
                 Spacer(modifier = DoubleVertSpacer)
             }
@@ -201,10 +184,112 @@ fun PdfPreviewCard(
     }
 }
 
-private fun extractFilename(url: String): String {
+@Composable
+private fun PlaceholderPdfCard(
+    content: MediaUrlPdf,
+    onLoad: () -> Unit,
+) {
+    val filename = remember(content.url) { extractFilename(content.url) }
+    Column(
+        modifier =
+            MaterialTheme.colorScheme.innerPostModifier
+                .fillMaxWidth()
+                .combinedClickable(onClick = onLoad, onLongClick = onLoad),
+    ) {
+        FilenameRow(filename = filename, subtitle = "Tap to load PDF")
+        Spacer(modifier = DoubleVertSpacer)
+    }
+}
+
+@Composable
+private fun PdfSkeletonCard(filename: String) {
+    Column(modifier = MaterialTheme.colorScheme.innerPostModifier.fillMaxWidth()) {
+        FilenameRow(filename = filename, subtitle = "Loading…")
+        Spacer(modifier = DoubleVertSpacer)
+    }
+}
+
+@Composable
+private fun FilenameRow(
+    filename: String,
+    subtitle: String,
+) {
+    Row(
+        modifier = MaxWidthWithHorzPadding.padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.PictureAsPdf,
+            contentDescription = null,
+            modifier = Size20Modifier,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = filename,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+            )
+        }
+    }
+}
+
+private fun renderFirstPage(
+    file: java.io.File,
+    targetWidthPx: Int,
+): PdfLoadState =
+    ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { pfd ->
+        PdfRenderer(pfd).use { renderer ->
+            val pageCount = renderer.pageCount
+            if (pageCount <= 0) return@use PdfLoadState.Failed
+
+            renderer.openPage(0).use { page ->
+                val (renderW, renderH) = cappedRenderSize(page.width, page.height, targetWidthPx)
+                val bitmap = Bitmap.createBitmap(renderW, renderH, Bitmap.Config.ARGB_8888)
+                bitmap.eraseColor(android.graphics.Color.WHITE)
+                page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                PdfLoadState.Ready(
+                    PdfPreview(
+                        thumbnail = bitmap,
+                        pageCount = pageCount,
+                        aspectRatio = page.width.toFloat() / page.height.toFloat(),
+                    ),
+                )
+            }
+        }
+    }
+
+/**
+ * Scales the page's native point size to fit within [maxDim] on the longest side, preserving
+ * aspect ratio. Falls back to native size if it's already smaller.
+ */
+internal fun cappedRenderSize(
+    pageWidth: Int,
+    pageHeight: Int,
+    maxDim: Int,
+): Pair<Int, Int> {
+    if (pageWidth <= 0 || pageHeight <= 0) return 1 to 1
+    val longest = maxOf(pageWidth, pageHeight)
+    if (longest <= maxDim) return pageWidth to pageHeight
+    val scale = maxDim.toFloat() / longest
+    val w = (pageWidth * scale).toInt().coerceAtLeast(1)
+    val h = (pageHeight * scale).toInt().coerceAtLeast(1)
+    return w to h
+}
+
+internal fun extractFilename(url: String): String {
     val afterQuery = url.substringBefore('?').substringBefore('#')
     val name = afterQuery.substringAfterLast('/', afterQuery)
     return if (name.isBlank()) url else name
 }
 
-private fun pageCountLabel(pageCount: Int): String = if (pageCount == 1) "1 page" else "$pageCount pages"
+internal fun pageCountLabel(pageCount: Int): String = if (pageCount == 1) "1 page" else "$pageCount pages"
