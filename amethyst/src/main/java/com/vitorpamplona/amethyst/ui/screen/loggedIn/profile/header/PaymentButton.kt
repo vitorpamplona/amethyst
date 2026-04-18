@@ -64,7 +64,9 @@ fun PaymentButton(
             remember(note) {
                 (note?.event as? PaymentTargetsEvent)?.paymentTargets() ?: emptyList()
             }
-        PaymentButtonWithTargets(targets)
+        if (targets.isNotEmpty()) {
+            PaymentButtonWithTargets(targets)
+        }
     }
 }
 
@@ -94,31 +96,22 @@ fun PaymentButtonWithTargets(targets: List<PaymentTarget>) {
             onDismiss = { expanded = false },
         ) {
             M3ActionSection {
-                if (targets.isEmpty()) {
+                targets.forEach { target ->
                     M3ActionRow(
                         icon = Icons.Outlined.AccountBalanceWallet,
-                        text = stringRes(R.string.no_payment_targets_message),
-                        enabled = false,
-                        onClick = {},
+                        text = "${target.type.replaceFirstChar(Char::titlecase)}: ${target.authority}",
+                        onClick = {
+                            expanded = false
+                            try {
+                                val intent = Intent(Intent.ACTION_VIEW, "payto://${target.type}/${target.authority}".toUri())
+                                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                                context.startActivity(intent)
+                            } catch (e: Exception) {
+                                if (e is kotlinx.coroutines.CancellationException) throw e
+                                errorMessage = stringRes(context, R.string.no_payment_app_found)
+                            }
+                        },
                     )
-                } else {
-                    targets.forEach { target ->
-                        M3ActionRow(
-                            icon = Icons.Outlined.AccountBalanceWallet,
-                            text = "${target.type.replaceFirstChar(Char::titlecase)}: ${target.authority}",
-                            onClick = {
-                                expanded = false
-                                try {
-                                    val intent = Intent(Intent.ACTION_VIEW, "payto://${target.type}/${target.authority}".toUri())
-                                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                                    context.startActivity(intent)
-                                } catch (e: Exception) {
-                                    if (e is kotlinx.coroutines.CancellationException) throw e
-                                    errorMessage = stringRes(context, R.string.no_payment_app_found)
-                                }
-                            },
-                        )
-                    }
                 }
             }
         }
