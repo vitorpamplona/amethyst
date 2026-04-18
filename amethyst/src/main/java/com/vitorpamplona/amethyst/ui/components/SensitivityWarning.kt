@@ -117,15 +117,13 @@ fun SensitivityWarning(
 }
 
 @Composable
-fun SensitivityWarningOverBlurhash(
+fun ContentWarningGate(
     isSensitive: Boolean,
     reasons: Set<String>,
-    blurhash: String?,
-    ratio: Float?,
-    description: String?,
-    contentScale: ContentScale,
-    preloadUrl: String?,
+    preloadUrls: List<String>,
     accountViewModel: AccountViewModel,
+    modifier: Modifier = Modifier.fillMaxWidth(),
+    backdrop: (@Composable () -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
     if (!isSensitive) {
@@ -137,51 +135,12 @@ fun SensitivityWarningOverBlurhash(
 
     var showContentWarningNote by remember(accountState) { mutableStateOf(accountState.value != true) }
 
-    if (showContentWarningNote && preloadUrl != null) {
+    if (showContentWarningNote && preloadUrls.isNotEmpty()) {
         val context = LocalContext.current
-        LaunchedEffect(preloadUrl) {
-            runCatching {
-                context.imageLoader.enqueue(ImageRequest.Builder(context).data(preloadUrl).build())
-            }
-        }
-    }
-
-    CrossfadeIfEnabled(targetState = showContentWarningNote, accountViewModel = accountViewModel) {
-        if (it) {
-            if (blurhash != null) {
-                ContentWarningOverBlurhash(reasons, blurhash, ratio, description, contentScale) { showContentWarningNote = false }
-            } else {
-                ContentWarningNote(reasons.firstOrNull()) { showContentWarningNote = false }
-            }
-        } else {
-            content()
-        }
-    }
-}
-
-@Composable
-fun SensitivityWarningOverBlurhashGrid(
-    isSensitive: Boolean,
-    reasons: Set<String>,
-    media: List<MediaUrlImage>,
-    accountViewModel: AccountViewModel,
-    content: @Composable () -> Unit,
-) {
-    if (!isSensitive || media.isEmpty()) {
-        content()
-        return
-    }
-
-    val accountState = accountViewModel.showSensitiveContent().collectAsStateWithLifecycle()
-
-    var showContentWarningNote by remember(accountState) { mutableStateOf(accountState.value != true) }
-
-    if (showContentWarningNote) {
-        val context = LocalContext.current
-        LaunchedEffect(media) {
-            media.forEach { item ->
+        LaunchedEffect(preloadUrls) {
+            preloadUrls.forEach { url ->
                 runCatching {
-                    context.imageLoader.enqueue(ImageRequest.Builder(context).data(item.url).build())
+                    context.imageLoader.enqueue(ImageRequest.Builder(context).data(url).build())
                 }
             }
         }
@@ -189,7 +148,14 @@ fun SensitivityWarningOverBlurhashGrid(
 
     CrossfadeIfEnabled(targetState = showContentWarningNote, accountViewModel = accountViewModel) {
         if (it) {
-            ContentWarningOverBlurhashGrid(reasons, media) { showContentWarningNote = false }
+            if (backdrop != null) {
+                Box(modifier = modifier.clipToBounds()) {
+                    backdrop()
+                    ContentWarningOverlayBody(reasons) { showContentWarningNote = false }
+                }
+            } else {
+                ContentWarningNote(reasons.firstOrNull()) { showContentWarningNote = false }
+            }
         } else {
             content()
         }
@@ -239,84 +205,43 @@ fun ContentWarningNoteWithBigReasonPreview() {
     }
 }
 
-@Preview
 @Composable
-fun ContentWarningOverBlurhashPreview() {
-    ThemeComparisonColumn {
-        ContentWarningOverBlurhash(
-            reasons = setOf("Spoilers"),
-            blurhash = "LEHV6nWB2yk8pyo0adR*.7kCMdnj",
-            ratio = 16f / 9f,
-            description = null,
-            contentScale = ContentScale.FillWidth,
-            onDismiss = {},
-        )
-    }
-}
-
-@Preview
-@Composable
-fun ContentWarningOverBlurhashMultiReasonPreview() {
-    ThemeComparisonColumn {
-        ContentWarningOverBlurhash(
-            reasons = setOf("Spoilers", "Violence", "Nudity"),
-            blurhash = "LEHV6nWB2yk8pyo0adR*.7kCMdnj",
-            ratio = 16f / 9f,
-            description = null,
-            contentScale = ContentScale.FillWidth,
-            onDismiss = {},
-        )
-    }
-}
-
-@Composable
-fun ContentWarningOverBlurhash(
-    reasons: Set<String>,
+fun BlurhashBackdrop(
     blurhash: String,
-    ratio: Float?,
     description: String?,
-    contentScale: ContentScale,
-    onDismiss: () -> Unit,
 ) {
-    val sizingModifier =
-        when {
-            contentScale == ContentScale.Crop -> Modifier.fillMaxSize()
-            ratio != null -> Modifier.fillMaxWidth().aspectRatio(ratio)
-            else -> Modifier.fillMaxWidth()
-        }
-
-    Box(modifier = sizingModifier.clipToBounds()) {
-        DisplayBlurHash(
-            blurhash = blurhash,
-            description = description,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize(),
-        )
-        ContentWarningOverlayBody(reasons, onDismiss)
-    }
+    DisplayBlurHash(
+        blurhash = blurhash,
+        description = description,
+        contentScale = ContentScale.Crop,
+        modifier = Modifier.fillMaxSize(),
+    )
 }
 
 @Composable
-fun ContentWarningOverBlurhashGrid(
-    reasons: Set<String>,
-    media: List<MediaUrlImage>,
-    onDismiss: () -> Unit,
-) {
-    Box(modifier = Modifier.fillMaxWidth().aspectRatio(1f).clipToBounds()) {
-        AutoNonlazyGrid(media.size) { idx ->
-            val item = media[idx]
-            if (item.blurhash != null) {
-                DisplayBlurHash(
-                    blurhash = item.blurhash,
-                    description = item.description,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize(),
-                )
-            }
+fun BlurhashGridBackdrop(media: List<MediaUrlImage>) {
+    AutoNonlazyGrid(media.size) { idx ->
+        val item = media[idx]
+        if (item.blurhash != null) {
+            DisplayBlurHash(
+                blurhash = item.blurhash,
+                description = item.description,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
         }
-        ContentWarningOverlayBody(reasons, onDismiss)
     }
 }
+
+fun mediaSizingModifier(
+    ratio: Float?,
+    contentScale: ContentScale,
+): Modifier =
+    when {
+        contentScale == ContentScale.Crop -> Modifier.fillMaxSize()
+        ratio != null -> Modifier.fillMaxWidth().aspectRatio(ratio)
+        else -> Modifier.fillMaxWidth()
+    }
 
 @Composable
 private fun ContentWarningOverlayBody(
@@ -487,7 +412,7 @@ fun ContentWarningNote(
     }
 }
 
-fun collectPictureReasons(event: Event): Set<String> {
+fun collectContentWarningReasons(event: Event): Set<String> {
     val reasons = linkedSetOf<String>()
     event.contentWarningReason()?.takeIf { it.isNotBlank() }?.let { reasons.add(it) }
     event.imetas().forEach { iMeta ->

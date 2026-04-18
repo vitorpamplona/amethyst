@@ -151,15 +151,13 @@ fun ZoomableContentView(
     when (content) {
         is MediaUrlImage -> {
             val ratio = content.dim?.aspectRatio() ?: MediaAspectRatioCache.get(content.url)
-            SensitivityWarningOverBlurhash(
-                isSensitive = content.isSensitive,
+            ContentWarningGate(
+                isSensitive = content.contentWarning != null,
                 reasons = setOfNotNull(content.contentWarning),
-                blurhash = content.blurhash,
-                ratio = ratio,
-                description = content.description,
-                contentScale = contentScale,
-                preloadUrl = content.url,
+                preloadUrls = listOf(content.url),
                 accountViewModel = accountViewModel,
+                modifier = mediaSizingModifier(ratio, contentScale),
+                backdrop = content.blurhash?.let { blurhash -> { BlurhashBackdrop(blurhash, content.description) } },
             ) {
                 TwoSecondController(content) { controllerVisible ->
                     val mainImageModifier =
@@ -175,15 +173,13 @@ fun ZoomableContentView(
 
         is MediaUrlVideo -> {
             val ratio = content.dim?.aspectRatio() ?: MediaAspectRatioCache.get(content.url)
-            SensitivityWarningOverBlurhash(
-                isSensitive = content.isSensitive,
+            ContentWarningGate(
+                isSensitive = content.contentWarning != null,
                 reasons = setOfNotNull(content.contentWarning),
-                blurhash = content.blurhash,
-                ratio = ratio,
-                description = content.description,
-                contentScale = contentScale,
-                preloadUrl = null,
+                preloadUrls = emptyList(),
                 accountViewModel = accountViewModel,
+                modifier = mediaSizingModifier(ratio, contentScale),
+                backdrop = content.blurhash?.let { blurhash -> { BlurhashBackdrop(blurhash, content.description) } },
             ) {
                 Box(
                     modifier = Modifier.fillMaxWidth().then(boundsTrackingModifier),

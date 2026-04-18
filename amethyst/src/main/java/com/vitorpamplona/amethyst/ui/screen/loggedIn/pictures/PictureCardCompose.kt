@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.pictures
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -39,11 +40,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
+import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.AutoNonlazyGrid
-import com.vitorpamplona.amethyst.ui.components.SensitivityWarningOverBlurhashGrid
+import com.vitorpamplona.amethyst.ui.components.BlurhashBackdrop
+import com.vitorpamplona.amethyst.ui.components.BlurhashGridBackdrop
+import com.vitorpamplona.amethyst.ui.components.ContentWarningGate
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
-import com.vitorpamplona.amethyst.ui.components.collectPictureReasons
+import com.vitorpamplona.amethyst.ui.components.collectContentWarningReasons
+import com.vitorpamplona.amethyst.ui.components.mediaSizingModifier
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -94,8 +99,7 @@ private fun PictureCardImage(
 ) {
     val uri = note.toNostrUri()
     val isSensitive = event.isSensitiveOrNSFW()
-    val reasons = collectPictureReasons(event)
-    val inGrid = event.imetaTags().size > 1
+    val reasons = collectContentWarningReasons(event)
 
     val images by
         remember(note) {
@@ -110,41 +114,50 @@ private fun PictureCardImage(
                             blurhash = it.blurhash,
                             dim = it.dimension,
                             uri = uri,
-                            contentWarning = reasons.firstOrNull(),
-                            // In grid mode the warning is handled at the grid level to avoid
-                            // one overlay per image. Single-image posts still warn per media.
-                            isSensitive = isSensitive && !inGrid,
                             mimeType = it.mimeType,
                         )
                     }.toImmutableList(),
             )
         }
 
-    if (images.isNotEmpty()) {
-        if (images.size == 1) {
+    if (images.isEmpty()) return
+
+    if (images.size == 1) {
+        val single = images.first()
+        val ratio = single.dim?.aspectRatio() ?: MediaAspectRatioCache.get(single.url)
+        ContentWarningGate(
+            isSensitive = isSensitive,
+            reasons = reasons,
+            preloadUrls = listOf(single.url),
+            accountViewModel = accountViewModel,
+            modifier = mediaSizingModifier(ratio, ContentScale.FillWidth),
+            backdrop = single.blurhash?.let { blurhash -> { BlurhashBackdrop(blurhash, single.description) } },
+        ) {
             ZoomableContentView(
-                content = images.first(),
+                content = single,
                 images = images,
                 roundedCorner = false,
                 contentScale = ContentScale.FillWidth,
                 accountViewModel = accountViewModel,
             )
-        } else {
-            SensitivityWarningOverBlurhashGrid(
-                isSensitive = isSensitive,
-                reasons = reasons,
-                media = images,
-                accountViewModel = accountViewModel,
-            ) {
-                AutoNonlazyGrid(images.size) {
-                    ZoomableContentView(
-                        content = images[it],
-                        images = images,
-                        roundedCorner = false,
-                        contentScale = ContentScale.Crop,
-                        accountViewModel = accountViewModel,
-                    )
-                }
+        }
+    } else {
+        ContentWarningGate(
+            isSensitive = isSensitive,
+            reasons = reasons,
+            preloadUrls = images.map { it.url },
+            accountViewModel = accountViewModel,
+            modifier = Modifier.fillMaxWidth().aspectRatio(1f),
+            backdrop = { BlurhashGridBackdrop(images) },
+        ) {
+            AutoNonlazyGrid(images.size) {
+                ZoomableContentView(
+                    content = images[it],
+                    images = images,
+                    roundedCorner = false,
+                    contentScale = ContentScale.Crop,
+                    accountViewModel = accountViewModel,
+                )
             }
         }
     }

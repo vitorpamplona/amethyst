@@ -51,7 +51,6 @@ open class MediaUrlImage(
     dim: DimensionTag? = null,
     uri: String? = null,
     val contentWarning: String? = null,
-    val isSensitive: Boolean = contentWarning != null,
     mimeType: String? = null,
 ) : MediaUrlContent(url, description, hash, dim, blurhash, uri, mimeType)
 
@@ -63,12 +62,11 @@ class EncryptedMediaUrlImage(
     dim: DimensionTag? = null,
     uri: String? = null,
     contentWarning: String? = null,
-    isSensitive: Boolean = contentWarning != null,
     mimeType: String? = null,
     val encryptionAlgo: String,
     val encryptionKey: ByteArray,
     val encryptionNonce: ByteArray,
-) : MediaUrlImage(url, description, hash, blurhash, dim, uri, contentWarning, isSensitive, mimeType)
+) : MediaUrlImage(url, description, hash, blurhash, dim, uri, contentWarning, mimeType)
 
 @Immutable
 open class MediaUrlVideo(
@@ -81,7 +79,6 @@ open class MediaUrlVideo(
     val authorName: String? = null,
     blurhash: String? = null,
     val contentWarning: String? = null,
-    val isSensitive: Boolean = contentWarning != null,
     mimeType: String? = null,
 ) : MediaUrlContent(url, description, hash, dim, blurhash, uri, mimeType)
 
@@ -96,12 +93,11 @@ class EncryptedMediaUrlVideo(
     authorName: String? = null,
     blurhash: String? = null,
     contentWarning: String? = null,
-    isSensitive: Boolean = contentWarning != null,
     mimeType: String? = null,
     val encryptionAlgo: String,
     val encryptionKey: ByteArray,
     val encryptionNonce: ByteArray,
-) : MediaUrlVideo(url, description, hash, dim, uri, artworkUri, authorName, blurhash, contentWarning, isSensitive, mimeType)
+) : MediaUrlVideo(url, description, hash, dim, uri, artworkUri, authorName, blurhash, contentWarning, mimeType)
 
 @Immutable
 abstract class MediaPreloadedContent(

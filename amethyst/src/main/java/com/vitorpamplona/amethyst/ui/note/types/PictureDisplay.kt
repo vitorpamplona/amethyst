@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.ui.note.types
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -37,12 +39,16 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
+import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.AutoNonlazyGrid
-import com.vitorpamplona.amethyst.ui.components.SensitivityWarningOverBlurhashGrid
+import com.vitorpamplona.amethyst.ui.components.BlurhashBackdrop
+import com.vitorpamplona.amethyst.ui.components.BlurhashGridBackdrop
+import com.vitorpamplona.amethyst.ui.components.ContentWarningGate
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
-import com.vitorpamplona.amethyst.ui.components.collectPictureReasons
+import com.vitorpamplona.amethyst.ui.components.collectContentWarningReasons
+import com.vitorpamplona.amethyst.ui.components.mediaSizingModifier
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
@@ -63,8 +69,7 @@ fun PictureDisplay(
     val event = (note.event as? PictureEvent) ?: return
     val uri = note.toNostrUri()
     val isSensitive = event.isSensitiveOrNSFW()
-    val reasons = collectPictureReasons(event)
-    val inGrid = event.imetaTags().size > 1
+    val reasons = collectContentWarningReasons(event)
 
     val images by
         remember(note) {
@@ -79,8 +84,6 @@ fun PictureDisplay(
                             blurhash = it.blurhash,
                             dim = it.dimension,
                             uri = uri,
-                            contentWarning = reasons.firstOrNull(),
-                            isSensitive = isSensitive && !inGrid,
                             mimeType = it.mimeType,
                         )
                     }.toImmutableList(),
@@ -106,19 +109,31 @@ fun PictureDisplay(
             }
 
             if (images.size == 1) {
-                ZoomableContentView(
-                    content = images.first(),
-                    images = images,
-                    roundedCorner = roundedCorner,
-                    contentScale = ContentScale.FillWidth,
-                    accountViewModel = accountViewModel,
-                )
-            } else {
-                SensitivityWarningOverBlurhashGrid(
+                val ratio = first.dim?.aspectRatio() ?: MediaAspectRatioCache.get(first.url)
+                ContentWarningGate(
                     isSensitive = isSensitive,
                     reasons = reasons,
-                    media = images,
+                    preloadUrls = listOf(first.url),
                     accountViewModel = accountViewModel,
+                    modifier = mediaSizingModifier(ratio, ContentScale.FillWidth),
+                    backdrop = first.blurhash?.let { blurhash -> { BlurhashBackdrop(blurhash, first.description) } },
+                ) {
+                    ZoomableContentView(
+                        content = first,
+                        images = images,
+                        roundedCorner = roundedCorner,
+                        contentScale = ContentScale.FillWidth,
+                        accountViewModel = accountViewModel,
+                    )
+                }
+            } else {
+                ContentWarningGate(
+                    isSensitive = isSensitive,
+                    reasons = reasons,
+                    preloadUrls = images.map { it.url },
+                    accountViewModel = accountViewModel,
+                    modifier = Modifier.fillMaxWidth().aspectRatio(1f),
+                    backdrop = { BlurhashGridBackdrop(images) },
                 ) {
                     AutoNonlazyGrid(images.size) {
                         ZoomableContentView(
