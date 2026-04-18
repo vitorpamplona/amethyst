@@ -35,6 +35,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
+import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest.NIP90ContentDiscoveryRequestEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -175,8 +176,16 @@ class TopNavFilterState(
                 )
             }
 
+        // Only DVMs that advertise NIP-90 content discovery (kind 5300) can produce a
+        // home feed. Hide entries whose AppDefinitionEvent isn't loaded yet OR doesn't
+        // include kind 5300 so the chip doesn't appear for image-generation, translation,
+        // search, or other DVM kinds that would never reply.
         val favoriteDvms =
-            favoriteDvmList.map { dvmNote ->
+            favoriteDvmList.mapNotNull { dvmNote ->
+                val supports5300 =
+                    (dvmNote.event as? AppDefinitionEvent)
+                        ?.includeKind(NIP90ContentDiscoveryRequestEvent.KIND) == true
+                if (!supports5300) return@mapNotNull null
                 FeedDefinition(
                     TopFilter.FavoriteDvm(dvmNote.address),
                     FavoriteDvmName(dvmNote),

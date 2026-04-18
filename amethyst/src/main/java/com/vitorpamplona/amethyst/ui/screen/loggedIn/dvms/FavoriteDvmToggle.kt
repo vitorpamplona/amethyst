@@ -32,10 +32,13 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteAndMap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
+import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
+import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest.NIP90ContentDiscoveryRequestEvent
 
 @Composable
 fun FavoriteDvmToggle(
@@ -43,6 +46,15 @@ fun FavoriteDvmToggle(
     accountViewModel: AccountViewModel,
     modifier: Modifier = Modifier,
 ) {
+    // Only NIP-90 content-discovery DVMs (kind 5300) produce a feed; hide the toggle
+    // for any other DVM type so users don't favourite something that would never reply.
+    val supportsContentDiscovery by
+        observeNoteAndMap(appDefinitionNote, accountViewModel) { note ->
+            (note.event as? AppDefinitionEvent)?.includeKind(NIP90ContentDiscoveryRequestEvent.KIND) == true
+        }
+
+    if (!supportsContentDiscovery) return
+
     val favorites by accountViewModel.account.favoriteDvmList.flow
         .collectAsStateWithLifecycle()
 
