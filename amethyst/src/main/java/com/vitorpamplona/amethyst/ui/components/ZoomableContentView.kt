@@ -157,6 +157,8 @@ fun ZoomableContentView(
                 blurhash = content.blurhash,
                 ratio = ratio,
                 description = content.description,
+                contentScale = contentScale,
+                preloadUrl = content.url,
                 accountViewModel = accountViewModel,
             ) {
                 TwoSecondController(content) { controllerVisible ->
@@ -179,6 +181,8 @@ fun ZoomableContentView(
                 blurhash = content.blurhash,
                 ratio = ratio,
                 description = content.description,
+                contentScale = contentScale,
+                preloadUrl = null,
                 accountViewModel = accountViewModel,
             ) {
                 Box(

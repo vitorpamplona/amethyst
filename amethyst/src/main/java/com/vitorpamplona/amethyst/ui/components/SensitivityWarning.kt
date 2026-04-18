@@ -40,20 +40,25 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil3.imageLoader
+import coil3.request.ImageRequest
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
@@ -112,6 +117,8 @@ fun SensitivityWarningOverBlurhash(
     blurhash: String?,
     ratio: Float?,
     description: String?,
+    contentScale: ContentScale,
+    preloadUrl: String?,
     accountViewModel: AccountViewModel,
     content: @Composable () -> Unit,
 ) {
@@ -124,10 +131,19 @@ fun SensitivityWarningOverBlurhash(
 
     var showContentWarningNote by remember(accountState) { mutableStateOf(accountState.value != true) }
 
+    if (showContentWarningNote && preloadUrl != null) {
+        val context = LocalContext.current
+        LaunchedEffect(preloadUrl) {
+            runCatching {
+                context.imageLoader.enqueue(ImageRequest.Builder(context).data(preloadUrl).build())
+            }
+        }
+    }
+
     CrossfadeIfEnabled(targetState = showContentWarningNote, accountViewModel = accountViewModel) {
         if (it) {
             if (blurhash != null) {
-                ContentWarningOverBlurhash(reason, blurhash, ratio, description) { showContentWarningNote = false }
+                ContentWarningOverBlurhash(reason, blurhash, ratio, description, contentScale) { showContentWarningNote = false }
             } else {
                 ContentWarningNote(reason) { showContentWarningNote = false }
             }
@@ -189,6 +205,7 @@ fun ContentWarningOverBlurhashPreview() {
             blurhash = "LEHV6nWB2yk8pyo0adR*.7kCMdnj",
             ratio = 16f / 9f,
             description = null,
+            contentScale = ContentScale.FillWidth,
             onDismiss = {},
         )
     }
@@ -200,16 +217,17 @@ fun ContentWarningOverBlurhash(
     blurhash: String,
     ratio: Float?,
     description: String?,
+    contentScale: ContentScale,
     onDismiss: () -> Unit,
 ) {
     val sizingModifier =
-        if (ratio != null) {
-            Modifier.fillMaxWidth().aspectRatio(ratio)
-        } else {
-            Modifier.fillMaxWidth()
+        when {
+            contentScale == ContentScale.Crop -> Modifier.fillMaxSize()
+            ratio != null -> Modifier.fillMaxWidth().aspectRatio(ratio)
+            else -> Modifier.fillMaxWidth()
         }
 
-    Box(modifier = sizingModifier) {
+    Box(modifier = sizingModifier.clipToBounds()) {
         DisplayBlurHash(
             blurhash = blurhash,
             description = description,
