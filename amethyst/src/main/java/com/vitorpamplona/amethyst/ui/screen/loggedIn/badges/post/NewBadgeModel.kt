@@ -75,6 +75,13 @@ class NewBadgeModel : ViewModel() {
 
     var onceUploaded: () -> Unit = {}
 
+    fun init(account: Account) {
+        if (this.account == account) return
+        this.account = account
+        this.selectedServer = defaultServer()
+        this.stripMetadata = account.settings.stripLocationOnUpload
+    }
+
     fun load(
         account: Account,
         uris: ImmutableList<SelectedMedia>,
@@ -86,6 +93,12 @@ class NewBadgeModel : ViewModel() {
         this.name = ""
         this.description = ""
     }
+
+    fun setPickedMedia(uris: ImmutableList<SelectedMedia>) {
+        this.multiOrchestrator = if (uris.isNotEmpty()) MultiOrchestrator(uris) else null
+    }
+
+    fun hasPickedImage(): Boolean = multiOrchestrator != null
 
     fun canPost(): Boolean =
         !isUploading &&

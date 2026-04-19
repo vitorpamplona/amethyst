@@ -440,6 +440,8 @@
     <string name="badge_image_placeholder">https://example.com/badge.png</string>
     <string name="badge_thumb_label">Thumbnail URL (optional)</string>
     <string name="badge_thumb_placeholder">https://example.com/badge-thumb.png</string>
+    <string name="badge_upload_image_cta">Upload an image</string>
+    <string name="badge_upload_image_hint">Pick a square image to be the face of your badge.</string>
     <string name="award_badge_loading">Loading badge…</string>
     <string name="award_badge_search_label">Search users</string>
     <string name="award_badge_search_placeholder">Name, npub, or NIP-05</string>
