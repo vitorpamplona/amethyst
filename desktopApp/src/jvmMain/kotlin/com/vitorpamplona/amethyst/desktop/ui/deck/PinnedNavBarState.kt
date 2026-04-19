@@ -67,6 +67,11 @@ class PinnedNavBarState {
         DesktopPreferences.pinnedNavItems = _pinnedScreens.value.joinToString(",") { it.typeKey() }
     }
 
+    fun loadFromList(screens: List<DeckColumnType>) {
+        _pinnedScreens.value = screens.ifEmpty { DEFAULT_PINNED }
+        save()
+    }
+
     fun load() {
         val raw = DesktopPreferences.pinnedNavItems
         if (raw.isBlank()) {

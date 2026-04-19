@@ -267,6 +267,12 @@ fun main() {
                                         iconName = "Star",
                                         layoutMode = layoutMode,
                                         columns = columns,
+                                        singlePaneScreens =
+                                            if (layoutMode == LayoutMode.SINGLE_PANE) {
+                                                columns.map { it.typeKey }
+                                            } else {
+                                                emptyList()
+                                            },
                                     )
                                 workspaceManager.addWorkspace(ws)
                             }
@@ -789,12 +795,17 @@ fun App(
                                     }
 
                                     LayoutMode.SINGLE_PANE -> {
-                                        val screenKey =
-                                            ws.singlePaneScreen
-                                                ?: ws.columns.firstOrNull()?.typeKey
-                                                ?: "home"
-                                        val type = DeckState.parseColumnTypeFromKey(screenKey)
-                                        if (type != null) singlePaneState.navigate(type)
+                                        // Set nav bar screens from workspace
+                                        if (ws.singlePaneScreens.isNotEmpty()) {
+                                            val screens =
+                                                ws.singlePaneScreens.mapNotNull {
+                                                    DeckState.parseColumnTypeFromKey(it)
+                                                }
+                                            if (screens.isNotEmpty()) {
+                                                pinnedNavBarState.loadFromList(screens)
+                                                singlePaneState.navigate(screens.first())
+                                            }
+                                        }
                                     }
                                 }
                             },

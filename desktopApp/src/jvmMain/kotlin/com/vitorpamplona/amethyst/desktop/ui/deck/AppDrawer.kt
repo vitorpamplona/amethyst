@@ -55,6 +55,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SportsEsports
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
@@ -883,7 +884,9 @@ private fun WorkspaceEditorDialog(
     var columns by remember {
         mutableStateOf(initial?.columns ?: listOf(Workspace.WorkspaceColumn("home")))
     }
-    var singlePaneScreen by remember { mutableStateOf(initial?.singlePaneScreen) }
+    var singlePaneScreens by remember {
+        mutableStateOf(initial?.singlePaneScreens ?: listOf("home"))
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -941,11 +944,11 @@ private fun WorkspaceEditorDialog(
                 if (layoutMode == LayoutMode.DECK) {
                     DeckColumnEditor(columns = columns, onColumnsChange = { columns = it })
                 }
-                // Single Pane: screen picker
+                // Single Pane: nav bar screen selector (first = default)
                 if (layoutMode == LayoutMode.SINGLE_PANE) {
-                    SinglePaneScreenPicker(
-                        selected = singlePaneScreen,
-                        onSelect = { singlePaneScreen = it },
+                    SinglePaneScreensEditor(
+                        screens = singlePaneScreens,
+                        onScreensChange = { singlePaneScreens = it },
                     )
                 }
             }
@@ -963,7 +966,7 @@ private fun WorkspaceEditorDialog(
                             iconName = iconName,
                             layoutMode = layoutMode,
                             columns = columns,
-                            singlePaneScreen = singlePaneScreen,
+                            singlePaneScreens = singlePaneScreens,
                         ),
                     )
                 },
@@ -1021,28 +1024,51 @@ private fun DeckColumnEditor(
 }
 
 @Composable
-private fun SinglePaneScreenPicker(
-    selected: String?,
-    onSelect: (String) -> Unit,
+private fun SinglePaneScreensEditor(
+    screens: List<String>,
+    onScreensChange: (List<String>) -> Unit,
 ) {
-    var expanded by remember { mutableStateOf(false) }
-    val selectedTitle =
-        selected?.let { DeckState.parseColumnTypeFromKey(it)?.title() } ?: "Select screen"
-
     Column {
-        Text("Screen", style = MaterialTheme.typography.labelMedium)
+        Text("Nav Bar Screens", style = MaterialTheme.typography.labelMedium)
+        Text(
+            "First screen is the default",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
         Spacer(Modifier.height(4.dp))
-        TextButton(onClick = { expanded = true }) { Text(selectedTitle) }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            LAUNCHABLE_SCREENS.filter { !it.requiresInput() }.forEach { screen ->
-                DropdownMenuItem(
-                    text = { Text(screen.title()) },
-                    onClick = {
-                        onSelect(screen.typeKey())
-                        expanded = false
-                    },
-                )
+        screens.forEachIndexed { idx, key ->
+            val displayName = DeckState.parseColumnTypeFromKey(key)?.title() ?: key
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (idx == 0) {
+                    Icon(
+                        Icons.Default.Star,
+                        "Default",
+                        Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                    Spacer(Modifier.width(4.dp))
+                }
+                Text(displayName, Modifier.weight(1f))
+                IconButton(onClick = {
+                    onScreensChange(screens.toMutableList().apply { removeAt(idx) })
+                }) { Icon(Icons.Default.Close, "Remove", Modifier.size(16.dp)) }
             }
+        }
+        // Add screen dropdown
+        var expanded by remember { mutableStateOf(false) }
+        TextButton(onClick = { expanded = true }) { Text("+ Add Screen") }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            PinnedNavBarState.PINNABLE_SCREENS
+                .filter { screen -> screens.none { it == screen.typeKey() } }
+                .forEach { screen ->
+                    DropdownMenuItem(
+                        text = { Text(screen.title()) },
+                        onClick = {
+                            onScreensChange(screens + screen.typeKey())
+                            expanded = false
+                        },
+                    )
+                }
         }
     }
 }

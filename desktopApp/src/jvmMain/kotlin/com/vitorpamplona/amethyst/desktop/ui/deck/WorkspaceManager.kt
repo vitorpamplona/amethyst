@@ -124,7 +124,7 @@ class WorkspaceManager(
                                 "name" to ws.name,
                                 "iconName" to ws.iconName,
                                 "layoutMode" to ws.layoutMode.name,
-                                "singlePaneScreen" to ws.singlePaneScreen,
+                                "singlePaneScreens" to ws.singlePaneScreens,
                                 "columns" to
                                     ws.columns.map { col ->
                                         mapOf(
@@ -162,7 +162,14 @@ class WorkspaceManager(
                             } catch (e: Exception) {
                                 LayoutMode.DECK
                             }
-                        val singlePaneScreen = entry["singlePaneScreen"] as? String
+
+                        @Suppress("UNCHECKED_CAST")
+                        val singlePaneScreens =
+                            (entry["singlePaneScreens"] as? List<String>) ?: run {
+                                // Backward compat: old format had single "singlePaneScreen" string
+                                val legacy = entry["singlePaneScreen"] as? String
+                                if (legacy != null) listOf(legacy) else emptyList()
+                            }
 
                         @Suppress("UNCHECKED_CAST")
                         val columns =
@@ -183,7 +190,7 @@ class WorkspaceManager(
                             iconName = iconName,
                             layoutMode = layoutMode,
                             columns = columns,
-                            singlePaneScreen = singlePaneScreen,
+                            singlePaneScreens = singlePaneScreens,
                         )
                     } catch (e: Exception) {
                         null

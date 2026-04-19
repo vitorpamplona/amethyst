@@ -47,7 +47,7 @@ data class Workspace(
     val iconName: String,
     val layoutMode: LayoutMode,
     val columns: List<WorkspaceColumn>,
-    val singlePaneScreen: String? = null,
+    val singlePaneScreens: List<String> = emptyList(),
 ) {
     data class WorkspaceColumn(
         val typeKey: String,
