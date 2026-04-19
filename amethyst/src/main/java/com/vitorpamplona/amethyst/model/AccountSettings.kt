@@ -43,7 +43,7 @@ import com.vitorpamplona.quartz.nip37Drafts.privateOutbox.PrivateOutboxRelayList
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
-import com.vitorpamplona.quartz.nip51Lists.favoriteDvmList.FavoriteDvmListEvent
+import com.vitorpamplona.quartz.nip51Lists.favoriteAlgoFeedsList.FavoriteAlgoFeedsListEvent
 import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
 import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
@@ -203,7 +203,7 @@ class AccountSettings(
     var backupChannelList: ChannelListEvent? = null,
     var backupCommunityList: CommunityListEvent? = null,
     var backupHashtagList: HashtagListEvent? = null,
-    var backupFavoriteDvmList: FavoriteDvmListEvent? = null,
+    var backupFavoriteDvmList: FavoriteAlgoFeedsListEvent? = null,
     var backupGeohashList: GeohashListEvent? = null,
     var backupEphemeralChatList: EphemeralChatListEvent? = null,
     var backupTrustProviderList: TrustProviderListEvent? = null,
@@ -727,7 +727,7 @@ class AccountSettings(
         }
     }
 
-    fun updateFavoriteDvmListTo(newFavoriteDvmList: FavoriteDvmListEvent?) {
+    fun updateFavoriteDvmListTo(newFavoriteDvmList: FavoriteAlgoFeedsListEvent?) {
         if (newFavoriteDvmList == null || newFavoriteDvmList.tags.isEmpty()) return
 
         // Events might be different objects, we have to compare their ids.

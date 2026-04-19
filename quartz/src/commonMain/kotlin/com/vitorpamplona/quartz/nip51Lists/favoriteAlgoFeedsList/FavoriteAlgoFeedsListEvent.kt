@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip51Lists.favoriteDvmList
+package com.vitorpamplona.quartz.nip51Lists.favoriteAlgoFeedsList
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Address
@@ -38,7 +38,7 @@ import com.vitorpamplona.quartz.nip51Lists.remove
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
-class FavoriteDvmListEvent(
+class FavoriteAlgoFeedsListEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
@@ -46,72 +46,72 @@ class FavoriteDvmListEvent(
     content: String,
     sig: HexKey,
 ) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
-    fun publicFavoriteDvms(): List<AddressBookmark> = tags.mapNotNull(AddressBookmark::parse)
+    fun publicFavoriteAlgoFeeds(): List<AddressBookmark> = tags.mapNotNull(AddressBookmark::parse)
 
-    suspend fun privateFavoriteDvms(signer: NostrSigner): List<AddressBookmark>? = privateTags(signer)?.mapNotNull(AddressBookmark::parse)
+    suspend fun privateFavoriteAlgoFeeds(signer: NostrSigner): List<AddressBookmark>? = privateTags(signer)?.mapNotNull(AddressBookmark::parse)
 
     companion object {
         const val KIND = 10090
-        const val ALT = "Favorite DVM list"
+        const val ALT = "Favorite algo-feeds list"
         const val FIXED_D_TAG = ""
 
         fun createAddress(pubKey: HexKey) = Address(KIND, pubKey, FIXED_D_TAG)
 
         suspend fun create(
-            dvm: AddressBookmark,
+            feed: AddressBookmark,
             isPrivate: Boolean,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-        ): FavoriteDvmListEvent =
+        ): FavoriteAlgoFeedsListEvent =
             if (isPrivate) {
                 create(
-                    publicDvms = emptyList(),
-                    privateDvms = listOf(dvm),
+                    publicFeeds = emptyList(),
+                    privateFeeds = listOf(feed),
                     signer = signer,
                     createdAt = createdAt,
                 )
             } else {
                 create(
-                    publicDvms = listOf(dvm),
-                    privateDvms = emptyList(),
+                    publicFeeds = listOf(feed),
+                    privateFeeds = emptyList(),
                     signer = signer,
                     createdAt = createdAt,
                 )
             }
 
         suspend fun add(
-            earlierVersion: FavoriteDvmListEvent,
-            dvm: AddressBookmark,
+            earlierVersion: FavoriteAlgoFeedsListEvent,
+            feed: AddressBookmark,
             isPrivate: Boolean,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-        ): FavoriteDvmListEvent =
+        ): FavoriteAlgoFeedsListEvent =
             if (isPrivate) {
                 val privateTags =
                     earlierVersion.privateTags(signer)
                         ?: throw SignerExceptions.UnauthorizedDecryptionException()
                 resign(
                     tags = earlierVersion.tags,
-                    privateTags = privateTags.remove(dvm.toTagIdOnly()) + dvm.toTagArray(),
+                    privateTags = privateTags.remove(feed.toTagIdOnly()) + feed.toTagArray(),
                     signer = signer,
                     createdAt = createdAt,
                 )
             } else {
                 resign(
                     content = earlierVersion.content,
-                    tags = earlierVersion.tags.remove(dvm.toTagIdOnly()) + dvm.toTagArray(),
+                    tags = earlierVersion.tags.remove(feed.toTagIdOnly()) + feed.toTagArray(),
                     signer = signer,
                     createdAt = createdAt,
                 )
             }
 
         suspend fun remove(
-            earlierVersion: FavoriteDvmListEvent,
-            dvm: Address,
+            earlierVersion: FavoriteAlgoFeedsListEvent,
+            feed: Address,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-        ): FavoriteDvmListEvent {
-            val idOnly = AddressBookmark.assemble(dvm, null)
+        ): FavoriteAlgoFeedsListEvent {
+            val idOnly = AddressBookmark.assemble(feed, null)
             val privateTags = earlierVersion.privateTags(signer)
             return if (privateTags != null) {
                 resign(
@@ -147,7 +147,7 @@ class FavoriteDvmListEvent(
             tags: TagArray,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-        ): FavoriteDvmListEvent {
+        ): FavoriteAlgoFeedsListEvent {
             val newTags =
                 if (tags.fastAny(AltTag::match)) {
                     tags
@@ -159,32 +159,32 @@ class FavoriteDvmListEvent(
         }
 
         suspend fun create(
-            publicDvms: List<AddressBookmark> = emptyList(),
-            privateDvms: List<AddressBookmark> = emptyList(),
+            publicFeeds: List<AddressBookmark> = emptyList(),
+            privateFeeds: List<AddressBookmark> = emptyList(),
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-        ): FavoriteDvmListEvent {
-            val template = build(publicDvms, privateDvms, signer, createdAt)
+        ): FavoriteAlgoFeedsListEvent {
+            val template = build(publicFeeds, privateFeeds, signer, createdAt)
             return signer.sign(template)
         }
 
         suspend fun build(
-            publicDvms: List<AddressBookmark> = emptyList(),
-            privateDvms: List<AddressBookmark> = emptyList(),
+            publicFeeds: List<AddressBookmark> = emptyList(),
+            privateFeeds: List<AddressBookmark> = emptyList(),
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            initializer: TagArrayBuilder<FavoriteDvmListEvent>.() -> Unit = {},
-        ) = eventTemplate<FavoriteDvmListEvent>(
+            initializer: TagArrayBuilder<FavoriteAlgoFeedsListEvent>.() -> Unit = {},
+        ) = eventTemplate<FavoriteAlgoFeedsListEvent>(
             kind = KIND,
             description =
                 PrivateTagsInContent.encryptNip44(
-                    privateDvms.map { it.toTagArray() }.toTypedArray(),
+                    privateFeeds.map { it.toTagArray() }.toTypedArray(),
                     signer,
                 ),
             createdAt = createdAt,
         ) {
             alt(ALT)
-            favoriteDvms(publicDvms)
+            favoriteAlgoFeeds(publicFeeds)
 
             initializer()
         }

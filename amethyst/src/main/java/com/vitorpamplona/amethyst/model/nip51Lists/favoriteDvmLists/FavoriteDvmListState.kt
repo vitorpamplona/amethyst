@@ -28,7 +28,7 @@ import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
-import com.vitorpamplona.quartz.nip51Lists.favoriteDvmList.FavoriteDvmListEvent
+import com.vitorpamplona.quartz.nip51Lists.favoriteAlgoFeedsList.FavoriteAlgoFeedsListEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -53,14 +53,14 @@ class FavoriteDvmListState(
     // Creates a long-term reference for this note so that the GC doesn't collect the note itself
     val favoriteDvmListNote = cache.getOrCreateAddressableNote(getFavoriteDvmListAddress())
 
-    fun getFavoriteDvmListAddress() = FavoriteDvmListEvent.createAddress(signer.pubKey)
+    fun getFavoriteDvmListAddress() = FavoriteAlgoFeedsListEvent.createAddress(signer.pubKey)
 
     fun getFavoriteDvmListFlow(): StateFlow<NoteState> = favoriteDvmListNote.flow().metadata.stateFlow
 
-    fun getFavoriteDvmList(): FavoriteDvmListEvent? = favoriteDvmListNote.event as? FavoriteDvmListEvent
+    fun getFavoriteDvmList(): FavoriteAlgoFeedsListEvent? = favoriteDvmListNote.event as? FavoriteAlgoFeedsListEvent
 
     suspend fun favoriteDvmListWithBackup(note: Note): Set<Address> {
-        val event = note.event as? FavoriteDvmListEvent ?: settings.backupFavoriteDvmList
+        val event = note.event as? FavoriteAlgoFeedsListEvent ?: settings.backupFavoriteDvmList
         return event?.let { decryptionCache.favoriteDvms(it) } ?: emptySet()
     }
 
@@ -92,18 +92,18 @@ class FavoriteDvmListState(
                 emptyList(),
             )
 
-    suspend fun follow(dvm: AddressBookmark): FavoriteDvmListEvent {
+    suspend fun follow(dvm: AddressBookmark): FavoriteAlgoFeedsListEvent {
         val list = getFavoriteDvmList()
         return if (list == null) {
-            FavoriteDvmListEvent.create(dvm, false, signer)
+            FavoriteAlgoFeedsListEvent.create(dvm, false, signer)
         } else {
-            FavoriteDvmListEvent.add(list, dvm, false, signer)
+            FavoriteAlgoFeedsListEvent.add(list, dvm, false, signer)
         }
     }
 
-    suspend fun unfollow(dvm: Address): FavoriteDvmListEvent? {
+    suspend fun unfollow(dvm: Address): FavoriteAlgoFeedsListEvent? {
         val list = getFavoriteDvmList() ?: return null
-        return FavoriteDvmListEvent.remove(list, dvm, signer)
+        return FavoriteAlgoFeedsListEvent.remove(list, dvm, signer)
     }
 
     init {
@@ -119,7 +119,7 @@ class FavoriteDvmListState(
             Log.d("AccountRegisterObservers", "Favorite DVM List Collector Start")
             getFavoriteDvmListFlow().collect {
                 Log.d("AccountRegisterObservers") { "Favorite DVM List for ${signer.pubKey}" }
-                (it.note.event as? FavoriteDvmListEvent)?.let {
+                (it.note.event as? FavoriteAlgoFeedsListEvent)?.let {
                     settings.updateFavoriteDvmListTo(it)
                 }
             }

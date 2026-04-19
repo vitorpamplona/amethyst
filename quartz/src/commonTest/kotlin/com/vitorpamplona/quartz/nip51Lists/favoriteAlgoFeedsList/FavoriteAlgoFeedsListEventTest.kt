@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip51Lists.favoriteDvmList
+package com.vitorpamplona.quartz.nip51Lists.favoriteAlgoFeedsList
 
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
@@ -30,7 +30,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-class FavoriteDvmListEventTest {
+class FavoriteAlgoFeedsListEventTest {
     private val signer = NostrSignerInternal("nsec10g0wheggqn9dawlc0yuv6adnat6n09anr7eyykevw2dm8xa5fffs0wsdsr".nsecToKeyPair())
 
     private fun dvm(
@@ -40,12 +40,12 @@ class FavoriteDvmListEventTest {
 
     @Test
     fun kindMatchesSpec() {
-        assertEquals(10090, FavoriteDvmListEvent.KIND)
+        assertEquals(10090, FavoriteAlgoFeedsListEvent.KIND)
     }
 
     @Test
     fun addressesAreReplaceableWithFixedDTag() {
-        val address = FavoriteDvmListEvent.createAddress("a".repeat(64))
+        val address = FavoriteAlgoFeedsListEvent.createAddress("a".repeat(64))
         assertEquals(10090, address.kind)
         assertEquals("", address.dTag)
     }
@@ -53,11 +53,11 @@ class FavoriteDvmListEventTest {
     @Test
     fun createStoresDvmAsATag() =
         runTest {
-            val dvm = dvm("a".repeat(64))
+            val aFeed = dvm("a".repeat(64))
 
             val event =
-                FavoriteDvmListEvent.create(
-                    dvm = dvm,
+                FavoriteAlgoFeedsListEvent.create(
+                    feed = aFeed,
                     isPrivate = false,
                     signer = signer,
                     createdAt = 1740669816,
@@ -65,31 +65,31 @@ class FavoriteDvmListEventTest {
 
             assertEquals(10090, event.kind)
             assertTrue(
-                event.tags.any { it.size >= 2 && it[0] == "a" && it[1] == dvm.address.toValue() },
+                event.tags.any { it.size >= 2 && it[0] == "a" && it[1] == aFeed.address.toValue() },
                 "public a tag for the favourited DVM should be present",
             )
-            val favorites = event.publicFavoriteDvms()
+            val favorites = event.publicFavoriteAlgoFeeds()
             assertEquals(1, favorites.size)
-            assertEquals(dvm.address, favorites.first().address)
+            assertEquals(aFeed.address, favorites.first().address)
         }
 
     @Test
     fun addAppendsWithoutDuplicatingExistingEntry() =
         runTest {
-            val dvm = dvm("a".repeat(64))
+            val aFeed = dvm("a".repeat(64))
 
             val initial =
-                FavoriteDvmListEvent.create(
-                    dvm = dvm,
+                FavoriteAlgoFeedsListEvent.create(
+                    feed = aFeed,
                     isPrivate = false,
                     signer = signer,
                     createdAt = 1740669816,
                 )
 
             val afterDupeAdd =
-                FavoriteDvmListEvent.add(
+                FavoriteAlgoFeedsListEvent.add(
                     earlierVersion = initial,
-                    dvm = dvm,
+                    feed = aFeed,
                     isPrivate = false,
                     signer = signer,
                     createdAt = 1740669817,
@@ -97,7 +97,7 @@ class FavoriteDvmListEventTest {
 
             assertEquals(
                 1,
-                afterDupeAdd.publicFavoriteDvms().count { it.address == dvm.address },
+                afterDupeAdd.publicFavoriteAlgoFeeds().count { it.address == aFeed.address },
                 "re-adding the same DVM must not produce a duplicate tag",
             )
         }
@@ -109,23 +109,23 @@ class FavoriteDvmListEventTest {
             val second = dvm("b".repeat(64))
 
             val initial =
-                FavoriteDvmListEvent.create(
-                    dvm = first,
+                FavoriteAlgoFeedsListEvent.create(
+                    feed = first,
                     isPrivate = false,
                     signer = signer,
                     createdAt = 1740669816,
                 )
 
             val after =
-                FavoriteDvmListEvent.add(
+                FavoriteAlgoFeedsListEvent.add(
                     earlierVersion = initial,
-                    dvm = second,
+                    feed = second,
                     isPrivate = false,
                     signer = signer,
                     createdAt = 1740669817,
                 )
 
-            val addresses = after.publicFavoriteDvms().map { it.address }.toSet()
+            val addresses = after.publicFavoriteAlgoFeeds().map { it.address }.toSet()
             assertTrue(first.address in addresses)
             assertTrue(second.address in addresses)
         }
@@ -137,22 +137,22 @@ class FavoriteDvmListEventTest {
             val second = dvm("b".repeat(64))
 
             val initial =
-                FavoriteDvmListEvent.create(
-                    publicDvms = listOf(first, second),
-                    privateDvms = emptyList(),
+                FavoriteAlgoFeedsListEvent.create(
+                    publicFeeds = listOf(first, second),
+                    privateFeeds = emptyList(),
                     signer = signer,
                     createdAt = 1740669816,
                 )
 
             val after =
-                FavoriteDvmListEvent.remove(
+                FavoriteAlgoFeedsListEvent.remove(
                     earlierVersion = initial,
-                    dvm = first.address,
+                    feed = first.address,
                     signer = signer,
                     createdAt = 1740669817,
                 )
 
-            val addresses = after.publicFavoriteDvms().map { it.address }.toSet()
+            val addresses = after.publicFavoriteAlgoFeeds().map { it.address }.toSet()
             assertFalse(first.address in addresses, "removed DVM should not survive")
             assertTrue(second.address in addresses, "other DVMs should be preserved")
         }

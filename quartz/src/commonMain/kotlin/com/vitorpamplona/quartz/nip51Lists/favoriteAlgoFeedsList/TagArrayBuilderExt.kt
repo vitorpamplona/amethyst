@@ -18,11 +18,11 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip51Lists.favoriteDvmList
+package com.vitorpamplona.quartz.nip51Lists.favoriteAlgoFeedsList
 
-import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
 
-fun TagArray.favoriteDvmList() = mapNotNull(AddressBookmark::parseAddress)
+fun TagArrayBuilder<FavoriteAlgoFeedsListEvent>.favoriteAlgoFeed(app: AddressBookmark) = add(app.toTagArray())
 
-fun TagArray.favoriteDvmSet() = mapNotNullTo(mutableSetOf(), AddressBookmark::parseAddress)
+fun TagArrayBuilder<FavoriteAlgoFeedsListEvent>.favoriteAlgoFeeds(apps: List<AddressBookmark>) = addAll(apps.map { it.toTagArray() })

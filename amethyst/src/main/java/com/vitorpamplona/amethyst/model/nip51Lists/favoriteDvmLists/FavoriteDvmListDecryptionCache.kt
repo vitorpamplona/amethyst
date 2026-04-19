@@ -22,15 +22,15 @@ package com.vitorpamplona.amethyst.model.nip51Lists.favoriteDvmLists
 
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEventCache
-import com.vitorpamplona.quartz.nip51Lists.favoriteDvmList.FavoriteDvmListEvent
-import com.vitorpamplona.quartz.nip51Lists.favoriteDvmList.favoriteDvmSet
+import com.vitorpamplona.quartz.nip51Lists.favoriteAlgoFeedsList.FavoriteAlgoFeedsListEvent
+import com.vitorpamplona.quartz.nip51Lists.favoriteAlgoFeedsList.favoriteAlgoFeedsSet
 
 class FavoriteDvmListDecryptionCache(
     val signer: NostrSigner,
 ) {
-    val cachedPrivateLists = PrivateTagArrayEventCache<FavoriteDvmListEvent>(signer)
+    val cachedPrivateLists = PrivateTagArrayEventCache<FavoriteAlgoFeedsListEvent>(signer)
 
-    fun cachedFavoriteDvms(event: FavoriteDvmListEvent) = cachedPrivateLists.mergeTagListPrecached(event).favoriteDvmSet()
+    fun cachedFavoriteDvms(event: FavoriteAlgoFeedsListEvent) = cachedPrivateLists.mergeTagListPrecached(event).favoriteAlgoFeedsSet()
 
-    suspend fun favoriteDvms(event: FavoriteDvmListEvent) = cachedPrivateLists.mergeTagList(event).favoriteDvmSet()
+    suspend fun favoriteDvms(event: FavoriteAlgoFeedsListEvent) = cachedPrivateLists.mergeTagList(event).favoriteAlgoFeedsSet()
 }
