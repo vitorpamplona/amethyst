@@ -18,25 +18,19 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.topNavFeeds.favoriteDvm
+package com.vitorpamplona.amethyst.model.nip51Lists.favoriteAlgoFeedsLists
 
-import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavPerRelayFilterSet
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEventCache
+import com.vitorpamplona.quartz.nip51Lists.favoriteAlgoFeedsList.FavoriteAlgoFeedsListEvent
+import com.vitorpamplona.quartz.nip51Lists.favoriteAlgoFeedsList.favoriteAlgoFeedsSet
 
-/**
- * Two relay sets, two distinct subscriptions:
- *
- * - [contentFetches] — for each user-configured content relay, the ids/addresses
- *   we want to pull (the actual notes the DVM curated).
- * - [listenRelays] — the union of DVM publish relays across all active DVMs
- *   (where they will deliver future kind 6300 / 7000 events for their requests).
- * - [requestIds] — the set of currently-active kind-5300 request ids to listen
- *   for. A single-DVM filter carries one; the merged "All favorite DVMs"
- *   filter carries one per favorite DVM.
- */
-class FavoriteDvmTopNavPerRelayFilterSet(
-    val contentFetches: Map<NormalizedRelayUrl, FavoriteDvmTopNavPerRelayFilter>,
-    val listenRelays: Set<NormalizedRelayUrl>,
-    val requestIds: Set<HexKey>,
-) : IFeedTopNavPerRelayFilterSet
+class FavoriteAlgoFeedsListDecryptionCache(
+    val signer: NostrSigner,
+) {
+    val cachedPrivateLists = PrivateTagArrayEventCache<FavoriteAlgoFeedsListEvent>(signer)
+
+    fun cachedFavoriteAlgoFeeds(event: FavoriteAlgoFeedsListEvent) = cachedPrivateLists.mergeTagListPrecached(event).favoriteAlgoFeedsSet()
+
+    suspend fun favoriteAlgoFeeds(event: FavoriteAlgoFeedsListEvent) = cachedPrivateLists.mergeTagList(event).favoriteAlgoFeedsSet()
+}

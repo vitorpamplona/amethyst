@@ -18,10 +18,10 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip90Dvms
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip90AlgoFeeds
 
-import com.vitorpamplona.amethyst.model.topNavFeeds.favoriteDvm.FavoriteDvmTopNavPerRelayFilter
-import com.vitorpamplona.amethyst.model.topNavFeeds.favoriteDvm.FavoriteDvmTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.favoriteAlgoFeeds.FavoriteAlgoFeedTopNavPerRelayFilter
+import com.vitorpamplona.amethyst.model.topNavFeeds.favoriteAlgoFeeds.FavoriteAlgoFeedTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
@@ -45,8 +45,8 @@ import com.vitorpamplona.quartz.nip90Dvms.status.NIP90StatusEvent
  *   never publishes responses on the user's outbox, so listening anywhere else
  *   would silently miss them.
  */
-fun filterHomePostsByDvmIds(
-    set: FavoriteDvmTopNavPerRelayFilterSet,
+fun filterHomePostsByAlgoFeedIds(
+    set: FavoriteAlgoFeedTopNavPerRelayFilterSet,
     @Suppress("UNUSED_PARAMETER") since: SincePerRelayMap?,
     @Suppress("UNUSED_PARAMETER") defaultSince: Long?,
 ): List<RelayBasedFilter> {
@@ -68,7 +68,7 @@ fun filterHomePostsByDvmIds(
 
 private fun contentFetchFilters(
     relay: NormalizedRelayUrl,
-    filter: FavoriteDvmTopNavPerRelayFilter,
+    filter: FavoriteAlgoFeedTopNavPerRelayFilter,
 ): List<RelayBasedFilter> {
     val out = mutableListOf<RelayBasedFilter>()
 

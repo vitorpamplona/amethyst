@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.dvms
+package com.vitorpamplona.amethyst.model.algoFeeds
 
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.quartz.nip01Core.core.Address
@@ -45,7 +45,7 @@ import kotlinx.coroutines.sync.withLock
 private const val RESPONSE_TIMEOUT_MS = 20_000L
 
 /**
- * Immutable snapshot of a favorite DVM's current request/response state.
+ * Immutable snapshot of a favorite algo feed's current request/response state.
  *
  * - [requestId] is the id of the most recently published kind-5300 request.
  * - [responseRelays] is the relay set the kind-5300 was sent to — the same set on
@@ -55,7 +55,7 @@ private const val RESPONSE_TIMEOUT_MS = 20_000L
  * - [latestStatus] is the latest kind-7000 status event (processing, payment-required, error, …).
  * - [errorMessage] captures any client-side failure while publishing the request.
  */
-data class FavoriteDvmSnapshot(
+data class FavoriteAlgoFeedsSnapshot(
     val requestId: HexKey? = null,
     val responseRelays: Set<NormalizedRelayUrl> = emptySet(),
     val ids: Set<HexKey> = emptySet(),
@@ -65,7 +65,7 @@ data class FavoriteDvmSnapshot(
 )
 
 /**
- * Manages the NIP-90 content-discovery RPC cycle for each favorite DVM the user
+ * Manages the NIP-90 content-discovery RPC cycle for each favorite algo feed the user
  * pins to the top-nav.
  *
  * The orchestrator is lazy: it starts a request/response cycle the first time any
@@ -75,50 +75,50 @@ data class FavoriteDvmSnapshot(
  *
  * This class does not own the relay subscriptions that fetch DVM responses and
  * matching notes. Those are issued by `HomeOutboxEventsEoseManager` while the
- * user has a `TopFilter.FavoriteDvm` selected. The orchestrator merely observes
+ * user has a `TopFilter.FavoriteAlgoFeed` selected. The orchestrator merely observes
  * what the relays deliver into `LocalCache`.
  */
-class FavoriteDvmOrchestrator(
+class FavoriteAlgoFeedsOrchestrator(
     val account: Account,
     val scope: CoroutineScope,
 ) {
-    private val flows = mutableMapOf<Address, MutableStateFlow<FavoriteDvmSnapshot>>()
+    private val flows = mutableMapOf<Address, MutableStateFlow<FavoriteAlgoFeedsSnapshot>>()
     private val jobs = mutableMapOf<Address, Job>()
     private val mutex = Mutex()
 
-    fun observe(dvmAddress: Address): StateFlow<FavoriteDvmSnapshot> {
-        flows[dvmAddress]?.let { return it.asStateFlow() }
+    fun observe(feedAddress: Address): StateFlow<FavoriteAlgoFeedsSnapshot> {
+        flows[feedAddress]?.let { return it.asStateFlow() }
 
-        val seed = MutableStateFlow(FavoriteDvmSnapshot())
-        flows[dvmAddress] = seed
-        scope.launch { startFor(dvmAddress, seed) }
+        val seed = MutableStateFlow(FavoriteAlgoFeedsSnapshot())
+        flows[feedAddress] = seed
+        scope.launch { startFor(feedAddress, seed) }
         return seed.asStateFlow()
     }
 
-    fun refresh(dvmAddress: Address) {
-        val seed = flows[dvmAddress] ?: return
+    fun refresh(feedAddress: Address) {
+        val seed = flows[feedAddress] ?: return
         scope.launch {
             mutex.withLock {
-                jobs.remove(dvmAddress)?.cancel()
+                jobs.remove(feedAddress)?.cancel()
             }
-            startFor(dvmAddress, seed)
+            startFor(feedAddress, seed)
         }
     }
 
-    fun stop(dvmAddress: Address) {
+    fun stop(feedAddress: Address) {
         scope.launch {
             mutex.withLock {
-                jobs.remove(dvmAddress)?.cancel()
-                flows.remove(dvmAddress)
+                jobs.remove(feedAddress)?.cancel()
+                flows.remove(feedAddress)
             }
         }
     }
 
     private suspend fun startFor(
-        dvmAddress: Address,
-        seed: MutableStateFlow<FavoriteDvmSnapshot>,
+        feedAddress: Address,
+        seed: MutableStateFlow<FavoriteAlgoFeedsSnapshot>,
     ) {
-        val user = account.cache.checkGetOrCreateUser(dvmAddress.pubKeyHex) ?: return
+        val user = account.cache.checkGetOrCreateUser(feedAddress.pubKeyHex) ?: return
         val job =
             scope.launch(Dispatchers.IO) {
                 try {
@@ -188,12 +188,12 @@ class FavoriteDvmOrchestrator(
                     }
                 } catch (e: Exception) {
                     if (e is CancellationException) throw e
-                    Log.w("FavoriteDvmOrchestrator", "Failed to start DVM request: ${e.message}", e)
+                    Log.w("FavoriteAlgoFeedsOrchestrator", "Failed to start DVM request: ${e.message}", e)
                     seed.update { it.copy(errorMessage = e.message ?: "Unknown error") }
                 }
             }
 
-        mutex.withLock { jobs[dvmAddress] = job }
+        mutex.withLock { jobs[feedAddress] = job }
     }
 
     private fun splitInnerTags(innerTags: List<HexKey>): Pair<Set<HexKey>, Set<String>> {

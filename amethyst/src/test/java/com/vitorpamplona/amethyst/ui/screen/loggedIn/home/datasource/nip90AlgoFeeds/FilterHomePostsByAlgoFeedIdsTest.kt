@@ -18,10 +18,10 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip90Dvms
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip90AlgoFeeds
 
-import com.vitorpamplona.amethyst.model.topNavFeeds.favoriteDvm.FavoriteDvmTopNavPerRelayFilter
-import com.vitorpamplona.amethyst.model.topNavFeeds.favoriteDvm.FavoriteDvmTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.favoriteAlgoFeeds.FavoriteAlgoFeedTopNavPerRelayFilter
+import com.vitorpamplona.amethyst.model.topNavFeeds.favoriteAlgoFeeds.FavoriteAlgoFeedTopNavPerRelayFilterSet
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.NIP90ContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.status.NIP90StatusEvent
@@ -30,34 +30,34 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class FilterHomePostsByDvmIdsTest {
+class FilterHomePostsByAlgoFeedIdsTest {
     private val userRelay = RelayUrlNormalizer.normalizeOrNull("wss://user.example/")!!
     private val dvmRelay = RelayUrlNormalizer.normalizeOrNull("wss://dvm.example/")!!
 
     @Test
     fun emptyFilterSetProducesNoRequests() {
         val set =
-            FavoriteDvmTopNavPerRelayFilterSet(
+            FavoriteAlgoFeedTopNavPerRelayFilterSet(
                 contentFetches = emptyMap(),
                 listenRelays = emptySet(),
                 requestIds = emptySet(),
             )
 
-        assertTrue(filterHomePostsByDvmIds(set, since = null, defaultSince = null).isEmpty())
+        assertTrue(filterHomePostsByAlgoFeedIds(set, since = null, defaultSince = null).isEmpty())
     }
 
     @Test
     fun contentFetchIssuedOnUserRelayWithIdsFilter() {
         val ids = setOf("a".repeat(64), "b".repeat(64))
         val set =
-            FavoriteDvmTopNavPerRelayFilterSet(
+            FavoriteAlgoFeedTopNavPerRelayFilterSet(
                 contentFetches =
-                    mapOf(userRelay to FavoriteDvmTopNavPerRelayFilter(ids = ids, addresses = emptySet())),
+                    mapOf(userRelay to FavoriteAlgoFeedTopNavPerRelayFilter(ids = ids, addresses = emptySet())),
                 listenRelays = emptySet(),
                 requestIds = emptySet(),
             )
 
-        val filters = filterHomePostsByDvmIds(set, since = null, defaultSince = null)
+        val filters = filterHomePostsByAlgoFeedIds(set, since = null, defaultSince = null)
 
         assertEquals(1, filters.size)
         val single = filters.single()
@@ -71,13 +71,13 @@ class FilterHomePostsByDvmIdsTest {
     fun listenFilterIssuedOnDvmRelayWithKinds6300And7000() {
         val requestId = "9".repeat(64)
         val set =
-            FavoriteDvmTopNavPerRelayFilterSet(
+            FavoriteAlgoFeedTopNavPerRelayFilterSet(
                 contentFetches = emptyMap(),
                 listenRelays = setOf(dvmRelay),
                 requestIds = setOf(requestId),
             )
 
-        val filters = filterHomePostsByDvmIds(set, since = null, defaultSince = null)
+        val filters = filterHomePostsByAlgoFeedIds(set, since = null, defaultSince = null)
 
         assertEquals(1, filters.size)
         val listen = filters.single()
@@ -96,13 +96,13 @@ class FilterHomePostsByDvmIdsTest {
         val req1 = "1".repeat(64)
         val req2 = "2".repeat(64)
         val set =
-            FavoriteDvmTopNavPerRelayFilterSet(
+            FavoriteAlgoFeedTopNavPerRelayFilterSet(
                 contentFetches = emptyMap(),
                 listenRelays = setOf(dvmRelay),
                 requestIds = setOf(req1, req2),
             )
 
-        val filters = filterHomePostsByDvmIds(set, since = null, defaultSince = null)
+        val filters = filterHomePostsByAlgoFeedIds(set, since = null, defaultSince = null)
 
         assertEquals(1, filters.size)
         val eTag =
@@ -120,14 +120,14 @@ class FilterHomePostsByDvmIdsTest {
         val ids = setOf("a".repeat(64))
         val requestId = "9".repeat(64)
         val set =
-            FavoriteDvmTopNavPerRelayFilterSet(
+            FavoriteAlgoFeedTopNavPerRelayFilterSet(
                 contentFetches =
-                    mapOf(userRelay to FavoriteDvmTopNavPerRelayFilter(ids = ids, addresses = emptySet())),
+                    mapOf(userRelay to FavoriteAlgoFeedTopNavPerRelayFilter(ids = ids, addresses = emptySet())),
                 listenRelays = setOf(dvmRelay),
                 requestIds = setOf(requestId),
             )
 
-        val filters = filterHomePostsByDvmIds(set, since = null, defaultSince = null)
+        val filters = filterHomePostsByAlgoFeedIds(set, since = null, defaultSince = null)
 
         assertEquals(2, filters.size)
         assertTrue(filters.any { it.relay == userRelay && it.filter.ids != null })

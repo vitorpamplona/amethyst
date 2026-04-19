@@ -18,10 +18,10 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.topNavFeeds.favoriteDvm
+package com.vitorpamplona.amethyst.model.topNavFeeds.favoriteAlgoFeeds
 
-import com.vitorpamplona.amethyst.model.dvms.FavoriteDvmOrchestrator
-import com.vitorpamplona.amethyst.model.dvms.FavoriteDvmSnapshot
+import com.vitorpamplona.amethyst.model.algoFeeds.FavoriteAlgoFeedsOrchestrator
+import com.vitorpamplona.amethyst.model.algoFeeds.FavoriteAlgoFeedsSnapshot
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedFlowsType
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.quartz.nip01Core.core.Address
@@ -35,12 +35,12 @@ import kotlinx.coroutines.flow.flatMapLatest
 
 /**
  * Feed flow that merges snapshots from every currently-favorited DVM into a
- * single [AllFavoriteDvmsTopNavFilter]. Re-wires subscriptions whenever the
+ * single [AllFavoriteAlgoFeedsTopNavFilter]. Re-wires subscriptions whenever the
  * favorite set changes.
  */
-class AllFavoriteDvmsFeedFlow(
-    val favoriteDvmAddresses: StateFlow<Set<Address>>,
-    val orchestrator: FavoriteDvmOrchestrator,
+class AllFavoriteAlgoFeedsFlow(
+    val favoriteAlgoFeedAddresses: StateFlow<Set<Address>>,
+    val orchestrator: FavoriteAlgoFeedsOrchestrator,
     val outboxRelays: StateFlow<Set<NormalizedRelayUrl>>,
     val proxyRelays: StateFlow<Set<NormalizedRelayUrl>>,
 ) : IFeedFlowsType {
@@ -50,9 +50,9 @@ class AllFavoriteDvmsFeedFlow(
     ): Set<NormalizedRelayUrl> = if (proxy.isNotEmpty()) proxy else outbox
 
     private fun merge(
-        snapshots: List<FavoriteDvmSnapshot>,
+        snapshots: List<FavoriteAlgoFeedsSnapshot>,
         contentRelays: Set<NormalizedRelayUrl>,
-    ): AllFavoriteDvmsTopNavFilter {
+    ): AllFavoriteAlgoFeedsTopNavFilter {
         val ids = mutableSetOf<String>()
         val addresses = mutableSetOf<String>()
         val listen = mutableSetOf<NormalizedRelayUrl>()
@@ -63,7 +63,7 @@ class AllFavoriteDvmsFeedFlow(
             listen += snap.responseRelays
             snap.requestId?.let { requestIds += it }
         }
-        return AllFavoriteDvmsTopNavFilter(
+        return AllFavoriteAlgoFeedsTopNavFilter(
             acceptedIds = ids,
             acceptedAddresses = addresses,
             contentRelays = contentRelays,
@@ -72,8 +72,8 @@ class AllFavoriteDvmsFeedFlow(
         )
     }
 
-    private fun emptyFilter(contentRelays: Set<NormalizedRelayUrl>): AllFavoriteDvmsTopNavFilter =
-        AllFavoriteDvmsTopNavFilter(
+    private fun emptyFilter(contentRelays: Set<NormalizedRelayUrl>): AllFavoriteAlgoFeedsTopNavFilter =
+        AllFavoriteAlgoFeedsTopNavFilter(
             acceptedIds = emptySet(),
             acceptedAddresses = emptySet(),
             contentRelays = contentRelays,
@@ -83,13 +83,13 @@ class AllFavoriteDvmsFeedFlow(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun flow(): Flow<IFeedTopNavFilter> =
-        favoriteDvmAddresses.flatMapLatest { addresses ->
+        favoriteAlgoFeedAddresses.flatMapLatest { addresses ->
             if (addresses.isEmpty()) {
                 combine(outboxRelays, proxyRelays) { outbox, proxy ->
                     emptyFilter(resolveContentRelays(outbox, proxy))
                 }
             } else {
-                val snapshotFlows: List<Flow<FavoriteDvmSnapshot>> = addresses.map { orchestrator.observe(it) }
+                val snapshotFlows: List<Flow<FavoriteAlgoFeedsSnapshot>> = addresses.map { orchestrator.observe(it) }
                 combine(snapshotFlows) { it.toList() }
                     .let { merged ->
                         combine(merged, outboxRelays, proxyRelays) { snaps, outbox, proxy ->
@@ -99,9 +99,9 @@ class AllFavoriteDvmsFeedFlow(
             }
         }
 
-    override fun startValue(): AllFavoriteDvmsTopNavFilter {
+    override fun startValue(): AllFavoriteAlgoFeedsTopNavFilter {
         val contentRelays = resolveContentRelays(outboxRelays.value, proxyRelays.value)
-        val addresses = favoriteDvmAddresses.value
+        val addresses = favoriteAlgoFeedAddresses.value
         return if (addresses.isEmpty()) {
             emptyFilter(contentRelays)
         } else {

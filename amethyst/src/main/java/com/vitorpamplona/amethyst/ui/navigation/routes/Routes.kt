@@ -171,7 +171,7 @@ sealed class Route {
 
     @Serializable object EditMediaServers : Route()
 
-    @Serializable object EditFavoriteDvms : Route()
+    @Serializable object EditFavoriteAlgoFeeds : Route()
 
     @Serializable object EditPaymentTargets : Route()
 

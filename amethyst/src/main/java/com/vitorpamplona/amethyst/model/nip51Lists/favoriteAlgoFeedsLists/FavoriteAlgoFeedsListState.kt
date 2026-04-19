@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.nip51Lists.favoriteDvmLists
+package com.vitorpamplona.amethyst.model.nip51Lists.favoriteAlgoFeedsLists
 
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.AddressableNote
@@ -43,34 +43,34 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.launch
 
-class FavoriteDvmListState(
+class FavoriteAlgoFeedsListState(
     val signer: NostrSigner,
     val cache: LocalCache,
-    val decryptionCache: FavoriteDvmListDecryptionCache,
+    val decryptionCache: FavoriteAlgoFeedsListDecryptionCache,
     val scope: CoroutineScope,
     val settings: AccountSettings,
 ) {
     // Creates a long-term reference for this note so that the GC doesn't collect the note itself
-    val favoriteDvmListNote = cache.getOrCreateAddressableNote(getFavoriteDvmListAddress())
+    val favoriteAlgoFeedsListNote = cache.getOrCreateAddressableNote(getFavoriteAlgoFeedsListAddress())
 
-    fun getFavoriteDvmListAddress() = FavoriteAlgoFeedsListEvent.createAddress(signer.pubKey)
+    fun getFavoriteAlgoFeedsListAddress() = FavoriteAlgoFeedsListEvent.createAddress(signer.pubKey)
 
-    fun getFavoriteDvmListFlow(): StateFlow<NoteState> = favoriteDvmListNote.flow().metadata.stateFlow
+    fun getFavoriteAlgoFeedsListFlow(): StateFlow<NoteState> = favoriteAlgoFeedsListNote.flow().metadata.stateFlow
 
-    fun getFavoriteDvmList(): FavoriteAlgoFeedsListEvent? = favoriteDvmListNote.event as? FavoriteAlgoFeedsListEvent
+    fun getFavoriteAlgoFeedsList(): FavoriteAlgoFeedsListEvent? = favoriteAlgoFeedsListNote.event as? FavoriteAlgoFeedsListEvent
 
-    suspend fun favoriteDvmListWithBackup(note: Note): Set<Address> {
-        val event = note.event as? FavoriteAlgoFeedsListEvent ?: settings.backupFavoriteDvmList
-        return event?.let { decryptionCache.favoriteDvms(it) } ?: emptySet()
+    suspend fun favoriteAlgoFeedsListWithBackup(note: Note): Set<Address> {
+        val event = note.event as? FavoriteAlgoFeedsListEvent ?: settings.backupFavoriteAlgoFeedsList
+        return event?.let { decryptionCache.favoriteAlgoFeeds(it) } ?: emptySet()
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val flow: StateFlow<Set<Address>> =
-        getFavoriteDvmListFlow()
+        getFavoriteAlgoFeedsListFlow()
             .transformLatest { noteState ->
-                emit(favoriteDvmListWithBackup(noteState.note))
+                emit(favoriteAlgoFeedsListWithBackup(noteState.note))
             }.onStart {
-                emit(favoriteDvmListWithBackup(favoriteDvmListNote))
+                emit(favoriteAlgoFeedsListWithBackup(favoriteAlgoFeedsListNote))
             }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
@@ -93,7 +93,7 @@ class FavoriteDvmListState(
             )
 
     suspend fun follow(dvm: AddressBookmark): FavoriteAlgoFeedsListEvent {
-        val list = getFavoriteDvmList()
+        val list = getFavoriteAlgoFeedsList()
         return if (list == null) {
             FavoriteAlgoFeedsListEvent.create(dvm, false, signer)
         } else {
@@ -102,12 +102,12 @@ class FavoriteDvmListState(
     }
 
     suspend fun unfollow(dvm: Address): FavoriteAlgoFeedsListEvent? {
-        val list = getFavoriteDvmList() ?: return null
+        val list = getFavoriteAlgoFeedsList() ?: return null
         return FavoriteAlgoFeedsListEvent.remove(list, dvm, signer)
     }
 
     init {
-        settings.backupFavoriteDvmList?.let { event ->
+        settings.backupFavoriteAlgoFeedsList?.let { event ->
             Log.d("AccountRegisterObservers") { "Loading saved Favorite DVM list ${event.toJson()}" }
             @OptIn(DelicateCoroutinesApi::class)
             scope.launch(Dispatchers.IO) {
@@ -117,10 +117,10 @@ class FavoriteDvmListState(
 
         scope.launch(Dispatchers.IO) {
             Log.d("AccountRegisterObservers", "Favorite DVM List Collector Start")
-            getFavoriteDvmListFlow().collect {
+            getFavoriteAlgoFeedsListFlow().collect {
                 Log.d("AccountRegisterObservers") { "Favorite DVM List for ${signer.pubKey}" }
                 (it.note.event as? FavoriteAlgoFeedsListEvent)?.let {
-                    settings.updateFavoriteDvmListTo(it)
+                    settings.updateFavoriteAlgoFeedsListTo(it)
                 }
             }
         }

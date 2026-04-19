@@ -70,7 +70,7 @@ import com.vitorpamplona.amethyst.ui.theme.grayText
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FavoriteDvmListScreen(
+fun FavoriteAlgoFeedsListScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -101,17 +101,17 @@ fun FavoriteDvmListScreen(
                 color = MaterialTheme.colorScheme.grayText,
             )
 
-            FavoriteDvmList(accountViewModel, nav)
+            FavoriteAlgoFeedList(accountViewModel, nav)
         }
     }
 }
 
 @Composable
-private fun FavoriteDvmList(
+private fun FavoriteAlgoFeedList(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val favorites by accountViewModel.account.favoriteDvmList.flowNotes
+    val favorites by accountViewModel.account.favoriteAlgoFeedsList.flowNotes
         .collectAsStateWithLifecycle()
 
     if (favorites.isEmpty()) {
@@ -136,12 +136,12 @@ private fun FavoriteDvmList(
         items(
             items = favorites,
             key = { it.address.toValue() },
-        ) { dvmNote ->
-            FavoriteDvmRow(
-                dvmNote = dvmNote,
+        ) { feedNote ->
+            FavoriteAlgoFeedRow(
+                feedNote = feedNote,
                 accountViewModel = accountViewModel,
-                onOpen = { nav.nav(Route.ContentDiscovery(dvmNote.idHex)) },
-                onRemove = { accountViewModel.unfollowFavoriteDvm(dvmNote.address) },
+                onOpen = { nav.nav(Route.ContentDiscovery(feedNote.idHex)) },
+                onRemove = { accountViewModel.unfollowFavoriteAlgoFeed(feedNote.address) },
             )
         }
     }
@@ -149,13 +149,13 @@ private fun FavoriteDvmList(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun FavoriteDvmRow(
-    dvmNote: AddressableNote,
+private fun FavoriteAlgoFeedRow(
+    feedNote: AddressableNote,
     accountViewModel: AccountViewModel,
     onOpen: () -> Unit,
     onRemove: () -> Unit,
 ) {
-    val card = observeAppDefinition(dvmNote, accountViewModel)
+    val card = observeAppDefinition(feedNote, accountViewModel)
 
     Row(
         modifier =
@@ -175,19 +175,19 @@ private fun FavoriteDvmRow(
                     loadedImageModifier = SimpleImage35Modifier,
                     accountViewModel = accountViewModel,
                     onLoadingBackground = {
-                        dvmNote.author?.let { author ->
+                        feedNote.author?.let { author ->
                             BannerImage(author, SimpleImage35Modifier, accountViewModel)
                         }
                     },
                     onError = {
-                        dvmNote.author?.let { author ->
+                        feedNote.author?.let { author ->
                             BannerImage(author, SimpleImage35Modifier, accountViewModel)
                         }
                     },
                 )
             }
         } ?: run {
-            dvmNote.author?.let { author ->
+            feedNote.author?.let { author ->
                 BannerImage(author, SimpleImage35Modifier, accountViewModel)
             }
         }
@@ -198,7 +198,7 @@ private fun FavoriteDvmRow(
             modifier = Modifier.weight(1f),
         ) {
             Text(
-                text = card.name.ifBlank { dvmNote.dTag() },
+                text = card.name.ifBlank { feedNote.dTag() },
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,

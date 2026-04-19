@@ -42,7 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.TopFilter
-import com.vitorpamplona.amethyst.model.dvms.FavoriteDvmSnapshot
+import com.vitorpamplona.amethyst.model.algoFeeds.FavoriteAlgoFeedsSnapshot
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteAndMap
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.LoadingAnimation
@@ -55,7 +55,7 @@ import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 
 @Composable
-fun HomeDvmStatusBanner(
+fun HomeAlgoFeedStatusBanner(
     accountViewModel: AccountViewModel,
     nav: INav,
     modifier: Modifier = Modifier,
@@ -64,31 +64,31 @@ fun HomeDvmStatusBanner(
         .collectAsStateWithLifecycle()
 
     when (val filter = topFilter) {
-        is TopFilter.FavoriteDvm -> SingleDvmBanner(filter, accountViewModel, nav, modifier)
-        is TopFilter.AllFavoriteDvms -> AllFavoriteDvmsBanner(accountViewModel, modifier)
+        is TopFilter.FavoriteAlgoFeed -> SingleAlgoFeedBanner(filter, accountViewModel, nav, modifier)
+        is TopFilter.AllFavoriteAlgoFeeds -> AllFavoriteAlgoFeedsBanner(accountViewModel, modifier)
         else -> Unit
     }
 }
 
 @Composable
-private fun SingleDvmBanner(
-    favDvm: TopFilter.FavoriteDvm,
+private fun SingleAlgoFeedBanner(
+    favFeed: TopFilter.FavoriteAlgoFeed,
     accountViewModel: AccountViewModel,
     nav: INav,
     modifier: Modifier = Modifier,
 ) {
-    val snapshot by accountViewModel.account.favoriteDvmOrchestrator
-        .observe(favDvm.address)
+    val snapshot by accountViewModel.account.favoriteAlgoFeedsOrchestrator
+        .observe(favFeed.address)
         .collectAsStateWithLifecycle()
 
     // Hide the banner when the feed is already populated.
     if (snapshot.ids.isNotEmpty() || snapshot.addresses.isNotEmpty()) return
 
-    val dvmAddressValue = favDvm.address.toValue()
+    val feedAddressValue = favFeed.address.toValue()
 
-    LoadNote(baseNoteHex = dvmAddressValue, accountViewModel = accountViewModel) { dvmNote ->
+    LoadNote(baseNoteHex = feedAddressValue, accountViewModel = accountViewModel) { feedNote ->
         val resolvedName by
-            observeNoteAndMap(dvmNote ?: return@LoadNote, accountViewModel) { note ->
+            observeNoteAndMap(feedNote ?: return@LoadNote, accountViewModel) { note ->
                 (note.event as? AppDefinitionEvent)
                     ?.appMetaData()
                     ?.name
@@ -107,7 +107,7 @@ private fun SingleDvmBanner(
                         showSpinner = false,
                     )
                     Spacer(modifier = StdVertSpacer)
-                    RetryButton { accountViewModel.refreshFavoriteDvm(favDvm.address) }
+                    RetryButton { accountViewModel.refreshFavoriteAlgoFeed(favFeed.address) }
                 }
 
                 status?.code == "payment-required" -> {
@@ -144,7 +144,7 @@ private fun SingleDvmBanner(
                         showSpinner = false,
                     )
                     Spacer(modifier = StdVertSpacer)
-                    RetryButton { accountViewModel.refreshFavoriteDvm(favDvm.address) }
+                    RetryButton { accountViewModel.refreshFavoriteAlgoFeed(favFeed.address) }
                 }
 
                 status?.code == "processing" -> {
@@ -169,11 +169,11 @@ private fun SingleDvmBanner(
 }
 
 @Composable
-private fun AllFavoriteDvmsBanner(
+private fun AllFavoriteAlgoFeedsBanner(
     accountViewModel: AccountViewModel,
     modifier: Modifier = Modifier,
 ) {
-    val addresses by accountViewModel.account.favoriteDvmList.flow
+    val addresses by accountViewModel.account.favoriteAlgoFeedsList.flow
         .collectAsStateWithLifecycle()
 
     if (addresses.isEmpty()) return
@@ -181,9 +181,9 @@ private fun AllFavoriteDvmsBanner(
     // Observe each DVM's snapshot so we can decide whether to hide the banner
     // based on the aggregate state. Hide it as soon as any DVM has produced a
     // feed; only error out when every one of them has errored.
-    val snapshots: List<FavoriteDvmSnapshot> =
+    val snapshots: List<FavoriteAlgoFeedsSnapshot> =
         addresses.map { address ->
-            val snap by accountViewModel.account.favoriteDvmOrchestrator
+            val snap by accountViewModel.account.favoriteAlgoFeedsOrchestrator
                 .observe(address)
                 .collectAsStateWithLifecycle()
             snap
@@ -202,7 +202,7 @@ private fun AllFavoriteDvmsBanner(
             )
             Spacer(modifier = StdVertSpacer)
             RetryButton {
-                addresses.forEach { accountViewModel.refreshFavoriteDvm(it) }
+                addresses.forEach { accountViewModel.refreshFavoriteAlgoFeed(it) }
             }
         } else {
             BannerMessageRow(

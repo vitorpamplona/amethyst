@@ -127,7 +127,7 @@ fun AllSettingsScreen(
                 title = R.string.favorite_dvms_title,
                 icon = Icons.Outlined.AutoAwesome,
                 tint = tint,
-                onClick = { nav.nav(Route.EditFavoriteDvms) },
+                onClick = { nav.nav(Route.EditFavoriteAlgoFeeds) },
             )
             HorizontalDivider()
             SettingsNavigationRow(

@@ -157,11 +157,11 @@ sealed class TopFilter(
     ) : TopFilter("Relay/$url")
 
     @Serializable
-    class FavoriteDvm(
+    class FavoriteAlgoFeed(
         val address: Address,
-    ) : TopFilter("FavoriteDvm/${address.toValue()}")
+    ) : TopFilter("FavoriteAlgoFeed/${address.toValue()}")
 
-    @Serializable object AllFavoriteDvms : TopFilter(" All Favourite DVMs ")
+    @Serializable object AllFavoriteAlgoFeeds : TopFilter(" All Favourite DVMs ")
 }
 
 @Stable
@@ -203,7 +203,7 @@ class AccountSettings(
     var backupChannelList: ChannelListEvent? = null,
     var backupCommunityList: CommunityListEvent? = null,
     var backupHashtagList: HashtagListEvent? = null,
-    var backupFavoriteDvmList: FavoriteAlgoFeedsListEvent? = null,
+    var backupFavoriteAlgoFeedsList: FavoriteAlgoFeedsListEvent? = null,
     var backupGeohashList: GeohashListEvent? = null,
     var backupEphemeralChatList: EphemeralChatListEvent? = null,
     var backupTrustProviderList: TrustProviderListEvent? = null,
@@ -727,12 +727,12 @@ class AccountSettings(
         }
     }
 
-    fun updateFavoriteDvmListTo(newFavoriteDvmList: FavoriteAlgoFeedsListEvent?) {
+    fun updateFavoriteAlgoFeedsListTo(newFavoriteDvmList: FavoriteAlgoFeedsListEvent?) {
         if (newFavoriteDvmList == null || newFavoriteDvmList.tags.isEmpty()) return
 
         // Events might be different objects, we have to compare their ids.
-        if (backupFavoriteDvmList?.id != newFavoriteDvmList.id) {
-            backupFavoriteDvmList = newFavoriteDvmList
+        if (backupFavoriteAlgoFeedsList?.id != newFavoriteDvmList.id) {
+            backupFavoriteAlgoFeedsList = newFavoriteDvmList
             saveAccountSettings()
         }
     }

@@ -18,11 +18,12 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.topNavFeeds.favoriteDvm
+package com.vitorpamplona.amethyst.model.topNavFeeds.favoriteAlgoFeeds
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -31,18 +32,20 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 
 /**
- * Top-nav filter that unions the latest kind-6300 responses from every currently
- * favorited DVM. Behaves like [FavoriteDvmTopNavFilter] (pure membership check
- * against a snapshot), but the accepted set is the union across N DVMs and the
- * request-id list carries one entry per DVM for the relay-listen subscription.
+ * Top-nav filter backed by the latest kind-6300 response from a favorite algo feed.
+ *
+ * The filter is a pure immutable membership check: [match] accepts a note only if the
+ * DVM's latest response included it. When a new response arrives, a new instance is
+ * emitted through [FavoriteAlgoFeedFlow] and replaces the active filter.
  */
 @Immutable
-class AllFavoriteDvmsTopNavFilter(
+class FavoriteAlgoFeedTopNavFilter(
+    val feedAddress: Address,
     val acceptedIds: Set<HexKey>,
     val acceptedAddresses: Set<String>,
     val contentRelays: Set<NormalizedRelayUrl>,
     val listenRelays: Set<NormalizedRelayUrl>,
-    val requestIds: Set<HexKey>,
+    val requestId: HexKey?,
 ) : IFeedTopNavFilter {
     override fun matchAuthor(pubkey: HexKey): Boolean = true
 
@@ -50,18 +53,18 @@ class AllFavoriteDvmsTopNavFilter(
         noteEvent.id in acceptedIds ||
             (noteEvent is AddressableEvent && noteEvent.addressTag() in acceptedAddresses)
 
-    override fun toPerRelayFlow(cache: LocalCache): Flow<FavoriteDvmTopNavPerRelayFilterSet> = MutableStateFlow(startValue(cache))
+    override fun toPerRelayFlow(cache: LocalCache): Flow<FavoriteAlgoFeedTopNavPerRelayFilterSet> = MutableStateFlow(startValue(cache))
 
-    override fun startValue(cache: LocalCache): FavoriteDvmTopNavPerRelayFilterSet =
-        FavoriteDvmTopNavPerRelayFilterSet(
+    override fun startValue(cache: LocalCache): FavoriteAlgoFeedTopNavPerRelayFilterSet =
+        FavoriteAlgoFeedTopNavPerRelayFilterSet(
             contentFetches =
                 contentRelays.associateWith {
-                    FavoriteDvmTopNavPerRelayFilter(
+                    FavoriteAlgoFeedTopNavPerRelayFilter(
                         ids = acceptedIds,
                         addresses = acceptedAddresses,
                     )
                 },
             listenRelays = listenRelays,
-            requestIds = requestIds,
+            requestIds = setOfNotNull(requestId),
         )
 }

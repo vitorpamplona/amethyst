@@ -18,14 +18,14 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.topNavFeeds.favoriteDvm
+package com.vitorpamplona.amethyst.model.topNavFeeds.favoriteAlgoFeeds
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavPerRelayFilter
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 @Immutable
-class FavoriteDvmTopNavPerRelayFilter(
+class FavoriteAlgoFeedTopNavPerRelayFilter(
     val ids: Set<HexKey>,
     val addresses: Set<String>,
 ) : IFeedTopNavPerRelayFilter

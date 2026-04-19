@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.topNavFeeds.favoriteDvm
+package com.vitorpamplona.amethyst.model.topNavFeeds.favoriteAlgoFeeds
 
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
@@ -27,7 +27,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class FavoriteDvmTopNavFilterTest {
+class FavoriteAlgoFeedTopNavFilterTest {
     private fun textNote(id: String) = TextNoteEvent(id = id, pubKey = "a".repeat(64), createdAt = 1, tags = emptyArray(), content = "", sig = "x".repeat(128))
 
     private fun longFormNote(
@@ -47,8 +47,8 @@ class FavoriteDvmTopNavFilterTest {
     @Test
     fun matchesNoteWhoseIdIsInAcceptedSet() {
         val filter =
-            FavoriteDvmTopNavFilter(
-                dvmAddress = dvmAddress,
+            FavoriteAlgoFeedTopNavFilter(
+                feedAddress = dvmAddress,
                 acceptedIds = setOf("1".repeat(64)),
                 acceptedAddresses = emptySet(),
                 contentRelays = emptySet(),
@@ -62,8 +62,8 @@ class FavoriteDvmTopNavFilterTest {
     @Test
     fun rejectsNoteNotInAcceptedSet() {
         val filter =
-            FavoriteDvmTopNavFilter(
-                dvmAddress = dvmAddress,
+            FavoriteAlgoFeedTopNavFilter(
+                feedAddress = dvmAddress,
                 acceptedIds = setOf("1".repeat(64)),
                 acceptedAddresses = emptySet(),
                 contentRelays = emptySet(),
@@ -81,8 +81,8 @@ class FavoriteDvmTopNavFilterTest {
         val articleAddress = "30023:$articleAuthor:$articleDTag"
 
         val filter =
-            FavoriteDvmTopNavFilter(
-                dvmAddress = dvmAddress,
+            FavoriteAlgoFeedTopNavFilter(
+                feedAddress = dvmAddress,
                 acceptedIds = emptySet(),
                 acceptedAddresses = setOf(articleAddress),
                 contentRelays = emptySet(),
@@ -96,8 +96,8 @@ class FavoriteDvmTopNavFilterTest {
     @Test
     fun nullRequestIdCollapsesToEmptyRequestIdsInFilterSet() {
         val filter =
-            FavoriteDvmTopNavFilter(
-                dvmAddress = dvmAddress,
+            FavoriteAlgoFeedTopNavFilter(
+                feedAddress = dvmAddress,
                 acceptedIds = emptySet(),
                 acceptedAddresses = emptySet(),
                 contentRelays = emptySet(),
@@ -106,7 +106,7 @@ class FavoriteDvmTopNavFilterTest {
             )
 
         // passing a LocalCache is only needed because the method demands it;
-        // FavoriteDvmTopNavFilter.startValue doesn't actually consult it.
+        // FavoriteAlgoFeedTopNavFilter.startValue doesn't actually consult it.
         val set = filter.startValue(com.vitorpamplona.amethyst.model.LocalCache)
         assertTrue(set.requestIds.isEmpty())
     }
@@ -114,8 +114,8 @@ class FavoriteDvmTopNavFilterTest {
     @Test
     fun nonNullRequestIdProducesSingletonInFilterSet() {
         val filter =
-            FavoriteDvmTopNavFilter(
-                dvmAddress = dvmAddress,
+            FavoriteAlgoFeedTopNavFilter(
+                feedAddress = dvmAddress,
                 acceptedIds = emptySet(),
                 acceptedAddresses = emptySet(),
                 contentRelays = emptySet(),

@@ -18,9 +18,9 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.topNavFeeds.favoriteDvm
+package com.vitorpamplona.amethyst.model.topNavFeeds.favoriteAlgoFeeds
 
-import com.vitorpamplona.amethyst.model.dvms.FavoriteDvmOrchestrator
+import com.vitorpamplona.amethyst.model.algoFeeds.FavoriteAlgoFeedsOrchestrator
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedFlowsType
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.quartz.nip01Core.core.Address
@@ -30,9 +30,9 @@ import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 
-class FavoriteDvmFeedFlow(
-    val dvmAddress: Address,
-    val orchestrator: FavoriteDvmOrchestrator,
+class FavoriteAlgoFeedFlow(
+    val feedAddress: Address,
+    val orchestrator: FavoriteAlgoFeedsOrchestrator,
     val outboxRelays: StateFlow<Set<NormalizedRelayUrl>>,
     val proxyRelays: StateFlow<Set<NormalizedRelayUrl>>,
 ) : IFeedFlowsType {
@@ -42,10 +42,10 @@ class FavoriteDvmFeedFlow(
     ): Set<NormalizedRelayUrl> = if (proxy.isNotEmpty()) proxy else outbox
 
     private fun buildFilter(
-        snapshot: com.vitorpamplona.amethyst.model.dvms.FavoriteDvmSnapshot,
+        snapshot: com.vitorpamplona.amethyst.model.algoFeeds.FavoriteAlgoFeedsSnapshot,
         contentRelays: Set<NormalizedRelayUrl>,
-    ) = FavoriteDvmTopNavFilter(
-        dvmAddress = dvmAddress,
+    ) = FavoriteAlgoFeedTopNavFilter(
+        feedAddress = feedAddress,
         acceptedIds = snapshot.ids,
         acceptedAddresses = snapshot.addresses,
         contentRelays = contentRelays,
@@ -54,13 +54,13 @@ class FavoriteDvmFeedFlow(
     )
 
     override fun flow(): Flow<IFeedTopNavFilter> =
-        combine(orchestrator.observe(dvmAddress), outboxRelays, proxyRelays) { snap, outbox, proxy ->
+        combine(orchestrator.observe(feedAddress), outboxRelays, proxyRelays) { snap, outbox, proxy ->
             buildFilter(snap, resolveRelays(outbox, proxy))
         }
 
-    override fun startValue(): FavoriteDvmTopNavFilter =
+    override fun startValue(): FavoriteAlgoFeedTopNavFilter =
         buildFilter(
-            snapshot = orchestrator.observe(dvmAddress).value,
+            snapshot = orchestrator.observe(feedAddress).value,
             contentRelays = resolveRelays(outboxRelays.value, proxyRelays.value),
         )
 

@@ -86,7 +86,7 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNo
 import com.vitorpamplona.amethyst.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.ui.note.creators.location.LoadCityName
 import com.vitorpamplona.amethyst.ui.screen.CommunityName
-import com.vitorpamplona.amethyst.ui.screen.FavoriteDvmName
+import com.vitorpamplona.amethyst.ui.screen.FavoriteAlgoFeedName
 import com.vitorpamplona.amethyst.ui.screen.FeedDefinition
 import com.vitorpamplona.amethyst.ui.screen.GeoHashName
 import com.vitorpamplona.amethyst.ui.screen.HashtagName
@@ -361,7 +361,7 @@ fun RenderOption(
             )
         }
 
-        is FavoriteDvmName -> {
+        is FavoriteAlgoFeedName -> {
             val noteState by observeNote(option.note, accountViewModel)
             val name =
                 (noteState.note.event as? AppDefinitionEvent)
@@ -419,7 +419,7 @@ private fun groupFeedDefinitions(options: ImmutableList<FeedDefinition>): Map<Fe
                 FeedGroup.LOCATIONS
             }
 
-            is FavoriteDvmName -> {
+            is FavoriteAlgoFeedName -> {
                 FeedGroup.DVMS
             }
 
@@ -427,7 +427,7 @@ private fun groupFeedDefinitions(options: ImmutableList<FeedDefinition>): Map<Fe
                 when (entry.item.code) {
                     is TopFilter.AroundMe -> FeedGroup.LOCATIONS
                     is TopFilter.Global -> FeedGroup.RELAYS
-                    is TopFilter.AllFavoriteDvms -> FeedGroup.DVMS
+                    is TopFilter.AllFavoriteAlgoFeeds -> FeedGroup.DVMS
                     else -> FeedGroup.FEEDS
                 }
             }
@@ -592,11 +592,11 @@ private fun FeedIcon(
                 Icons.AutoMirrored.Outlined.ViewList
             }
 
-            is TopFilter.FavoriteDvm -> {
+            is TopFilter.FavoriteAlgoFeed -> {
                 Icons.Outlined.AutoAwesome
             }
 
-            is TopFilter.AllFavoriteDvms -> {
+            is TopFilter.AllFavoriteAlgoFeeds -> {
                 Icons.Outlined.AutoAwesome
             }
 
@@ -606,7 +606,7 @@ private fun FeedIcon(
                     is RelayName -> Icons.Outlined.Storage
                     is CommunityName -> Icons.Outlined.Groups
                     is PeopleListName -> Icons.AutoMirrored.Outlined.ViewList
-                    is FavoriteDvmName -> Icons.Outlined.AutoAwesome
+                    is FavoriteAlgoFeedName -> Icons.Outlined.AutoAwesome
                     else -> Icons.Outlined.Person
                 }
             }

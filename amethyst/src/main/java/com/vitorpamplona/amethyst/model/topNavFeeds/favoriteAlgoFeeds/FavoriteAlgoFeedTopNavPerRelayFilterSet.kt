@@ -18,19 +18,25 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.nip51Lists.favoriteDvmLists
+package com.vitorpamplona.amethyst.model.topNavFeeds.favoriteAlgoFeeds
 
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEventCache
-import com.vitorpamplona.quartz.nip51Lists.favoriteAlgoFeedsList.FavoriteAlgoFeedsListEvent
-import com.vitorpamplona.quartz.nip51Lists.favoriteAlgoFeedsList.favoriteAlgoFeedsSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavPerRelayFilterSet
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
-class FavoriteDvmListDecryptionCache(
-    val signer: NostrSigner,
-) {
-    val cachedPrivateLists = PrivateTagArrayEventCache<FavoriteAlgoFeedsListEvent>(signer)
-
-    fun cachedFavoriteDvms(event: FavoriteAlgoFeedsListEvent) = cachedPrivateLists.mergeTagListPrecached(event).favoriteAlgoFeedsSet()
-
-    suspend fun favoriteDvms(event: FavoriteAlgoFeedsListEvent) = cachedPrivateLists.mergeTagList(event).favoriteAlgoFeedsSet()
-}
+/**
+ * Two relay sets, two distinct subscriptions:
+ *
+ * - [contentFetches] — for each user-configured content relay, the ids/addresses
+ *   we want to pull (the actual notes the DVM curated).
+ * - [listenRelays] — the union of DVM publish relays across all active DVMs
+ *   (where they will deliver future kind 6300 / 7000 events for their requests).
+ * - [requestIds] — the set of currently-active kind-5300 request ids to listen
+ *   for. A single feed carries one; the merged "All favorite algo feeds"
+ *   filter carries one per favorite algo feed.
+ */
+class FavoriteAlgoFeedTopNavPerRelayFilterSet(
+    val contentFetches: Map<NormalizedRelayUrl, FavoriteAlgoFeedTopNavPerRelayFilter>,
+    val listenRelays: Set<NormalizedRelayUrl>,
+    val requestIds: Set<HexKey>,
+) : IFeedTopNavPerRelayFilterSet

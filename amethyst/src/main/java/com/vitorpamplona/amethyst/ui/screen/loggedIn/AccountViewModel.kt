@@ -1089,11 +1089,11 @@ class AccountViewModel(
 
     fun unfollowHashtag(tag: String) = launchSigner { account.unfollowHashtag(tag) }
 
-    fun followFavoriteDvm(dvm: AddressBookmark) = launchSigner { account.followFavoriteDvm(dvm) }
+    fun followFavoriteAlgoFeed(dvm: AddressBookmark) = launchSigner { account.followFavoriteAlgoFeed(dvm) }
 
-    fun unfollowFavoriteDvm(dvm: Address) = launchSigner { account.unfollowFavoriteDvm(dvm) }
+    fun unfollowFavoriteAlgoFeed(dvm: Address) = launchSigner { account.unfollowFavoriteAlgoFeed(dvm) }
 
-    fun refreshFavoriteDvm(dvm: Address) = account.favoriteDvmOrchestrator.refresh(dvm)
+    fun refreshFavoriteAlgoFeed(dvm: Address) = account.favoriteAlgoFeedsOrchestrator.refresh(dvm)
 
     fun followRelayFeed(url: NormalizedRelayUrl) = launchSigner { account.followRelayFeed(url) }
 

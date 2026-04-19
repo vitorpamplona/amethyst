@@ -52,7 +52,7 @@ import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest.NIP90ContentDi
  * a 6300 reply that never comes.
  */
 @Composable
-fun FavoriteDvmToggle(
+fun FavoriteAlgoFeedToggle(
     appDefinitionNote: AddressableNote,
     accountViewModel: AccountViewModel,
     modifier: Modifier = Modifier,
@@ -65,7 +65,7 @@ fun FavoriteDvmToggle(
 
     if (!supportsContentDiscovery) return
 
-    val favorites by accountViewModel.account.favoriteDvmList.flow
+    val favorites by accountViewModel.account.favoriteAlgoFeedsList.flow
         .collectAsStateWithLifecycle()
 
     val isFavorite = favorites.contains(appDefinitionNote.address)
@@ -74,9 +74,9 @@ fun FavoriteDvmToggle(
         modifier = modifier,
         onClick = {
             if (isFavorite) {
-                accountViewModel.unfollowFavoriteDvm(appDefinitionNote.address)
+                accountViewModel.unfollowFavoriteAlgoFeed(appDefinitionNote.address)
             } else {
-                accountViewModel.followFavoriteDvm(
+                accountViewModel.followFavoriteAlgoFeed(
                     AddressBookmark(
                         address = appDefinitionNote.address,
                         relayHint = appDefinitionNote.relayHintUrl(),

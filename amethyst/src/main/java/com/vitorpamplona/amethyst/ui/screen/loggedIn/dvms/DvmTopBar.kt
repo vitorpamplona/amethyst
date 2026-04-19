@@ -102,7 +102,7 @@ fun DvmTopBar(
                             }
                         }
                     addressableNote?.let { target ->
-                        FavoriteDvmToggle(
+                        FavoriteAlgoFeedToggle(
                             appDefinitionNote = target,
                             accountViewModel = accountViewModel,
                         )

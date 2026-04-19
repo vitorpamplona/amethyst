@@ -240,7 +240,7 @@ private fun HomePages(
                 )
             }
 
-            HomeDvmStatusBanner(
+            HomeAlgoFeedStatusBanner(
                 accountViewModel = accountViewModel,
                 nav = nav,
                 modifier = Modifier.align(Alignment.TopCenter),
@@ -300,7 +300,7 @@ fun HomeFeeds(
 ) {
     val activeFilter by accountViewModel.account.settings.defaultHomeFollowList
         .collectAsStateWithLifecycle()
-    val favoriteDvmAddresses by accountViewModel.account.favoriteDvmList.flow
+    val favoriteAlgoFeedAddresses by accountViewModel.account.favoriteAlgoFeedsList.flow
         .collectAsStateWithLifecycle()
 
     val onRefresh: () -> Unit = {
@@ -308,8 +308,8 @@ fun HomeFeeds(
         // Swiping down on Home should also re-issue the kind-5300 request(s) so the
         // DVM(s) produce fresh feeds, not just re-render whatever's cached.
         when (val filter = activeFilter) {
-            is TopFilter.FavoriteDvm -> accountViewModel.refreshFavoriteDvm(filter.address)
-            is TopFilter.AllFavoriteDvms -> favoriteDvmAddresses.forEach { accountViewModel.refreshFavoriteDvm(it) }
+            is TopFilter.FavoriteAlgoFeed -> accountViewModel.refreshFavoriteAlgoFeed(filter.address)
+            is TopFilter.AllFavoriteAlgoFeeds -> favoriteAlgoFeedAddresses.forEach { accountViewModel.refreshFavoriteAlgoFeed(it) }
             else -> Unit
         }
     }
