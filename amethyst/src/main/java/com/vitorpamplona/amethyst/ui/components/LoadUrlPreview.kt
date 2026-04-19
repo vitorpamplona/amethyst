@@ -26,6 +26,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.layout.ContentScale
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
+import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
@@ -107,6 +108,15 @@ fun RenderLoaded(
         Box(modifier = HalfVertPadding) {
             ZoomableContentView(
                 content = MediaUrlVideo(url, uri = callbackUri),
+                roundedCorner = true,
+                contentScale = ContentScale.FillWidth,
+                accountViewModel = accountViewModel,
+            )
+        }
+    } else if (state.previewInfo.mimeType.startsWith("application/pdf")) {
+        Box(modifier = HalfVertPadding) {
+            ZoomableContentView(
+                content = MediaUrlPdf(url, uri = callbackUri, mimeType = state.previewInfo.mimeType),
                 roundedCorner = true,
                 contentScale = ContentScale.FillWidth,
                 accountViewModel = accountViewModel,

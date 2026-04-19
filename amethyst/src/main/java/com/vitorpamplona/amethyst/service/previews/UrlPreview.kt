@@ -71,6 +71,8 @@ class UrlPreview {
                             UrlInfoItem(url, image = url, mimeType = mimeType.toString())
                         } else if (mimeType.type == "video") {
                             UrlInfoItem(url, image = url, mimeType = mimeType.toString())
+                        } else if (mimeType.type == "application" && mimeType.subtype == "pdf") {
+                            UrlInfoItem(url, image = url, mimeType = mimeType.toString())
                         } else {
                             throw IllegalArgumentException("Website returned unknown encoding for previews: $mimeType")
                         }

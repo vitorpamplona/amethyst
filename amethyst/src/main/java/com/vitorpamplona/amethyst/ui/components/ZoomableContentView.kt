@@ -77,6 +77,8 @@ import coil3.compose.AsyncImage
 import coil3.compose.AsyncImagePainter
 import coil3.compose.SubcomposeAsyncImage
 import coil3.compose.SubcomposeAsyncImageContent
+import coil3.request.ImageRequest
+import coil3.size.Size
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
@@ -86,6 +88,7 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaLocalVideo
 import com.vitorpamplona.amethyst.commons.richtext.MediaPreloadedContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
+import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.service.images.BlurhashWrapper
@@ -93,6 +96,8 @@ import com.vitorpamplona.amethyst.service.playback.composable.VideoView
 import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.openBlossomUriAsIntent
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.actions.InformationDialog
+import com.vitorpamplona.amethyst.ui.components.pdf.PdfPreviewCard
+import com.vitorpamplona.amethyst.ui.components.pdf.PdfViewerDialog
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.note.BlankNote
 import com.vitorpamplona.amethyst.ui.note.DownloadForOfflineIcon
@@ -237,18 +242,36 @@ fun ZoomableContentView(
                 }
             }
         }
+
+        is MediaUrlPdf -> {
+            Box(modifier = Modifier.fillMaxWidth().then(boundsTrackingModifier)) {
+                PdfPreviewCard(
+                    content = content,
+                    accountViewModel = accountViewModel,
+                    onOpen = { dialogOpen = true },
+                )
+            }
+        }
     }
 
     if (dialogOpen) {
-        ZoomableImageDialog(
-            imageUrl = content,
-            allImages = images,
-            sourceBounds = sourceBounds,
-            onDismiss = {
-                dialogOpen = false
-            },
-            accountViewModel = accountViewModel,
-        )
+        if (content is MediaUrlPdf) {
+            PdfViewerDialog(
+                content = content,
+                accountViewModel = accountViewModel,
+                onDismiss = { dialogOpen = false },
+            )
+        } else {
+            ZoomableImageDialog(
+                imageUrl = content,
+                allImages = images,
+                sourceBounds = sourceBounds,
+                onDismiss = {
+                    dialogOpen = false
+                },
+                accountViewModel = accountViewModel,
+            )
+        }
     }
 }
 
@@ -271,6 +294,7 @@ fun LocalImageView(
     controllerVisible: MutableState<Boolean>,
     accountViewModel: AccountViewModel,
     alwayShowImage: Boolean = false,
+    fullResolution: Boolean = false,
 ) {
     if (content.localFileExists()) {
         val showImage =
@@ -281,10 +305,23 @@ fun LocalImageView(
             }
 
         val ratio = remember(content) { content.dim?.aspectRatio() ?: MediaAspectRatioCache.get(content.localFile.toString()) }
+        val context = LocalContext.current
+        val imageModel =
+            if (fullResolution) {
+                remember(content.localFile, context) {
+                    ImageRequest
+                        .Builder(context)
+                        .data(content.localFile)
+                        .size(Size.ORIGINAL)
+                        .build()
+                }
+            } else {
+                content.localFile
+            }
         CrossfadeIfEnabled(targetState = showImage.value, contentAlignment = Alignment.Center, accountViewModel = accountViewModel) { imageVisible ->
             if (imageVisible) {
                 SubcomposeAsyncImage(
-                    model = content.localFile,
+                    model = imageModel,
                     contentDescription = content.description,
                     contentScale = contentScale,
                     modifier = mainImageModifier,
@@ -386,6 +423,7 @@ fun UrlImageView(
     controllerVisible: MutableState<Boolean>,
     accountViewModel: AccountViewModel,
     alwayShowImage: Boolean = false,
+    fullResolution: Boolean = false,
 ) {
     val ratio = content.dim?.aspectRatio() ?: MediaAspectRatioCache.get(content.url)
 
@@ -396,10 +434,24 @@ fun UrlImageView(
             )
         }
 
+    val context = LocalContext.current
+    val imageModel =
+        if (fullResolution) {
+            remember(content.url, context) {
+                ImageRequest
+                    .Builder(context)
+                    .data(content.url)
+                    .size(Size.ORIGINAL)
+                    .build()
+            }
+        } else {
+            content.url
+        }
+
     CrossfadeIfEnabled(targetState = showImage.value, contentAlignment = Alignment.Center, accountViewModel = accountViewModel) {
         if (it) {
             SubcomposeAsyncImage(
-                model = content.url,
+                model = imageModel,
                 contentDescription = content.description,
                 contentScale = contentScale,
                 modifier = mainImageModifier,
