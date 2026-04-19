@@ -45,6 +45,7 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
@@ -170,6 +171,7 @@ private fun LoadedPdfPreviewCard(
                     bitmap = current.preview.thumbnail.asImageBitmap(),
                     contentDescription = content.description ?: filename,
                     contentScale = ContentScale.FillWidth,
+                    filterQuality = FilterQuality.High,
                     modifier =
                         Modifier
                             .fillMaxWidth()

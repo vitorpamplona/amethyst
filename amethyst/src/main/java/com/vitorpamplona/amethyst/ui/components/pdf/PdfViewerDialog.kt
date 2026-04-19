@@ -49,14 +49,17 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.window.Dialog
@@ -74,16 +77,28 @@ import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import net.engawapg.lib.zoomable.rememberZoomState
 import net.engawapg.lib.zoomable.zoomable
 
-// Hard ceiling on each rendered page bitmap, in pixels. Higher = sharper when the
-// user pinch-zooms inside the dialog, but each page costs ~maxDim^2 * 4 bytes of
-// RAM (ARGB_8888). 3072 gives ~26 MB per A4-shaped page.
+// Hard ceiling on each base-rendered page bitmap, in pixels. Higher = sharper when
+// the user pinch-zooms inside the dialog, but each page costs ~maxDim^2 * 4 bytes
+// of RAM (ARGB_8888). 3072 gives ~26 MB per A4-shaped page.
 private const val VIEWER_MAX_DIM_PX = 3072
+
+// Hard ceiling for the per-page zoom-aware detail render. When the user zooms in
+// past HI_RES_ZOOM_THRESHOLD we re-render the current page at
+// (VIEWER_MAX_DIM_PX * scale) capped at this value. 6144 allows up to 2x sharper
+// than the base render at peak cost of ~100 MB for one page (ARGB_8888, A4 shape).
+private const val HI_RES_MAX_DIM_PX = 6144
+private const val HI_RES_ZOOM_THRESHOLD = 1.2f
+private const val HI_RES_DEBOUNCE_MS = 200L
 
 // How many recently-rendered pages to keep around. Pager already pre-composes the
 // current page plus one neighbor; this just speeds up small back/forward swipes.
@@ -285,6 +300,7 @@ private fun PdfViewerContent(
     }
 }
 
+@OptIn(FlowPreview::class)
 @Composable
 private fun PdfPageView(
     handle: PdfDocumentHandle,
@@ -294,43 +310,50 @@ private fun PdfPageView(
     val cached = cache.get(pageIndex)
 
     @Suppress("ProduceStateDoesNotAssignValue")
-    val bitmap by produceState<Bitmap?>(initialValue = cached, key1 = handle, key2 = pageIndex) {
+    val baseBitmap by produceState<Bitmap?>(initialValue = cached, key1 = handle, key2 = pageIndex) {
         if (value != null) return@produceState
-        val rendered =
-            try {
-                handle.mutex.withLock {
-                    if (handle.closed) {
-                        null
-                    } else {
-                        withContext(Dispatchers.IO) {
-                            handle.renderer.openPage(pageIndex).use { page ->
-                                val (width, height) = cappedRenderSize(page.width, page.height, VIEWER_MAX_DIM_PX)
-                                val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-                                bmp.eraseColor(android.graphics.Color.WHITE)
-                                page.render(bmp, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-                                bmp
-                            }
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                Log.w("PdfViewerDialog", "Failed to render page $pageIndex", e)
-                null
-            }
-
+        val rendered = renderPageCatching(handle, pageIndex, VIEWER_MAX_DIM_PX)
         rendered?.let { cache.put(pageIndex, it) }
         value = rendered
     }
 
     val zoomState = rememberZoomState()
-    val current = bitmap
+
+    // Re-render the page at a higher resolution once the user zooms in and settles,
+    // so pinch-zoomed text stays crisp instead of getting GPU-upscaled from the base
+    // bitmap. Released when zoom drops back under threshold or the page leaves view.
+    var hiResBitmap by remember(handle, pageIndex) { mutableStateOf<Bitmap?>(null) }
+
+    LaunchedEffect(handle, pageIndex, baseBitmap) {
+        if (baseBitmap == null) return@LaunchedEffect
+        snapshotFlow { zoomState.scale }
+            .debounce(HI_RES_DEBOUNCE_MS)
+            .distinctUntilChanged()
+            .collectLatest { scale ->
+                if (scale < HI_RES_ZOOM_THRESHOLD) {
+                    hiResBitmap = null
+                } else {
+                    val target = (VIEWER_MAX_DIM_PX * scale).toInt().coerceAtMost(HI_RES_MAX_DIM_PX)
+                    // Skip if the hi-res render wouldn't beat what we already have.
+                    val base = baseBitmap ?: return@collectLatest
+                    val baseLongest = maxOf(base.width, base.height)
+                    if (target <= baseLongest) {
+                        hiResBitmap = null
+                    } else {
+                        hiResBitmap = renderPageCatching(handle, pageIndex, target)
+                    }
+                }
+            }
+    }
+
+    val current = hiResBitmap ?: baseBitmap
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         if (current != null) {
             Image(
                 bitmap = current.asImageBitmap(),
                 contentDescription = null,
                 contentScale = ContentScale.Fit,
+                filterQuality = FilterQuality.High,
                 modifier =
                     Modifier
                         .fillMaxSize()
@@ -341,3 +364,30 @@ private fun PdfPageView(
         }
     }
 }
+
+private suspend fun renderPageCatching(
+    handle: PdfDocumentHandle,
+    pageIndex: Int,
+    maxDim: Int,
+): Bitmap? =
+    try {
+        handle.mutex.withLock {
+            if (handle.closed) {
+                null
+            } else {
+                withContext(Dispatchers.IO) {
+                    handle.renderer.openPage(pageIndex).use { page ->
+                        val (width, height) = cappedRenderSize(page.width, page.height, maxDim)
+                        val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+                        bmp.eraseColor(android.graphics.Color.WHITE)
+                        page.render(bmp, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                        bmp
+                    }
+                }
+            }
+        }
+    } catch (e: Exception) {
+        if (e is CancellationException) throw e
+        Log.w("PdfViewerDialog", "Failed to render page $pageIndex at $maxDim px", e)
+        null
+    }
