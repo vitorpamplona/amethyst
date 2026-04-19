@@ -1350,6 +1350,9 @@
     <string name="private_inbox_section">Bejövő közvetlen üzenet-átjátszók</string>
     <string name="private_inbox_section_explainer_profile">A felhasználó ezeken az átjátszókon keresztül fogadja a közvetlen üzeneteket</string>
     <string name="private_inbox_section_explainer">Adjon hozzá 1–3 átjátszót, hogy privát postafiókként szolgáljon. Mások ezeket az átjátszókat használják, hogy Önnek privát üzeneteket küldjenek. A bejövő privát üzenetek átjátszóinak bárkitől el kell fogadniuk minden üzenetet, de azok letöltését csak Ön engedélyezheti. Jó választási lehetőségek:\n - inbox.nostr.wine (fizetős)\n - auth.nostr1.com (ingyenes)\n - you.nostr1.com (személyes átjátszók - fizetős)</string>
+    <string name="keypackages">Kulcscsomagok</string>
+    <string name="keypackage_section">Kulcscsomag-átjátszók</string>
+    <string name="keypackage_section_explainer">Azok az átjátszók, ahol az Ön MLS-kulcscsomagjai közzétételre kerülnek (MIP-00). Más felhasználók ezeket a kulcscsomagokat lekérve tudják Önt meghívni a Marmot csoportos beszélgetésekbe. Adjon meg 1-3 olyan átjátszót, amely fogadja az Ön kulcscsomag-eseményeit, és lehetővé teszi azok nyilvános olvasását.</string>
     <string name="private_outbox_section">Privát saját átjátszók</string>
     <string name="private_outbox_section_explainer">Adjon hozzá 1–3 átjátszót, hogy olyan eseményeket tároljanak, amelyeket senki más nem láthat, például a piszkozatait és/vagy az alkalmazásbeállításait. Ideális esetben ezek az átjátszók vagy helyi szintűek, vagy hitelesítést igényelnek az egyes felhasználói tartalmak letöltése előtt.</string>
     <string name="kind_3_section">Általános átjátszók</string>
