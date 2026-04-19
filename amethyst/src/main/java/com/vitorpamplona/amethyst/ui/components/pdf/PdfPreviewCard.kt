@@ -271,18 +271,20 @@ private fun renderFirstPage(
     }
 
 /**
- * Scales the page's native point size to fit within [maxDim] on the longest side, preserving
- * aspect ratio. Falls back to native size if it's already smaller.
+ * Returns the bitmap dimensions to render a PDF page at, scaled so the longest side equals
+ * [targetDim] while preserving aspect ratio. Always scales, never returns native size: a PDF
+ * page's native width/height are in PostScript points (1/72"), which is far below any useful
+ * display resolution. Since PDFs are vector, rendering at a larger target is essentially free
+ * and avoids a 72-DPI-blurry bitmap.
  */
 internal fun cappedRenderSize(
     pageWidth: Int,
     pageHeight: Int,
-    maxDim: Int,
+    targetDim: Int,
 ): Pair<Int, Int> {
     if (pageWidth <= 0 || pageHeight <= 0) return 1 to 1
     val longest = maxOf(pageWidth, pageHeight)
-    if (longest <= maxDim) return pageWidth to pageHeight
-    val scale = maxDim.toFloat() / longest
+    val scale = targetDim.toFloat() / longest
     val w = (pageWidth * scale).toInt().coerceAtLeast(1)
     val h = (pageHeight * scale).toInt().coerceAtLeast(1)
     return w to h
