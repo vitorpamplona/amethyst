@@ -441,9 +441,9 @@
     <string name="badge_thumb_label">Thumbnail URL (optional)</string>
     <string name="badge_thumb_placeholder">https://example.com/badge-thumb.png</string>
     <string name="award_badge_loading">Loading badge…</string>
-    <string name="award_badge_recipients_label">Recipients (npub or hex, one per line)</string>
-    <string name="award_badge_recipients_placeholder">npub1…\nnpub1…</string>
-    <string name="award_badge_recipient_count">%1$d recipient(s) will receive this badge</string>
+    <string name="award_badge_search_label">Search users</string>
+    <string name="award_badge_search_placeholder">Name, npub, or NIP-05</string>
+    <string name="award_badge_remove_recipient">Remove</string>
     <string name="badge_untitled">Untitled badge</string>
     <string name="badge_awardees_label">Awarded to %1$d</string>
     <string name="badge_award_received_title">You received a badge</string>

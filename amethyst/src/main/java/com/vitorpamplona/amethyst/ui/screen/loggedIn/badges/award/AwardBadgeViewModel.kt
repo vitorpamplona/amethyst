@@ -24,15 +24,14 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
-import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
 
 @Stable
@@ -41,7 +40,6 @@ class AwardBadgeViewModel : ViewModel() {
     lateinit var account: Account
 
     var definition by mutableStateOf<BadgeDefinitionEvent?>(null)
-    var awardeesText by mutableStateOf(TextFieldValue(""))
 
     fun init(
         accountVM: AccountViewModel,
@@ -57,26 +55,11 @@ class AwardBadgeViewModel : ViewModel() {
         definition = ev
     }
 
-    fun parsedPubKeys(): List<HexKey> =
-        awardeesText.text
-            .split('\n', ',', ' ', ';')
-            .mapNotNull { raw ->
-                val trimmed = raw.trim()
-                if (trimmed.isEmpty()) null else decodePublicKeyAsHexOrNull(trimmed)
-            }.distinct()
-
-    fun canPost(): Boolean = definition != null && parsedPubKeys().isNotEmpty()
-
-    fun cancel() {
-        awardeesText = TextFieldValue("")
-    }
-
-    suspend fun sendPost() {
+    suspend fun sendPost(awardees: List<User>) {
         val def = definition ?: return
-        val awardees = parsedPubKeys().map { PTag(it) }
         if (awardees.isEmpty()) return
 
-        account.sendBadgeAward(def, awardees)
-        cancel()
+        val pTags = awardees.map { PTag(it.pubkeyHex) }
+        account.sendBadgeAward(def, pTags)
     }
 }
