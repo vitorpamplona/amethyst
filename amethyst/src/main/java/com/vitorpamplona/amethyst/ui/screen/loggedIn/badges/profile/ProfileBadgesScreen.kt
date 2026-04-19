@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.profile
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -56,6 +57,7 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFind
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -116,13 +118,17 @@ fun ProfileBadgesScreen(
     }
 
     val receivedAwards =
-        remember(myPubkey, bundleTick) {
+        remember(myPubkey, bundleTick, acceptedAwardIds) {
             LocalCache.notes
                 .filterIntoSet { _, it ->
                     val event = it.event
                     event is BadgeAwardEvent && event.awardeeIds().contains(myPubkey)
                 }.mapNotNull { it.event as? BadgeAwardEvent }
-                .sortedByDescending { it.createdAt }
+                .sortedWith(
+                    // Accepted badges on top, then most recent first.
+                    compareByDescending<BadgeAwardEvent> { acceptedAwardIds.contains(it.id) }
+                        .thenByDescending { it.createdAt },
+                )
         }
 
     Scaffold(
@@ -156,6 +162,7 @@ fun ProfileBadgesScreen(
                             award = award,
                             isAccepted = acceptedAwardIds.contains(award.id),
                             accountViewModel = accountViewModel,
+                            nav = nav,
                         )
                         HorizontalDivider()
                     }
@@ -170,26 +177,43 @@ private fun AwardRow(
     award: BadgeAwardEvent,
     isAccepted: Boolean,
     accountViewModel: AccountViewModel,
+    nav: INav,
 ) {
     val defAddr = award.awardDefinition().firstOrNull()
 
     if (defAddr == null) {
-        StaticAwardRow(definition = null, isAccepted = isAccepted, accountViewModel = accountViewModel, award = award)
+        StaticAwardRow(
+            definition = null,
+            defNote = null,
+            isAccepted = isAccepted,
+            accountViewModel = accountViewModel,
+            award = award,
+            nav = nav,
+        )
         return
     }
 
     LoadAddressableNote(defAddr, accountViewModel) { defNote ->
         if (defNote == null) {
-            StaticAwardRow(definition = null, isAccepted = isAccepted, accountViewModel = accountViewModel, award = award)
+            StaticAwardRow(
+                definition = null,
+                defNote = null,
+                isAccepted = isAccepted,
+                accountViewModel = accountViewModel,
+                award = award,
+                nav = nav,
+            )
         } else {
             // Ask relays for the definition if we don't have it yet, then watch.
             EventFinderFilterAssemblerSubscription(defNote, accountViewModel)
             val definition by observeNoteEvent<BadgeDefinitionEvent>(defNote, accountViewModel)
             StaticAwardRow(
                 definition = definition,
+                defNote = defNote,
                 isAccepted = isAccepted,
                 accountViewModel = accountViewModel,
                 award = award,
+                nav = nav,
             )
         }
     }
@@ -198,15 +222,27 @@ private fun AwardRow(
 @Composable
 private fun StaticAwardRow(
     definition: BadgeDefinitionEvent?,
+    defNote: com.vitorpamplona.amethyst.model.AddressableNote?,
     isAccepted: Boolean,
     accountViewModel: AccountViewModel,
     award: BadgeAwardEvent,
+    nav: INav,
 ) {
-    Row(
-        modifier =
+    val rowModifier =
+        if (defNote != null) {
             Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 12.dp),
+                .clickable {
+                    routeFor(defNote, accountViewModel.account)?.let { nav.nav(it) }
+                }.padding(horizontal = 20.dp, vertical = 12.dp)
+        } else {
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 12.dp)
+        }
+
+    Row(
+        modifier = rowModifier,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         BadgeThumb(definition)
