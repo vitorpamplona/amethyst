@@ -89,10 +89,17 @@ private class PdfDocumentHandle(
     val pfd: ParcelFileDescriptor,
     val renderer: PdfRenderer,
 ) {
-    val pageCount: Int get() = renderer.pageCount
+    // Snapshot eagerly. Compose's saveable PagerState reads pageCount during
+    // teardown, which can run *after* close() — so we can't query the renderer
+    // lazily without tripping IllegalStateException("Document already closed").
+    val pageCount: Int = renderer.pageCount
     val mutex: Mutex = Mutex()
 
+    @Volatile var closed: Boolean = false
+        private set
+
     fun close() {
+        closed = true
         runCatching { renderer.close() }.onFailure { Log.w("PdfViewerDialog", "renderer close failed", it) }
         runCatching { pfd.close() }.onFailure { Log.w("PdfViewerDialog", "pfd close failed", it) }
         runCatching { snapshot.close() }.onFailure { Log.w("PdfViewerDialog", "snapshot close failed", it) }
@@ -259,13 +266,17 @@ private fun PdfPageView(
         val rendered =
             try {
                 handle.mutex.withLock {
-                    withContext(Dispatchers.IO) {
-                        handle.renderer.openPage(pageIndex).use { page ->
-                            val (width, height) = cappedRenderSize(page.width, page.height, VIEWER_MAX_DIM_PX)
-                            val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-                            bmp.eraseColor(android.graphics.Color.WHITE)
-                            page.render(bmp, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-                            bmp
+                    if (handle.closed) {
+                        null
+                    } else {
+                        withContext(Dispatchers.IO) {
+                            handle.renderer.openPage(pageIndex).use { page ->
+                                val (width, height) = cappedRenderSize(page.width, page.height, VIEWER_MAX_DIM_PX)
+                                val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+                                bmp.eraseColor(android.graphics.Color.WHITE)
+                                page.render(bmp, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                                bmp
+                            }
                         }
                     }
                 }
