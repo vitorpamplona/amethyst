@@ -904,19 +904,36 @@ private fun WorkspaceEditorDialog(
                 )
                 // Icon picker
                 Text("Icon", style = MaterialTheme.typography.labelMedium)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    val isSelected = { iName: String -> iName == iconName }
                     WorkspaceIcons.availableNames.forEach { iName ->
-                        IconButton(onClick = { iconName = iName }) {
-                            Icon(
-                                WorkspaceIcons.resolve(iName),
-                                iName,
-                                tint =
-                                    if (iName == iconName) {
-                                        MaterialTheme.colorScheme.primary
-                                    } else {
-                                        MaterialTheme.colorScheme.onSurfaceVariant
-                                    },
-                            )
+                        Surface(
+                            modifier = Modifier.size(40.dp).clickable { iconName = iName },
+                            shape = RoundedCornerShape(8.dp),
+                            color =
+                                if (isSelected(iName)) {
+                                    MaterialTheme.colorScheme.primaryContainer
+                                } else {
+                                    Color.Transparent
+                                },
+                            tonalElevation = if (isSelected(iName)) 4.dp else 0.dp,
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    WorkspaceIcons.resolve(iName),
+                                    iName,
+                                    modifier = Modifier.size(24.dp),
+                                    tint =
+                                        if (isSelected(iName)) {
+                                            MaterialTheme.colorScheme.primary
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurfaceVariant
+                                        },
+                                )
+                            }
                         }
                     }
                 }
