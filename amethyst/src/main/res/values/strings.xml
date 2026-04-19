@@ -469,6 +469,10 @@
     <string name="pin_to_profile">Pin to Profile</string>
     <string name="unpin_from_profile">Unpin from Profile</string>
 
+    <string name="deleted_items_banner_title">%1$d item(s) in this list have been deleted by their author.</string>
+    <string name="deleted_items_banner_remove">Remove from list</string>
+    <string name="deleted_items_banner_dismiss">Dismiss</string>
+
     <string name="bookmark_lists">Bookmark Lists</string>
     <string name="bookmark_list_icon_label">Icon for bookmark list</string>
     <string name="bookmark_list_creation_screen_title">New Bookmark List</string>
@@ -1763,7 +1767,21 @@
     <string name="feed_group_locations">Locations</string>
     <string name="feed_group_communities">Communities</string>
     <string name="feed_group_lists">Lists</string>
+    <string name="feed_group_dvms">Feed Algorithms</string>
+    <string name="follow_list_all_favorite_dvms">All favorite feed algorithms</string>
     <string name="feed_group_relays">Relays</string>
+
+    <string name="add_dvm_to_favorites">Add feed algorithm to favorites</string>
+    <string name="remove_dvm_from_favorites">Remove from favorites</string>
+    <string name="favorite_dvms_title">Favorite Feed Algorithms</string>
+    <string name="favorite_dvms_explainer">Feed algorithms you starred here appear as filter chips on the Home feed. Open Discover to add more.</string>
+    <string name="favorite_dvms_empty">No favorite feed algorithms yet. Open Discover, tap one, and star it to add it here.</string>
+    <string name="dvm_home_status_requesting">Asking %1$s for a feed…</string>
+    <string name="dvm_home_status_requesting_all">Asking your favorite feed algorithms for feeds…</string>
+    <string name="dvm_home_status_processing">Processing your feed…</string>
+    <string name="dvm_home_status_payment_required">This feed algorithm requires payment</string>
+    <string name="dvm_home_status_error">The feed algorithm returned an error</string>
+    <string name="dvm_home_retry">Retry</string>
 
     <string name="temporary_account">Log off on device lock</string>
     <string name="private_message">Private Message</string>

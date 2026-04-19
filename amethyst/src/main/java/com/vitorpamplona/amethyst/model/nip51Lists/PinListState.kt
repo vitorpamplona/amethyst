@@ -127,4 +127,21 @@ class PinListState(
             signer = signer,
         )
     }
+
+    suspend fun removeDeletedPins(deletedNotes: Set<Note>): PinListEvent? {
+        val currentList = getPinList() ?: return null
+        if (deletedNotes.isEmpty()) return null
+
+        val deletedIds = deletedNotes.mapTo(HashSet()) { it.idHex }
+        val newTags =
+            currentList.tags
+                .filter { tag ->
+                    val bookmark = EventBookmark.parse(tag)
+                    bookmark == null || bookmark.eventId !in deletedIds
+                }.toTypedArray()
+
+        if (newTags.size == currentList.tags.size) return null
+
+        return PinListEvent.resign(tags = newTags, signer = signer)
+    }
 }

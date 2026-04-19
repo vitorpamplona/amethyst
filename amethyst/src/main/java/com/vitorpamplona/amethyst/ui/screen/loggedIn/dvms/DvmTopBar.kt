@@ -21,19 +21,25 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms
 
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
+import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteAndMap
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBackButton
+import com.vitorpamplona.amethyst.ui.navigation.topbars.MyExtensibleTopAppBar
+import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.note.elements.BannerImage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.SimpleImage35Modifier
+import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 
 @Composable
 fun DvmTopBar(
@@ -41,7 +47,7 @@ fun DvmTopBar(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    TopBarExtensibleWithBackButton(
+    MyExtensibleTopAppBar(
         title = {
             LoadNote(baseNoteHex = appDefinitionId, accountViewModel = accountViewModel) { appDefinitionNote ->
                 if (appDefinitionNote != null) {
@@ -82,6 +88,27 @@ fun DvmTopBar(
                 }
             }
         },
-        popBack = nav::popBack,
+        navigationIcon = { IconButton(onClick = nav::popBack) { ArrowBackIcon() } },
+        actions = {
+            // The route passes the event's hex id, so LoadNote returns a plain Note,
+            // not the AddressableNote the toggle needs. Derive the AddressableNote
+            // from the loaded AppDefinitionEvent's address() once the event exists.
+            LoadNote(baseNoteHex = appDefinitionId, accountViewModel = accountViewModel) { appDefinitionNote ->
+                if (appDefinitionNote != null) {
+                    val addressableNote by
+                        observeNoteAndMap(appDefinitionNote, accountViewModel) { note ->
+                            (note.event as? AppDefinitionEvent)?.let {
+                                LocalCache.getOrCreateAddressableNote(it.address())
+                            }
+                        }
+                    addressableNote?.let { target ->
+                        FavoriteAlgoFeedToggle(
+                            appDefinitionNote = target,
+                            accountViewModel = accountViewModel,
+                        )
+                    }
+                }
+            }
+        },
     )
 }

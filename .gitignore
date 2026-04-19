@@ -173,3 +173,5 @@ packaging/appimage/squashfs-root/
 .worktrees/
 .claude/worktrees/
 benchmark/src/main/jniLibs/
+
+/tools/marmot-interop/state

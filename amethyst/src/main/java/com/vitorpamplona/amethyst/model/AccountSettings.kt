@@ -43,6 +43,7 @@ import com.vitorpamplona.quartz.nip37Drafts.privateOutbox.PrivateOutboxRelayList
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.favoriteAlgoFeedsList.FavoriteAlgoFeedsListEvent
 import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
 import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
@@ -157,6 +158,13 @@ sealed class TopFilter(
     class Relay(
         val url: String,
     ) : TopFilter("Relay/$url")
+
+    @Serializable
+    class FavoriteAlgoFeed(
+        val address: Address,
+    ) : TopFilter("FavoriteAlgoFeed/${address.toValue()}")
+
+    @Serializable object AllFavoriteAlgoFeeds : TopFilter(" All Favourite DVMs ")
 }
 
 @Stable
@@ -199,6 +207,7 @@ class AccountSettings(
     var backupChannelList: ChannelListEvent? = null,
     var backupCommunityList: CommunityListEvent? = null,
     var backupHashtagList: HashtagListEvent? = null,
+    var backupFavoriteAlgoFeedsList: FavoriteAlgoFeedsListEvent? = null,
     var backupGeohashList: GeohashListEvent? = null,
     var backupEphemeralChatList: EphemeralChatListEvent? = null,
     var backupTrustProviderList: TrustProviderListEvent? = null,
@@ -729,6 +738,16 @@ class AccountSettings(
         // Events might be different objects, we have to compare their ids.
         if (backupHashtagList?.id != newHashtagList.id) {
             backupHashtagList = newHashtagList
+            saveAccountSettings()
+        }
+    }
+
+    fun updateFavoriteAlgoFeedsListTo(newFavoriteDvmList: FavoriteAlgoFeedsListEvent?) {
+        if (newFavoriteDvmList == null || newFavoriteDvmList.tags.isEmpty()) return
+
+        // Events might be different objects, we have to compare their ids.
+        if (backupFavoriteAlgoFeedsList?.id != newFavoriteDvmList.id) {
+            backupFavoriteAlgoFeedsList = newFavoriteDvmList
             saveAccountSettings()
         }
     }

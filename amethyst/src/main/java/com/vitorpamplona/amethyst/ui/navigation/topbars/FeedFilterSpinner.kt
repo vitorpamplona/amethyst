@@ -40,6 +40,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ViewList
 import androidx.compose.material.icons.automirrored.outlined.VolumeOff
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.Person
@@ -67,6 +68,7 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -84,6 +86,7 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNo
 import com.vitorpamplona.amethyst.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.ui.note.creators.location.LoadCityName
 import com.vitorpamplona.amethyst.ui.screen.CommunityName
+import com.vitorpamplona.amethyst.ui.screen.FavoriteAlgoFeedName
 import com.vitorpamplona.amethyst.ui.screen.FeedDefinition
 import com.vitorpamplona.amethyst.ui.screen.GeoHashName
 import com.vitorpamplona.amethyst.ui.screen.HashtagName
@@ -100,6 +103,7 @@ import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
+import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import kotlinx.collections.immutable.ImmutableList
 
 @OptIn(ExperimentalPermissionsApi::class)
@@ -150,23 +154,40 @@ fun FeedFilterSpinner(
         Row(verticalAlignment = Alignment.CenterVertically) {
             Spacer(modifier = Size20Modifier)
 
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            // Bound the Column so long filter names (e.g. DVM titles) get truncated
+            // instead of wrapping to multiple lines and shoving the expand icon out.
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.weight(1f, fill = false),
+            ) {
                 val filter = selected?.code
                 if (filter is TopFilter.Geohash) {
                     LoadCityName(
                         geohashStr = filter.tag,
                         onLoading = {
                             Row {
-                                Text(filter.tag)
+                                Text(
+                                    text = filter.tag,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
                                 Spacer(modifier = StdHorzSpacer)
                                 LoadingAnimation(indicatorSize = 12.dp, circleWidth = 2.dp)
                             }
                         },
                     ) { cityName ->
-                        Text(cityName)
+                        Text(
+                            text = cityName,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
                     }
                 } else {
-                    Text(currentText)
+                    Text(
+                        text = currentText,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                 }
 
                 if (filter is TopFilter.AroundMe) {
@@ -178,6 +199,8 @@ fun FeedFilterSpinner(
                             text = stringRes(R.string.lack_location_permissions),
                             fontSize = Font12SP,
                             lineHeight = 12.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                         )
                     } else {
                         val location by Amethyst.instance.locationManager.geohashStateFlow
@@ -193,6 +216,8 @@ fun FeedFilterSpinner(
                                                 text = "(${myLocation.geoHash})",
                                                 fontSize = Font12SP,
                                                 lineHeight = 12.sp,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
                                             )
                                             Spacer(modifier = StdHorzSpacer)
                                             LoadingAnimation(indicatorSize = 12.dp, circleWidth = 2.dp)
@@ -203,6 +228,8 @@ fun FeedFilterSpinner(
                                         text = "($cityName)",
                                         fontSize = Font12SP,
                                         lineHeight = 12.sp,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
                                     )
                                 }
                             }
@@ -212,6 +239,8 @@ fun FeedFilterSpinner(
                                     text = stringRes(R.string.lack_location_permissions),
                                     fontSize = Font12SP,
                                     lineHeight = 12.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
                                 )
                             }
 
@@ -220,6 +249,8 @@ fun FeedFilterSpinner(
                                     text = stringRes(R.string.loading_location),
                                     fontSize = Font12SP,
                                     lineHeight = 12.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
                                 )
                             }
                         }
@@ -329,6 +360,20 @@ fun RenderOption(
                 color = MaterialTheme.colorScheme.onSurface,
             )
         }
+
+        is FavoriteAlgoFeedName -> {
+            val noteState by observeNote(option.note, accountViewModel)
+            val name =
+                (noteState.note.event as? AppDefinitionEvent)
+                    ?.appMetaData()
+                    ?.name
+                    ?.takeIf { it.isNotBlank() } ?: option.note.dTag()
+            Text(
+                text = name,
+                fontSize = Font14SP,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+        }
     }
 }
 
@@ -346,6 +391,7 @@ private enum class FeedGroup(
     COMMUNITIES(R.string.feed_group_communities),
     LOCATIONS(R.string.feed_group_locations),
     LISTS(R.string.feed_group_lists),
+    DVMS(R.string.feed_group_dvms),
     RELAYS(R.string.feed_group_relays),
 }
 
@@ -373,10 +419,15 @@ private fun groupFeedDefinitions(options: ImmutableList<FeedDefinition>): Map<Fe
                 FeedGroup.LOCATIONS
             }
 
+            is FavoriteAlgoFeedName -> {
+                FeedGroup.DVMS
+            }
+
             is ResourceName -> {
                 when (entry.item.code) {
                     is TopFilter.AroundMe -> FeedGroup.LOCATIONS
                     is TopFilter.Global -> FeedGroup.RELAYS
+                    is TopFilter.AllFavoriteAlgoFeeds -> FeedGroup.DVMS
                     else -> FeedGroup.FEEDS
                 }
             }
@@ -541,12 +592,21 @@ private fun FeedIcon(
                 Icons.AutoMirrored.Outlined.ViewList
             }
 
+            is TopFilter.FavoriteAlgoFeed -> {
+                Icons.Outlined.AutoAwesome
+            }
+
+            is TopFilter.AllFavoriteAlgoFeeds -> {
+                Icons.Outlined.AutoAwesome
+            }
+
             else -> {
                 when (item.name) {
                     is GeoHashName -> Icons.Outlined.LocationOn
                     is RelayName -> Icons.Outlined.Storage
                     is CommunityName -> Icons.Outlined.Groups
                     is PeopleListName -> Icons.AutoMirrored.Outlined.ViewList
+                    is FavoriteAlgoFeedName -> Icons.Outlined.AutoAwesome
                     else -> Icons.Outlined.Person
                 }
             }

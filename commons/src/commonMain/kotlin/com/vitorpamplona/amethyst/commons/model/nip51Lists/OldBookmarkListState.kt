@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
@@ -210,4 +211,32 @@ class OldBookmarkListState(
         } else {
             publicBookmarkEventIdSet.value.contains(note.idHex)
         }
+
+    suspend fun removeDeletedBookmarks(
+        deletedEventIds: Set<String>,
+        deletedAddresses: Set<Address>,
+    ): OldBookmarkListEvent? {
+        val currentList = getBookmarkList() ?: return null
+        if (deletedEventIds.isEmpty() && deletedAddresses.isEmpty()) return null
+
+        val newPublicTags = filterOutDeletedBookmarks(currentList.tags, deletedEventIds, deletedAddresses)
+        val oldPrivateTags = currentList.privateTags(signer)
+
+        return if (oldPrivateTags == null) {
+            if (newPublicTags.size == currentList.tags.size) return null
+            OldBookmarkListEvent.resign(
+                content = currentList.content,
+                tags = newPublicTags,
+                signer = signer,
+            )
+        } else {
+            val newPrivateTags = filterOutDeletedBookmarks(oldPrivateTags, deletedEventIds, deletedAddresses)
+            if (newPublicTags.size == currentList.tags.size && newPrivateTags.size == oldPrivateTags.size) return null
+            OldBookmarkListEvent.resign(
+                tags = newPublicTags,
+                privateTags = newPrivateTags,
+                signer = signer,
+            )
+        }
+    }
 }
