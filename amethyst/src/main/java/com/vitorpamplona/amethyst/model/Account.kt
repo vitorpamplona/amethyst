@@ -154,8 +154,11 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.countHashtags
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
 import com.vitorpamplona.quartz.nip01Core.tags.references.references
 import com.vitorpamplona.quartz.nip03Timestamp.OtsResolver
@@ -199,6 +202,12 @@ import com.vitorpamplona.quartz.nip57Zaps.PrivateZapCache
 import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetup
 import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplits
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiser
+import com.vitorpamplona.quartz.nip58Badges.accepted.AcceptedBadgeSetEvent
+import com.vitorpamplona.quartz.nip58Badges.accepted.tags.AcceptedBadge
+import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
+import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
+import com.vitorpamplona.quartz.nip58Badges.definition.tags.ThumbTag
+import com.vitorpamplona.quartz.nip58Badges.profile.ProfileBadgesEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.EphemeralGiftWrapEvent
@@ -235,6 +244,7 @@ import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 import com.vitorpamplona.quartz.nipB0WebBookmarks.WebBookmarkEvent
 import com.vitorpamplona.quartz.utils.DualCase
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.containsAny
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -247,6 +257,8 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.math.BigDecimal
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -460,6 +472,9 @@ class Account(
 
     val liveArticlesFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultArticlesFollowList)
     val liveArticlesFollowListsPerRelay = OutboxLoaderState(liveArticlesFollowLists, cache, scope).flow
+
+    val liveBadgesFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultBadgesFollowList)
+    val liveBadgesFollowListsPerRelay = OutboxLoaderState(liveBadgesFollowLists, cache, scope).flow
 
     override fun isWriteable(): Boolean = settings.isWriteable()
 
@@ -1082,6 +1097,136 @@ class Account(
 
         cache.justConsumeMyOwnEvent(signedEvent)
         client.publish(signedEvent, computeRelayListToBroadcast(signedEvent))
+    }
+
+    suspend fun sendBadgeDefinition(
+        badgeId: String,
+        name: String?,
+        imageUrl: String?,
+        imageDim: DimensionTag?,
+        description: String?,
+        thumbs: List<ThumbTag> = emptyList(),
+    ) {
+        if (!isWriteable()) return
+
+        val template =
+            BadgeDefinitionEvent.build(
+                badgeId = badgeId,
+                name = name,
+                imageUrl = imageUrl,
+                imageDimensions = imageDim,
+                description = description,
+                thumbs = thumbs,
+            )
+        val signedEvent = signer.sign(template)
+
+        cache.justConsumeMyOwnEvent(signedEvent)
+        client.publish(signedEvent, outboxRelays.flow.value)
+    }
+
+    suspend fun deleteBadgeDefinition(event: BadgeDefinitionEvent) {
+        if (!isWriteable()) return
+        if (event.pubKey != signer.pubKey) return
+
+        val template = DeletionEvent.build(listOf(event))
+        val signedEvent = signer.sign(template)
+
+        cache.justConsumeMyOwnEvent(signedEvent)
+        client.publish(signedEvent, computeRelayListToBroadcast(signedEvent))
+    }
+
+    suspend fun sendBadgeAward(
+        definition: BadgeDefinitionEvent,
+        awardees: List<PTag>,
+    ) {
+        if (!isWriteable()) return
+        if (awardees.isEmpty()) return
+
+        val aTag = ATag(definition.kind, definition.pubKey, definition.dTag(), null)
+        val template = BadgeAwardEvent.build(aTag, awardees)
+        val signedEvent = signer.sign(template)
+
+        val relays =
+            outboxRelays.flow.value +
+                awardees
+                    .flatMap { cache.getOrCreateUser(it.pubKey).inboxRelays() ?: emptyList() }
+                    .toSet()
+
+        cache.justConsumeMyOwnEvent(signedEvent)
+        client.publish(signedEvent, relays)
+    }
+
+    private fun loadCurrentAcceptedBadges(): List<AcceptedBadge> {
+        val newNote = cache.getAddressableNoteIfExists(ProfileBadgesEvent.createAddress(signer.pubKey))
+        val newEvent = newNote?.event as? ProfileBadgesEvent
+        if (newEvent != null) return newEvent.acceptedBadges()
+
+        val oldNote = cache.getAddressableNoteIfExists(AcceptedBadgeSetEvent.createAddress(signer.pubKey))
+        val oldEvent = oldNote?.event as? AcceptedBadgeSetEvent
+        return oldEvent?.acceptedBadges() ?: emptyList()
+    }
+
+    /**
+     * Serializes read-modify-write of the accepted-badges replaceable event so two
+     * rapid toggles can't race each other into losing updates.
+     */
+    private val profileBadgesMutex = Mutex()
+
+    /**
+     * Returns a createdAt strictly greater than whatever ProfileBadgesEvent (or
+     * the legacy AcceptedBadgeSetEvent) currently sits in cache. Needed because
+     * LocalCache.consumeBaseReplaceable drops updates whose createdAt isn't
+     * strictly greater, and TimeUtils.now() has only second resolution.
+     */
+    private fun nextProfileBadgesCreatedAt(): Long {
+        val latest =
+            maxOf(
+                (cache.getAddressableNoteIfExists(ProfileBadgesEvent.createAddress(signer.pubKey))?.event?.createdAt) ?: 0L,
+                (cache.getAddressableNoteIfExists(AcceptedBadgeSetEvent.createAddress(signer.pubKey))?.event?.createdAt) ?: 0L,
+            )
+        return maxOf(TimeUtils.now(), latest + 1)
+    }
+
+    suspend fun addAcceptedBadge(
+        award: BadgeAwardEvent,
+        definition: BadgeDefinitionEvent,
+    ) {
+        if (!isWriteable()) return
+
+        val aTag = ATag(definition.kind, definition.pubKey, definition.dTag(), null)
+        val eTag = ETag(award.id)
+
+        val signedEvent =
+            profileBadgesMutex.withLock {
+                val current = loadCurrentAcceptedBadges()
+                if (current.any { it.badgeAward.eventId == award.id }) return
+                val updated = current + AcceptedBadge(aTag, eTag)
+
+                val template = ProfileBadgesEvent.build(updated, createdAt = nextProfileBadgesCreatedAt())
+                val signed = signer.sign(template)
+                cache.justConsumeMyOwnEvent(signed)
+                signed
+            }
+
+        client.publish(signedEvent, outboxRelays.flow.value)
+    }
+
+    suspend fun removeAcceptedBadge(award: BadgeAwardEvent) {
+        if (!isWriteable()) return
+
+        val signedEvent =
+            profileBadgesMutex.withLock {
+                val current = loadCurrentAcceptedBadges()
+                val updated = current.filterNot { it.badgeAward.eventId == award.id }
+                if (updated.size == current.size) return
+
+                val template = ProfileBadgesEvent.build(updated, createdAt = nextProfileBadgesCreatedAt())
+                val signed = signer.sign(template)
+                cache.justConsumeMyOwnEvent(signed)
+                signed
+            }
+
+        client.publish(signedEvent, outboxRelays.flow.value)
     }
 
     fun sendMyPublicAndPrivateOutbox(event: Event?) {

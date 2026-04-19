@@ -127,6 +127,9 @@ sealed class TopFilter(
     object Chess : TopFilter(" Chess ")
 
     @Serializable
+    object Mine : TopFilter(" Mine ")
+
+    @Serializable
     class PeopleList(
         val address: Address,
     ) : TopFilter(address.toValue())
@@ -182,6 +185,7 @@ class AccountSettings(
     val defaultShortsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultLongsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultArticlesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.AllFollows),
+    val defaultBadgesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Mine),
     val nwcWallets: MutableStateFlow<List<NwcWalletEntryNorm>> = MutableStateFlow(emptyList()),
     val defaultNwcWalletId: MutableStateFlow<String?> = MutableStateFlow(null),
     var hideDeleteRequestDialog: Boolean = false,
@@ -508,6 +512,17 @@ class AccountSettings(
     fun changeDefaultArticlesFollowList(name: TopFilter) {
         if (defaultArticlesFollowList.value != name) {
             defaultArticlesFollowList.tryEmit(name)
+            saveAccountSettings()
+        }
+    }
+
+    fun changeDefaultBadgesFollowList(name: FeedDefinition) {
+        changeDefaultBadgesFollowList(name.code)
+    }
+
+    fun changeDefaultBadgesFollowList(name: TopFilter) {
+        if (defaultBadgesFollowList.value != name) {
+            defaultBadgesFollowList.tryEmit(name)
             saveAccountSettings()
         }
     }

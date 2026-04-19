@@ -97,6 +97,12 @@ class TopNavFilterState(
             name = ResourceName(R.string.follow_list_chess),
         )
 
+    val mineFollow =
+        FeedDefinition(
+            code = TopFilter.Mine,
+            name = ResourceName(R.string.follow_list_mine),
+          )
+        
     val allFavoriteAlgoFeedsFollow =
         FeedDefinition(
             code = TopFilter.AllFavoriteAlgoFeeds,
@@ -240,6 +246,18 @@ class TopNavFilterState(
             )
         }
 
+    private val _badgeRoutes =
+        livePeopleListsFlow.transform { peopleLists ->
+            checkNotInMainThread()
+            emit(
+                listOf(
+                    listOf(allFollows, userFollows, kind3Follows, globalFollow, mineFollow),
+                    peopleLists,
+                    listOf(muteListFollow),
+                ).flatten().toImmutableList(),
+            )
+        }
+
     private val _kind3GlobalPeople =
         livePeopleListsFlow.transform { peopleLists ->
             checkNotInMainThread()
@@ -261,6 +279,11 @@ class TopNavFilterState(
         _kind3GlobalPeople
             .flowOn(Dispatchers.IO)
             .stateIn(scope, SharingStarted.Eagerly, defaultLists)
+
+    val badgeRoutes =
+        _badgeRoutes
+            .flowOn(Dispatchers.IO)
+            .stateIn(scope, SharingStarted.Eagerly, persistentListOf(allFollows, userFollows, kind3Follows, globalFollow, mineFollow, muteListFollow))
 
     fun destroy() {
         Log.d("Init") { "OnCleared: ${this.javaClass.simpleName}" }

@@ -28,6 +28,8 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentF
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderFilterAssembler
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.SearchFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.articles.datasource.ArticlesFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.datasource.BadgesFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.profile.datasource.ProfileBadgesFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.datasource.ChatroomFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.datasource.ChannelFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.datasource.ChatroomListFilterAssembler
@@ -97,6 +99,8 @@ class RelaySubscriptionsCoordinator(
     val shorts = ShortsFilterAssembler(client)
     val longs = LongsFilterAssembler(client)
     val articles = ArticlesFilterAssembler(client)
+    val badges = BadgesFilterAssembler(client)
+    val profileBadges = ProfileBadgesFilterAssembler(client)
 
     // active when sending zaps via NWC
     val nwc = NWCPaymentFilterAssembler(client)
@@ -114,6 +118,8 @@ class RelaySubscriptionsCoordinator(
             shorts,
             longs,
             articles,
+            badges,
+            profileBadges,
             channelFinder,
             eventFinder,
             userFinder,

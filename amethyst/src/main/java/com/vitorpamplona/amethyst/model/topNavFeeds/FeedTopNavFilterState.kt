@@ -95,6 +95,10 @@ class FeedTopNavFilterState(
                 ChessFeedFlow(followsRelays, proxyRelays)
             }
 
+            TopFilter.Mine -> {
+                AllFollowsFeedFlow(allFollows, followsRelays, blockedRelays, proxyRelays)
+            }
+
             is TopFilter.Community -> {
                 NoteFeedFlow(
                     LocalCache
