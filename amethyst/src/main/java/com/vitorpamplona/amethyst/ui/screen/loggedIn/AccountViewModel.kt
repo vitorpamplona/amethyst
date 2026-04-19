@@ -138,6 +138,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
 import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
@@ -1106,6 +1107,12 @@ class AccountViewModel(
 
     fun unfollowHashtag(tag: String) = launchSigner { account.unfollowHashtag(tag) }
 
+    fun followFavoriteAlgoFeed(dvm: AddressBookmark) = launchSigner { account.followFavoriteAlgoFeed(dvm) }
+
+    fun unfollowFavoriteAlgoFeed(dvm: Address) = launchSigner { account.unfollowFavoriteAlgoFeed(dvm) }
+
+    fun refreshFavoriteAlgoFeed(dvm: Address) = account.favoriteAlgoFeedsOrchestrator.refresh(dvm)
+
     fun followRelayFeed(url: NormalizedRelayUrl) = launchSigner { account.followRelayFeed(url) }
 
     fun unfollowRelayFeed(url: NormalizedRelayUrl) = launchSigner { account.unfollowRelayFeed(url) }
@@ -1820,8 +1827,8 @@ class AccountViewModel(
         onReady: (event: Note) -> Unit,
     ) {
         launchSigner {
-            account.requestDVMContentDiscovery(dvmPublicKey) {
-                onReady(LocalCache.getOrCreateNote(it.id))
+            account.requestDVMContentDiscovery(dvmPublicKey) { request, _ ->
+                onReady(LocalCache.getOrCreateNote(request.id))
             }
         }
     }

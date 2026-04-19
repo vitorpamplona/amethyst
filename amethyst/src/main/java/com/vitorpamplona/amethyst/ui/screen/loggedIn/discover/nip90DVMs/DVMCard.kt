@@ -21,11 +21,9 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip90DVMs
 
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -40,8 +38,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
@@ -51,12 +49,12 @@ import com.vitorpamplona.amethyst.ui.note.LikeReaction
 import com.vitorpamplona.amethyst.ui.note.ZapReaction
 import com.vitorpamplona.amethyst.ui.note.elements.BannerImage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.FavoriteAlgoFeedToggle
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.observeAppDefinition
 import com.vitorpamplona.amethyst.ui.theme.HalfTopPadding
 import com.vitorpamplona.amethyst.ui.theme.RowColSpacing5dp
 import com.vitorpamplona.amethyst.ui.theme.SimpleImageBorder
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
-import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.bitcoinColor
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.nip05
@@ -118,25 +116,12 @@ fun RenderContentDVMThumb(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
             )
-            Spacer(modifier = StdVertSpacer)
-            Row(
-                verticalAlignment = CenterVertically,
-                horizontalArrangement = RowColSpacing5dp,
-            ) {
-                LikeReaction(
-                    baseNote = baseNote,
-                    grayTint = MaterialTheme.colorScheme.onSurface,
+            if (baseNote is AddressableNote) {
+                FavoriteAlgoFeedToggle(
+                    appDefinitionNote = baseNote,
                     accountViewModel = accountViewModel,
-                    nav,
                 )
             }
-            Spacer(modifier = StdHorzSpacer)
-            ZapReaction(
-                baseNote = baseNote,
-                grayTint = MaterialTheme.colorScheme.onSurface,
-                accountViewModel = accountViewModel,
-                nav = nav,
-            )
         },
         onDescription = {
             card.description?.let {
@@ -168,22 +153,16 @@ fun RenderContentDVMThumb(
                     color = MaterialTheme.colorScheme.primary
                     amount = card.amount + " Sats"
                 }
-                Row(
-                    verticalAlignment = CenterVertically,
-                    horizontalArrangement = Arrangement.Absolute.Right,
-                ) {
-                    Text(
-                        textAlign = TextAlign.End,
-                        text = " $amount ",
-                        color = color,
-                        maxLines = 3,
-                        modifier =
-                            Modifier
-                                .weight(1f, fill = false)
-                                .border(Dp(.1f), color, shape = RoundedCornerShape(20)),
-                        fontSize = 12.sp,
-                    )
-                }
+                Text(
+                    textAlign = TextAlign.End,
+                    text = " $amount ",
+                    color = color,
+                    maxLines = 1,
+                    modifier =
+                        Modifier
+                            .border(Dp(.1f), color, shape = RoundedCornerShape(20)),
+                    fontSize = 12.sp,
+                )
             }
             Spacer(modifier = StdHorzSpacer)
             card.personalized?.let {
@@ -196,24 +175,35 @@ fun RenderContentDVMThumb(
                     color = MaterialTheme.colorScheme.nip05
                     name = "Generic"
                 }
-                Spacer(modifier = StdVertSpacer)
-                Row(
-                    verticalAlignment = CenterVertically,
-                    horizontalArrangement = Arrangement.Absolute.Right,
-                ) {
-                    Text(
-                        textAlign = TextAlign.End,
-                        text = " $name ",
-                        color = color,
-                        maxLines = 3,
-                        modifier =
-                            Modifier
-                                .padding(start = 4.dp)
-                                .weight(1f, fill = false)
-                                .border(Dp(.1f), color, shape = RoundedCornerShape(20)),
-                        fontSize = 12.sp,
-                    )
-                }
+                Text(
+                    textAlign = TextAlign.End,
+                    text = " $name ",
+                    color = color,
+                    maxLines = 1,
+                    modifier =
+                        Modifier
+                            .border(Dp(.1f), color, shape = RoundedCornerShape(20)),
+                    fontSize = 12.sp,
+                )
+            }
+            Spacer(modifier = Modifier.weight(1f))
+            Row(
+                verticalAlignment = CenterVertically,
+                horizontalArrangement = RowColSpacing5dp,
+            ) {
+                LikeReaction(
+                    baseNote = baseNote,
+                    grayTint = MaterialTheme.colorScheme.onSurface,
+                    accountViewModel = accountViewModel,
+                    nav,
+                )
+                Spacer(modifier = StdHorzSpacer)
+                ZapReaction(
+                    baseNote = baseNote,
+                    grayTint = MaterialTheme.colorScheme.onSurface,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
             }
         },
     )

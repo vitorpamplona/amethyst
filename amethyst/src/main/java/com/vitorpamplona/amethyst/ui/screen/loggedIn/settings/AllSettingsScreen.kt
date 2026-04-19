@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.CloudUpload
 import androidx.compose.material.icons.outlined.DeleteForever
@@ -120,6 +121,13 @@ fun AllSettingsScreen(
                 icon = Icons.Outlined.CloudUpload,
                 tint = tint,
                 onClick = { nav.nav(Route.EditMediaServers) },
+            )
+            HorizontalDivider()
+            SettingsNavigationRow(
+                title = R.string.favorite_dvms_title,
+                icon = Icons.Outlined.AutoAwesome,
+                tint = tint,
+                onClick = { nav.nav(Route.EditFavoriteAlgoFeeds) },
             )
             HorizontalDivider()
             SettingsNavigationRow(
