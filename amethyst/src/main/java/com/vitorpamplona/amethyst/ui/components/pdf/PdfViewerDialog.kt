@@ -50,7 +50,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -81,8 +80,33 @@ import kotlinx.coroutines.withContext
 import net.engawapg.lib.zoomable.rememberZoomState
 import net.engawapg.lib.zoomable.zoomable
 
-// Hard ceiling on each rendered page bitmap, in pixels. Prevents OOM on very large pages.
-private const val VIEWER_MAX_DIM_PX = 2048
+// Hard ceiling on each rendered page bitmap, in pixels. Higher = sharper when the
+// user pinch-zooms inside the dialog, but each page costs ~maxDim^2 * 4 bytes of
+// RAM (ARGB_8888). 3072 gives ~26 MB per A4-shaped page.
+private const val VIEWER_MAX_DIM_PX = 3072
+
+// How many recently-rendered pages to keep around. Pager already pre-composes the
+// current page plus one neighbor; this just speeds up small back/forward swipes.
+// At VIEWER_MAX_DIM_PX = 3072 this caps memory at ~80 MB worth of page bitmaps.
+private const val PAGE_CACHE_SIZE = 3
+
+private class PageBitmapCache(
+    private val maxSize: Int,
+) {
+    private val cache =
+        object : java.util.LinkedHashMap<Int, Bitmap>(maxSize, 0.75f, true) {
+            override fun removeEldestEntry(eldest: Map.Entry<Int, Bitmap>): Boolean = size > maxSize
+        }
+
+    @Synchronized fun get(key: Int): Bitmap? = cache[key]
+
+    @Synchronized fun put(
+        key: Int,
+        value: Bitmap,
+    ) {
+        cache[key] = value
+    }
+}
 
 private class PdfDocumentHandle(
     val snapshot: DiskCache.Snapshot,
@@ -196,63 +220,66 @@ private fun PdfViewerContent(
         }
     } else {
         val pagerState = rememberPagerState { handle.pageCount }
-        val pageCache = remember(handle) { mutableStateMapOf<Int, Bitmap>() }
+        val pageCache = remember(handle) { PageBitmapCache(PAGE_CACHE_SIZE) }
 
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier.fillMaxSize(),
-        ) { pageIndex ->
-            PdfPageView(
-                handle = handle,
-                pageIndex = pageIndex,
-                cache = pageCache,
-            )
-        }
-
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = Size15dp, vertical = Size10dp)
-                    .statusBarsPadding()
-                    .systemBarsPadding(),
-            horizontalArrangement = spacedBy(Size10dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            OutlinedButton(
-                onClick = onDismiss,
-                contentPadding = PaddingValues(horizontal = Size5dp),
-                colors = ButtonDefaults.outlinedButtonColors().copy(containerColor = MaterialTheme.colorScheme.background),
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = stringRes(R.string.back),
+        Box(modifier = Modifier.fillMaxSize()) {
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.fillMaxSize(),
+            ) { pageIndex ->
+                PdfPageView(
+                    handle = handle,
+                    pageIndex = pageIndex,
+                    cache = pageCache,
                 )
             }
 
-            Spacer(modifier = Modifier.weight(1f))
-
-            Text(
-                text = "${pagerState.currentPage + 1} / ${handle.pageCount}",
-                color = Color.White,
+            Row(
                 modifier =
                     Modifier
-                        .background(Color.Black.copy(alpha = 0.4f), shape = MaterialTheme.shapes.small)
-                        .padding(horizontal = Size10dp, vertical = Size5dp),
-            )
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            OutlinedButton(
-                onClick = { sharePopupExpanded.value = true },
-                contentPadding = PaddingValues(horizontal = Size5dp),
-                colors = ButtonDefaults.outlinedButtonColors().copy(containerColor = MaterialTheme.colorScheme.background),
+                        .align(Alignment.TopCenter)
+                        .fillMaxWidth()
+                        .statusBarsPadding()
+                        .systemBarsPadding()
+                        .padding(horizontal = Size15dp, vertical = Size10dp),
+                horizontalArrangement = spacedBy(Size10dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(
-                    imageVector = Icons.Default.Share,
-                    modifier = Size20Modifier,
-                    contentDescription = stringRes(R.string.quick_action_share),
+                OutlinedButton(
+                    onClick = onDismiss,
+                    contentPadding = PaddingValues(horizontal = Size5dp),
+                    colors = ButtonDefaults.outlinedButtonColors().copy(containerColor = MaterialTheme.colorScheme.background),
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = stringRes(R.string.back),
+                    )
+                }
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                Text(
+                    text = "${pagerState.currentPage + 1} / ${handle.pageCount}",
+                    color = Color.White,
+                    modifier =
+                        Modifier
+                            .background(Color.Black.copy(alpha = 0.4f), shape = MaterialTheme.shapes.small)
+                            .padding(horizontal = Size10dp, vertical = Size5dp),
                 )
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                OutlinedButton(
+                    onClick = { sharePopupExpanded.value = true },
+                    contentPadding = PaddingValues(horizontal = Size5dp),
+                    colors = ButtonDefaults.outlinedButtonColors().copy(containerColor = MaterialTheme.colorScheme.background),
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Share,
+                        modifier = Size20Modifier,
+                        contentDescription = stringRes(R.string.quick_action_share),
+                    )
+                }
             }
         }
     }
@@ -262,9 +289,9 @@ private fun PdfViewerContent(
 private fun PdfPageView(
     handle: PdfDocumentHandle,
     pageIndex: Int,
-    cache: MutableMap<Int, Bitmap>,
+    cache: PageBitmapCache,
 ) {
-    val cached = cache[pageIndex]
+    val cached = cache.get(pageIndex)
 
     @Suppress("ProduceStateDoesNotAssignValue")
     val bitmap by produceState<Bitmap?>(initialValue = cached, key1 = handle, key2 = pageIndex) {
@@ -292,7 +319,7 @@ private fun PdfPageView(
                 null
             }
 
-        rendered?.let { cache[pageIndex] = it }
+        rendered?.let { cache.put(pageIndex, it) }
         value = rendered
     }
 
