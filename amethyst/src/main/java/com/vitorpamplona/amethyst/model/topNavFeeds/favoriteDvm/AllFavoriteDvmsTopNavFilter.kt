@@ -32,7 +32,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 
 /**
  * Top-nav filter that unions the latest kind-6300 responses from every currently
- * favourited DVM. Behaves like [FavoriteDvmTopNavFilter] (pure membership check
+ * favorited DVM. Behaves like [FavoriteDvmTopNavFilter] (pure membership check
  * against a snapshot), but the accepted set is the union across N DVMs and the
  * request-id list carries one entry per DVM for the relay-listen subscription.
  */

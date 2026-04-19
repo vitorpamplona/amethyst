@@ -32,8 +32,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
  * - [listenRelays] — the union of DVM publish relays across all active DVMs
  *   (where they will deliver future kind 6300 / 7000 events for their requests).
  * - [requestIds] — the set of currently-active kind-5300 request ids to listen
- *   for. A single-DVM filter carries one; the merged "All favourite DVMs"
- *   filter carries one per favourite DVM.
+ *   for. A single-DVM filter carries one; the merged "All favorite DVMs"
+ *   filter carries one per favorite DVM.
  */
 class FavoriteDvmTopNavPerRelayFilterSet(
     val contentFetches: Map<NormalizedRelayUrl, FavoriteDvmTopNavPerRelayFilter>,

@@ -34,9 +34,9 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 
 /**
- * Feed flow that merges snapshots from every currently-favourited DVM into a
+ * Feed flow that merges snapshots from every currently-favorited DVM into a
  * single [AllFavoriteDvmsTopNavFilter]. Re-wires subscriptions whenever the
- * favourite set changes.
+ * favorite set changes.
  */
 class AllFavoriteDvmsFeedFlow(
     val favoriteDvmAddresses: StateFlow<Set<Address>>,

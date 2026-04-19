@@ -31,7 +31,7 @@ import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.NIP90ContentD
 import com.vitorpamplona.quartz.nip90Dvms.status.NIP90StatusEvent
 
 /**
- * Builds relay REQ filters for a favourite-DVM home feed.
+ * Builds relay REQ filters for a favorite-DVM home feed.
  *
  * Two distinct subscription kinds with two distinct relay sets:
  *

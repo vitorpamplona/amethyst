@@ -35,7 +35,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
-import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest.NIP90ContentDiscoveryRequestEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -182,24 +181,22 @@ class TopNavFilterState(
                 )
             }
 
-        // Only DVMs that advertise NIP-90 content discovery (kind 5300) can produce a
-        // home feed. Hide entries whose AppDefinitionEvent isn't loaded yet OR doesn't
-        // include kind 5300 so the chip doesn't appear for image-generation, translation,
-        // search, or other DVM kinds that would never reply.
+        // Favorites can only be added through FavoriteDvmToggle, which itself checks
+        // that the AppDefinitionEvent advertises kind 5300. Don't re-check here: on
+        // cold start the AppDefinitionEvent may not be in cache yet, and dropping
+        // the entry means the persisted TopFilter.FavoriteDvm can't find its chip
+        // in the spinner (user sees "Select an option" while the banner fires the
+        // RPC — the bug we had before this change).
         val favoriteDvms =
-            favoriteDvmList.mapNotNull { dvmNote ->
-                val supports5300 =
-                    (dvmNote.event as? AppDefinitionEvent)
-                        ?.includeKind(NIP90ContentDiscoveryRequestEvent.KIND) == true
-                if (!supports5300) return@mapNotNull null
+            favoriteDvmList.map { dvmNote ->
                 FeedDefinition(
                     TopFilter.FavoriteDvm(dvmNote.address),
                     FavoriteDvmName(dvmNote),
                 )
             }
 
-        // Only show the "All favourite DVMs" meta-chip when there is at least one
-        // real favourite to merge; otherwise the chip opens to an empty feed.
+        // Only show the "All favorite DVMs" meta-chip when there is at least one
+        // real favorite to merge; otherwise the chip opens to an empty feed.
         val allFavorites =
             if (favoriteDvms.isNotEmpty()) listOf(allFavoriteDvmsFollow) else emptyList()
 

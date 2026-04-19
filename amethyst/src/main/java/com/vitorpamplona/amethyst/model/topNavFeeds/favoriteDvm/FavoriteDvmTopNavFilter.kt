@@ -32,7 +32,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 
 /**
- * Top-nav filter backed by the latest kind-6300 response from a favourite DVM.
+ * Top-nav filter backed by the latest kind-6300 response from a favorite DVM.
  *
  * The filter is a pure immutable membership check: [match] accepts a note only if the
  * DVM's latest response included it. When a new response arrives, a new instance is

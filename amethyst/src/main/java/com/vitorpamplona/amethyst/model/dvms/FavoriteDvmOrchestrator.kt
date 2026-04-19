@@ -45,7 +45,7 @@ import kotlinx.coroutines.sync.withLock
 private const val RESPONSE_TIMEOUT_MS = 20_000L
 
 /**
- * Immutable snapshot of a favourite DVM's current request/response state.
+ * Immutable snapshot of a favorite DVM's current request/response state.
  *
  * - [requestId] is the id of the most recently published kind-5300 request.
  * - [responseRelays] is the relay set the kind-5300 was sent to — the same set on
@@ -65,7 +65,7 @@ data class FavoriteDvmSnapshot(
 )
 
 /**
- * Manages the NIP-90 content-discovery RPC cycle for each favourite DVM the user
+ * Manages the NIP-90 content-discovery RPC cycle for each favorite DVM the user
  * pins to the top-nav.
  *
  * The orchestrator is lazy: it starts a request/response cycle the first time any
