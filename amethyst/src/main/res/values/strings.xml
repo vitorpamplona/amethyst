@@ -448,6 +448,7 @@
     <string name="badge_awardees_label">Awarded to %1$d</string>
     <string name="badge_award_received_title">You received a badge</string>
     <string name="profile_badges_title">Profile badges</string>
+    <string name="profile_badges_header">Badges · %1$d</string>
     <string name="profile_badges_description">Choose which of the badges you\'ve received appear on your profile.</string>
     <string name="profile_badges_empty">You haven\'t received any badges yet.</string>
     <string name="pictures">Pictures</string>
