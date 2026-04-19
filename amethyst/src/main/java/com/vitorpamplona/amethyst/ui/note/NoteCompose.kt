@@ -396,10 +396,6 @@ fun AcceptableNote(
                 }
             }
 
-            is BadgeDefinitionEvent -> {
-                BadgeDisplay(baseNote = baseNote, accountViewModel = accountViewModel, nav = nav)
-            }
-
             else -> {
                 LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel, nav) { showPopup ->
                     CheckNewAndRenderNote(
@@ -452,10 +448,6 @@ fun AcceptableNote(
                         nav = nav,
                     )
                 }
-            }
-
-            is BadgeDefinitionEvent -> {
-                BadgeDisplay(baseNote = baseNote, accountViewModel = accountViewModel, nav = nav)
             }
 
             else -> {
@@ -936,6 +928,10 @@ private fun RenderNoteRow(
 
         is BadgeAwardEvent -> {
             RenderBadgeAward(baseNote, backgroundColor, accountViewModel, nav)
+        }
+
+        is BadgeDefinitionEvent -> {
+            BadgeDisplay(baseNote = baseNote, accountViewModel = accountViewModel, nav = nav)
         }
 
         is LnZapEvent -> {
