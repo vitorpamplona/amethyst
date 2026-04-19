@@ -36,8 +36,11 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -49,15 +52,21 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.profile.datasource.ProfileBadgesFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip58Badges.accepted.AcceptedBadgeSetEvent
 import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
 import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
 import com.vitorpamplona.quartz.nip58Badges.profile.ProfileBadgesEvent
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 @Composable
 fun ProfileBadgesScreen(
@@ -65,6 +74,10 @@ fun ProfileBadgesScreen(
     nav: INav,
 ) {
     val myPubkey = accountViewModel.userProfile().pubkeyHex
+
+    // Pull every kind 8 award tagging me from the user's notification relays so
+    // historic awards land in cache while this screen is open.
+    ProfileBadgesFilterAssemblerSubscription(accountViewModel)
 
     val newNote = accountViewModel.getOrCreateAddressableNote(ProfileBadgesEvent.createAddress(myPubkey))
     val oldNote = accountViewModel.getOrCreateAddressableNote(AcceptedBadgeSetEvent.createAddress(myPubkey))
@@ -86,8 +99,24 @@ fun ProfileBadgesScreen(
                 .toSet()
         }
 
+    // Tick whenever LocalCache emits a bundle that contains an award addressed
+    // to me, so the snapshot below recomputes and the new award appears.
+    var bundleTick by remember { mutableIntStateOf(0) }
+    LaunchedEffect(myPubkey) {
+        launch(Dispatchers.IO) {
+            LocalCache.live.newEventBundles.collect { bundle ->
+                val touchesMe =
+                    bundle.any { note ->
+                        val ev = note.event
+                        ev is BadgeAwardEvent && ev.awardeeIds().contains(myPubkey)
+                    }
+                if (touchesMe) bundleTick++
+            }
+        }
+    }
+
     val receivedAwards =
-        remember(myPubkey, newState, oldState) {
+        remember(myPubkey, bundleTick) {
             LocalCache.notes
                 .filterIntoSet { _, it ->
                     val event = it.event
@@ -143,11 +172,36 @@ private fun AwardRow(
     accountViewModel: AccountViewModel,
 ) {
     val defAddr = award.awardDefinition().firstOrNull()
-    val definition =
-        remember(award.id) {
-            defAddr?.let { LocalCache.getAddressableNoteIfExists(it)?.event as? BadgeDefinitionEvent }
-        }
 
+    if (defAddr == null) {
+        StaticAwardRow(definition = null, isAccepted = isAccepted, accountViewModel = accountViewModel, award = award)
+        return
+    }
+
+    LoadAddressableNote(defAddr, accountViewModel) { defNote ->
+        if (defNote == null) {
+            StaticAwardRow(definition = null, isAccepted = isAccepted, accountViewModel = accountViewModel, award = award)
+        } else {
+            // Ask relays for the definition if we don't have it yet, then watch.
+            EventFinderFilterAssemblerSubscription(defNote, accountViewModel)
+            val definition by observeNoteEvent<BadgeDefinitionEvent>(defNote, accountViewModel)
+            StaticAwardRow(
+                definition = definition,
+                isAccepted = isAccepted,
+                accountViewModel = accountViewModel,
+                award = award,
+            )
+        }
+    }
+}
+
+@Composable
+private fun StaticAwardRow(
+    definition: BadgeDefinitionEvent?,
+    isAccepted: Boolean,
+    accountViewModel: AccountViewModel,
+    award: BadgeAwardEvent,
+) {
     Row(
         modifier =
             Modifier
@@ -182,6 +236,7 @@ private fun AwardRow(
 
         Switch(
             checked = isAccepted,
+            enabled = definition != null,
             onCheckedChange = { checked ->
                 accountViewModel.launchSigner {
                     if (checked) {
