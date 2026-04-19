@@ -117,16 +117,26 @@ fun ProfileBadgesScreen(
         }
     }
 
+    // "loaded" flips once when either profile-badges event arrives in cache, so
+    // we re-sort exactly once after the initial load. Toggling the Switch below
+    // doesn't change it, so the list stays in place while the user edits.
+    val acceptedDataLoaded =
+        newState.note.event != null || oldState.note.event != null
+
     val receivedAwards =
-        remember(myPubkey, bundleTick, acceptedAwardIds) {
+        remember(myPubkey, bundleTick, acceptedDataLoaded) {
+            // acceptedAwardIds is captured from the enclosing scope at this
+            // recomputation point; it is NOT part of the remember key, so
+            // subsequent toggles don't re-run this sort.
+            val initialAccepted = acceptedAwardIds
             LocalCache.notes
                 .filterIntoSet { _, it ->
                     val event = it.event
                     event is BadgeAwardEvent && event.awardeeIds().contains(myPubkey)
                 }.mapNotNull { it.event as? BadgeAwardEvent }
                 .sortedWith(
-                    // Accepted badges on top, then most recent first.
-                    compareByDescending<BadgeAwardEvent> { acceptedAwardIds.contains(it.id) }
+                    // Accepted badges on top (at load time), then most recent first.
+                    compareByDescending<BadgeAwardEvent> { initialAccepted.contains(it.id) }
                         .thenByDescending { it.createdAt },
                 )
         }
