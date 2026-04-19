@@ -68,6 +68,7 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -153,23 +154,40 @@ fun FeedFilterSpinner(
         Row(verticalAlignment = Alignment.CenterVertically) {
             Spacer(modifier = Size20Modifier)
 
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            // Bound the Column so long filter names (e.g. DVM titles) get truncated
+            // instead of wrapping to multiple lines and shoving the expand icon out.
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.weight(1f, fill = false),
+            ) {
                 val filter = selected?.code
                 if (filter is TopFilter.Geohash) {
                     LoadCityName(
                         geohashStr = filter.tag,
                         onLoading = {
                             Row {
-                                Text(filter.tag)
+                                Text(
+                                    text = filter.tag,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
                                 Spacer(modifier = StdHorzSpacer)
                                 LoadingAnimation(indicatorSize = 12.dp, circleWidth = 2.dp)
                             }
                         },
                     ) { cityName ->
-                        Text(cityName)
+                        Text(
+                            text = cityName,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
                     }
                 } else {
-                    Text(currentText)
+                    Text(
+                        text = currentText,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                 }
 
                 if (filter is TopFilter.AroundMe) {
@@ -181,6 +199,8 @@ fun FeedFilterSpinner(
                             text = stringRes(R.string.lack_location_permissions),
                             fontSize = Font12SP,
                             lineHeight = 12.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                         )
                     } else {
                         val location by Amethyst.instance.locationManager.geohashStateFlow
@@ -196,6 +216,8 @@ fun FeedFilterSpinner(
                                                 text = "(${myLocation.geoHash})",
                                                 fontSize = Font12SP,
                                                 lineHeight = 12.sp,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
                                             )
                                             Spacer(modifier = StdHorzSpacer)
                                             LoadingAnimation(indicatorSize = 12.dp, circleWidth = 2.dp)
@@ -206,6 +228,8 @@ fun FeedFilterSpinner(
                                         text = "($cityName)",
                                         fontSize = Font12SP,
                                         lineHeight = 12.sp,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
                                     )
                                 }
                             }
@@ -215,6 +239,8 @@ fun FeedFilterSpinner(
                                     text = stringRes(R.string.lack_location_permissions),
                                     fontSize = Font12SP,
                                     lineHeight = 12.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
                                 )
                             }
 
@@ -223,6 +249,8 @@ fun FeedFilterSpinner(
                                     text = stringRes(R.string.loading_location),
                                     fontSize = Font12SP,
                                     lineHeight = 12.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
                                 )
                             }
                         }
