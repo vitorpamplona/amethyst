@@ -77,6 +77,8 @@ import coil3.compose.AsyncImage
 import coil3.compose.AsyncImagePainter
 import coil3.compose.SubcomposeAsyncImage
 import coil3.compose.SubcomposeAsyncImageContent
+import coil3.request.ImageRequest
+import coil3.size.Size
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
@@ -276,6 +278,7 @@ fun LocalImageView(
     controllerVisible: MutableState<Boolean>,
     accountViewModel: AccountViewModel,
     alwayShowImage: Boolean = false,
+    fullResolution: Boolean = false,
 ) {
     if (content.localFileExists()) {
         val showImage =
@@ -286,10 +289,23 @@ fun LocalImageView(
             }
 
         val ratio = remember(content) { content.dim?.aspectRatio() ?: MediaAspectRatioCache.get(content.localFile.toString()) }
+        val context = LocalContext.current
+        val imageModel =
+            if (fullResolution) {
+                remember(content.localFile, context) {
+                    ImageRequest
+                        .Builder(context)
+                        .data(content.localFile)
+                        .size(Size.ORIGINAL)
+                        .build()
+                }
+            } else {
+                content.localFile
+            }
         CrossfadeIfEnabled(targetState = showImage.value, contentAlignment = Alignment.Center, accountViewModel = accountViewModel) { imageVisible ->
             if (imageVisible) {
                 SubcomposeAsyncImage(
-                    model = content.localFile,
+                    model = imageModel,
                     contentDescription = content.description,
                     contentScale = contentScale,
                     modifier = mainImageModifier,
@@ -391,6 +407,7 @@ fun UrlImageView(
     controllerVisible: MutableState<Boolean>,
     accountViewModel: AccountViewModel,
     alwayShowImage: Boolean = false,
+    fullResolution: Boolean = false,
 ) {
     val ratio = content.dim?.aspectRatio() ?: MediaAspectRatioCache.get(content.url)
 
@@ -401,10 +418,24 @@ fun UrlImageView(
             )
         }
 
+    val context = LocalContext.current
+    val imageModel =
+        if (fullResolution) {
+            remember(content.url, context) {
+                ImageRequest
+                    .Builder(context)
+                    .data(content.url)
+                    .size(Size.ORIGINAL)
+                    .build()
+            }
+        } else {
+            content.url
+        }
+
     CrossfadeIfEnabled(targetState = showImage.value, contentAlignment = Alignment.Center, accountViewModel = accountViewModel) {
         if (it) {
             SubcomposeAsyncImage(
-                model = content.url,
+                model = imageModel,
                 contentDescription = content.description,
                 contentScale = contentScale,
                 modifier = mainImageModifier,

@@ -535,6 +535,7 @@ private fun RenderImageOrVideo(
                     controllerVisible = controllerVisible,
                     accountViewModel = accountViewModel,
                     alwayShowImage = true,
+                    fullResolution = true,
                 )
             }
 
@@ -593,6 +594,7 @@ private fun RenderImageOrVideo(
                     controllerVisible = controllerVisible,
                     accountViewModel = accountViewModel,
                     alwayShowImage = true,
+                    fullResolution = true,
                 )
             }
 
