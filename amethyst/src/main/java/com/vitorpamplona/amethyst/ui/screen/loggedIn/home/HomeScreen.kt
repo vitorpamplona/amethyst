@@ -23,11 +23,14 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.home
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Arrangement.Absolute.spacedBy
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
@@ -52,6 +55,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
@@ -179,7 +183,6 @@ private fun HomePages(
         topBar = {
             Column {
                 HomeTopBar(accountViewModel, nav)
-                HomeDvmStatusBanner(accountViewModel, nav)
                 SecondaryTabRow(
                     containerColor = Color.Transparent,
                     contentColor = MaterialTheme.colorScheme.onBackground,
@@ -210,24 +213,37 @@ private fun HomePages(
             HomeScreenFloatingButton(accountViewModel, nav)
         },
         accountViewModel = accountViewModel,
-    ) {
-        HorizontalPager(
-            contentPadding = it,
-            state = pagerState,
-            userScrollEnabled = true,
-            modifier =
-                Modifier.zonedDrawerSwipe(
-                    pagerState = pagerState,
-                    openDrawer = nav::openDrawer,
-                ),
-        ) { page ->
-            HomeFeeds(
-                feedState = tabs[page].feedState,
-                routeForLastRead = tabs[page].routeForLastRead,
-                scrollStateKey = tabs[page].scrollStateKey,
-                liveSection = tabs[page].liveSection,
+    ) { paddingValues ->
+        // Wrap pager + banner in a Box so the banner can float over the feed
+        // (anchored top-center) instead of living in the topBar Column where
+        // it would push the tabs down every time it appears or disappears.
+        Box(
+            modifier = Modifier.fillMaxSize().padding(paddingValues),
+        ) {
+            HorizontalPager(
+                contentPadding = PaddingValues(0.dp),
+                state = pagerState,
+                userScrollEnabled = true,
+                modifier =
+                    Modifier.zonedDrawerSwipe(
+                        pagerState = pagerState,
+                        openDrawer = nav::openDrawer,
+                    ),
+            ) { page ->
+                HomeFeeds(
+                    feedState = tabs[page].feedState,
+                    routeForLastRead = tabs[page].routeForLastRead,
+                    scrollStateKey = tabs[page].scrollStateKey,
+                    liveSection = tabs[page].liveSection,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+            }
+
+            HomeDvmStatusBanner(
                 accountViewModel = accountViewModel,
                 nav = nav,
+                modifier = Modifier.align(Alignment.TopCenter),
             )
         }
     }

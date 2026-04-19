@@ -58,13 +58,14 @@ import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 fun HomeDvmStatusBanner(
     accountViewModel: AccountViewModel,
     nav: INav,
+    modifier: Modifier = Modifier,
 ) {
     val topFilter by accountViewModel.account.settings.defaultHomeFollowList
         .collectAsStateWithLifecycle()
 
     when (val filter = topFilter) {
-        is TopFilter.FavoriteDvm -> SingleDvmBanner(filter, accountViewModel, nav)
-        is TopFilter.AllFavoriteDvms -> AllFavoriteDvmsBanner(accountViewModel)
+        is TopFilter.FavoriteDvm -> SingleDvmBanner(filter, accountViewModel, nav, modifier)
+        is TopFilter.AllFavoriteDvms -> AllFavoriteDvmsBanner(accountViewModel, modifier)
         else -> Unit
     }
 }
@@ -74,6 +75,7 @@ private fun SingleDvmBanner(
     favDvm: TopFilter.FavoriteDvm,
     accountViewModel: AccountViewModel,
     nav: INav,
+    modifier: Modifier = Modifier,
 ) {
     val snapshot by accountViewModel.account.favoriteDvmOrchestrator
         .observe(favDvm.address)
@@ -95,7 +97,7 @@ private fun SingleDvmBanner(
                     ?: ""
             }
 
-        BannerCard {
+        BannerCard(modifier) {
             val status = snapshot.latestStatus?.status()
 
             when {
@@ -167,7 +169,10 @@ private fun SingleDvmBanner(
 }
 
 @Composable
-private fun AllFavoriteDvmsBanner(accountViewModel: AccountViewModel) {
+private fun AllFavoriteDvmsBanner(
+    accountViewModel: AccountViewModel,
+    modifier: Modifier = Modifier,
+) {
     val addresses by accountViewModel.account.favoriteDvmList.flow
         .collectAsStateWithLifecycle()
 
@@ -189,7 +194,7 @@ private fun AllFavoriteDvmsBanner(accountViewModel: AccountViewModel) {
 
     val allErrored = snapshots.all { it.errorMessage != null || it.latestStatus?.status()?.code == "error" }
 
-    BannerCard {
+    BannerCard(modifier) {
         if (allErrored) {
             BannerMessageRow(
                 message = stringRes(R.string.dvm_home_status_error),
@@ -209,14 +214,22 @@ private fun AllFavoriteDvmsBanner(accountViewModel: AccountViewModel) {
 }
 
 @Composable
-private fun BannerCard(content: @Composable () -> Unit) {
+private fun BannerCard(
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    // Sits above the feed instead of in the topBar Column, so adding/removing
+    // the banner doesn't shift the tabs/filter up and down. tonalElevation
+    // gives it a faint surface tint so it reads as a floating overlay.
     Surface(
         modifier =
-            Modifier
+            modifier
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp, vertical = 6.dp),
         shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        tonalElevation = 4.dp,
+        shadowElevation = 4.dp,
     ) {
         Column(modifier = Modifier.padding(12.dp)) { content() }
     }
