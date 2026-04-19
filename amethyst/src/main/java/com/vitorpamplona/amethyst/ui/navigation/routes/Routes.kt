@@ -49,10 +49,6 @@ sealed class Route {
 
     @Serializable object ProfileBadges : Route()
 
-    @Serializable data class NewBadge(
-        val editDTag: String? = null,
-    ) : Route()
-
     @Serializable data class AwardBadge(
         val kind: Int,
         val pubKeyHex: HexKey,

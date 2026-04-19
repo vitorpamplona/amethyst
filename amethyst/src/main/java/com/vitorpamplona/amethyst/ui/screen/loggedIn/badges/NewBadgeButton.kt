@@ -22,29 +22,63 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.badges
 
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.actions.uploads.GallerySelect
+import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.post.NewBadgeDialog
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.post.NewBadgeModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size26Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 
 @Composable
-fun NewBadgeButton(nav: INav) {
+fun NewBadgeButton(accountViewModel: AccountViewModel) {
+    var wantsToPickImage by remember { mutableStateOf(false) }
+    var pickedMedia by remember { mutableStateOf<ImmutableList<SelectedMedia>>(persistentListOf()) }
+
+    val postViewModel: NewBadgeModel = viewModel()
+
+    if (wantsToPickImage) {
+        GallerySelect(
+            onImageUri = { uris ->
+                wantsToPickImage = false
+                // We only need the first picked image for a badge.
+                pickedMedia = if (uris.isNotEmpty()) persistentListOf(uris.first()) else persistentListOf()
+            },
+        )
+    }
+
+    if (pickedMedia.isNotEmpty()) {
+        NewBadgeDialog(
+            uris = pickedMedia,
+            onClose = { pickedMedia = persistentListOf() },
+            postViewModel = postViewModel,
+            accountViewModel = accountViewModel,
+        )
+    }
+
     FloatingActionButton(
-        onClick = { nav.nav(Route.NewBadge()) },
+        onClick = { wantsToPickImage = true },
         modifier = Size55Modifier,
         shape = CircleShape,
         containerColor = MaterialTheme.colorScheme.primary,
     ) {
         Icon(
-            imageVector = Icons.Outlined.Add,
+            imageVector = Icons.Default.AddPhotoAlternate,
             contentDescription = stringRes(id = R.string.new_badge),
             modifier = Size26Modifier,
             tint = Color.White,

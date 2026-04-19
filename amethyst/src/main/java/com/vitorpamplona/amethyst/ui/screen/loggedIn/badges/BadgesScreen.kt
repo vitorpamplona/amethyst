@@ -77,7 +77,7 @@ fun BadgesScreen(
             }
         },
         floatingButton = {
-            NewBadgeButton(nav)
+            NewBadgeButton(accountViewModel)
         },
         accountViewModel = accountViewModel,
     ) { paddingValues ->
