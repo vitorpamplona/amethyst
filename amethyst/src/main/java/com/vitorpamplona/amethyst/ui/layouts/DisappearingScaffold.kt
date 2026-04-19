@@ -25,6 +25,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -85,6 +87,9 @@ fun DisappearingScaffold(
     if (allowBarHide) ResetBarsOnResume(state)
 
     // When bars are pinned, skip attaching the nested-scroll connection entirely.
+    // The outer Surface provides the Material container color + onBackground as
+    // LocalContentColor, matching M3 Scaffold's behaviour (without it, default text
+    // color falls back to Color.Black and is invisible on the dark theme).
     val rootModifier =
         if (allowBarHide) {
             Modifier.imePadding().nestedScroll(connection)
@@ -92,7 +97,30 @@ fun DisappearingScaffold(
             Modifier.imePadding()
         }
 
-    SubcomposeLayout(modifier = rootModifier) { constraints ->
+    Surface(
+        modifier = rootModifier,
+        color = MaterialTheme.colorScheme.background,
+        contentColor = MaterialTheme.colorScheme.onBackground,
+    ) {
+        ScaffoldLayout(
+            state = state,
+            topBar = topBar,
+            bottomBar = bottomBar,
+            floatingButton = floatingButton,
+            mainContent = mainContent,
+        )
+    }
+}
+
+@Composable
+private fun ScaffoldLayout(
+    state: DisappearingBarState,
+    topBar: (@Composable () -> Unit)?,
+    bottomBar: (@Composable () -> Unit)?,
+    floatingButton: (@Composable () -> Unit)?,
+    mainContent: @Composable (padding: PaddingValues) -> Unit,
+) {
+    SubcomposeLayout { constraints ->
         val layoutWidth = constraints.maxWidth
         val layoutHeight = constraints.maxHeight
         val looseConstraints = constraints.copy(minWidth = 0, minHeight = 0)
