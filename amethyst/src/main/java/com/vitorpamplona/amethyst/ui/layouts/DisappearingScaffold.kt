@@ -54,12 +54,13 @@ fun DisappearingScaffold(
     floatingButton: (@Composable () -> Unit)? = null,
     accountViewModel: AccountViewModel,
     isActive: () -> Boolean = { true },
+    allowBarHide: Boolean = true,
     mainContent: @Composable (padding: PaddingValues) -> Unit,
 ) {
     val state = rememberDisappearingBarState()
 
     val canScroll = {
-        isActive() && accountViewModel.settings.isImmersiveScrollingActive()
+        allowBarHide && isActive() && accountViewModel.settings.isImmersiveScrollingActive()
     }
 
     val connection =

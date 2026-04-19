@@ -55,6 +55,7 @@ fun EphemeralChatScreen(
             }
         },
         accountViewModel = accountViewModel,
+        allowBarHide = false,
     ) {
         Column(Modifier.padding(it)) {
             EphemeralChatChannelView(channelId, draft, replyTo, accountViewModel, nav)
