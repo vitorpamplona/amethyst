@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.model.topNavFeeds.favoriteDvm
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
-import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -32,20 +31,18 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 
 /**
- * Top-nav filter backed by the latest kind-6300 response from a favourite DVM.
- *
- * The filter is a pure immutable membership check: [match] accepts a note only if the
- * DVM's latest response included it. When a new response arrives, a new instance is
- * emitted through [FavoriteDvmFeedFlow] and replaces the active filter.
+ * Top-nav filter that unions the latest kind-6300 responses from every currently
+ * favourited DVM. Behaves like [FavoriteDvmTopNavFilter] (pure membership check
+ * against a snapshot), but the accepted set is the union across N DVMs and the
+ * request-id list carries one entry per DVM for the relay-listen subscription.
  */
 @Immutable
-class FavoriteDvmTopNavFilter(
-    val dvmAddress: Address,
+class AllFavoriteDvmsTopNavFilter(
     val acceptedIds: Set<HexKey>,
     val acceptedAddresses: Set<String>,
     val contentRelays: Set<NormalizedRelayUrl>,
     val listenRelays: Set<NormalizedRelayUrl>,
-    val requestId: HexKey?,
+    val requestIds: Set<HexKey>,
 ) : IFeedTopNavFilter {
     override fun matchAuthor(pubkey: HexKey): Boolean = true
 
@@ -65,6 +62,6 @@ class FavoriteDvmTopNavFilter(
                     )
                 },
             listenRelays = listenRelays,
-            requestIds = setOfNotNull(requestId),
+            requestIds = requestIds,
         )
 }

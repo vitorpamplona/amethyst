@@ -399,6 +399,7 @@ private fun groupFeedDefinitions(options: ImmutableList<FeedDefinition>): Map<Fe
                 when (entry.item.code) {
                     is TopFilter.AroundMe -> FeedGroup.LOCATIONS
                     is TopFilter.Global -> FeedGroup.RELAYS
+                    is TopFilter.AllFavoriteDvms -> FeedGroup.DVMS
                     else -> FeedGroup.FEEDS
                 }
             }
@@ -564,6 +565,10 @@ private fun FeedIcon(
             }
 
             is TopFilter.FavoriteDvm -> {
+                Icons.Outlined.AutoAwesome
+            }
+
+            is TopFilter.AllFavoriteDvms -> {
                 Icons.Outlined.AutoAwesome
             }
 

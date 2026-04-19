@@ -98,6 +98,12 @@ class TopNavFilterState(
             name = ResourceName(R.string.follow_list_chess),
         )
 
+    val allFavoriteDvmsFollow =
+        FeedDefinition(
+            code = TopFilter.AllFavoriteDvms,
+            name = ResourceName(R.string.follow_list_all_favorite_dvms),
+        )
+
     val defaultLists = persistentListOf(allFollows, userFollows, kind3Follows, aroundMe, globalFollow, muteListFollow)
 
     fun mergePeopleLists(
@@ -192,7 +198,12 @@ class TopNavFilterState(
                 )
             }
 
-        return (communities + hashtags + geotags + relays + favoriteDvms).sortedBy { it.name.name() }
+        // Only show the "All favourite DVMs" meta-chip when there is at least one
+        // real favourite to merge; otherwise the chip opens to an empty feed.
+        val allFavorites =
+            if (favoriteDvms.isNotEmpty()) listOf(allFavoriteDvmsFollow) else emptyList()
+
+        return (communities + hashtags + geotags + relays + allFavorites + favoriteDvms).sortedBy { it.name.name() }
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)

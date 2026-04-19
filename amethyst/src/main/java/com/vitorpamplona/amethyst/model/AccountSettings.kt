@@ -160,6 +160,8 @@ sealed class TopFilter(
     class FavoriteDvm(
         val address: Address,
     ) : TopFilter("FavoriteDvm/${address.toValue()}")
+
+    @Serializable object AllFavoriteDvms : TopFilter(" All Favourite DVMs ")
 }
 
 @Stable

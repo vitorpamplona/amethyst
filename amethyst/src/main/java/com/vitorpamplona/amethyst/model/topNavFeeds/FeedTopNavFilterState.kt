@@ -31,12 +31,14 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.allUserFollows.Kind3UserFoll
 import com.vitorpamplona.amethyst.model.topNavFeeds.aroundMe.AroundMeFeedFlow
 import com.vitorpamplona.amethyst.model.topNavFeeds.aroundMe.GeohashFeedFlow
 import com.vitorpamplona.amethyst.model.topNavFeeds.chess.ChessFeedFlow
+import com.vitorpamplona.amethyst.model.topNavFeeds.favoriteDvm.AllFavoriteDvmsFeedFlow
 import com.vitorpamplona.amethyst.model.topNavFeeds.favoriteDvm.FavoriteDvmFeedFlow
 import com.vitorpamplona.amethyst.model.topNavFeeds.global.GlobalFeedFlow
 import com.vitorpamplona.amethyst.model.topNavFeeds.hashtag.HashtagFeedFlow
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.NoteFeedFlow
 import com.vitorpamplona.amethyst.model.topNavFeeds.relay.RelayFeedFlow
 import com.vitorpamplona.amethyst.service.location.LocationState
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
@@ -65,6 +67,7 @@ class FeedTopNavFilterState(
     val signer: NostrSigner,
     val scope: CoroutineScope,
     val favoriteDvmOrchestrator: FavoriteDvmOrchestrator,
+    val favoriteDvmAddresses: StateFlow<Set<Address>>,
 ) {
     fun loadFlowsFor(listName: TopFilter): IFeedFlowsType =
         when (listName) {
@@ -149,6 +152,15 @@ class FeedTopNavFilterState(
             is TopFilter.FavoriteDvm -> {
                 FavoriteDvmFeedFlow(
                     dvmAddress = listName.address,
+                    orchestrator = favoriteDvmOrchestrator,
+                    outboxRelays = followsRelays,
+                    proxyRelays = proxyRelays,
+                )
+            }
+
+            TopFilter.AllFavoriteDvms -> {
+                AllFavoriteDvmsFeedFlow(
+                    favoriteDvmAddresses = favoriteDvmAddresses,
                     orchestrator = favoriteDvmOrchestrator,
                     outboxRelays = followsRelays,
                     proxyRelays = proxyRelays,

@@ -427,6 +427,7 @@ class Account(
             signer = signer,
             scope = scope,
             favoriteDvmOrchestrator = favoriteDvmOrchestrator,
+            favoriteDvmAddresses = favoriteDvmList.flow,
         ).flow
 
     // App-ready Feeds

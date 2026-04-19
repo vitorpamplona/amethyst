@@ -56,10 +56,10 @@ fun filterHomePostsByDvmIds(
         out += contentFetchFilters(relay, filter)
     }
 
-    val requestId = set.requestId
-    if (requestId != null) {
+    if (set.requestIds.isNotEmpty()) {
+        val requestIds = set.requestIds.toList()
         set.listenRelays.forEach { relay ->
-            out += responseListenFilter(relay, requestId)
+            out += responseListenFilter(relay, requestIds)
         }
     }
 
@@ -101,7 +101,7 @@ private fun contentFetchFilters(
 
 private fun responseListenFilter(
     relay: NormalizedRelayUrl,
-    requestId: HexKey,
+    requestIds: List<HexKey>,
 ) = RelayBasedFilter(
     relay = relay,
     filter =
@@ -111,7 +111,7 @@ private fun responseListenFilter(
                     NIP90ContentDiscoveryResponseEvent.KIND,
                     NIP90StatusEvent.KIND,
                 ),
-            tags = mapOf("e" to listOf(requestId)),
-            limit = 10,
+            tags = mapOf("e" to requestIds),
+            limit = 10 * requestIds.size,
         ),
 )

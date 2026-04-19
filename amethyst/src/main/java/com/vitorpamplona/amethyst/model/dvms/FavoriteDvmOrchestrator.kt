@@ -32,6 +32,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -40,6 +41,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+
+private const val RESPONSE_TIMEOUT_MS = 20_000L
 
 /**
  * Immutable snapshot of a favourite DVM's current request/response state.
@@ -165,6 +168,23 @@ class FavoriteDvmOrchestrator(
                             ).collectLatest { status ->
                                 seed.update { it.copy(latestStatus = status) }
                             }
+                    }
+
+                    // If nothing arrives within RESPONSE_TIMEOUT_MS (neither a 6300
+                    // response nor any 7000 status), surface an error so the banner
+                    // can show Retry instead of spinning forever.
+                    launch {
+                        delay(RESPONSE_TIMEOUT_MS)
+                        val current = seed.value
+                        val stillWaiting =
+                            current.requestId == requestId &&
+                                current.ids.isEmpty() &&
+                                current.addresses.isEmpty() &&
+                                current.latestStatus == null &&
+                                current.errorMessage == null
+                        if (stillWaiting) {
+                            seed.update { it.copy(errorMessage = "timeout") }
+                        }
                     }
                 } catch (e: Exception) {
                     if (e is CancellationException) throw e

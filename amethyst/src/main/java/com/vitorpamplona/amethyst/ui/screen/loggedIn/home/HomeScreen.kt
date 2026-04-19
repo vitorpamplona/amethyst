@@ -284,14 +284,17 @@ fun HomeFeeds(
 ) {
     val activeFilter by accountViewModel.account.settings.defaultHomeFollowList
         .collectAsStateWithLifecycle()
-    val activeDvm = activeFilter as? TopFilter.FavoriteDvm
+    val favoriteDvmAddresses by accountViewModel.account.favoriteDvmList.flow
+        .collectAsStateWithLifecycle()
 
     val onRefresh: () -> Unit = {
         feedState.invalidateData()
-        if (activeDvm != null) {
-            // Swiping down on Home should also re-issue the kind-5300 request so the
-            // DVM produces a fresh feed, not just re-render whatever's cached.
-            accountViewModel.refreshFavoriteDvm(activeDvm.address)
+        // Swiping down on Home should also re-issue the kind-5300 request(s) so the
+        // DVM(s) produce fresh feeds, not just re-render whatever's cached.
+        when (val filter = activeFilter) {
+            is TopFilter.FavoriteDvm -> accountViewModel.refreshFavoriteDvm(filter.address)
+            is TopFilter.AllFavoriteDvms -> favoriteDvmAddresses.forEach { accountViewModel.refreshFavoriteDvm(it) }
+            else -> Unit
         }
     }
 
