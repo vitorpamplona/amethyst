@@ -30,7 +30,6 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalView
@@ -38,8 +37,32 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
 import kotlin.math.abs
 
-// This keeps the position of all visible videos in the current screen.
-val trackingVideos = mutableSetOf<MediaControllerState>()
+/**
+ * Tracking entry pairs the [MediaControllerState] with its active flag so the
+ * mutex can update the loser/winner directly without a secondary lookup.
+ */
+private class TrackedVideo(
+    val controller: MediaControllerState,
+    val active: MutableState<Boolean>,
+)
+
+// Process-wide list of currently registered videos. Compose callbacks run on
+// the main thread so no synchronization is required. ArrayList beats HashSet
+// here because the only iteration is the rare re-election after the winner
+// disappears; adds/removes happen only when entering/leaving composition.
+private val trackingVideos = ArrayList<TrackedVideo>()
+
+// The closest video. Maintained as a single-winner cache so each scroll-frame
+// position update is O(1) instead of O(N) per video (O(N^2) total).
+private var winner: TrackedVideo? = null
+
+// Cached result of view.getGlobalVisibleRect. The compose root rarely changes
+// across a scroll burst; caching avoids N native calls per frame.
+private val cachedRootRect = Rect()
+private var cachedRootRectView: View? = null
+private var cachedRootRectVisible: Boolean = false
+private var cachedRootRectTimeNs: Long = 0L
+private const val ROOT_RECT_CACHE_TTL_NS = 8_000_000L // ~half a frame at 60fps
 
 /**
  * This function selects only one Video to be active. The video that is closest to the center of the
@@ -53,84 +76,145 @@ fun VideoPlayerActiveMutex(
     // Is the current video the closest to the center?
     val isClosestToTheCenterOfTheScreen = remember(controller) { mutableStateOf(false) }
 
+    val tracked =
+        remember(controller, isClosestToTheCenterOfTheScreen) {
+            TrackedVideo(controller, isClosestToTheCenterOfTheScreen)
+        }
+
     // Keep track of all available videos.
-    DisposableEffect(key1 = controller) {
-        trackingVideos.add(controller)
+    DisposableEffect(key1 = tracked) {
+        trackingVideos.add(tracked)
         onDispose {
-            trackingVideos.remove(controller)
+            trackingVideos.remove(tracked)
+            tracked.controller.visibility.distanceToCenter = null
+            if (winner === tracked) {
+                winner = null
+                electNewWinner()
+            }
         }
     }
 
     val view = LocalView.current
 
     val videoModifier =
-        remember(controller) {
-            Modifier.fillMaxWidth().heightIn(min = 120.dp).onVisiblePositionChanges(view) { bounds, distanceToCenter ->
-                controller.visibility.bounds = bounds
-                controller.visibility.distanceToCenter = distanceToCenter
-
-                if (distanceToCenter != null) {
-                    // finds out of the current video is the closest to the center.
-                    var newActive = true
-                    for (video in trackingVideos) {
-                        val videoPos = video.visibility.distanceToCenter
-                        if (videoPos != null && videoPos < distanceToCenter) {
-                            newActive = false
-                            break
-                        }
-                    }
-
-                    // marks the current video active
-                    if (isClosestToTheCenterOfTheScreen.value != newActive) {
-                        isClosestToTheCenterOfTheScreen.value = newActive
-                    }
-                } else {
-                    // got out of screen, marks video as inactive
-                    if (isClosestToTheCenterOfTheScreen.value) {
-                        isClosestToTheCenterOfTheScreen.value = false
-                    }
+        remember(tracked, view) {
+            Modifier.fillMaxWidth().heightIn(min = 120.dp).onGloballyPositioned { coordinates ->
+                if (!coordinates.isAttached) {
+                    reportPosition(tracked, null)
+                    return@onGloballyPositioned
                 }
+                val bounds = coordinates.boundsInWindow()
+                val left = bounds.left.toInt()
+                val top = bounds.top.toInt()
+                val right = bounds.right.toInt()
+                val bottom = bounds.bottom.toInt()
+                tracked.controller.visibility.setBounds(left, top, right, bottom)
+                reportPosition(tracked, distanceToCenter(view, left, top, right, bottom))
             }
         }
 
     inner(videoModifier, isClosestToTheCenterOfTheScreen)
 }
 
-fun Modifier.onVisiblePositionChanges(
-    view: View,
-    onVisiblePosition: (Rect, Float?) -> Unit,
-): Modifier =
-    onGloballyPositioned { coordinates ->
-        val bounds = coordinates.boundsInWindow()
-        val boundRect = Rect(bounds.left.toInt(), bounds.top.toInt(), bounds.right.toInt(), bounds.bottom.toInt())
-        onVisiblePosition(boundRect, coordinates.getDistanceToVertCenterIfVisible(boundRect, view))
+/**
+ * Single-winner update path. Called from onGloballyPositioned during scroll.
+ *
+ * Cost is O(1) for every position update except when the current winner becomes
+ * invisible — in that case we re-elect (O(N)). This brings the per-frame cost
+ * down from O(N^2) to O(N).
+ */
+private fun reportPosition(
+    tracked: TrackedVideo,
+    distanceToCenter: Float?,
+) {
+    val previous = tracked.controller.visibility.distanceToCenter
+    if (previous == distanceToCenter) return // nothing changed
+
+    tracked.controller.visibility.distanceToCenter = distanceToCenter
+
+    if (distanceToCenter == null) {
+        // Became invisible. Only meaningful work if this video was the winner.
+        if (winner === tracked) {
+            tracked.active.value = false
+            winner = null
+            electNewWinner()
+        }
+        return
     }
 
-fun LayoutCoordinates.getDistanceToVertCenterIfVisible(
-    bounds: Rect,
+    val current = winner
+    when {
+        current === tracked -> {
+            // Still the winner; distance was already updated above.
+        }
+
+        current == null -> {
+            // No winner yet — claim it.
+            winner = tracked
+            tracked.active.value = true
+        }
+
+        else -> {
+            val currentDistance = current.controller.visibility.distanceToCenter
+            if (currentDistance == null || distanceToCenter < currentDistance) {
+                // Dethrone the current winner.
+                current.active.value = false
+                winner = tracked
+                tracked.active.value = true
+            }
+        }
+    }
+}
+
+private fun electNewWinner() {
+    var bestDistance = Float.MAX_VALUE
+    var best: TrackedVideo? = null
+    val list = trackingVideos
+    for (i in list.indices) {
+        val tv = list[i]
+        val d = tv.controller.visibility.distanceToCenter ?: continue
+        if (d < bestDistance) {
+            bestDistance = d
+            best = tv
+        }
+    }
+    if (best != null) {
+        winner = best
+        best.active.value = true
+    }
+}
+
+/**
+ * Returns the cached visible-rect of the root view if it was computed within
+ * the last frame, otherwise refreshes the cache. The Rect is shared and must
+ * be treated as read-only by callers.
+ */
+private fun cachedGlobalVisibleRect(view: View): Rect? {
+    val now = System.nanoTime()
+    if (cachedRootRectView === view && (now - cachedRootRectTimeNs) < ROOT_RECT_CACHE_TTL_NS) {
+        return if (cachedRootRectVisible) cachedRootRect else null
+    }
+    cachedRootRectVisible = view.getGlobalVisibleRect(cachedRootRect)
+    cachedRootRectView = view
+    cachedRootRectTimeNs = now
+    return if (cachedRootRectVisible) cachedRootRect else null
+}
+
+private fun distanceToCenter(
     view: View,
+    left: Int,
+    top: Int,
+    right: Int,
+    bottom: Int,
 ): Float? {
-    if (!isAttached) return null
-    // Window relative bounds of our compose root view that are visible on the screen
-    val globalRootRect = Rect()
-    if (!view.getGlobalVisibleRect(globalRootRect)) {
-        // we aren't visible at all.
+    if (right <= left || bottom <= top) return null
+
+    val rootRect = cachedGlobalVisibleRect(view) ?: return null
+
+    // Make sure we are completely in bounds.
+    if (top < rootRect.top || left < rootRect.left || right > rootRect.right || bottom > rootRect.bottom) {
         return null
     }
 
-    if (bounds.isEmpty) return null
-
-    // Make sure we are completely in bounds.
-    if (
-        bounds.top >= globalRootRect.top &&
-        bounds.left >= globalRootRect.left &&
-        bounds.right <= globalRootRect.right &&
-        bounds.bottom <= globalRootRect.bottom
-    ) {
-        return abs(
-            ((bounds.top + bounds.bottom) / 2.0f) - ((globalRootRect.top + globalRootRect.bottom) / 2.0f),
-        )
-    }
-
-    return null
+    return abs(((top + bottom) / 2.0f) - ((rootRect.top + rootRect.bottom) / 2.0f))
 }

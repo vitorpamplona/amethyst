@@ -349,82 +349,95 @@ fun FeedDVM(
         Spacer(modifier = DoubleVertSpacer)
         Text(currentStatus, textAlign = TextAlign.Center)
 
-        if (status.code == "payment-required") {
-            val amountTag = latestStatus.firstAmount()
-            val amount = amountTag?.amount
+        DvmPaymentActions(
+            latestStatus = latestStatus,
+            accountViewModel = accountViewModel,
+            nav = nav,
+            onStatusUpdate = { currentStatus = it },
+        )
+    }
+}
 
-            val invoice = amountTag?.lnInvoice
+@Composable
+fun DvmPaymentActions(
+    latestStatus: NIP90StatusEvent,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+    onStatusUpdate: (String) -> Unit,
+) {
+    val status = latestStatus.status() ?: return
 
-            val thankYou = stringRes(id = R.string.dvm_waiting_to_confirm_payment)
-            val nwcPaymentRequest = stringRes(id = R.string.nwc_payment_request)
+    if (status.code != "payment-required") return
 
-            if (invoice != null) {
-                val context = LocalContext.current
-                Button(onClick = {
-                    if (accountViewModel.account.nip47SignerState.hasWalletConnectSetup()) {
-                        accountViewModel.sendZapPaymentRequestFor(
-                            bolt11 = invoice,
-                            zappedNote = null,
-                            onSent = {
-                                currentStatus = nwcPaymentRequest
-                            },
-                            onResponse = { response ->
-                                currentStatus =
-                                    if (response is PayInvoiceErrorResponse) {
-                                        stringRes(
-                                            context,
-                                            R.string.wallet_connect_pay_invoice_error_error,
-                                            response.error?.message
-                                                ?: response.error?.code?.toString() ?: "Error parsing error message",
-                                        )
-                                    } else {
-                                        thankYou
-                                    }
+    val amountTag = latestStatus.firstAmount()
+    val amount = amountTag?.amount
+    val invoice = amountTag?.lnInvoice
+
+    val thankYou = stringRes(id = R.string.dvm_waiting_to_confirm_payment)
+    val nwcPaymentRequest = stringRes(id = R.string.nwc_payment_request)
+
+    if (invoice != null) {
+        val context = LocalContext.current
+        Button(onClick = {
+            if (accountViewModel.account.nip47SignerState.hasWalletConnectSetup()) {
+                accountViewModel.sendZapPaymentRequestFor(
+                    bolt11 = invoice,
+                    zappedNote = null,
+                    onSent = {
+                        onStatusUpdate(nwcPaymentRequest)
+                    },
+                    onResponse = { response ->
+                        onStatusUpdate(
+                            if (response is PayInvoiceErrorResponse) {
+                                stringRes(
+                                    context,
+                                    R.string.wallet_connect_pay_invoice_error_error,
+                                    response.error?.message
+                                        ?: response.error?.code?.toString() ?: "Error parsing error message",
+                                )
+                            } else {
+                                thankYou
                             },
                         )
-                    } else {
-                        payViaIntent(
-                            invoice,
-                            context,
-                            onPaid = {
-                                currentStatus = thankYou
-                            },
-                            onError = {
-                                currentStatus = it
-                            },
-                        )
-                    }
-                }) {
-                    val amountInInvoice =
-                        try {
-                            LnInvoiceUtil.getAmountInSats(invoice).toLong()
-                        } catch (_: Exception) {
-                            null
-                        }
-
-                    if (amountInInvoice != null) {
-                        Text(text = "Pay $amountInInvoice sats to the DVM")
-                    } else {
-                        Text(text = "Pay Invoice from the DVM")
-                    }
-                }
-            } else if (amount != null) {
-                LoadNote(baseNoteHex = latestStatus.id, accountViewModel = accountViewModel) { stateNote ->
-                    stateNote?.let {
-                        ZapDVMButton(
-                            baseNote = it,
-                            amount = amount,
-                            grayTint = MaterialTheme.colorScheme.onPrimary,
-                            accountViewModel = accountViewModel,
-                            nav = nav,
-                        )
-                    }
-                }
+                    },
+                )
+            } else {
+                payViaIntent(
+                    invoice,
+                    context,
+                    onPaid = {
+                        onStatusUpdate(thankYou)
+                    },
+                    onError = {
+                        onStatusUpdate(it)
+                    },
+                )
             }
-        } else if (status.code == "processing") {
-            currentStatus = status.description
-        } else if (status.code == "error") {
-            currentStatus = status.description
+        }) {
+            val amountInInvoice =
+                try {
+                    LnInvoiceUtil.getAmountInSats(invoice).toLong()
+                } catch (_: Exception) {
+                    null
+                }
+
+            if (amountInInvoice != null) {
+                Text(text = "Pay $amountInInvoice sats to the DVM")
+            } else {
+                Text(text = "Pay Invoice from the DVM")
+            }
+        }
+    } else if (amount != null) {
+        LoadNote(baseNoteHex = latestStatus.id, accountViewModel = accountViewModel) { stateNote ->
+            stateNote?.let {
+                ZapDVMButton(
+                    baseNote = it,
+                    amount = amount,
+                    grayTint = MaterialTheme.colorScheme.onPrimary,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+            }
         }
     }
 }

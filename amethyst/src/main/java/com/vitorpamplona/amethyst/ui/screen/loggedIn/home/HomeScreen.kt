@@ -23,11 +23,13 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.home
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Arrangement.Absolute.spacedBy
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
@@ -209,23 +211,40 @@ private fun HomePages(
             HomeScreenFloatingButton(accountViewModel, nav)
         },
         accountViewModel = accountViewModel,
-    ) {
-        HorizontalPager(
-            state = pagerState,
-            userScrollEnabled = true,
-            modifier =
-                Modifier.zonedDrawerSwipe(
-                    pagerState = pagerState,
-                    openDrawer = nav::openDrawer,
-                ),
-        ) { page ->
-            HomeFeeds(
-                feedState = tabs[page].feedState,
-                routeForLastRead = tabs[page].routeForLastRead,
-                scrollStateKey = tabs[page].scrollStateKey,
-                liveSection = tabs[page].liveSection,
+    ) { paddingValues ->
+        // Wrap pager + banner in a Box so the banner can float over the feed
+        // (anchored top-center) instead of living in the topBar Column where
+        // it would push the tabs down every time it appears or disappears.
+        // The Box itself fills the full screen; inner LazyColumns pick up the
+        // scaffold padding from LocalDisappearingScaffoldPadding via
+        // rememberFeedContentPadding, so feed items still scroll behind the bars.
+        Box(modifier = Modifier.fillMaxSize()) {
+            HorizontalPager(
+                state = pagerState,
+                userScrollEnabled = true,
+                modifier =
+                    Modifier.zonedDrawerSwipe(
+                        pagerState = pagerState,
+                        openDrawer = nav::openDrawer,
+                    ),
+            ) { page ->
+                HomeFeeds(
+                    feedState = tabs[page].feedState,
+                    routeForLastRead = tabs[page].routeForLastRead,
+                    scrollStateKey = tabs[page].scrollStateKey,
+                    liveSection = tabs[page].liveSection,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+            }
+
+            HomeAlgoFeedStatusBanner(
                 accountViewModel = accountViewModel,
                 nav = nav,
+                modifier =
+                    Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = paddingValues.calculateTopPadding()),
             )
         }
     }
@@ -280,7 +299,23 @@ fun HomeFeeds(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    RefresheableBox(feedState, enablePullRefresh) {
+    val activeFilter by accountViewModel.account.settings.defaultHomeFollowList
+        .collectAsStateWithLifecycle()
+    val favoriteAlgoFeedAddresses by accountViewModel.account.favoriteAlgoFeedsList.flow
+        .collectAsStateWithLifecycle()
+
+    val onRefresh: () -> Unit = {
+        feedState.invalidateData()
+        // Swiping down on Home should also re-issue the kind-5300 request(s) so the
+        // DVM(s) produce fresh feeds, not just re-render whatever's cached.
+        when (val filter = activeFilter) {
+            is TopFilter.FavoriteAlgoFeed -> accountViewModel.refreshFavoriteAlgoFeed(filter.address)
+            is TopFilter.AllFavoriteAlgoFeeds -> favoriteAlgoFeedAddresses.forEach { accountViewModel.refreshFavoriteAlgoFeed(it) }
+            else -> Unit
+        }
+    }
+
+    RefresheableHomeBox(onRefresh, enablePullRefresh) {
         SaveableFeedContentState(feedState, scrollStateKey) { listState ->
             RenderFeedContentState(
                 feedContentState = feedState,
@@ -289,9 +324,25 @@ fun HomeFeeds(
                 nav = nav,
                 routeForLastRead = routeForLastRead,
                 onLoaded = { FeedLoaded(it, listState, routeForLastRead, liveSection, accountViewModel, nav) },
-                onEmpty = { HomeFeedEmpty(feedState::invalidateData) },
+                onEmpty = { HomeFeedEmpty(onRefresh) },
             )
         }
+    }
+}
+
+@Composable
+private fun RefresheableHomeBox(
+    onRefresh: () -> Unit,
+    enablePullRefresh: Boolean,
+    content: @Composable androidx.compose.foundation.layout.BoxScope.() -> Unit,
+) {
+    if (enablePullRefresh) {
+        RefresheableBox(onRefresh = onRefresh, content = content)
+    } else {
+        androidx.compose.foundation.layout.Box(
+            Modifier.fillMaxSize(),
+            content = content,
+        )
     }
 }
 

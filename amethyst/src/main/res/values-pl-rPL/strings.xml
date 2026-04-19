@@ -1346,6 +1346,9 @@
     <string name="private_inbox_section">Odbiorcze transmitery DM</string>
     <string name="private_inbox_section_explainer_profile">Użytkownik otrzymuje DM na tych transmiterach</string>
     <string name="private_inbox_section_explainer">Wstaw od 1 do 3 transmiterów, które będą służyć jako Twoja prywatna skrzynka odbiorcza. Inni będą używać tych transmiterów do wysyłania wiadomości DM do Ciebie. Transmitery odbiorcze DM powinny akceptować dowolne wiadomości od każdego, ale pozwalać tylko na ich pobieranie. Dobre opcje to:\n - inbox.nostr.wine (płatny)\n - you.nostr1.com (transmitery osobiste - płatny)</string>
+    <string name="keypackages">Pakiety kluczy</string>
+    <string name="keypackage_section">Transmitery pakietu kluczy</string>
+    <string name="keypackage_section_explainer">Transmitery, na których publikowane są Twoje pakiety kluczy MLS (MIP-00). Inni użytkownicy pobierają te pakiety kluczy, aby zaprosić Cię do czatów grupowych w aplikacji Marmot. Wprowadź od 1 do 3 transmiterów, które akceptują zdarzenia związane z pakietami kluczy od Ciebie i zezwalają na publiczny dostęp do tych danych.</string>
     <string name="private_outbox_section">Transmitery Prywatne</string>
     <string name="private_outbox_section_explainer">Wstaw od 1 do 3 transmiterów przechowujących dane zdarzeń, których nikt inny nie widzi, takich jak Wersje robocze i/lub ustawienia aplikacji. Idealnie byłoby, gdyby te transmitery były lokalne lub wymagały uwierzytelnienia przed pobraniem treści każdego użytkownika.</string>
     <string name="kind_3_section">Transmitery ogólne</string>

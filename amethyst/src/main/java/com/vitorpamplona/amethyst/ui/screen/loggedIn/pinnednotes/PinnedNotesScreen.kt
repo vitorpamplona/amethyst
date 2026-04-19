@@ -20,16 +20,24 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.pinnednotes
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
+import com.vitorpamplona.amethyst.ui.components.DeletedItemsBanner
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
@@ -59,28 +67,62 @@ fun PinnedNotesScreen(
     // Preload all pinned events so they don't load one-by-one when scrolling
     PreloadPinnedEvents(pinState, accountViewModel)
 
-    RenderPinnedNotesScreen(pinnedNotesFeedViewModel, accountViewModel, nav)
+    RenderPinnedNotesScreen(pinnedNotesFeedViewModel, pinState, accountViewModel, nav)
 }
 
 @Composable
 private fun RenderPinnedNotesScreen(
     pinnedNotesFeedViewModel: PinnedNotesFeedViewModel,
+    pinState: List<Note>?,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    var bannerDismissed by remember { mutableStateOf(false) }
+    val deletedPins =
+        remember(pinState) {
+            pinState
+                ?.filter { note ->
+                    note.event?.let(accountViewModel.account.cache::hasBeenDeleted) == true
+                }.orEmpty()
+        }
+
+    LaunchedEffect(deletedPins) {
+        if (deletedPins.isEmpty()) bannerDismissed = false
+    }
+
     DisappearingScaffold(
         isInvertedLayout = false,
         topBar = {
             TopBarWithBackButton(stringRes(id = R.string.pinned_notes), nav::popBack)
         },
         accountViewModel = accountViewModel,
-    ) {
-        RefresheableFeedView(
-            pinnedNotesFeedViewModel,
-            null,
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
+    ) { paddingValues ->
+        // Feed fills the screen so items scroll behind the top bar (via
+        // rememberFeedContentPadding); banner overlays at the top, offset down
+        // by the scaffold's top padding so it sits below the bar.
+        Box(modifier = Modifier.fillMaxSize()) {
+            RefresheableFeedView(
+                pinnedNotesFeedViewModel,
+                null,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+
+            if (!bannerDismissed && deletedPins.isNotEmpty()) {
+                DeletedItemsBanner(
+                    count = deletedPins.size,
+                    onRemove = {
+                        accountViewModel.removeDeletedPins(deletedPins.toSet())
+                        bannerDismissed = true
+                    },
+                    onDismiss = { bannerDismissed = true },
+                    modifier =
+                        Modifier
+                            .align(Alignment.TopCenter)
+                            .padding(top = paddingValues.calculateTopPadding()),
+                )
+            }
+        }
     }
 }
 

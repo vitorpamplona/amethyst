@@ -49,6 +49,7 @@ fun VideoViewInner(
     automaticallyStartPlayback: Boolean,
     controllerVisible: MutableState<Boolean> = mutableStateOf(false),
     onZoom: (() -> Unit)? = null,
+    hasBlurhash: Boolean = false,
     accountViewModel: AccountViewModel,
 ) {
     // keeps a copy of the value to avoid recompositions here when the DEFAULT value changes
@@ -82,6 +83,7 @@ fun VideoViewInner(
                     videoModifier = videoModifier,
                     controllerVisible = controllerVisible,
                     onDialog = onZoom,
+                    hasBlurhash = hasBlurhash,
                     accountViewModel = accountViewModel,
                 )
             }

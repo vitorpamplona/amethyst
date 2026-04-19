@@ -535,6 +535,7 @@ private fun RenderImageOrVideo(
                     controllerVisible = controllerVisible,
                     accountViewModel = accountViewModel,
                     alwayShowImage = true,
+                    fullResolution = true,
                 )
             }
 
@@ -568,6 +569,7 @@ private fun RenderImageOrVideo(
                         nostrUriCallback = content.uri,
                         automaticallyStartPlayback = true,
                         controllerVisible = controllerVisible,
+                        hasBlurhash = content.blurhash != null,
                         accountViewModel = accountViewModel,
                     )
                 }
@@ -592,6 +594,7 @@ private fun RenderImageOrVideo(
                     controllerVisible = controllerVisible,
                     accountViewModel = accountViewModel,
                     alwayShowImage = true,
+                    fullResolution = true,
                 )
             }
 
@@ -626,6 +629,7 @@ private fun RenderImageOrVideo(
                             nostrUriCallback = content.uri,
                             automaticallyStartPlayback = true,
                             controllerVisible = controllerVisible,
+                            hasBlurhash = content.blurhash != null,
                             accountViewModel = accountViewModel,
                         )
                     }

@@ -56,5 +56,20 @@ class MediaControllerState(
 @Stable
 class VisibilityData {
     var bounds: Rect? = null
+        private set
     var distanceToCenter: Float? = null
+
+    fun setBounds(
+        left: Int,
+        top: Int,
+        right: Int,
+        bottom: Int,
+    ) {
+        val current = bounds
+        if (current == null) {
+            bounds = Rect(left, top, right, bottom)
+        } else {
+            current.set(left, top, right, bottom)
+        }
+    }
 }

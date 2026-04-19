@@ -38,6 +38,7 @@ import com.vitorpamplona.amethyst.commons.model.nip38UserStatuses.UserStatusActi
 import com.vitorpamplona.amethyst.commons.model.nip56Reports.ReportAction
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.logTime
+import com.vitorpamplona.amethyst.model.algoFeeds.FavoriteAlgoFeedsOrchestrator
 import com.vitorpamplona.amethyst.model.edits.PrivateStorageRelayListDecryptionCache
 import com.vitorpamplona.amethyst.model.edits.PrivateStorageRelayListState
 import com.vitorpamplona.amethyst.model.localRelays.ForwardKind0ToLocalRelayState
@@ -66,6 +67,8 @@ import com.vitorpamplona.amethyst.model.nip51Lists.blockedRelays.BlockedRelayLis
 import com.vitorpamplona.amethyst.model.nip51Lists.blockedRelays.BlockedRelayListState
 import com.vitorpamplona.amethyst.model.nip51Lists.broadcastRelays.BroadcastRelayListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.broadcastRelays.BroadcastRelayListState
+import com.vitorpamplona.amethyst.model.nip51Lists.favoriteAlgoFeedsLists.FavoriteAlgoFeedsListDecryptionCache
+import com.vitorpamplona.amethyst.model.nip51Lists.favoriteAlgoFeedsLists.FavoriteAlgoFeedsListState
 import com.vitorpamplona.amethyst.model.nip51Lists.geohashLists.GeohashListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.geohashLists.GeohashListState
 import com.vitorpamplona.amethyst.model.nip51Lists.hashtagLists.HashtagListDecryptionCache
@@ -134,6 +137,7 @@ import com.vitorpamplona.quartz.experimental.profileGallery.mimeType
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageUtils
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupStateStore
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -150,8 +154,11 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.countHashtags
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
 import com.vitorpamplona.quartz.nip01Core.tags.references.references
 import com.vitorpamplona.quartz.nip03Timestamp.OtsResolver
@@ -186,6 +193,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Request
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
@@ -194,6 +202,12 @@ import com.vitorpamplona.quartz.nip57Zaps.PrivateZapCache
 import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetup
 import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplits
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiser
+import com.vitorpamplona.quartz.nip58Badges.accepted.AcceptedBadgeSetEvent
+import com.vitorpamplona.quartz.nip58Badges.accepted.tags.AcceptedBadge
+import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
+import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
+import com.vitorpamplona.quartz.nip58Badges.definition.tags.ThumbTag
+import com.vitorpamplona.quartz.nip58Badges.profile.ProfileBadgesEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.EphemeralGiftWrapEvent
@@ -230,6 +244,7 @@ import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 import com.vitorpamplona.quartz.nipB0WebBookmarks.WebBookmarkEvent
 import com.vitorpamplona.quartz.utils.DualCase
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.containsAny
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -242,6 +257,8 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.math.BigDecimal
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -321,6 +338,10 @@ class Account(
 
     val hashtagListDecryptionCache = HashtagListDecryptionCache(signer)
     val hashtagList = HashtagListState(signer, cache, hashtagListDecryptionCache, scope, settings)
+
+    val favoriteAlgoFeedsListDecryptionCache = FavoriteAlgoFeedsListDecryptionCache(signer)
+    val favoriteAlgoFeedsList = FavoriteAlgoFeedsListState(signer, cache, favoriteAlgoFeedsListDecryptionCache, scope, settings)
+    val favoriteAlgoFeedsOrchestrator = FavoriteAlgoFeedsOrchestrator(this, scope)
 
     val geohashListDecryptionCache = GeohashListDecryptionCache(signer)
     val geohashList = GeohashListState(signer, cache, geohashListDecryptionCache, scope, settings)
@@ -417,6 +438,8 @@ class Account(
             caches = feedDecryptionCaches,
             signer = signer,
             scope = scope,
+            favoriteAlgoFeedsOrchestrator = favoriteAlgoFeedsOrchestrator,
+            favoriteAlgoFeedAddresses = favoriteAlgoFeedsList.flow,
         ).flow
 
     // App-ready Feeds
@@ -449,6 +472,9 @@ class Account(
 
     val liveArticlesFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultArticlesFollowList)
     val liveArticlesFollowListsPerRelay = OutboxLoaderState(liveArticlesFollowLists, cache, scope).flow
+
+    val liveBadgesFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultBadgesFollowList)
+    val liveBadgesFollowListsPerRelay = OutboxLoaderState(liveBadgesFollowLists, cache, scope).flow
 
     override fun isWriteable(): Boolean = settings.isWriteable()
 
@@ -1012,6 +1038,12 @@ class Account(
 
     suspend fun unfollowHashtag(tag: String) = sendMyPublicAndPrivateOutbox(hashtagList.unfollow(tag))
 
+    suspend fun followFavoriteAlgoFeed(dvm: AddressBookmark) = sendMyPublicAndPrivateOutbox(favoriteAlgoFeedsList.follow(dvm))
+
+    suspend fun unfollowFavoriteAlgoFeed(dvm: Address) = sendMyPublicAndPrivateOutbox(favoriteAlgoFeedsList.unfollow(dvm))
+
+    fun isFavoriteAlgoFeed(dvm: Address): Boolean = favoriteAlgoFeedsList.flow.value.contains(dvm)
+
     suspend fun followGeohash(geohash: String) = sendMyPublicAndPrivateOutbox(geohashList.follow(geohash))
 
     suspend fun unfollowGeohash(geohash: String) = sendMyPublicAndPrivateOutbox(geohashList.unfollow(geohash))
@@ -1065,6 +1097,136 @@ class Account(
 
         cache.justConsumeMyOwnEvent(signedEvent)
         client.publish(signedEvent, computeRelayListToBroadcast(signedEvent))
+    }
+
+    suspend fun sendBadgeDefinition(
+        badgeId: String,
+        name: String?,
+        imageUrl: String?,
+        imageDim: DimensionTag?,
+        description: String?,
+        thumbs: List<ThumbTag> = emptyList(),
+    ) {
+        if (!isWriteable()) return
+
+        val template =
+            BadgeDefinitionEvent.build(
+                badgeId = badgeId,
+                name = name,
+                imageUrl = imageUrl,
+                imageDimensions = imageDim,
+                description = description,
+                thumbs = thumbs,
+            )
+        val signedEvent = signer.sign(template)
+
+        cache.justConsumeMyOwnEvent(signedEvent)
+        client.publish(signedEvent, outboxRelays.flow.value)
+    }
+
+    suspend fun deleteBadgeDefinition(event: BadgeDefinitionEvent) {
+        if (!isWriteable()) return
+        if (event.pubKey != signer.pubKey) return
+
+        val template = DeletionEvent.build(listOf(event))
+        val signedEvent = signer.sign(template)
+
+        cache.justConsumeMyOwnEvent(signedEvent)
+        client.publish(signedEvent, computeRelayListToBroadcast(signedEvent))
+    }
+
+    suspend fun sendBadgeAward(
+        definition: BadgeDefinitionEvent,
+        awardees: List<PTag>,
+    ) {
+        if (!isWriteable()) return
+        if (awardees.isEmpty()) return
+
+        val aTag = ATag(definition.kind, definition.pubKey, definition.dTag(), null)
+        val template = BadgeAwardEvent.build(aTag, awardees)
+        val signedEvent = signer.sign(template)
+
+        val relays =
+            outboxRelays.flow.value +
+                awardees
+                    .flatMap { cache.getOrCreateUser(it.pubKey).inboxRelays() ?: emptyList() }
+                    .toSet()
+
+        cache.justConsumeMyOwnEvent(signedEvent)
+        client.publish(signedEvent, relays)
+    }
+
+    private fun loadCurrentAcceptedBadges(): List<AcceptedBadge> {
+        val newNote = cache.getAddressableNoteIfExists(ProfileBadgesEvent.createAddress(signer.pubKey))
+        val newEvent = newNote?.event as? ProfileBadgesEvent
+        if (newEvent != null) return newEvent.acceptedBadges()
+
+        val oldNote = cache.getAddressableNoteIfExists(AcceptedBadgeSetEvent.createAddress(signer.pubKey))
+        val oldEvent = oldNote?.event as? AcceptedBadgeSetEvent
+        return oldEvent?.acceptedBadges() ?: emptyList()
+    }
+
+    /**
+     * Serializes read-modify-write of the accepted-badges replaceable event so two
+     * rapid toggles can't race each other into losing updates.
+     */
+    private val profileBadgesMutex = Mutex()
+
+    /**
+     * Returns a createdAt strictly greater than whatever ProfileBadgesEvent (or
+     * the legacy AcceptedBadgeSetEvent) currently sits in cache. Needed because
+     * LocalCache.consumeBaseReplaceable drops updates whose createdAt isn't
+     * strictly greater, and TimeUtils.now() has only second resolution.
+     */
+    private fun nextProfileBadgesCreatedAt(): Long {
+        val latest =
+            maxOf(
+                (cache.getAddressableNoteIfExists(ProfileBadgesEvent.createAddress(signer.pubKey))?.event?.createdAt) ?: 0L,
+                (cache.getAddressableNoteIfExists(AcceptedBadgeSetEvent.createAddress(signer.pubKey))?.event?.createdAt) ?: 0L,
+            )
+        return maxOf(TimeUtils.now(), latest + 1)
+    }
+
+    suspend fun addAcceptedBadge(
+        award: BadgeAwardEvent,
+        definition: BadgeDefinitionEvent,
+    ) {
+        if (!isWriteable()) return
+
+        val aTag = ATag(definition.kind, definition.pubKey, definition.dTag(), null)
+        val eTag = ETag(award.id)
+
+        val signedEvent =
+            profileBadgesMutex.withLock {
+                val current = loadCurrentAcceptedBadges()
+                if (current.any { it.badgeAward.eventId == award.id }) return
+                val updated = current + AcceptedBadge(aTag, eTag)
+
+                val template = ProfileBadgesEvent.build(updated, createdAt = nextProfileBadgesCreatedAt())
+                val signed = signer.sign(template)
+                cache.justConsumeMyOwnEvent(signed)
+                signed
+            }
+
+        client.publish(signedEvent, outboxRelays.flow.value)
+    }
+
+    suspend fun removeAcceptedBadge(award: BadgeAwardEvent) {
+        if (!isWriteable()) return
+
+        val signedEvent =
+            profileBadgesMutex.withLock {
+                val current = loadCurrentAcceptedBadges()
+                val updated = current.filterNot { it.badgeAward.eventId == award.id }
+                if (updated.size == current.size) return
+
+                val template = ProfileBadgesEvent.build(updated, createdAt = nextProfileBadgesCreatedAt())
+                val signed = signer.sign(template)
+                cache.justConsumeMyOwnEvent(signed)
+                signed
+            }
+
+        client.publish(signedEvent, outboxRelays.flow.value)
     }
 
     fun sendMyPublicAndPrivateOutbox(event: Event?) {
@@ -2195,6 +2357,24 @@ class Account(
         }
     }
 
+    suspend fun removeDeletedBookmarks(
+        deletedEventIds: Set<String>,
+        deletedAddresses: Set<Address>,
+    ) {
+        if (!isWriteable()) return
+        val event = bookmarkState.removeDeletedBookmarks(deletedEventIds, deletedAddresses) ?: return
+        sendMyPublicAndPrivateOutbox(event)
+    }
+
+    suspend fun removeDeletedOldBookmarks(
+        deletedEventIds: Set<String>,
+        deletedAddresses: Set<Address>,
+    ) {
+        if (!isWriteable()) return
+        val event = oldBookmarkState.removeDeletedBookmarks(deletedEventIds, deletedAddresses) ?: return
+        sendMyPublicAndPrivateOutbox(event)
+    }
+
     /**
      * Creates a bookmark event without sending it.
      * Returns the event and target relays for tracked broadcasting.
@@ -2293,6 +2473,13 @@ class Account(
         }
     }
 
+    suspend fun removeDeletedPins(deletedNotes: Set<Note>) {
+        if (!isWriteable()) return
+
+        val event = pinState.removeDeletedPins(deletedNotes) ?: return
+        sendMyPublicAndPrivateOutbox(event)
+    }
+
     suspend fun createAddPinEvent(note: Note): Pair<Event, Set<NormalizedRelayUrl>>? {
         if (!isWriteable() || note.isDraft()) return null
 
@@ -2341,7 +2528,7 @@ class Account(
 
     suspend fun requestDVMContentDiscovery(
         dvmPublicKey: User,
-        onReady: (event: NIP90ContentDiscoveryRequestEvent) -> Unit,
+        onReady: (event: NIP90ContentDiscoveryRequestEvent, relays: Set<NormalizedRelayUrl>) -> Unit,
     ) {
         val relays = nip65RelayList.inboxFlow.value.toSet()
         val request = signer.sign<NIP90ContentDiscoveryRequestEvent>(NIP90ContentDiscoveryRequestEvent.build(dvmPublicKey.pubkeyHex, signer.pubKey, relays))
@@ -2351,7 +2538,7 @@ class Account(
                 ?: (dvmPublicKey.allUsedRelays() + cache.relayHints.hintsForKey(dvmPublicKey.pubkeyHex))
 
         cache.justConsumeMyOwnEvent(request)
-        onReady(request)
+        onReady(request, relayList.toSet())
         delay(100)
         client.publish(request, relayList)
     }

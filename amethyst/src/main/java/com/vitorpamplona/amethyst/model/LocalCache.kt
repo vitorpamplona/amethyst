@@ -65,6 +65,7 @@ import com.vitorpamplona.quartz.experimental.notifications.wake.WakeUpEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
@@ -148,6 +149,7 @@ import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
+import com.vitorpamplona.quartz.nip51Lists.favoriteAlgoFeedsList.FavoriteAlgoFeedsListEvent
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
 import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
@@ -2627,12 +2629,14 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is RelayFeedsListEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is JesterEvent -> consumeRegularEvent(event, relay, wasVerified)
                 is KeyPackageEvent -> consumeBaseReplaceable(event, relay, wasVerified)
+                is KeyPackageRelayListEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is LiveChessGameChallengeEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is LiveChessGameAcceptEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is LiveChessMoveEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is LiveChessGameEndEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is LiveChessDrawOfferEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is HashtagListEvent -> consumeBaseReplaceable(event, relay, wasVerified)
+                is FavoriteAlgoFeedsListEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is HighlightEvent -> consumeRegularEvent(event, relay, wasVerified)
                 is IndexerRelayListEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is InteractiveStoryPrologueEvent -> consumeBaseReplaceable(event, relay, wasVerified)

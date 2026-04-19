@@ -419,6 +419,40 @@
     <string name="polls">Polls</string>
     <string name="open_polls">Open</string>
     <string name="closed_polls">Closed</string>
+    <string name="badges">Badges</string>
+    <string name="received_badges">Received</string>
+    <string name="my_badges">Mine</string>
+    <string name="awarded_badges">Awarded</string>
+    <string name="discover_badges">Discover</string>
+    <string name="new_badge">New Badge</string>
+    <string name="edit_badge">Edit Badge</string>
+    <string name="award_badge">Award Badge</string>
+    <string name="accept_badge">Accept</string>
+    <string name="reject_badge">Reject</string>
+    <string name="unaccept_badge">Remove from profile</string>
+    <string name="badge_id_label">Badge ID (d-tag)</string>
+    <string name="badge_id_placeholder">bravery, contributor-2025…</string>
+    <string name="badge_name_label">Name</string>
+    <string name="badge_name_placeholder">Human-readable badge name</string>
+    <string name="badge_description_label">Description</string>
+    <string name="badge_description_placeholder">Why is this badge awarded?</string>
+    <string name="badge_image_label">Image URL (1024×1024)</string>
+    <string name="badge_image_placeholder">https://example.com/badge.png</string>
+    <string name="badge_thumb_label">Thumbnail URL (optional)</string>
+    <string name="badge_thumb_placeholder">https://example.com/badge-thumb.png</string>
+    <string name="badge_upload_image_cta">Upload an image</string>
+    <string name="badge_upload_image_hint">Pick a square image to be the face of your badge.</string>
+    <string name="award_badge_loading">Loading badge…</string>
+    <string name="award_badge_search_label">Search users</string>
+    <string name="award_badge_search_placeholder">Name, npub, or NIP-05</string>
+    <string name="award_badge_remove_recipient">Remove</string>
+    <string name="badge_untitled">Untitled badge</string>
+    <string name="badge_awardees_label">Awarded to %1$d</string>
+    <string name="badge_award_received_title">You received a badge</string>
+    <string name="profile_badges_title">Profile badges</string>
+    <string name="profile_badges_header">Badges · %1$d</string>
+    <string name="profile_badges_description">Choose which of the badges you\'ve received appear on your profile.</string>
+    <string name="profile_badges_empty">You haven\'t received any badges yet.</string>
     <string name="pictures">Pictures</string>
     <string name="shorts">Shorts</string>
     <string name="longs">Videos</string>
@@ -434,6 +468,10 @@
     <string name="pinned_notes_explainer">Your pinned notes</string>
     <string name="pin_to_profile">Pin to Profile</string>
     <string name="unpin_from_profile">Unpin from Profile</string>
+
+    <string name="deleted_items_banner_title">%1$d item(s) in this list have been deleted by their author.</string>
+    <string name="deleted_items_banner_remove">Remove from list</string>
+    <string name="deleted_items_banner_dismiss">Dismiss</string>
 
     <string name="bookmark_lists">Bookmark Lists</string>
     <string name="bookmark_list_icon_label">Icon for bookmark list</string>
@@ -624,6 +662,7 @@
     <string name="follow_list_aroundme">Around Me</string>
     <string name="follow_list_global">Global</string>
     <string name="follow_list_chess">Chess</string>
+    <string name="follow_list_mine">Mine</string>
     <string name="follow_list_mute_list">Mute List</string>
 
     <string name="follow_sets">Follow Lists</string>
@@ -1562,6 +1601,7 @@
     <string name="private_inbox_section">DM Inbox Relays</string>
     <string name="private_inbox_section_explainer_profile">User receives DMs on these relays</string>
     <string name="private_inbox_section_explainer">Insert between 1–3 relays to serve as your private inbox. Others will use these relays to send DMs to you. DM Inbox relays should accept any message from anyone, but only allow you to download them. Good options are:\n - inbox.nostr.wine (paid)\n - auth.nostr1.com (free)\n - you.nostr1.com (personal relays - paid)</string>
+    <string name="keypackages">KeyPackages</string>
     <string name="keypackage_section">KeyPackage Relays</string>
     <string name="keypackage_section_explainer">Relays where your MLS KeyPackages are published (MIP-00). Other users fetch these KeyPackages to invite you into Marmot group chats. Insert between 1–3 relays that accept KeyPackage events from you and allow public reads.</string>
     <string name="private_outbox_section">Private Home Relays</string>
@@ -1727,7 +1767,21 @@
     <string name="feed_group_locations">Locations</string>
     <string name="feed_group_communities">Communities</string>
     <string name="feed_group_lists">Lists</string>
+    <string name="feed_group_dvms">Feed Algorithms</string>
+    <string name="follow_list_all_favorite_dvms">All favorite feed algorithms</string>
     <string name="feed_group_relays">Relays</string>
+
+    <string name="add_dvm_to_favorites">Add feed algorithm to favorites</string>
+    <string name="remove_dvm_from_favorites">Remove from favorites</string>
+    <string name="favorite_dvms_title">Favorite Feed Algorithms</string>
+    <string name="favorite_dvms_explainer">Feed algorithms you starred here appear as filter chips on the Home feed. Open Discover to add more.</string>
+    <string name="favorite_dvms_empty">No favorite feed algorithms yet. Open Discover, tap one, and star it to add it here.</string>
+    <string name="dvm_home_status_requesting">Asking %1$s for a feed…</string>
+    <string name="dvm_home_status_requesting_all">Asking your favorite feed algorithms for feeds…</string>
+    <string name="dvm_home_status_processing">Processing your feed…</string>
+    <string name="dvm_home_status_payment_required">This feed algorithm requires payment</string>
+    <string name="dvm_home_status_error">The feed algorithm returned an error</string>
+    <string name="dvm_home_retry">Retry</string>
 
     <string name="temporary_account">Log off on device lock</string>
     <string name="private_message">Private Message</string>

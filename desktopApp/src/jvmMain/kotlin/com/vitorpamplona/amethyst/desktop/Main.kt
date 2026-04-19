@@ -88,12 +88,17 @@ import com.vitorpamplona.amethyst.desktop.ui.LoginScreen
 import com.vitorpamplona.amethyst.desktop.ui.ZapFeedback
 import com.vitorpamplona.amethyst.desktop.ui.auth.ForceLogoutDialog
 import com.vitorpamplona.amethyst.desktop.ui.chats.DmSendTracker
-import com.vitorpamplona.amethyst.desktop.ui.deck.AddColumnDialog
+import com.vitorpamplona.amethyst.desktop.ui.deck.AppDrawer
 import com.vitorpamplona.amethyst.desktop.ui.deck.DeckColumnType
 import com.vitorpamplona.amethyst.desktop.ui.deck.DeckLayout
 import com.vitorpamplona.amethyst.desktop.ui.deck.DeckSidebar
 import com.vitorpamplona.amethyst.desktop.ui.deck.DeckState
+import com.vitorpamplona.amethyst.desktop.ui.deck.PinnedNavBarState
 import com.vitorpamplona.amethyst.desktop.ui.deck.SinglePaneLayout
+import com.vitorpamplona.amethyst.desktop.ui.deck.SinglePaneState
+import com.vitorpamplona.amethyst.desktop.ui.deck.Workspace
+import com.vitorpamplona.amethyst.desktop.ui.deck.WorkspaceManager
+import com.vitorpamplona.amethyst.desktop.ui.deck.param
 import com.vitorpamplona.amethyst.desktop.ui.media.LocalAwtWindow
 import com.vitorpamplona.amethyst.desktop.ui.media.LocalIsImmersiveFullscreen
 import com.vitorpamplona.amethyst.desktop.ui.media.LocalWindowState
@@ -190,9 +195,10 @@ fun main() {
         var replyToNote by remember { mutableStateOf<com.vitorpamplona.quartz.nip01Core.core.Event?>(null) }
         val deckScope = rememberCoroutineScope()
         val deckState = remember { DeckState(deckScope).also { it.load() } }
+        val workspaceManager = remember { WorkspaceManager(deckScope).also { it.load() } }
         val accountManager = remember { AccountManager.create() }
         val accountState by accountManager.accountState.collectAsState()
-        var showAddColumnDialog by remember { mutableStateOf(false) }
+        var showAppDrawer by remember { mutableStateOf(false) }
 
         // Tor state at Window level — survives key() app rebuild
         var torSettings by remember {
@@ -236,6 +242,42 @@ fun main() {
                                 KeyShortcut(Key.N, ctrl = true)
                             },
                         onClick = { showComposeDialog = true },
+                    )
+                    Item(
+                        "Save as Workspace",
+                        shortcut =
+                            if (isMacOS) {
+                                KeyShortcut(Key.S, meta = true, shift = true)
+                            } else {
+                                KeyShortcut(Key.S, ctrl = true, shift = true)
+                            },
+                        onClick = {
+                            if (workspaceManager.workspaces.value.size < WorkspaceManager.MAX_WORKSPACES) {
+                                val columns =
+                                    deckState.columns.value.map { col ->
+                                        Workspace.WorkspaceColumn(
+                                            typeKey = col.type.typeKey(),
+                                            param = col.type.param(),
+                                            width = col.width,
+                                        )
+                                    }
+                                val ws =
+                                    Workspace(
+                                        name = "Workspace ${workspaceManager.workspaces.value.size + 1}",
+                                        iconName = "Star",
+                                        layoutMode = layoutMode,
+                                        columns = columns,
+                                        singlePaneScreens =
+                                            if (layoutMode == LayoutMode.SINGLE_PANE) {
+                                                columns.map { it.typeKey }
+                                            } else {
+                                                emptyList()
+                                            },
+                                    )
+                                workspaceManager.addWorkspace(ws)
+                            }
+                        },
+                        enabled = workspaceManager.workspaces.value.size < WorkspaceManager.MAX_WORKSPACES,
                     )
                     Separator()
                     Item(
@@ -300,6 +342,17 @@ fun main() {
                 }
                 Menu("View") {
                     Item(
+                        "App Drawer",
+                        shortcut =
+                            if (isMacOS) {
+                                KeyShortcut(Key.K, meta = true)
+                            } else {
+                                KeyShortcut(Key.K, ctrl = true)
+                            },
+                        onClick = { showAppDrawer = !showAppDrawer },
+                    )
+                    Separator()
+                    Item(
                         if (layoutMode == LayoutMode.DECK) "\u2713 Deck Layout" else "Deck Layout",
                         shortcut =
                             if (isMacOS) {
@@ -323,7 +376,7 @@ fun main() {
                                 } else {
                                     KeyShortcut(Key.T, ctrl = true)
                                 },
-                            onClick = { showAddColumnDialog = true },
+                            onClick = { showAppDrawer = true },
                         )
                         Item(
                             "Close Column",
@@ -432,10 +485,15 @@ fun main() {
                 key(appRestartKey) {
                     App(
                         layoutMode = layoutMode,
+                        onLayoutModeChange = { newMode ->
+                            layoutMode = newMode
+                            DesktopPreferences.layoutMode = newMode.name
+                        },
                         deckState = deckState,
+                        workspaceManager = workspaceManager,
                         accountManager = accountManager,
                         showComposeDialog = showComposeDialog,
-                        showAddColumnDialog = showAddColumnDialog,
+                        showAppDrawer = showAppDrawer,
                         onShowComposeDialog = { showComposeDialog = true },
                         onShowReplyDialog = { event ->
                             replyToNote = event
@@ -445,8 +503,8 @@ fun main() {
                             showComposeDialog = false
                             replyToNote = null
                         },
-                        onDismissAddColumnDialog = { showAddColumnDialog = false },
-                        onShowAddColumnDialog = { showAddColumnDialog = true },
+                        onDismissAppDrawer = { showAppDrawer = false },
+                        onShowAppDrawer = { showAppDrawer = true },
                         replyToNote = replyToNote,
                         onRestartApp = { appRestartKey++ },
                         torManager = torManager,
@@ -463,15 +521,17 @@ fun main() {
 @Composable
 fun App(
     layoutMode: LayoutMode,
+    onLayoutModeChange: (LayoutMode) -> Unit,
     deckState: DeckState,
+    workspaceManager: WorkspaceManager,
     accountManager: AccountManager,
     showComposeDialog: Boolean,
-    showAddColumnDialog: Boolean,
+    showAppDrawer: Boolean,
     onShowComposeDialog: () -> Unit,
     onShowReplyDialog: (com.vitorpamplona.quartz.nip01Core.core.Event) -> Unit,
     onDismissComposeDialog: () -> Unit,
-    onDismissAddColumnDialog: () -> Unit,
-    onShowAddColumnDialog: () -> Unit,
+    onDismissAppDrawer: () -> Unit,
+    onShowAppDrawer: () -> Unit,
     replyToNote: com.vitorpamplona.quartz.nip01Core.core.Event?,
     onRestartApp: () -> Unit = {},
     torManager: com.vitorpamplona.amethyst.desktop.tor.DesktopTorManager,
@@ -479,6 +539,9 @@ fun App(
     externalPortFlow: kotlinx.coroutines.flow.MutableStateFlow<Int>,
     initialTorSettings: com.vitorpamplona.amethyst.commons.tor.TorSettings,
 ) {
+    val singlePaneState = remember { SinglePaneState() }
+    val pinnedNavBarState = remember { PinnedNavBarState(workspaceManager).also { it.loadFromWorkspace() } }
+
     // Always reload from prefs — after key() rebuild, prefs have the latest saved settings
     var torSettings by remember {
         mutableStateOf(
@@ -683,6 +746,9 @@ fun App(
                         MainContent(
                             layoutMode = layoutMode,
                             deckState = deckState,
+                            workspaceManager = workspaceManager,
+                            singlePaneState = singlePaneState,
+                            pinnedNavBarState = pinnedNavBarState,
                             relayManager = relayManager,
                             localCache = localCache,
                             accountManager = accountManager,
@@ -693,7 +759,7 @@ fun App(
                             torStatus = currentTorStatus,
                             onShowComposeDialog = onShowComposeDialog,
                             onShowReplyDialog = onShowReplyDialog,
-                            onShowAddColumnDialog = onShowAddColumnDialog,
+                            onShowAppDrawer = onShowAppDrawer,
                         )
                     }
 
@@ -707,14 +773,53 @@ fun App(
                         )
                     }
 
-                    // Add column dialog
-                    if (showAddColumnDialog) {
-                        AddColumnDialog(
-                            onDismiss = onDismissAddColumnDialog,
-                            onAdd = { type ->
-                                deckState.addColumn(type)
-                                onDismissAddColumnDialog()
+                    // App Drawer overlay
+                    if (showAppDrawer) {
+                        val openColumns by deckState.columns.collectAsState()
+                        AppDrawer(
+                            openColumnTypes =
+                                if (layoutMode == LayoutMode.DECK) {
+                                    openColumns.map { it.type.typeKey() }.toSet()
+                                } else {
+                                    emptySet()
+                                },
+                            pinnedNavBarState = pinnedNavBarState,
+                            workspaceManager = workspaceManager,
+                            onSwitchWorkspace = { ws ->
+                                // Switch layout mode to match workspace
+                                onLayoutModeChange(ws.layoutMode)
+                                // Load columns or single pane screen
+                                when (ws.layoutMode) {
+                                    LayoutMode.DECK -> {
+                                        deckState.loadFromWorkspace(ws.columns)
+                                    }
+
+                                    LayoutMode.SINGLE_PANE -> {
+                                        // Load nav bar from workspace + navigate to first screen
+                                        pinnedNavBarState.loadFromWorkspace()
+                                        val firstKey =
+                                            ws.singlePaneScreens.firstOrNull() ?: "home"
+                                        val type = DeckState.parseColumnTypeFromKey(firstKey)
+                                        if (type != null) singlePaneState.navigate(type)
+                                    }
+                                }
                             },
+                            onSelectScreen = { type ->
+                                when (layoutMode) {
+                                    LayoutMode.DECK -> {
+                                        if (deckState.hasColumnOfType(type)) {
+                                            deckState.focusExistingColumn(type)
+                                        } else {
+                                            deckState.addColumn(type)
+                                        }
+                                    }
+
+                                    LayoutMode.SINGLE_PANE -> {
+                                        singlePaneState.navigate(type)
+                                    }
+                                }
+                            },
+                            onDismiss = onDismissAppDrawer,
                         )
                     }
                 }
@@ -736,6 +841,9 @@ fun App(
 fun MainContent(
     layoutMode: LayoutMode,
     deckState: DeckState,
+    workspaceManager: WorkspaceManager,
+    singlePaneState: SinglePaneState,
+    pinnedNavBarState: PinnedNavBarState,
     relayManager: DesktopRelayConnectionManager,
     localCache: DesktopLocalCache,
     accountManager: AccountManager,
@@ -746,7 +854,7 @@ fun MainContent(
     torStatus: com.vitorpamplona.amethyst.commons.tor.TorServiceStatus,
     onShowComposeDialog: () -> Unit,
     onShowReplyDialog: (com.vitorpamplona.quartz.nip01Core.core.Event) -> Unit,
-    onShowAddColumnDialog: () -> Unit,
+    onShowAppDrawer: () -> Unit,
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -893,6 +1001,9 @@ fun MainContent(
                             highlightStore = highlightStore,
                             draftStore = draftStore,
                             appScope = appScope,
+                            singlePaneState = singlePaneState,
+                            pinnedNavBarState = pinnedNavBarState,
+                            onOpenAppDrawer = onShowAppDrawer,
                             onShowComposeDialog = onShowComposeDialog,
                             onShowReplyDialog = onShowReplyDialog,
                             onZapFeedback = onZapFeedback,
@@ -906,7 +1017,7 @@ fun MainContent(
                     LayoutMode.DECK -> {
                         if (!isImmersive) {
                             DeckSidebar(
-                                onAddColumn = onShowAddColumnDialog,
+                                onAddColumn = onShowAppDrawer,
                                 onOpenSettings = {
                                     if (deckState.hasColumnOfType(DeckColumnType.Settings)) {
                                         deckState.focusExistingColumn(DeckColumnType.Settings)

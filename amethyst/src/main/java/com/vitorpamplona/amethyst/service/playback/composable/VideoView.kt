@@ -137,6 +137,7 @@ fun VideoView(
                     nostrUriCallback = nostrUriCallback,
                     automaticallyStartPlayback = automaticallyStartPlayback.value,
                     onZoom = onDialog,
+                    hasBlurhash = false,
                     accountViewModel = accountViewModel,
                     showControls = showControls,
                 )
@@ -183,6 +184,7 @@ fun VideoView(
                     nostrUriCallback = nostrUriCallback,
                     automaticallyStartPlayback = automaticallyStartPlayback.value,
                     onZoom = onDialog,
+                    hasBlurhash = true,
                     accountViewModel = accountViewModel,
                     showControls = showControls,
                 )

@@ -69,6 +69,17 @@ class EncryptedMediaUrlImage(
 ) : MediaUrlImage(url, description, hash, blurhash, dim, uri, contentWarning, mimeType)
 
 @Immutable
+open class MediaUrlPdf(
+    url: String,
+    description: String? = null,
+    hash: String? = null,
+    blurhash: String? = null,
+    dim: DimensionTag? = null,
+    uri: String? = null,
+    mimeType: String? = null,
+) : MediaUrlContent(url, description, hash, dim, blurhash, uri, mimeType)
+
+@Immutable
 open class MediaUrlVideo(
     url: String,
     description: String? = null,

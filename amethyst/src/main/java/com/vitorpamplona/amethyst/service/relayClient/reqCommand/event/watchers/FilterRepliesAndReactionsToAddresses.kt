@@ -35,6 +35,7 @@ import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.utils.mapOfSet
 
@@ -49,6 +50,7 @@ val RepliesAndReactionsToAddressesKinds1 =
         ZapPollEvent.KIND,
         CommentEvent.KIND,
         AttestationEvent.KIND,
+        BadgeAwardEvent.KIND,
     )
 
 val PostsAndChatMessagesToAddresses =

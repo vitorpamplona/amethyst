@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.note.types
 
-import android.graphics.Rect
 import androidx.annotation.OptIn
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -206,8 +205,12 @@ fun RenderVoicePlayer(
                     .height(100.dp)
                     .onGloballyPositioned { coordinates ->
                         val bounds = coordinates.boundsInWindow()
-                        val boundRect = Rect(bounds.left.toInt(), bounds.top.toInt(), bounds.right.toInt(), bounds.bottom.toInt())
-                        controllerState.visibility.bounds = boundRect
+                        controllerState.visibility.setBounds(
+                            bounds.left.toInt(),
+                            bounds.top.toInt(),
+                            bounds.right.toInt(),
+                            bounds.bottom.toInt(),
+                        )
                     }.clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null, // to prevent the ripple from the tap
