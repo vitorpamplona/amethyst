@@ -77,7 +77,7 @@ fun LongsScreen(
             NewLongVideoButton(accountViewModel, nav, longsFeedContentState::sendToTop)
         },
         accountViewModel = accountViewModel,
-    ) { paddingValues ->
+    ) {
         RefresheableBox(longsFeedContentState, true) {
             SaveableFeedContentState(longsFeedContentState, scrollStateKey = ScrollStateKeys.LONGS_SCREEN) { listState ->
                 RenderFeedContentState(
@@ -90,7 +90,6 @@ fun LongsScreen(
                         LongsFeedLoaded(
                             loaded = loaded,
                             listState = listState,
-                            scaffoldPadding = paddingValues,
                             accountViewModel = accountViewModel,
                             nav = nav,
                         )

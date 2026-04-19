@@ -85,7 +85,7 @@ import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
-import com.vitorpamplona.amethyst.ui.layouts.rememberMergedPadding
+import com.vitorpamplona.amethyst.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
@@ -298,7 +298,6 @@ import kotlinx.coroutines.withContext
 fun ThreadFeedView(
     noteId: String,
     viewModel: LevelFeedViewModel,
-    scaffoldPadding: PaddingValues = PaddingValues(0.dp),
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -310,7 +309,7 @@ fun ThreadFeedView(
             nav = nav,
             routeForLastRead = null,
             onLoaded = {
-                RenderThreadFeed(noteId, it, viewModel.llState, viewModel, scaffoldPadding, accountViewModel, nav)
+                RenderThreadFeed(noteId, it, viewModel.llState, viewModel, accountViewModel, nav)
             },
         )
     }
@@ -322,7 +321,6 @@ fun RenderThreadFeed(
     loaded: FeedState.Loaded,
     listState: LazyListState,
     viewModel: LevelFeedViewModel,
-    scaffoldPadding: PaddingValues,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -359,7 +357,7 @@ fun RenderThreadFeed(
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = rememberMergedPadding(scaffoldPadding, FeedPadding),
+        contentPadding = rememberFeedContentPadding(FeedPadding),
         state = listState,
     ) {
         itemsIndexed(

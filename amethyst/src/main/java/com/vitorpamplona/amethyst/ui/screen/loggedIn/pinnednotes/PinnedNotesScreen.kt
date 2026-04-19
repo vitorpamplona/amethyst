@@ -78,7 +78,6 @@ private fun RenderPinnedNotesScreen(
         RefresheableFeedView(
             pinnedNotesFeedViewModel,
             null,
-            scaffoldPadding = it,
             accountViewModel = accountViewModel,
             nav = nav,
         )

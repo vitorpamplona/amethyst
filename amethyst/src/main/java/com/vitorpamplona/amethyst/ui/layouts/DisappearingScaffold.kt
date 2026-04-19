@@ -26,9 +26,12 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -59,27 +62,37 @@ fun DisappearingScaffold(
 ) {
     val state = rememberDisappearingBarState()
 
-    val canScroll = {
-        allowBarHide && isActive() && accountViewModel.settings.isImmersiveScrollingActive()
-    }
+    // Hold the latest values in state so the NSC's captured lambda stays fresh across
+    // recompositions without rebuilding the NSC itself.
+    val latestIsActive by rememberUpdatedState(isActive)
+    val latestAllowBarHide by rememberUpdatedState(allowBarHide)
+    val latestAccountViewModel by rememberUpdatedState(accountViewModel)
 
     val connection =
         remember(state, isInvertedLayout) {
             DisappearingBarNestedScroll(
                 state = state,
-                canScroll = canScroll,
+                canScroll = {
+                    latestAllowBarHide &&
+                        latestIsActive() &&
+                        latestAccountViewModel.settings.isImmersiveScrollingActive()
+                },
                 reverseLayout = isInvertedLayout,
             )
         }
 
-    ResetBarsOnResume(state)
+    // Only wire the lifecycle observer when the scaffold actually moves its bars.
+    if (allowBarHide) ResetBarsOnResume(state)
 
-    SubcomposeLayout(
-        modifier =
-            Modifier
-                .imePadding()
-                .nestedScroll(connection),
-    ) { constraints ->
+    // When bars are pinned, skip attaching the nested-scroll connection entirely.
+    val rootModifier =
+        if (allowBarHide) {
+            Modifier.imePadding().nestedScroll(connection)
+        } else {
+            Modifier.imePadding()
+        }
+
+    SubcomposeLayout(modifier = rootModifier) { constraints ->
         val layoutWidth = constraints.maxWidth
         val layoutHeight = constraints.maxHeight
         val looseConstraints = constraints.copy(minWidth = 0, minHeight = 0)
@@ -127,7 +140,9 @@ fun DisappearingScaffold(
 
         val contentPlaceable =
             subcompose(DisappearingSlot.Content) {
-                mainContent(contentPadding)
+                CompositionLocalProvider(LocalDisappearingScaffoldPadding provides contentPadding) {
+                    mainContent(contentPadding)
+                }
             }.firstOrNull()?.measure(
                 Constraints.fixed(layoutWidth, layoutHeight),
             )

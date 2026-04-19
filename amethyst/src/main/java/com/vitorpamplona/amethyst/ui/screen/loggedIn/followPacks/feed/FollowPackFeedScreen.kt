@@ -179,7 +179,6 @@ fun FollowPackFeedScreen(
                     RefresheableFeedView(
                         newThreadFeedViewModel,
                         null,
-                        scaffoldPadding = it,
                         accountViewModel = accountViewModel,
                         nav = nav,
                     )
@@ -189,7 +188,6 @@ fun FollowPackFeedScreen(
                     RefresheableFeedView(
                         conversationsFeedViewModel,
                         null,
-                        scaffoldPadding = it,
                         accountViewModel = accountViewModel,
                         nav = nav,
                     )
@@ -198,7 +196,6 @@ fun FollowPackFeedScreen(
                 2 -> {
                     UserFeedView(
                         membersFeedViewModel,
-                        it,
                         accountViewModel,
                         nav,
                     )

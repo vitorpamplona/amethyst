@@ -96,7 +96,6 @@ fun MessagesTwoPane(
                     ChatroomList(
                         knownFeedContentState,
                         newFeedContentState,
-                        padding,
                         accountViewModel,
                         twoPaneNav,
                     )

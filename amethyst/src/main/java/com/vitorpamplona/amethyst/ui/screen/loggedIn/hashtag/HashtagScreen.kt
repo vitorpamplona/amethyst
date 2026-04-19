@@ -108,7 +108,6 @@ fun HashtagScreen(
         RefresheableFeedView(
             feedViewModel,
             null,
-            scaffoldPadding = it,
             accountViewModel = accountViewModel,
             nav = nav,
         )

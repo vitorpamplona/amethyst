@@ -98,7 +98,6 @@ fun MessagesSinglePane(
         MessagesPager(
             pagerState,
             tabs,
-            it,
             accountViewModel,
             nav,
         )

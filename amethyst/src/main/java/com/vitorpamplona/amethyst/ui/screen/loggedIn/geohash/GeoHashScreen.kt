@@ -103,7 +103,6 @@ fun GeoHashScreen(
         RefresheableFeedView(
             feedViewModel,
             null,
-            scaffoldPadding = it,
             accountViewModel = accountViewModel,
             nav = nav,
         )

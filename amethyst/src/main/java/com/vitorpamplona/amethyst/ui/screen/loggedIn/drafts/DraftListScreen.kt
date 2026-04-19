@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.drafts
 
 import androidx.compose.animation.animateContentSize
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
@@ -54,7 +53,7 @@ import com.vitorpamplona.amethyst.ui.feeds.RenderFeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys.DRAFTS
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
-import com.vitorpamplona.amethyst.ui.layouts.rememberMergedPadding
+import com.vitorpamplona.amethyst.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.ShorterTopAppBar
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
@@ -146,7 +145,7 @@ private fun RenderDraftListScreen(
             )
         },
         accountViewModel = accountViewModel,
-    ) { scaffoldPadding ->
+    ) {
         RefresheableBox(feedState) {
             SaveableFeedState(feedState, DRAFTS) { listState ->
                 RenderFeedContentState(
@@ -155,7 +154,7 @@ private fun RenderDraftListScreen(
                     listState = listState,
                     nav = nav,
                     routeForLastRead = null,
-                    onLoaded = { DraftFeedLoaded(it, listState, scaffoldPadding, accountViewModel, nav) },
+                    onLoaded = { DraftFeedLoaded(it, listState, accountViewModel, nav) },
                 )
             }
         }
@@ -166,14 +165,13 @@ private fun RenderDraftListScreen(
 private fun DraftFeedLoaded(
     loaded: FeedState.Loaded,
     listState: LazyListState,
-    scaffoldPadding: PaddingValues,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
 
     LazyColumn(
-        contentPadding = rememberMergedPadding(scaffoldPadding, FeedPadding),
+        contentPadding = rememberFeedContentPadding(FeedPadding),
         state = listState,
     ) {
         itemsIndexed(items.list, key = { _, item -> item.idHex }) { _, item ->

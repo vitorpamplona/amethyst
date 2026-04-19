@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.search
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -58,7 +57,7 @@ import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.TextSearchDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
-import com.vitorpamplona.amethyst.ui.layouts.rememberMergedPadding
+import com.vitorpamplona.amethyst.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -123,11 +122,10 @@ fun SearchScreen(
             }
         },
         accountViewModel = accountViewModel,
-    ) { scaffoldPadding ->
+    ) {
         DisplaySearchResults(
             searchBarViewModel = searchBarViewModel,
-            scaffoldPadding = scaffoldPadding,
-            header = { ObserveRelayListForSearchAndDisplayIfNotFound(accountViewModel, nav) },
+            headerContent = { ObserveRelayListForSearchAndDisplayIfNotFound(accountViewModel, nav) },
             nav = nav,
             accountViewModel = accountViewModel,
         )
@@ -220,8 +218,7 @@ private fun SearchTextField(
 @Composable
 private fun DisplaySearchResults(
     searchBarViewModel: SearchBarViewModel,
-    scaffoldPadding: PaddingValues,
-    header: @Composable () -> Unit,
+    headerContent: @Composable () -> Unit,
     nav: INav,
     accountViewModel: AccountViewModel,
 ) {
@@ -236,10 +233,10 @@ private fun DisplaySearchResults(
 
     LazyColumn(
         modifier = Modifier.fillMaxHeight(),
-        contentPadding = rememberMergedPadding(scaffoldPadding, FeedPadding),
+        contentPadding = rememberFeedContentPadding(FeedPadding),
         state = searchBarViewModel.listState,
     ) {
-        item(key = "scaffold-header") { header() }
+        item(key = "scaffold-header") { headerContent() }
 
         if (!isRefreshing) return@LazyColumn
 

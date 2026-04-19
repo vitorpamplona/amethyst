@@ -26,7 +26,6 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -52,7 +51,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.ui.notifications.Card
@@ -61,7 +59,7 @@ import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.feeds.FeedError
 import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
-import com.vitorpamplona.amethyst.ui.layouts.rememberMergedPadding
+import com.vitorpamplona.amethyst.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.BadgeCompose
 import com.vitorpamplona.amethyst.ui.note.CloseIcon
@@ -89,7 +87,6 @@ fun RenderCardFeed(
     nav: INav,
     routeForLastRead: String,
     scrollToEventId: String? = null,
-    scaffoldPadding: PaddingValues = PaddingValues(0.dp),
     headerContent: (@Composable () -> Unit)? = null,
 ) {
     val feedState by feedContent.feedContent.collectAsStateWithLifecycle()
@@ -118,7 +115,6 @@ fun RenderCardFeed(
                     accountViewModel = accountViewModel,
                     nav = nav,
                     scrollToEventId = scrollToEventId,
-                    scaffoldPadding = scaffoldPadding,
                     headerContent = headerContent,
                 )
             }
@@ -153,7 +149,6 @@ private fun FeedLoaded(
     accountViewModel: AccountViewModel,
     nav: INav,
     scrollToEventId: String? = null,
-    scaffoldPadding: PaddingValues = PaddingValues(0.dp),
     headerContent: (@Composable () -> Unit)? = null,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
@@ -179,7 +174,7 @@ private fun FeedLoaded(
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = rememberMergedPadding(scaffoldPadding, FeedPadding),
+        contentPadding = rememberFeedContentPadding(FeedPadding),
         state = listState,
     ) {
         if (headerContent != null) {

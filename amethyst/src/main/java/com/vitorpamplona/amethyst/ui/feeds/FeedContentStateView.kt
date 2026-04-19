@@ -21,14 +21,12 @@
 package com.vitorpamplona.amethyst.ui.feeds
 
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
@@ -41,13 +39,12 @@ fun RefresheableFeedContentStateView(
     routeForLastRead: String?,
     enablePullRefresh: Boolean = true,
     scrollStateKey: String? = null,
-    scaffoldPadding: PaddingValues = PaddingValues(0.dp),
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     RefresheableBox(feedContentState, enablePullRefresh) {
         SaveableFeedContentState(feedContentState, scrollStateKey) { listState ->
-            RenderFeedContentState(feedContentState, accountViewModel, listState, nav, routeForLastRead, scaffoldPadding)
+            RenderFeedContentState(feedContentState, accountViewModel, listState, nav, routeForLastRead)
         }
     }
 }
@@ -95,8 +92,7 @@ fun RenderFeedContentState(
     listState: LazyListState,
     nav: INav,
     routeForLastRead: String?,
-    scaffoldPadding: PaddingValues = PaddingValues(0.dp),
-    onLoaded: @Composable (FeedState.Loaded) -> Unit = { FeedLoaded(it, listState, routeForLastRead, accountViewModel, nav, scaffoldPadding) },
+    onLoaded: @Composable (FeedState.Loaded) -> Unit = { FeedLoaded(it, listState, routeForLastRead, accountViewModel, nav) },
     onEmpty: @Composable () -> Unit = { FeedEmpty(feedContentState::invalidateData) },
     onError: @Composable (String) -> Unit = { FeedError(it, feedContentState::invalidateData) },
     onLoading: @Composable () -> Unit = { LoadingFeed() },

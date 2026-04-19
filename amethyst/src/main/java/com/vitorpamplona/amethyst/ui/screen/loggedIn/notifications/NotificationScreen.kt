@@ -102,7 +102,6 @@ fun NotificationScreen(
                 nav = nav,
                 routeForLastRead = "Notification",
                 scrollToEventId = scrollToEventId,
-                scaffoldPadding = it,
                 headerContent = { ObserveInboxRelayListAndDisplayIfNotFound(accountViewModel, nav) },
             )
         }

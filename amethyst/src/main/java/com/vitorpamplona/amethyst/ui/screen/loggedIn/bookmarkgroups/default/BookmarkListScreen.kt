@@ -125,7 +125,6 @@ private fun RenderBookmarkScreen(
                     RefresheableFeedView(
                         privateFeedViewModel,
                         null,
-                        scaffoldPadding = it,
                         accountViewModel = accountViewModel,
                         nav = nav,
                     )
@@ -135,7 +134,6 @@ private fun RenderBookmarkScreen(
                     RefresheableFeedView(
                         publicFeedViewModel,
                         null,
-                        scaffoldPadding = it,
                         accountViewModel = accountViewModel,
                         nav = nav,
                     )

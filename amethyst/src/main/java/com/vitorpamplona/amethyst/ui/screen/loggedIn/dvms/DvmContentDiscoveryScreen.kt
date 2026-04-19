@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -96,13 +95,13 @@ fun DvmContentDiscoveryScreen(
             DvmTopBar(appDefinitionEventId, accountViewModel, nav)
         },
         accountViewModel = accountViewModel,
-    ) { paddingValues ->
+    ) {
         LoadNote(baseNoteHex = appDefinitionEventId, accountViewModel = accountViewModel) { note ->
             note?.let { baseNote ->
                 WatchNoteEvent(
                     baseNote,
                     onNoteEventFound = {
-                        DvmContentDiscoveryScreen(baseNote, paddingValues, accountViewModel, nav)
+                        DvmContentDiscoveryScreen(baseNote, accountViewModel, nav)
                     },
                     onBlank = {
                         FeedEmptyWithStatus(baseNote, stringRes(R.string.dvm_looking_for_app), accountViewModel, nav)
@@ -117,7 +116,6 @@ fun DvmContentDiscoveryScreen(
 @Composable
 fun DvmContentDiscoveryScreen(
     appDefinition: Note,
-    scaffoldPadding: PaddingValues,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -152,7 +150,6 @@ fun DvmContentDiscoveryScreen(
                 appDefinition,
                 myRequestEventID,
                 onRefresh,
-                scaffoldPadding,
                 accountViewModel,
                 nav,
             )
@@ -169,7 +166,6 @@ fun ObserverContentDiscoveryResponse(
     appDefinition: Note,
     dvmRequestId: Note,
     onRefresh: () -> Unit,
-    scaffoldPadding: PaddingValues,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -198,7 +194,6 @@ fun ObserverContentDiscoveryResponse(
             dvmRequestId.idHex,
             myResponse,
             onRefresh,
-            scaffoldPadding,
             accountViewModel,
             nav,
         )
@@ -251,7 +246,6 @@ fun PrepareViewContentDiscoveryModels(
     dvmRequestId: String,
     latestResponse: NIP90ContentDiscoveryResponseEvent,
     onRefresh: () -> Unit,
-    scaffoldPadding: PaddingValues,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -265,14 +259,13 @@ fun PrepareViewContentDiscoveryModels(
         resultFeedViewModel.invalidateData()
     }
 
-    RenderNostrNIP90ContentDiscoveryScreen(resultFeedViewModel, onRefresh, scaffoldPadding, accountViewModel, nav)
+    RenderNostrNIP90ContentDiscoveryScreen(resultFeedViewModel, onRefresh, accountViewModel, nav)
 }
 
 @Composable
 fun RenderNostrNIP90ContentDiscoveryScreen(
     resultFeedViewModel: NIP90ContentDiscoveryFeedViewModel,
     onRefresh: () -> Unit,
-    scaffoldPadding: PaddingValues,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -284,7 +277,6 @@ fun RenderNostrNIP90ContentDiscoveryScreen(
             listState,
             nav,
             null,
-            scaffoldPadding,
             onEmpty = {
                 FeedEmpty {
                     onRefresh()

@@ -76,13 +76,12 @@ fun ProductsScreen(
             NewProductButton(accountViewModel, nav)
         },
         accountViewModel = accountViewModel,
-    ) { paddingValues ->
+    ) {
         RefresheableBox(productsFeedContentState, true) {
             SaveableGridFeedContentState(productsFeedContentState, scrollStateKey = ScrollStateKeys.PRODUCTS_SCREEN) { gridState ->
                 RenderProductsFeed(
                     feedContentState = productsFeedContentState,
                     gridState = gridState,
-                    scaffoldPadding = paddingValues,
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )

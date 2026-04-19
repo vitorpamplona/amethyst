@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
@@ -70,7 +69,7 @@ import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.feeds.rememberForeverPagerState
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
-import com.vitorpamplona.amethyst.ui.layouts.rememberMergedPadding
+import com.vitorpamplona.amethyst.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -277,7 +276,6 @@ private fun DiscoverPages(
                                 routeForLastRead = tab.routeForLastRead,
                                 forceEventKind = tab.forceEventKind,
                                 listState = listState,
-                                scaffoldPadding = it,
                                 accountViewModel = accountViewModel,
                                 nav = nav,
                             )
@@ -289,7 +287,6 @@ private fun DiscoverPages(
                                 routeForLastRead = tab.routeForLastRead,
                                 forceEventKind = tab.forceEventKind,
                                 listState = listState,
-                                scaffoldPadding = it,
                                 accountViewModel = accountViewModel,
                                 nav = nav,
                             )
@@ -307,7 +304,6 @@ private fun RenderDiscoverFeed(
     routeForLastRead: String?,
     forceEventKind: Int?,
     listState: LazyGridState,
-    scaffoldPadding: PaddingValues,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -334,7 +330,6 @@ private fun RenderDiscoverFeed(
                     routeForLastRead,
                     listState,
                     forceEventKind,
-                    scaffoldPadding,
                     accountViewModel,
                     nav,
                 )
@@ -397,7 +392,6 @@ private fun RenderDiscoverFeed(
     routeForLastRead: String?,
     forceEventKind: Int?,
     listState: LazyListState,
-    scaffoldPadding: PaddingValues,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -424,7 +418,6 @@ private fun RenderDiscoverFeed(
                     routeForLastRead,
                     listState,
                     forceEventKind,
-                    scaffoldPadding,
                     accountViewModel,
                     nav,
                 )
@@ -468,14 +461,13 @@ private fun DiscoverFeedLoaded(
     routeForLastRead: String?,
     listState: LazyListState,
     forceEventKind: Int?,
-    scaffoldPadding: PaddingValues,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
 
     LazyColumn(
-        contentPadding = rememberMergedPadding(scaffoldPadding, FeedPadding),
+        contentPadding = rememberFeedContentPadding(FeedPadding),
         state = listState,
     ) {
         itemsIndexed(items.list, key = { _, item -> item.idHex }) { _, item ->
@@ -504,7 +496,6 @@ private fun DiscoverFeedColumnsLoaded(
     routeForLastRead: String?,
     listState: LazyGridState,
     forceEventKind: Int?,
-    scaffoldPadding: PaddingValues,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -512,7 +503,7 @@ private fun DiscoverFeedColumnsLoaded(
 
     LazyVerticalGrid(
         columns = GridCells.Fixed(2),
-        contentPadding = rememberMergedPadding(scaffoldPadding, FeedPadding),
+        contentPadding = rememberFeedContentPadding(FeedPadding),
         state = listState,
     ) {
         itemsIndexed(items.list, key = { _, item -> item.idHex }) { _, item ->

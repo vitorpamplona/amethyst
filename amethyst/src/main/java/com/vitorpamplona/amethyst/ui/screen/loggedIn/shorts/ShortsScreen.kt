@@ -77,7 +77,7 @@ fun ShortsScreen(
             NewShortVideoButton(accountViewModel, nav, shortsFeedContentState::sendToTop)
         },
         accountViewModel = accountViewModel,
-    ) { paddingValues ->
+    ) {
         RefresheableBox(shortsFeedContentState, true) {
             SaveableFeedContentState(shortsFeedContentState, scrollStateKey = ScrollStateKeys.SHORTS_SCREEN) { listState ->
                 RenderFeedContentState(
@@ -90,7 +90,6 @@ fun ShortsScreen(
                         ShortsFeedLoaded(
                             loaded = loaded,
                             listState = listState,
-                            scaffoldPadding = paddingValues,
                             accountViewModel = accountViewModel,
                             nav = nav,
                         )

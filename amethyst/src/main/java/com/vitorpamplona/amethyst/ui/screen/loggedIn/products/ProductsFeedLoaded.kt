@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.products
 
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -33,7 +32,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
@@ -41,7 +39,7 @@ import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.feeds.FeedEmpty
 import com.vitorpamplona.amethyst.ui.feeds.FeedError
 import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
-import com.vitorpamplona.amethyst.ui.layouts.rememberMergedPadding
+import com.vitorpamplona.amethyst.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.ChannelCardCompose
@@ -53,7 +51,6 @@ import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 fun RenderProductsFeed(
     feedContentState: FeedContentState,
     gridState: LazyGridState,
-    scaffoldPadding: PaddingValues = PaddingValues(0.dp),
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -78,7 +75,6 @@ fun RenderProductsFeed(
                 ProductsFeedColumnsLoaded(
                     state,
                     gridState,
-                    scaffoldPadding,
                     accountViewModel,
                     nav,
                 )
@@ -96,7 +92,6 @@ fun RenderProductsFeed(
 private fun ProductsFeedColumnsLoaded(
     loaded: FeedState.Loaded,
     listState: LazyGridState,
-    scaffoldPadding: PaddingValues,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -104,7 +99,7 @@ private fun ProductsFeedColumnsLoaded(
 
     LazyVerticalGrid(
         columns = GridCells.Fixed(2),
-        contentPadding = rememberMergedPadding(scaffoldPadding, FeedPadding),
+        contentPadding = rememberFeedContentPadding(FeedPadding),
         state = listState,
     ) {
         itemsIndexed(items.list, key = { _, item -> item.idHex }) { _, item ->

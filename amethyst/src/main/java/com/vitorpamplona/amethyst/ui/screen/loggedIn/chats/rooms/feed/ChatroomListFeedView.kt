@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.feed
 
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
@@ -31,7 +30,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
@@ -41,7 +39,7 @@ import com.vitorpamplona.amethyst.ui.feeds.FeedError
 import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.feeds.SaveableFeedContentState
-import com.vitorpamplona.amethyst.ui.layouts.rememberMergedPadding
+import com.vitorpamplona.amethyst.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.ChatroomHeaderCompose
@@ -52,13 +50,12 @@ import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 fun ChatroomListFeedView(
     feedContentState: FeedContentState,
     scrollStateKey: String,
-    scaffoldPadding: PaddingValues = PaddingValues(0.dp),
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     RefresheableBox(feedContentState, true) {
         SaveableFeedContentState(feedContentState, scrollStateKey) { listState ->
-            CrossFadeState(feedContentState, listState, scaffoldPadding, accountViewModel, nav)
+            CrossFadeState(feedContentState, listState, accountViewModel, nav)
         }
     }
 }
@@ -67,7 +64,6 @@ fun ChatroomListFeedView(
 private fun CrossFadeState(
     feedContentState: FeedContentState,
     listState: LazyListState,
-    scaffoldPadding: PaddingValues,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -88,7 +84,7 @@ private fun CrossFadeState(
             }
 
             is FeedState.Loaded -> {
-                FeedLoaded(state, listState, scaffoldPadding, accountViewModel, nav)
+                FeedLoaded(state, listState, accountViewModel, nav)
             }
 
             FeedState.Loading -> {
@@ -102,14 +98,13 @@ private fun CrossFadeState(
 private fun FeedLoaded(
     loaded: FeedState.Loaded,
     listState: LazyListState,
-    scaffoldPadding: PaddingValues,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
 
     LazyColumn(
-        contentPadding = rememberMergedPadding(scaffoldPadding, FeedPadding),
+        contentPadding = rememberFeedContentPadding(FeedPadding),
         state = listState,
     ) {
         itemsIndexed(

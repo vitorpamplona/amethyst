@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.feed
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
@@ -122,7 +121,6 @@ fun MessagesTabHeader(
 fun MessagesPager(
     pagerState: PagerState,
     tabs: List<MessagesTabItem>,
-    paddingValues: PaddingValues,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -138,7 +136,6 @@ fun MessagesPager(
         ChatroomListFeedView(
             feedContentState = tabs[page].feedContentState,
             scrollStateKey = tabs[page].scrollStateKey,
-            scaffoldPadding = paddingValues,
             accountViewModel = accountViewModel,
             nav = nav,
         )

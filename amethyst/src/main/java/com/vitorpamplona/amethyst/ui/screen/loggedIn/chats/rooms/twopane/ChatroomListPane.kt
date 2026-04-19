@@ -21,13 +21,11 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.twopane
 
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
@@ -44,7 +42,6 @@ import kotlinx.collections.immutable.persistentListOf
 fun ChatroomList(
     knownFeedContentState: FeedContentState,
     newFeedContentState: FeedContentState,
-    scaffoldPadding: PaddingValues = PaddingValues(0.dp),
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -76,7 +73,6 @@ fun ChatroomList(
         MessagesPager(
             pagerState,
             tabs,
-            scaffoldPadding,
             accountViewModel,
             nav,
         )

@@ -24,7 +24,6 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Arrangement.Absolute.spacedBy
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -52,7 +51,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
@@ -75,7 +73,7 @@ import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.feeds.rememberForeverPagerState
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
-import com.vitorpamplona.amethyst.ui.layouts.rememberMergedPadding
+import com.vitorpamplona.amethyst.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -226,7 +224,6 @@ private fun HomePages(
                 routeForLastRead = tabs[page].routeForLastRead,
                 scrollStateKey = tabs[page].scrollStateKey,
                 liveSection = tabs[page].liveSection,
-                scaffoldPadding = it,
                 accountViewModel = accountViewModel,
                 nav = nav,
             )
@@ -280,7 +277,6 @@ fun HomeFeeds(
     enablePullRefresh: Boolean = true,
     scrollStateKey: String? = null,
     liveSection: ChannelFeedContentState? = null,
-    scaffoldPadding: PaddingValues = PaddingValues(0.dp),
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -292,7 +288,7 @@ fun HomeFeeds(
                 listState = listState,
                 nav = nav,
                 routeForLastRead = routeForLastRead,
-                onLoaded = { FeedLoaded(it, listState, routeForLastRead, liveSection, scaffoldPadding, accountViewModel, nav) },
+                onLoaded = { FeedLoaded(it, listState, routeForLastRead, liveSection, accountViewModel, nav) },
                 onEmpty = { HomeFeedEmpty(feedState::invalidateData) },
             )
         }
@@ -306,16 +302,13 @@ fun FeedLoaded(
     listState: LazyListState,
     routeForLastRead: String?,
     liveSection: ChannelFeedContentState? = null,
-    scaffoldPadding: PaddingValues = PaddingValues(0.dp),
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
 
-    val listPadding = rememberMergedPadding(scaffoldPadding, FeedPadding)
-
     LazyColumn(
-        contentPadding = listPadding,
+        contentPadding = rememberFeedContentPadding(FeedPadding),
         state = listState,
     ) {
         if (liveSection != null) {

@@ -159,7 +159,6 @@ private fun RenderOldBookmarkScreen(
                     RefresheableFeedView(
                         privateFeedViewModel,
                         null,
-                        scaffoldPadding = it,
                         accountViewModel = accountViewModel,
                         nav = nav,
                     )
@@ -169,7 +168,6 @@ private fun RenderOldBookmarkScreen(
                     RefresheableFeedView(
                         publicFeedViewModel,
                         null,
-                        scaffoldPadding = it,
                         accountViewModel = accountViewModel,
                         nav = nav,
                     )

@@ -77,7 +77,7 @@ fun ArticlesScreen(
             NewArticleButton(nav)
         },
         accountViewModel = accountViewModel,
-    ) { paddingValues ->
+    ) {
         RefresheableBox(articlesFeedContentState, true) {
             SaveableFeedContentState(articlesFeedContentState, scrollStateKey = ScrollStateKeys.ARTICLES_SCREEN) { listState ->
                 RenderFeedContentState(
@@ -90,7 +90,6 @@ fun ArticlesScreen(
                         ArticlesFeedLoaded(
                             loaded = loaded,
                             listState = listState,
-                            scaffoldPadding = paddingValues,
                             accountViewModel = accountViewModel,
                             nav = nav,
                         )

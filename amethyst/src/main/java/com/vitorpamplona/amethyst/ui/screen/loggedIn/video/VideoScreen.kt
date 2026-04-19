@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.video
 
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyColumn
@@ -41,7 +40,7 @@ import com.vitorpamplona.amethyst.ui.feeds.SaveableFeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
-import com.vitorpamplona.amethyst.ui.layouts.rememberMergedPadding
+import com.vitorpamplona.amethyst.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -99,7 +98,6 @@ fun VideoScreen(
         RenderFeed(
             videoFeedContentState = videoFeedContentState,
             scrollKey = ScrollStateKeys.VIDEO_SCREEN,
-            scaffoldPadding = it,
             accountViewModel = accountViewModel,
             nav = nav,
         )
@@ -125,7 +123,6 @@ fun WatchAccountForVideoScreen(
 private fun RenderFeed(
     videoFeedContentState: FeedContentState,
     scrollKey: String?,
-    scaffoldPadding: PaddingValues,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -141,7 +138,6 @@ private fun RenderFeed(
                     VideoFeedLoaded(
                         loaded = loaded,
                         listState = listState,
-                        scaffoldPadding = scaffoldPadding,
                         accountViewModel = accountViewModel,
                         nav = nav,
                     )
@@ -155,14 +151,13 @@ private fun RenderFeed(
 fun VideoFeedLoaded(
     loaded: FeedState.Loaded,
     listState: LazyListState,
-    scaffoldPadding: PaddingValues = PaddingValues(0.dp),
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
 
     LazyColumn(
-        contentPadding = rememberMergedPadding(scaffoldPadding, FeedPadding),
+        contentPadding = rememberFeedContentPadding(FeedPadding),
         state = listState,
     ) {
         itemsIndexed(

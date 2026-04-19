@@ -21,14 +21,12 @@
 package com.vitorpamplona.amethyst.ui.screen
 
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
@@ -50,13 +48,12 @@ fun RefresheableFeedView(
     routeForLastRead: String?,
     enablePullRefresh: Boolean = true,
     scrollStateKey: String? = null,
-    scaffoldPadding: PaddingValues = PaddingValues(0.dp),
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     RefresheableBox(viewModel, enablePullRefresh) {
         SaveableFeedState(viewModel.feedState, scrollStateKey) { listState ->
-            RenderFeedState(viewModel, accountViewModel, listState, nav, routeForLastRead, scaffoldPadding)
+            RenderFeedState(viewModel, accountViewModel, listState, nav, routeForLastRead)
         }
     }
 }
@@ -104,9 +101,8 @@ fun RenderFeedState(
     listState: LazyListState,
     nav: INav,
     routeForLastRead: String?,
-    scaffoldPadding: PaddingValues = PaddingValues(0.dp),
     onLoaded: @Composable (FeedState.Loaded) -> Unit = {
-        FeedLoaded(it, listState, routeForLastRead, accountViewModel, nav, scaffoldPadding)
+        FeedLoaded(it, listState, routeForLastRead, accountViewModel, nav)
     },
     onEmpty: @Composable () -> Unit = { FeedEmpty { viewModel.invalidateData() } },
     onError: @Composable (String) -> Unit = { FeedError(it) { viewModel.invalidateData() } },

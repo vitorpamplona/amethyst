@@ -172,7 +172,6 @@ private fun PollsPages(
                         listState = listState,
                         nav = nav,
                         routeForLastRead = tabs[page].routeForLastRead,
-                        scaffoldPadding = it,
                     )
                 }
             }

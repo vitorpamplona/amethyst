@@ -69,6 +69,6 @@ fun ThreadScreen(
         },
         accountViewModel = accountViewModel,
     ) {
-        ThreadFeedView(noteId, feedViewModel, it, accountViewModel, nav)
+        ThreadFeedView(noteId, feedViewModel, accountViewModel, nav)
     }
 }

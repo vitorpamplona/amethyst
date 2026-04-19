@@ -77,7 +77,7 @@ fun PicturesScreen(
             NewPictureButton(accountViewModel, nav, picturesFeedContentState::sendToTop)
         },
         accountViewModel = accountViewModel,
-    ) { paddingValues ->
+    ) {
         RefresheableBox(picturesFeedContentState, true) {
             SaveableFeedContentState(picturesFeedContentState, scrollStateKey = ScrollStateKeys.PICTURES_SCREEN) { listState ->
                 RenderFeedContentState(
@@ -90,7 +90,6 @@ fun PicturesScreen(
                         PictureFeedLoaded(
                             loaded = loaded,
                             listState = listState,
-                            scaffoldPadding = paddingValues,
                             accountViewModel = accountViewModel,
                             nav = nav,
                         )

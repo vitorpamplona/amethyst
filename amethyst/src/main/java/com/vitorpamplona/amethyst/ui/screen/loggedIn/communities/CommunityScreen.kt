@@ -198,7 +198,6 @@ fun CommunityScreen(
                     RefresheableFeedView(
                         feedViewModel,
                         null,
-                        scaffoldPadding = it,
                         accountViewModel = accountViewModel,
                         nav = nav,
                     )
@@ -208,7 +207,6 @@ fun CommunityScreen(
                     RefresheableFeedView(
                         modFeedViewModel,
                         null,
-                        scaffoldPadding = it,
                         accountViewModel = accountViewModel,
                         nav = nav,
                     )
