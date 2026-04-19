@@ -85,6 +85,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import net.engawapg.lib.zoomable.rememberZoomState
+import net.engawapg.lib.zoomable.toggleScale
 import net.engawapg.lib.zoomable.zoomable
 
 // Hard ceiling on each base-rendered page bitmap, in pixels. Higher = sharper when
@@ -99,6 +100,10 @@ private const val VIEWER_MAX_DIM_PX = 3072
 private const val HI_RES_MAX_DIM_PX = 6144
 private const val HI_RES_ZOOM_THRESHOLD = 1.2f
 private const val HI_RES_DEBOUNCE_MS = 200L
+
+// Zoom level the viewer animates to when the user double-taps. Matches the
+// threshold region where we swap in the hi-res bitmap.
+private const val DOUBLE_TAP_ZOOM_SCALE = 2.5f
 
 // How many recently-rendered pages to keep around. Pager already pre-composes the
 // current page plus one neighbor; this just speeds up small back/forward swipes.
@@ -357,7 +362,12 @@ private fun PdfPageView(
                 modifier =
                     Modifier
                         .fillMaxSize()
-                        .zoomable(zoomState),
+                        .zoomable(
+                            zoomState = zoomState,
+                            onDoubleTap = { position ->
+                                zoomState.toggleScale(targetScale = DOUBLE_TAP_ZOOM_SCALE, position = position)
+                            },
+                        ),
             )
         } else {
             CircularProgressIndicator(color = Color.White)
