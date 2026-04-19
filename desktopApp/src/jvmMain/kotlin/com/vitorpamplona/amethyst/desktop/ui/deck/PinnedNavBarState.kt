@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.desktop.ui.deck
 
-import com.vitorpamplona.amethyst.desktop.DesktopPreferences
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -28,9 +27,11 @@ import kotlinx.coroutines.flow.update
 
 /**
  * Manages which screens are pinned to the navigation sidebar.
- * Persists to DesktopPreferences as CSV of typeKey strings.
+ * Pin/unpin syncs to the active workspace's singlePaneScreens.
  */
-class PinnedNavBarState {
+class PinnedNavBarState(
+    private val workspaceManager: WorkspaceManager? = null,
+) {
     private val _pinnedScreens = MutableStateFlow(DEFAULT_PINNED)
     val pinnedScreens: StateFlow<List<DeckColumnType>> = _pinnedScreens.asStateFlow()
 
@@ -40,13 +41,13 @@ class PinnedNavBarState {
         if (isPinned(type)) return
         if (!isPinnable(type)) return
         _pinnedScreens.update { it + type }
-        save()
+        syncToWorkspace()
     }
 
     fun unpin(type: DeckColumnType) {
         if (!isUnpinnable(type)) return
         _pinnedScreens.update { current -> current.filter { it.typeKey() != type.typeKey() } }
-        save()
+        syncToWorkspace()
     }
 
     fun move(
@@ -60,34 +61,32 @@ class PinnedNavBarState {
             mutable.add(toIndex, item)
             mutable.toList()
         }
-        save()
-    }
-
-    fun save() {
-        DesktopPreferences.pinnedNavItems = _pinnedScreens.value.joinToString(",") { it.typeKey() }
+        syncToWorkspace()
     }
 
     fun loadFromList(screens: List<DeckColumnType>) {
         _pinnedScreens.value = screens.ifEmpty { DEFAULT_PINNED }
-        save()
     }
 
-    fun load() {
-        val raw = DesktopPreferences.pinnedNavItems
-        if (raw.isBlank()) {
-            _pinnedScreens.value = DEFAULT_PINNED
-            return
+    fun loadFromWorkspace() {
+        val ws = workspaceManager?.activeWorkspace ?: return
+        if (ws.singlePaneScreens.isNotEmpty()) {
+            val screens =
+                ws.singlePaneScreens.mapNotNull { key ->
+                    PINNABLE_SCREENS.find { it.typeKey() == key }
+                }
+            _pinnedScreens.value = screens.ifEmpty { DEFAULT_PINNED }
         }
-        val keys = raw.split(",").filter { it.isNotBlank() }
-        val screens =
-            keys.mapNotNull { key ->
-                PINNABLE_SCREENS.find { it.typeKey() == key }
-            }
-        _pinnedScreens.value = screens.ifEmpty { DEFAULT_PINNED }
+    }
+
+    private fun syncToWorkspace() {
+        val wm = workspaceManager ?: return
+        val ws = wm.activeWorkspace
+        val updated = ws.copy(singlePaneScreens = _pinnedScreens.value.map { it.typeKey() })
+        wm.updateWorkspace(updated)
     }
 
     companion object {
-        // Only object types are pinnable (no parameterized types like Hashtag, Editor)
         val PINNABLE_SCREENS: List<DeckColumnType> =
             LAUNCHABLE_SCREENS.filter { !it.requiresInput() && it !is DeckColumnType.Editor }
 
@@ -106,7 +105,6 @@ class PinnedNavBarState {
                 DeckColumnType.Settings,
             )
 
-        // These screens cannot be unpinned
         private val ALWAYS_PINNED = setOf("home", "settings")
 
         fun isPinnable(type: DeckColumnType): Boolean = PINNABLE_SCREENS.any { it.typeKey() == type.typeKey() }

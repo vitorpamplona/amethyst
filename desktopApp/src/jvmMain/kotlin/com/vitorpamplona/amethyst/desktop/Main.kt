@@ -540,7 +540,7 @@ fun App(
     initialTorSettings: com.vitorpamplona.amethyst.commons.tor.TorSettings,
 ) {
     val singlePaneState = remember { SinglePaneState() }
-    val pinnedNavBarState = remember { PinnedNavBarState().also { it.load() } }
+    val pinnedNavBarState = remember { PinnedNavBarState(workspaceManager).also { it.loadFromWorkspace() } }
 
     // Always reload from prefs — after key() rebuild, prefs have the latest saved settings
     var torSettings by remember {
@@ -795,17 +795,12 @@ fun App(
                                     }
 
                                     LayoutMode.SINGLE_PANE -> {
-                                        // Set nav bar screens from workspace
-                                        if (ws.singlePaneScreens.isNotEmpty()) {
-                                            val screens =
-                                                ws.singlePaneScreens.mapNotNull {
-                                                    DeckState.parseColumnTypeFromKey(it)
-                                                }
-                                            if (screens.isNotEmpty()) {
-                                                pinnedNavBarState.loadFromList(screens)
-                                                singlePaneState.navigate(screens.first())
-                                            }
-                                        }
+                                        // Load nav bar from workspace + navigate to first screen
+                                        pinnedNavBarState.loadFromWorkspace()
+                                        val firstKey =
+                                            ws.singlePaneScreens.firstOrNull() ?: "home"
+                                        val type = DeckState.parseColumnTypeFromKey(firstKey)
+                                        if (type != null) singlePaneState.navigate(type)
                                     }
                                 }
                             },
