@@ -256,7 +256,9 @@ private fun renderFirstPage(
 
             renderer.openPage(0).use { page ->
                 val (renderW, renderH) = cappedRenderSize(page.width, page.height, targetWidthPx)
-                val bitmap = Bitmap.createBitmap(renderW, renderH, Bitmap.Config.ARGB_8888)
+                // RGB_565 halves memory vs ARGB_8888 and is visually identical for
+                // opaque PDF renders.
+                val bitmap = Bitmap.createBitmap(renderW, renderH, Bitmap.Config.RGB_565)
                 bitmap.eraseColor(android.graphics.Color.WHITE)
                 page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
                 PdfLoadState.Ready(
