@@ -39,7 +39,6 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -79,7 +78,6 @@ import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
 import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
 import com.vitorpamplona.quartz.nip58Badges.profile.ProfileBadgesEvent
 
-private val BadgeCardShape = RoundedCornerShape(12.dp)
 private val BadgeThumbSize = 72.dp
 
 @Composable
@@ -177,41 +175,38 @@ private fun BadgeCard(
     onClick: (() -> Unit)? = null,
     actions: @Composable () -> Unit = {},
 ) {
-    val baseModifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)
-    OutlinedCard(
-        modifier = if (onClick != null) baseModifier.clickable(onClick = onClick) else baseModifier,
-        shape = BadgeCardShape,
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                BadgeThumbnail(imageUrl, name)
+    val baseModifier = Modifier.fillMaxWidth()
+    val clickableModifier = if (onClick != null) baseModifier.clickable(onClick = onClick) else baseModifier
 
-                Spacer(modifier = Modifier.size(14.dp))
+    Column(modifier = clickableModifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            BadgeThumbnail(imageUrl, name)
 
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = name?.ifBlank { null } ?: stringRes(R.string.badge_untitled),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-            }
+            Spacer(modifier = Modifier.size(14.dp))
 
-            if (!description.isNullOrBlank()) {
-                Spacer(modifier = Modifier.height(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = description,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 4,
+                    text = name?.ifBlank { null } ?: stringRes(R.string.badge_untitled),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-
-            actions()
         }
+
+        if (!description.isNullOrBlank()) {
+            Spacer(modifier = Modifier.height(10.dp))
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 4,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+
+        actions()
     }
 }
 
