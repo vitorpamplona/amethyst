@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.note.types
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -67,6 +68,7 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNo
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -95,6 +97,12 @@ fun BadgeDisplay(
         imageUrl = definition.thumb()?.ifBlank { null } ?: definition.image(),
         name = definition.name(),
         description = definition.description(),
+        onClick =
+            nav?.let {
+                {
+                    routeFor(baseNote, accountViewModel.account)?.let { route -> nav.nav(route) }
+                }
+            },
     ) {
         if (isMine && nav != null) {
             BadgeActionRow {
@@ -150,6 +158,9 @@ fun RenderBadgeAward(
         imageUrl = definition?.thumb()?.ifBlank { null } ?: definition?.image(),
         name = definition?.name() ?: stringRes(R.string.award_granted_to),
         description = definition?.description(),
+        onClick = {
+            routeFor(note, accountViewModel.account)?.let { nav.nav(it) }
+        },
     ) {
         if (awardees.isNotEmpty()) {
             BadgeAwardeesRow(awardees, accountViewModel, nav)
@@ -163,10 +174,12 @@ private fun BadgeCard(
     imageUrl: String?,
     name: String?,
     description: String?,
+    onClick: (() -> Unit)? = null,
     actions: @Composable () -> Unit = {},
 ) {
+    val baseModifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)
     OutlinedCard(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+        modifier = if (onClick != null) baseModifier.clickable(onClick = onClick) else baseModifier,
         shape = BadgeCardShape,
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
