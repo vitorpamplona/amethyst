@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.twopane
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
@@ -97,6 +96,7 @@ fun MessagesTwoPane(
                     ChatroomList(
                         knownFeedContentState,
                         newFeedContentState,
+                        padding,
                         accountViewModel,
                         twoPaneNav,
                     )
@@ -134,7 +134,7 @@ fun MessagesTwoPane(
             strategy = strategy,
             displayFeatures = displayFeatures,
             foldAwareConfiguration = FoldAwareConfiguration.VerticalFoldsOnly,
-            modifier = Modifier.padding(padding).consumeWindowInsets(padding).fillMaxSize(),
+            modifier = Modifier.fillMaxSize(),
         )
     }
 }

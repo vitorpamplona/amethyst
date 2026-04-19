@@ -127,7 +127,6 @@ fun MessagesPager(
     nav: INav,
 ) {
     HorizontalPager(
-        contentPadding = paddingValues,
         state = pagerState,
         userScrollEnabled = true,
         modifier =
@@ -139,6 +138,7 @@ fun MessagesPager(
         ChatroomListFeedView(
             feedContentState = tabs[page].feedContentState,
             scrollStateKey = tabs[page].scrollStateKey,
+            scaffoldPadding = paddingValues,
             accountViewModel = accountViewModel,
             nav = nav,
         )

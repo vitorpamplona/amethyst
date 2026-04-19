@@ -44,6 +44,7 @@ import kotlinx.collections.immutable.persistentListOf
 fun ChatroomList(
     knownFeedContentState: FeedContentState,
     newFeedContentState: FeedContentState,
+    scaffoldPadding: PaddingValues = PaddingValues(0.dp),
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -75,7 +76,7 @@ fun ChatroomList(
         MessagesPager(
             pagerState,
             tabs,
-            PaddingValues(0.dp),
+            scaffoldPadding,
             accountViewModel,
             nav,
         )
