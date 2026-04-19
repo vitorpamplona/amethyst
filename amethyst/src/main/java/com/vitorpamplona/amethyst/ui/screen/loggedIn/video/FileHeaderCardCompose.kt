@@ -42,14 +42,19 @@ import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
+import com.vitorpamplona.amethyst.ui.components.BlurhashBackdrop
+import com.vitorpamplona.amethyst.ui.components.ContentWarningGate
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
+import com.vitorpamplona.amethyst.ui.components.collectContentWarningReasons
+import com.vitorpamplona.amethyst.ui.components.mediaSizingModifier
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitiveOrNSFW
 import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
 import kotlin.text.ifEmpty
 
@@ -95,12 +100,15 @@ private fun FileHeaderCardImage(
 ) {
     val fullUrl = event.url() ?: return
 
+    val isSensitive = remember(note) { event.isSensitiveOrNSFW() }
+    val reasons = remember(note) { collectContentWarningReasons(event) }
+    val isImage = remember(note) { event.mimeType()?.startsWith("image/") == true || RichTextParser.isImageUrl(fullUrl) }
+    val blurHash = remember(note) { event.blurhash() }
+    val dimensions = remember(note) { event.dimensions() }
+
     val content by remember(note) {
-        val blurHash = event.blurhash()
         val hash = event.hash()
-        val dimensions = event.dimensions()
         val description = event.content.ifEmpty { null } ?: event.alt()
-        val isImage = event.mimeType()?.startsWith("image/") == true || RichTextParser.isImageUrl(fullUrl)
         val uri = note.toNostrUri()
         val mimeType = event.mimeType()
 
@@ -130,7 +138,16 @@ private fun FileHeaderCardImage(
         )
     }
 
-    SensitivityWarning(note = note, accountViewModel = accountViewModel) {
+    val ratio = dimensions?.aspectRatio() ?: MediaAspectRatioCache.get(fullUrl)
+
+    ContentWarningGate(
+        isSensitive = isSensitive,
+        reasons = reasons,
+        preloadUrls = if (isImage) listOf(fullUrl) else emptyList(),
+        accountViewModel = accountViewModel,
+        modifier = mediaSizingModifier(ratio, ContentScale.FillWidth),
+        backdrop = blurHash?.let { blurhash -> { BlurhashBackdrop(blurhash, content.description) } },
+    ) {
         ZoomableContentView(
             content = content,
             roundedCorner = false,

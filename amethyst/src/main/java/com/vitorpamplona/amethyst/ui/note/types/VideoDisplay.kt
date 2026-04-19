@@ -29,12 +29,17 @@ import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
+import com.vitorpamplona.amethyst.ui.components.BlurhashBackdrop
+import com.vitorpamplona.amethyst.ui.components.ContentWarningGate
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
+import com.vitorpamplona.amethyst.ui.components.collectContentWarningReasons
+import com.vitorpamplona.amethyst.ui.components.mediaSizingModifier
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitiveOrNSFW
 import com.vitorpamplona.quartz.nip71Video.VideoEvent
 
 @Composable
@@ -48,11 +53,13 @@ fun JustVideoDisplay(
     val event = (videoEvent as? Event) ?: return
 
     val imeta = videoEvent.imetaTags().getOrNull(0) ?: return
+    val isSensitive = remember(note) { event.isSensitiveOrNSFW() }
+    val reasons = remember(note) { collectContentWarningReasons(event) }
+    val isImage = remember(note) { imeta.mimeType?.startsWith("image/") == true || RichTextParser.isImageUrl(imeta.url) }
 
     val content by
         remember(note) {
             val description = event.content.ifEmpty { null } ?: imeta.alt ?: event.alt()
-            val isImage = imeta.mimeType?.startsWith("image/") == true || RichTextParser.isImageUrl(imeta.url)
 
             mutableStateOf<BaseMediaContent>(
                 if (isImage) {
@@ -80,7 +87,16 @@ fun JustVideoDisplay(
             )
         }
 
-    SensitivityWarning(note = note, accountViewModel = accountViewModel) {
+    val ratio = imeta.dimension?.aspectRatio() ?: MediaAspectRatioCache.get(imeta.url)
+
+    ContentWarningGate(
+        isSensitive = isSensitive,
+        reasons = reasons,
+        preloadUrls = if (isImage) listOf(imeta.url) else emptyList(),
+        accountViewModel = accountViewModel,
+        modifier = mediaSizingModifier(ratio, contentScale),
+        backdrop = imeta.blurhash?.let { blurhash -> { BlurhashBackdrop(blurhash, content.description) } },
+    ) {
         ZoomableContentView(
             content = content,
             roundedCorner = roundedCorner,

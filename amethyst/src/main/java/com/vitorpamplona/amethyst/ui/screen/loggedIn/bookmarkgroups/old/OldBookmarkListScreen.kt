@@ -40,15 +40,19 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
+import com.vitorpamplona.amethyst.ui.components.DeletedItemsBanner
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
@@ -88,7 +92,7 @@ fun OldBookmarkListScreen(
     // Preload all bookmarked events so they don't load one-by-one when scrolling
     PreloadOldBookmarkEvents(bookmarkState, accountViewModel)
 
-    RenderOldBookmarkScreen(publicFeedViewModel, privateFeedViewModel, accountViewModel, nav)
+    RenderOldBookmarkScreen(publicFeedViewModel, privateFeedViewModel, bookmarkState, accountViewModel, nav)
 }
 
 @SuppressLint("LocalContextGetResourceValueCall")
@@ -97,12 +101,36 @@ fun OldBookmarkListScreen(
 private fun RenderOldBookmarkScreen(
     publicFeedViewModel: OldBookmarkPublicFeedViewModel,
     privateFeedViewModel: OldBookmarkPrivateFeedViewModel,
+    bookmarkState: com.vitorpamplona.amethyst.commons.model.nip51Lists.OldBookmarkListState.BookmarkList?,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val pagerState = rememberPagerState { 2 }
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
+
+    val cache = accountViewModel.account.cache
+    val deletedEventIds = remember(bookmarkState) { mutableSetOf<String>() }
+    val deletedAddresses = remember(bookmarkState) { mutableSetOf<com.vitorpamplona.quartz.nip01Core.core.Address>() }
+    val deletedCount =
+        remember(bookmarkState) {
+            deletedEventIds.clear()
+            deletedAddresses.clear()
+            val all = bookmarkState?.public.orEmpty() + bookmarkState?.private.orEmpty()
+            all.forEach { note ->
+                val event = note.event
+                if (event != null && cache.hasBeenDeleted(event)) {
+                    deletedEventIds.add(note.idHex)
+                    if (note is AddressableNote) deletedAddresses.add(note.address)
+                }
+            }
+            deletedEventIds.size + deletedAddresses.size
+        }
+
+    var bannerDismissed by remember { mutableStateOf(false) }
+    LaunchedEffect(deletedCount) {
+        if (deletedCount == 0) bannerDismissed = false
+    }
 
     DisappearingScaffold(
         isInvertedLayout = false,
@@ -156,6 +184,19 @@ private fun RenderOldBookmarkScreen(
         accountViewModel = accountViewModel,
     ) {
         Column(Modifier.padding(it).fillMaxHeight()) {
+            if (!bannerDismissed) {
+                DeletedItemsBanner(
+                    count = deletedCount,
+                    onRemove = {
+                        accountViewModel.removeDeletedOldBookmarks(
+                            deletedEventIds.toSet(),
+                            deletedAddresses.toSet(),
+                        )
+                        bannerDismissed = true
+                    },
+                    onDismiss = { bannerDismissed = true },
+                )
+            }
             HorizontalPager(state = pagerState) { page ->
                 when (page) {
                     0 -> {

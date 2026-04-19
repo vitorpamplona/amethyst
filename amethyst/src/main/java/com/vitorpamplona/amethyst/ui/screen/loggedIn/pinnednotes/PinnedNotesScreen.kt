@@ -27,13 +27,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
+import com.vitorpamplona.amethyst.ui.components.DeletedItemsBanner
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
@@ -63,15 +66,29 @@ fun PinnedNotesScreen(
     // Preload all pinned events so they don't load one-by-one when scrolling
     PreloadPinnedEvents(pinState, accountViewModel)
 
-    RenderPinnedNotesScreen(pinnedNotesFeedViewModel, accountViewModel, nav)
+    RenderPinnedNotesScreen(pinnedNotesFeedViewModel, pinState, accountViewModel, nav)
 }
 
 @Composable
 private fun RenderPinnedNotesScreen(
     pinnedNotesFeedViewModel: PinnedNotesFeedViewModel,
+    pinState: List<Note>?,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    var bannerDismissed by remember { mutableStateOf(false) }
+    val deletedPins =
+        remember(pinState) {
+            pinState
+                ?.filter { note ->
+                    note.event?.let(accountViewModel.account.cache::hasBeenDeleted) == true
+                }.orEmpty()
+        }
+
+    LaunchedEffect(deletedPins) {
+        if (deletedPins.isEmpty()) bannerDismissed = false
+    }
+
     DisappearingScaffold(
         isInvertedLayout = false,
         topBar = {
@@ -80,6 +97,16 @@ private fun RenderPinnedNotesScreen(
         accountViewModel = accountViewModel,
     ) {
         Column(Modifier.padding(it).fillMaxHeight()) {
+            if (!bannerDismissed) {
+                DeletedItemsBanner(
+                    count = deletedPins.size,
+                    onRemove = {
+                        accountViewModel.removeDeletedPins(deletedPins.toSet())
+                        bannerDismissed = true
+                    },
+                    onDismiss = { bannerDismissed = true },
+                )
+            }
             RefresheableFeedView(
                 pinnedNotesFeedViewModel,
                 null,
