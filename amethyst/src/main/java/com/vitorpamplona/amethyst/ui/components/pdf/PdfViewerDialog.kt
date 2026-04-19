@@ -161,9 +161,15 @@ private fun PdfViewerContent(
             }
     }
 
-    DisposableEffect(handleState) {
+    // Capture the handle as a local val so the onDispose lambda closes *this* handle,
+    // not whatever the delegated property reads at dispose time. Without this, the
+    // DisposableEffect keyed on handleState runs its onDispose when handleState
+    // transitions from null -> handle, and `handleState?.close()` reads the new handle
+    // and closes it right after it was created.
+    val handleForDispose = handleState
+    DisposableEffect(handleForDispose) {
         onDispose {
-            handleState?.close()
+            handleForDispose?.close()
         }
     }
 
