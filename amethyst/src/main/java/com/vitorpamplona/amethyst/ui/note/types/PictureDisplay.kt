@@ -67,9 +67,9 @@ fun PictureDisplay(
     nav: INav,
 ) {
     val event = (note.event as? PictureEvent) ?: return
-    val uri = note.toNostrUri()
-    val isSensitive = event.isSensitiveOrNSFW()
-    val reasons = collectContentWarningReasons(event)
+    val uri = remember(note) { note.toNostrUri() }
+    val isSensitive = remember(note) { event.isSensitiveOrNSFW() }
+    val reasons = remember(note) { collectContentWarningReasons(event) }
 
     val images by
         remember(note) {

@@ -103,9 +103,9 @@ private fun VideoCardImage(
     val event = (event as? Event) ?: return
 
     val imeta = videoEvent.imetaTags().getOrNull(0) ?: return
-    val isSensitive = event.isSensitiveOrNSFW()
-    val reasons = collectContentWarningReasons(event)
-    val isImage = imeta.mimeType?.startsWith("image/") == true || RichTextParser.isImageUrl(imeta.url)
+    val isSensitive = remember(note) { event.isSensitiveOrNSFW() }
+    val reasons = remember(note) { collectContentWarningReasons(event) }
+    val isImage = remember(note) { imeta.mimeType?.startsWith("image/") == true || RichTextParser.isImageUrl(imeta.url) }
 
     val content by
         remember(note) {

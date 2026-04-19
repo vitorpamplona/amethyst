@@ -100,11 +100,11 @@ private fun FileHeaderCardImage(
 ) {
     val fullUrl = event.url() ?: return
 
-    val isSensitive = event.isSensitiveOrNSFW()
-    val reasons = collectContentWarningReasons(event)
-    val isImage = event.mimeType()?.startsWith("image/") == true || RichTextParser.isImageUrl(fullUrl)
-    val blurHash = event.blurhash()
-    val dimensions = event.dimensions()
+    val isSensitive = remember(note) { event.isSensitiveOrNSFW() }
+    val reasons = remember(note) { collectContentWarningReasons(event) }
+    val isImage = remember(note) { event.mimeType()?.startsWith("image/") == true || RichTextParser.isImageUrl(fullUrl) }
+    val blurHash = remember(note) { event.blurhash() }
+    val dimensions = remember(note) { event.dimensions() }
 
     val content by remember(note) {
         val hash = event.hash()
