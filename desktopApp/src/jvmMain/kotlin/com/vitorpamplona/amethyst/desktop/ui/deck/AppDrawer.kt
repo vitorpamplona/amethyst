@@ -817,6 +817,7 @@ private fun WorkspaceCard(
             }
             // Active indicator
             if (isActive) {
+                Spacer(Modifier.width(8.dp))
                 Icon(
                     Icons.Default.Check,
                     "Active",
@@ -929,7 +930,7 @@ private fun WorkspaceEditorDialog(
                             onClick = { layoutMode = LayoutMode.SINGLE_PANE },
                             shape = SegmentedButtonDefaults.itemShape(0, 2),
                         ) {
-                            Text("Single Pane")
+                            Text("Single", maxLines = 1)
                         }
                         SegmentedButton(
                             selected = layoutMode == LayoutMode.DECK,
