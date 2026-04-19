@@ -89,16 +89,16 @@ import net.engawapg.lib.zoomable.toggleScale
 import net.engawapg.lib.zoomable.zoomable
 
 // Hard ceiling on each base-rendered page bitmap, in pixels. Higher = sharper when
-// the user pinch-zooms inside the dialog, but each page costs ~maxDim^2 * 2 bytes
-// of RAM (RGB_565). 3072 gives ~13 MB per A4-shaped page.
+// the user pinch-zooms inside the dialog, but each page costs ~maxDim^2 * 4 bytes
+// of RAM (PdfRenderer requires ARGB_8888). 3072 gives ~26 MB per A4-shaped page.
 private const val VIEWER_MAX_DIM_PX = 3072
 
 // Hard ceiling for the per-page zoom-aware detail render. When the user zooms in
 // past HI_RES_ZOOM_THRESHOLD we re-render the current page at
 // (VIEWER_MAX_DIM_PX * scale) capped at this value. 4096 keeps the bitmap within
 // common GPU texture limits (so drawing stays hardware-accelerated) and caps
-// memory at ~24 MB for an A4-shaped page (RGB_565). Above 4096 most mid-range
-// GPUs fall back to software rendering, which is what caused the pan/zoom jitter.
+// memory at ~48 MB for an A4-shaped page. Above 4096 most mid-range GPUs fall
+// back to software rendering, which is what caused the pan/zoom jitter.
 private const val HI_RES_MAX_DIM_PX = 4096
 private const val HI_RES_ZOOM_THRESHOLD = 1.5f
 private const val HI_RES_DEBOUNCE_MS = 200L
@@ -398,10 +398,9 @@ private suspend fun renderPageCatching(
                 withContext(Dispatchers.IO) {
                     handle.renderer.openPage(pageIndex).use { page ->
                         val (width, height) = cappedRenderSize(page.width, page.height, maxDim)
-                        // RGB_565 uses half the memory of ARGB_8888 and is indistinguishable
-                        // for PDFs (opaque white background, no alpha). Halves GPU texture
-                        // upload size and sampling cost during pan/zoom.
-                        val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565)
+                        // PdfRenderer requires ARGB_8888 bitmaps — RGB_565 is silently
+                        // rejected and produces blank output.
+                        val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
                         bmp.eraseColor(android.graphics.Color.WHITE)
                         page.render(bmp, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
                         bmp
