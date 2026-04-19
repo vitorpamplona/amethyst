@@ -239,6 +239,7 @@ import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 import com.vitorpamplona.quartz.nipB0WebBookmarks.WebBookmarkEvent
 import com.vitorpamplona.quartz.utils.DualCase
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.containsAny
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -251,6 +252,8 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.math.BigDecimal
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -1146,6 +1149,27 @@ class Account(
         return oldEvent?.acceptedBadges() ?: emptyList()
     }
 
+    /**
+     * Serializes read-modify-write of the accepted-badges replaceable event so two
+     * rapid toggles can't race each other into losing updates.
+     */
+    private val profileBadgesMutex = Mutex()
+
+    /**
+     * Returns a createdAt strictly greater than whatever ProfileBadgesEvent (or
+     * the legacy AcceptedBadgeSetEvent) currently sits in cache. Needed because
+     * LocalCache.consumeBaseReplaceable drops updates whose createdAt isn't
+     * strictly greater, and TimeUtils.now() has only second resolution.
+     */
+    private fun nextProfileBadgesCreatedAt(): Long {
+        val latest =
+            maxOf(
+                (cache.getAddressableNoteIfExists(ProfileBadgesEvent.createAddress(signer.pubKey))?.event?.createdAt) ?: 0L,
+                (cache.getAddressableNoteIfExists(AcceptedBadgeSetEvent.createAddress(signer.pubKey))?.event?.createdAt) ?: 0L,
+            )
+        return maxOf(TimeUtils.now(), latest + 1)
+    }
+
     suspend fun addAcceptedBadge(
         award: BadgeAwardEvent,
         definition: BadgeDefinitionEvent,
@@ -1155,30 +1179,36 @@ class Account(
         val aTag = ATag(definition.kind, definition.pubKey, definition.dTag(), null)
         val eTag = ETag(award.id)
 
-        val current = loadCurrentAcceptedBadges()
-        val alreadyAccepted = current.any { it.badgeAward.eventId == award.id }
-        if (alreadyAccepted) return
+        val signedEvent =
+            profileBadgesMutex.withLock {
+                val current = loadCurrentAcceptedBadges()
+                if (current.any { it.badgeAward.eventId == award.id }) return
+                val updated = current + AcceptedBadge(aTag, eTag)
 
-        val updated = current + AcceptedBadge(aTag, eTag)
+                val template = ProfileBadgesEvent.build(updated, createdAt = nextProfileBadgesCreatedAt())
+                val signed = signer.sign(template)
+                cache.justConsumeMyOwnEvent(signed)
+                signed
+            }
 
-        val template = ProfileBadgesEvent.build(updated)
-        val signedEvent = signer.sign(template)
-
-        cache.justConsumeMyOwnEvent(signedEvent)
         client.publish(signedEvent, outboxRelays.flow.value)
     }
 
     suspend fun removeAcceptedBadge(award: BadgeAwardEvent) {
         if (!isWriteable()) return
 
-        val current = loadCurrentAcceptedBadges()
-        val updated = current.filterNot { it.badgeAward.eventId == award.id }
-        if (updated.size == current.size) return
+        val signedEvent =
+            profileBadgesMutex.withLock {
+                val current = loadCurrentAcceptedBadges()
+                val updated = current.filterNot { it.badgeAward.eventId == award.id }
+                if (updated.size == current.size) return
 
-        val template = ProfileBadgesEvent.build(updated)
-        val signedEvent = signer.sign(template)
+                val template = ProfileBadgesEvent.build(updated, createdAt = nextProfileBadgesCreatedAt())
+                val signed = signer.sign(template)
+                cache.justConsumeMyOwnEvent(signed)
+                signed
+            }
 
-        cache.justConsumeMyOwnEvent(signedEvent)
         client.publish(signedEvent, outboxRelays.flow.value)
     }
 
