@@ -297,7 +297,7 @@ private fun BadgeAwardeesRow(
 }
 
 @Composable
-private fun AcceptBadgeControls(
+fun AcceptBadgeControls(
     award: BadgeAwardEvent,
     accountViewModel: AccountViewModel,
 ) {

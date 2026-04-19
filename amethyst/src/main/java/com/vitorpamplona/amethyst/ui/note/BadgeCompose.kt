@@ -46,11 +46,13 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNo
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.elements.MoreOptionsButton
+import com.vitorpamplona.amethyst.ui.note.types.AcceptBadgeControls
 import com.vitorpamplona.amethyst.ui.note.types.BadgeDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.BadgeCard
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -127,6 +129,10 @@ fun BadgeCompose(
 
                 note.replyTo?.firstOrNull()?.let {
                     BadgeDisplay(baseNote = it, accountViewModel)
+                }
+
+                (note.event as? BadgeAwardEvent)?.let { award ->
+                    AcceptBadgeControls(award, accountViewModel)
                 }
             }
         }
