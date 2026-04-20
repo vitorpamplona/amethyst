@@ -49,7 +49,6 @@ import kotlin.coroutines.cancellation.CancellationException
 
 @Stable
 class EmojiPackMetadataViewModel : ViewModel() {
-    private lateinit var accountViewModel: AccountViewModel
     private lateinit var account: Account
 
     var pack by mutableStateOf<OwnedEmojiPack?>(null)
@@ -59,27 +58,18 @@ class EmojiPackMetadataViewModel : ViewModel() {
     val picture = mutableStateOf(TextFieldValue())
     val description = mutableStateOf(TextFieldValue())
 
-    /**
-     * Local image the user just picked from the gallery but hasn't uploaded yet.
-     * When non-null the hero preview shows this file and `submit()` will upload
-     * it before publishing the emoji pack event. Mutated only via [pickMedia] /
-     * [clearPickedMedia] so the setter name doesn't collide on the JVM.
-     */
     var pickedMedia by mutableStateOf<SelectedMedia?>(null)
         private set
 
-    /** True while upload-then-publish is running. Disables the submit button and shows a spinner. */
     var isWorking by mutableStateOf(false)
 
     val canPost by derivedStateOf {
         !isWorking && name.value.text.isNotBlank()
     }
 
-    /** True when either a remote cover URL exists OR the user has picked a local image. */
     fun hasImage(): Boolean = pickedMedia != null || picture.value.text.isNotBlank()
 
     fun init(accountViewModel: AccountViewModel) {
-        this.accountViewModel = accountViewModel
         this.account = accountViewModel.account
     }
 
@@ -101,18 +91,6 @@ class EmojiPackMetadataViewModel : ViewModel() {
         pickedMedia = media
     }
 
-    fun clearPickedMedia() {
-        pickedMedia = null
-    }
-
-    /**
-     * Kicks off the full create/update flow:
-     *   1. If a local image was picked, upload it first and update `picture`.
-     *   2. Build & sign the EmojiPackEvent with the (possibly newly uploaded) URL.
-     *
-     * Mirrors the badge-definition flow where the user never sees the URL and the
-     * image upload is implicit in pressing "Create" / "Save".
-     */
     fun submit(
         context: Context,
         onSuccess: () -> Unit,
@@ -169,19 +147,6 @@ class EmojiPackMetadataViewModel : ViewModel() {
         }
     }
 
-    /**
-     * Retained for backward compatibility with the old "paste URL + upload button"
-     * flow. New UI goes through [submit]. The signer contract is unchanged: the
-     * final signed EmojiPackEvent still carries the published URL in `image`.
-     */
-    @Suppress("unused")
-    fun createOrUpdate() {
-        accountViewModel.launchSigner {
-            publish()
-            clear()
-        }
-    }
-
     fun clear() {
         name.value = TextFieldValue()
         picture.value = TextFieldValue()
@@ -189,13 +154,6 @@ class EmojiPackMetadataViewModel : ViewModel() {
         pickedMedia = null
     }
 
-    /**
-     * Uploads [galleryUri] using the user's configured default file server,
-     * respecting the account's strip-location-on-upload preference. Returns the
-     * published URL or null on failure (having already called [onError]).
-     *
-     * Mirrors the NIP-96/Blossom block used by `BookmarkGroupMetadataViewModel.upload`.
-     */
     private suspend fun uploadImage(
         galleryUri: SelectedMedia,
         context: Context,
