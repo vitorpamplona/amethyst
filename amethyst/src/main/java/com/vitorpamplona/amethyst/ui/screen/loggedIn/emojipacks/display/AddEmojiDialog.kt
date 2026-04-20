@@ -24,8 +24,14 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -41,14 +47,28 @@ import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 
+/**
+ * Dialog for adding a custom emoji to an owned emoji pack (NIP-30 kind 30030).
+ *
+ * The [onConfirm] callback receives the new [EmojiUrlTag] alongside an `isPrivate`
+ * flag: when `true`, the caller is expected to store the entry in the event's
+ * encrypted `.content` (NIP-51 private tags) rather than as a public tag.
+ *
+ * NOTE: Private emojis are currently only visible to the pack owner when viewing
+ * their own pack here. They are NOT surfaced in the reaction menu or in the `:`
+ * autocomplete picker, because those consumers read public tags only via
+ * [com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState.mergePack].
+ * The dialog surfaces a warning so users understand the tradeoff.
+ */
 @Composable
 fun AddEmojiDialog(
     onDismiss: () -> Unit,
-    onConfirm: (EmojiUrlTag) -> Unit,
+    onConfirm: (EmojiUrlTag, Boolean) -> Unit,
 ) {
     var shortcode by remember { mutableStateOf("") }
     var url by remember { mutableStateOf("") }
     var packAddressText by remember { mutableStateOf("") }
+    var isPrivate by remember { mutableStateOf(false) }
 
     val shortcodeValid by remember {
         derivedStateOf {
@@ -101,6 +121,31 @@ fun AddEmojiDialog(
                     onValueChange = { packAddressText = it },
                     label = { Text(stringRes(R.string.emoji_pack_address_label)) },
                 )
+                Spacer(DoubleVertSpacer)
+                FilterChip(
+                    selected = isPrivate,
+                    onClick = { isPrivate = !isPrivate },
+                    label = { Text(stringRes(R.string.emoji_private_toggle)) },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = if (isPrivate) Icons.Default.Lock else Icons.Default.LockOpen,
+                            contentDescription = null,
+                        )
+                    },
+                )
+                Spacer(DoubleVertSpacer)
+                Text(
+                    text =
+                        stringRes(
+                            if (isPrivate) {
+                                R.string.emoji_private_explainer
+                            } else {
+                                R.string.emoji_public_explainer
+                            },
+                        ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         },
         confirmButton = {
@@ -108,7 +153,10 @@ fun AddEmojiDialog(
                 enabled = canConfirm,
                 onClick = {
                     val parsedAddress = packAddressText.trim().takeIf { it.isNotEmpty() }?.let { Address.parse(it) }
-                    onConfirm(EmojiUrlTag(code = shortcode, url = url.trim(), emojiSet = parsedAddress))
+                    onConfirm(
+                        EmojiUrlTag(code = shortcode, url = url.trim(), emojiSet = parsedAddress),
+                        isPrivate,
+                    )
                 },
             ) {
                 Text(stringRes(R.string.add))
