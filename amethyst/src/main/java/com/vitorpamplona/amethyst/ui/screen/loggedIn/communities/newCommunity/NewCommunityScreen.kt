@@ -150,9 +150,12 @@ private fun CommunityFormScreen(
 
     Scaffold(
         topBar = {
-            val titleRes =
-                if (model.isEditing()) R.string.edit_community else R.string.new_community
-            if (model.isEditing()) {
+            // Derive the top bar from the parameter, not model.isEditing(), so the
+            // first composition of the edit screen already shows "Save" before
+            // loadFrom() runs in its LaunchedEffect.
+            val isEditing = editing != null
+            val titleRes = if (isEditing) R.string.edit_community else R.string.new_community
+            if (isEditing) {
                 ActionTopBar(
                     titleRes = titleRes,
                     postRes = R.string.save,
