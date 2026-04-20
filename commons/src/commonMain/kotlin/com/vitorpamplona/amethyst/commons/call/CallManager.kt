@@ -358,8 +358,6 @@ class CallManager(
                             cancelPeerTimeout(callerPubKey)
                         }
                     }
-
-                    else -> {}
                 }
                 emitSessionEvent(CallSessionEvent.MidCallOfferReceived(callerPubKey, event.sdpOffer()))
                 return
@@ -1079,7 +1077,6 @@ class CallManager(
                             when (cur) {
                                 is CallState.IncomingCall -> cur.peerPubKeys()
                                 is CallState.Offering -> cur.peerPubKeys
-                                else -> emptySet()
                             }
                         transitionToEnded(callId, peers, EndReason.TIMEOUT)
                     }
