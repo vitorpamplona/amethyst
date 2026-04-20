@@ -18,24 +18,34 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip72ModCommunities.approval
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.list.datasource
 
-import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
-import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
-import com.vitorpamplona.quartz.nip01Core.tags.aTag.toATag
-import com.vitorpamplona.quartz.nip01Core.tags.events.toETagArray
-import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 
-fun TagArrayBuilder<CommunityPostApprovalEvent>.community(event: EventHintBundle<CommunityDefinitionEvent>) = add(event.toATag().toATagArray())
+private const val COMMUNITIES_MINE_LIMIT = 300
 
-fun TagArrayBuilder<CommunityPostApprovalEvent>.approved(event: EventHintBundle<Event>) {
-    add(event.toETagArray())
-    if (event.event is AddressableEvent) {
-        add(event.toATag().toATagArray())
+fun filterCommunitiesMine(
+    pubkey: HexKey,
+    relays: Set<NormalizedRelayUrl>,
+    since: SincePerRelayMap?,
+): List<RelayBasedFilter> {
+    if (relays.isEmpty() || pubkey.isEmpty()) return emptyList()
+    val authors = listOf(pubkey)
+    return relays.map { relay ->
+        RelayBasedFilter(
+            relay = relay,
+            filter =
+                Filter(
+                    kinds = listOf(CommunityDefinitionEvent.KIND),
+                    authors = authors,
+                    limit = COMMUNITIES_MINE_LIMIT,
+                    since = since?.get(relay)?.time,
+                ),
+        )
     }
 }
-
-fun TagArrayBuilder<CommunityPostApprovalEvent>.notifyAuthor(event: EventHintBundle<Event>) = add(PTag.assemble(event.event.pubKey, event.authorHomeRelay))

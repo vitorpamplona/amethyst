@@ -18,24 +18,31 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip72ModCommunities.approval
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.list.datasource
 
-import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
-import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
-import com.vitorpamplona.quartz.nip01Core.tags.aTag.toATag
-import com.vitorpamplona.quartz.nip01Core.tags.events.toETagArray
-import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
-import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.KeyDataSourceSubscription
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
-fun TagArrayBuilder<CommunityPostApprovalEvent>.community(event: EventHintBundle<CommunityDefinitionEvent>) = add(event.toATag().toATagArray())
-
-fun TagArrayBuilder<CommunityPostApprovalEvent>.approved(event: EventHintBundle<Event>) {
-    add(event.toETagArray())
-    if (event.event is AddressableEvent) {
-        add(event.toATag().toATagArray())
-    }
+@Composable
+fun CommunitiesListFilterAssemblerSubscription(accountViewModel: AccountViewModel) {
+    CommunitiesListFilterAssemblerSubscription(
+        accountViewModel.dataSources().communitiesList,
+        accountViewModel,
+    )
 }
 
-fun TagArrayBuilder<CommunityPostApprovalEvent>.notifyAuthor(event: EventHintBundle<Event>) = add(PTag.assemble(event.event.pubKey, event.authorHomeRelay))
+@Composable
+fun CommunitiesListFilterAssemblerSubscription(
+    dataSource: CommunitiesListFilterAssembler,
+    accountViewModel: AccountViewModel,
+) {
+    val state =
+        remember(accountViewModel.account) {
+            CommunitiesListQueryState(accountViewModel.account, accountViewModel.feedStates, accountViewModel.viewModelScope)
+        }
+
+    KeyDataSourceSubscription(state, dataSource)
+}

@@ -36,6 +36,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import com.vitorpamplona.quartz.nip51Lists.interestSet.InterestSetEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.collections.immutable.persistentListOf
@@ -275,6 +276,18 @@ class TopNavFilterState(
             )
         }
 
+    private val _communityRoutes =
+        livePeopleListsFlow.transform { peopleLists ->
+            checkNotInMainThread()
+            emit(
+                listOf(
+                    listOf(allFollows, userFollows, kind3Follows, globalFollow, mineFollow),
+                    peopleLists,
+                    listOf(muteListFollow),
+                ).flatten().toImmutableList(),
+            )
+        }
+
     private val _kind3GlobalPeople =
         livePeopleListsFlow.transform { peopleLists ->
             checkNotInMainThread()
@@ -299,6 +312,11 @@ class TopNavFilterState(
 
     val badgeRoutes =
         _badgeRoutes
+            .flowOn(Dispatchers.IO)
+            .stateIn(scope, SharingStarted.Eagerly, persistentListOf(allFollows, userFollows, kind3Follows, globalFollow, mineFollow, muteListFollow))
+
+    val communityRoutes =
+        _communityRoutes
             .flowOn(Dispatchers.IO)
             .stateIn(scope, SharingStarted.Eagerly, persistentListOf(allFollows, userFollows, kind3Follows, globalFollow, mineFollow, muteListFollow))
 
@@ -364,7 +382,11 @@ class PeopleListName(
 class CommunityName(
     val note: AddressableNote,
 ) : Name() {
-    override fun name() = "/n/${(note.dTag())}"
+    override fun name(): String {
+        val definition = note.event as? CommunityDefinitionEvent
+        val label = definition?.name()?.ifBlank { null } ?: note.dTag()
+        return "/n/$label"
+    }
 }
 
 @Stable

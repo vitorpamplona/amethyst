@@ -547,17 +547,17 @@ object LocalPreferences {
 
                     Log.d("LocalPreferences") { "Load account from file $npub - before parsing events" }
 
-                    val defaultHomeFollowList = async { parseOrNull<TopFilter>(defaultHomeFollowListStr) ?: TopFilter.AllFollows }
-                    val defaultStoriesFollowList = async { parseOrNull<TopFilter>(defaultStoriesFollowListStr) ?: TopFilter.Global }
-                    val defaultNotificationFollowList = async { parseOrNull<TopFilter>(defaultNotificationFollowListStr) ?: TopFilter.Global }
-                    val defaultDiscoveryFollowList = async { parseOrNull<TopFilter>(defaultDiscoveryFollowListStr) ?: TopFilter.Global }
+                    val defaultHomeFollowList = async { parseTopFilterOrDefault(defaultHomeFollowListStr, TopFilter.AllFollows) }
+                    val defaultStoriesFollowList = async { parseTopFilterOrDefault(defaultStoriesFollowListStr, TopFilter.Global) }
+                    val defaultNotificationFollowList = async { parseTopFilterOrDefault(defaultNotificationFollowListStr, TopFilter.Global) }
+                    val defaultDiscoveryFollowList = async { parseTopFilterOrDefault(defaultDiscoveryFollowListStr, TopFilter.Global) }
 
-                    val defaultPollsFollowList = async { parseOrNull<TopFilter>(defaultPollsFollowListStr) ?: TopFilter.Global }
-                    val defaultPicturesFollowList = async { parseOrNull<TopFilter>(defaultPicturesFollowListStr) ?: TopFilter.Global }
-                    val defaultProductsFollowList = async { parseOrNull<TopFilter>(defaultProductsFollowListStr) ?: TopFilter.AroundMe }
-                    val defaultShortsFollowList = async { parseOrNull<TopFilter>(defaultShortsFollowListStr) ?: TopFilter.Global }
-                    val defaultLongsFollowList = async { parseOrNull<TopFilter>(defaultLongsFollowListStr) ?: TopFilter.Global }
-                    val defaultArticlesFollowList = async { parseOrNull<TopFilter>(defaultArticlesFollowListStr) ?: TopFilter.AllFollows }
+                    val defaultPollsFollowList = async { parseTopFilterOrDefault(defaultPollsFollowListStr, TopFilter.Global) }
+                    val defaultPicturesFollowList = async { parseTopFilterOrDefault(defaultPicturesFollowListStr, TopFilter.Global) }
+                    val defaultProductsFollowList = async { parseTopFilterOrDefault(defaultProductsFollowListStr, TopFilter.AroundMe) }
+                    val defaultShortsFollowList = async { parseTopFilterOrDefault(defaultShortsFollowListStr, TopFilter.Global) }
+                    val defaultLongsFollowList = async { parseTopFilterOrDefault(defaultLongsFollowListStr, TopFilter.Global) }
+                    val defaultArticlesFollowList = async { parseTopFilterOrDefault(defaultArticlesFollowListStr, TopFilter.AllFollows) }
 
                     val nwcWalletsLoaded =
                         async {
@@ -670,6 +670,20 @@ object LocalPreferences {
             }
         Log.d("LocalPreferences") { "Loaded account from file $npub" }
         return result
+    }
+
+    private fun parseTopFilterOrDefault(
+        value: String?,
+        default: TopFilter,
+    ): TopFilter {
+        if (value.isNullOrEmpty() || value == "null") return default
+        return try {
+            JsonMapper.fromJson<TopFilter>(value)
+        } catch (e: Throwable) {
+            if (e is CancellationException) throw e
+            Log.w("LocalPreferences", "Error Decoding TopFilter from Preferences with value $value", e)
+            default
+        }
     }
 
     private inline fun <reified T : Any> parseOrNull(value: String?): T? {

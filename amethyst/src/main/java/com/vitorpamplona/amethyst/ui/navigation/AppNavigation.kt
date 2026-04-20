@@ -93,6 +93,9 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.MessagesScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.ChessGameScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.ChessLobbyScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.CommunityScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.list.CommunitiesScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.newCommunity.EditCommunityScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.newCommunity.NewCommunityScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.DiscoverScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip23LongForm.LongFormPostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip99Classifieds.NewProductScreen
@@ -221,6 +224,9 @@ fun BuildNavigation(
         composable<Route.Discover> { DiscoverScreen(accountViewModel, nav) }
         composableArgs<Route.Notification> { NotificationScreen(it.scrollToEventId, accountViewModel, nav) }
         composableFromEnd<Route.Polls> { PollsScreen(accountViewModel, nav) }
+        composableFromEnd<Route.Communities> { CommunitiesScreen(accountViewModel, nav) }
+        composableFromEnd<Route.NewCommunity> { NewCommunityScreen(accountViewModel, nav) }
+        composableFromEndArgs<Route.EditCommunity> { EditCommunityScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
         composableFromEnd<Route.Badges> { BadgesScreen(accountViewModel, nav) }
         composableFromEnd<Route.ProfileBadges> { ProfileBadgesScreen(accountViewModel, nav) }
         composableFromBottomArgs<Route.AwardBadge> { AwardBadgeScreen(it.kind, it.pubKeyHex, it.dTag, accountViewModel, nav) }
