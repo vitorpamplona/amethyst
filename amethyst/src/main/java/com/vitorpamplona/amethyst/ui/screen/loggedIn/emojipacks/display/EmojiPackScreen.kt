@@ -168,6 +168,8 @@ private fun EmojiPackScreenView(
 
     if (showAddDialog) {
         AddEmojiDialog(
+            viewModel = viewModel,
+            accountViewModel = accountViewModel,
             onDismiss = { showAddDialog = false },
             onConfirm = { tag, isPrivate ->
                 accountViewModel.launchSigner {

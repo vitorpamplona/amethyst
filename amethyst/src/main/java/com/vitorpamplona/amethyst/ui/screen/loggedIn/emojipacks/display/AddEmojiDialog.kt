@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
@@ -41,7 +42,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.actions.uploads.SelectSingleFromGallery
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.quartz.nip01Core.core.Address
@@ -54,14 +59,16 @@ import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
  * flag: when `true`, the caller is expected to store the entry in the event's
  * encrypted `.content` (NIP-51 private tags) rather than as a public tag.
  *
- * NOTE: Private emojis are currently only visible to the pack owner when viewing
- * their own pack here. They are NOT surfaced in the reaction menu or in the `:`
- * autocomplete picker, because those consumers read public tags only via
- * [com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState.mergePack].
- * The dialog surfaces a warning so users understand the tradeoff.
+ * Private emojis are visible only to the pack owner, but they ARE surfaced in
+ * both the reaction menu and the `:` autocomplete picker once the app decrypts
+ * them. Decryption is asynchronous; autocomplete shows the public list first
+ * and the private entries are appended once decryption finishes. See
+ * [com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState.mergePackWithPrivate].
  */
 @Composable
 fun AddEmojiDialog(
+    viewModel: EmojiPackViewModel,
+    accountViewModel: AccountViewModel,
     onDismiss: () -> Unit,
     onConfirm: (EmojiUrlTag, Boolean) -> Unit,
 ) {
@@ -113,6 +120,21 @@ fun AddEmojiDialog(
                     value = url,
                     onValueChange = { url = it },
                     label = { Text(stringRes(R.string.emoji_url_label)) },
+                    leadingIcon = {
+                        val context = LocalContext.current
+                        SelectSingleFromGallery(
+                            isUploading = viewModel.isUploadingEmojiImage,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(start = 2.dp),
+                        ) { selected ->
+                            viewModel.uploadEmojiImage(
+                                uri = selected,
+                                context = context,
+                                onUploaded = { uploadedUrl -> url = uploadedUrl },
+                                onError = accountViewModel.toastManager::toast,
+                            )
+                        }
+                    },
                 )
                 Spacer(DoubleVertSpacer)
                 OutlinedTextField(
