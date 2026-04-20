@@ -318,16 +318,30 @@ test_01_keypackage_discovery() {
 test_02_amethyst_creates_group() {
   banner "Test 02 — Amethyst creates group, invites B"
 
+  # Baseline dump BEFORE the human triggers the publish in Amethyst.
+  # If this diagnostic shows B has no inbox relays (or the inbox relays
+  # differ from the ones Amethyst has cached for B's kind:10050 list),
+  # the welcome gift wrap will never reach B no matter how correctly
+  # Amethyst sends it.
+  dump_daemon_diagnostics B "pre-invite baseline"
+
   prompt_human "In Amethyst:
   1. Tap '+' -> Create Group
   2. Name: Interop-02
   3. Add member: $B_NPUB
-  4. Tap Create / Send Invite"
+  4. Tap Create / Send Invite
 
-  step "polling B's daemon for invite (60s)"
+Tip: watch the Android logcat for tag 'MarmotDbg' — you should see
+'publishing welcome gift wrap id=… kind:1059 → N relay(s): [...]' listing
+the same relays as B's inbox above. If the list is empty or different,
+that's the bug."
+
+  step "polling B's daemon for invite (60s, heartbeat every ~10s)"
   local gid
   if ! gid=$(wait_for_invite B 60); then
     fail_msg "no invite arrived at B"
+    dump_daemon_diagnostics B "post-timeout (test_02)"
+    prompt_amethyst_logcat "test_02 timeout"
     record_result "02 Amethyst->B create+invite" fail "invite never arrived"
     return
   fi
@@ -431,14 +445,18 @@ test_04_three_member_group() {
   fi
   info "using group $gid"
 
+  dump_daemon_diagnostics C "pre-invite baseline (test_04)"
+
   prompt_human "In Amethyst, open the group from Test 02 (or 'Interop-04-bootstrap').
   Group Info -> Add Member -> paste: $C_NPUB
   Confirm the invite is sent."
 
-  step "polling C for invite (60s)"
+  step "polling C for invite (60s, heartbeat every ~10s)"
   local c_gid
   if ! c_gid=$(wait_for_invite C 60); then
     fail_msg "C never received invite"
+    dump_daemon_diagnostics C "post-timeout (test_04)"
+    prompt_amethyst_logcat "test_04 timeout"
     record_result "04 3-member add-after-create" fail "invite to C missing"
     return
   fi
@@ -865,6 +883,15 @@ main() {
   ensure_identity C
   prompt_for_a_npub
   configure_relays
+
+  # Baseline dump after relays are configured but before any tests run.
+  # This is the single most useful log to forward when Test 02 fails —
+  # it shows whether B's kind:10050 (inbox) relay list actually landed
+  # on the relays Amethyst will look at for the giftwrap delivery target.
+  banner "Post-configure baseline diagnostics"
+  dump_daemon_diagnostics B "post-configure"
+  dump_daemon_diagnostics C "post-configure"
+
   instruct_amethyst_setup
 
   test_01_keypackage_discovery
