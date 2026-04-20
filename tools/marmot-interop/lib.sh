@@ -104,7 +104,7 @@ confirm() {
     while true; do
         printf '%s? %s%s  [p]ass / [f]ail / [s]kip: ' "$C_CYAN" "$q" "$C_RESET" >&2
         read -r ans
-        case "${ans,,}" in
+        case "$(printf '%s' "$ans" | tr '[:upper:]' '[:lower:]')" in
             p|pass) printf 'CONFIRM PASS: %s\n' "$q" >>"$LOG_FILE"; return 0 ;;
             f|fail) printf 'CONFIRM FAIL: %s\n' "$q" >>"$LOG_FILE"; return 1 ;;
             s|skip) printf 'CONFIRM SKIP: %s\n' "$q" >>"$LOG_FILE"; return 2 ;;
