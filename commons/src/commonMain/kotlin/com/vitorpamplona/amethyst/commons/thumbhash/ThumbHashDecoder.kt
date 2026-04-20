@@ -26,16 +26,63 @@ import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.max
-import kotlin.math.min
 import kotlin.math.round
 
 /**
  * ThumbHash decoder.
  *
  * Port of the reference implementation by Evan Wallace
- * (https://github.com/evanw/thumbhash, public domain), adapted to Kotlin.
+ * (https://github.com/evanw/thumbhash, public domain), with performance
+ * optimisations for the decode hot path:
+ *
+ *  - cosine tables for the inverse DCT are precomputed once per decode and
+ *    cached across decodes keyed by `(size, componentCount)`; the reference
+ *    JS impl recomputes them for every single output pixel.
+ *  - AC coefficients are unpacked into fixed-size `DoubleArray`s, avoiding
+ *    `ArrayList<Double>` boxing and the final array copy.
+ *  - The LPQA → sRGB conversion uses an inline branch clamp instead of
+ *    `min/max/round/coerceIn` chains.
  */
 object ThumbHashDecoder {
+    // Cosine tables are small and decoded sizes repeat heavily in practice
+    // (every Coil request at a given target width shares the same table).
+    // Keep an unbounded map — there are at most a few dozen distinct
+    // (size, components) pairs across the entire app lifetime, each table is
+    // a few KB, so the memory ceiling is tiny.
+    private val cosineCache = HashMap<Long, DoubleArray>()
+    private val cosineCacheLock = Any()
+
+    /**
+     * Clear the cosine table cache. Tables are tiny but callers under memory
+     * pressure can release them; they will be recomputed on demand.
+     */
+    fun clearCache() {
+        synchronized(cosineCacheLock) { cosineCache.clear() }
+    }
+
+    private fun cosTable(
+        size: Int,
+        components: Int,
+    ): DoubleArray {
+        val key = (size.toLong() shl 32) or components.toLong()
+        synchronized(cosineCacheLock) {
+            cosineCache[key]?.let { return it }
+        }
+        val table = DoubleArray(size * components)
+        val piOverSize = PI / size
+        for (i in 0 until size) {
+            val phase = piOverSize * (i + 0.5)
+            val rowOffset = i * components
+            for (c in 0 until components) {
+                table[rowOffset + c] = cos(phase * c)
+            }
+        }
+        synchronized(cosineCacheLock) {
+            cosineCache.getOrPut(key) { table }
+        }
+        return table
+    }
+
     /**
      * Returns width/height. Returns null if the hash is malformed.
      */
@@ -67,7 +114,20 @@ object ThumbHashDecoder {
         val width: Int,
         val height: Int,
         val pixels: IntArray,
-    )
+    ) {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (other !is RGBAImage) return false
+            return width == other.width && height == other.height && pixels.contentEquals(other.pixels)
+        }
+
+        override fun hashCode(): Int {
+            var result = width
+            result = 31 * result + height
+            result = 31 * result + pixels.contentHashCode()
+            return result
+        }
+    }
 
     /**
      * Decode a ThumbHash byte array into ARGB pixels.
@@ -106,100 +166,106 @@ object ThumbHashDecoder {
             aScale = 0.0
         }
 
+        // Pre-size and unpack AC coefficients
+        val lAcCount = countAc(lx, ly)
+        val pqAcCount = countAc(3, 3)
+        val aAcCount = if (hasAlpha) countAc(5, 5) else 0
+        val totalAc = lAcCount + pqAcCount * 2 + aAcCount
         val acStart = if (hasAlpha) 6 else 5
+        val acBytesAvailable = hash.size - acStart
+        // 2 coefficients per byte
+        if (acBytesAvailable * 2 < totalAc) return null
+
+        val lAc = DoubleArray(lAcCount)
+        val pAc = DoubleArray(pqAcCount)
+        val qAc = DoubleArray(pqAcCount)
+        val aAc = if (hasAlpha) DoubleArray(aAcCount) else EMPTY_DOUBLE
+
         var acIndex = 0
+        acIndex = readAcInto(hash, acStart, acIndex, lx, ly, lScale, lAc)
+        acIndex = readAcInto(hash, acStart, acIndex, 3, 3, pScale * 1.25, pAc)
+        acIndex = readAcInto(hash, acStart, acIndex, 3, 3, qScale * 1.25, qAc)
+        if (hasAlpha) readAcInto(hash, acStart, acIndex, 5, 5, aScale, aAc)
 
-        fun readAc(
-            nx: Int,
-            ny: Int,
-            scale: Double,
-        ): DoubleArray {
-            val ac = ArrayList<Double>(nx * ny)
-            var cy = 0
-            while (cy < ny) {
-                var cx = if (cy != 0) 0 else 1
-                while (cx * ny < nx * (ny - cy)) {
-                    val byteIdx = acStart + (acIndex shr 1)
-                    if (byteIdx >= hash.size) return DoubleArray(0)
-                    val shift = (acIndex and 1) shl 2
-                    val q4 = ((hash[byteIdx].toInt() ushr shift) and 15)
-                    ac.add((q4 / 7.5 - 1.0) * scale)
-                    acIndex++
-                    cx++
-                }
-                cy++
-            }
-            return DoubleArray(ac.size) { ac[it] }
-        }
-
-        val lAc = readAc(lx, ly, lScale)
-        val pAc = readAc(3, 3, pScale * 1.25)
-        val qAc = readAc(3, 3, qScale * 1.25)
-        val aAc = if (hasAlpha) readAc(5, 5, aScale) else DoubleArray(0)
-
+        // Output size
         val ratio = lx.toDouble() / ly.toDouble()
         val w = round(if (ratio > 1) 32.0 else 32.0 * ratio).toInt()
         val h = round(if (ratio > 1) 32.0 / ratio else 32.0).toInt()
         val pixels = IntArray(w * h)
 
-        val fxMax = max(lx, if (hasAlpha) 5 else 3)
-        val fyMax = max(ly, if (hasAlpha) 5 else 3)
-        val fx = DoubleArray(fxMax)
-        val fy = DoubleArray(fyMax)
+        // Precomputed cosine tables (shared across decodes with matching size/components)
+        val cosXL = cosTable(w, lx)
+        val cosYL = cosTable(h, ly)
+        val cosXPQ = cosTable(w, 3)
+        val cosYPQ = cosTable(h, 3)
+        val cosXA: DoubleArray
+        val cosYA: DoubleArray
+        if (hasAlpha) {
+            cosXA = cosTable(w, 5)
+            cosYA = cosTable(h, 5)
+        } else {
+            cosXA = EMPTY_DOUBLE
+            cosYA = EMPTY_DOUBLE
+        }
 
+        // Decode pixels using the inverse DCT
+        var pixelIdx = 0
         for (y in 0 until h) {
+            val cosYLBase = y * ly
+            val cosYPQBase = y * 3
+            val cosYABase = y * 5
             for (x in 0 until w) {
-                var lVal = lDc
-                var pVal = pDc
-                var qVal = qDc
-                var aVal = aDc
+                val cosXLBase = x * lx
+                val cosXPQBase = x * 3
+                val cosXABase = x * 5
 
-                for (cx in 0 until fxMax) fx[cx] = cos(PI / w * (x + 0.5) * cx)
-                for (cy in 0 until fyMax) fy[cy] = cos(PI / h * (y + 0.5) * cy)
+                var l = lDc
+                var p = pDc
+                var q = qDc
+                var a = aDc
 
-                // L
-                run {
-                    var cy = 0
-                    var j = 0
-                    while (cy < ly) {
-                        var cx = if (cy != 0) 0 else 1
-                        val fy2 = fy[cy] * 2.0
-                        while (cx * ly < lx * (ly - cy)) {
-                            lVal += lAc[j] * fx[cx] * fy2
-                            j++
-                            cx++
-                        }
-                        cy++
+                // L channel — triangular iteration over (cx, cy)
+                var j = 0
+                var cy = 0
+                while (cy < ly) {
+                    val fyL2 = cosYL[cosYLBase + cy] * 2.0
+                    var cx = if (cy != 0) 0 else 1
+                    val cxLimit = cxLimitForL(lx, ly, cy)
+                    while (cx < cxLimit) {
+                        l += lAc[j] * cosXL[cosXLBase + cx] * fyL2
+                        j++
+                        cx++
                     }
+                    cy++
                 }
 
-                // P & Q
-                run {
-                    var cy = 0
-                    var j = 0
-                    while (cy < 3) {
-                        var cx = if (cy != 0) 0 else 1
-                        val fy2 = fy[cy] * 2.0
-                        while (cx < 3 - cy) {
-                            val f = fx[cx] * fy2
-                            pVal += pAc[j] * f
-                            qVal += qAc[j] * f
-                            j++
-                            cx++
-                        }
-                        cy++
+                // P and Q share the same 3x3 triangular iteration
+                j = 0
+                cy = 0
+                while (cy < 3) {
+                    val fyPQ2 = cosYPQ[cosYPQBase + cy] * 2.0
+                    var cx = if (cy != 0) 0 else 1
+                    val cxLimit = 3 - cy
+                    while (cx < cxLimit) {
+                        val f = cosXPQ[cosXPQBase + cx] * fyPQ2
+                        p += pAc[j] * f
+                        q += qAc[j] * f
+                        j++
+                        cx++
                     }
+                    cy++
                 }
 
-                // A
+                // Alpha channel
                 if (hasAlpha) {
-                    var cy = 0
-                    var j = 0
+                    j = 0
+                    cy = 0
                     while (cy < 5) {
+                        val fyA2 = cosYA[cosYABase + cy] * 2.0
                         var cx = if (cy != 0) 0 else 1
-                        val fy2 = fy[cy] * 2.0
-                        while (cx < 5 - cy) {
-                            aVal += aAc[j] * fx[cx] * fy2
+                        val cxLimit = 5 - cy
+                        while (cx < cxLimit) {
+                            a += aAc[j] * cosXA[cosXABase + cx] * fyA2
                             j++
                             cx++
                         }
@@ -207,15 +273,15 @@ object ThumbHashDecoder {
                     }
                 }
 
-                // LPQA → RGB
-                val bCh = lVal - 2.0 / 3.0 * pVal
-                val rCh = (3.0 * lVal - bCh + qVal) / 2.0
-                val gCh = rCh - qVal
-                val rOut = (255.0 * min(1.0, max(0.0, rCh))).let { round(it).toInt() }.coerceIn(0, 255)
-                val gOut = (255.0 * min(1.0, max(0.0, gCh))).let { round(it).toInt() }.coerceIn(0, 255)
-                val bOut = (255.0 * min(1.0, max(0.0, bCh))).let { round(it).toInt() }.coerceIn(0, 255)
-                val aOut = if (hasAlpha) (255.0 * min(1.0, max(0.0, aVal))).let { round(it).toInt() }.coerceIn(0, 255) else 255
-                pixels[x + y * w] = (aOut shl 24) or (rOut shl 16) or (gOut shl 8) or bOut
+                // LPQA → sRGB with inline clamp
+                val bCh = l - 2.0 / 3.0 * p
+                val rCh = (3.0 * l - bCh + q) * 0.5
+                val gCh = rCh - q
+                val rOut = clamp255(rCh)
+                val gOut = clamp255(gCh)
+                val bOut = clamp255(bCh)
+                val aOut = if (hasAlpha) clamp255(a) else 255
+                pixels[pixelIdx++] = (aOut shl 24) or (rOut shl 16) or (gOut shl 8) or bOut
             }
         }
 
@@ -236,18 +302,101 @@ object ThumbHashDecoder {
     }
 
     /**
-     * Decode a ThumbHash string into a [PlatformImage] roughly [targetWidth] wide,
-     * preserving the aspect ratio of the original image.
-     *
-     * Mirrors [com.vitorpamplona.amethyst.commons.blurhash.BlurHashDecoder.decodeKeepAspectRatio]
-     * so existing placeholder pipelines can swap in thumbhash transparently.
+     * Decode a ThumbHash string into a [PlatformImage] whose aspect ratio
+     * matches the original image. [targetWidth] is accepted for API symmetry
+     * with [com.vitorpamplona.amethyst.commons.blurhash.BlurHashDecoder.decodeKeepAspectRatio]
+     * but the intrinsic decode output size is used because ThumbHash's own
+     * reconstruction is already aspect-correct at ~32px.
      */
+    @Suppress("UNUSED_PARAMETER")
     fun decodeKeepAspectRatio(
         hash: String?,
         targetWidth: Int,
     ): PlatformImage? {
         val rgba = decode(hash) ?: return null
         return PlatformImage.create(rgba.pixels, rgba.width, rgba.height)
+    }
+
+    // --- internal helpers --- //
+
+    private val EMPTY_DOUBLE = DoubleArray(0)
+
+    /**
+     * Count the number of AC coefficients carried by a channel of size nx × ny,
+     * following the reference implementation's triangular traversal.
+     */
+    private fun countAc(
+        nx: Int,
+        ny: Int,
+    ): Int {
+        var count = 0
+        var cy = 0
+        while (cy < ny) {
+            var cx = if (cy != 0) 0 else 1
+            while (cx * ny < nx * (ny - cy)) {
+                count++
+                cx++
+            }
+            cy++
+        }
+        return count
+    }
+
+    /**
+     * Row limit for the L channel's triangular traversal. For nx == ny this
+     * collapses to `nx - cy`; keeping the explicit form avoids a mispredicted
+     * branch in the inner loop for non-square L blocks.
+     */
+    private fun cxLimitForL(
+        lx: Int,
+        ly: Int,
+        cy: Int,
+    ): Int {
+        // cx * ly < lx * (ly - cy)  ⇔  cx < (lx * (ly - cy)) / ly
+        // Use integer ceil emulation: smallest cx that fails the condition.
+        val numerator = lx * (ly - cy)
+        // Largest cx satisfying cx * ly < numerator:
+        //   cx <= ceil(numerator / ly) - 1 when numerator is exact,
+        //   otherwise cx <= floor(numerator / ly).
+        // So the limit (exclusive) is ceil(numerator / ly) when numerator % ly != 0,
+        // else numerator / ly.
+        return if (numerator % ly == 0) numerator / ly else numerator / ly + 1
+    }
+
+    private fun readAcInto(
+        hash: ByteArray,
+        acStart: Int,
+        startIndex: Int,
+        nx: Int,
+        ny: Int,
+        scale: Double,
+        out: DoubleArray,
+    ): Int {
+        var acIndex = startIndex
+        var outIdx = 0
+        val hashLen = hash.size
+        var cy = 0
+        while (cy < ny) {
+            var cx = if (cy != 0) 0 else 1
+            while (cx * ny < nx * (ny - cy)) {
+                val byteIdx = acStart + (acIndex shr 1)
+                if (byteIdx >= hashLen) return acIndex
+                val shift = (acIndex and 1) shl 2
+                val q4 = (hash[byteIdx].toInt() ushr shift) and 15
+                out[outIdx++] = (q4 / 7.5 - 1.0) * scale
+                acIndex++
+                cx++
+            }
+            cy++
+        }
+        return acIndex
+    }
+
+    /** Clamp v into 0..1 and scale to 0..255 with rounding, branchlessly on the hot path. */
+    private fun clamp255(v: Double): Int {
+        if (v <= 0.0) return 0
+        if (v >= 1.0) return 255
+        return (v * 255.0 + 0.5).toInt()
     }
 
     private fun padBase64(s: String): String {
