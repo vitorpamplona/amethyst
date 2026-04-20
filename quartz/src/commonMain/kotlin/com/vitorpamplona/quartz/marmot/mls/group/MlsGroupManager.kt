@@ -267,11 +267,9 @@ class MlsGroupManager(
     suspend fun commit(nostrGroupId: HexKey): CommitResult =
         mutex.withLock {
             val group = requireGroup(nostrGroupId)
-
-            // Retain current epoch secrets before transition
-            retainEpochSecrets(nostrGroupId, group)
-
+            val retainedBefore = group.retainedSecrets()
             val result = group.commit()
+            pushRetainedEpoch(nostrGroupId, retainedBefore)
             persistGroup(nostrGroupId)
             result
         }
@@ -292,10 +290,16 @@ class MlsGroupManager(
     ) = mutex.withLock {
         val group = requireGroup(nostrGroupId)
 
-        // Retain current epoch secrets before transition
-        retainEpochSecrets(nostrGroupId, group)
+        // Capture the outgoing epoch's secrets BEFORE advancing, but only
+        // commit them to the retention window once processCommit succeeds —
+        // otherwise a failed commit (e.g. "Duplicate encryption key" on an
+        // add-me relay echo) would pollute the window with a duplicate of
+        // the current epoch key, wasting the finite retention slots.
+        val retainedBefore = group.retainedSecrets()
 
         group.processCommit(commitBytes, senderLeafIndex, confirmationTag)
+
+        pushRetainedEpoch(nostrGroupId, retainedBefore)
         persistGroup(nostrGroupId)
     }
 
@@ -355,10 +359,18 @@ class MlsGroupManager(
             null
         }
 
-    // --- Member Management ---
+    // --- Member Management (atomic stage+merge; retained for tests/offline use) ---
 
     /**
-     * Add a member and create a Commit.
+     * Add a member and create a Commit, advancing the local epoch immediately.
+     *
+     * **Production callers MUST use [stageAddMember] + [mergeStagedCommit]
+     * instead.** The commit bytes returned here are wrapped on the wire with
+     * the *post-commit* exporter key, which is wrong — other existing members
+     * at epoch N cannot decrypt it, so the commit is unprocessable by anyone
+     * except the new member (who doesn't need it because their Welcome already
+     * carries the post-commit state). This entry point is retained only for
+     * unit tests and scenarios where outer framing isn't used.
      */
     suspend fun addMember(
         nostrGroupId: HexKey,
@@ -366,14 +378,16 @@ class MlsGroupManager(
     ): CommitResult =
         mutex.withLock {
             val group = requireGroup(nostrGroupId)
-            retainEpochSecrets(nostrGroupId, group)
+            val retainedBefore = group.retainedSecrets()
             val result = group.addMember(keyPackageBytes)
+            pushRetainedEpoch(nostrGroupId, retainedBefore)
             persistGroup(nostrGroupId)
             result
         }
 
     /**
-     * Remove a member and create a Commit.
+     * Remove a member and create a Commit. See [addMember] for the production
+     * caveat — use [stageRemoveMember] + [mergeStagedCommit] on the wire.
      */
     suspend fun removeMember(
         nostrGroupId: HexKey,
@@ -381,27 +395,25 @@ class MlsGroupManager(
     ): CommitResult =
         mutex.withLock {
             val group = requireGroup(nostrGroupId)
-            retainEpochSecrets(nostrGroupId, group)
+            val retainedBefore = group.retainedSecrets()
             val result = group.removeMember(targetLeafIndex)
+            pushRetainedEpoch(nostrGroupId, retainedBefore)
             persistGroup(nostrGroupId)
             result
         }
 
     /**
-     * Rotate the signing key within a group and commit.
-     *
-     * Per MIP-00, members SHOULD self-update within 24 hours of joining.
-     * This creates an Update proposal with a fresh signing key and commits it.
-     *
-     * @param nostrGroupId hex-encoded Nostr group ID
-     * @return the [CommitResult] to publish
+     * Rotate the signing key within a group and commit. See [addMember] for
+     * the production caveat — use [stageRotateSigningKey] + [mergeStagedCommit]
+     * on the wire.
      */
     suspend fun rotateSigningKey(nostrGroupId: HexKey): CommitResult =
         mutex.withLock {
             val group = requireGroup(nostrGroupId)
-            retainEpochSecrets(nostrGroupId, group)
+            val retainedBefore = group.retainedSecrets()
             group.proposeSigningKeyRotation()
             val result = group.commit()
+            pushRetainedEpoch(nostrGroupId, retainedBefore)
             persistGroup(nostrGroupId)
             result
         }
@@ -410,12 +422,8 @@ class MlsGroupManager(
      * Update group extensions (e.g., MIP-01 metadata) via a GroupContextExtensions proposal.
      * Creates the proposal, commits it, and persists the new state.
      *
-     * Authorization (MIP-01): extension updates require admin privileges once
-     * the group has at least one admin. During bootstrap — before any
-     * `admin_pubkeys` are configured — any member may seed the initial
-     * extension set (e.g. the creator installing the first
-     * [com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData] with
-     * themselves as admin).
+     * See [addMember] for the production caveat — use [stageUpdateGroupExtensions]
+     * + [mergeStagedCommit] on the wire.
      */
     suspend fun updateGroupExtensions(
         nostrGroupId: HexKey,
@@ -428,12 +436,88 @@ class MlsGroupManager(
             check(!adminsConfigured || group.isLocalAdmin()) {
                 "MIP-01: only admins may update group extensions"
             }
-            retainEpochSecrets(nostrGroupId, group)
+            val retainedBefore = group.retainedSecrets()
             group.proposeGroupContextExtensions(extensions)
             val result = group.commit()
+            pushRetainedEpoch(nostrGroupId, retainedBefore)
             persistGroup(nostrGroupId)
             result
         }
+
+    // --- Staged Member Management (production path; MDK parity) ---
+
+    /**
+     * Stage an Add-member Commit without advancing the local epoch.
+     * The returned [StagedCommit.preCommitExporterSecret] is the epoch-N key
+     * that the outer kind:445 ChaCha20 layer MUST use so that existing
+     * members at epoch N can decrypt + process it. Call [mergeStagedCommit]
+     * after the kind:445 has been handed to the transport.
+     */
+    suspend fun stageAddMember(
+        nostrGroupId: HexKey,
+        keyPackageBytes: ByteArray,
+    ): StagedCommit =
+        mutex.withLock {
+            requireGroup(nostrGroupId).stageAddMember(keyPackageBytes)
+        }
+
+    /**
+     * Stage a Remove-member Commit. See [stageAddMember].
+     */
+    suspend fun stageRemoveMember(
+        nostrGroupId: HexKey,
+        targetLeafIndex: Int,
+    ): StagedCommit =
+        mutex.withLock {
+            requireGroup(nostrGroupId).stageRemoveMember(targetLeafIndex)
+        }
+
+    /**
+     * Stage a signing-key rotation Commit. See [stageAddMember].
+     */
+    suspend fun stageRotateSigningKey(nostrGroupId: HexKey): StagedCommit =
+        mutex.withLock {
+            val group = requireGroup(nostrGroupId)
+            group.proposeSigningKeyRotation()
+            group.stageCommit()
+        }
+
+    /**
+     * Stage a GroupContextExtensions Commit (MIP-01 metadata). See
+     * [stageAddMember].
+     */
+    suspend fun stageUpdateGroupExtensions(
+        nostrGroupId: HexKey,
+        extensions: List<Extension>,
+    ): StagedCommit =
+        mutex.withLock {
+            val group = requireGroup(nostrGroupId)
+            val currentMarmot = group.currentMarmotData()
+            val adminsConfigured = currentMarmot != null && currentMarmot.adminPubkeys.isNotEmpty()
+            check(!adminsConfigured || group.isLocalAdmin()) {
+                "MIP-01: only admins may update group extensions"
+            }
+            group.proposeGroupContextExtensions(extensions)
+            group.stageCommit()
+        }
+
+    /**
+     * Merge a previously [stageAddMember]/[stageRemoveMember]/etc. commit,
+     * advancing the local epoch to N+1. Retains the pre-commit epoch's
+     * secrets for late-message decryption, then persists.
+     */
+    suspend fun mergeStagedCommit(
+        nostrGroupId: HexKey,
+        staged: StagedCommit,
+    ) = mutex.withLock {
+        val group = requireGroup(nostrGroupId)
+        // Retain the outgoing epoch's secrets BEFORE advancing (they live in
+        // the pre-commit snapshot, which is this group's current state).
+        val retainedBefore = group.retainedSecrets()
+        group.mergeStagedCommit(staged)
+        pushRetainedEpoch(nostrGroupId, retainedBefore)
+        persistGroup(nostrGroupId)
+    }
 
     /**
      * Leave a group (self-remove).
@@ -564,12 +648,18 @@ class MlsGroupManager(
         }
     }
 
-    private fun retainEpochSecrets(
+    /**
+     * Push a previously-captured [RetainedEpochSecrets] into the bounded
+     * retention window. Call after the epoch advance has been applied
+     * successfully so that failed commits don't pollute the window with
+     * duplicate current-epoch keys.
+     */
+    private fun pushRetainedEpoch(
         nostrGroupId: HexKey,
-        group: MlsGroup,
+        retainedBefore: RetainedEpochSecrets,
     ) {
         val retained = retainedEpochs.getOrPut(nostrGroupId) { mutableListOf() }
-        retained.add(group.retainedSecrets())
+        retained.add(retainedBefore)
 
         // Trim to retention window (keep only the most recent N-1 epochs)
         while (retained.size > EPOCH_RETENTION_WINDOW) {

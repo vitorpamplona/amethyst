@@ -98,7 +98,7 @@ import com.vitorpamplona.quartz.utils.mac.MacInstance
  */
 class MlsGroup private constructor(
     private var groupContext: GroupContext,
-    private val tree: RatchetTree,
+    private var tree: RatchetTree,
     private var myLeafIndex: Int,
     private var epochSecrets: EpochSecrets,
     private var secretTree: SecretTree,
@@ -198,6 +198,125 @@ class MlsGroup private constructor(
     /** Whether a ReInit proposal has been committed, requiring a new group to be created. */
     var reInitPending: Proposal.ReInit? = null
         private set
+
+    // --- Stage/Merge Infrastructure (RFC 9420 §12.4 / MDK parity) ---
+
+    /**
+     * Capture a complete snapshot of every mutable field so this group can be
+     * restored atomically. Used by [stageCommit] to rewind after computing a
+     * Commit so the outer code can encrypt the kind:445 with the pre-commit
+     * exporter secret before advancing locally.
+     */
+    private fun captureSnapshot(): MlsGroupSnapshot {
+        val treeWriter = TlsWriter()
+        tree.encodeTls(treeWriter)
+        return MlsGroupSnapshot(
+            groupContext = groupContext,
+            treeBytes = treeWriter.toByteArray(),
+            myLeafIndex = myLeafIndex,
+            epochSecrets = epochSecrets,
+            secretTree = secretTree,
+            initSecret = initSecret,
+            signingPrivateKey = signingPrivateKey,
+            encryptionPrivateKey = encryptionPrivateKey,
+            interimTranscriptHash = interimTranscriptHash,
+            pskStore = pskStore.toMap(),
+            pendingProposals = pendingProposals.toList(),
+            sentKeys = sentKeys.toMap(),
+            pendingSigningKey = pendingSigningKey,
+            pendingEncryptionKey = pendingEncryptionKey,
+            reInitPending = reInitPending,
+        )
+    }
+
+    /**
+     * Overwrite every mutable field of this group from a prior snapshot.
+     * See [captureSnapshot] for the use case.
+     */
+    private fun restoreSnapshot(s: MlsGroupSnapshot) {
+        groupContext = s.groupContext
+        tree = RatchetTree.decodeTls(TlsReader(s.treeBytes))
+        myLeafIndex = s.myLeafIndex
+        epochSecrets = s.epochSecrets
+        // secretTree is keyed on encryption_secret + leafCount; rebuilding from
+        // the snapshot's encryption_secret avoids relying on SecretTree being
+        // a pure data class, which it currently is, but keeps us robust.
+        secretTree = SecretTree(s.epochSecrets.encryptionSecret, tree.leafCount)
+        initSecret = s.initSecret
+        signingPrivateKey = s.signingPrivateKey
+        encryptionPrivateKey = s.encryptionPrivateKey
+        interimTranscriptHash = s.interimTranscriptHash
+        pskStore.clear()
+        pskStore.putAll(s.pskStore)
+        pendingProposals.clear()
+        pendingProposals.addAll(s.pendingProposals)
+        sentKeys.clear()
+        sentKeys.putAll(s.sentKeys)
+        pendingSigningKey = s.pendingSigningKey
+        pendingEncryptionKey = s.pendingEncryptionKey
+        reInitPending = s.reInitPending
+    }
+
+    /**
+     * Build a Commit from the currently pending proposals **without** advancing
+     * the local epoch. The caller can then outer-encrypt the kind:445 using
+     * [StagedCommit.preCommitExporterSecret] — which is still the current
+     * epoch's key — and call [mergeStagedCommit] to advance locally only after
+     * the kind:445 has been handed to the transport.
+     *
+     * This mirrors OpenMLS / MDK's `create_commit` + `merge_pending_commit`
+     * pair and is the only correct way to encrypt a Commit: existing members
+     * still at epoch N need the pre-commit exporter secret to decrypt the
+     * outer layer, while the new member joining via Welcome does not need to
+     * process this Commit at all.
+     *
+     * On success, the group state is unchanged.
+     * On failure, the group state is unchanged.
+     */
+    fun stageCommit(): StagedCommit {
+        val preCommitSnapshot = captureSnapshot()
+        val preCommitExporter = exporterSecret("marmot", "group-event".encodeToByteArray(), 32)
+        val preCommitEpoch = groupContext.epoch
+
+        val committed: CommitResult =
+            try {
+                commit()
+            } catch (e: Exception) {
+                // commit() may have mutated fields before throwing — always roll back.
+                restoreSnapshot(preCommitSnapshot)
+                throw e
+            }
+
+        val postCommitSnapshot = captureSnapshot()
+        val postCommitEpoch = groupContext.epoch
+
+        // Rewind to pre-commit state so the outer code sees epoch N until it
+        // explicitly calls mergeStagedCommit.
+        restoreSnapshot(preCommitSnapshot)
+
+        return StagedCommit(
+            preCommitExporterSecret = preCommitExporter,
+            preCommitEpoch = preCommitEpoch,
+            postCommitEpoch = postCommitEpoch,
+            commitBytes = committed.commitBytes,
+            framedCommitBytes = committed.framedCommitBytes,
+            welcomeBytes = committed.welcomeBytes,
+            groupInfoBytes = committed.groupInfoBytes,
+            postState = postCommitSnapshot,
+        )
+    }
+
+    /**
+     * Apply a previously [stageCommit]ed transition, advancing this group from
+     * epoch N to epoch N+1. Call once the Commit has been successfully handed
+     * to the transport.
+     */
+    fun mergeStagedCommit(staged: StagedCommit) {
+        check(groupContext.epoch == staged.preCommitEpoch) {
+            "mergeStagedCommit: group at epoch ${groupContext.epoch} but staged commit is for epoch ${staged.preCommitEpoch}"
+        }
+        restoreSnapshot(staged.postState)
+    }
 
     /**
      * Register a pre-shared key for use in PSK proposals.
@@ -2072,6 +2191,14 @@ class MlsGroup private constructor(
     /**
      * Add a member to the group by their KeyPackage.
      * Creates and applies a Commit with an Add proposal.
+     *
+     * This advances the local epoch eagerly; the returned [CommitResult] is
+     * encrypted on the wire with the **post-commit** exporter key, which is
+     * only correct for tests / offline MLS scenarios. Production callers MUST
+     * use [stageAddMember] + [mergeStagedCommit] so the kind:445 can be
+     * wrapped with the pre-commit exporter key, matching the MDK reference
+     * and allowing other existing members to actually decrypt and process the
+     * commit.
      */
     fun addMember(keyPackageBytes: ByteArray): CommitResult {
         proposeAdd(keyPackageBytes)
@@ -2079,12 +2206,36 @@ class MlsGroup private constructor(
     }
 
     /**
+     * Stage an Add-member Commit without advancing the local epoch.
+     * Returned [StagedCommit] carries the pre-commit exporter secret that the
+     * outer kind:445 layer MUST be encrypted with (RFC 9420 §12.4 + MDK).
+     * Call [mergeStagedCommit] after the commit has been handed to the
+     * transport to advance locally.
+     */
+    fun stageAddMember(keyPackageBytes: ByteArray): StagedCommit {
+        proposeAdd(keyPackageBytes)
+        return stageCommit()
+    }
+
+    /**
      * Remove a member from the group.
      * Creates and applies a Commit with a Remove proposal.
+     *
+     * See [addMember] for why production callers should prefer
+     * [stageRemoveMember] instead.
      */
     fun removeMember(targetLeafIndex: Int): CommitResult {
         proposeRemove(targetLeafIndex)
         return commit()
+    }
+
+    /**
+     * Stage a Remove-member Commit without advancing the local epoch.
+     * See [stageAddMember] for the rationale.
+     */
+    fun stageRemoveMember(targetLeafIndex: Int): StagedCommit {
+        proposeRemove(targetLeafIndex)
+        return stageCommit()
     }
 
     /**
