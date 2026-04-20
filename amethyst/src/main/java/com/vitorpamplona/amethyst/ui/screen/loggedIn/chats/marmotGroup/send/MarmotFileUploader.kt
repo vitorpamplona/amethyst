@@ -91,7 +91,7 @@ class MarmotFileUploader(
 
             val state = item.orchestrator.progressState.value
             if (state is UploadingState.Finished && state.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
-                val serverResult = state.result as UploadOrchestrator.OrchestratorResult.ServerResult
+                val serverResult = state.result
                 results.add(
                     Mip04UploadResult(
                         url = serverResult.url,

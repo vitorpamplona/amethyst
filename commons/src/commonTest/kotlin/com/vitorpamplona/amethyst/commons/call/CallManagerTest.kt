@@ -112,6 +112,12 @@ class CallManagerTest {
         return events to job
     }
 
+    private fun TestScope.collectRenegotiationEvents(manager: CallManager): Pair<MutableList<CallRenegotiateEvent>, Job> {
+        val events = mutableListOf<CallRenegotiateEvent>()
+        val job = launch { manager.renegotiationEvents.collect { events.add(it) } }
+        return events to job
+    }
+
     // ---- Event construction helpers ----
     // These use the real event builders from quartz so that tag structures
     // stay in sync with the production code.  The builder returns an
@@ -569,13 +575,13 @@ class CallManagerTest {
             manager.onPeerConnected()
             assertIs<CallState.Connected>(manager.state.value)
 
-            var receivedRenego: CallRenegotiateEvent? = null
-            manager.onRenegotiationOfferReceived = { receivedRenego = it }
+            val (renegoEvents, renegoJob) = collectRenegotiationEvents(manager)
 
             val renego = makeRenegotiate(from = alice, to = bob)
             manager.onSignalingEvent(renego)
 
-            assertNotNull(receivedRenego, "Renegotiation should be forwarded in Connected state")
+            assertNotNull(renegoEvents.firstOrNull(), "Renegotiation should be forwarded in Connected state")
+            renegoJob.cancel()
         }
 
     @Test
@@ -587,13 +593,13 @@ class CallManagerTest {
             manager.acceptCall(sdpAnswer)
             assertIs<CallState.Connecting>(manager.state.value)
 
-            var receivedRenego: CallRenegotiateEvent? = null
-            manager.onRenegotiationOfferReceived = { receivedRenego = it }
+            val (renegoEvents, renegoJob) = collectRenegotiationEvents(manager)
 
             val renego = makeRenegotiate(from = alice, to = bob)
             manager.onSignalingEvent(renego)
 
-            assertNotNull(receivedRenego)
+            assertNotNull(renegoEvents.firstOrNull())
+            renegoJob.cancel()
         }
 
     @Test
@@ -601,14 +607,14 @@ class CallManagerTest {
         runTest {
             val (manager, _) = createManager(localPubKey = bob)
 
-            var receivedRenego: CallRenegotiateEvent? = null
-            manager.onRenegotiationOfferReceived = { receivedRenego = it }
+            val (renegoEvents, renegoJob) = collectRenegotiationEvents(manager)
 
             val renego = makeRenegotiate(from = alice, to = bob)
             manager.onSignalingEvent(renego)
 
             assertIs<CallState.Idle>(manager.state.value)
-            assertEquals(null, receivedRenego, "Renegotiation in Idle state should be ignored")
+            assertEquals(0, renegoEvents.size, "Renegotiation in Idle state should be ignored")
+            renegoJob.cancel()
         }
 
     @Test
@@ -620,13 +626,13 @@ class CallManagerTest {
             manager.acceptCall(sdpAnswer)
             manager.onPeerConnected()
 
-            var receivedRenego: CallRenegotiateEvent? = null
-            manager.onRenegotiationOfferReceived = { receivedRenego = it }
+            val (renegoEvents, renegoJob) = collectRenegotiationEvents(manager)
 
             val renego = makeRenegotiate(from = alice, to = bob, callId = "wrong-call-id")
             manager.onSignalingEvent(renego)
 
-            assertEquals(null, receivedRenego, "Renegotiation for wrong call-id should be ignored")
+            assertEquals(0, renegoEvents.size, "Renegotiation for wrong call-id should be ignored")
+            renegoJob.cancel()
         }
 
     // ========================================================================
@@ -1765,10 +1771,10 @@ class CallManagerTest {
             assertEquals(1, alicePublished.size)
 
             // Step 7: Bob receives renegotiate and responds
-            var renegoReceived = false
-            bobManager.onRenegotiationOfferReceived = { renegoReceived = true }
+            val (bobRenegoEvents, bobRenegoJob) = collectRenegotiationEvents(bobManager)
             bobManager.onSignalingEvent(makeRenegotiate(from = alice, to = bob))
-            assertTrue(renegoReceived)
+            assertTrue(bobRenegoEvents.isNotEmpty())
+            bobRenegoJob.cancel()
 
             bobPublished.clear()
             bobManager.sendRenegotiationAnswer("renego-answer-sdp", alice)
