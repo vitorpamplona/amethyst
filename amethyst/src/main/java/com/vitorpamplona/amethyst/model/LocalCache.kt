@@ -172,6 +172,7 @@ import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessa
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresenceEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.raid.LiveActivitiesRaidEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
@@ -1495,6 +1496,26 @@ object LocalCache : ILocalCache, ICacheProvider {
         return new
     }
 
+    fun consume(
+        event: LiveActivitiesRaidEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ): Boolean {
+        val fromAddress = event.fromAddress()
+        val toAddress = event.toAddress()
+        if (fromAddress == null && toAddress == null) return false
+
+        val new = consumeRegularEvent(event, relay, wasVerified)
+
+        if (new) {
+            val note = getOrCreateNote(event.id)
+            fromAddress?.let { getOrCreateLiveChannel(it).addNote(note, relay) }
+            toAddress?.let { getOrCreateLiveChannel(it).addNote(note, relay) }
+        }
+
+        return new
+    }
+
     @Suppress("UNUSED_PARAMETER")
     fun consume(
         event: ChannelHideMessageEvent,
@@ -2667,6 +2688,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is LabeledBookmarkListEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is LiveActivitiesEvent -> consume(event, relay, wasVerified)
                 is LiveActivitiesChatMessageEvent -> consume(event, relay, wasVerified)
+                is LiveActivitiesRaidEvent -> consume(event, relay, wasVerified)
                 is MeetingSpaceEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is MeetingRoomEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is MeetingRoomPresenceEvent -> consumeBaseReplaceable(event, relay, wasVerified)
