@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.clip.LiveActivitiesClipEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.raid.LiveActivitiesRaidEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 
@@ -41,6 +42,7 @@ fun filterMessagesToLiveActivities(
                         listOf(
                             LiveActivitiesChatMessageEvent.KIND,
                             LiveActivitiesRaidEvent.KIND,
+                            LiveActivitiesClipEvent.KIND,
                             LnZapEvent.KIND,
                         ),
                     tags = mapOf("a" to listOfNotNull(channel.address.toValue())),

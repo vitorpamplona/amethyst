@@ -169,6 +169,7 @@ import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarEvent
 import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.clip.LiveActivitiesClipEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresenceEvent
@@ -1516,6 +1517,24 @@ object LocalCache : ILocalCache, ICacheProvider {
         return new
     }
 
+    fun consume(
+        event: LiveActivitiesClipEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ): Boolean {
+        val activityAddress = event.activityAddress() ?: return false
+
+        val new = consumeRegularEvent(event, relay, wasVerified)
+
+        if (new) {
+            val channel = getOrCreateLiveChannel(activityAddress)
+            val note = getOrCreateNote(event.id)
+            channel.addNote(note, relay)
+        }
+
+        return new
+    }
+
     @Suppress("UNUSED_PARAMETER")
     fun consume(
         event: ChannelHideMessageEvent,
@@ -2689,6 +2708,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is LiveActivitiesEvent -> consume(event, relay, wasVerified)
                 is LiveActivitiesChatMessageEvent -> consume(event, relay, wasVerified)
                 is LiveActivitiesRaidEvent -> consume(event, relay, wasVerified)
+                is LiveActivitiesClipEvent -> consume(event, relay, wasVerified)
                 is MeetingSpaceEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is MeetingRoomEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is MeetingRoomPresenceEvent -> consumeBaseReplaceable(event, relay, wasVerified)
