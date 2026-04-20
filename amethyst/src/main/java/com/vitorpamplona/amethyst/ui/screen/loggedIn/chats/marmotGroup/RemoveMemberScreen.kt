@@ -44,7 +44,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -55,6 +54,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.marmot.GroupMemberInfo
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.UserPicture
@@ -71,16 +71,16 @@ fun RemoveMemberScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    var members by remember { mutableStateOf(emptyList<GroupMemberInfo>()) }
+    val chatroom =
+        remember(nostrGroupId) {
+            accountViewModel.account.marmotGroupList.getOrCreateGroup(nostrGroupId)
+        }
+    val members by chatroom.members.collectAsStateWithLifecycle()
     var memberToRemove by remember { mutableStateOf<GroupMemberInfo?>(null) }
     var isRemoving by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val myPubkey = accountViewModel.account.signer.pubKey
     val context = LocalContext.current
-
-    LaunchedEffect(nostrGroupId) {
-        members = accountViewModel.marmotGroupMembers(nostrGroupId)
-    }
 
     Scaffold(
         topBar = {
@@ -155,7 +155,6 @@ fun RemoveMemberScreen(
                 scope.launch(Dispatchers.IO) {
                     try {
                         accountViewModel.removeMarmotGroupMember(nostrGroupId, member.leafIndex)
-                        members = accountViewModel.marmotGroupMembers(nostrGroupId)
                         isRemoving = false
                         launch(Dispatchers.Main) {
                             Toast

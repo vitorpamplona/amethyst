@@ -47,7 +47,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -85,17 +84,12 @@ fun MarmotGroupInfoScreen(
     val groupDescription by chatroom.description.collectAsStateWithLifecycle()
     val adminPubkeys by chatroom.adminPubkeys.collectAsStateWithLifecycle()
     val groupRelays by chatroom.relays.collectAsStateWithLifecycle()
-    var members by remember { mutableStateOf(emptyList<GroupMemberInfo>()) }
+    val members by chatroom.members.collectAsStateWithLifecycle()
     var showLeaveDialog by remember { mutableStateOf(false) }
     var isLeaving by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val myPubkey = accountViewModel.account.signer.pubKey
     val context = LocalContext.current
-
-    LaunchedEffect(nostrGroupId) {
-        members = accountViewModel.marmotGroupMembers(nostrGroupId)
-        chatroom.memberCount.value = members.size
-    }
 
     Scaffold(
         topBar = {

@@ -432,7 +432,9 @@ class MarmotManager(
             chatroom.adminPubkeys.value = metadata.adminPubkeys
             chatroom.relays.value = metadata.relays
         }
-        chatroom.memberCount.value = memberCount(nostrGroupId)
+        val members = memberPubkeys(nostrGroupId)
+        chatroom.members.value = members
+        chatroom.memberCount.value = members.size
     }
 }
 
