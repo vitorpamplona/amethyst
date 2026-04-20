@@ -69,6 +69,27 @@ class MarmotGroupChatroom(
      */
     var ownerSentMessage: Boolean = false
 
+    // Synthetic note used by list views to represent the group when no
+    // messages have been received yet. Lazily created and kept stable so
+    // equality-based feed diffing treats it as the same row across refreshes.
+    private var cachedPlaceholder: Note? = null
+
+    @Synchronized
+    fun placeholderNote(): Note {
+        val existing = cachedPlaceholder
+        if (existing != null) return existing
+        val created =
+            Note(placeholderIdHex(nostrGroupId)).apply {
+                addGatherer(this@MarmotGroupChatroom)
+            }
+        cachedPlaceholder = created
+        return created
+    }
+
+    companion object {
+        fun placeholderIdHex(nostrGroupId: HexKey): HexKey = "marmot-empty-$nostrGroupId"
+    }
+
     private var changesFlow: WeakReference<MutableSharedFlow<ListChange<Note>>> = WeakReference(null)
 
     fun changesFlow(): MutableSharedFlow<ListChange<Note>> {

@@ -284,6 +284,7 @@
 
     <string name="public_chat">Public Chat</string>
     <string name="marmot_group">MLS Group</string>
+    <string name="marmot_group_no_messages_yet">No messages yet</string>
     <string name="public_chat_title">Public Chat Metadata</string>
     <string name="public_chat_explainer">Public chats are visible to everyone on Nostr and anyone
         can participate on them. They are great for open communities around specific topics.
