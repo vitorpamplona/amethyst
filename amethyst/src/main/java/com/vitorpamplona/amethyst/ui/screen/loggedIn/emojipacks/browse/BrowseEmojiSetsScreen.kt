@@ -20,20 +20,41 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.browse
 
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyGridState
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
+import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
+import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
+import com.vitorpamplona.amethyst.ui.feeds.FeedEmpty
+import com.vitorpamplona.amethyst.ui.feeds.FeedError
+import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
-import com.vitorpamplona.amethyst.ui.feeds.RenderFeedContentState
-import com.vitorpamplona.amethyst.ui.feeds.SaveableFeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
+import com.vitorpamplona.amethyst.ui.feeds.WatchScrollToTop
+import com.vitorpamplona.amethyst.ui.feeds.rememberForeverLazyGridState
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.browse.datasource.BrowseEmojiSetsFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.common.EmojiPackCard
+import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
+import com.vitorpamplona.quartz.nip30CustomEmoji.taggedEmojis
 
 @Composable
 fun BrowseEmojiSetsScreen(
@@ -65,17 +86,112 @@ fun BrowseEmojiSetsScreen(
         accountViewModel = accountViewModel,
     ) {
         RefresheableBox(feedContentState, true) {
-            SaveableFeedContentState(feedContentState, scrollStateKey = ScrollStateKeys.BROWSE_EMOJI_SETS_SCREEN) { listState ->
-                RenderFeedContentState(
-                    feedContentState = feedContentState,
+            val gridState = rememberForeverLazyGridState(ScrollStateKeys.BROWSE_EMOJI_SETS_SCREEN)
+            WatchScrollToTop(feedContentState, gridState)
+            RenderBrowseEmojiSetsGrid(
+                feedContentState = feedContentState,
+                gridState = gridState,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
+    }
+}
+
+@Composable
+private fun RenderBrowseEmojiSetsGrid(
+    feedContentState: FeedContentState,
+    gridState: LazyGridState,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val feedState by feedContentState.feedContent.collectAsStateWithLifecycle()
+
+    CrossfadeIfEnabled(
+        targetState = feedState,
+        animationSpec = tween(durationMillis = 100),
+        accountViewModel = accountViewModel,
+    ) { state ->
+        when (state) {
+            is FeedState.Empty -> {
+                FeedEmpty(feedContentState::invalidateData)
+            }
+
+            is FeedState.FeedError -> {
+                FeedError(state.errorMessage, feedContentState::invalidateData)
+            }
+
+            is FeedState.Loaded -> {
+                BrowseEmojiSetsGridLoaded(
+                    loaded = state,
+                    gridState = gridState,
                     accountViewModel = accountViewModel,
-                    listState = listState,
                     nav = nav,
-                    routeForLastRead = "BrowseEmojiSetsFeed",
                 )
+            }
+
+            is FeedState.Loading -> {
+                LoadingFeed()
             }
         }
     }
+}
+
+@Composable
+private fun BrowseEmojiSetsGridLoaded(
+    loaded: FeedState.Loaded,
+    gridState: LazyGridState,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val items by loaded.feed.collectAsStateWithLifecycle()
+
+    LazyVerticalGrid(
+        columns = GridCells.Adaptive(minSize = 160.dp),
+        state = gridState,
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        items(
+            items.list,
+            key = { note -> note.idHex },
+        ) { note ->
+            BrowsedEmojiPackCard(
+                note = note,
+                modifier = Modifier.animateItem(),
+                onClick = { nav.nav(Route.Note(note.idHex)) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun BrowsedEmojiPackCard(
+    note: Note,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    val event = note.event as? EmojiPackEvent ?: return
+
+    val title =
+        remember(event) {
+            event.titleOrName()?.takeIf { it.isNotBlank() } ?: event.dTag()
+        }
+    val emojiUrls =
+        remember(event) {
+            event.taggedEmojis().map { it.url }
+        }
+    val coverImage = remember(event) { event.image() }
+
+    EmojiPackCard(
+        title = title,
+        emojiUrls = emojiUrls,
+        coverImage = coverImage,
+        onClick = onClick,
+        modifier = modifier,
+    )
 }
 
 @Composable

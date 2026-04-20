@@ -22,17 +22,21 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.list
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.EmojiEmotions
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.HorizontalDivider
@@ -43,6 +47,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -52,13 +58,18 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.model.nip30CustomEmojis.OwnedEmojiPack
+import com.vitorpamplona.amethyst.ui.components.ClickableBox
+import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
+import com.vitorpamplona.amethyst.ui.components.M3ActionRow
+import com.vitorpamplona.amethyst.ui.components.M3ActionSection
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.ui.note.VerticalDotsIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.common.EmojiPackCard
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
-import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.Size40Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import kotlinx.coroutines.flow.StateFlow
@@ -134,40 +145,108 @@ fun ListOfEmojiPacksFeedView(
     val feedState by listSource.collectAsStateWithLifecycle()
     val selectedPacks by selectedPacksFlow.collectAsStateWithLifecycle()
 
-    LazyColumn(
-        state = rememberLazyListState(),
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = FeedPadding,
-    ) {
-        item {
-            MyEmojiListRow(
-                selectedPackCount = selectedPacks?.size ?: 0,
-                onClick = openMyEmojiList,
-            )
-            HorizontalDivider(thickness = DividerThickness)
-        }
+    Column(modifier = Modifier.fillMaxSize()) {
+        MyEmojiListRow(
+            selectedPackCount = selectedPacks?.size ?: 0,
+            onClick = openMyEmojiList,
+        )
+        HorizontalDivider(thickness = DividerThickness)
 
         if (feedState.isEmpty()) {
-            item {
-                Text(
-                    text = stringRes(R.string.no_emoji_packs),
-                    modifier = Modifier.fillMaxWidth().padding(16.dp),
-                    textAlign = TextAlign.Center,
-                )
-            }
+            Text(
+                text = stringRes(R.string.no_emoji_packs),
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                textAlign = TextAlign.Center,
+            )
         } else {
-            itemsIndexed(
-                feedState,
-                key = { _: Int, item: OwnedEmojiPack -> item.identifier },
-            ) { _, pack ->
-                EmojiPackItem(
-                    modifier = Modifier.fillMaxSize().animateItem(),
-                    pack = pack,
-                    onClick = { openItem(pack) },
-                    onEdit = { editItem(pack) },
-                    onDelete = { deleteItem(pack) },
-                )
-                HorizontalDivider(thickness = DividerThickness)
+            LazyVerticalGrid(
+                columns = GridCells.Adaptive(minSize = 160.dp),
+                state = rememberLazyGridState(),
+                modifier = Modifier.fillMaxSize(),
+                contentPadding =
+                    androidx.compose.foundation.layout
+                        .PaddingValues(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                items(
+                    feedState,
+                    key = { item: OwnedEmojiPack -> item.identifier },
+                ) { pack ->
+                    OwnedEmojiPackCard(
+                        pack = pack,
+                        modifier = Modifier.animateItem(),
+                        onClick = { openItem(pack) },
+                        onEdit = { editItem(pack) },
+                        onDelete = { deleteItem(pack) },
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun OwnedEmojiPackCard(
+    pack: OwnedEmojiPack,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    val emojiUrls =
+        remember(pack) {
+            (pack.publicEmojis + pack.privateEmojis).map { it.url }
+        }
+
+    Box(modifier = modifier.fillMaxWidth()) {
+        // Owned packs omit the cover badge: the top-right corner is reserved for the
+        // edit/delete overflow menu, which the user needs more than a reminder of the
+        // cover they themselves uploaded.
+        EmojiPackCard(
+            title = pack.title,
+            emojiUrls = emojiUrls,
+            coverImage = null,
+            onClick = onClick,
+        )
+        Box(modifier = Modifier.align(Alignment.TopEnd).padding(4.dp)) {
+            EmojiPackOptionsButton(
+                onEdit = onEdit,
+                onDelete = onDelete,
+            )
+        }
+    }
+}
+
+@Composable
+private fun EmojiPackOptionsButton(
+    onEdit: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    val isMenuOpen = remember { mutableStateOf(false) }
+
+    ClickableBox(
+        onClick = { isMenuOpen.value = true },
+    ) {
+        VerticalDotsIcon()
+    }
+
+    if (isMenuOpen.value) {
+        M3ActionDialog(
+            title = stringRes(R.string.emoji_pack_actions_dialog_title),
+            onDismiss = { isMenuOpen.value = false },
+        ) {
+            M3ActionSection {
+                M3ActionRow(icon = Icons.Outlined.Edit, text = stringRes(R.string.edit_emoji_pack)) {
+                    onEdit()
+                    isMenuOpen.value = false
+                }
+            }
+            M3ActionSection {
+                M3ActionRow(icon = Icons.Outlined.Delete, text = stringRes(R.string.quick_action_delete), isDestructive = true) {
+                    onDelete()
+                    isMenuOpen.value = false
+                }
             }
         }
     }
