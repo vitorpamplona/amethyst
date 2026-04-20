@@ -85,6 +85,7 @@ fun PictureDisplay(
                             dim = it.dimension,
                             uri = uri,
                             mimeType = it.mimeType,
+                            thumbhash = it.thumbhash,
                         )
                     }.toImmutableList(),
             )
@@ -116,7 +117,7 @@ fun PictureDisplay(
                     preloadUrls = listOf(first.url),
                     accountViewModel = accountViewModel,
                     modifier = mediaSizingModifier(ratio, ContentScale.FillWidth),
-                    backdrop = first.blurhash?.let { blurhash -> { BlurhashBackdrop(blurhash, first.description) } },
+                    backdrop = (first.thumbhash ?: first.blurhash)?.let { { BlurhashBackdrop(first.blurhash, first.description, first.thumbhash) } },
                 ) {
                     ZoomableContentView(
                         content = first,

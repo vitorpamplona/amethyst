@@ -86,6 +86,7 @@ fun GalleryThumbnail(
                         dim = noteEvent.dimensions(),
                         uri = null,
                         mimeType = noteEvent.mimeType(),
+                        thumbhash = noteEvent.thumbhash(),
                     )
                 } else {
                     MediaUrlImage(
@@ -97,6 +98,7 @@ fun GalleryThumbnail(
                         dim = noteEvent.dimensions(),
                         uri = null,
                         mimeType = noteEvent.mimeType(),
+                        thumbhash = noteEvent.thumbhash(),
                     )
                 }
             }
@@ -111,6 +113,7 @@ fun GalleryThumbnail(
                     dim = imeta.dimension,
                     uri = null,
                     mimeType = imeta.mimeType,
+                    thumbhash = imeta.thumbhash,
                 )
             }
         } else if (noteEvent is VideoEvent) {
@@ -124,6 +127,7 @@ fun GalleryThumbnail(
                     dim = imeta.dimension,
                     uri = null,
                     mimeType = imeta.mimeType,
+                    thumbhash = imeta.thumbhash,
                 )
             }
         } else {
@@ -210,12 +214,13 @@ fun UrlImageView(
                 when (state) {
                     is AsyncImagePainter.State.Loading,
                     -> {
-                        if (content.blurhash != null) {
+                        if (content.blurhash != null || content.thumbhash != null) {
                             DisplayBlurHash(
                                 content.blurhash,
                                 content.description,
                                 ContentScale.Crop,
                                 defaultModifier,
+                                thumbhash = content.thumbhash,
                             )
                         } else {
                             Box(defaultModifier, contentAlignment = Alignment.Center) {
@@ -243,12 +248,13 @@ fun UrlImageView(
                 }
             }
         } else {
-            if (content.blurhash != null) {
+            if (content.blurhash != null || content.thumbhash != null) {
                 DisplayBlurHash(
                     content.blurhash,
                     content.description,
                     ContentScale.Crop,
                     defaultModifier.clickable { showImage.value = true },
+                    thumbhash = content.thumbhash,
                 )
                 Icon(
                     imageVector = Icons.Default.PlayCircleOutline,

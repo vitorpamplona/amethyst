@@ -166,6 +166,7 @@ fun buildMip04IMetaTag(
     nonce: ByteArray,
     dimensions: String? = null,
     blurhash: String? = null,
+    thumbhash: String? = null,
 ): IMetaTag =
     IMetaTagBuilder(url)
         .apply {
@@ -176,4 +177,5 @@ fun buildMip04IMetaTag(
             add(Mip04Fields.VERSION, Mip04MediaEncryption.VERSION)
             dimensions?.let { add(Mip04Fields.DIMENSIONS, it) }
             blurhash?.let { add(Mip04Fields.BLURHASH, it) }
+            thumbhash?.let { add(Mip04Fields.THUMBHASH, it) }
         }.build()

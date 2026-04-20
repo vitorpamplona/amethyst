@@ -76,6 +76,7 @@ private fun ObserverAndRenderNIP95(
             val uri = header.toNostrUri()
             val localDir = note.idHex.let { File(Amethyst.instance.nip95cache, it) }
             val blurHash = eventHeader.blurhash()
+            val thumbHash = eventHeader.thumbhash()
             val dimensions = eventHeader.dimensions()
             val description = eventHeader.alt() ?: eventHeader.content
             val mimeType = eventHeader.mimeType()
@@ -90,6 +91,7 @@ private fun ObserverAndRenderNIP95(
                         blurhash = blurHash,
                         isVerified = true,
                         uri = uri,
+                        thumbhash = thumbHash,
                     )
                 } else {
                     MediaLocalVideo(
@@ -100,6 +102,8 @@ private fun ObserverAndRenderNIP95(
                         isVerified = true,
                         uri = uri,
                         authorName = header.author?.toBestDisplayName(),
+                        blurhash = blurHash,
+                        thumbhash = thumbHash,
                     )
                 }
 

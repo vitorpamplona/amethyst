@@ -39,6 +39,7 @@ import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.HashSha256Tag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.OriginalHashTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.SizeTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.ThumbhashTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.ciphers.AESGCM
 
@@ -65,6 +66,8 @@ class ChatMessageEncryptedFileHeaderEvent(
 
     fun blurhash() = tags.firstNotNullOfOrNull(BlurhashTag::parse)
 
+    fun thumbhash() = tags.firstNotNullOfOrNull(ThumbhashTag::parse)
+
     fun originalHash() = tags.firstNotNullOfOrNull(OriginalHashTag::parse)
 
     fun algo() = tags.firstNotNullOfOrNull(EncryptionAlgo::parse)
@@ -87,6 +90,7 @@ class ChatMessageEncryptedFileHeaderEvent(
             size: Int? = null,
             dimension: DimensionTag? = null,
             blurhash: String? = null,
+            thumbhash: String? = null,
             originalHash: String? = null,
             magnetUri: String? = null,
             torrentInfoHash: String? = null,
@@ -108,6 +112,7 @@ class ChatMessageEncryptedFileHeaderEvent(
             mimeType?.let { mimeType(it) }
             dimension?.let { dimension(it) }
             blurhash?.let { blurhash(it) }
+            thumbhash?.let { thumbhash(it) }
             originalHash?.let { originalHash(it) }
             magnetUri?.let { magnet(it) }
             torrentInfoHash?.let { torrentInfohash(it) }

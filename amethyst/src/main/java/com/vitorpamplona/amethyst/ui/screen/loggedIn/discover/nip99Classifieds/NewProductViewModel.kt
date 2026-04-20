@@ -429,14 +429,18 @@ open class NewProductViewModel :
                             ) {
                                 productImages = productImages +
                                     ProductImageMeta(
-                                        it.result.url,
-                                        it.result.fileHeader.mimeType,
-                                        it.result.fileHeader.blurHash
-                                            ?.blurhash,
-                                        it.result.fileHeader.dim,
-                                        alt,
-                                        it.result.fileHeader.hash,
-                                        it.result.fileHeader.size,
+                                        url = it.result.url,
+                                        mimeType = it.result.fileHeader.mimeType,
+                                        blurhash =
+                                            it.result.fileHeader.blurHash
+                                                ?.blurhash,
+                                        dimension = it.result.fileHeader.dim,
+                                        alt = alt,
+                                        hash = it.result.fileHeader.hash,
+                                        size = it.result.fileHeader.size,
+                                        thumbhash =
+                                            it.result.fileHeader.thumbHash
+                                                ?.thumbhash,
                                     )
                             } else {
                                 iMetaDescription.add(it.result, alt, contentWarningReason)

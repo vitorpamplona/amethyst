@@ -68,6 +68,7 @@ fun VideoView(
     onDialog: (() -> Unit)? = null,
     accountViewModel: AccountViewModel,
     alwaysShowVideo: Boolean = false,
+    thumbhash: String? = null,
 ) {
     val borderModifier =
         if (roundedCorner) {
@@ -78,7 +79,7 @@ fun VideoView(
             Modifier
         }
 
-    VideoView(videoUri, mimeType, title, thumb, borderModifier, contentScale, waveform, artworkUri, authorName, dimensions, blurhash, nostrUriCallback, onDialog, alwaysShowVideo, accountViewModel = accountViewModel)
+    VideoView(videoUri, mimeType, title, thumb, borderModifier, contentScale, waveform, artworkUri, authorName, dimensions, blurhash, nostrUriCallback, onDialog, alwaysShowVideo, accountViewModel = accountViewModel, thumbhash = thumbhash)
 }
 
 @Composable
@@ -99,6 +100,7 @@ fun VideoView(
     alwaysShowVideo: Boolean = false,
     showControls: Boolean = true,
     accountViewModel: AccountViewModel,
+    thumbhash: String? = null,
 ) {
     val automaticallyStartPlayback =
         remember {
@@ -107,7 +109,7 @@ fun VideoView(
             )
         }
 
-    if (blurhash == null) {
+    if (blurhash == null && thumbhash == null) {
         val ratio = dimensions?.aspectRatio() ?: MediaAspectRatioCache.get(videoUri)
 
         val modifier =
@@ -154,12 +156,13 @@ fun VideoView(
             }
 
         Box(modifier, contentAlignment = Alignment.Center) {
-            // Always displays Blurharh to avoid size flickering
+            // Always displays a placeholder (thumbhash preferred, blurhash fallback) to avoid size flickering
             DisplayBlurHash(
                 blurhash,
                 null,
                 contentScale,
                 if (ratio != null) borderModifier.aspectRatio(ratio) else borderModifier,
+                thumbhash = thumbhash,
             )
 
             if (!automaticallyStartPlayback.value) {

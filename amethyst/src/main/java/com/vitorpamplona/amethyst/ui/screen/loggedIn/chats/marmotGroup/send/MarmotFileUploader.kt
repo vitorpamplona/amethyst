@@ -43,6 +43,7 @@ class Mip04UploadResult(
     val dimensions: String?,
     val blurhash: String?,
     val caption: String?,
+    val thumbhash: String? = null,
 )
 
 /**
@@ -102,6 +103,7 @@ class MarmotFileUploader(
                         dimensions = serverResult.fileHeader.dim?.toString(),
                         blurhash = serverResult.fileHeader.blurHash?.blurhash,
                         caption = viewState.caption.ifEmpty { null },
+                        thumbhash = serverResult.fileHeader.thumbHash?.thumbhash,
                     ),
                 )
             } else {

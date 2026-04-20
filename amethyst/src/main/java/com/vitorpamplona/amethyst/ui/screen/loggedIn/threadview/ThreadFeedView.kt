@@ -922,6 +922,7 @@ private fun RenderClassifiedsReaderForThread(
                 dim = it.dimension,
                 uri = note.toNostrUri(),
                 mimeType = it.mimeType,
+                thumbhash = it.thumbhash,
             )
         }
 
