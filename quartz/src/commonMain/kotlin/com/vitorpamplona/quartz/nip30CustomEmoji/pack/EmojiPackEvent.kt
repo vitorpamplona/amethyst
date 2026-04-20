@@ -26,9 +26,11 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip31Alts.alt
-import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
-import com.vitorpamplona.quartz.nip34Git.repository.name
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
+import com.vitorpamplona.quartz.nip51Lists.tags.DescriptionTag
+import com.vitorpamplona.quartz.nip51Lists.tags.ImageTag
+import com.vitorpamplona.quartz.nip51Lists.tags.NameTag
+import com.vitorpamplona.quartz.nip51Lists.tags.TitleTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -42,6 +44,18 @@ class EmojiPackEvent(
     content: String,
     sig: HexKey,
 ) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+    @Deprecated("NIP-51 has deprecated name. Use title instead", ReplaceWith("title()"))
+    fun name() = tags.firstNotNullOfOrNull(NameTag::parse)
+
+    fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
+
+    @Suppress("DEPRECATION")
+    fun titleOrName() = title() ?: name()
+
+    fun description() = tags.firstNotNullOfOrNull(DescriptionTag::parse)
+
+    fun image() = tags.firstNotNullOfOrNull(ImageTag::parse)
+
     companion object {
         const val KIND = 30030
         const val ALT_DESCRIPTION = "Emoji pack"
@@ -51,11 +65,11 @@ class EmojiPackEvent(
             name: String,
             dTag: String = Uuid.random().toString(),
             createdAt: Long = TimeUtils.now(),
-            initializer: TagArrayBuilder<GitRepositoryEvent>.() -> Unit = {},
-        ) = eventTemplate(KIND, "", createdAt) {
+            initializer: TagArrayBuilder<EmojiPackEvent>.() -> Unit = {},
+        ) = eventTemplate<EmojiPackEvent>(KIND, "", createdAt) {
             alt(ALT_DESCRIPTION)
             dTag(dTag)
-            name(name)
+            title(name)
             initializer()
         }
     }
