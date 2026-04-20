@@ -626,6 +626,9 @@ fun ShowImageUploadGallery(
                         encryptionAlgo = data.cipher.name(),
                         encryptionKey = data.cipher.keyBytes,
                         encryptionNonce = data.cipher.nonce,
+                        thumbhash =
+                            data.result.fileHeader.thumbHash
+                                ?.thumbhash,
                     )
                 } else {
                     EncryptedMediaUrlVideo(
@@ -641,6 +644,9 @@ fun ShowImageUploadGallery(
                         encryptionAlgo = data.cipher.name(),
                         encryptionKey = data.cipher.keyBytes,
                         encryptionNonce = data.cipher.nonce,
+                        thumbhash =
+                            data.result.fileHeader.thumbHash
+                                ?.thumbhash,
                     )
                 }
             } else {
@@ -655,6 +661,9 @@ fun ShowImageUploadGallery(
                         dim = data.result.fileHeader.dim,
                         uri = null,
                         mimeType = data.result.mimeTypeBeforeEncryption,
+                        thumbhash =
+                            data.result.fileHeader.thumbHash
+                                ?.thumbhash,
                     )
                 } else {
                     MediaUrlVideo(
@@ -667,6 +676,9 @@ fun ShowImageUploadGallery(
                         dim = data.result.fileHeader.dim,
                         uri = null,
                         mimeType = data.result.mimeTypeBeforeEncryption,
+                        thumbhash =
+                            data.result.fileHeader.thumbHash
+                                ?.thumbhash,
                     )
                 }
             },

@@ -49,6 +49,7 @@ fun FileHeaderDisplay(
     val content by
         remember(note) {
             val blurHash = event.blurhash()
+            val thumbHash = event.thumbhash()
             val hash = event.hash()
             val dimensions = event.dimensions()
             val description = event.content.ifEmpty { null } ?: event.alt()
@@ -66,6 +67,7 @@ fun FileHeaderDisplay(
                         dim = dimensions,
                         uri = uri,
                         mimeType = mimeType,
+                        thumbhash = thumbHash,
                     )
                 } else {
                     MediaUrlVideo(
@@ -77,6 +79,7 @@ fun FileHeaderDisplay(
                         uri = uri,
                         authorName = note.author?.toBestDisplayName(),
                         mimeType = mimeType,
+                        thumbhash = thumbHash,
                     )
                 },
             )

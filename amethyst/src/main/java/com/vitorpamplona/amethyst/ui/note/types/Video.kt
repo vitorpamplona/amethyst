@@ -103,6 +103,7 @@ fun VideoDisplay(
                         dim = imeta.dimension,
                         uri = uri,
                         mimeType = imeta.mimeType,
+                        thumbhash = imeta.thumbhash,
                     )
                 } else {
                     MediaUrlVideo(
@@ -115,6 +116,7 @@ fun VideoDisplay(
                         artworkUri = imeta.image.firstOrNull(),
                         mimeType = imeta.mimeType,
                         blurhash = imeta.blurhash,
+                        thumbhash = imeta.thumbhash,
                     )
                 },
             )

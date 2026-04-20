@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.service.uploads
 
 import android.media.MediaDataSource
 import com.vitorpamplona.amethyst.service.images.BlurhashWrapper
+import com.vitorpamplona.amethyst.service.images.ThumbhashWrapper
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.utils.Log
@@ -36,6 +37,7 @@ class FileHeader(
     val size: Int,
     val dim: DimensionTag?,
     val blurHash: BlurhashWrapper?,
+    val thumbHash: ThumbhashWrapper? = null,
 ) {
     class UnableToDownload(
         val fileUrl: String,
@@ -71,9 +73,9 @@ class FileHeader(
                 val hash = sha256(data).toHexKey()
                 val size = data.size
 
-                val (blurHash, dim) = BlurhashMetadataCalculator.computeFromBytes(data, mimeType, dimPrecomputed)
+                val preview = PreviewMetadataCalculator.computeFromBytes(data, mimeType, dimPrecomputed)
 
-                Result.success(FileHeader(mimeType, hash, size, dim, blurHash))
+                Result.success(FileHeader(mimeType, hash, size, preview.dim, preview.blurhash, preview.thumbhash))
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 Log.e("ImageDownload") { "Couldn't convert image in to File Header: ${e.message}" }

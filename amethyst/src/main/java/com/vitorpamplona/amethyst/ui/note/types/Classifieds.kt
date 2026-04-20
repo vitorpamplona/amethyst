@@ -70,6 +70,7 @@ fun RenderClassifieds(
                 dim = it.dimension,
                 uri = note.toNostrUri(),
                 mimeType = it.mimeType,
+                thumbhash = it.thumbhash,
             )
         }
     val title = noteEvent.title()

@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip68Picture.dims
 import com.vitorpamplona.quartz.nip68Picture.hash
 import com.vitorpamplona.quartz.nip68Picture.mimeType
 import com.vitorpamplona.quartz.nip68Picture.size
+import com.vitorpamplona.quartz.nip68Picture.thumbhash
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTagBuilder
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
@@ -38,6 +39,7 @@ data class ProductImageMeta(
     val alt: String? = null,
     val hash: String? = null,
     val size: Int? = null,
+    val thumbhash: String? = null,
 ) {
     fun toIMeta(): IMetaTag =
         IMetaTagBuilder(url)
@@ -48,6 +50,7 @@ data class ProductImageMeta(
                 size?.let { size(it) }
                 dimension?.let { dims(it) }
                 blurhash?.let { blurhash(it) }
+                thumbhash?.let { thumbhash(it) }
             }.build()
 
     fun toIMetaArray(): Array<String> = toIMeta().toTagArray()
@@ -55,13 +58,14 @@ data class ProductImageMeta(
     companion object {
         fun parse(iMeta: IMetaTag): ProductImageMeta =
             ProductImageMeta(
-                iMeta.url,
-                iMeta.mimeType()?.firstOrNull(),
-                iMeta.blurhash()?.firstOrNull(),
-                iMeta.dims()?.firstOrNull()?.let { DimensionTag.parse(it) },
-                iMeta.alt()?.firstOrNull(),
-                iMeta.hash()?.firstOrNull(),
-                iMeta.size()?.firstOrNull()?.toIntOrNull(),
+                url = iMeta.url,
+                mimeType = iMeta.mimeType()?.firstOrNull(),
+                blurhash = iMeta.blurhash()?.firstOrNull(),
+                dimension = iMeta.dims()?.firstOrNull()?.let { DimensionTag.parse(it) },
+                alt = iMeta.alt()?.firstOrNull(),
+                hash = iMeta.hash()?.firstOrNull(),
+                size = iMeta.size()?.firstOrNull()?.toIntOrNull(),
+                thumbhash = iMeta.thumbhash()?.firstOrNull(),
             )
     }
 }

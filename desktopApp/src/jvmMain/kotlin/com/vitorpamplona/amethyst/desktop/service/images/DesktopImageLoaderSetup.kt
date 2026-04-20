@@ -60,8 +60,10 @@ object DesktopImageLoaderSetup {
                 add(SkiaGifDecoder.Factory())
                 add(DesktopBase64Fetcher.Factory)
                 add(DesktopBlurHashFetcher.Factory)
+                add(DesktopThumbHashFetcher.Factory)
                 add(DesktopBase64Fetcher.BKeyer)
                 add(DesktopBlurHashFetcher.BKeyer)
+                add(DesktopThumbHashFetcher.TKeyer)
             }.build()
 
     private fun newMemoryCache(): MemoryCache {

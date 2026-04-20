@@ -39,7 +39,8 @@ fun TagArrayBuilder<PictureEvent>.pictureIMeta(
     hash: String? = null,
     size: Int? = null,
     alt: String? = null,
-) = pictureIMeta(PictureMeta(url, mimeType, blurhash, dimension, alt, hash, size))
+    thumbhash: String? = null,
+) = pictureIMeta(PictureMeta(url, mimeType, blurhash, dimension, alt, hash, size, thumbhash = thumbhash))
 
 fun TagArrayBuilder<PictureEvent>.pictureIMeta(imeta: PictureMeta): TagArrayBuilder<PictureEvent> {
     add(imeta.toIMetaArray())

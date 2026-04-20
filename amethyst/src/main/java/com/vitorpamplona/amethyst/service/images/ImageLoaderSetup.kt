@@ -83,10 +83,12 @@ class ImageLoaderSetup {
                         add(VideoFrameDecoder.Factory())
                         add(Base64Fetcher.Factory)
                         add(BlurHashFetcher.Factory)
+                        add(ThumbHashFetcher.Factory)
                         add(BlossomFetcher.Factory(blossomServerResolver, callFactory))
                         add(ProfilePictureFetcher.Factory(thumbnailCache, callFactory, backgroundScope))
                         add(Base64Fetcher.BKeyer)
                         add(BlurHashFetcher.BKeyer)
+                        add(ThumbHashFetcher.TKeyer)
                         add(ProfilePictureFetcher.BKeyer)
                         add(OkHttpFactory(callFactory))
                     }.build(),

@@ -43,7 +43,8 @@ fun <T : VideoEvent> TagArrayBuilder<T>.videoIMeta(
     hash: String? = null,
     size: Int? = null,
     alt: String? = null,
-) = videoIMeta(VideoMeta(url, mimeType, blurhash, dimension, alt, hash, size))
+    thumbhash: String? = null,
+) = videoIMeta(VideoMeta(url, mimeType, blurhash, dimension, alt, hash, size, thumbhash = thumbhash))
 
 fun <T : VideoEvent> TagArrayBuilder<T>.videoIMeta(imeta: VideoMeta) = add(imeta.toIMetaArray())
 

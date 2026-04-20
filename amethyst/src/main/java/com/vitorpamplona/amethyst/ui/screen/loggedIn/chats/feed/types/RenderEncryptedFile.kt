@@ -79,6 +79,7 @@ fun RenderEncryptedFile(
                         encryptionAlgo = algo,
                         encryptionKey = key,
                         encryptionNonce = nonce,
+                        thumbhash = noteEvent.thumbhash(),
                     )
                 } else {
                     EncryptedMediaUrlVideo(
@@ -93,6 +94,7 @@ fun RenderEncryptedFile(
                         encryptionAlgo = algo,
                         encryptionKey = key,
                         encryptionNonce = nonce,
+                        thumbhash = noteEvent.thumbhash(),
                     )
                 },
             )

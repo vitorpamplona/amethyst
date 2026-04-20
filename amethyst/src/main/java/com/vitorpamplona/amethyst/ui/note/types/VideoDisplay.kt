@@ -71,6 +71,7 @@ fun JustVideoDisplay(
                         dim = imeta.dimension,
                         uri = note.toNostrUri(),
                         mimeType = imeta.mimeType,
+                        thumbhash = imeta.thumbhash,
                     )
                 } else {
                     MediaUrlVideo(
@@ -82,6 +83,7 @@ fun JustVideoDisplay(
                         uri = note.toNostrUri(),
                         authorName = note.author?.toBestDisplayName(),
                         mimeType = imeta.mimeType,
+                        thumbhash = imeta.thumbhash,
                     )
                 },
             )
@@ -95,7 +97,7 @@ fun JustVideoDisplay(
         preloadUrls = if (isImage) listOf(imeta.url) else emptyList(),
         accountViewModel = accountViewModel,
         modifier = mediaSizingModifier(ratio, contentScale),
-        backdrop = imeta.blurhash?.let { blurhash -> { BlurhashBackdrop(blurhash, content.description) } },
+        backdrop = (imeta.thumbhash ?: imeta.blurhash)?.let { { BlurhashBackdrop(imeta.blurhash, content.description, imeta.thumbhash) } },
     ) {
         ZoomableContentView(
             content = content,
