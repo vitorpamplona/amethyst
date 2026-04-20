@@ -420,6 +420,17 @@
     <string name="open_polls">Open</string>
     <string name="closed_polls">Closed</string>
     <string name="badges">Badges</string>
+    <string name="communities">Communities</string>
+    <string name="new_community">New Community</string>
+    <string name="new_community_name">Community name</string>
+    <string name="new_community_description">Description</string>
+    <string name="new_community_image_url">Cover image URL (optional)</string>
+    <string name="new_community_rules">Rules (optional)</string>
+    <string name="new_community_moderators">Moderators (one pubkey per line, optional)</string>
+    <string name="new_community_relay_requests">Relay for requests (optional)</string>
+    <string name="new_community_relay_approvals">Relay for approvals (optional)</string>
+    <string name="new_community_publish">Publish</string>
+    <string name="new_community_empty">No communities match this filter.</string>
     <string name="received_badges">Received</string>
     <string name="my_badges">Mine</string>
     <string name="awarded_badges">Awarded</string>

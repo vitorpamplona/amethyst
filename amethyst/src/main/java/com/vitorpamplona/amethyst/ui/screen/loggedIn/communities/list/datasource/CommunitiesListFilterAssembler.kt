@@ -18,24 +18,33 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip72ModCommunities.approval
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.list.datasource
 
-import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
-import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
-import com.vitorpamplona.quartz.nip01Core.tags.aTag.toATag
-import com.vitorpamplona.quartz.nip01Core.tags.events.toETagArray
-import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
-import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
+import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
+import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountFeedContentStates
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import kotlinx.coroutines.CoroutineScope
 
-fun TagArrayBuilder<CommunityPostApprovalEvent>.community(event: EventHintBundle<CommunityDefinitionEvent>) = add(event.toATag().toATagArray())
+class CommunitiesListQueryState(
+    val account: Account,
+    val feedStates: AccountFeedContentStates,
+    val scope: CoroutineScope,
+)
 
-fun TagArrayBuilder<CommunityPostApprovalEvent>.approved(event: EventHintBundle<Event>) {
-    add(event.toETagArray())
-    if (event.event is AddressableEvent) {
-        add(event.toATag().toATagArray())
-    }
+@Stable
+class CommunitiesListFilterAssembler(
+    client: INostrClient,
+) : ComposeSubscriptionManager<CommunitiesListQueryState>() {
+    val group =
+        listOf(
+            CommunitiesListSubAssembler(client, ::allKeys),
+        )
+
+    override fun invalidateKeys() = invalidateFilters()
+
+    override fun invalidateFilters() = group.forEach { it.invalidateFilters() }
+
+    override fun destroy() = group.forEach { it.destroy() }
 }
-
-fun TagArrayBuilder<CommunityPostApprovalEvent>.notifyAuthor(event: EventHintBundle<Event>) = add(PTag.assemble(event.event.pubKey, event.authorHomeRelay))

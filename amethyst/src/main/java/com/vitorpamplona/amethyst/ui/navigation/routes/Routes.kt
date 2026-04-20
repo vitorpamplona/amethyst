@@ -45,6 +45,10 @@ sealed class Route {
 
     @Serializable object Polls : Route()
 
+    @Serializable object Communities : Route()
+
+    @Serializable object NewCommunity : Route()
+
     @Serializable object Badges : Route()
 
     @Serializable object ProfileBadges : Route()
