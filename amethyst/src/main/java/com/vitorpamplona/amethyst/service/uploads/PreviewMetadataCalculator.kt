@@ -26,11 +26,28 @@ import android.graphics.BitmapFactory
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import com.vitorpamplona.amethyst.commons.blurhash.toBlurhash
+import com.vitorpamplona.amethyst.commons.thumbhash.toThumbhash
 import com.vitorpamplona.amethyst.service.images.BlurhashWrapper
+import com.vitorpamplona.amethyst.service.images.ThumbhashWrapper
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.utils.Log
 
-object BlurhashMetadataCalculator {
+/**
+ * Result of precomputing placeholder metadata during an upload. The bitmap or video thumbnail is
+ * decoded exactly once and both hashes are computed from the same pixels to keep the hot upload
+ * path cheap.
+ */
+data class PreviewHashes(
+    val blurhash: BlurhashWrapper? = null,
+    val thumbhash: ThumbhashWrapper? = null,
+    val dim: DimensionTag? = null,
+) {
+    companion object {
+        val EMPTY = PreviewHashes()
+    }
+}
+
+object PreviewMetadataCalculator {
     private fun isImage(mimeType: String?) = mimeType?.startsWith("image/", ignoreCase = true) == true
 
     private fun isVideo(mimeType: String?) = mimeType?.startsWith("video/", ignoreCase = true) == true
@@ -42,19 +59,11 @@ object BlurhashMetadataCalculator {
             inPreferredConfig = Bitmap.Config.ARGB_8888
         }
 
-    private fun processImage(
-        bitmap: Bitmap?,
-        dimPrecomputed: DimensionTag?,
-    ): Pair<BlurhashWrapper?, DimensionTag?> {
-        val (blur, dim) = processBitmap(bitmap)
-        return blur to (dim ?: dimPrecomputed)
-    }
-
     fun computeFromBytes(
         data: ByteArray,
         mimeType: String?,
         dimPrecomputed: DimensionTag?,
-    ): Pair<BlurhashWrapper?, DimensionTag?> =
+    ): PreviewHashes =
         when {
             isImage(mimeType) -> {
                 val bitmap = BitmapFactory.decodeByteArray(data, 0, data.size, createBitmapOptions())
@@ -72,7 +81,7 @@ object BlurhashMetadataCalculator {
             }
 
             else -> {
-                null to dimPrecomputed
+                PreviewHashes(dim = dimPrecomputed)
             }
         }
 
@@ -81,7 +90,7 @@ object BlurhashMetadataCalculator {
         uri: Uri,
         mimeType: String?,
         dimPrecomputed: DimensionTag? = null,
-    ): Pair<BlurhashWrapper?, DimensionTag?>? {
+    ): PreviewHashes? {
         if (!shouldAttempt(mimeType)) return null
 
         return try {
@@ -90,7 +99,7 @@ object BlurhashMetadataCalculator {
                     context.contentResolver.openInputStream(uri)?.use { stream ->
                         val bitmap = BitmapFactory.decodeStream(stream, null, createBitmapOptions())
                         processImage(bitmap, dimPrecomputed)
-                    } ?: (null to dimPrecomputed)
+                    } ?: PreviewHashes(dim = dimPrecomputed)
                 }
 
                 isVideo(mimeType) -> {
@@ -108,33 +117,44 @@ object BlurhashMetadataCalculator {
                 }
             }
         } catch (e: Exception) {
-            Log.w("BlurhashMetadataCalc", "Failed to compute metadata from uri", e)
+            Log.w("PreviewMetadataCalc", "Failed to compute metadata from uri", e)
             null
         }
     }
 
-    private fun processBitmap(bitmap: Bitmap?): Pair<BlurhashWrapper?, DimensionTag?> =
+    private fun processImage(
+        bitmap: Bitmap?,
+        dimPrecomputed: DimensionTag?,
+    ): PreviewHashes {
+        val hashes = processBitmap(bitmap)
+        return hashes.copy(dim = hashes.dim ?: dimPrecomputed)
+    }
+
+    private fun processBitmap(bitmap: Bitmap?): PreviewHashes =
         if (bitmap != null) {
             try {
-                val blurhash = BlurhashWrapper(bitmap.toBlurhash())
-                blurhash to DimensionTag(bitmap.width, bitmap.height)
+                val blurhash = runCatching { BlurhashWrapper(bitmap.toBlurhash()) }.getOrNull()
+                val thumbhash = runCatching { ThumbhashWrapper(bitmap.toThumbhash()) }.getOrNull()
+                PreviewHashes(
+                    blurhash = blurhash,
+                    thumbhash = thumbhash,
+                    dim = DimensionTag(bitmap.width, bitmap.height),
+                )
             } finally {
                 bitmap.recycle()
             }
         } else {
-            null to null
+            PreviewHashes.EMPTY
         }
 
     private fun processRetriever(
         retriever: MediaMetadataRetriever,
         dimPrecomputed: DimensionTag?,
-    ): Pair<BlurhashWrapper?, DimensionTag?> {
+    ): PreviewHashes {
         val dim = retriever.prepareDimFromVideo() ?: dimPrecomputed
-        val blurhash = retriever.getThumbnail()?.toBlurhash()?.let { BlurhashWrapper(it) }
-        return if (dim?.hasSize() == true) {
-            blurhash to dim
-        } else {
-            blurhash to null
-        }
+        val thumb = retriever.getThumbnail()
+        val hashes = processBitmap(thumb)
+        val finalDim = if (dim?.hasSize() == true) dim else hashes.dim
+        return hashes.copy(dim = finalDim)
     }
 }

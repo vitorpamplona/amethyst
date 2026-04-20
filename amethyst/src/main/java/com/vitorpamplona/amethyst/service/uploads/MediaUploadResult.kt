@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.service.uploads
 
 import com.vitorpamplona.amethyst.service.images.BlurhashWrapper
+import com.vitorpamplona.amethyst.service.images.ThumbhashWrapper
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 
@@ -45,12 +46,15 @@ data class MediaUploadResult(
     val ipfs: String? = null,
     // blurhash value for previews
     val blurHash: BlurhashWrapper? = null,
+    // thumbhash value for previews (preferred over blurhash in the UI)
+    val thumbHash: ThumbhashWrapper? = null,
 ) {
-    fun mergeLocalMetadata(localMetadata: Pair<BlurhashWrapper?, DimensionTag?>?): MediaUploadResult =
-        localMetadata?.let { (blur, dim) ->
+    fun mergeLocalMetadata(localMetadata: PreviewHashes?): MediaUploadResult =
+        localMetadata?.let { hashes ->
             copy(
-                dimension = dim ?: dimension,
-                blurHash = blur ?: blurHash,
+                dimension = hashes.dim ?: dimension,
+                blurHash = hashes.blurhash ?: blurHash,
+                thumbHash = hashes.thumbhash ?: thumbHash,
             )
         } ?: this
 }

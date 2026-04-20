@@ -59,6 +59,7 @@ import androidx.compose.material.icons.outlined.CollectionsBookmark
 import androidx.compose.material.icons.outlined.Drafts
 import androidx.compose.material.icons.outlined.GroupAdd
 import androidx.compose.material.icons.outlined.Language
+import androidx.compose.material.icons.outlined.MilitaryTech
 import androidx.compose.material.icons.outlined.Photo
 import androidx.compose.material.icons.outlined.PlayCircle
 import androidx.compose.material.icons.outlined.Settings
@@ -599,6 +600,14 @@ fun ListContent(
             tint = MaterialTheme.colorScheme.onBackground,
             nav = nav,
             route = Route.Polls,
+        )
+
+        NavigationRow(
+            title = R.string.badges,
+            icon = Icons.Outlined.MilitaryTech,
+            tint = MaterialTheme.colorScheme.onBackground,
+            nav = nav,
+            route = Route.Badges,
         )
 
         NavigationRow(

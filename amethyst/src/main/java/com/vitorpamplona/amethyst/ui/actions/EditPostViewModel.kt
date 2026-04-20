@@ -62,6 +62,7 @@ import com.vitorpamplona.quartz.nip94FileMetadata.mimeType
 import com.vitorpamplona.quartz.nip94FileMetadata.originalHash
 import com.vitorpamplona.quartz.nip94FileMetadata.sensitiveContent
 import com.vitorpamplona.quartz.nip94FileMetadata.size
+import com.vitorpamplona.quartz.nip94FileMetadata.thumbhash
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -233,6 +234,8 @@ open class EditPostViewModel : ViewModel() {
                                             ?.let { dims(it) }
                                         state.result.fileHeader.blurHash
                                             ?.let { blurhash(it.blurhash) }
+                                        state.result.fileHeader.thumbHash
+                                            ?.let { thumbhash(it.thumbhash) }
                                         state.result.magnet?.let { magnet(it) }
                                         state.result.uploadedHash?.let { originalHash(it) }
                                         alt?.let { alt(it) }

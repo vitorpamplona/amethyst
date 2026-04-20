@@ -36,6 +36,7 @@ data class PictureMeta(
     val service: String? = null,
     val fallback: List<String> = emptyList(),
     val annotations: List<UserAnnotationTag> = emptyList(),
+    val thumbhash: String? = null,
 ) {
     fun toIMetaArray(): Array<String> =
         IMetaTagBuilder(url)
@@ -46,6 +47,7 @@ data class PictureMeta(
                 size?.let { size(it) }
                 dimension?.let { dims(it) }
                 blurhash?.let { blurhash(it) }
+                thumbhash?.let { thumbhash(it) }
                 service?.let { service(it) }
                 fallback.forEach { fallback(it) }
                 annotations.forEach { userAnnotations(it) }
@@ -55,16 +57,17 @@ data class PictureMeta(
     companion object {
         fun parse(iMeta: IMetaTag): PictureMeta =
             PictureMeta(
-                iMeta.url,
-                iMeta.mimeType()?.firstOrNull(),
-                iMeta.blurhash()?.firstOrNull(),
-                iMeta.dims()?.firstOrNull()?.let { DimensionTag.parse(it) },
-                iMeta.alt()?.firstOrNull(),
-                iMeta.hash()?.firstOrNull(),
-                iMeta.size()?.firstOrNull()?.toIntOrNull(),
-                iMeta.service()?.firstOrNull(),
-                iMeta.fallback() ?: emptyList(),
-                iMeta.userAnnotations() ?: emptyList(),
+                url = iMeta.url,
+                mimeType = iMeta.mimeType()?.firstOrNull(),
+                blurhash = iMeta.blurhash()?.firstOrNull(),
+                dimension = iMeta.dims()?.firstOrNull()?.let { DimensionTag.parse(it) },
+                alt = iMeta.alt()?.firstOrNull(),
+                hash = iMeta.hash()?.firstOrNull(),
+                size = iMeta.size()?.firstOrNull()?.toIntOrNull(),
+                service = iMeta.service()?.firstOrNull(),
+                fallback = iMeta.fallback() ?: emptyList(),
+                annotations = iMeta.userAnnotations() ?: emptyList(),
+                thumbhash = iMeta.thumbhash()?.firstOrNull(),
             )
     }
 }

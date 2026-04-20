@@ -36,6 +36,7 @@ import com.vitorpamplona.quartz.nip94FileMetadata.tags.ServiceTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.SizeTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.SummaryTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.ThumbTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.ThumbhashTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.TorrentInfoHash
 
 /**
@@ -54,6 +55,8 @@ fun IMetaTag.size() = properties.get(SizeTag.TAG_NAME)
 fun IMetaTag.dims() = properties.get(DimensionTag.TAG_NAME)
 
 fun IMetaTag.blurhash() = properties.get(BlurhashTag.TAG_NAME)
+
+fun IMetaTag.thumbhash() = properties.get(ThumbhashTag.TAG_NAME)
 
 fun IMetaTag.originalHash() = properties.get(OriginalHashTag.TAG_NAME)
 
