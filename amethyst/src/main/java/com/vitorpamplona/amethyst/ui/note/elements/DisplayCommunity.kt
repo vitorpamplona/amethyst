@@ -24,9 +24,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.text.style.TextOverflow
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.ui.components.ClickableTextColor
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -34,6 +37,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip72ModCommunities.communityAddress
+import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 
 @Composable
 fun DisplayFollowingCommunityInPost(
@@ -42,38 +46,46 @@ fun DisplayFollowingCommunityInPost(
     nav: INav,
 ) {
     Column(HalfStartPadding) {
-        Row(verticalAlignment = Alignment.CenterVertically) { DisplayCommunity(baseNote, nav) }
+        Row(verticalAlignment = Alignment.CenterVertically) { DisplayCommunity(baseNote, accountViewModel, nav) }
     }
 }
 
 @Composable
 private fun DisplayCommunity(
     note: Note,
+    accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val communityTag = note.event?.communityAddress() ?: return
 
+    val communityNote = LocalCache.getOrCreateAddressableNote(communityTag)
+    val communityState by observeNote(communityNote, accountViewModel)
+    val label = communityShortLabel(communityTag, communityState.note.event as? CommunityDefinitionEvent)
+
     ClickableTextColor(
-        getCommunityShortName(communityTag),
+        label,
         linkColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.52f),
         overflow = TextOverflow.Ellipsis,
         maxLines = 1,
     ) {
         nav.nav {
-            note.event?.communityAddress()?.let { communityTag ->
-                Route.Community(communityTag.kind, communityTag.pubKeyHex, communityTag.dTag)
+            note.event?.communityAddress()?.let { addr ->
+                Route.Community(addr.kind, addr.pubKeyHex, addr.dTag)
             }
         }
     }
 }
 
-fun getCommunityShortName(communityAddress: Address): String {
-    val name =
-        if (communityAddress.dTag.length > 10) {
-            communityAddress.dTag.take(10) + "..."
+private fun communityShortLabel(
+    address: Address,
+    definition: CommunityDefinitionEvent?,
+): String {
+    val raw = definition?.name()?.ifBlank { null } ?: address.dTag
+    val shortened =
+        if (raw.length > 12) {
+            raw.take(12) + "..."
         } else {
-            communityAddress.dTag.take(10)
+            raw
         }
-
-    return "/n/$name"
+    return "/n/$shortened"
 }

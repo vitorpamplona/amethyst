@@ -96,7 +96,7 @@ fun RenderCommunitiesThumb(
 
     RenderCommunitiesThumb(
         CommunityCard(
-            name = noteEvent.dTag(),
+            name = noteEvent.name()?.ifBlank { null } ?: noteEvent.dTag(),
             description = noteEvent.description(),
             cover = noteEvent.image()?.imageUrl,
             moderators = noteEvent.moderatorKeys().toImmutableList(),

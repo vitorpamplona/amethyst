@@ -71,14 +71,17 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.Nip05State
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.uploads.GallerySelect
 import com.vitorpamplona.amethyst.ui.actions.uploads.ShowImageUploadGallery
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.topbars.ActionTopBar
 import com.vitorpamplona.amethyst.ui.navigation.topbars.CreatingTopBar
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
@@ -89,12 +92,28 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayUrlEditF
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.SuggestionListDefaultHeightPage
+import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.tags.RelayTag
 import kotlinx.collections.immutable.persistentListOf
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NewCommunityScreen(
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) = CommunityFormScreen(editing = null, accountViewModel = accountViewModel, nav = nav)
+
+@Composable
+fun EditCommunityScreen(
+    editing: Address,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) = CommunityFormScreen(editing = editing, accountViewModel = accountViewModel, nav = nav)
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CommunityFormScreen(
+    editing: Address?,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -103,6 +122,15 @@ fun NewCommunityScreen(
 
     LaunchedEffect(accountViewModel.account) {
         model.init(accountViewModel.account)
+    }
+
+    LaunchedEffect(editing) {
+        if (editing != null) {
+            val note = LocalCache.getOrCreateAddressableNote(editing)
+            (note.event as? CommunityDefinitionEvent)?.let { model.loadFrom(it) }
+        } else {
+            model.existingDTag = null
+        }
     }
 
     StrippingFailureDialog(model.strippingFailureConfirmation)
@@ -122,21 +150,42 @@ fun NewCommunityScreen(
 
     Scaffold(
         topBar = {
-            CreatingTopBar(
-                titleRes = R.string.new_community,
-                isActive = model::canPost,
-                onCancel = {
-                    model.reset()
-                    nav.popBack()
-                },
-                onPost = {
-                    model.publish(
-                        context = context,
-                        onSuccess = { nav.popBack() },
-                        onError = accountViewModel.toastManager::toast,
-                    )
-                },
-            )
+            val titleRes =
+                if (model.isEditing()) R.string.edit_community else R.string.new_community
+            if (model.isEditing()) {
+                ActionTopBar(
+                    titleRes = titleRes,
+                    postRes = R.string.save,
+                    isActive = model::canPost,
+                    onCancel = {
+                        model.reset()
+                        nav.popBack()
+                    },
+                    onPost = {
+                        model.publish(
+                            context = context,
+                            onSuccess = { nav.popBack() },
+                            onError = accountViewModel.toastManager::toast,
+                        )
+                    },
+                )
+            } else {
+                CreatingTopBar(
+                    titleRes = titleRes,
+                    isActive = model::canPost,
+                    onCancel = {
+                        model.reset()
+                        nav.popBack()
+                    },
+                    onPost = {
+                        model.publish(
+                            context = context,
+                            onSuccess = { nav.popBack() },
+                            onError = accountViewModel.toastManager::toast,
+                        )
+                    },
+                )
+            }
         },
     ) { pad ->
         Surface(
@@ -235,18 +284,69 @@ private fun CommunityImagePicker(
     accountViewModel: AccountViewModel,
     onPickImage: () -> Unit,
 ) {
-    if (model.hasPickedImage()) {
-        model.multiOrchestrator?.let {
-            Box(modifier = Modifier.clickable(onClick = onPickImage)) {
-                ShowImageUploadGallery(
-                    list = it,
-                    onDelete = { model.setPickedMedia(persistentListOf()) },
-                    accountViewModel = accountViewModel,
-                )
+    val existingUrl = model.existingImageUrl
+    when {
+        model.hasPickedImage() -> {
+            model.multiOrchestrator?.let {
+                Box(modifier = Modifier.clickable(onClick = onPickImage)) {
+                    ShowImageUploadGallery(
+                        list = it,
+                        onDelete = { model.setPickedMedia(persistentListOf()) },
+                        accountViewModel = accountViewModel,
+                    )
+                }
             }
         }
-    } else {
-        CommunityImagePlaceholder(onClick = onPickImage)
+
+        !existingUrl.isNullOrBlank() -> {
+            ExistingCommunityCover(
+                url = existingUrl,
+                onClick = onPickImage,
+                onClear = { model.existingImageUrl = null },
+            )
+        }
+
+        else -> {
+            CommunityImagePlaceholder(onClick = onPickImage)
+        }
+    }
+}
+
+@Composable
+private fun ExistingCommunityCover(
+    url: String,
+    onClick: () -> Unit,
+    onClear: () -> Unit,
+) {
+    Box(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .aspectRatio(16f / 9f)
+                .clickable(onClick = onClick),
+        contentAlignment = Alignment.TopEnd,
+    ) {
+        AsyncImage(
+            model = url,
+            contentDescription = null,
+            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(16f / 9f)
+                    .border(
+                        width = 1.dp,
+                        color = MaterialTheme.colorScheme.outline,
+                        shape = RoundedCornerShape(16.dp),
+                    ),
+        )
+        IconButton(onClick = onClear) {
+            Icon(
+                imageVector = Icons.Outlined.Close,
+                contentDescription = stringRes(R.string.remove),
+                tint = MaterialTheme.colorScheme.onSurface,
+            )
+        }
     }
 }
 

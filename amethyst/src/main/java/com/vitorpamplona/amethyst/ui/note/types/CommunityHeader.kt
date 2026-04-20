@@ -34,6 +34,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalButton
@@ -70,6 +71,7 @@ import com.vitorpamplona.amethyst.ui.components.RichTextViewer
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.LikeReaction
@@ -439,12 +441,31 @@ private fun LongCommunityActionOptions(
     nav: INav,
 ) {
     Row {
+        if (note.author?.pubkeyHex == accountViewModel.account.signer.pubKey) {
+            EditCommunityButton(note, nav)
+        }
         ShareCommunityButton(accountViewModel, note, nav)
         WatchAddressableNoteFollows(note, accountViewModel) { isFollowing ->
             if (isFollowing) {
                 LeaveCommunityButton(accountViewModel, note, nav)
             }
         }
+    }
+}
+
+@Composable
+fun EditCommunityButton(
+    note: AddressableNote,
+    nav: INav,
+) {
+    FilledTonalIconButton(
+        onClick = { nav.nav(Route.EditCommunity(note.address)) },
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.Edit,
+            modifier = Size18Modifier,
+            contentDescription = stringRes(R.string.edit_community),
+        )
     }
 }
 

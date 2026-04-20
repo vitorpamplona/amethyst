@@ -36,6 +36,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import com.vitorpamplona.quartz.nip51Lists.interestSet.InterestSetEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.collections.immutable.persistentListOf
@@ -381,7 +382,11 @@ class PeopleListName(
 class CommunityName(
     val note: AddressableNote,
 ) : Name() {
-    override fun name() = "/n/${(note.dTag())}"
+    override fun name(): String {
+        val definition = note.event as? CommunityDefinitionEvent
+        val label = definition?.name()?.ifBlank { null } ?: note.dTag()
+        return "/n/$label"
+    }
 }
 
 @Stable

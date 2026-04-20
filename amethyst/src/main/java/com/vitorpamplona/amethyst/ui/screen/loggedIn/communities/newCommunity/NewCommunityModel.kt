@@ -43,6 +43,7 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
+import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.tags.ModeratorTag
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.tags.RelayTag
 import kotlinx.collections.immutable.ImmutableList
@@ -61,11 +62,16 @@ data class CommunityRelayEntry(
 class NewCommunityModel : ViewModel() {
     var account: Account? = null
 
+    // When set, publish() reuses this d-tag so the kind-34550 replaceable event
+    // is updated in place (edit flow). Null in the create flow.
+    var existingDTag: String? = null
+
     var isPublishing by mutableStateOf(false)
 
     var name by mutableStateOf("")
     var description by mutableStateOf("")
     var rules by mutableStateOf("")
+    var existingImageUrl by mutableStateOf<String?>(null)
 
     // Image upload state - mirrors NewBadgeModel.
     var multiOrchestrator by mutableStateOf<MultiOrchestrator?>(null)
@@ -87,6 +93,42 @@ class NewCommunityModel : ViewModel() {
         this.selectedServer = defaultServer()
         this.stripMetadata = account.settings.stripLocationOnUpload
     }
+
+    /**
+     * Preloads the form with the current contents of [existing] so the user can edit
+     * the replaceable kind 34550 event. Keeps the original `d` tag so relays replace
+     * the previous version instead of creating a new community.
+     */
+    fun loadFrom(existing: CommunityDefinitionEvent) {
+        existingDTag = existing.dTag()
+        name = existing.name().orEmpty()
+        description = existing.description().orEmpty()
+        rules = existing.rules().orEmpty()
+        existingImageUrl = existing.image()?.imageUrl
+
+        val ownerKey = account?.signer?.pubKey
+        moderators.clear()
+        existing
+            .moderatorKeys()
+            .asSequence()
+            .filter { it != ownerKey }
+            .distinct()
+            .forEach { pubkey ->
+                val user = account?.cache?.getOrCreateUser(pubkey) ?: return@forEach
+                if (moderators.none { it.pubkeyHex == user.pubkeyHex }) {
+                    moderators.add(user)
+                }
+            }
+
+        relays.clear()
+        existing.relays().forEach { tag ->
+            if (relays.none { it.url == tag.url }) {
+                relays.add(CommunityRelayEntry(tag.url, tag.marker))
+            }
+        }
+    }
+
+    fun isEditing(): Boolean = existingDTag != null
 
     fun defaultServer() = account?.settings?.defaultFileServer ?: DEFAULT_MEDIA_SERVERS[0]
 
@@ -156,14 +198,14 @@ class NewCommunityModel : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             isPublishing = true
             try {
-                val imageUrl =
-                    uploadImageIfAny(context, myAccount, onError) ?: run {
-                        if (multiOrchestrator != null) {
-                            // upload failed; error was reported, bail out
-                            return@launch
-                        }
+                val uploadedUrl =
+                    if (multiOrchestrator != null) {
+                        uploadImageIfAny(context, myAccount, onError) ?: return@launch
+                    } else {
                         null
                     }
+
+                val imageUrl = uploadedUrl ?: existingImageUrl
 
                 val ownerKey = myAccount.signer.pubKey
                 val moderatorTags =
@@ -177,6 +219,8 @@ class NewCommunityModel : ViewModel() {
 
                 val relayTags = relays.map { RelayTag(it.url, it.marker) }
 
+                val dTag = existingDTag ?: Uuid.random().toString()
+
                 val definition =
                     myAccount.sendCommunityDefinition(
                         name = name.trim(),
@@ -185,7 +229,7 @@ class NewCommunityModel : ViewModel() {
                         image = imageUrl,
                         rules = rules.trim().ifBlank { null },
                         relays = relayTags.ifEmpty { null },
-                        dTag = Uuid.random().toString(),
+                        dTag = dTag,
                     )
 
                 if (definition == null) {
@@ -196,9 +240,11 @@ class NewCommunityModel : ViewModel() {
                     return@launch
                 }
 
-                // Follow it so it shows up under "Mine".
-                val communityNote = myAccount.cache.getOrCreateAddressableNote(definition.address())
-                myAccount.follow(communityNote)
+                // Auto-follow only on the create flow; editing doesn't change the follow set.
+                if (existingDTag == null) {
+                    val communityNote = myAccount.cache.getOrCreateAddressableNote(definition.address())
+                    myAccount.follow(communityNote)
+                }
 
                 selectedServer?.let { myAccount.settings.changeDefaultFileServer(it) }
                 myAccount.settings.changeStripLocationOnUpload(stripMetadata)
@@ -260,6 +306,8 @@ class NewCommunityModel : ViewModel() {
         name = ""
         description = ""
         rules = ""
+        existingImageUrl = null
+        existingDTag = null
         multiOrchestrator = null
         moderators.clear()
         relays.clear()

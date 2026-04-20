@@ -422,6 +422,7 @@
     <string name="badges">Badges</string>
     <string name="communities">Communities</string>
     <string name="new_community">New Community</string>
+    <string name="edit_community">Edit Community</string>
     <string name="new_community_name">Community name</string>
     <string name="new_community_description">Description</string>
     <string name="new_community_rules">Rules (optional)</string>
