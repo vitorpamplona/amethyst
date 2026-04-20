@@ -51,10 +51,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
-import androidx.media3.common.C
 import androidx.media3.common.Player
-import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.Tracks
+import androidx.media3.common.VideoSize
 import androidx.media3.common.util.UnstableApi
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -72,14 +71,25 @@ fun VideoQualityButton(
     modifier: Modifier = Modifier,
 ) {
     var tracks by remember(player) { mutableStateOf(player.currentTracks) }
+    // Track the rendering video size separately from tracks. In adaptive playback,
+    // Tracks.Group.isTrackSelected(i) returns true for every rung in the adaptive
+    // set, so we can't derive the currently-playing resolution from the Tracks
+    // object. Player.videoSize + onVideoSizeChanged gives the real rendered size
+    // and updates whenever ABR steps up or down.
+    var videoSize by remember(player) { mutableStateOf(player.videoSize) }
     var openDialog by remember { mutableStateOf(false) }
 
     DisposableEffect(player) {
         tracks = player.currentTracks
+        videoSize = player.videoSize
         val listener =
             object : Player.Listener {
                 override fun onTracksChanged(newTracks: Tracks) {
                     tracks = newTracks
+                }
+
+                override fun onVideoSizeChanged(newSize: VideoSize) {
+                    videoSize = newSize
                 }
             }
         player.addListener(listener)
@@ -88,6 +98,8 @@ fun VideoQualityButton(
 
     val videoGroup = getVideoTrackGroup(tracks) ?: return
     if (videoGroup.length <= 1) return
+
+    val currentShortSide = minOf(videoSize.width, videoSize.height).takeIf { it > 0 }
 
     AnimatedVisibility(
         visible = controllerVisible.value,
@@ -126,7 +138,7 @@ fun VideoQualityButton(
         ) {
             VideoQualityChoices(
                 videoGroup = videoGroup,
-                currentShortSide = getCurrentPlayingShortSide(tracks),
+                currentShortSide = currentShortSide,
                 isAuto = !hasVideoOverride(player),
                 onSelectAuto = {
                     clearVideoOverride(player)
@@ -210,26 +222,3 @@ private fun formatBitrate(bitrate: Int): String =
         bitrate >= 1_000_000 -> String.format(Locale.US, "%.1f Mbps", bitrate / 1_000_000.0)
         else -> String.format(Locale.US, "%.0f kbps", bitrate / 1_000.0)
     }
-
-@OptIn(UnstableApi::class)
-private fun hasVideoOverride(player: Player): Boolean = player.trackSelectionParameters.overrides.any { (key, _) -> key.type == C.TRACK_TYPE_VIDEO }
-
-private fun clearVideoOverride(player: Player) {
-    player.trackSelectionParameters =
-        player.trackSelectionParameters
-            .buildUpon()
-            .clearOverridesOfType(C.TRACK_TYPE_VIDEO)
-            .build()
-}
-
-private fun selectVideoTrack(
-    player: Player,
-    group: Tracks.Group,
-    trackIndex: Int,
-) {
-    player.trackSelectionParameters =
-        player.trackSelectionParameters
-            .buildUpon()
-            .setOverrideForType(TrackSelectionOverride(group.mediaTrackGroup, trackIndex))
-            .build()
-}

@@ -26,6 +26,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import com.vitorpamplona.amethyst.service.playback.composable.controls.ApplyInitialVideoQuality
 import com.vitorpamplona.amethyst.service.playback.composable.mainVideo.VideoPlayerActiveMutex
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.GetMediaItem
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -50,6 +51,7 @@ fun VideoViewInner(
     controllerVisible: MutableState<Boolean> = mutableStateOf(false),
     onZoom: (() -> Unit)? = null,
     hasBlurhash: Boolean = false,
+    isFullscreen: Boolean = false,
     accountViewModel: AccountViewModel,
 ) {
     // keeps a copy of the value to avoid recompositions here when the DEFAULT value changes
@@ -71,6 +73,10 @@ fun VideoViewInner(
             mediaItem = mediaItem,
             muted = muted,
         ) { controller ->
+            ApplyInitialVideoQuality(
+                player = controller.controller,
+                isFullscreen = isFullscreen,
+            )
             VideoPlayerActiveMutex(controller) { videoModifier, isClosestToTheCenterOfTheScreen ->
                 ControlWhenPlayerIsActive(controller, automaticallyStartPlayback, isClosestToTheCenterOfTheScreen)
                 RenderVideoPlayer(

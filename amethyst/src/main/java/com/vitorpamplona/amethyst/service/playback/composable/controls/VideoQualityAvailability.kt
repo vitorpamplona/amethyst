@@ -20,22 +20,52 @@
  */
 package com.vitorpamplona.amethyst.service.playback.composable.controls
 
+import androidx.annotation.OptIn
 import androidx.media3.common.C
+import androidx.media3.common.Player
+import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.Tracks
+import androidx.media3.common.util.UnstableApi
 
 fun getVideoTrackGroup(tracks: Tracks): Tracks.Group? = tracks.groups.firstOrNull { it.type == C.TRACK_TYPE_VIDEO && it.length > 0 }
 
-// Returns the "Xp" value for the currently selected video track. Uses min(width, height) so
-// that a portrait video's renditions get the same "360p / 540p / 720p" labels as a landscape
-// source — the streaming convention is to label by the short side, not format.height which is
-// the long side for portrait content.
-fun getCurrentPlayingShortSide(tracks: Tracks): Int? {
-    val group = getVideoTrackGroup(tracks) ?: return null
+// Finds the track with the smallest short side (min(width, height)) in the given video group.
+// Returns null if no track has a positive short side. Used to force lowest-resolution playback
+// in feeds to save bandwidth.
+@OptIn(UnstableApi::class)
+fun findLowestResolutionTrackIndex(group: Tracks.Group): Int? {
+    var bestIndex: Int? = null
+    var bestShortSide = Int.MAX_VALUE
     for (i in 0 until group.length) {
-        if (group.isTrackSelected(i)) {
-            val format = group.getTrackFormat(i)
-            return minOf(format.width, format.height).takeIf { it > 0 }
+        val format = group.getTrackFormat(i)
+        val shortSide = minOf(format.width, format.height)
+        if (shortSide > 0 && shortSide < bestShortSide) {
+            bestShortSide = shortSide
+            bestIndex = i
         }
     }
-    return null
+    return bestIndex
+}
+
+@OptIn(UnstableApi::class)
+fun hasVideoOverride(player: Player): Boolean = player.trackSelectionParameters.overrides.any { (key, _) -> key.type == C.TRACK_TYPE_VIDEO }
+
+fun clearVideoOverride(player: Player) {
+    player.trackSelectionParameters =
+        player.trackSelectionParameters
+            .buildUpon()
+            .clearOverridesOfType(C.TRACK_TYPE_VIDEO)
+            .build()
+}
+
+fun selectVideoTrack(
+    player: Player,
+    group: Tracks.Group,
+    trackIndex: Int,
+) {
+    player.trackSelectionParameters =
+        player.trackSelectionParameters
+            .buildUpon()
+            .setOverrideForType(TrackSelectionOverride(group.mediaTrackGroup, trackIndex))
+            .build()
 }
