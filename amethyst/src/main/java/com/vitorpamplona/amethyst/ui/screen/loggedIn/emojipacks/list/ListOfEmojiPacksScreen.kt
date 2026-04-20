@@ -71,9 +71,7 @@ fun ListOfEmojiPacksScreen(
     ListOfEmojiPacksFeed(
         listSource = accountViewModel.account.ownedEmojiPacks.listFeedFlow,
         selectedPacksFlow = accountViewModel.account.emoji.flow,
-        openMyEmojiList = {
-            // kind 10030 is a user's selection of packs. No dedicated screen yet; open pack edit instead.
-        },
+        openMyEmojiList = { nav.nav(Route.MyEmojiList) },
         addEmojiPack = { nav.nav(Route.EmojiPackMetadataEdit()) },
         openEmojiPack = { pack -> nav.nav(Route.EmojiPackView(pack.identifier)) },
         editEmojiPack = { pack -> nav.nav(Route.EmojiPackMetadataEdit(pack.identifier)) },
