@@ -136,7 +136,6 @@ import com.vitorpamplona.quartz.experimental.profileGallery.fromEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.hash
 import com.vitorpamplona.quartz.experimental.profileGallery.mimeType
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
-import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageUtils
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupStateStore
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
@@ -2211,23 +2210,13 @@ class Account(
     }
 
     /**
-     * Check if a KeyPackage has been published, either locally generated
-     * in this session or found in the local cache from a previous session.
+     * Check if a KeyPackage has been published in this session.
+     * The d-tag is a randomly-generated value stored in the KeyPackageRotationManager's
+     * persisted snapshot, so there is no fixed address to query in the cache.
      */
     suspend fun hasPublishedKeyPackage(): Boolean {
-        // Check in-memory bundles first (current session)
-        val manager = marmotManager
-        if (manager != null && manager.hasActiveKeyPackages()) return true
-
-        // Check local cache for our own kind:30443 events (from previous sessions / relay downloads)
-        val address =
-            com.vitorpamplona.quartz.nip01Core.core.Address(
-                KeyPackageEvent.KIND,
-                signer.pubKey,
-                KeyPackageUtils.PRIMARY_SLOT,
-            )
-        val note = cache.getAddressableNoteIfExists(address)
-        return note?.event != null
+        val manager = marmotManager ?: return false
+        return manager.hasActiveKeyPackages()
     }
 
     /**

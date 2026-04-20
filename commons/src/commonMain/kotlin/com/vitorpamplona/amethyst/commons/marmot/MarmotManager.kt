@@ -296,10 +296,11 @@ class MarmotManager(
     @OptIn(ExperimentalEncodingApi::class)
     suspend fun generateKeyPackageEvent(
         relays: List<NormalizedRelayUrl>,
-        dTagSlot: String = KeyPackageUtils.PRIMARY_SLOT,
+        slotName: String = KeyPackageUtils.PRIMARY_SLOT,
     ): KeyPackageEvent {
+        val dTag = keyPackageRotationManager.getOrCreateSlotDTag(slotName)
         val identity = signer.pubKey.hexToByteArray()
-        val bundle = keyPackageRotationManager.generateKeyPackage(identity, dTagSlot)
+        val bundle = keyPackageRotationManager.generateKeyPackage(identity, dTag)
 
         val keyPackageBytes = bundle.keyPackage.toTlsBytes()
         val keyPackageBase64 = Base64.encode(keyPackageBytes)
@@ -308,7 +309,7 @@ class MarmotManager(
         val template =
             KeyPackageEvent.build(
                 keyPackageBase64 = keyPackageBase64,
-                dTagSlot = dTagSlot,
+                dTagSlot = dTag,
                 keyPackageRef = keyPackageRef,
                 relays = relays,
             )
@@ -317,7 +318,7 @@ class MarmotManager(
         // Welcome receivers identify the consumed KeyPackage by its Nostr
         // event id (the MIP-02 "e" tag), not by the MLS reference hash, so
         // remember the mapping right after we know the signed event id.
-        keyPackageRotationManager.recordPublishedEventId(dTagSlot, signed.id)
+        keyPackageRotationManager.recordPublishedEventId(dTag, signed.id)
         return signed
     }
 

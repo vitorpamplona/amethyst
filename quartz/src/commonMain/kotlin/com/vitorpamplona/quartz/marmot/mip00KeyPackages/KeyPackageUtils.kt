@@ -21,8 +21,10 @@
 package com.vitorpamplona.quartz.marmot.mip00KeyPackages
 
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.tags.EncodingTag
+import com.vitorpamplona.quartz.marmot.mls.crypto.MlsCryptoProvider
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 
@@ -41,11 +43,21 @@ object KeyPackageUtils {
     /** Current addressable KeyPackage kind */
     const val CURRENT_KIND = KeyPackageEvent.KIND // 30443
 
-    /** Default d-tag slot for primary KeyPackage */
-    const val PRIMARY_SLOT = "0"
-
     /** Maximum number of d-tag slots a user should maintain */
     const val MAX_SLOTS = 10
+
+    /**
+     * Logical name for the primary KeyPackage slot.
+     * This is NOT the actual d-tag value — the actual d-tag is a randomly
+     * generated 64-char hex string stored persistently in [KeyPackageRotationManager].
+     */
+    const val PRIMARY_SLOT = "primary"
+
+    /**
+     * Generates a cryptographically random d-tag value per MIP-00:
+     * a 32-byte (64 hex char) random identifier for a KeyPackage slot.
+     */
+    fun generateRandomDTag(): String = MlsCryptoProvider.randomBytes(32).toHexKey()
 
     /**
      * Selects the best KeyPackage from a set of candidates for a given user.
