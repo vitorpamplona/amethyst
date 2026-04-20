@@ -66,6 +66,7 @@ import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.SettingsInputAntenna
 import androidx.compose.material.icons.outlined.SmartDisplay
 import androidx.compose.material.icons.outlined.Storefront
+import androidx.compose.material.icons.outlined.Tag
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -559,6 +560,14 @@ fun ListContent(
             tint = MaterialTheme.colorScheme.onBackground,
             nav = nav,
             route = Route.BookmarkGroups,
+        )
+
+        NavigationRow(
+            title = R.string.interest_sets_title,
+            icon = Icons.Outlined.Tag,
+            tint = MaterialTheme.colorScheme.onBackground,
+            nav = nav,
+            route = Route.InterestSets,
         )
 
         NavigationRow(

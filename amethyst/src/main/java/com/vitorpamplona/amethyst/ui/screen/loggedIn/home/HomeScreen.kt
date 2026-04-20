@@ -282,6 +282,10 @@ fun HomeScreenFloatingButton(
             NewHashtagPostButton(filter.tag, accountViewModel, nav)
         }
 
+        is TopFilter.InterestSet -> {
+            NewNoteButton(nav)
+        }
+
         else -> {
             NewNoteButton(nav)
         }

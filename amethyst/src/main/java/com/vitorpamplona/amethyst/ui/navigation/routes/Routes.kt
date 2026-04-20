@@ -106,6 +106,16 @@ sealed class Route {
 
     @Serializable object BookmarkGroups : Route()
 
+    @Serializable object InterestSets : Route()
+
+    @Serializable data class InterestSetView(
+        val dTag: String,
+    ) : Route()
+
+    @Serializable data class InterestSetMetadataEdit(
+        val dTag: String? = null,
+    ) : Route()
+
     @Serializable object ImportFollowsSelectUser : Route()
 
     @Serializable data class ImportFollowsPickFollows(
