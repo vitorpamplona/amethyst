@@ -22,9 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.GroupAdd
@@ -100,7 +98,7 @@ fun MarmotGroupChatScreen(
         accountViewModel = accountViewModel,
         allowBarHide = false,
     ) {
-        Column(Modifier.padding(it).consumeWindowInsets(it).statusBarsPadding()) {
+        Column(Modifier.padding(it)) {
             MarmotGroupChatView(
                 nostrGroupId = nostrGroupId,
                 accountViewModel = accountViewModel,

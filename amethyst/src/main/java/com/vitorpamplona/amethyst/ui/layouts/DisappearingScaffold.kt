@@ -24,6 +24,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -90,12 +92,16 @@ fun DisappearingScaffold(
     // The outer Surface provides the Material container color + onBackground as
     // LocalContentColor, matching M3 Scaffold's behaviour (without it, default text
     // color falls back to Color.Black and is invisible on the dark theme).
-    val rootModifier =
+    val baseModifier =
         if (allowBarHide) {
             Modifier.imePadding().nestedScroll(connection)
         } else {
             Modifier.imePadding()
         }
+    val rootModifier =
+        baseModifier
+            .let { if (topBar == null) it.statusBarsPadding() else it }
+            .let { if (bottomBar == null) it.navigationBarsPadding() else it }
 
     Surface(
         modifier = rootModifier,
