@@ -156,6 +156,116 @@ class MarmotMipComplianceTest {
     }
 
     @Test
+    fun marmotGroupData_rejectsDuplicateAdminPubkeys() {
+        // MIP-01: admin_pubkeys MUST NOT contain duplicate keys.
+        assertFailsWith<IllegalArgumentException> {
+            MarmotGroupData(
+                nostrGroupId = groupId32,
+                adminPubkeys = listOf(adminPubkey, adminPubkey),
+            )
+        }
+    }
+
+    // --- MIP-01 byte-level interop fixtures (MDK reference) ----------------
+    //
+    // These fixtures were produced by serializing the identical struct via the
+    // Rust `tls_codec` 0.4 crate used by MDK (see commit message for the
+    // generator). They pin Amethyst's v2 encoder output byte-for-byte against
+    // the MDK reference, so any future regression in VarInt framing surfaces
+    // immediately.
+    //
+    // Fixtures are v2 (no `disappearing_message_secs` field) because MDK's
+    // current `CURRENT_VERSION = 2` reference has no v3 support yet.
+
+    private fun mdkFixtureA(): ByteArray =
+        (
+            // version=2 + 32 bytes of group_id (all zero)
+            "0002" +
+                "00".repeat(32) +
+                // name=empty, description=empty (VarInt(0) = single 0x00)
+                "0000" +
+                // admin_pubkeys: VarInt(32) = 0x20, then one 32-byte key of 0xAA
+                "20" + "aa".repeat(32) +
+                // relays: outer VarInt(21) = 0x15; inner VarInt(20) = 0x14 +
+                // "wss://relay.example/" (20 bytes)
+                "15" + "14" + "7773733a2f2f72656c61792e6578616d706c652f" +
+                // image_hash, image_key, image_nonce, image_upload_key — all empty
+                "00000000"
+        ).hexToByteArray()
+
+    private fun mdkFixtureB(): ByteArray =
+        (
+            "0002" +
+                "11".repeat(32) +
+                // name: VarInt(8)=0x08 + "Amethyst"
+                "08" + "416d657468797374" +
+                // description: VarInt(10)=0x0a + "Test group"
+                "0a" + "546573742067726f7570" +
+                // admin_pubkeys: outer VarInt(64) — 64 = 0x40, two-byte VarInt
+                // prefix "40 40" (high bits 01, value 0x0040) + 2×32 bytes
+                "4040" + "bb".repeat(32) + "cc".repeat(32) +
+                // relays outer VarInt(44) = 0x2c, then two inner relays each
+                // VarInt(21) + 21-byte URL
+                "2c" +
+                "15" + "7773733a2f2f72656c6179312e6578616d706c652f" +
+                "15" + "7773733a2f2f72656c6179322e6578616d706c652f" +
+                // image_* all empty
+                "00000000"
+        ).hexToByteArray()
+
+    @Test
+    fun marmotGroupData_encodesFixtureAByteForByteVsMdk() {
+        // Encode an Amethyst MarmotGroupData with the same inputs and assert the
+        // bytes match MDK's tls_codec 0.4 output exactly.
+        val data =
+            MarmotGroupData(
+                version = 2,
+                nostrGroupId = "00".repeat(32),
+                name = "",
+                description = "",
+                adminPubkeys = listOf("aa".repeat(32)),
+                relays = listOf("wss://relay.example/"),
+            )
+        assertContentEquals(mdkFixtureA(), data.encodeTls())
+    }
+
+    @Test
+    fun marmotGroupData_encodesFixtureBByteForByteVsMdk() {
+        val data =
+            MarmotGroupData(
+                version = 2,
+                nostrGroupId = "11".repeat(32),
+                name = "Amethyst",
+                description = "Test group",
+                adminPubkeys = listOf("bb".repeat(32), "cc".repeat(32)),
+                relays = listOf("wss://relay1.example/", "wss://relay2.example/"),
+            )
+        assertContentEquals(mdkFixtureB(), data.encodeTls())
+    }
+
+    @Test
+    fun marmotGroupData_decodesMdkFixtureA() {
+        val decoded = assertNotNull(MarmotGroupData.decodeTls(mdkFixtureA()))
+        assertEquals(2, decoded.version)
+        assertEquals("00".repeat(32), decoded.nostrGroupId)
+        assertEquals("", decoded.name)
+        assertEquals("", decoded.description)
+        assertEquals(listOf("aa".repeat(32)), decoded.adminPubkeys)
+        assertEquals(listOf("wss://relay.example/"), decoded.relays)
+        assertNull(decoded.disappearingMessageSecs)
+    }
+
+    @Test
+    fun marmotGroupData_decodesMdkFixtureB() {
+        val decoded = assertNotNull(MarmotGroupData.decodeTls(mdkFixtureB()))
+        assertEquals(2, decoded.version)
+        assertEquals("Amethyst", decoded.name)
+        assertEquals("Test group", decoded.description)
+        assertEquals(listOf("bb".repeat(32), "cc".repeat(32)), decoded.adminPubkeys)
+        assertEquals(listOf("wss://relay1.example/", "wss://relay2.example/"), decoded.relays)
+    }
+
+    @Test
     fun mip01ImageCrypto_deriveImageKeyIs32BytesAndDeterministic() {
         val seed = "11".repeat(32).hexToByteArray()
 

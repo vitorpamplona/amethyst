@@ -150,18 +150,22 @@ data class MarmotGroupData(
         writer.putOpaqueVarInt(imageNonce ?: ByteArray(0))
         writer.putOpaqueVarInt(imageUploadKey ?: ByteArray(0))
 
-        // v3+: disappearing_message_secs (0 bytes = none, 8 bytes big-endian uint64 = secs)
-        val disappearingBytes =
-            disappearingMessageSecs?.let { secs ->
-                val out = ByteArray(8)
-                var v = secs.toLong()
-                for (i in 7 downTo 0) {
-                    out[i] = (v and 0xFF).toByte()
-                    v = v ushr 8
-                }
-                out
-            } ?: ByteArray(0)
-        writer.putOpaqueVarInt(disappearingBytes)
+        // v3+: disappearing_message_secs (0 bytes = none, 8 bytes big-endian uint64 = secs).
+        // Only emitted for version ≥ 3; v1/v2 have no such field, so omitting it keeps
+        // the wire format byte-for-byte compatible with older implementations (MDK v2).
+        if (version >= 3) {
+            val disappearingBytes =
+                disappearingMessageSecs?.let { secs ->
+                    val out = ByteArray(8)
+                    var v = secs.toLong()
+                    for (i in 7 downTo 0) {
+                        out[i] = (v and 0xFF).toByte()
+                        v = v ushr 8
+                    }
+                    out
+                } ?: ByteArray(0)
+            writer.putOpaqueVarInt(disappearingBytes)
+        }
 
         return writer.toByteArray()
     }
