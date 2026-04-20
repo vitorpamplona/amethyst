@@ -47,7 +47,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -59,6 +58,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.marmot.GroupMemberInfo
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -92,9 +92,10 @@ fun MarmotGroupInfoScreen(
     val myPubkey = accountViewModel.account.signer.pubKey
     val context = LocalContext.current
 
-    LaunchedEffect(nostrGroupId) {
+    LifecycleResumeEffect(nostrGroupId) {
         members = accountViewModel.marmotGroupMembers(nostrGroupId)
         chatroom.memberCount.value = members.size
+        onPauseOrDispose {}
     }
 
     Scaffold(
