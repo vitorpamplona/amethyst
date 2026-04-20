@@ -23,8 +23,10 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.old
 import android.annotation.SuppressLint
 import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -44,8 +46,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -138,7 +140,7 @@ private fun RenderOldBookmarkScreen(
             Column {
                 TopBarWithBackButton(stringRes(id = R.string.old_bookmarks_title), nav::popBack)
                 SecondaryTabRow(
-                    containerColor = Color.Transparent,
+                    containerColor = MaterialTheme.colorScheme.background,
                     contentColor = MaterialTheme.colorScheme.onBackground,
                     selectedTabIndex = pagerState.currentPage,
                     modifier = TabRowHeight,
@@ -182,22 +184,9 @@ private fun RenderOldBookmarkScreen(
             )
         },
         accountViewModel = accountViewModel,
-    ) {
-        Column(Modifier.padding(it).fillMaxHeight()) {
-            if (!bannerDismissed) {
-                DeletedItemsBanner(
-                    count = deletedCount,
-                    onRemove = {
-                        accountViewModel.removeDeletedOldBookmarks(
-                            deletedEventIds.toSet(),
-                            deletedAddresses.toSet(),
-                        )
-                        bannerDismissed = true
-                    },
-                    onDismiss = { bannerDismissed = true },
-                )
-            }
-            HorizontalPager(state = pagerState) { page ->
+    ) { paddingValues ->
+        Box(modifier = Modifier.fillMaxSize()) {
+            HorizontalPager(state = pagerState, modifier = Modifier.fillMaxHeight()) { page ->
                 when (page) {
                     0 -> {
                         RefresheableFeedView(
@@ -217,6 +206,24 @@ private fun RenderOldBookmarkScreen(
                         )
                     }
                 }
+            }
+
+            if (!bannerDismissed && deletedCount > 0) {
+                DeletedItemsBanner(
+                    count = deletedCount,
+                    onRemove = {
+                        accountViewModel.removeDeletedOldBookmarks(
+                            deletedEventIds.toSet(),
+                            deletedAddresses.toSet(),
+                        )
+                        bannerDismissed = true
+                    },
+                    onDismiss = { bannerDismissed = true },
+                    modifier =
+                        Modifier
+                            .align(Alignment.TopCenter)
+                            .padding(top = paddingValues.calculateTopPadding()),
+                )
             }
         }
     }

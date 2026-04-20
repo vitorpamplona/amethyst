@@ -21,11 +21,8 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.drafts
 
 import androidx.compose.animation.animateContentSize
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -56,6 +53,7 @@ import com.vitorpamplona.amethyst.ui.feeds.RenderFeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys.DRAFTS
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.ShorterTopAppBar
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
@@ -148,18 +146,16 @@ private fun RenderDraftListScreen(
         },
         accountViewModel = accountViewModel,
     ) {
-        Column(Modifier.padding(it).fillMaxHeight()) {
-            RefresheableBox(feedState) {
-                SaveableFeedState(feedState, DRAFTS) { listState ->
-                    RenderFeedContentState(
-                        feedContentState = feedState,
-                        accountViewModel = accountViewModel,
-                        listState = listState,
-                        nav = nav,
-                        routeForLastRead = null,
-                        onLoaded = { DraftFeedLoaded(it, listState, accountViewModel, nav) },
-                    )
-                }
+        RefresheableBox(feedState) {
+            SaveableFeedState(feedState, DRAFTS) { listState ->
+                RenderFeedContentState(
+                    feedContentState = feedState,
+                    accountViewModel = accountViewModel,
+                    listState = listState,
+                    nav = nav,
+                    routeForLastRead = null,
+                    onLoaded = { DraftFeedLoaded(it, listState, accountViewModel, nav) },
+                )
             }
         }
     }
@@ -175,7 +171,7 @@ private fun DraftFeedLoaded(
     val items by loaded.feed.collectAsStateWithLifecycle()
 
     LazyColumn(
-        contentPadding = FeedPadding,
+        contentPadding = rememberFeedContentPadding(FeedPadding),
         state = listState,
     ) {
         itemsIndexed(items.list, key = { _, item -> item.idHex }) { _, item ->

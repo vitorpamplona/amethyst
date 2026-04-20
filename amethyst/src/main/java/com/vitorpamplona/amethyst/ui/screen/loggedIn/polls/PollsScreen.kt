@@ -34,7 +34,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
@@ -131,7 +130,7 @@ private fun PollsPages(
             Column {
                 PollsTopBar(accountViewModel, nav)
                 SecondaryTabRow(
-                    containerColor = Color.Transparent,
+                    containerColor = MaterialTheme.colorScheme.background,
                     contentColor = MaterialTheme.colorScheme.onBackground,
                     modifier = TabRowHeight,
                     selectedTabIndex = pagerState.currentPage,
@@ -162,7 +161,6 @@ private fun PollsPages(
         accountViewModel = accountViewModel,
     ) {
         HorizontalPager(
-            contentPadding = it,
             state = pagerState,
             userScrollEnabled = true,
         ) { page ->

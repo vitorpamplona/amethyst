@@ -82,6 +82,7 @@ fun ChatroomScreen(
             )
         },
         accountViewModel = accountViewModel,
+        allowBarHide = false,
     ) {
         Column(Modifier.padding(it).consumeWindowInsets(it).statusBarsPadding()) {
             ChatroomView(

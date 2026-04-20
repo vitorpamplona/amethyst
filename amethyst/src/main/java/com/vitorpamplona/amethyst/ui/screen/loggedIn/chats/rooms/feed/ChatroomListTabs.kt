@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.feed
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
@@ -46,7 +45,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
@@ -81,7 +79,7 @@ fun MessagesTabHeader(
 
     Box(Modifier.fillMaxWidth()) {
         SecondaryTabRow(
-            containerColor = Color.Transparent,
+            containerColor = MaterialTheme.colorScheme.background,
             contentColor = MaterialTheme.colorScheme.onBackground,
             selectedTabIndex = pagerState.currentPage,
             modifier = TabRowHeight,
@@ -123,12 +121,10 @@ fun MessagesTabHeader(
 fun MessagesPager(
     pagerState: PagerState,
     tabs: List<MessagesTabItem>,
-    paddingValues: PaddingValues,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     HorizontalPager(
-        contentPadding = paddingValues,
         state = pagerState,
         userScrollEnabled = true,
         modifier =

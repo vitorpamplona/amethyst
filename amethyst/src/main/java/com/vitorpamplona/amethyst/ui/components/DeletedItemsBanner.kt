@@ -44,10 +44,11 @@ fun DeletedItemsBanner(
     count: Int,
     onRemove: () -> Unit,
     onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     if (count <= 0) return
 
-    Column(modifier = StdPadding) {
+    Column(modifier = modifier.then(StdPadding)) {
         Card(
             modifier = MaterialTheme.colorScheme.imageModifier,
         ) {
