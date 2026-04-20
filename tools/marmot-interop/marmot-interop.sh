@@ -27,6 +27,12 @@ RESULTS_FILE="$STATE_DIR/results-$RUN_TS.tsv"
 WN_REPO="${WN_REPO:-$STATE_DIR/whitenoise-rs}"
 WN_BIN=""
 WND_BIN=""
+B_NPUB=""
+B_HEX=""
+C_NPUB=""
+C_HEX=""
+A_NPUB=""
+A_HEX=""
 
 DEFAULT_RELAYS=( "wss://relay.damus.io" "wss://nos.lol" "wss://relay.primal.net" )
 USE_LOCAL_RELAYS=0
@@ -208,20 +214,54 @@ configure_relays() {
   else
     relays=( "${DEFAULT_RELAYS[@]}" )
   fi
+  add_relay() {
+    local wn_fn="$1" r="$2" t add_out
+    for t in nip65 inbox key_package; do
+      if add_out=$("$wn_fn" relays add --type "$t" "$r" 2>&1); then
+        info "$wn_fn relays add --type $t $r: ok"
+      else
+        case "$add_out" in
+          *"already exists"*|*"already added"*|*"duplicate"*)
+            info "$wn_fn relays add --type $t $r: already exists, skipping" ;;
+          *)
+            warn "$wn_fn relays add --type $t $r failed: $add_out"
+            printf '%s relays add --type %s %s: %s\n' "$wn_fn" "$t" "$r" "$add_out" >>"$LOG_FILE" ;;
+        esac
+      fi
+    done
+  }
+
   for r in "${relays[@]}"; do
     step "adding $r to both daemons"
-    wn_b relays add "$r" >/dev/null 2>&1 || warn "wn_b relays add $r failed (may already exist)"
-    wn_c relays add "$r" >/dev/null 2>&1 || warn "wn_c relays add $r failed (may already exist)"
+    add_relay wn_b "$r"
+    add_relay wn_c "$r"
   done
 
+  step "B relay list after configure"
+  local relay_list
+  relay_list=$(wn_b --json relays list 2>/dev/null || true)
+  info "B relays: $(printf '%s' "$relay_list" | jq -r '.result[]? | "\(.url) [\(.status)]"' 2>/dev/null | tr '\n' '  ')"
+  printf 'B relay list: %s\n' "$relay_list" >>"$LOG_FILE"
+
   step "sanity-check: B publishes KP, C fetches it"
-  wn_b keys publish >/dev/null 2>&1 || warn "wn_b keys publish returned nonzero"
+  local publish_out
+  if publish_out=$(wn_b keys publish 2>&1); then
+    info "wn_b keys publish: ok"
+  else
+    warn "wn_b keys publish failed: $publish_out"
+    printf 'wn_b keys publish: %s\n' "$publish_out" >>"$LOG_FILE"
+  fi
   sleep 4
-  if wn_c --json keys check "$B_NPUB" 2>/dev/null | jq -e '.event_id // empty' >/dev/null 2>&1; then
-    info "sanity OK — relay round-trip works"
+  local sanity_raw sanity_id
+  sanity_raw=$(wn_c --json keys check "$B_NPUB" 2>>"$LOG_FILE" || true)
+  sanity_id=$(printf '%s' "$sanity_raw" | jq -r '.result.event_id // .event_id // empty' 2>/dev/null || true)
+  if [[ -n "$sanity_id" && "$sanity_id" != "null" ]]; then
+    info "sanity OK — relay round-trip works (event_id: $sanity_id)"
   else
     warn "sanity-check failed — public relays may be rejecting kind 30443."
     warn "Consider rerunning with --local-relays (requires 'just docker-up' in whitenoise-rs)."
+    info "raw keys check response: $sanity_raw"
+    printf 'sanity keys check raw: %s\n' "$sanity_raw" >>"$LOG_FILE"
   fi
 }
 
@@ -247,11 +287,21 @@ test_01_keypackage_discovery() {
   banner "Test 01 — KeyPackage publish & discovery (MIP-00)"
 
   step "B fetches A's KeyPackage from relays"
-  if wn_b --json keys check "$A_NPUB" 2>/dev/null | jq -e '.event_id // empty' >/dev/null 2>&1; then
-    pass_msg "B discovered A's KeyPackage"
+  local kp_relays kp_raw kp_event_id
+  kp_relays=$(wn_b --json relays list 2>/dev/null || wn_b relays list 2>/dev/null || true)
+  info "B relay list: $kp_relays"
+  printf 'B relay list: %s\n' "$kp_relays" >>"$LOG_FILE"
+
+  kp_raw=$(wn_b --json keys check "$A_NPUB" 2>>"$LOG_FILE" || true)
+  printf 'wn keys check raw output: %s\n' "$kp_raw" >>"$LOG_FILE"
+  kp_event_id=$(printf '%s' "$kp_raw" | jq -r '.result.event_id // .event_id // empty' 2>/dev/null || true)
+
+  if [[ -n "$kp_event_id" && "$kp_event_id" != "null" ]]; then
+    pass_msg "B discovered A's KeyPackage (event_id: $kp_event_id)"
     record_result "01a KeyPackage A->B" pass
   else
     fail_msg "B cannot find A's KeyPackage. Did Amethyst publish to the same relays?"
+    info "raw response from wn keys check: $kp_raw"
     record_result "01a KeyPackage A->B" fail "wn keys check returned no event_id"
   fi
 
@@ -327,10 +377,12 @@ test_03_wn_creates_group() {
 
   step "B creates group 'Interop-03' with A as sole invitee"
   local out gid
-  out=$(wn_b --json groups create "Interop-03" "$A_NPUB" 2>&1 | tee -a "$LOG_FILE")
+  out=$(wn_b --json groups create "Interop-03" "$A_NPUB" 2>>"$LOG_FILE")
+  printf 'wn groups create raw output: %s\n' "$out" >>"$LOG_FILE"
   gid=$(printf '%s' "$out" | jq -r '.group_id // .mls_group_id // empty' 2>/dev/null || true)
   if [[ -z "$gid" ]]; then
     fail_msg "could not parse group_id from 'wn groups create' output"
+    info "raw output: $out"
     record_result "03 B->Amethyst create+invite" fail "no group_id"
     return
   fi
@@ -372,8 +424,8 @@ test_04_three_member_group() {
   if [[ -z "${gid:-}" ]]; then
     warn "GROUP_02 not set (Test 02 likely skipped/failed); creating new group here"
     local out
-    out=$(wn_b --json groups create "Interop-04-bootstrap" "$A_NPUB" 2>&1 | tee -a "$LOG_FILE")
-    gid=$(printf '%s' "$out" | jq -r '.group_id // .mls_group_id // empty')
+    out=$(wn_b --json groups create "Interop-04-bootstrap" "$A_NPUB" 2>>"$LOG_FILE")
+    gid=$(printf '%s' "$out" | jq -r '.group_id // .mls_group_id // empty' 2>/dev/null || true)
     save_state GROUP_02 "$gid"
     prompt_human "In Amethyst, accept the new group invite 'Interop-04-bootstrap'."
   fi
@@ -745,7 +797,7 @@ test_13_keypackage_rotation() {
 
   step "B records A's current KP event id"
   local before
-  before=$(wn_b --json keys check "$A_NPUB" 2>/dev/null | jq -r '.event_id // empty')
+  before=$(wn_b --json keys check "$A_NPUB" 2>/dev/null | jq -r '.result.event_id // .event_id // empty')
   info "A KP before rotation: $before"
   if [[ -z "$before" ]]; then
     fail_msg "no existing KP for A"; record_result "13 keypackage rotation" fail "no KP found"; return
@@ -759,7 +811,7 @@ test_13_keypackage_rotation() {
   step "waiting for a new KP event id at B (60s)"
   local deadline=$(( $(date +%s) + 60 )) after=""
   while [[ $(date +%s) -lt $deadline ]]; do
-    after=$(wn_b --json keys check "$A_NPUB" 2>/dev/null | jq -r '.event_id // empty')
+    after=$(wn_b --json keys check "$A_NPUB" 2>/dev/null | jq -r '.result.event_id // .event_id // empty')
     [[ -n "$after" && "$after" != "$before" ]] && break
     sleep 3
   done

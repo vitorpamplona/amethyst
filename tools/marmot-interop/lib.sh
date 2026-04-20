@@ -114,8 +114,8 @@ confirm() {
 }
 
 # ------- wn wrappers ---------------------------------------------------------
-wn_b() { "$WN_BIN" --socket "$B_SOCKET" "$@"; }
-wn_c() { "$WN_BIN" --socket "$C_SOCKET" "$@"; }
+wn_b() { "$WN_BIN" --socket "$B_SOCKET" ${B_NPUB:+--account "$B_NPUB"} "$@"; }
+wn_c() { "$WN_BIN" --socket "$C_SOCKET" ${C_NPUB:+--account "$C_NPUB"} "$@"; }
 
 # Run wn with --json and pipe through jq; aborts the test on jq parse failure.
 wn_b_json() { wn_b --json "$@"; }
