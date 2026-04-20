@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.marmot.mls.messages.KeyPackageBundle
 import com.vitorpamplona.quartz.marmot.mls.messages.MlsKeyPackage
 import com.vitorpamplona.quartz.marmot.mls.tree.Capabilities
 import com.vitorpamplona.quartz.marmot.mls.tree.Credential
+import com.vitorpamplona.quartz.marmot.mls.tree.Extension
 import com.vitorpamplona.quartz.marmot.mls.tree.LeafNode
 import com.vitorpamplona.quartz.marmot.mls.tree.LeafNodeSource
 import com.vitorpamplona.quartz.marmot.mls.tree.Lifetime
@@ -303,6 +304,9 @@ class KeyPackageRotationManager(
             MlsKeyPackage(
                 initKey = initKp.publicKey,
                 leafNode = leafNode,
+                // LastResort (0x000A) marks this as a last-resort KeyPackage per MLS Extensions draft.
+                // MDK always marks KeyPackages as last-resort via .mark_as_last_resort().
+                extensions = listOf(Extension(extensionType = 0x000A, extensionData = ByteArray(0))),
                 signature = ByteArray(0),
             )
         val keyPackage =
@@ -495,7 +499,18 @@ class KeyPackageRotationManager(
                 encryptionKey = encryptionKey,
                 signatureKey = signatureKey,
                 credential = Credential.Basic(identity),
-                capabilities = Capabilities(),
+                capabilities =
+                    Capabilities(
+                        extensions =
+                            listOf(
+                                0x000A, // LastResort (required by OpenMLS validation)
+                                0xF2EE, // NostrGroupData (required by group's RequiredCapabilities)
+                            ),
+                        proposals =
+                            listOf(
+                                0x000A, // SelfRemove (required by group's RequiredCapabilities)
+                            ),
+                    ),
                 leafNodeSource = LeafNodeSource.KEY_PACKAGE,
                 lifetime = Lifetime(notBefore = now, notAfter = now + KEY_PACKAGE_LIFETIME_SECONDS),
                 extensions = emptyList(),
@@ -519,7 +534,8 @@ class KeyPackageRotationManager(
          * v1: bundles + pendingRotations
          * v2: + eventIdToSlot map (so welcome lookup by Nostr event id works)
          * v3: + namedSlotDTags map (per MIP-00, d-tags are random 64-char hex, persisted here)
+         * v4: capabilities fixed (0xF2EE, 0x000A extensions + 0x000A proposals; LastResort extension on KP)
          */
-        private const val SNAPSHOT_VERSION = 3
+        private const val SNAPSHOT_VERSION = 4
     }
 }
