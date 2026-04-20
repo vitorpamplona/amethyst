@@ -143,6 +143,33 @@ expect_contains() {
     return 1
 }
 
+# ------- JSON helpers --------------------------------------------------------
+
+# Extract MLS group ID as lowercase hex from wn JSON output.
+# Handles both formats:
+#   - plain hex string (from `groups list`)
+#   - {"value":{"vec":[...]}} serde struct (from `groups create`)
+#   - flat byte array [n, ...] (from some responses)
+# Input: JSON string via stdin; optional 2nd arg = field name (default: mls_group_id)
+jq_group_id() {
+    local field="${1:-mls_group_id}"
+    jq -r --arg f "$field" '
+        def byte2hex:
+            . as $n |
+            [($n / 16 | floor), ($n % 16)] |
+            map(if . < 10 then (48 + .) else (87 + .) end) |
+            implode;
+        (.result // .) |
+        .[$f] |
+        if type == "string" then .
+        elif (type == "object" and (.value.vec != null)) then
+            [.value.vec[] | byte2hex] | join("")
+        elif type == "array" then
+            [.[] | byte2hex] | join("")
+        else empty end
+    ' 2>/dev/null || true
+}
+
 # ------- polling helpers -----------------------------------------------------
 
 # wait_for_invite <B|C> <timeout-seconds>
@@ -154,10 +181,10 @@ wait_for_invite() {
     while [[ $(date +%s) -lt $deadline ]]; do
         if [[ "$who" == "B" ]]; then
             gid=$(wn_b_json groups invites 2>/dev/null \
-                  | jq -r '.[0].group_id // .[0].mls_group_id // empty' 2>/dev/null || true)
+                  | jq -c '.[0] // empty' 2>/dev/null | jq_group_id || true)
         else
             gid=$(wn_c_json groups invites 2>/dev/null \
-                  | jq -r '.[0].group_id // .[0].mls_group_id // empty' 2>/dev/null || true)
+                  | jq -c '.[0] // empty' 2>/dev/null | jq_group_id || true)
         fi
         if [[ -n "${gid:-}" ]]; then
             printf '%s\n' "$gid"

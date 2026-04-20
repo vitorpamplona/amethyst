@@ -379,7 +379,7 @@ test_03_wn_creates_group() {
   local out gid
   out=$(wn_b --json groups create "Interop-03" "$A_NPUB" 2>>"$LOG_FILE")
   printf 'wn groups create raw output: %s\n' "$out" >>"$LOG_FILE"
-  gid=$(printf '%s' "$out" | jq -r '.group_id // .mls_group_id // empty' 2>/dev/null || true)
+  gid=$(printf '%s' "$out" | jq_group_id)
   if [[ -z "$gid" ]]; then
     fail_msg "could not parse group_id from 'wn groups create' output"
     info "raw output: $out"
@@ -425,7 +425,7 @@ test_04_three_member_group() {
     warn "GROUP_02 not set (Test 02 likely skipped/failed); creating new group here"
     local out
     out=$(wn_b --json groups create "Interop-04-bootstrap" "$A_NPUB" 2>>"$LOG_FILE")
-    gid=$(printf '%s' "$out" | jq -r '.group_id // .mls_group_id // empty' 2>/dev/null || true)
+    gid=$(printf '%s' "$out" | jq_group_id)
     save_state GROUP_02 "$gid"
     prompt_human "In Amethyst, accept the new group invite 'Interop-04-bootstrap'."
   fi
@@ -469,8 +469,9 @@ test_05_wn_adds_amethyst_existing() {
 
   step "B creates group with only C, then adds A"
   local out gid
-  out=$(wn_b --json groups create "Interop-05" "$C_NPUB" 2>&1 | tee -a "$LOG_FILE")
-  gid=$(printf '%s' "$out" | jq -r '.group_id // .mls_group_id // empty')
+  out=$(wn_b --json groups create "Interop-05" "$C_NPUB" 2>>"$LOG_FILE")
+  printf 'wn groups create raw output: %s\n' "$out" >>"$LOG_FILE"
+  gid=$(printf '%s' "$out" | jq_group_id)
   if [[ -z "$gid" ]]; then
     fail_msg "could not create Interop-05"
     record_result "05 wn adds Amethyst existing" fail "create failed"
@@ -748,8 +749,9 @@ test_12_offline_catchup() {
   wn_c keys publish >/dev/null 2>&1 || true
   sleep 3
   local out gid
-  out=$(wn_b --json groups create "Interop-12" "$A_NPUB" 2>&1 | tee -a "$LOG_FILE")
-  gid=$(printf '%s' "$out" | jq -r '.group_id // .mls_group_id // empty')
+  out=$(wn_b --json groups create "Interop-12" "$A_NPUB" 2>>"$LOG_FILE")
+  printf 'wn groups create raw output: %s\n' "$out" >>"$LOG_FILE"
+  gid=$(printf '%s' "$out" | jq_group_id)
   if [[ -z "$gid" ]]; then
     fail_msg "could not create Interop-12"; record_result "12 offline catchup" fail "create failed"; return
   fi
