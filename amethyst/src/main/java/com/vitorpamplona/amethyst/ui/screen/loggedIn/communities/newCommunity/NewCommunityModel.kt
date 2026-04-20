@@ -21,23 +21,41 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.newCommunity
 
 import android.content.Context
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
+import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
+import com.vitorpamplona.amethyst.service.uploads.SuspendableConfirmation
+import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
+import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.tags.ModeratorTag
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.tags.RelayTag
+import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
+
+@Immutable
+data class CommunityRelayEntry(
+    val url: NormalizedRelayUrl,
+    val marker: String? = null,
+)
 
 @Stable
 class NewCommunityModel : ViewModel() {
@@ -47,15 +65,65 @@ class NewCommunityModel : ViewModel() {
 
     var name by mutableStateOf("")
     var description by mutableStateOf("")
-    var imageUrl by mutableStateOf("")
     var rules by mutableStateOf("")
-    var moderatorsText by mutableStateOf("")
-    var relayRequestsUrl by mutableStateOf("")
-    var relayApprovalsUrl by mutableStateOf("")
+
+    // Image upload state - mirrors NewBadgeModel.
+    var multiOrchestrator by mutableStateOf<MultiOrchestrator?>(null)
+    var selectedServer by mutableStateOf<ServerName?>(null)
+
+    // 0 = Low, 1 = Medium, 2 = High, 3 = UNCOMPRESSED
+    var mediaQualitySlider by mutableIntStateOf(1)
+    var stripMetadata by mutableStateOf(true)
+
+    val strippingFailureConfirmation = SuspendableConfirmation()
+
+    // Moderator/Relay lists - backed by mutableStateListOf for direct Compose observation.
+    val moderators = mutableStateListOf<User>()
+    val relays = mutableStateListOf<CommunityRelayEntry>()
 
     fun init(account: Account) {
         if (this.account == account) return
         this.account = account
+        this.selectedServer = defaultServer()
+        this.stripMetadata = account.settings.stripLocationOnUpload
+    }
+
+    fun defaultServer() = account?.settings?.defaultFileServer ?: DEFAULT_MEDIA_SERVERS[0]
+
+    fun setPickedMedia(uris: ImmutableList<SelectedMedia>) {
+        this.multiOrchestrator = if (uris.isNotEmpty()) MultiOrchestrator(uris) else null
+    }
+
+    fun hasPickedImage(): Boolean = multiOrchestrator != null
+
+    fun addModerator(user: User) {
+        if (moderators.none { it.pubkeyHex == user.pubkeyHex }) {
+            moderators.add(user)
+        }
+    }
+
+    fun removeModerator(user: User) {
+        moderators.removeAll { it.pubkeyHex == user.pubkeyHex }
+    }
+
+    fun addRelay(url: NormalizedRelayUrl) {
+        if (relays.none { it.url == url }) {
+            relays.add(CommunityRelayEntry(url))
+        }
+    }
+
+    fun removeRelay(entry: CommunityRelayEntry) {
+        relays.removeAll { it.url == entry.url }
+    }
+
+    fun setRelayMarker(
+        entry: CommunityRelayEntry,
+        marker: String?,
+    ) {
+        val index = relays.indexOfFirst { it.url == entry.url }
+        if (index >= 0) {
+            relays[index] = entry.copy(marker = marker)
+        }
     }
 
     fun canPost(): Boolean =
@@ -88,15 +156,33 @@ class NewCommunityModel : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             isPublishing = true
             try {
-                val moderatorTags = parseModeratorTags(myAccount)
-                val relayTags = parseRelayTags()
+                val imageUrl =
+                    uploadImageIfAny(context, myAccount, onError) ?: run {
+                        if (multiOrchestrator != null) {
+                            // upload failed; error was reported, bail out
+                            return@launch
+                        }
+                        null
+                    }
+
+                val ownerKey = myAccount.signer.pubKey
+                val moderatorTags =
+                    buildList {
+                        add(ModeratorTag(ownerKey, null, "moderator"))
+                        moderators
+                            .asSequence()
+                            .filter { it.pubkeyHex != ownerKey }
+                            .forEach { add(ModeratorTag(it.pubkeyHex, null, "moderator")) }
+                    }
+
+                val relayTags = relays.map { RelayTag(it.url, it.marker) }
 
                 val definition =
                     myAccount.sendCommunityDefinition(
                         name = name.trim(),
                         description = description.trim(),
                         moderators = moderatorTags,
-                        image = imageUrl.trim().ifBlank { null },
+                        image = imageUrl,
                         rules = rules.trim().ifBlank { null },
                         relays = relayTags.ifEmpty { null },
                         dTag = Uuid.random().toString(),
@@ -110,9 +196,12 @@ class NewCommunityModel : ViewModel() {
                     return@launch
                 }
 
-                // Also follow the community so it appears on the user's list.
+                // Follow it so it shows up under "Mine".
                 val communityNote = myAccount.cache.getOrCreateAddressableNote(definition.address())
                 myAccount.follow(communityNote)
+
+                selectedServer?.let { myAccount.settings.changeDefaultFileServer(it) }
+                myAccount.settings.changeStripLocationOnUpload(stripMetadata)
 
                 reset()
                 onSuccess()
@@ -122,42 +211,58 @@ class NewCommunityModel : ViewModel() {
         }
     }
 
-    private fun parseModeratorTags(account: Account): List<ModeratorTag> {
-        val hexes =
-            moderatorsText
-                .lineSequence()
-                .map { it.trim() }
-                .filter { it.length == 64 && it.all { ch -> ch.isDigit() || (ch in 'a'..'f') || (ch in 'A'..'F') } }
-                .map { it.lowercase() }
-                .toSet()
+    private suspend fun uploadImageIfAny(
+        context: Context,
+        myAccount: Account,
+        onError: (String, String) -> Unit,
+    ): String? {
+        val orch = multiOrchestrator ?: return null
+        val serverToUse = selectedServer ?: defaultServer()
 
-        val withOwner = hexes + account.signer.pubKey
+        val results =
+            orch.upload(
+                alt = name.trim().ifBlank { "Community cover" },
+                contentWarningReason = null,
+                mediaQuality = MediaCompressor.intToCompressorQuality(mediaQualitySlider),
+                server = serverToUse,
+                account = myAccount,
+                context = context,
+                useH265 = false,
+                stripMetadata = stripMetadata,
+                onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
+            )
 
-        return withOwner.map { ModeratorTag(it, null, "moderator") }
-    }
-
-    private fun parseRelayTags(): List<RelayTag> {
-        val tags = mutableListOf<RelayTag>()
-        relayRequestsUrl.trim().takeIf { it.isNotEmpty() }?.let {
-            RelayUrlNormalizer.normalizeOrNull(it)?.let { url ->
-                tags += RelayTag(url, RelayTag.MARKER_REQUESTS)
-            }
+        if (!results.allGood) {
+            val messages =
+                results.errors
+                    .map { stringRes(context, it.errorResource, *it.params) }
+                    .distinct()
+                    .joinToString(".\n")
+            onError(stringRes(context, R.string.failed_to_upload_media_no_details), messages)
+            return null
         }
-        relayApprovalsUrl.trim().takeIf { it.isNotEmpty() }?.let {
-            RelayUrlNormalizer.normalizeOrNull(it)?.let { url ->
-                tags += RelayTag(url, RelayTag.MARKER_APPROVALS)
+
+        val uploaded =
+            results.successful.firstNotNullOfOrNull {
+                it.result as? UploadOrchestrator.OrchestratorResult.ServerResult
+            } ?: run {
+                onError(
+                    stringRes(context, R.string.failed_to_upload_media_no_details),
+                    "Upload succeeded but no image URL was returned by the server.",
+                )
+                return null
             }
-        }
-        return tags
+
+        return uploaded.url
     }
 
     fun reset() {
         name = ""
         description = ""
-        imageUrl = ""
         rules = ""
-        moderatorsText = ""
-        relayRequestsUrl = ""
-        relayApprovalsUrl = ""
+        multiOrchestrator = null
+        moderators.clear()
+        relays.clear()
+        selectedServer = defaultServer()
     }
 }
