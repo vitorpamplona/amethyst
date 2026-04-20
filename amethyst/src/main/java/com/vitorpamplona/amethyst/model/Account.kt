@@ -2070,6 +2070,13 @@ class Account(
                 relays = groupRelays,
             )
 
+        // The MLS commit has already been applied to the local group state —
+        // surface the new member list in the chatroom now so observers (e.g.
+        // MarmotGroupInfoScreen) update without waiting for our own commit to
+        // loop back through the relay.
+        val chatroom = marmotGroupList.getOrCreateGroup(nostrGroupId)
+        manager.syncMetadataTo(nostrGroupId, chatroom)
+
         Log.d("MarmotDbg") {
             "addMarmotGroupMember: built commit kind=${commitEvent.signedEvent.kind} id=${commitEvent.signedEvent.id.take(8)}… " +
                 "welcomeDelivery=${if (welcomeDelivery != null) "present(giftWrapId=${welcomeDelivery.giftWrapEvent.id.take(8)}…)" else "null"}"
@@ -2270,6 +2277,8 @@ class Account(
         if (!isWriteable()) return
 
         val outbound = manager.removeMember(nostrGroupId, targetLeafIndex)
+        val chatroom = marmotGroupList.getOrCreateGroup(nostrGroupId)
+        manager.syncMetadataTo(nostrGroupId, chatroom)
         client.publish(outbound.signedEvent, groupRelays)
     }
 

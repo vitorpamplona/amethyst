@@ -58,7 +58,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.marmot.GroupMemberInfo
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -85,18 +84,12 @@ fun MarmotGroupInfoScreen(
     val groupDescription by chatroom.description.collectAsStateWithLifecycle()
     val adminPubkeys by chatroom.adminPubkeys.collectAsStateWithLifecycle()
     val groupRelays by chatroom.relays.collectAsStateWithLifecycle()
-    var members by remember { mutableStateOf(emptyList<GroupMemberInfo>()) }
+    val members by chatroom.members.collectAsStateWithLifecycle()
     var showLeaveDialog by remember { mutableStateOf(false) }
     var isLeaving by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val myPubkey = accountViewModel.account.signer.pubKey
     val context = LocalContext.current
-
-    LifecycleResumeEffect(nostrGroupId) {
-        members = accountViewModel.marmotGroupMembers(nostrGroupId)
-        chatroom.memberCount.value = members.size
-        onPauseOrDispose {}
-    }
 
     Scaffold(
         topBar = {

@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.model.marmotGroups
 
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.marmot.GroupMemberInfo
 import com.vitorpamplona.amethyst.commons.model.Channel.Companion.DefaultFeedOrder
 import com.vitorpamplona.amethyst.commons.model.ListChange
 import com.vitorpamplona.amethyst.commons.model.Note
@@ -46,6 +47,7 @@ class MarmotGroupChatroom(
     var adminPubkeys = MutableStateFlow<List<HexKey>>(emptyList())
     var relays = MutableStateFlow<List<String>>(emptyList())
     var memberCount = MutableStateFlow(0)
+    var members = MutableStateFlow<List<GroupMemberInfo>>(emptyList())
     var newestMessage: Note? = null
     val unreadCount = MutableStateFlow(0)
 
