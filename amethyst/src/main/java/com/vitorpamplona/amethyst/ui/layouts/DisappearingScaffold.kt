@@ -210,7 +210,7 @@ private fun FloatingButtonHolder(
     Box(
         modifier =
             Modifier.graphicsLayer {
-                val visible = (1f - state.bottomCollapsedFraction).coerceAtLeast(0f)
+                val visible = (1f - state.bottomCollapsedFraction).coerceAtLeast(0.001f)
                 scaleX = visible
                 scaleY = visible
                 alpha = visible
