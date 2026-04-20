@@ -102,12 +102,12 @@ fun VideoView(
     accountViewModel: AccountViewModel,
     thumbhash: String? = null,
 ) {
-    val automaticallyStartPlayback =
-        remember {
-            mutableStateOf(
-                if (alwaysShowVideo) true else accountViewModel.settings.startVideoPlayback(),
-            )
-        }
+    val initialAutoStart = if (alwaysShowVideo) true else accountViewModel.settings.startVideoPlayback()
+    val automaticallyStartPlayback = remember { mutableStateOf(initialAutoStart) }
+
+    // Once the video is being shown, only honor the user's autoplay preference when it was auto-loaded.
+    // If the user manually tapped the download button, they want it to play.
+    val autoplay = alwaysShowVideo || (initialAutoStart && accountViewModel.settings.autoPlayVideos()) || (!initialAutoStart && automaticallyStartPlayback.value)
 
     if (blurhash == null && thumbhash == null) {
         val ratio = dimensions?.aspectRatio() ?: MediaAspectRatioCache.get(videoUri)
@@ -137,7 +137,7 @@ fun VideoView(
                     artworkUri = artworkUri,
                     authorName = authorName,
                     nostrUriCallback = nostrUriCallback,
-                    automaticallyStartPlayback = automaticallyStartPlayback.value,
+                    automaticallyStartPlayback = autoplay,
                     onZoom = onDialog,
                     hasBlurhash = false,
                     accountViewModel = accountViewModel,
@@ -185,7 +185,7 @@ fun VideoView(
                     artworkUri = artworkUri,
                     authorName = authorName,
                     nostrUriCallback = nostrUriCallback,
-                    automaticallyStartPlayback = automaticallyStartPlayback.value,
+                    automaticallyStartPlayback = autoplay,
                     onZoom = onDialog,
                     hasBlurhash = true,
                     accountViewModel = accountViewModel,

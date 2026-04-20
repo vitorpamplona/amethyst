@@ -95,6 +95,7 @@ class UiSharedPreferences(
         val UI_LANGUAGE = stringPreferencesKey("ui.language")
         val UI_SHOW_IMAGES = stringPreferencesKey("ui.show_images")
         val UI_START_PLAYBACK = stringPreferencesKey("ui.start_playback")
+        val UI_PLAY_VIDEOS = stringPreferencesKey("ui.play_videos")
         val UI_SHOW_URL_PREVIEW = stringPreferencesKey("ui.show_url_preview")
         val UI_HIDE_NAVIGATION_BARS = stringPreferencesKey("ui.hide_navigation_bars")
         val UI_SHOW_PROFILE_PICTURES = stringPreferencesKey("ui.show_profile_pictures")
@@ -114,6 +115,7 @@ class UiSharedPreferences(
                     preferredLanguage = preferences[UI_LANGUAGE]?.ifBlank { null },
                     automaticallyShowImages = preferences[UI_SHOW_IMAGES]?.let { ConnectivityType.valueOf(it) } ?: ConnectivityType.ALWAYS,
                     automaticallyStartPlayback = preferences[UI_START_PLAYBACK]?.let { ConnectivityType.valueOf(it) } ?: ConnectivityType.ALWAYS,
+                    automaticallyPlayVideos = preferences[UI_PLAY_VIDEOS]?.let { BooleanType.valueOf(it) } ?: BooleanType.ALWAYS,
                     automaticallyShowUrlPreview = preferences[UI_SHOW_URL_PREVIEW]?.let { ConnectivityType.valueOf(it) } ?: ConnectivityType.ALWAYS,
                     automaticallyHideNavigationBars = preferences[UI_HIDE_NAVIGATION_BARS]?.let { BooleanType.valueOf(it) } ?: BooleanType.ALWAYS,
                     automaticallyShowProfilePictures = preferences[UI_SHOW_PROFILE_PICTURES]?.let { ConnectivityType.valueOf(it) } ?: ConnectivityType.ALWAYS,
@@ -150,6 +152,7 @@ class UiSharedPreferences(
                     preferences[UI_LANGUAGE] = sharedSettings.preferredLanguage ?: ""
                     preferences[UI_SHOW_IMAGES] = sharedSettings.automaticallyShowImages.name
                     preferences[UI_START_PLAYBACK] = sharedSettings.automaticallyStartPlayback.name
+                    preferences[UI_PLAY_VIDEOS] = sharedSettings.automaticallyPlayVideos.name
                     preferences[UI_SHOW_URL_PREVIEW] = sharedSettings.automaticallyShowUrlPreview.name
                     preferences[UI_HIDE_NAVIGATION_BARS] = sharedSettings.automaticallyHideNavigationBars.name
                     preferences[UI_SHOW_PROFILE_PICTURES] = sharedSettings.automaticallyShowProfilePictures.name

@@ -116,6 +116,7 @@ fun SettingsScreen(sharedPrefs: UiSettingsFlow) {
         ShowThemeChoice(sharedPrefs)
         ShowImagePreviewChoice(sharedPrefs)
         ShowVideoPlaybackChoice(sharedPrefs)
+        AutoplayVideosChoice(sharedPrefs)
         ShowUrlPreviewChoice(sharedPrefs)
         ShowProfilePictureChoice(sharedPrefs)
         ImmersiveScrollingChoice(sharedPrefs)
@@ -261,6 +262,26 @@ fun ShowVideoPlaybackChoice(sharedPrefs: UiSettingsFlow) {
         videoIndex.screenCode,
     ) {
         sharedPrefs.automaticallyStartPlayback.tryEmit(parseConnectivityType(it))
+    }
+}
+
+@Composable
+fun AutoplayVideosChoice(sharedPrefs: UiSettingsFlow) {
+    val autoplayIndex by sharedPrefs.automaticallyPlayVideos.collectAsState()
+
+    val booleanItems =
+        persistentListOf(
+            TitleExplainer(stringRes(ConnectivityType.ALWAYS.resourceId)),
+            TitleExplainer(stringRes(ConnectivityType.NEVER.resourceId)),
+        )
+
+    SettingsRow(
+        R.string.autoplay_videos,
+        R.string.autoplay_videos_description,
+        booleanItems,
+        autoplayIndex.screenCode,
+    ) {
+        sharedPrefs.automaticallyPlayVideos.tryEmit(parseBooleanType(it))
     }
 }
 
