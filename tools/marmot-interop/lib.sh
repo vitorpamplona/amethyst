@@ -175,21 +175,45 @@ jq_group_id() {
 # wait_for_invite <B|C> <timeout-seconds>
 # Echoes the first new group_id that appears in `wn groups invites --json`.
 # Returns 1 on timeout.
+#
+# Also prints a heartbeat every ~10s with:
+#   - elapsed/remaining time
+#   - current count of pending welcomes (should be 0 until it isn't)
+#   - last relevant line of wnd stderr (grep for welcome/giftwrap/subscribe/error)
+# so a stalled poll gives the operator something to forward.
 wait_for_invite() {
-    local who="$1" timeout="${2:-60}" deadline gid
-    deadline=$(( $(date +%s) + timeout ))
+    local who="$1" timeout="${2:-60}" deadline gid start last_hb
+    local wnfn data_dir
+    if [[ "$who" == "B" ]]; then wnfn=wn_b; data_dir="$B_DIR"
+    else                         wnfn=wn_c; data_dir="$C_DIR"; fi
+    start=$(date +%s)
+    deadline=$(( start + timeout ))
+    last_hb=$start
     while [[ $(date +%s) -lt $deadline ]]; do
-        if [[ "$who" == "B" ]]; then
-            gid=$(wn_b_json groups invites 2>/dev/null \
-                  | jq -c '.[0] // empty' 2>/dev/null | jq_group_id || true)
-        else
-            gid=$(wn_c_json groups invites 2>/dev/null \
-                  | jq -c '.[0] // empty' 2>/dev/null | jq_group_id || true)
-        fi
+        gid=$("$wnfn" --json groups invites 2>/dev/null \
+                | jq -c '.[0] // empty' 2>/dev/null | jq_group_id || true)
         if [[ -n "${gid:-}" ]]; then
             printf '%s\n' "$gid"
             return 0
         fi
+
+        # Heartbeat every ~10s.
+        local now=$(date +%s)
+        if (( now - last_hb >= 10 )); then
+            local elapsed=$(( now - start )) remaining=$(( deadline - now ))
+            local pending
+            pending=$("$wnfn" --json groups invites 2>/dev/null \
+                        | jq 'length' 2>/dev/null || echo "?")
+            local recent=""
+            if [[ -f "$data_dir/logs/stderr.log" ]]; then
+                recent=$(tail -n 200 "$data_dir/logs/stderr.log" 2>/dev/null \
+                    | grep -iE 'welcome|giftwrap|gift_wrap|mls|subscribe|1059|444|error|warn' \
+                    | tail -n 1 || true)
+            fi
+            info "$who wait_for_invite +${elapsed}s (remaining ${remaining}s)  pending=$pending  tail: ${recent:-<no relevant wnd log yet>}"
+            last_hb=$now
+        fi
+
         sleep 2
     done
     return 1
@@ -295,6 +319,98 @@ load_state() {
     local key="$1"
     [[ -f "$STATE_FILE_RUNTIME" ]] || return 1
     grep "^${key}=" "$STATE_FILE_RUNTIME" 2>/dev/null | tail -n1 | cut -d= -f2-
+}
+
+# ------- daemon diagnostics --------------------------------------------------
+# Dumps everything we know about a daemon's state. Called before polling for
+# invites (baseline) and on every invite-poll failure so the operator can
+# forward a single log file that explains what the daemon saw (or didn't).
+#
+# Output is tee'd to both stderr (for live viewing) and $LOG_FILE (for forward).
+dump_daemon_diagnostics() {
+    local who="$1" tag="${2:-diagnostics}" data_dir socket wnfn npub hex
+    if [[ "$who" == "B" ]]; then
+        data_dir="$B_DIR"; socket="$B_SOCKET"; wnfn=wn_b
+        npub="${B_NPUB:-?}"; hex="${B_HEX:-?}"
+    else
+        data_dir="$C_DIR"; socket="$C_SOCKET"; wnfn=wn_c
+        npub="${C_NPUB:-?}"; hex="${C_HEX:-?}"
+    fi
+
+    printf '\n%s%s---- [%s] %s daemon diagnostics ----%s\n' \
+        "$C_BOLD" "$C_CYAN" "$tag" "$who" "$C_RESET" >&2
+    printf '\n==== [%s] %s daemon diagnostics ====\n' "$tag" "$who" >>"$LOG_FILE"
+
+    info "$who identity  npub=$npub"
+    info "$who identity  hex =$hex"
+    info "$who socket    $socket"
+
+    # Relay list grouped by type — this is the critical bit for invite
+    # debugging. whitenoise-rs subscribes to kind:1059 on Inbox relays only,
+    # so if Amethyst doesn't see $B_NPUB's kind:10050 list pointing at these
+    # URLs, the gift wrap will never reach B.
+    step "$who relays (per type):"
+    for t in nip65 inbox key_package; do
+        local raw urls
+        raw=$("$wnfn" --json relays list --type "$t" 2>/dev/null || true)
+        urls=$(printf '%s' "$raw" \
+                 | jq -r '(.result // .) | .[]? | (.url // .relay.url // empty)' 2>/dev/null \
+                 | paste -sd',' -)
+        info "  $t: ${urls:-<none>}"
+        printf '  %s %s raw: %s\n' "$who" "$t" "$raw" >>"$LOG_FILE"
+    done
+
+    # Connection status per relay — shows which sockets are actually live.
+    step "$who relay connection status:"
+    "$wnfn" --json relays list 2>/dev/null \
+        | jq -r '(.result // .)[]? | "  \(.url // .relay.url // "?") [\(.type // "?")] [\(.status // .connection_status // "?")]"' 2>/dev/null \
+        | tee -a "$LOG_FILE" >&2 || true
+
+    # Daemon-level subscription health.
+    step "$who wn debug health:"
+    local health
+    health=$("$wnfn" --json debug health 2>/dev/null || "$wnfn" debug health 2>/dev/null || true)
+    printf '  %s\n' "${health:-<no output>}" | tee -a "$LOG_FILE" >&2
+
+    # Relay-control state (subscriptions, filters, planes). Truncated to keep
+    # stderr readable; full copy still goes to $LOG_FILE.
+    step "$who wn debug relay-control-state (truncated to stderr; full in $LOG_FILE):"
+    local rcs
+    rcs=$("$wnfn" --json debug relay-control-state 2>/dev/null || "$wnfn" debug relay-control-state 2>/dev/null || true)
+    printf '%s\n' "${rcs:-<no output>}" | head -n 20 | sed 's/^/    /' >&2
+    printf '%s wn debug relay-control-state FULL:\n%s\n' "$who" "${rcs:-<no output>}" >>"$LOG_FILE"
+
+    # Pending welcomes already decrypted by the daemon. Non-empty here while
+    # wait_for_invite is polling would be a race worth noticing.
+    step "$who pending invites:"
+    local inv
+    inv=$("$wnfn" --json groups invites 2>/dev/null || true)
+    printf '  %s\n' "${inv:-<no output>}" | tee -a "$LOG_FILE" >&2
+
+    # Tail of daemon stderr — contains the live 1059/welcome processing logs.
+    step "$who wnd stderr (last 80 lines from $data_dir/logs/stderr.log):"
+    if [[ -f "$data_dir/logs/stderr.log" ]]; then
+        tail -n 80 "$data_dir/logs/stderr.log" 2>/dev/null | sed 's/^/    /' | tee -a "$LOG_FILE" >&2 || true
+    else
+        info "  (no stderr log at $data_dir/logs/stderr.log)"
+    fi
+
+    printf '%s%s---- end %s diagnostics ----%s\n\n' \
+        "$C_BOLD" "$C_CYAN" "$who" "$C_RESET" >&2
+    printf '==== end [%s] %s diagnostics ====\n\n' "$tag" "$who" >>"$LOG_FILE"
+}
+
+# Asks the operator to capture Amethyst's MarmotDbg logcat so the script log
+# ends up with both sides of the pipe in one place.
+prompt_amethyst_logcat() {
+    local note="${1:-paste below}"
+    prompt_human "On the host running adb, capture Amethyst's Marmot logs:
+
+    adb logcat -d -v time | grep -E 'MarmotDbg|Marmot |MlsWelcome|GiftWrap' \\
+        | tail -n 200 > /tmp/amethyst-marmot.log
+
+Then paste /tmp/amethyst-marmot.log contents here so the failure report has
+both the Amethyst-side publish log and the wn-side subscription log ($note)."
 }
 
 # ------- group cleanup -------------------------------------------------------
