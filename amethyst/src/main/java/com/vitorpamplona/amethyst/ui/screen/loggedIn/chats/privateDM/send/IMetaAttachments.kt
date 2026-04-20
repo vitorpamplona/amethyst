@@ -38,6 +38,7 @@ import com.vitorpamplona.quartz.nip94FileMetadata.mimeType
 import com.vitorpamplona.quartz.nip94FileMetadata.originalHash
 import com.vitorpamplona.quartz.nip94FileMetadata.sensitiveContent
 import com.vitorpamplona.quartz.nip94FileMetadata.size
+import com.vitorpamplona.quartz.nip94FileMetadata.thumbhash
 import okhttp3.OkHttpClient
 import java.util.Locale
 
@@ -60,6 +61,7 @@ class IMetaAttachments {
                         it.mimeType?.let { mimeType(it) }
                         it.dim?.let { dims(it) }
                         it.blurHash?.let { blurhash(it.blurhash) }
+                        it.thumbHash?.let { thumbhash(it.thumbhash) }
                     }.build()
             }
 
@@ -101,6 +103,7 @@ class IMetaAttachments {
                 result.fileHeader.mimeType?.let { mimeType(it) }
                 result.fileHeader.dim?.let { dims(it) }
                 result.fileHeader.blurHash?.let { blurhash(it.blurhash) }
+                result.fileHeader.thumbHash?.let { thumbhash(it.thumbhash) }
                 result.magnet?.let { magnet(it) }
                 result.uploadedHash?.let { originalHash(it) }
 

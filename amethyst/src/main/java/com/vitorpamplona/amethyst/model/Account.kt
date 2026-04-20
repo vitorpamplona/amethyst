@@ -75,6 +75,7 @@ import com.vitorpamplona.amethyst.model.nip51Lists.hashtagLists.HashtagListDecry
 import com.vitorpamplona.amethyst.model.nip51Lists.hashtagLists.HashtagListState
 import com.vitorpamplona.amethyst.model.nip51Lists.indexerRelays.IndexerRelayListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.indexerRelays.IndexerRelayListState
+import com.vitorpamplona.amethyst.model.nip51Lists.interestSets.InterestSetsState
 import com.vitorpamplona.amethyst.model.nip51Lists.labeledBookmarkLists.LabeledBookmarkListsState
 import com.vitorpamplona.amethyst.model.nip51Lists.muteList.MuteListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.muteList.MuteListState
@@ -237,6 +238,7 @@ import com.vitorpamplona.quartz.nip94FileMetadata.magnet
 import com.vitorpamplona.quartz.nip94FileMetadata.mimeType
 import com.vitorpamplona.quartz.nip94FileMetadata.originalHash
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
+import com.vitorpamplona.quartz.nip94FileMetadata.thumbhash
 import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
@@ -261,6 +263,8 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.math.BigDecimal
 import kotlin.coroutines.cancellation.CancellationException
+import com.vitorpamplona.quartz.experimental.nip95.header.thumbhash as nip95thumbhash
+import com.vitorpamplona.quartz.experimental.profileGallery.thumbhash as galleryThumbhash
 
 @OptIn(DelicateCoroutinesApi::class)
 @Stable
@@ -360,6 +364,7 @@ class Account(
     val hiddenUsers = HiddenUsersState(muteList.flow, blockPeopleList.flow, scope, settings)
 
     val labeledBookmarkLists = LabeledBookmarkListsState(signer, cache, scope)
+    val interestSets = InterestSetsState(signer, cache, scope)
     val oldBookmarkState = OldBookmarkListState(signer, cache, scope)
     val bookmarkState = BookmarkListState(signer, cache, scope)
     val pinState = PinListState(signer, cache, scope)
@@ -440,6 +445,7 @@ class Account(
             scope = scope,
             favoriteAlgoFeedsOrchestrator = favoriteAlgoFeedsOrchestrator,
             favoriteAlgoFeedAddresses = favoriteAlgoFeedsList.flow,
+            interestSetHashtags = interestSets.hashtagsByIdentifier,
         ).flow
 
     // App-ready Feeds
@@ -1280,6 +1286,7 @@ class Account(
                 headerInfo.mimeType?.let { mimeType(it) }
                 headerInfo.dim?.let { dimension(it) }
                 headerInfo.blurHash?.let { blurhash(it.blurhash) }
+                headerInfo.thumbHash?.let { nip95thumbhash(it.thumbhash) }
 
                 contentWarningReason?.let { contentWarning(contentWarningReason) }
             }
@@ -1364,16 +1371,17 @@ class Account(
         val iMetas =
             urlHeaderInfo.map {
                 PictureMeta(
-                    it.key,
-                    it.value.mimeType,
-                    it.value.blurHash?.blurhash,
-                    it.value.dim,
-                    caption,
-                    it.value.hash,
-                    it.value.size,
-                    null,
-                    emptyList(),
-                    emptyList(),
+                    url = it.key,
+                    mimeType = it.value.mimeType,
+                    blurhash = it.value.blurHash?.blurhash,
+                    dimension = it.value.dim,
+                    alt = caption,
+                    hash = it.value.hash,
+                    size = it.value.size,
+                    service = null,
+                    fallback = emptyList(),
+                    annotations = emptyList(),
+                    thumbhash = it.value.thumbHash?.thumbhash,
                 )
             }
 
@@ -1416,13 +1424,14 @@ class Account(
                         quotes(findNostrUris(it))
                     }
                     pictureIMeta(
-                        url,
-                        headerInfo.mimeType,
-                        headerInfo.blurHash?.blurhash,
-                        headerInfo.dim,
-                        headerInfo.hash,
-                        headerInfo.size,
-                        alt,
+                        url = url,
+                        mimeType = headerInfo.mimeType,
+                        blurhash = headerInfo.blurHash?.blurhash,
+                        dimension = headerInfo.dim,
+                        hash = headerInfo.hash,
+                        size = headerInfo.size,
+                        alt = alt,
+                        thumbhash = headerInfo.thumbHash?.thumbhash,
                     )
                     // add zap splits
                     // add zap raiser
@@ -1440,6 +1449,7 @@ class Account(
                         dimension = headerInfo.dim,
                         blurhash = headerInfo.blurHash?.blurhash,
                         alt = alt,
+                        thumbhash = headerInfo.thumbHash?.thumbhash,
                     )
 
                 if (headerInfo.dim.height > headerInfo.dim.width) {
@@ -1459,6 +1469,7 @@ class Account(
                     headerInfo.mimeType?.let { mimeType(it) }
                     headerInfo.dim?.let { dimension(it) }
                     headerInfo.blurHash?.let { blurhash(it.blurhash) }
+                    headerInfo.thumbHash?.let { thumbhash(it.thumbhash) }
 
                     originalHash?.let { originalHash(it) }
                     magnetUri?.let { magnet(it) }
@@ -2309,6 +2320,7 @@ class Account(
         dim: DimensionTag?,
         hash: String?,
         mimeType: String?,
+        thumbhash: String? = null,
     ) {
         val template =
             ProfileGalleryEntryEvent.build(url) {
@@ -2317,6 +2329,7 @@ class Account(
                 mimeType?.let { mimeType(it) }
                 dim?.let { dimension(it) }
                 blurhash?.let { blurhash(it) }
+                thumbhash?.let { galleryThumbhash(it) }
             }
 
         val event = signer.sign(template)
@@ -2850,6 +2863,7 @@ class Account(
                     peopleLists.newNotes(newNotes)
                     followLists.newNotes(newNotes)
                     labeledBookmarkLists.newNotes(newNotes)
+                    interestSets.newNotes(newNotes)
                 }
             }
         }
@@ -2861,6 +2875,7 @@ class Account(
                     peopleLists.deletedNotes(deletedNotes)
                     followLists.deletedNotes(deletedNotes)
                     labeledBookmarkLists.deletedNotes(deletedNotes)
+                    interestSets.deletedNotes(deletedNotes)
                 }
             }
         }

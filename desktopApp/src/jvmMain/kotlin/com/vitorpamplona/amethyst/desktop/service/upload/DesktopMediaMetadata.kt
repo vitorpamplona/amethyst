@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.desktop.service.upload
 
 import com.vitorpamplona.amethyst.commons.blurhash.toBlurhash
 import com.vitorpamplona.amethyst.commons.blurhash.toPlatformImage
+import com.vitorpamplona.amethyst.commons.thumbhash.toThumbhash
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.sha256.sha256
 import java.io.File
@@ -34,6 +35,7 @@ data class MediaMetadata(
     val width: Int? = null,
     val height: Int? = null,
     val blurhash: String? = null,
+    val thumbhash: String? = null,
 )
 
 object DesktopMediaMetadata {
@@ -44,6 +46,7 @@ object DesktopMediaMetadata {
         var width: Int? = null
         var height: Int? = null
         var blurhash: String? = null
+        var thumbhash: String? = null
 
         if (mimeType.startsWith("image/")) {
             try {
@@ -51,7 +54,9 @@ object DesktopMediaMetadata {
                 if (image != null) {
                     width = image.width
                     height = image.height
-                    blurhash = image.toPlatformImage().toBlurhash()
+                    val platformImage = image.toPlatformImage()
+                    blurhash = runCatching { platformImage.toBlurhash() }.getOrNull()
+                    thumbhash = runCatching { platformImage.toThumbhash() }.getOrNull()
                 }
             } catch (_: Exception) {
             }
@@ -64,6 +69,7 @@ object DesktopMediaMetadata {
             width = width,
             height = height,
             blurhash = blurhash,
+            thumbhash = thumbhash,
         )
     }
 

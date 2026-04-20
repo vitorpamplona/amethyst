@@ -64,6 +64,7 @@ class ChatFileSender(
                 size = result.fileHeader.size,
                 dimension = result.fileHeader.dim,
                 blurhash = result.fileHeader.blurHash?.blurhash,
+                thumbhash = result.fileHeader.thumbHash?.thumbhash,
             ) {
                 if (!caption.isNullOrEmpty()) {
                     alt(caption)

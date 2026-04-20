@@ -91,7 +91,6 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
-import com.vitorpamplona.amethyst.service.images.BlurhashWrapper
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView
 import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.openBlossomUriAsIntent
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
@@ -162,7 +161,7 @@ fun ZoomableContentView(
                 preloadUrls = listOf(content.url),
                 accountViewModel = accountViewModel,
                 modifier = mediaSizingModifier(ratio, contentScale),
-                backdrop = content.blurhash?.let { blurhash -> { BlurhashBackdrop(blurhash, content.description) } },
+                backdrop = (content.thumbhash ?: content.blurhash)?.let { { BlurhashBackdrop(content.blurhash, content.description, content.thumbhash) } },
             ) {
                 TwoSecondController(content) { controllerVisible ->
                     val mainImageModifier =
@@ -184,7 +183,7 @@ fun ZoomableContentView(
                 preloadUrls = emptyList(),
                 accountViewModel = accountViewModel,
                 modifier = mediaSizingModifier(ratio, contentScale),
-                backdrop = content.blurhash?.let { blurhash -> { BlurhashBackdrop(blurhash, content.description) } },
+                backdrop = (content.thumbhash ?: content.blurhash)?.let { { BlurhashBackdrop(content.blurhash, content.description, content.thumbhash) } },
             ) {
                 Box(
                     modifier = Modifier.fillMaxWidth().then(boundsTrackingModifier),
@@ -203,6 +202,7 @@ fun ZoomableContentView(
                         nostrUriCallback = content.uri,
                         onDialog = { dialogOpen = true },
                         accountViewModel = accountViewModel,
+                        thumbhash = content.thumbhash,
                     )
                 }
             }
@@ -330,13 +330,14 @@ fun LocalImageView(
                     when (state) {
                         is AsyncImagePainter.State.Loading,
                         -> {
-                            if (content.blurhash != null) {
+                            if (content.blurhash != null || content.thumbhash != null) {
                                 if (ratio != null) {
                                     DisplayBlurHash(
                                         content.blurhash,
                                         content.description,
                                         contentScale,
                                         loadedImageModifier.aspectRatio(ratio),
+                                        thumbhash = content.thumbhash,
                                     )
                                 } else {
                                     DisplayBlurHash(
@@ -344,6 +345,7 @@ fun LocalImageView(
                                         content.description,
                                         contentScale,
                                         loadedImageModifier,
+                                        thumbhash = content.thumbhash,
                                     )
                                 }
                             } else {
@@ -389,7 +391,7 @@ fun LocalImageView(
                     }
                 }
             } else {
-                if (content.blurhash != null && ratio != null) {
+                if ((content.blurhash != null || content.thumbhash != null) && ratio != null) {
                     DisplayBlurHash(
                         content.blurhash,
                         content.description,
@@ -397,6 +399,7 @@ fun LocalImageView(
                         loadedImageModifier
                             .aspectRatio(ratio)
                             .clickable { showImage.value = true },
+                        thumbhash = content.thumbhash,
                     )
                     IconButton(
                         modifier = Modifier.size(Size75dp),
@@ -460,7 +463,7 @@ fun UrlImageView(
                 when (state) {
                     is AsyncImagePainter.State.Loading,
                     -> {
-                        if (content.blurhash != null) {
+                        if (content.blurhash != null || content.thumbhash != null) {
                             if (ratio != null) {
                                 val modifier =
                                     if (contentScale == ContentScale.Crop) {
@@ -474,6 +477,7 @@ fun UrlImageView(
                                     content.description,
                                     ContentScale.Crop,
                                     modifier,
+                                    thumbhash = content.thumbhash,
                                 )
                             } else {
                                 DisplayBlurHash(
@@ -481,6 +485,7 @@ fun UrlImageView(
                                     content.description,
                                     ContentScale.Crop,
                                     loadedImageModifier,
+                                    thumbhash = content.thumbhash,
                                 )
                             }
                         } else {
@@ -515,7 +520,7 @@ fun UrlImageView(
                 }
             }
         } else {
-            if (content.blurhash != null && ratio != null) {
+            if ((content.blurhash != null || content.thumbhash != null) && ratio != null) {
                 val modifier =
                     if (contentScale == ContentScale.Crop) {
                         loadedImageModifier.clickable { showImage.value = true }
@@ -528,6 +533,7 @@ fun UrlImageView(
                     content.description,
                     contentScale,
                     modifier,
+                    thumbhash = content.thumbhash,
                 )
                 IconButton(
                     modifier = Modifier.size(Size75dp),
@@ -786,11 +792,14 @@ fun DisplayBlurHash(
     description: String?,
     contentScale: ContentScale,
     modifier: Modifier,
+    thumbhash: String? = null,
 ) {
-    if (blurhash == null) return
+    val model =
+        com.vitorpamplona.amethyst.service.images
+            .placeholderModel(thumbhash, blurhash) ?: return
 
     AsyncImage(
-        model = BlurhashWrapper(blurhash),
+        model = model,
         contentDescription = description,
         contentScale = contentScale,
         modifier = modifier,

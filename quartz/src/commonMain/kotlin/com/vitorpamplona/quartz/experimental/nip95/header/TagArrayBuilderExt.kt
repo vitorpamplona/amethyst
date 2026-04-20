@@ -33,6 +33,7 @@ import com.vitorpamplona.quartz.nip94FileMetadata.tags.ServiceTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.SizeTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.SummaryTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.ThumbTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.ThumbhashTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.TorrentInfoHash
 
 fun TagArrayBuilder<FileStorageHeaderEvent>.mimeType(mimeType: String) = add(MimeTypeTag.assemble(mimeType))
@@ -44,6 +45,8 @@ fun TagArrayBuilder<FileStorageHeaderEvent>.fileSize(size: Int) = add(SizeTag.as
 fun TagArrayBuilder<FileStorageHeaderEvent>.dimension(dim: DimensionTag) = add(DimensionTag.assemble(dim))
 
 fun TagArrayBuilder<FileStorageHeaderEvent>.blurhash(blurhash: String) = add(BlurhashTag.assemble(blurhash))
+
+fun TagArrayBuilder<FileStorageHeaderEvent>.thumbhash(thumbhash: String) = add(ThumbhashTag.assemble(thumbhash))
 
 fun TagArrayBuilder<FileStorageHeaderEvent>.torrentInfohash(hash: String) = add(TorrentInfoHash.assemble(hash))
 

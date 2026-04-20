@@ -43,6 +43,7 @@ class Mip04UploadResult(
     val dimensions: String?,
     val blurhash: String?,
     val caption: String?,
+    val thumbhash: String? = null,
 )
 
 /**
@@ -91,7 +92,7 @@ class MarmotFileUploader(
 
             val state = item.orchestrator.progressState.value
             if (state is UploadingState.Finished && state.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
-                val serverResult = state.result as UploadOrchestrator.OrchestratorResult.ServerResult
+                val serverResult = state.result
                 results.add(
                     Mip04UploadResult(
                         url = serverResult.url,
@@ -102,6 +103,7 @@ class MarmotFileUploader(
                         dimensions = serverResult.fileHeader.dim?.toString(),
                         blurhash = serverResult.fileHeader.blurHash?.blurhash,
                         caption = viewState.caption.ifEmpty { null },
+                        thumbhash = serverResult.fileHeader.thumbHash?.thumbhash,
                     ),
                 )
             } else {

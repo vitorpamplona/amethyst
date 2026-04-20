@@ -358,6 +358,7 @@ private fun buildIMetaTags(results: List<UploadResult>): List<IMetaTag> =
             props["dim"] = listOf("${meta.width}x${meta.height}")
         }
         meta.blurhash?.let { props["blurhash"] = listOf(it) }
+        meta.thumbhash?.let { props["thumbhash"] = listOf(it) }
         IMetaTag(url = url, properties = props)
     }
 
@@ -460,6 +461,7 @@ private fun buildPictureMetas(results: List<UploadResult>): List<com.vitorpamplo
                 },
             hash = meta.sha256,
             size = meta.size.toInt(),
+            thumbhash = meta.thumbhash,
         )
     }
 

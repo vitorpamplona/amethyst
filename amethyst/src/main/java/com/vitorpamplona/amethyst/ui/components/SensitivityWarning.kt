@@ -207,14 +207,16 @@ fun ContentWarningNoteWithBigReasonPreview() {
 
 @Composable
 fun BlurhashBackdrop(
-    blurhash: String,
+    blurhash: String?,
     description: String?,
+    thumbhash: String? = null,
 ) {
     DisplayBlurHash(
         blurhash = blurhash,
         description = description,
         contentScale = ContentScale.Crop,
         modifier = Modifier.fillMaxSize(),
+        thumbhash = thumbhash,
     )
 }
 
@@ -222,12 +224,13 @@ fun BlurhashBackdrop(
 fun BlurhashGridBackdrop(media: List<MediaUrlImage>) {
     AutoNonlazyGrid(media.size) { idx ->
         val item = media[idx]
-        if (item.blurhash != null) {
+        if (item.blurhash != null || item.thumbhash != null) {
             DisplayBlurHash(
                 blurhash = item.blurhash,
                 description = item.description,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
+                thumbhash = item.thumbhash,
             )
         }
     }

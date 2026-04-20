@@ -485,6 +485,21 @@
     <string name="bookmark_list_links_btn_label">View Links</string>
     <string name="bookmark_list_hashtags_btn_label">View Hashtags</string>
     <string name="bookmark_list_feed_empty_msg">You do not have any bookmark lists yet. Tap the new button below to make one.</string>
+
+    <string name="interest_sets_title">Interest Sets</string>
+    <string name="interest_sets_empty">You do not have any interest sets yet. Tap the new button below to make one.</string>
+    <string name="interest_set_create_btn_label">New Interest Set</string>
+    <string name="interest_set_creation_screen_title">New Interest Set</string>
+    <string name="interest_set_name_label">Set Name</string>
+    <string name="interest_set_name_placeholder">My interests</string>
+    <string name="interest_set_hashtag_add_placeholder">Add hashtag</string>
+    <string name="interest_set_hashtag_private_toggle">Private</string>
+    <string name="interest_set_hashtag_count">%1$d hashtag(s)</string>
+    <string name="interest_set_actions_dialog_title">Interest Set Actions</string>
+    <string name="interest_set_rename">Rename</string>
+    <string name="interest_set_clone">Clone</string>
+    <string name="interest_set_add_hashtag">Add hashtag</string>
+    <string name="interest_set_toggle_visibility">Toggle public/private</string>
     <string name="private_posts_label">Private Posts</string>
     <string name="private_posts_count">Private Posts(%1$s)</string>
     <string name="public_posts_label">Public Posts</string>
@@ -1764,6 +1779,7 @@
     <string name="select_list_to_filter">Select an option to filter the feed</string>
     <string name="feed_group_feeds">Feeds</string>
     <string name="feed_group_hashtags">Hashtags</string>
+    <string name="feed_group_interest_sets">Interest Sets</string>
     <string name="feed_group_locations">Locations</string>
     <string name="feed_group_communities">Communities</string>
     <string name="feed_group_lists">Lists</string>
