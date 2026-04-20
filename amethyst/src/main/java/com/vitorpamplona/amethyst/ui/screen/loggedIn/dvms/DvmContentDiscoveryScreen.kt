@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
@@ -96,21 +95,19 @@ fun DvmContentDiscoveryScreen(
             DvmTopBar(appDefinitionEventId, accountViewModel, nav)
         },
         accountViewModel = accountViewModel,
-    ) { paddingValues ->
-        Column(Modifier.padding(paddingValues)) {
-            LoadNote(baseNoteHex = appDefinitionEventId, accountViewModel = accountViewModel) { note ->
-                note?.let { baseNote ->
-                    WatchNoteEvent(
-                        baseNote,
-                        onNoteEventFound = {
-                            DvmContentDiscoveryScreen(baseNote, accountViewModel, nav)
-                        },
-                        onBlank = {
-                            FeedEmptyWithStatus(baseNote, stringRes(R.string.dvm_looking_for_app), accountViewModel, nav)
-                        },
-                        accountViewModel,
-                    )
-                }
+    ) {
+        LoadNote(baseNoteHex = appDefinitionEventId, accountViewModel = accountViewModel) { note ->
+            note?.let { baseNote ->
+                WatchNoteEvent(
+                    baseNote,
+                    onNoteEventFound = {
+                        DvmContentDiscoveryScreen(baseNote, accountViewModel, nav)
+                    },
+                    onBlank = {
+                        FeedEmptyWithStatus(baseNote, stringRes(R.string.dvm_looking_for_app), accountViewModel, nav)
+                    },
+                    accountViewModel,
+                )
             }
         }
     }
@@ -272,22 +269,20 @@ fun RenderNostrNIP90ContentDiscoveryScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    Column(Modifier.fillMaxHeight()) {
-        SaveableFeedState(resultFeedViewModel.feedState, null) { listState ->
-            // TODO (Optional) Instead of a like reaction, do a Kind 31989 NIP89 App recommendation
-            RenderFeedState(
-                resultFeedViewModel,
-                accountViewModel,
-                listState,
-                nav,
-                null,
-                onEmpty = {
-                    FeedEmpty {
-                        onRefresh()
-                    }
-                },
-            )
-        }
+    SaveableFeedState(resultFeedViewModel.feedState, null) { listState ->
+        // TODO (Optional) Instead of a like reaction, do a Kind 31989 NIP89 App recommendation
+        RenderFeedState(
+            resultFeedViewModel,
+            accountViewModel,
+            listState,
+            nav,
+            null,
+            onEmpty = {
+                FeedEmpty {
+                    onRefresh()
+                }
+            },
+        )
     }
 }
 

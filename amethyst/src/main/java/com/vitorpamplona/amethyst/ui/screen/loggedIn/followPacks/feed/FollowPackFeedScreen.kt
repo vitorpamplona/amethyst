@@ -172,7 +172,6 @@ fun FollowPackFeedScreen(
         accountViewModel = accountViewModel,
     ) {
         HorizontalPager(
-            contentPadding = it,
             state = pagerState,
         ) { page ->
             when (page) {

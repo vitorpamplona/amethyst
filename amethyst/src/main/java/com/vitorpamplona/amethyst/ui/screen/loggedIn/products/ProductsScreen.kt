@@ -20,12 +20,9 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.products
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
@@ -79,17 +76,15 @@ fun ProductsScreen(
             NewProductButton(accountViewModel, nav)
         },
         accountViewModel = accountViewModel,
-    ) { paddingValues ->
-        Column(Modifier.padding(paddingValues)) {
-            RefresheableBox(productsFeedContentState, true) {
-                SaveableGridFeedContentState(productsFeedContentState, scrollStateKey = ScrollStateKeys.PRODUCTS_SCREEN) { gridState ->
-                    RenderProductsFeed(
-                        feedContentState = productsFeedContentState,
-                        gridState = gridState,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
-                }
+    ) {
+        RefresheableBox(productsFeedContentState, true) {
+            SaveableGridFeedContentState(productsFeedContentState, scrollStateKey = ScrollStateKeys.PRODUCTS_SCREEN) { gridState ->
+                RenderProductsFeed(
+                    feedContentState = productsFeedContentState,
+                    gridState = gridState,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
             }
         }
     }

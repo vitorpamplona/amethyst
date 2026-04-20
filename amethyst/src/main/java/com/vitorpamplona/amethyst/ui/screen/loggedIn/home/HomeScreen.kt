@@ -25,7 +25,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Arrangement.Absolute.spacedBy
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -53,9 +52,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
@@ -78,6 +75,7 @@ import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.feeds.rememberForeverPagerState
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -184,7 +182,7 @@ private fun HomePages(
             Column {
                 HomeTopBar(accountViewModel, nav)
                 SecondaryTabRow(
-                    containerColor = Color.Transparent,
+                    containerColor = MaterialTheme.colorScheme.background,
                     contentColor = MaterialTheme.colorScheme.onBackground,
                     modifier = TabRowHeight,
                     selectedTabIndex = pagerState.currentPage,
@@ -217,11 +215,11 @@ private fun HomePages(
         // Wrap pager + banner in a Box so the banner can float over the feed
         // (anchored top-center) instead of living in the topBar Column where
         // it would push the tabs down every time it appears or disappears.
-        Box(
-            modifier = Modifier.fillMaxSize().padding(paddingValues),
-        ) {
+        // The Box itself fills the full screen; inner LazyColumns pick up the
+        // scaffold padding from LocalDisappearingScaffoldPadding via
+        // rememberFeedContentPadding, so feed items still scroll behind the bars.
+        Box(modifier = Modifier.fillMaxSize()) {
             HorizontalPager(
-                contentPadding = PaddingValues(0.dp),
                 state = pagerState,
                 userScrollEnabled = true,
                 modifier =
@@ -243,7 +241,10 @@ private fun HomePages(
             HomeAlgoFeedStatusBanner(
                 accountViewModel = accountViewModel,
                 nav = nav,
-                modifier = Modifier.align(Alignment.TopCenter),
+                modifier =
+                    Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = paddingValues.calculateTopPadding()),
             )
         }
     }
@@ -362,7 +363,7 @@ fun FeedLoaded(
     val items by loaded.feed.collectAsStateWithLifecycle()
 
     LazyColumn(
-        contentPadding = FeedPadding,
+        contentPadding = rememberFeedContentPadding(FeedPadding),
         state = listState,
     ) {
         if (liveSection != null) {
