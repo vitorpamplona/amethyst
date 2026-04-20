@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.display
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,11 +29,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
@@ -49,6 +52,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -90,7 +95,6 @@ private fun EmojiPackScreenView(
 ) {
     val pack by viewModel.selectedPackFlow.collectAsStateWithLifecycle()
     var showAddDialog by remember { mutableStateOf(false) }
-    var isAddingPrivate by remember { mutableStateOf(false) }
     var pendingDelete by remember { mutableStateOf<EmojiDeleteTarget?>(null) }
 
     Scaffold(
@@ -138,10 +142,7 @@ private fun EmojiPackScreenView(
                         contentDescription = null,
                     )
                 },
-                onClick = {
-                    isAddingPrivate = false
-                    showAddDialog = true
-                },
+                onClick = { showAddDialog = true },
                 shape = CircleShape,
                 containerColor = MaterialTheme.colorScheme.primary,
             )
@@ -168,9 +169,9 @@ private fun EmojiPackScreenView(
     if (showAddDialog) {
         AddEmojiDialog(
             onDismiss = { showAddDialog = false },
-            onConfirm = { tag ->
+            onConfirm = { tag, isPrivate ->
                 accountViewModel.launchSigner {
-                    viewModel.addEmoji(tag, isAddingPrivate)
+                    viewModel.addEmoji(tag, isPrivate)
                 }
                 showAddDialog = false
             },
@@ -189,6 +190,9 @@ private fun EmojiPackScreenView(
                     isDestructive = true,
                 ) {
                     accountViewModel.launchSigner {
+                        // removeEmoji must be called with the matching isPrivate flag
+                        // so we remove from the encrypted `.content` rather than the
+                        // public tag array (or vice-versa).
                         viewModel.removeEmoji(target.emoji.code, target.isPrivate)
                     }
                     pendingDelete = null
@@ -223,20 +227,53 @@ private fun EmojiGrid(
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         items(allEmojis, key = { (emoji, isPrivate) -> "${emoji.code}-${if (isPrivate) "priv" else "pub"}" }) { (emoji, isPrivate) ->
+            EmojiCell(
+                emoji = emoji,
+                isPrivate = isPrivate,
+                onLongClick = { onLongPress(emoji, isPrivate) },
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun EmojiCell(
+    emoji: EmojiUrlTag,
+    isPrivate: Boolean,
+    onLongClick: () -> Unit,
+) {
+    val privateLabel = stringRes(R.string.emoji_private_badge)
+    Box(
+        modifier =
+            Modifier
+                .combinedClickable(
+                    onClick = {},
+                    onLongClick = onLongClick,
+                ),
+        contentAlignment = Alignment.Center,
+    ) {
+        AsyncImage(
+            model = emoji.url,
+            contentDescription = if (isPrivate) "${emoji.code} ($privateLabel)" else emoji.code,
+            modifier = Size35Modifier,
+            contentScale = ContentScale.Crop,
+        )
+        if (isPrivate) {
             Box(
                 modifier =
                     Modifier
-                        .combinedClickable(
-                            onClick = {},
-                            onLongClick = { onLongPress(emoji, isPrivate) },
-                        ),
+                        .align(Alignment.TopEnd)
+                        .size(14.dp)
+                        .clip(CircleShape)
+                        .background(Color.Black.copy(alpha = 0.55f)),
                 contentAlignment = Alignment.Center,
             ) {
-                AsyncImage(
-                    model = emoji.url,
-                    contentDescription = emoji.code,
-                    modifier = Size35Modifier,
-                    contentScale = ContentScale.Crop,
+                Icon(
+                    imageVector = Icons.Filled.Lock,
+                    contentDescription = privateLabel,
+                    tint = Color.White,
+                    modifier = Modifier.size(10.dp),
                 )
             }
         }
