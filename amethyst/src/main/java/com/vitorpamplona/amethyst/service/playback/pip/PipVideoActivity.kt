@@ -35,6 +35,7 @@ import androidx.media3.common.util.UnstableApi
 import com.vitorpamplona.amethyst.service.playback.composable.DEFAULT_MUTED_SETTING
 import com.vitorpamplona.amethyst.service.playback.composable.GetVideoController
 import com.vitorpamplona.amethyst.service.playback.composable.controls.ApplyInitialVideoQuality
+import com.vitorpamplona.amethyst.service.playback.composable.controls.VideoQualityPolicy
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.GetMediaItem
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.MediaItemData
 
@@ -55,7 +56,7 @@ class PipVideoActivity : ComponentActivity() {
                         // rendition. User can still manually change quality via controls.
                         ApplyInitialVideoQuality(
                             player = controllerState.controller,
-                            isFullscreen = false,
+                            policy = VideoQualityPolicy.LOWEST,
                         )
                         RegisterBackgroundMedia(controllerState)
                         RegisterControllerReceiver(controllerState)

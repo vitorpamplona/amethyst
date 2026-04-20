@@ -27,16 +27,18 @@ import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
 
-fun getVideoTrackGroup(tracks: Tracks): Tracks.Group? = tracks.groups.firstOrNull { it.type == C.TRACK_TYPE_VIDEO && it.length > 0 }
+internal fun getVideoTrackGroup(tracks: Tracks): Tracks.Group? = tracks.groups.firstOrNull { it.type == C.TRACK_TYPE_VIDEO && it.length > 0 }
 
 // Finds the track with the smallest short side (min(width, height)) in the given video group.
 // Returns null if no track has a positive short side. Used to force lowest-resolution playback
-// in feeds to save bandwidth.
+// in feeds to save bandwidth. Skips tracks the device can't decode — ExoPlayer would silently
+// reject an override pointing at an unsupported track and fall back to adaptive selection.
 @OptIn(UnstableApi::class)
-fun findLowestResolutionTrackIndex(group: Tracks.Group): Int? {
+internal fun findLowestResolutionTrackIndex(group: Tracks.Group): Int? {
     var bestIndex: Int? = null
     var bestShortSide = Int.MAX_VALUE
     for (i in 0 until group.length) {
+        if (!group.isTrackSupported(i)) continue
         val format = group.getTrackFormat(i)
         val shortSide = minOf(format.width, format.height)
         if (shortSide > 0 && shortSide < bestShortSide) {
@@ -48,9 +50,9 @@ fun findLowestResolutionTrackIndex(group: Tracks.Group): Int? {
 }
 
 @OptIn(UnstableApi::class)
-fun hasVideoOverride(player: Player): Boolean = player.trackSelectionParameters.overrides.any { (key, _) -> key.type == C.TRACK_TYPE_VIDEO }
+internal fun hasVideoOverride(player: Player): Boolean = player.trackSelectionParameters.overrides.any { (key, _) -> key.type == C.TRACK_TYPE_VIDEO }
 
-fun clearVideoOverride(player: Player) {
+internal fun clearVideoOverride(player: Player) {
     player.trackSelectionParameters =
         player.trackSelectionParameters
             .buildUpon()
@@ -58,7 +60,8 @@ fun clearVideoOverride(player: Player) {
             .build()
 }
 
-fun selectVideoTrack(
+@OptIn(UnstableApi::class)
+internal fun selectVideoTrack(
     player: Player,
     group: Tracks.Group,
     trackIndex: Int,

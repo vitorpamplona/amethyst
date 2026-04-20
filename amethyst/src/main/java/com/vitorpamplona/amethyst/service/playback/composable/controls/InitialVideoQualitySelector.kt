@@ -20,77 +20,98 @@
  */
 package com.vitorpamplona.amethyst.service.playback.composable.controls
 
+import androidx.annotation.MainThread
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.media3.common.Player
 import androidx.media3.common.Tracks
 
 /**
+ * Which HLS rendition to pick automatically the first time tracks become available for a media
+ * item. Expressed as an explicit policy instead of a `Boolean` so call sites must commit to one
+ * value at construction and any future dynamic-state caller is forced to key the effect on it.
+ */
+enum class VideoQualityPolicy {
+    /** Lock to the lowest-resolution rendition (feed and PiP: save bandwidth). */
+    LOWEST,
+
+    /** Clear any video override so the player uses adaptive bitrate (fullscreen). */
+    AUTO,
+}
+
+/**
  * Applies a default video quality when tracks become available on the given player.
- *
- * - In feed context (`isFullscreen = false`): locks to the lowest-resolution rendition to save
- *   bandwidth. The user can still manually pick any quality (or "Auto") via the quality button.
- * - In fullscreen context (`isFullscreen = true`): clears any video override so the player uses
- *   adaptive bitrate selection (Auto).
  *
  * The initial selection is applied once per media item. If the user later changes the quality
  * manually, or swaps to a different media item, the new choice wins — we don't reapply for the
  * same media id. Selections intentionally don't persist across composable lifecycles, so opening
- * a feed video in fullscreen starts with Auto and returning to the feed starts with lowest again.
+ * a feed video in fullscreen starts with [VideoQualityPolicy.AUTO] and returning to the feed
+ * starts with [VideoQualityPolicy.LOWEST] again.
  */
 @Composable
 fun ApplyInitialVideoQuality(
     player: Player,
-    isFullscreen: Boolean,
+    policy: VideoQualityPolicy,
 ) {
     // Tracks the media id we've already initialized so we don't fight user overrides after the
-    // first application. Scoped to this composable instance so fullscreen <-> feed transitions
-    // reset the choice as required (they're separate VideoViewInner instances with separate
-    // players, so isFullscreen never flips on a given instance).
-    val appliedForMediaId = remember(player) { arrayOf<String?>(null) }
+    // first application.
+    val appliedForMediaId = remember(player) { mutableStateOf<String?>(null) }
 
-    DisposableEffect(player) {
+    DisposableEffect(player, policy) {
+        // Re-arm the guard whenever the player or the policy changes so a new policy gets a
+        // chance to apply even if the same media id has already been handled under the old one.
+        appliedForMediaId.value = null
+
         val listener =
             object : Player.Listener {
                 override fun onTracksChanged(tracks: Tracks) {
-                    applyInitialQuality(player, tracks, isFullscreen, appliedForMediaId)
+                    applyInitialQuality(player, tracks, policy, appliedForMediaId)
                 }
             }
 
         // Tracks might already be available by the time we attach the listener.
-        applyInitialQuality(player, player.currentTracks, isFullscreen, appliedForMediaId)
+        applyInitialQuality(player, player.currentTracks, policy, appliedForMediaId)
         player.addListener(listener)
         onDispose { player.removeListener(listener) }
     }
 }
 
+// Invoked from Player.Listener callbacks and DisposableEffect bodies, both of which run on
+// the player's application looper (main thread for ExoPlayer). The body mutates Compose state
+// and trackSelectionParameters; both are main-thread-only.
+@MainThread
 private fun applyInitialQuality(
     player: Player,
     tracks: Tracks,
-    isFullscreen: Boolean,
-    appliedForMediaId: Array<String?>,
+    policy: VideoQualityPolicy,
+    appliedForMediaId: MutableState<String?>,
 ) {
     val mediaId = player.currentMediaItem?.mediaId ?: return
-    if (appliedForMediaId[0] == mediaId) return
+    if (appliedForMediaId.value == mediaId) return
 
     val videoGroup = getVideoTrackGroup(tracks) ?: return
-    // No point forcing a choice when there's only one rendition.
+    // No point forcing a choice when there's only one rendition, and no future update will
+    // change that for this media id, so mark it as settled.
     if (videoGroup.length <= 1) {
-        appliedForMediaId[0] = mediaId
+        appliedForMediaId.value = mediaId
         return
     }
 
-    if (isFullscreen) {
-        // Ensure adaptive selection is active by removing any pre-existing video override.
-        if (hasVideoOverride(player)) {
-            clearVideoOverride(player)
+    when (policy) {
+        VideoQualityPolicy.AUTO -> {
+            if (hasVideoOverride(player)) clearVideoOverride(player)
+            appliedForMediaId.value = mediaId
         }
-    } else {
-        val lowestIndex = findLowestResolutionTrackIndex(videoGroup)
-        if (lowestIndex != null) {
+
+        VideoQualityPolicy.LOWEST -> {
+            // If no supported track has a positive short side yet, leave the guard unset so we
+            // retry on the next onTracksChanged when real video dimensions arrive.
+            val lowestIndex = findLowestResolutionTrackIndex(videoGroup) ?: return
             selectVideoTrack(player, videoGroup, lowestIndex)
+            appliedForMediaId.value = mediaId
         }
     }
-    appliedForMediaId[0] = mediaId
 }

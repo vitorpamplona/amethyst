@@ -71,25 +71,14 @@ fun VideoQualityButton(
     modifier: Modifier = Modifier,
 ) {
     var tracks by remember(player) { mutableStateOf(player.currentTracks) }
-    // Track the rendering video size separately from tracks. In adaptive playback,
-    // Tracks.Group.isTrackSelected(i) returns true for every rung in the adaptive
-    // set, so we can't derive the currently-playing resolution from the Tracks
-    // object. Player.videoSize + onVideoSizeChanged gives the real rendered size
-    // and updates whenever ABR steps up or down.
-    var videoSize by remember(player) { mutableStateOf(player.videoSize) }
     var openDialog by remember { mutableStateOf(false) }
 
     DisposableEffect(player) {
         tracks = player.currentTracks
-        videoSize = player.videoSize
         val listener =
             object : Player.Listener {
                 override fun onTracksChanged(newTracks: Tracks) {
                     tracks = newTracks
-                }
-
-                override fun onVideoSizeChanged(newSize: VideoSize) {
-                    videoSize = newSize
                 }
             }
         player.addListener(listener)
@@ -98,8 +87,6 @@ fun VideoQualityButton(
 
     val videoGroup = getVideoTrackGroup(tracks) ?: return
     if (videoGroup.length <= 1) return
-
-    val currentShortSide = minOf(videoSize.width, videoSize.height).takeIf { it > 0 }
 
     AnimatedVisibility(
         visible = controllerVisible.value,
@@ -131,6 +118,21 @@ fun VideoQualityButton(
     }
 
     if (openDialog) {
+        // Scope videoSize tracking to the open popup: HLS ABR fires onVideoSizeChanged on every
+        // rung switch, and we don't want to pay recomposition cost on cards whose menu isn't open.
+        var videoSize by remember(player) { mutableStateOf(player.videoSize) }
+        DisposableEffect(player) {
+            val listener =
+                object : Player.Listener {
+                    override fun onVideoSizeChanged(newSize: VideoSize) {
+                        videoSize = newSize
+                    }
+                }
+            player.addListener(listener)
+            onDispose { player.removeListener(listener) }
+        }
+        val currentShortSide = minOf(videoSize.width, videoSize.height).takeIf { it > 0 }
+
         Popup(
             alignment = Alignment.BottomCenter,
             onDismissRequest = { openDialog = false },
@@ -141,7 +143,7 @@ fun VideoQualityButton(
                 currentShortSide = currentShortSide,
                 isAuto = !hasVideoOverride(player),
                 onSelectAuto = {
-                    clearVideoOverride(player)
+                    if (hasVideoOverride(player)) clearVideoOverride(player)
                     openDialog = false
                 },
                 onSelectTrack = { trackIndex ->
@@ -207,6 +209,7 @@ private data class QualityChoice(
 private fun buildQualityChoices(group: Tracks.Group): ImmutableList<QualityChoice> {
     val choices = mutableListOf<QualityChoice>()
     for (i in 0 until group.length) {
+        if (!group.isTrackSupported(i)) continue
         val format = group.getTrackFormat(i)
         val shortSide = minOf(format.width, format.height)
         if (shortSide > 0) {

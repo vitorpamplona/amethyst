@@ -27,6 +27,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import com.vitorpamplona.amethyst.service.playback.composable.controls.ApplyInitialVideoQuality
+import com.vitorpamplona.amethyst.service.playback.composable.controls.VideoQualityPolicy
 import com.vitorpamplona.amethyst.service.playback.composable.mainVideo.VideoPlayerActiveMutex
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.GetMediaItem
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -75,7 +76,7 @@ fun VideoViewInner(
         ) { controller ->
             ApplyInitialVideoQuality(
                 player = controller.controller,
-                isFullscreen = isFullscreen,
+                policy = if (isFullscreen) VideoQualityPolicy.AUTO else VideoQualityPolicy.LOWEST,
             )
             VideoPlayerActiveMutex(controller) { videoModifier, isClosestToTheCenterOfTheScreen ->
                 ControlWhenPlayerIsActive(controller, automaticallyStartPlayback, isClosestToTheCenterOfTheScreen)
