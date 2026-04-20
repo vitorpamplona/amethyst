@@ -23,7 +23,6 @@ package com.vitorpamplona.quartz.marmot.mip05PushNotifications
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -33,8 +32,10 @@ import com.vitorpamplona.quartz.utils.TimeUtils
  * Unsigned application message sent inside a GroupEvent (kind:445) when a device
  * leaves a group or wants to disable push notifications.
  *
- * Has no tags — the MLS leaf index is implicit from the MLS sender identity.
- * Receiving clients MUST remove the token for the identified leaf.
+ * Per MIP-05 this event MUST have **no tags**. The MLS leaf index is implicit
+ * from the MLS sender identity; receiving clients MUST remove the token for
+ * the identified leaf. Adding extra tags could leak metadata or be rejected
+ * by strict MIP-05 validators (e.g. the MDK reference).
  *
  * MUST remain unsigned (no sig field) per MIP-03 security requirements.
  */
@@ -50,11 +51,6 @@ class TokenRemovalEvent(
     companion object {
         const val KIND = 449
 
-        fun build(
-            createdAt: Long = TimeUtils.now(),
-            initializer: TagArrayBuilder<TokenRemovalEvent>.() -> Unit = {},
-        ) = eventTemplate(KIND, "", createdAt) {
-            initializer()
-        }
+        fun build(createdAt: Long = TimeUtils.now()) = eventTemplate<TokenRemovalEvent>(KIND, "", createdAt)
     }
 }

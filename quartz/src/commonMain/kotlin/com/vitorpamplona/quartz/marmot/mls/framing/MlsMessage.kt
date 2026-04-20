@@ -23,6 +23,8 @@ package com.vitorpamplona.quartz.marmot.mls.framing
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsReader
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsSerializable
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsWriter
+import com.vitorpamplona.quartz.marmot.mls.messages.Commit
+import com.vitorpamplona.quartz.marmot.mls.messages.Proposal
 
 /**
  * MLS MLSMessage (RFC 9420 Section 6).
@@ -161,7 +163,17 @@ data class PublicMessage(
         encodeSender(writer, sender)
         writer.putOpaqueVarInt(authenticatedData)
         writer.putUint8(contentType.value)
-        writer.putBytes(content)
+
+        // RFC 9420 §6 FramedContent.content is a type-dependent body:
+        //   case application: opaque application_data<V>
+        //   case proposal:    Proposal proposal (struct, no outer length prefix)
+        //   case commit:      Commit commit       (struct, no outer length prefix)
+        // `content` holds the already-serialized body for proposal/commit, and
+        // the raw application bytes for application.
+        when (contentType) {
+            ContentType.APPLICATION -> writer.putOpaqueVarInt(content)
+            ContentType.PROPOSAL, ContentType.COMMIT -> writer.putBytes(content)
+        }
 
         // FramedContentAuthData
         writer.putOpaqueVarInt(signature)
@@ -191,9 +203,30 @@ data class PublicMessage(
             val authenticatedData = reader.readOpaqueVarInt()
             val contentType = ContentType.fromValue(reader.readUint8())
 
-            // Content is variable based on content_type, read remaining content
-            // For now, read as opaque
-            val content = reader.readOpaqueVarInt()
+            // RFC 9420 §6 FramedContent.content body varies by content_type.
+            // For PROPOSAL/COMMIT we decode the inner struct to advance the reader
+            // and then re-serialize back to bytes so the invariant
+            // "content holds the serialized body" holds for all variants.
+            val content: ByteArray =
+                when (contentType) {
+                    ContentType.APPLICATION -> {
+                        reader.readOpaqueVarInt()
+                    }
+
+                    ContentType.PROPOSAL -> {
+                        val proposal = Proposal.decodeTls(reader)
+                        val w = TlsWriter()
+                        proposal.encodeTls(w)
+                        w.toByteArray()
+                    }
+
+                    ContentType.COMMIT -> {
+                        val commit = Commit.decodeTls(reader)
+                        val w = TlsWriter()
+                        commit.encodeTls(w)
+                        w.toByteArray()
+                    }
+                }
             val signature = reader.readOpaqueVarInt()
 
             val confirmationTag =

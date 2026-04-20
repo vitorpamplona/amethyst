@@ -79,8 +79,11 @@ import kotlinx.coroutines.sync.withLock
  * ## Cross-Implementation Notes
  *
  * This manager uses ciphersuite 0x0001 (MLS_128_DHKEMX25519_AES128GCM_SHA256_Ed25519).
- * The epoch secret retention window is [EPOCH_RETENTION_WINDOW] = 2, meaning secrets
- * for the current and previous epoch are kept for late-message decryption.
+ * The epoch secret retention window is [EPOCH_RETENTION_WINDOW] = 5, matching the
+ * `DEFAULT_EPOCH_LOOKBACK` used by the MDK reference implementation so that late-
+ * arriving MIP-03 GroupEvents (and MLS application messages) whose outer ChaCha20-
+ * Poly1305 key was derived from a prior epoch's exporter secret can still be
+ * decrypted after a Commit advances the group.
  *
  * Thread safety: All suspending mutation methods are guarded by a [Mutex]
  * to prevent concurrent state corruption. Non-suspending read methods
@@ -662,9 +665,11 @@ class MlsGroupManager(
 
         /**
          * Number of past epochs to retain for late-arriving message decryption.
-         * MLS forward secrecy guarantees mean we want to limit this window.
+         * Matches MDK's `DEFAULT_EPOCH_LOOKBACK` so a message encrypted under
+         * the prior N epochs' exporter secrets can still be decrypted after a
+         * Commit advances the group. Capped for forward-secrecy reasons.
          */
-        const val EPOCH_RETENTION_WINDOW = 2
+        const val EPOCH_RETENTION_WINDOW = 5
 
         /** Size of reuse_guard in PrivateMessage (RFC 9420 §6.3.1) */
         private const val REUSE_GUARD_LENGTH = 4

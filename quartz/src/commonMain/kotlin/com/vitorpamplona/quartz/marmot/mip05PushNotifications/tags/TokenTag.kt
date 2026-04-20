@@ -38,7 +38,7 @@ import com.vitorpamplona.quartz.utils.ensure
  */
 @Immutable
 data class TokenTagData(
-    /** Base64-encoded EncryptedToken (280 bytes when decoded) */
+    /** Base64-encoded EncryptedToken (1084 bytes when decoded per MIP-05) */
     val encryptedToken: String,
     /** Hex-encoded notification server public key */
     val serverPubKey: HexKey,
@@ -52,8 +52,11 @@ class TokenTag {
     companion object {
         const val TAG_NAME = "token"
 
-        /** Expected decoded size of an EncryptedToken */
-        const val ENCRYPTED_TOKEN_SIZE = 280
+        /**
+         * Expected decoded size of an EncryptedToken per MIP-05:
+         * ephemeral_pubkey(32) || nonce(12) || ciphertext(1024 + 16 tag) = 1084 bytes.
+         */
+        const val ENCRYPTED_TOKEN_SIZE = 1084
 
         fun parse(tag: Array<String>): TokenTagData? {
             ensure(tag.has(3) && tag[0] == TAG_NAME) { return null }
