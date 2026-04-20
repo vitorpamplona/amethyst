@@ -59,11 +59,24 @@ class EmojiPackMetadataViewModel : ViewModel() {
     val picture = mutableStateOf(TextFieldValue())
     val description = mutableStateOf(TextFieldValue())
 
-    var isUploadingImageForPicture by mutableStateOf(false)
+    /**
+     * Local image the user just picked from the gallery but hasn't uploaded yet.
+     * When non-null the hero preview shows this file and `submit()` will upload
+     * it before publishing the emoji pack event. Mutated only via [pickMedia] /
+     * [clearPickedMedia] so the setter name doesn't collide on the JVM.
+     */
+    var pickedMedia by mutableStateOf<SelectedMedia?>(null)
+        private set
+
+    /** True while upload-then-publish is running. Disables the submit button and shows a spinner. */
+    var isWorking by mutableStateOf(false)
 
     val canPost by derivedStateOf {
-        name.value.text.isNotBlank()
+        !isWorking && name.value.text.isNotBlank()
     }
+
+    /** True when either a remote cover URL exists OR the user has picked a local image. */
+    fun hasImage(): Boolean = pickedMedia != null || picture.value.text.isNotBlank()
 
     fun init(accountViewModel: AccountViewModel) {
         this.accountViewModel = accountViewModel
@@ -81,25 +94,90 @@ class EmojiPackMetadataViewModel : ViewModel() {
         name.value = TextFieldValue(existing?.title ?: "")
         picture.value = TextFieldValue(existing?.image ?: "")
         description.value = TextFieldValue(existing?.description ?: "")
+        pickedMedia = null
     }
 
+    fun pickMedia(media: SelectedMedia) {
+        pickedMedia = media
+    }
+
+    fun clearPickedMedia() {
+        pickedMedia = null
+    }
+
+    /**
+     * Kicks off the full create/update flow:
+     *   1. If a local image was picked, upload it first and update `picture`.
+     *   2. Build & sign the EmojiPackEvent with the (possibly newly uploaded) URL.
+     *
+     * Mirrors the badge-definition flow where the user never sees the URL and the
+     * image upload is implicit in pressing "Create" / "Save".
+     */
+    fun submit(
+        context: Context,
+        onSuccess: () -> Unit,
+        onError: (String, String) -> Unit,
+    ) {
+        if (isWorking) return
+        viewModelScope.launch(Dispatchers.IO) {
+            isWorking = true
+            try {
+                val local = pickedMedia
+                if (local != null) {
+                    val uploadedUrl = uploadImage(local, context, onError)
+                    if (uploadedUrl == null) {
+                        isWorking = false
+                        return@launch
+                    }
+                    picture.value = TextFieldValue(uploadedUrl)
+                    pickedMedia = null
+                }
+
+                try {
+                    publish()
+                } catch (e: SignerExceptions.ReadOnlyException) {
+                    onError(
+                        stringRes(context, R.string.read_only_user),
+                        stringRes(context, R.string.login_with_a_private_key_to_be_able_to_sign_events),
+                    )
+                    isWorking = false
+                    return@launch
+                }
+                clear()
+                onSuccess()
+            } finally {
+                isWorking = false
+            }
+        }
+    }
+
+    private suspend fun publish() {
+        val currentPack = pack
+        if (currentPack == null) {
+            account.createOwnedEmojiPack(
+                title = name.value.text,
+                description = description.value.text,
+                image = picture.value.text,
+            )
+        } else {
+            account.updateOwnedEmojiPackMetadata(
+                dTag = currentPack.identifier,
+                newTitle = name.value.text,
+                newDescription = description.value.text,
+                newImage = picture.value.text,
+            )
+        }
+    }
+
+    /**
+     * Retained for backward compatibility with the old "paste URL + upload button"
+     * flow. New UI goes through [submit]. The signer contract is unchanged: the
+     * final signed EmojiPackEvent still carries the published URL in `image`.
+     */
+    @Suppress("unused")
     fun createOrUpdate() {
         accountViewModel.launchSigner {
-            val currentPack = pack
-            if (currentPack == null) {
-                account.createOwnedEmojiPack(
-                    title = name.value.text,
-                    description = description.value.text,
-                    image = picture.value.text,
-                )
-            } else {
-                account.updateOwnedEmojiPackMetadata(
-                    dTag = currentPack.identifier,
-                    newTitle = name.value.text,
-                    newDescription = description.value.text,
-                    newImage = picture.value.text,
-                )
-            }
+            publish()
             clear()
         }
     }
@@ -108,33 +186,21 @@ class EmojiPackMetadataViewModel : ViewModel() {
         name.value = TextFieldValue()
         picture.value = TextFieldValue()
         description.value = TextFieldValue()
+        pickedMedia = null
     }
 
-    fun uploadForPicture(
-        uri: SelectedMedia,
-        context: Context,
-        onError: (String, String) -> Unit,
-    ) {
-        viewModelScope.launch(Dispatchers.IO) {
-            upload(
-                uri,
-                context,
-                onUploading = { isUploadingImageForPicture = it },
-                onUploaded = { picture.value = TextFieldValue(it) },
-                onError = onError,
-            )
-        }
-    }
-
-    private suspend fun upload(
+    /**
+     * Uploads [galleryUri] using the user's configured default file server,
+     * respecting the account's strip-location-on-upload preference. Returns the
+     * published URL or null on failure (having already called [onError]).
+     *
+     * Mirrors the NIP-96/Blossom block used by `BookmarkGroupMetadataViewModel.upload`.
+     */
+    private suspend fun uploadImage(
         galleryUri: SelectedMedia,
         context: Context,
-        onUploading: (Boolean) -> Unit,
-        onUploaded: (String) -> Unit,
         onError: (String, String) -> Unit,
-    ) {
-        onUploading(true)
-
+    ): String? {
         val sourceUri =
             if (account.settings.stripLocationOnUpload) {
                 val result = MetadataStripper.strip(galleryUri.uri, galleryUri.mimeType, context.applicationContext)
@@ -143,8 +209,7 @@ class EmojiPackMetadataViewModel : ViewModel() {
                         stringRes(context, R.string.metadata_strip_failed_title),
                         stringRes(context, R.string.metadata_strip_failed_upload_cancelled),
                     )
-                    onUploading(false)
-                    return
+                    return null
                 }
                 result.uri
             } else {
@@ -152,7 +217,7 @@ class EmojiPackMetadataViewModel : ViewModel() {
             }
         val compResult = MediaCompressor().compress(sourceUri, galleryUri.mimeType, CompressorQuality.MEDIUM, context.applicationContext)
 
-        try {
+        return try {
             val result =
                 if (account.settings.defaultFileServer.type == ServerType.NIP96) {
                     Nip96Uploader().upload(
@@ -182,19 +247,24 @@ class EmojiPackMetadataViewModel : ViewModel() {
                 }
 
             if (result.url != null) {
-                onUploading(false)
-                onUploaded(result.url)
+                result.url
             } else {
-                onUploading(false)
-                onError(stringRes(context, R.string.failed_to_upload_media_no_details), stringRes(context, R.string.server_did_not_provide_a_url_after_uploading))
+                onError(
+                    stringRes(context, R.string.failed_to_upload_media_no_details),
+                    stringRes(context, R.string.server_did_not_provide_a_url_after_uploading),
+                )
+                null
             }
         } catch (_: SignerExceptions.ReadOnlyException) {
-            onUploading(false)
-            onError(stringRes(context, R.string.failed_to_upload_media_no_details), stringRes(context, R.string.login_with_a_private_key_to_be_able_to_upload))
+            onError(
+                stringRes(context, R.string.failed_to_upload_media_no_details),
+                stringRes(context, R.string.login_with_a_private_key_to_be_able_to_upload),
+            )
+            null
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            onUploading(false)
             onError(stringRes(context, R.string.failed_to_upload_media_no_details), e.message ?: e.javaClass.simpleName)
+            null
         }
     }
 }

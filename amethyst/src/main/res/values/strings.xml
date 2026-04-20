@@ -2387,6 +2387,8 @@
     <string name="emoji_pack_name_label">Pack name</string>
     <string name="emoji_pack_description_label">Description (optional)</string>
     <string name="emoji_pack_image_label">Cover image URL (optional)</string>
+    <string name="emoji_pack_upload_image_cta">Upload a cover image</string>
+    <string name="emoji_pack_upload_image_hint">Pick a square image to represent this emoji pack.</string>
     <string name="no_emoji_packs">You don\'t have any emoji packs yet</string>
     <string name="emoji_pack_count">%1$d emojis</string>
     <string name="my_emoji_list_title">My Emoji List</string>

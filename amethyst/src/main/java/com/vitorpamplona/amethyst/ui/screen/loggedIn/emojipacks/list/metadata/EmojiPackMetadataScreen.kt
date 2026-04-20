@@ -20,38 +20,59 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.list.metadata
 
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.actions.uploads.SelectSingleFromGallery
+import com.vitorpamplona.amethyst.ui.actions.uploads.GallerySelectSingle
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.CreatingTopBar
 import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 
 @Composable
 fun EmojiPackMetadataScreen(
@@ -82,34 +103,65 @@ private fun EmojiPackMetadataScaffold(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    val context = LocalContext.current
+    val scrollState = rememberScrollState()
+
+    var wantsToPickImage by remember { mutableStateOf(false) }
+
+    if (wantsToPickImage) {
+        GallerySelectSingle(
+            onImageUri = { media ->
+                wantsToPickImage = false
+                if (media != null) {
+                    viewModel.pickMedia(media)
+                }
+            },
+        )
+    }
+
+    val onSubmit: () -> Unit = {
+        viewModel.submit(
+            context = context,
+            onSuccess = { nav.popBack() },
+            onError = accountViewModel.toastManager::toast,
+        )
+    }
+
     Scaffold(
         topBar = {
             EmojiPackMetadataTopBar(
                 viewModel = viewModel,
-                accountViewModel = accountViewModel,
                 nav = nav,
+                onSubmit = onSubmit,
             )
         },
     ) { pad ->
-        LazyColumn(
-            Modifier
-                .fillMaxSize()
-                .padding(
-                    start = 10.dp,
-                    end = 10.dp,
-                    top = pad.calculateTopPadding(),
-                    bottom = pad.calculateBottomPadding(),
-                ).consumeWindowInsets(pad)
-                .imePadding(),
+        Surface(
+            modifier =
+                Modifier
+                    .padding(pad)
+                    .consumeWindowInsets(pad)
+                    .imePadding(),
         ) {
-            item {
-                PackName(viewModel)
-                Spacer(modifier = DoubleVertSpacer)
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 10.dp, vertical = 10.dp),
+            ) {
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(scrollState),
+                ) {
+                    PackImagePicker(
+                        viewModel = viewModel,
+                        onPickImage = { wantsToPickImage = true },
+                    )
 
-                PackImage(viewModel, accountViewModel)
-                Spacer(modifier = DoubleVertSpacer)
+                    Spacer(modifier = Modifier.height(12.dp))
 
-                PackDescription(viewModel)
+                    PackFormFields(viewModel)
+                }
             }
         }
     }
@@ -118,8 +170,8 @@ private fun EmojiPackMetadataScaffold(
 @Composable
 private fun EmojiPackMetadataTopBar(
     viewModel: EmojiPackMetadataViewModel,
-    accountViewModel: AccountViewModel,
     nav: INav,
+    onSubmit: () -> Unit,
 ) {
     if (viewModel.isNewPack) {
         CreatingTopBar(
@@ -129,17 +181,7 @@ private fun EmojiPackMetadataTopBar(
                 viewModel.clear()
                 nav.popBack()
             },
-            onPost = {
-                try {
-                    viewModel.createOrUpdate()
-                    nav.popBack()
-                } catch (e: SignerExceptions.ReadOnlyException) {
-                    accountViewModel.toastManager.toast(
-                        R.string.read_only_user,
-                        R.string.login_with_a_private_key_to_be_able_to_sign_events,
-                    )
-                }
-            },
+            onPost = onSubmit,
         )
     } else {
         SavingTopBar(
@@ -149,83 +191,135 @@ private fun EmojiPackMetadataTopBar(
                 viewModel.clear()
                 nav.popBack()
             },
-            onPost = {
-                try {
-                    viewModel.createOrUpdate()
-                    nav.popBack()
-                } catch (e: SignerExceptions.ReadOnlyException) {
-                    accountViewModel.toastManager.toast(
-                        R.string.read_only_user,
-                        R.string.login_with_a_private_key_to_be_able_to_sign_events,
-                    )
-                }
-            },
+            onPost = onSubmit,
         )
     }
 }
 
 @Composable
-private fun PackName(viewModel: EmojiPackMetadataViewModel) {
+private fun PackImagePicker(
+    viewModel: EmojiPackMetadataViewModel,
+    onPickImage: () -> Unit,
+) {
+    val picked = viewModel.pickedMedia
+    val currentUrl = viewModel.picture.value.text
+
+    when {
+        picked != null -> {
+            HeroImagePreview(
+                model = picked.uri,
+                onClick = onPickImage,
+            )
+        }
+
+        currentUrl.isNotBlank() -> {
+            HeroImagePreview(
+                model = currentUrl,
+                onClick = onPickImage,
+            )
+        }
+
+        else -> {
+            UploadPlaceholder(onClick = onPickImage)
+        }
+    }
+}
+
+@Composable
+private fun HeroImagePreview(
+    model: Any,
+    onClick: () -> Unit,
+) {
+    AsyncImage(
+        model = model,
+        contentDescription = stringRes(R.string.emoji_pack_image_label),
+        contentScale = ContentScale.Crop,
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f)
+                .clip(RoundedCornerShape(12.dp))
+                .clickable(onClick = onClick),
+    )
+}
+
+@Composable
+private fun UploadPlaceholder(onClick: () -> Unit) {
+    Box(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f)
+                .border(
+                    width = 1.dp,
+                    color = MaterialTheme.colorScheme.outline,
+                    shape = RoundedCornerShape(12.dp),
+                ).clickable(onClick = onClick)
+                .padding(24.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(
+                imageVector = Icons.Default.AddPhotoAlternate,
+                contentDescription = null,
+                modifier = Modifier.size(56.dp),
+                tint = MaterialTheme.colorScheme.primary,
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = stringRes(R.string.emoji_pack_upload_image_cta),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = stringRes(R.string.emoji_pack_upload_image_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+        }
+    }
+}
+
+@Composable
+private fun PackFormFields(viewModel: EmojiPackMetadataViewModel) {
     OutlinedTextField(
-        label = { Text(text = stringRes(R.string.emoji_pack_name_label)) },
-        modifier = Modifier.fillMaxWidth(),
         value = viewModel.name.value,
         onValueChange = { viewModel.name.value = it },
+        label = { Text(text = stringRes(R.string.emoji_pack_name_label)) },
         placeholder = {
             Text(
                 text = stringRes(R.string.emoji_pack_name_label),
                 color = MaterialTheme.colorScheme.placeholderText,
             )
         },
+        modifier = Modifier.fillMaxWidth(),
+        singleLine = true,
         keyboardOptions =
             KeyboardOptions.Default.copy(
                 capitalization = KeyboardCapitalization.Sentences,
             ),
         textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
     )
-}
 
-@Composable
-private fun PackImage(
-    viewModel: EmojiPackMetadataViewModel,
-    accountViewModel: AccountViewModel,
-) {
-    OutlinedTextField(
-        label = { Text(text = stringRes(R.string.emoji_pack_image_label)) },
-        modifier = Modifier.fillMaxWidth(),
-        value = viewModel.picture.value,
-        onValueChange = { viewModel.picture.value = it },
-        placeholder = {
-            Text(
-                text = "https://example.com/cover.jpg",
-                color = MaterialTheme.colorScheme.placeholderText,
-            )
-        },
-        leadingIcon = {
-            val context = LocalContext.current
-            SelectSingleFromGallery(
-                isUploading = viewModel.isUploadingImageForPicture,
-                tint = MaterialTheme.colorScheme.placeholderText,
-                modifier = Modifier.padding(start = 2.dp),
-            ) {
-                viewModel.uploadForPicture(it, context, onError = accountViewModel.toastManager::toast)
-            }
-        },
-    )
-}
+    Spacer(modifier = Modifier.height(12.dp))
 
-@Composable
-private fun PackDescription(viewModel: EmojiPackMetadataViewModel) {
     OutlinedTextField(
-        label = { Text(text = stringRes(R.string.emoji_pack_description_label)) },
-        modifier = Modifier.fillMaxWidth(),
         value = viewModel.description.value,
         onValueChange = { viewModel.description.value = it },
+        label = { Text(text = stringRes(R.string.emoji_pack_description_label)) },
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .height(120.dp),
+        minLines = 2,
+        maxLines = 6,
         keyboardOptions =
             KeyboardOptions.Default.copy(
                 capitalization = KeyboardCapitalization.Sentences,
             ),
         textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
-        minLines = 3,
     )
 }
