@@ -37,11 +37,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.actions.uploads.SelectSingleFromGallery
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.CreatingTopBar
 import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
@@ -104,7 +106,7 @@ private fun EmojiPackMetadataScaffold(
                 PackName(viewModel)
                 Spacer(modifier = DoubleVertSpacer)
 
-                PackImage(viewModel)
+                PackImage(viewModel, accountViewModel)
                 Spacer(modifier = DoubleVertSpacer)
 
                 PackDescription(viewModel)
@@ -184,7 +186,10 @@ private fun PackName(viewModel: EmojiPackMetadataViewModel) {
 }
 
 @Composable
-private fun PackImage(viewModel: EmojiPackMetadataViewModel) {
+private fun PackImage(
+    viewModel: EmojiPackMetadataViewModel,
+    accountViewModel: AccountViewModel,
+) {
     OutlinedTextField(
         label = { Text(text = stringRes(R.string.emoji_pack_image_label)) },
         modifier = Modifier.fillMaxWidth(),
@@ -195,6 +200,16 @@ private fun PackImage(viewModel: EmojiPackMetadataViewModel) {
                 text = "https://example.com/cover.jpg",
                 color = MaterialTheme.colorScheme.placeholderText,
             )
+        },
+        leadingIcon = {
+            val context = LocalContext.current
+            SelectSingleFromGallery(
+                isUploading = viewModel.isUploadingImageForPicture,
+                tint = MaterialTheme.colorScheme.placeholderText,
+                modifier = Modifier.padding(start = 2.dp),
+            ) {
+                viewModel.uploadForPicture(it, context, onError = accountViewModel.toastManager::toast)
+            }
         },
     )
 }
