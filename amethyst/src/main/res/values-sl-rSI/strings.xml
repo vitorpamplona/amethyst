@@ -414,6 +414,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="pinned_notes_explainer">Vaši pripeti zapiski</string>
     <string name="pin_to_profile">Pripni k profilu</string>
     <string name="unpin_from_profile">Odpni od profila</string>
+    <string name="deleted_items_banner_title">%1$d elementov na tem seznamu je avtor izbrisal.</string>
     <string name="deleted_items_banner_remove">Odstrani iz seznama</string>
     <string name="deleted_items_banner_dismiss">Prekliči</string>
     <string name="bookmark_lists">Seznam zaznamkov</string>
@@ -1191,7 +1192,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="route">Pot</string>
     <string name="route_home">Domov</string>
     <string name="route_search">Iskanje</string>
-    <string name="route_discover">Razišči</string>
+    <string name="route_discover">Odkrij</string>
     <string name="route_messages">Sporočila</string>
     <string name="route_notifications">Obvestila</string>
     <string name="route_global">Globalno</string>
@@ -1504,7 +1505,20 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="feed_group_locations">Lokacije</string>
     <string name="feed_group_communities">Skupnosti</string>
     <string name="feed_group_lists">Seznami</string>
+    <string name="feed_group_dvms">Algoritmi vsebin</string>
+    <string name="follow_list_all_favorite_dvms">Vsi priljubljeni algoritmi vsebin</string>
     <string name="feed_group_relays">Releji</string>
+    <string name="add_dvm_to_favorites">Dodaj algoritem vsebin med priljubljene</string>
+    <string name="remove_dvm_from_favorites">Odstrani iz priljubljenih</string>
+    <string name="favorite_dvms_title">Priljubljeni algoritmi vsebin</string>
+    <string name="favorite_dvms_explainer">Algoritmi vsebin, ki jih tukaj označite z zvezdico, se bodo prikazali kot filtri na začetnem zaslonu. Za nove odprite »Odkrij«.</string>
+    <string name="favorite_dvms_empty">Še nimate priljubljenih algoritmov vsebin. Odprite »Odkrij«, izberite enega in ga označite z zvezdico, da ga dodate sem.</string>
+    <string name="dvm_home_status_requesting">Poizvedba pri %1$s za vsebine…</string>
+    <string name="dvm_home_status_requesting_all">Pridobivanje vsebin iz vaših najljubših algoritmov…</string>
+    <string name="dvm_home_status_processing">Priprava vaših vsebin…</string>
+    <string name="dvm_home_status_payment_required">Ta algoritem vsebin zahteva plačilo</string>
+    <string name="dvm_home_status_error">Napaka algoritma pri osveževanju vsebin</string>
+    <string name="dvm_home_retry">Poskusi znova</string>
     <string name="temporary_account">Odjava ob zaklepu naprave</string>
     <string name="private_message">Zasebno sporočilo</string>
     <string name="public_message">Javno sporočilo</string>
