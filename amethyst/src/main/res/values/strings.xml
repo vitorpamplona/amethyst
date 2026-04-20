@@ -2372,4 +2372,30 @@
     <string name="ai_tone_more_direct">More Direct</string>
     <string name="ai_tone_punchy">Punchy</string>
     <string name="ai_tone_emojify">+ Emoji</string>
+
+    <!-- Emoji packs -->
+    <string name="emoji_packs_title">Emoji Packs</string>
+    <string name="emoji_pack_management_title">Add to Emoji List</string>
+    <string name="add_to_emoji_list">Add to my emoji list</string>
+    <string name="remove_from_emoji_list">Remove from my emoji list</string>
+    <string name="new_emoji_pack">New emoji pack</string>
+    <string name="edit_emoji_pack">Edit emoji pack</string>
+    <string name="emoji_shortcode_label">Shortcode (e.g. :smile:)</string>
+    <string name="emoji_shortcode_invalid">Only letters, numbers, hyphens, and underscores</string>
+    <string name="emoji_url_label">Image URL</string>
+    <string name="emoji_pack_address_label">Pack address (optional)</string>
+    <string name="emoji_pack_name_label">Pack name</string>
+    <string name="emoji_pack_description_label">Description (optional)</string>
+    <string name="emoji_pack_image_label">Cover image URL (optional)</string>
+    <string name="no_emoji_packs">You don\'t have any emoji packs yet</string>
+    <string name="emoji_pack_count">%1$d emojis</string>
+    <string name="my_emoji_list_title">My Emoji List</string>
+    <string name="my_emoji_list_explainer">Emoji packs you\'ve added to your selection (NIP-51 kind 10030)</string>
+    <string name="add_emoji_fab">Add emoji</string>
+    <string name="emoji_add_dialog_title">Add custom emoji</string>
+    <string name="emoji_remove_dialog_title">Remove :%1$s:?</string>
+    <string name="emoji_pack_is_in_list">\"%1$s\" is in your emoji list</string>
+    <string name="emoji_pack_is_not_in_list">\"%1$s\" is not in your emoji list</string>
+    <string name="emoji_pack_actions_dialog_title">Emoji pack actions</string>
+    <string name="manage_emoji_packs">Manage Emoji Packs</string>
 </resources>

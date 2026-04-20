@@ -147,6 +147,28 @@ sealed class Route {
         )
     }
 
+    @Serializable object EmojiPacks : Route()
+
+    @Serializable data class EmojiPackView(
+        val dTag: String,
+    ) : Route()
+
+    @Serializable data class EmojiPackMetadataEdit(
+        val dTag: String? = null,
+    ) : Route()
+
+    @Serializable data class EmojiPackSelection(
+        val kind: Int,
+        val pubKeyHex: HexKey,
+        val dTag: String,
+    ) : Route() {
+        constructor(address: Address) : this(
+            kind = address.kind,
+            pubKeyHex = address.pubKeyHex,
+            dTag = address.dTag,
+        )
+    }
+
     @Serializable object WebBookmarks : Route()
 
     @Serializable object Drafts : Route()
