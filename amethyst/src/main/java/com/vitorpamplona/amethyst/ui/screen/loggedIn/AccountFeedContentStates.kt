@@ -39,6 +39,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip72Communities.D
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip90DVMs.DiscoverNIP89FeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip99Classifieds.DiscoverMarketplaceFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.drafts.dal.DraftEventsFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.browse.dal.BrowseEmojiSetsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.dal.HomeConversationsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.dal.HomeLiveFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.dal.HomeNewThreadFeedFilter
@@ -83,6 +84,8 @@ class AccountFeedContentStates(
     val closedPollsFeed = FeedContentState(ClosedPollsFeedFilter(account), scope, LocalCache)
 
     val badgesFeed = FeedContentState(BadgesFeedFilter(account), scope, LocalCache)
+
+    val browseEmojiSetsFeed = FeedContentState(BrowseEmojiSetsFeedFilter(account), scope, LocalCache)
 
     val picturesFeed = FeedContentState(PictureFeedFilter(account), scope, LocalCache)
     val productsFeed = FeedContentState(ProductsFeedFilter(account), scope, LocalCache)
@@ -130,6 +133,8 @@ class AccountFeedContentStates(
 
         badgesFeed.updateFeedWith(newNotes)
 
+        browseEmojiSetsFeed.updateFeedWith(newNotes)
+
         picturesFeed.updateFeedWith(newNotes)
         productsFeed.updateFeedWith(newNotes)
         shortsFeed.updateFeedWith(newNotes)
@@ -169,6 +174,8 @@ class AccountFeedContentStates(
         closedPollsFeed.deleteFromFeed(newNotes)
 
         badgesFeed.deleteFromFeed(newNotes)
+
+        browseEmojiSetsFeed.deleteFromFeed(newNotes)
 
         picturesFeed.deleteFromFeed(newNotes)
         productsFeed.deleteFromFeed(newNotes)
