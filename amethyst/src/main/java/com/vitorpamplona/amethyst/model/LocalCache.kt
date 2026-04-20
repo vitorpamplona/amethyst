@@ -1541,12 +1541,32 @@ object LocalCache : ILocalCache, ICacheProvider {
 
             repliesTo.forEach { it.addZap(zapRequest, note) }
 
+            attachZapToLiveActivityChannel(event, note, relay)
+
             refreshNewNoteObservers(note)
 
             return true
         }
 
         return false
+    }
+
+    private fun attachZapToLiveActivityChannel(
+        event: LnZapEvent,
+        note: Note,
+        relay: NormalizedRelayUrl?,
+    ) {
+        val address =
+            event.tags
+                .asSequence()
+                .mapNotNull(ATag::parseAddress)
+                .firstOrNull { it.kind == LiveActivitiesEvent.KIND }
+                ?: return
+
+        // Match zap.stream: only show zaps whose receiver is the live activity host
+        if (event.zappedAuthor().none { it == address.pubKeyHex }) return
+
+        getOrCreateLiveChannel(address).addNote(note, relay)
     }
 
     fun consume(
