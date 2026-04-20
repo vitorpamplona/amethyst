@@ -31,6 +31,9 @@ import com.vitorpamplona.quartz.marmot.mls.crypto.X25519
 import com.vitorpamplona.quartz.marmot.mls.framing.ContentType
 import com.vitorpamplona.quartz.marmot.mls.framing.MlsMessage
 import com.vitorpamplona.quartz.marmot.mls.framing.PrivateMessage
+import com.vitorpamplona.quartz.marmot.mls.framing.PublicMessage
+import com.vitorpamplona.quartz.marmot.mls.framing.Sender
+import com.vitorpamplona.quartz.marmot.mls.framing.SenderType
 import com.vitorpamplona.quartz.marmot.mls.framing.WireFormat
 import com.vitorpamplona.quartz.marmot.mls.messages.Commit
 import com.vitorpamplona.quartz.marmot.mls.messages.CommitResult
@@ -502,7 +505,10 @@ class MlsGroup private constructor(
         val newConfirmedTranscriptHash = MlsCryptoProvider.hash(confirmedInput.toByteArray())
 
         val newTreeHash = tree.treeHash()
-        val newEpoch = groupContext.epoch + 1
+        val oldEpoch = groupContext.epoch
+        val preCommitGroupId = groupContext.groupId
+        val committerLeafIndex = myLeafIndex
+        val newEpoch = oldEpoch + 1
 
         groupContext =
             groupContext.copy(
@@ -544,7 +550,20 @@ class MlsGroup private constructor(
         sentKeys.clear()
 
         val commitBytes = commit.toTlsBytes()
-        return CommitResult(commitBytes, welcomeBytes, null)
+        val framedCommitBytes =
+            framePublicMessageCommit(
+                groupId = preCommitGroupId,
+                epoch = oldEpoch,
+                senderLeafIndex = committerLeafIndex,
+                commitBytes = commitBytes,
+                confirmationTag = confirmationTag,
+            )
+        return CommitResult(
+            commitBytes = commitBytes,
+            welcomeBytes = welcomeBytes,
+            groupInfoBytes = null,
+            framedCommitBytes = framedCommitBytes,
+        )
     }
 
     // --- Message Encryption ---
@@ -1474,6 +1493,38 @@ class MlsGroup private constructor(
         private const val MAX_SENT_KEYS = 10_000
         private const val REUSE_GUARD_LENGTH = 4
         private const val RATCHET_TREE_EXTENSION_TYPE = 0x0001
+
+        /**
+         * Wrap a raw [Commit] (as [commitBytes]) in an MlsMessage(PublicMessage(...))
+         * envelope so it can be published on the wire (RFC 9420 §6 / §6.2).
+         *
+         * The receiver uses the sender's leaf index and the confirmation_tag from
+         * the [PublicMessage] header to drive [MlsGroup.processCommit]. The
+         * `signature` and `membership_tag` opaque fields are intentionally empty —
+         * the current implementation does not verify them on inbound commits,
+         * but the TLS structure must still be present so decoding succeeds.
+         */
+        internal fun framePublicMessageCommit(
+            groupId: ByteArray,
+            epoch: Long,
+            senderLeafIndex: Int,
+            commitBytes: ByteArray,
+            confirmationTag: ByteArray,
+        ): ByteArray {
+            val publicMessage =
+                PublicMessage(
+                    groupId = groupId,
+                    epoch = epoch,
+                    sender = Sender(SenderType.MEMBER, senderLeafIndex),
+                    authenticatedData = ByteArray(0),
+                    contentType = ContentType.COMMIT,
+                    content = commitBytes,
+                    signature = ByteArray(0),
+                    confirmationTag = confirmationTag,
+                    membershipTag = ByteArray(0),
+                )
+            return MlsMessage.fromPublicMessage(publicMessage).toTlsBytes()
+        }
 
         /**
          * Build ConfirmedTranscriptHashInput (RFC 9420 Section 8.2) — static version

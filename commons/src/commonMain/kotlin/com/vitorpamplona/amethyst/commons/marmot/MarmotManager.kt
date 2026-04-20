@@ -179,7 +179,10 @@ class MarmotManager(
         }
 
         val commitResult = groupManager.addMember(nostrGroupId, keyPackageBytes)
-        val commitEvent = outboundProcessor.buildCommitEvent(nostrGroupId, commitResult.commitBytes)
+        val commitEvent = outboundProcessor.buildCommitEvent(nostrGroupId, commitResult.framedCommitBytes)
+        // We've already applied this commit locally; prevent the relay-echoed
+        // copy from being re-applied by the inbound pipeline.
+        inboundProcessor.markEventProcessed(commitEvent.signedEvent.id)
 
         val welcomeDelivery =
             welcomeSender.wrapWelcome(
@@ -266,7 +269,9 @@ class MarmotManager(
         targetLeafIndex: Int,
     ): OutboundGroupEvent {
         val commitResult = groupManager.removeMember(nostrGroupId, targetLeafIndex)
-        return outboundProcessor.buildCommitEvent(nostrGroupId, commitResult.commitBytes)
+        val commitEvent = outboundProcessor.buildCommitEvent(nostrGroupId, commitResult.framedCommitBytes)
+        inboundProcessor.markEventProcessed(commitEvent.signedEvent.id)
+        return commitEvent
     }
 
     /**
@@ -278,7 +283,9 @@ class MarmotManager(
         metadata: MarmotGroupData,
     ): OutboundGroupEvent {
         val commitResult = groupManager.updateGroupExtensions(nostrGroupId, listOf(metadata.toExtension()))
-        return outboundProcessor.buildCommitEvent(nostrGroupId, commitResult.commitBytes)
+        val commitEvent = outboundProcessor.buildCommitEvent(nostrGroupId, commitResult.framedCommitBytes)
+        inboundProcessor.markEventProcessed(commitEvent.signedEvent.id)
+        return commitEvent
     }
 
     // --- KeyPackage Management ---
