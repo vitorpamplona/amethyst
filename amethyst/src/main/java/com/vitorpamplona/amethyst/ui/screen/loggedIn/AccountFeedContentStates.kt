@@ -56,6 +56,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.shorts.dal.ShortsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.dal.VideoFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.webBookmarks.dal.WebBookmarkFeedFilter
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class AccountFeedContentStates(
     val account: Account,
@@ -99,6 +101,19 @@ class AccountFeedContentStates(
     val drafts = FeedContentState(DraftEventsFeedFilter(account), scope, LocalCache)
 
     val webBookmarks = FeedContentState(WebBookmarkFeedFilter(account), scope, LocalCache)
+
+    init {
+        // Marmot group list changes (new group, group marked known, group
+        // metadata synced) don't flow through LocalCache.newEventBundles, so
+        // the additive update path can't see them. Force a full feed rebuild
+        // whenever the list changes so empty groups appear and placeholder
+        // rows get replaced by real messages.
+        scope.launch(Dispatchers.IO) {
+            account.marmotGroupList.groupListChanges.collect {
+                dmKnown.invalidateData()
+            }
+        }
+    }
 
     suspend fun init() {
         notificationSummary.initializeSuspend()
