@@ -38,6 +38,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.RefreshingChatroomFeedView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.dal.ChannelFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.datasource.ChannelFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities.header.LiveStreamGoalHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.send.ChannelNewMessageViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.send.EditFieldRow
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
@@ -127,6 +128,7 @@ fun LiveActivityChannelView(
                     .weight(1f, true),
         ) {
             ShowVideoStreaming(channel, accountViewModel)
+            LiveStreamGoalHeader(channel, accountViewModel, nav)
             RefreshingChatroomFeedView(
                 feedContentState = feedViewModel.feedState,
                 accountViewModel = accountViewModel,

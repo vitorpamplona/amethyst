@@ -20,42 +20,47 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.datasource.subassemblies
 
-import com.vitorpamplona.amethyst.commons.model.Channel
-import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
-import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
-import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEoseManager
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.datasource.ChannelQueryState
-import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip75ZapGoals.GoalEvent
 
-class ChannelPublicFilterSubAssembler(
-    client: INostrClient,
-    allKeys: () -> Set<ChannelQueryState>,
-) : PerUniqueIdEoseManager<ChannelQueryState, Channel>(client, allKeys) {
-    override fun updateFilter(
-        key: ChannelQueryState,
-        since: SincePerRelayMap?,
-    ): List<RelayBasedFilter>? =
-        when (val channel = key.channel) {
-            is EphemeralChatChannel -> {
-                filterMessagesToEphemeralChat(channel, since)
-            }
+/**
+ * Fetches the NIP-75 zap goal referenced by a live stream plus the zap receipts
+ * that count toward it.
+ *
+ * zap.stream attaches a goal to a 30311 event via `["goal", "<hex event id>"]`.
+ * We fetch the 9041 goal event by id and the 9735 zap receipts that `#e`-tag it.
+ */
+fun filterGoalForLiveActivities(
+    channel: LiveActivitiesChannel,
+    since: SincePerRelayMap?,
+): List<RelayBasedFilter> {
+    val goalId = channel.info?.goalEventId() ?: return emptyList()
 
-            is PublicChatChannel -> {
-                filterMessagesToPublicChat(channel, since)
-            }
-
-            is LiveActivitiesChannel -> {
-                filterMessagesToLiveActivities(channel, since) +
-                    filterGoalForLiveActivities(channel, since)
-            }
-
-            else -> {
-                null
-            }
-        }
-
-    override fun id(key: ChannelQueryState) = key.channel
+    return channel.relays().toSet().flatMap { relay ->
+        listOf(
+            RelayBasedFilter(
+                relay = relay,
+                filter =
+                    Filter(
+                        kinds = listOf(GoalEvent.KIND),
+                        ids = listOf(goalId),
+                        limit = 1,
+                    ),
+            ),
+            RelayBasedFilter(
+                relay = relay,
+                filter =
+                    Filter(
+                        kinds = listOf(LnZapEvent.KIND),
+                        tags = mapOf("e" to listOf(goalId)),
+                        limit = 200,
+                        since = since?.get(relay)?.time,
+                    ),
+            ),
+        )
+    }
 }
