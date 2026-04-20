@@ -369,14 +369,14 @@ private suspend fun processMarmotWelcomeFlow(
         return
     }
 
-    val nostrGroupId = innerEvent.nostrGroupId()
-    if (nostrGroupId == null) {
-        Log.w("MarmotDbg") { "processMarmotWelcomeFlow: WelcomeEvent missing 'h' tag (nostrGroupId)" }
-        return
+    // "h" tag is optional per MIP-02 — some senders (e.g. whitenoise-rs) omit it.
+    // nostrGroupId is derived from the MLS GroupContext's NostrGroupData extension instead.
+    val hintNostrGroupId = innerEvent.nostrGroupId()
+    Log.d("MarmotDbg") {
+        "processMarmotWelcomeFlow: h-tag=${hintNostrGroupId?.take(8) ?: "(absent)"} — deriving from MLS content"
     }
-    Log.d("MarmotDbg") { "processMarmotWelcomeFlow: invoking manager.processWelcome group=${nostrGroupId.take(8)}…" }
 
-    val result = manager.processWelcome(innerEvent, nostrGroupId)
+    val result = manager.processWelcome(innerEvent, hintNostrGroupId)
 
     when (result) {
         is WelcomeResult.Joined -> {

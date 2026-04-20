@@ -128,20 +128,14 @@ class MarmotManager(
      */
     suspend fun processWelcome(
         welcomeEvent: WelcomeEvent,
-        nostrGroupId: HexKey,
+        hintNostrGroupId: HexKey? = welcomeEvent.nostrGroupId(),
     ): WelcomeResult {
-        // Validate that the provided nostrGroupId matches the WelcomeEvent's h-tag if present
-        val eventGroupId = welcomeEvent.nostrGroupId()
-        if (eventGroupId != null && eventGroupId != nostrGroupId) {
-            return WelcomeResult.Error(
-                "nostrGroupId mismatch: expected $nostrGroupId but WelcomeEvent has $eventGroupId",
-            )
-        }
-
-        val result = inboundProcessor.processWelcome(welcomeEvent, nostrGroupId)
+        // nostrGroupId is derived from the MLS GroupContext's NostrGroupData extension.
+        // The h-tag value (hintNostrGroupId) is validated against the MLS content inside
+        // inboundProcessor, so senders that omit the h-tag are handled transparently.
+        val result = inboundProcessor.processWelcome(welcomeEvent, hintNostrGroupId)
 
         if (result is WelcomeResult.Joined) {
-            // Update subscription state for the new group
             subscriptionManager.subscribeGroup(result.nostrGroupId)
             Log.d("MarmotManager", "Joined group ${result.nostrGroupId}")
         }

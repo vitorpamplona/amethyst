@@ -219,26 +219,21 @@ class MarmotInboundProcessor(
      * 4. Mark KeyPackage as consumed for rotation
      *
      * @param welcomeEvent the unwrapped kind:444 event
-     * @param nostrGroupId the Nostr group ID (from relay context or Welcome tags)
+     * @param hintNostrGroupId optional group ID from the "h" tag; validated against MLS content
+     *   if provided. If absent (sender omitted "h" tag), the ID is derived from the Welcome's
+     *   NostrGroupData extension — the MLS content is always the authoritative source.
      * @return the processing result
      */
     @OptIn(ExperimentalEncodingApi::class)
     suspend fun processWelcome(
         welcomeEvent: WelcomeEvent,
-        nostrGroupId: HexKey,
+        hintNostrGroupId: HexKey? = null,
     ): WelcomeResult =
         try {
             com.vitorpamplona.quartz.utils.Log
                 .d("MarmotDbg") {
-                    "MarmotInboundProcessor.processWelcome: group=${nostrGroupId.take(8)}… eventId=${welcomeEvent.id.take(8)}…"
+                    "MarmotInboundProcessor.processWelcome: hint=${hintNostrGroupId?.take(8)} eventId=${welcomeEvent.id.take(8)}…"
                 }
-            // Validate the caller-provided nostrGroupId matches the Welcome event's own h tag
-            val eventGroupId = welcomeEvent.nostrGroupId()
-            if (eventGroupId != null && eventGroupId != nostrGroupId) {
-                return WelcomeResult.Error(
-                    "nostrGroupId mismatch: caller=$nostrGroupId, event=$eventGroupId",
-                )
-            }
 
             val welcomeBytes = Base64.decode(welcomeEvent.welcomeBase64())
             val keyPackageEventId = welcomeEvent.keyPackageEventId()
@@ -273,10 +268,11 @@ class MarmotInboundProcessor(
             com.vitorpamplona.quartz.utils.Log
                 .d("MarmotDbg") { "MarmotInboundProcessor.processWelcome: bundle found — invoking groupManager.processWelcome" }
 
-            // Join the group
-            groupManager.processWelcome(nostrGroupId, welcomeBytes, bundle)
+            // Join the group; nostrGroupId is derived from the MLS GroupContext's
+            // NostrGroupData extension. The h-tag hint (if any) is validated inside.
+            val (_, nostrGroupId) = groupManager.processWelcome(welcomeBytes, bundle, hintNostrGroupId)
             com.vitorpamplona.quartz.utils.Log
-                .d("MarmotDbg") { "MarmotInboundProcessor.processWelcome: groupManager.processWelcome succeeded for ${nostrGroupId.take(8)}…" }
+                .d("MarmotDbg") { "MarmotInboundProcessor.processWelcome: joined group=${nostrGroupId.take(8)}…" }
 
             // Mark the KeyPackage as consumed — triggers rotation
             keyPackageRotationManager.markConsumedByEventId(keyPackageEventId)

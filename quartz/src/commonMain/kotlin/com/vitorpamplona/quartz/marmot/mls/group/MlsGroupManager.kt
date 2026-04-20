@@ -192,25 +192,40 @@ class MlsGroupManager(
      * 2. Group state is persisted
      * 3. A KeyPackage rotation should be triggered (see [needsKeyPackageRotation])
      *
-     * @param nostrGroupId hex-encoded Nostr group ID (from Welcome event tags)
      * @param welcomeBytes TLS-serialized Welcome message
      * @param bundle the KeyPackageBundle that was used for the invitation
-     * @return the joined [MlsGroup]
+     * @param hintNostrGroupId optional nostrGroupId from the Welcome event's "h" tag;
+     *   if provided and non-null, validated against the GroupContext's NostrGroupData extension.
+     *   If absent (sender did not include an "h" tag), the ID is derived from the MLS content.
+     * @return pair of (joined group, derived nostrGroupId)
      */
     suspend fun processWelcome(
-        nostrGroupId: HexKey,
         welcomeBytes: ByteArray,
         bundle: KeyPackageBundle,
-    ): MlsGroup =
+        hintNostrGroupId: HexKey? = null,
+    ): Pair<MlsGroup, HexKey> =
         mutex.withLock {
             val group = MlsGroup.processWelcome(welcomeBytes, bundle)
-            groups[nostrGroupId] = group
+
+            val derivedId =
+                group.currentMarmotData()?.nostrGroupId
+                    ?: throw IllegalArgumentException(
+                        "Welcome GroupContext is missing the NostrGroupData extension — cannot derive nostrGroupId",
+                    )
+
+            if (hintNostrGroupId != null && hintNostrGroupId != derivedId) {
+                throw IllegalArgumentException(
+                    "nostrGroupId mismatch: h-tag=$hintNostrGroupId, GroupContext=$derivedId",
+                )
+            }
+
+            groups[derivedId] = group
 
             // init_key is consumed — the bundle's initPrivateKey should not be
             // reused. Caller must discard the bundle and rotate KeyPackages.
 
-            persistGroup(nostrGroupId)
-            group
+            persistGroup(derivedId)
+            Pair(group, derivedId)
         }
 
     /**
