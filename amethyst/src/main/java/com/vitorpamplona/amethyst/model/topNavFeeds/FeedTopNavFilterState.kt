@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.favoriteAlgoFeeds.AllFavorit
 import com.vitorpamplona.amethyst.model.topNavFeeds.favoriteAlgoFeeds.FavoriteAlgoFeedFlow
 import com.vitorpamplona.amethyst.model.topNavFeeds.global.GlobalFeedFlow
 import com.vitorpamplona.amethyst.model.topNavFeeds.hashtag.HashtagFeedFlow
+import com.vitorpamplona.amethyst.model.topNavFeeds.hashtag.MultiHashtagFeedFlow
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.NoteFeedFlow
 import com.vitorpamplona.amethyst.model.topNavFeeds.relay.RelayFeedFlow
 import com.vitorpamplona.amethyst.service.location.LocationState
@@ -68,6 +69,7 @@ class FeedTopNavFilterState(
     val scope: CoroutineScope,
     val favoriteAlgoFeedsOrchestrator: FavoriteAlgoFeedsOrchestrator,
     val favoriteAlgoFeedAddresses: StateFlow<Set<Address>>,
+    val interestSetHashtags: StateFlow<Map<String, Set<String>>> = MutableStateFlow(emptyMap()),
 ) {
     fun loadFlowsFor(listName: TopFilter): IFeedFlowsType =
         when (listName) {
@@ -147,6 +149,11 @@ class FeedTopNavFilterState(
 
             is TopFilter.Hashtag -> {
                 HashtagFeedFlow(listName.tag, followsRelays, proxyRelays)
+            }
+
+            is TopFilter.InterestSet -> {
+                val hashtags = interestSetHashtags.value[listName.address.dTag].orEmpty()
+                MultiHashtagFeedFlow(hashtags, followsRelays, proxyRelays)
             }
 
             is TopFilter.Relay -> {

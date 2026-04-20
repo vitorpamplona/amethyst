@@ -108,6 +108,9 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.HomeScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.ShortNotePostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.VoiceReplyScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.nip75Goals.NewGoalScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.interestSets.display.InterestSetScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.interestSets.list.ListOfInterestSetsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.interestSets.list.metadata.InterestSetMetadataScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.keyBackup.AccountBackupScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.display.lists.PeopleListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.display.packs.FollowPackScreen
@@ -247,6 +250,10 @@ fun BuildNavigation(
         composableFromEnd<Route.BookmarkGroups> { ListOfBookmarkGroupsScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.BookmarkGroupView> { BookmarkGroupScreen(it.dTag, it.bookmarkType, accountViewModel, nav) }
         composableFromBottomArgs<Route.BookmarkGroupMetadataEdit> { BookmarkGroupMetadataScreen(it.dTag, accountViewModel, nav) }
+
+        composableFromEnd<Route.InterestSets> { ListOfInterestSetsScreen(accountViewModel, nav) }
+        composableFromEndArgs<Route.InterestSetView> { InterestSetScreen(it.dTag, accountViewModel, nav) }
+        composableFromBottomArgs<Route.InterestSetMetadataEdit> { InterestSetMetadataScreen(it.dTag, accountViewModel, nav) }
         composableFromBottomArgs<Route.PostBookmarkManagement> { PostBookmarkListManagementScreen(it.postId, accountViewModel, nav) }
         composableFromBottomArgs<Route.ArticleBookmarkManagement> { ArticleBookmarkListManagementScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
 

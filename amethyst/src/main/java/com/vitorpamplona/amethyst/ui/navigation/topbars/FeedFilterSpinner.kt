@@ -90,6 +90,7 @@ import com.vitorpamplona.amethyst.ui.screen.FavoriteAlgoFeedName
 import com.vitorpamplona.amethyst.ui.screen.FeedDefinition
 import com.vitorpamplona.amethyst.ui.screen.GeoHashName
 import com.vitorpamplona.amethyst.ui.screen.HashtagName
+import com.vitorpamplona.amethyst.ui.screen.InterestSetName
 import com.vitorpamplona.amethyst.ui.screen.Name
 import com.vitorpamplona.amethyst.ui.screen.PeopleListName
 import com.vitorpamplona.amethyst.ui.screen.RelayName
@@ -374,6 +375,14 @@ fun RenderOption(
                 color = MaterialTheme.colorScheme.onSurface,
             )
         }
+
+        is InterestSetName -> {
+            Text(
+                text = option.name(),
+                fontSize = Font14SP,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+        }
     }
 }
 
@@ -388,6 +397,7 @@ private enum class FeedGroup(
 ) {
     FEEDS(R.string.feed_group_feeds),
     HASHTAGS(R.string.feed_group_hashtags),
+    INTEREST_SETS(R.string.feed_group_interest_sets),
     COMMUNITIES(R.string.feed_group_communities),
     LOCATIONS(R.string.feed_group_locations),
     LISTS(R.string.feed_group_lists),
@@ -421,6 +431,10 @@ private fun groupFeedDefinitions(options: ImmutableList<FeedDefinition>): Map<Fe
 
             is FavoriteAlgoFeedName -> {
                 FeedGroup.DVMS
+            }
+
+            is InterestSetName -> {
+                FeedGroup.INTEREST_SETS
             }
 
             is ResourceName -> {

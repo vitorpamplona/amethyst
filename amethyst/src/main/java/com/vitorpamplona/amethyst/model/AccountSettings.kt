@@ -165,6 +165,11 @@ sealed class TopFilter(
     ) : TopFilter("FavoriteAlgoFeed/${address.toValue()}")
 
     @Serializable object AllFavoriteAlgoFeeds : TopFilter(" All Favourite DVMs ")
+
+    @Serializable
+    class InterestSet(
+        val address: Address,
+    ) : TopFilter("InterestSet/${address.toValue()}")
 }
 
 @Stable

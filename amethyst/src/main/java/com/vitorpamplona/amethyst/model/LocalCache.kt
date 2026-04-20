@@ -153,6 +153,7 @@ import com.vitorpamplona.quartz.nip51Lists.favoriteAlgoFeedsList.FavoriteAlgoFee
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
 import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
+import com.vitorpamplona.quartz.nip51Lists.interestSet.InterestSetEvent
 import com.vitorpamplona.quartz.nip51Lists.labeledBookmarkList.LabeledBookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
@@ -2642,6 +2643,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is InteractiveStoryPrologueEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is InteractiveStorySceneEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is InteractiveStoryReadingStateEvent -> consumeBaseReplaceable(event, relay, wasVerified)
+                is InterestSetEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is LabeledBookmarkListEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is LiveActivitiesEvent -> consume(event, relay, wasVerified)
                 is LiveActivitiesChatMessageEvent -> consume(event, relay, wasVerified)
