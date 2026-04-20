@@ -226,6 +226,87 @@ class MarmotPipelineTest {
     }
 
     @Test
+    fun testAddMemberCommitIsFramedAsPublicMessage() {
+        // Regression: addMember's outbound commit used to carry the raw Commit TLS
+        // bytes instead of an MlsMessage(PublicMessage(commit)) envelope, which
+        // caused receivers to fail parsing with "Unsupported MLS version: …"
+        // when the first two bytes of the Commit struct were read as the
+        // MlsMessage version field.
+        runBlocking {
+            val manager = createGroupManager()
+            manager.createGroup(groupId, "alice".encodeToByteArray())
+            val group = manager.getGroup(groupId)!!
+            val bobBundle = group.createKeyPackage("bob".encodeToByteArray(), ByteArray(0))
+
+            val commitResult = manager.addMember(groupId, bobBundle.keyPackage.toTlsBytes())
+
+            // The framedCommitBytes must decode as an MlsMessage(PublicMessage(commit))
+            val framed = commitResult.framedCommitBytes
+            val mlsMessage =
+                com.vitorpamplona.quartz.marmot.mls.framing.MlsMessage
+                    .decodeTls(
+                        com.vitorpamplona.quartz.marmot.mls.codec
+                            .TlsReader(framed),
+                    )
+            assertEquals(
+                com.vitorpamplona.quartz.marmot.mls.framing.WireFormat.PUBLIC_MESSAGE,
+                mlsMessage.wireFormat,
+            )
+
+            val publicMessage =
+                com.vitorpamplona.quartz.marmot.mls.framing.PublicMessage
+                    .decodeTls(
+                        com.vitorpamplona.quartz.marmot.mls.codec
+                            .TlsReader(mlsMessage.payload),
+                    )
+            assertEquals(
+                com.vitorpamplona.quartz.marmot.mls.framing.ContentType.COMMIT,
+                publicMessage.contentType,
+            )
+            assertEquals(
+                com.vitorpamplona.quartz.marmot.mls.framing.SenderType.MEMBER,
+                publicMessage.sender.senderType,
+            )
+            assertNotNull(publicMessage.confirmationTag, "confirmation_tag must be present on a commit")
+            // The PublicMessage.content carries the raw Commit struct.
+            kotlin.test.assertContentEquals(commitResult.commitBytes, publicMessage.content)
+        }
+    }
+
+    @Test
+    fun testAddMemberCommitEventDecryptsToFramedMlsMessage() {
+        // End-to-end variant: the kind:445 content returned by buildCommitEvent,
+        // when ChaCha20-Poly1305 decrypted with the current exporter key, must
+        // yield an MlsMessage whose wire format is PUBLIC_MESSAGE (not a raw
+        // Commit struct).
+        runBlocking {
+            val manager = createGroupManager()
+            manager.createGroup(groupId, "alice".encodeToByteArray())
+            val group = manager.getGroup(groupId)!!
+            val bobBundle = group.createKeyPackage("bob".encodeToByteArray(), ByteArray(0))
+
+            val commitResult = manager.addMember(groupId, bobBundle.keyPackage.toTlsBytes())
+
+            val outbound = MarmotOutboundProcessor(manager)
+            val outboundResult = outbound.buildCommitEvent(groupId, commitResult.framedCommitBytes)
+            val event = outboundResult.signedEvent
+
+            val exporterKey = manager.exporterSecret(groupId)
+            val mlsBytes = GroupEventEncryption.decrypt(event.content, exporterKey)
+            val mlsMessage =
+                com.vitorpamplona.quartz.marmot.mls.framing.MlsMessage
+                    .decodeTls(
+                        com.vitorpamplona.quartz.marmot.mls.codec
+                            .TlsReader(mlsBytes),
+                    )
+            assertEquals(
+                com.vitorpamplona.quartz.marmot.mls.framing.WireFormat.PUBLIC_MESSAGE,
+                mlsMessage.wireFormat,
+            )
+        }
+    }
+
+    @Test
     fun testSubscriptionManagerSyncWithGroupManager() {
         runBlocking {
             val manager = createGroupManager()

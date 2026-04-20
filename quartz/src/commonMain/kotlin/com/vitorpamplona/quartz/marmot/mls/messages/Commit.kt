@@ -91,11 +91,22 @@ data class UpdatePath(
 
 /**
  * Result of creating a Commit: the MLS messages to distribute.
+ *
+ * [commitBytes] is the raw TLS-encoded [Commit] struct (RFC 9420 §12.4), useful
+ * for unit tests and the [com.vitorpamplona.quartz.marmot.mls.group.MlsGroup.processCommit]
+ * entry point. For on-the-wire distribution, callers MUST publish
+ * [framedCommitBytes] (the MlsMessage(PublicMessage(FramedContent(commit))) envelope)
+ * so that receivers can parse the sender's leaf index and confirmation tag.
  */
 data class CommitResult(
     val commitBytes: ByteArray,
     val welcomeBytes: ByteArray?,
     val groupInfoBytes: ByteArray?,
+    /**
+     * Fully-framed commit ready for the MIP-03 outer ChaCha20 encryption.
+     * Wire format: MlsMessage(version=mls10, wireFormat=mls_public_message, payload=PublicMessage(...)).
+     */
+    val framedCommitBytes: ByteArray = commitBytes,
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
