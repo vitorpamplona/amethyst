@@ -36,6 +36,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -108,13 +109,13 @@ class CallManagerTest {
      */
     private fun TestScope.collectSessionEvents(manager: CallManager): Pair<MutableList<CallSessionEvent>, Job> {
         val events = mutableListOf<CallSessionEvent>()
-        val job = launch { manager.sessionEvents.collect { events.add(it) } }
+        val job = launch(UnconfinedTestDispatcher(testScheduler)) { manager.sessionEvents.collect { events.add(it) } }
         return events to job
     }
 
     private fun TestScope.collectRenegotiationEvents(manager: CallManager): Pair<MutableList<CallRenegotiateEvent>, Job> {
         val events = mutableListOf<CallRenegotiateEvent>()
-        val job = launch { manager.renegotiationEvents.collect { events.add(it) } }
+        val job = launch(UnconfinedTestDispatcher(testScheduler)) { manager.renegotiationEvents.collect { events.add(it) } }
         return events to job
     }
 
