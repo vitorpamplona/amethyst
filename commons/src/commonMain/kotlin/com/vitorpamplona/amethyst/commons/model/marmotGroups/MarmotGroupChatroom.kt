@@ -27,9 +27,11 @@ import com.vitorpamplona.amethyst.commons.model.ListChange
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.NotesGatherer
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.update
 import java.lang.ref.WeakReference
 
 /**
@@ -50,6 +52,14 @@ class MarmotGroupChatroom(
     var members = MutableStateFlow<List<GroupMemberInfo>>(emptyList())
     var newestMessage: Note? = null
     val unreadCount = MutableStateFlow(0)
+
+    /**
+     * Tracks the most recent createdAt (seconds) of a kind:445 group event
+     * observed from each relay, keyed by the relay that delivered it. Used by
+     * the Group Info screen to flag which configured relays are actively
+     * carrying traffic for this MLS group.
+     */
+    val relayActivity = MutableStateFlow<Map<NormalizedRelayUrl, Long>>(emptyMap())
 
     /**
      * True if the local user has ever sent an application message in this
@@ -132,6 +142,16 @@ class MarmotGroupChatroom(
 
     fun markAsRead() {
         unreadCount.value = 0
+    }
+
+    fun recordRelayActivity(
+        relay: NormalizedRelayUrl,
+        createdAt: Long,
+    ) {
+        relayActivity.update { current ->
+            val existing = current[relay] ?: 0L
+            if (createdAt > existing) current + (relay to createdAt) else current
+        }
     }
 
     fun pruneMessagesToTheLatestOnly(): Set<Note> {

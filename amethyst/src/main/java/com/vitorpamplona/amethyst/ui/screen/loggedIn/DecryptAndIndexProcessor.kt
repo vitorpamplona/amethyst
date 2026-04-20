@@ -566,6 +566,9 @@ class GroupEventHandler(
             return
         }
 
+        val chatroom = account.marmotGroupList.getOrCreateGroup(groupId)
+        eventNote.relays.forEach { chatroom.recordRelayActivity(it, event.createdAt) }
+
         try {
             val result = manager.processGroupEvent(event)
             Log.d("MarmotDbg") {
