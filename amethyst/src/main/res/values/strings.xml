@@ -1093,6 +1093,7 @@
     <string name="theme">Theme</string>
     <string name="automatically_load_images_gifs">Image Preview</string>
     <string name="automatically_play_videos">Video Playback</string>
+    <string name="autoplay_videos">Autoplay Videos</string>
     <string name="automatically_show_url_preview">URL Preview</string>
     <string name="automatically_hide_nav_bars">Immersive Scrolling</string>
     <string name="automatically_hide_nav_bars_description">Hide Nav Bars when Scrolling</string>
@@ -1184,7 +1185,8 @@
     <string name="language_description">For the App\'s Interface</string>
     <string name="theme_description">Dark, Light or System theme</string>
     <string name="automatically_load_images_gifs_description">Automatically load images and GIFs</string>
-    <string name="automatically_play_videos_description">Automatically plays videos and GIFs</string>
+    <string name="automatically_play_videos_description">Automatically load videos and GIFs</string>
+    <string name="autoplay_videos_description">Automatically play videos when visible on screen</string>
     <string name="automatically_show_url_preview_description">Show URL previews</string>
     <string name="load_image_description">When to load images</string>
 

@@ -138,5 +138,7 @@ class UiSettingsState(
 
     fun startVideoPlayback() = startVideoPlayback.value
 
+    fun autoPlayVideos() = uiSettingsFlow.automaticallyPlayVideos.value == BooleanType.ALWAYS
+
     fun showImages() = showImages.value
 }
