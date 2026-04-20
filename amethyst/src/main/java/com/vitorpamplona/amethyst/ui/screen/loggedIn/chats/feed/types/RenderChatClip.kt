@@ -20,21 +20,18 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -42,6 +39,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.note.CrossfadeToDisplayComment
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -64,56 +62,56 @@ fun RenderChatClip(
     val authorHex = remember(clip) { clip.pubKey }
 
     val accent = MaterialTheme.colorScheme.primary
-    val containerColor = remember(accent) { accent.copy(alpha = 0.12f) }
+    val accentAlpha = 0.12f
 
-    Column(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 2.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(containerColor)
-                .padding(horizontal = 10.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            UserPicture(authorHex, Size20dp, Modifier, accountViewModel, nav)
-            Spacer(StdHorzSpacer)
-            LoadUser(baseUserHex = authorHex, accountViewModel = accountViewModel) { user ->
-                if (user != null) {
-                    UsernameDisplay(
-                        baseUser = user,
-                        fontWeight = FontWeight.Bold,
-                        accountViewModel = accountViewModel,
-                    )
+    StreamSystemCard(accent = accent, accentAlpha = accentAlpha) {
+        val backgroundColor = remember(accent) { mutableStateOf(accent.copy(alpha = accentAlpha)) }
+
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                UserPicture(authorHex, Size20dp, Modifier, accountViewModel, nav)
+                Spacer(StdHorzSpacer)
+                LoadUser(baseUserHex = authorHex, accountViewModel = accountViewModel) { user ->
+                    if (user != null) {
+                        UsernameDisplay(
+                            baseUser = user,
+                            fontWeight = FontWeight.Bold,
+                            accountViewModel = accountViewModel,
+                        )
+                    }
                 }
+                Spacer(StdHorzSpacer)
+                Text(
+                    text = stringRes(R.string.chat_clip_created_a_clip),
+                    color = accent,
+                    fontWeight = FontWeight.Bold,
+                )
             }
-            Spacer(StdHorzSpacer)
-            Text(
-                text = stringRes(R.string.chat_clip_created_a_clip),
-                color = accent,
-                fontWeight = FontWeight.Bold,
-            )
-        }
 
-        if (!title.isNullOrBlank()) {
-            Text(text = title)
-        }
+            if (!title.isNullOrBlank()) {
+                Text(text = title)
+            }
 
-        val caption = clip.content
-        if (caption.isNotBlank()) {
-            Text(text = caption)
-        }
+            val caption = clip.content
+            if (caption.isNotBlank()) {
+                CrossfadeToDisplayComment(
+                    comment = caption,
+                    backgroundColor = backgroundColor,
+                    nav = nav,
+                    accountViewModel = accountViewModel,
+                )
+            }
 
-        if (!videoUrl.isNullOrBlank()) {
-            VideoView(
-                videoUri = videoUrl,
-                mimeType = null,
-                title = title,
-                roundedCorner = true,
-                contentScale = ContentScale.FillWidth,
-                accountViewModel = accountViewModel,
-            )
+            if (!videoUrl.isNullOrBlank()) {
+                VideoView(
+                    videoUri = videoUrl,
+                    mimeType = null,
+                    title = title,
+                    roundedCorner = true,
+                    contentScale = ContentScale.FillWidth,
+                    accountViewModel = accountViewModel,
+                )
+            }
         }
     }
 }

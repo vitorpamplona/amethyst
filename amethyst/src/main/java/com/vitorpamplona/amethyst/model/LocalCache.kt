@@ -1596,17 +1596,20 @@ object LocalCache : ILocalCache, ICacheProvider {
         note: Note,
         relay: NormalizedRelayUrl?,
     ) {
-        val address =
-            event.tags
-                .asSequence()
-                .mapNotNull(ATag::parseAddress)
-                .firstOrNull { it.kind == LiveActivitiesEvent.KIND }
-                ?: return
+        // Match zap.stream: only show zaps whose receiver is the live activity host.
+        val hosts = event.zappedAuthor().toHashSet()
+        if (hosts.isEmpty()) return
 
-        // Match zap.stream: only show zaps whose receiver is the live activity host
-        if (event.zappedAuthor().none { it == address.pubKeyHex }) return
-
-        getOrCreateLiveChannel(address).addNote(note, relay)
+        // Route into every live-activity address this zap references (zap.stream uses one, but
+        // a receipt could legitimately reference multiple simulcasted streams).
+        event.tags
+            .asSequence()
+            .mapNotNull(ATag::parseAddress)
+            .filter { it.kind == LiveActivitiesEvent.KIND && it.pubKeyHex in hosts }
+            .distinct()
+            .forEach { address ->
+                getOrCreateLiveChannel(address).addNote(note, relay)
+            }
     }
 
     fun consume(

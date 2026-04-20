@@ -44,6 +44,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteZaps
@@ -53,6 +54,7 @@ import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.ZapIcon
 import com.vitorpamplona.amethyst.ui.note.showAmountInteger
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size24dp
@@ -63,9 +65,13 @@ import java.math.BigDecimal
 
 private const val TOP_ZAPPERS_LIMIT = 10
 
+/** Sentinel key used to bucket every anonymous/private zap into a single leaderboard entry. */
+private const val ANON_KEY = "anon"
+
 private data class TopZapperEntry(
     val zapperPubKey: HexKey,
     val totalSats: BigDecimal,
+    val isAnonymous: Boolean,
 )
 
 /**
@@ -137,26 +143,37 @@ private fun ZapperPill(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    val clickModifier =
+        if (entry.isAnonymous) {
+            Modifier
+        } else {
+            Modifier.clickable { nav.nav(Route.Profile(entry.zapperPubKey)) }
+        }
+
     Surface(
         shape = CircleShape,
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-        modifier =
-            Modifier.clickable {
-                nav.nav(Route.Profile(entry.zapperPubKey))
-            },
+        modifier = clickModifier,
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            UserPicture(
-                userHex = entry.zapperPubKey,
-                size = Size24dp,
-                accountViewModel = accountViewModel,
-                nav = nav,
-            )
+            if (entry.isAnonymous) {
+                Text(
+                    text = stringRes(R.string.chat_zap_anonymous),
+                    style = MaterialTheme.typography.labelMedium,
+                )
+            } else {
+                UserPicture(
+                    userHex = entry.zapperPubKey,
+                    size = Size24dp,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+            }
             ZapIcon(Size16Modifier, BitcoinOrange)
             Text(
                 text = showAmountInteger(entry.totalSats),
@@ -171,25 +188,25 @@ private fun aggregateTopZappers(
     channel: LiveActivitiesChannel,
     goalNote: Note?,
 ): List<TopZapperEntry> {
-    // receiptId -> (zapperPubKey, sats) — dedupes a zap that appears via both #a and #e.
+    // receiptId -> (zapperBucketKey, sats) — dedupes a zap that appears via both #a and #e.
     val byReceipt = HashMap<HexKey, Pair<HexKey, BigDecimal>>()
 
     // Stream-level zaps routed to the channel cache.
     channel.notes.forEach { _, note ->
         val ev = note.event
         if (ev is LnZapEvent) {
-            val zapper = ev.zapRequest?.pubKey ?: return@forEach
+            val request = ev.zapRequest ?: return@forEach
             val sats = ev.amount() ?: return@forEach
-            byReceipt[note.idHex] = zapper to sats
+            byReceipt[note.idHex] = bucketKeyFor(request) to sats
         }
     }
 
     // Goal-scoped zaps attached to the goal note via #e.
     goalNote?.zaps?.forEach { (zapRequestNote, receiptNote) ->
         val receiptEv = receiptNote?.event as? LnZapEvent ?: return@forEach
-        val zapper = (zapRequestNote.event as? LnZapRequestEvent)?.pubKey ?: return@forEach
+        val request = zapRequestNote.event as? LnZapRequestEvent ?: return@forEach
         val sats = receiptEv.amount() ?: return@forEach
-        byReceipt[receiptNote.idHex] = zapper to sats
+        byReceipt[receiptNote.idHex] = bucketKeyFor(request) to sats
     }
 
     if (byReceipt.isEmpty()) return emptyList()
@@ -203,6 +220,9 @@ private fun aggregateTopZappers(
         .asSequence()
         .sortedByDescending { it.value }
         .take(TOP_ZAPPERS_LIMIT)
-        .map { TopZapperEntry(it.key, it.value) }
+        .map { TopZapperEntry(it.key, it.value, isAnonymous = it.key == ANON_KEY) }
         .toList()
 }
+
+/** Returns the aggregation key for a zap request: real pubkey, or the anon sentinel for any `anon`-tagged zap. */
+private fun bucketKeyFor(request: LnZapRequestEvent): HexKey = if (request.tags.any { it.isNotEmpty() && it[0] == "anon" }) ANON_KEY else request.pubKey

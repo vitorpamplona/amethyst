@@ -20,15 +20,11 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowForwardIos
 import androidx.compose.material3.Icon
@@ -40,7 +36,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
@@ -73,74 +68,72 @@ fun RenderChatRaid(
     if (from == null || to == null) return
 
     val accent = MaterialTheme.colorScheme.primary
-    val containerColor = remember(accent) { accent.copy(alpha = 0.14f) }
-    val backgroundColor = remember(containerColor) { mutableStateOf(containerColor) }
 
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 2.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(containerColor)
-                .clickable { nav.nav(to.toRoute()) }
-                .padding(horizontal = 10.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.Top,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    StreamSystemCard(
+        accent = accent,
+        accentAlpha = 0.14f,
+        onClick = { nav.nav(to.toRoute()) },
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                UserPicture(from.pubKeyHex, Size20dp, Modifier, accountViewModel, nav)
-                Spacer(StdHorzSpacer)
-                LoadUser(baseUserHex = from.pubKeyHex, accountViewModel = accountViewModel) { user ->
-                    if (user != null) {
-                        UsernameDisplay(
-                            baseUser = user,
-                            fontWeight = FontWeight.Bold,
-                            accountViewModel = accountViewModel,
-                        )
+        val backgroundColor = remember(accent) { mutableStateOf(accent.copy(alpha = 0.14f)) }
+
+        Row(
+            verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    UserPicture(from.pubKeyHex, Size20dp, Modifier, accountViewModel, nav)
+                    Spacer(StdHorzSpacer)
+                    LoadUser(baseUserHex = from.pubKeyHex, accountViewModel = accountViewModel) { user ->
+                        if (user != null) {
+                            UsernameDisplay(
+                                baseUser = user,
+                                fontWeight = FontWeight.Bold,
+                                accountViewModel = accountViewModel,
+                            )
+                        }
+                    }
+
+                    Spacer(StdHorzSpacer)
+                    Text(
+                        text = stringRes(R.string.chat_raid_is_raiding),
+                        color = accent,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Spacer(StdHorzSpacer)
+
+                    UserPicture(to.pubKeyHex, Size20dp, Modifier, accountViewModel, nav)
+                    Spacer(StdHorzSpacer)
+                    LoadUser(baseUserHex = to.pubKeyHex, accountViewModel = accountViewModel) { user ->
+                        if (user != null) {
+                            UsernameDisplay(
+                                baseUser = user,
+                                fontWeight = FontWeight.Bold,
+                                accountViewModel = accountViewModel,
+                            )
+                        }
                     }
                 }
 
-                Spacer(StdHorzSpacer)
-                Text(
-                    text = stringRes(R.string.chat_raid_is_raiding),
-                    color = accent,
-                    fontWeight = FontWeight.Bold,
-                )
-                Spacer(StdHorzSpacer)
-
-                UserPicture(to.pubKeyHex, Size20dp, Modifier, accountViewModel, nav)
-                Spacer(StdHorzSpacer)
-                LoadUser(baseUserHex = to.pubKeyHex, accountViewModel = accountViewModel) { user ->
-                    if (user != null) {
-                        UsernameDisplay(
-                            baseUser = user,
-                            fontWeight = FontWeight.Bold,
-                            accountViewModel = accountViewModel,
-                        )
-                    }
+                val message = raid.content
+                if (message.isNotBlank()) {
+                    Spacer(Modifier.padding(top = 2.dp))
+                    CrossfadeToDisplayComment(
+                        comment = message,
+                        backgroundColor = backgroundColor,
+                        nav = nav,
+                        accountViewModel = accountViewModel,
+                    )
                 }
             }
 
-            val message = raid.content
-            if (message.isNotBlank()) {
-                Spacer(Modifier.padding(top = 2.dp))
-                CrossfadeToDisplayComment(
-                    comment = message,
-                    backgroundColor = backgroundColor,
-                    nav = nav,
-                    accountViewModel = accountViewModel,
-                )
-            }
+            Icon(
+                imageVector = Icons.AutoMirrored.Outlined.ArrowForwardIos,
+                contentDescription = null,
+                tint = accent,
+                modifier = Size20Modifier,
+            )
         }
-
-        Icon(
-            imageVector = Icons.AutoMirrored.Outlined.ArrowForwardIos,
-            contentDescription = null,
-            tint = accent,
-            modifier = Size20Modifier,
-        )
     }
 }
 
