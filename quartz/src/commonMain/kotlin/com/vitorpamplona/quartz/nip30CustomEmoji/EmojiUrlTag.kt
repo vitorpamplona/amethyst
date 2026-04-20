@@ -21,12 +21,13 @@
 package com.vitorpamplona.quartz.nip30CustomEmoji
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.nip01Core.core.Address
 
 @Immutable
 data class EmojiUrlTag(
     val code: String,
     val url: String,
-    val emojiSet: String? = null,
+    val emojiSet: Address? = null,
 ) {
     fun encode(): String = ":$code:$url"
 
@@ -34,7 +35,7 @@ data class EmojiUrlTag(
 
     fun toTagArray() =
         if (emojiSet != null) {
-            arrayOf(TAG_NAME, code, url, emojiSet)
+            arrayOf(TAG_NAME, code, url, emojiSet.toValue())
         } else {
             arrayOf(TAG_NAME, code, url)
         }
@@ -60,7 +61,7 @@ data class EmojiUrlTag(
 
         fun parse(tag: Array<String>): EmojiUrlTag? =
             if (tag.size > 2 && tag[0] == TAG_NAME) {
-                EmojiUrlTag(tag[1], tag[2], tag.getOrNull(3))
+                EmojiUrlTag(tag[1], tag[2], tag.getOrNull(3)?.let(Address::parse))
             } else {
                 null
             }

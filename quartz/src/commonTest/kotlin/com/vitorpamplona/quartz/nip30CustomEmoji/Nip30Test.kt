@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip30CustomEmoji
 
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
@@ -28,6 +29,10 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class Nip30Test {
+    companion object {
+        private const val TEST_PUBKEY = "0000000000000000000000000000000000000000000000000000000000000abc"
+    }
+
     @Test()
     fun parseEmoji() {
         val tags = mapOf(":soapbox:" to "http://soapbox")
@@ -177,17 +182,25 @@ class Nip30Test {
 
     @Test
     fun emojiTagWithEmojiSetRoundtrip() {
-        val setAddress = "30030:abc123:emojis-fall"
+        val setAddress = Address(30030, TEST_PUBKEY, "emojis-fall")
         val tag = EmojiUrlTag("soapbox", "http://soapbox", setAddress)
-        assertContentEquals(arrayOf("emoji", "soapbox", "http://soapbox", setAddress), tag.toTagArray())
+        assertContentEquals(arrayOf("emoji", "soapbox", "http://soapbox", setAddress.toValue()), tag.toTagArray())
         assertEquals(tag, EmojiUrlTag.parse(tag.toTagArray()))
     }
 
     @Test
     fun parseIgnoresTrailingFields() {
-        val tag = arrayOf("emoji", "soapbox", "http://soapbox", "30030:abc123:pack", "extra")
+        val setAddress = Address(30030, TEST_PUBKEY, "pack")
+        val tag = arrayOf("emoji", "soapbox", "http://soapbox", setAddress.toValue(), "extra")
         val parsed = EmojiUrlTag.parse(tag)
-        assertEquals(EmojiUrlTag("soapbox", "http://soapbox", "30030:abc123:pack"), parsed)
+        assertEquals(EmojiUrlTag("soapbox", "http://soapbox", setAddress), parsed)
+    }
+
+    @Test
+    fun parseMalformedEmojiSetAddressYieldsNull() {
+        val tag = arrayOf("emoji", "soapbox", "http://soapbox", "not-an-address")
+        val parsed = EmojiUrlTag.parse(tag)
+        assertEquals(EmojiUrlTag("soapbox", "http://soapbox", null), parsed)
     }
 
     @Test

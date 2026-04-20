@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip30CustomEmoji
 
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 
@@ -28,7 +29,7 @@ fun <T : Event> TagArrayBuilder<T>.emoji(tag: EmojiUrlTag) = add(tag.toTagArray(
 fun <T : Event> TagArrayBuilder<T>.emoji(
     code: String,
     url: String,
-    emojiSet: String? = null,
+    emojiSet: Address? = null,
 ) = add(EmojiUrlTag(code, url, emojiSet).toTagArray())
 
 fun <T : Event> TagArrayBuilder<T>.emojis(tags: List<EmojiUrlTag>) = addAll(tags.map { it.toTagArray() })
