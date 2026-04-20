@@ -149,6 +149,8 @@ sealed class Route {
 
     @Serializable object EmojiPacks : Route()
 
+    @Serializable object MyEmojiList : Route()
+
     @Serializable data class EmojiPackView(
         val dTag: String,
     ) : Route()

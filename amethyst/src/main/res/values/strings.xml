@@ -2391,6 +2391,8 @@
     <string name="emoji_pack_count">%1$d emojis</string>
     <string name="my_emoji_list_title">My Emoji List</string>
     <string name="my_emoji_list_explainer">Emoji packs you\'ve added to your selection (NIP-51 kind 10030)</string>
+    <string name="my_emoji_list_empty">You haven\'t added any emoji packs to your list yet</string>
+    <string name="my_emoji_list_by_author">by %1$s</string>
     <string name="add_emoji_fab">Add emoji</string>
     <string name="emoji_add_dialog_title">Add custom emoji</string>
     <string name="emoji_remove_dialog_title">Remove :%1$s:?</string>
