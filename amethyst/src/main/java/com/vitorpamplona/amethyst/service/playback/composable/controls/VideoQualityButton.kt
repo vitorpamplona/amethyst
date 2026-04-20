@@ -51,10 +51,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
-import androidx.media3.common.C
 import androidx.media3.common.Player
-import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.Tracks
+import androidx.media3.common.VideoSize
 import androidx.media3.common.util.UnstableApi
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -119,6 +118,21 @@ fun VideoQualityButton(
     }
 
     if (openDialog) {
+        // Scope videoSize tracking to the open popup: HLS ABR fires onVideoSizeChanged on every
+        // rung switch, and we don't want to pay recomposition cost on cards whose menu isn't open.
+        var videoSize by remember(player) { mutableStateOf(player.videoSize) }
+        DisposableEffect(player) {
+            val listener =
+                object : Player.Listener {
+                    override fun onVideoSizeChanged(newSize: VideoSize) {
+                        videoSize = newSize
+                    }
+                }
+            player.addListener(listener)
+            onDispose { player.removeListener(listener) }
+        }
+        val currentShortSide = minOf(videoSize.width, videoSize.height).takeIf { it > 0 }
+
         Popup(
             alignment = Alignment.BottomCenter,
             onDismissRequest = { openDialog = false },
@@ -126,10 +140,10 @@ fun VideoQualityButton(
         ) {
             VideoQualityChoices(
                 videoGroup = videoGroup,
-                currentShortSide = getCurrentPlayingShortSide(tracks),
+                currentShortSide = currentShortSide,
                 isAuto = !hasVideoOverride(player),
                 onSelectAuto = {
-                    clearVideoOverride(player)
+                    if (hasVideoOverride(player)) clearVideoOverride(player)
                     openDialog = false
                 },
                 onSelectTrack = { trackIndex ->
@@ -195,6 +209,7 @@ private data class QualityChoice(
 private fun buildQualityChoices(group: Tracks.Group): ImmutableList<QualityChoice> {
     val choices = mutableListOf<QualityChoice>()
     for (i in 0 until group.length) {
+        if (!group.isTrackSupported(i)) continue
         val format = group.getTrackFormat(i)
         val shortSide = minOf(format.width, format.height)
         if (shortSide > 0) {
@@ -210,26 +225,3 @@ private fun formatBitrate(bitrate: Int): String =
         bitrate >= 1_000_000 -> String.format(Locale.US, "%.1f Mbps", bitrate / 1_000_000.0)
         else -> String.format(Locale.US, "%.0f kbps", bitrate / 1_000.0)
     }
-
-@OptIn(UnstableApi::class)
-private fun hasVideoOverride(player: Player): Boolean = player.trackSelectionParameters.overrides.any { (key, _) -> key.type == C.TRACK_TYPE_VIDEO }
-
-private fun clearVideoOverride(player: Player) {
-    player.trackSelectionParameters =
-        player.trackSelectionParameters
-            .buildUpon()
-            .clearOverridesOfType(C.TRACK_TYPE_VIDEO)
-            .build()
-}
-
-private fun selectVideoTrack(
-    player: Player,
-    group: Tracks.Group,
-    trackIndex: Int,
-) {
-    player.trackSelectionParameters =
-        player.trackSelectionParameters
-            .buildUpon()
-            .setOverrideForType(TrackSelectionOverride(group.mediaTrackGroup, trackIndex))
-            .build()
-}
