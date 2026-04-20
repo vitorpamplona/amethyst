@@ -115,27 +115,24 @@ class MarmotMipComplianceTest {
 
     @Test
     fun marmotGroupData_rejectsZeroDisappearingSecsOnDecode() {
-        // Hand-crafted TLS blob: version=3, group_id=32x0, empty opaque2 for
-        // name/description/admins/relays/images, then disappearing_message_secs
-        // = 8 bytes of zero (invalid).
+        // Hand-crafted TLS blob (MIP-01 QUIC VarInt length prefixes):
+        //   uint16 version=3 | opaque group_id[32] | 8x empty VarInt(0) fields
+        //   (name..image_upload_key) | disappearing_message_secs = VarInt(8) + 8
+        //   zero bytes (invalid per MIP-01).
         val header =
             ByteArray(2 + 32) {
-                // version + groupId
                 when (it) {
                     0 -> 0
-
                     1 -> 3
-
-                    // version=3
                     else -> 0
                 }
             }
-        // 8x opaque2 fields of length 0, each encoded as two zero bytes:
+        // 8 empty VarInt-prefixed opaque fields, each a single 0x00 byte:
         //   name, description, admin_pubkeys, relays, image_hash, image_key,
         //   image_nonce, image_upload_key
-        val zeroFields = ByteArray(8 * 2) // all zeros
-        // disappearing_message_secs opaque2 with 8 zero bytes
-        val disappearingField = ByteArray(2 + 8).also { it[1] = 8 }
+        val zeroFields = ByteArray(8) // all 0x00
+        // disappearing_message_secs: VarInt(8) = 0x08, then 8 zero bytes
+        val disappearingField = ByteArray(1 + 8).also { it[0] = 0x08 }
         val blob = header + zeroFields + disappearingField
 
         // decodeTls catches any exception and returns null
@@ -150,8 +147,9 @@ class MarmotMipComplianceTest {
                 it[0] = 0
                 it[1] = 99
             }
-        val zeroFields = ByteArray(8 * 2) // name..image_upload_key
-        val disappearingField = ByteArray(2) // zero-length
+        val zeroFields = ByteArray(8) // 8x VarInt(0) for name..image_upload_key
+        val disappearingField = ByteArray(1) // VarInt(0) — zero-length field
+
         val blob = header + zeroFields + disappearingField
 
         assertNull(MarmotGroupData.decodeTls(blob))
