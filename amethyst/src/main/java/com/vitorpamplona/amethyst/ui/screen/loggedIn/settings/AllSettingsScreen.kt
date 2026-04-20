@@ -130,7 +130,7 @@ fun AllSettingsScreen(
                 tint = tint,
                 onClick = { nav.nav(Route.ProfileBadges) },
             )
-            HorizontalDivider()  
+            HorizontalDivider()
             SettingsNavigationRow(
                 title = R.string.favorite_dvms_title,
                 icon = Icons.Outlined.AutoAwesome,
