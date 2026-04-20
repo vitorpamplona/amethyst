@@ -36,6 +36,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.datasource.Chat
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.datasource.ChessFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.datasource.CommunityFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.datasource.DiscoveryFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.browse.datasource.BrowseEmojiSetsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.feed.datasource.FollowPackFeedFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.datasource.GeoHashFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.datasource.HashtagFilterAssembler
@@ -101,6 +102,7 @@ class RelaySubscriptionsCoordinator(
     val articles = ArticlesFilterAssembler(client)
     val badges = BadgesFilterAssembler(client)
     val profileBadges = ProfileBadgesFilterAssembler(client)
+    val browseEmojiSets = BrowseEmojiSetsFilterAssembler(client)
 
     // active when sending zaps via NWC
     val nwc = NWCPaymentFilterAssembler(client)
@@ -120,6 +122,7 @@ class RelaySubscriptionsCoordinator(
             articles,
             badges,
             profileBadges,
+            browseEmojiSets,
             channelFinder,
             eventFinder,
             userFinder,

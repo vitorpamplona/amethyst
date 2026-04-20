@@ -572,6 +572,14 @@ fun ListContent(
         )
 
         NavigationRow(
+            title = R.string.browse_emoji_sets,
+            icon = Icons.Outlined.EmojiEmotions,
+            tint = MaterialTheme.colorScheme.onBackground,
+            nav = nav,
+            route = Route.BrowseEmojiSets,
+        )
+
+        NavigationRow(
             title = R.string.interest_sets_title,
             icon = Icons.Outlined.Tag,
             tint = MaterialTheme.colorScheme.onBackground,
