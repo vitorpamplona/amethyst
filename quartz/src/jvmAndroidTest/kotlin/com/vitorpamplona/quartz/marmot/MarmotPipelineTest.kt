@@ -429,6 +429,67 @@ class MarmotPipelineTest {
     }
 
     @Test
+    fun testFredEncryptsAfterJoiningThreeMemberGroup() {
+        // Reproduces the production StackOverflowError: the last-joined member
+        // (Fred at leafIndex=2 in a 3-member group) attempts to encrypt his
+        // first message and the SecretTree.getNodeSecret recursion never
+        // terminates.
+        runBlocking {
+            val aliceMgr = createGroupManager()
+            val bobMgr = createGroupManager()
+            val fredMgr = createGroupManager()
+
+            val aliceIdBytes = ByteArray(32) { 0xA1.toByte() }
+            aliceMgr.createGroup(groupId, aliceIdBytes)
+            aliceMgr.updateGroupExtensions(
+                nostrGroupId = groupId,
+                extensions =
+                    listOf(
+                        com.vitorpamplona.quartz.marmot.mip01Groups
+                            .MarmotGroupData(
+                                nostrGroupId = groupId,
+                                adminPubkeys = listOf(aliceIdBytes.toHexKey()),
+                            ).toExtension(),
+                    ),
+            )
+            val aliceGroup = aliceMgr.getGroup(groupId)!!
+            val bobBundle = aliceGroup.createKeyPackage(ByteArray(32) { 0xB2.toByte() }, ByteArray(0))
+            val fredBundle = aliceGroup.createKeyPackage(ByteArray(32) { 0xF3.toByte() }, ByteArray(0))
+
+            // Alice adds Bob.
+            val addBob = aliceMgr.addMember(groupId, bobBundle.keyPackage.toTlsBytes())
+            bobMgr.processWelcome(addBob.welcomeBytes!!, bobBundle)
+
+            // Alice adds Fred (he joins at leafIndex=2, in a 3-leaf tree).
+            val addFred = aliceMgr.addMember(groupId, fredBundle.keyPackage.toTlsBytes())
+            fredMgr.processWelcome(addFred.welcomeBytes!!, fredBundle)
+            // Bob (existing member at the pre-add-Fred epoch) receives and
+            // applies Alice's add-Fred commit to reach the same epoch as
+            // Alice + Fred. Without this, Bob can't decrypt Fred's subsequent
+            // application messages.
+            bobMgr.processCommit(
+                nostrGroupId = groupId,
+                commitBytes = addFred.commitBytes,
+                senderLeafIndex = aliceMgr.getGroup(groupId)!!.leafIndex,
+                confirmationTag = ByteArray(0),
+            )
+
+            // Sanity: Fred is at leafIndex=2, leafCount=3.
+            assertEquals(2, fredMgr.getGroup(groupId)!!.leafIndex)
+
+            // This is where production crashed with StackOverflowError.
+            val fredMsg = "hi from fred"
+            val fredCiphertext = fredMgr.encrypt(groupId, fredMsg.encodeToByteArray())
+
+            // And Alice & Bob must be able to decrypt it.
+            val aliceDecrypted = aliceMgr.decrypt(groupId, fredCiphertext)
+            assertEquals(fredMsg, aliceDecrypted.content.decodeToString())
+            val bobDecrypted = bobMgr.decrypt(groupId, fredCiphertext)
+            assertEquals(fredMsg, bobDecrypted.content.decodeToString())
+        }
+    }
+
+    @Test
     fun testAddMemberExposesPreCommitExporterSecret() {
         // Regression: before the fix, MarmotManager.addMember outer-encrypted
         // the kind:445 commit with the POST-commit (epoch N+1) exporter key,

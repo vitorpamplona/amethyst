@@ -47,9 +47,6 @@ class SecretTree(
     private val encryptionSecret: ByteArray,
     private val leafCount: Int,
 ) {
-    /** Cached tree node secrets, computed lazily */
-    private val treeSecrets = mutableMapOf<Int, ByteArray>()
-
     /** Per-sender ratchet state: (handshake generation, handshake secret, app generation, app secret) */
     private val senderState = mutableMapOf<Int, SenderRatchetState>()
 
@@ -70,11 +67,6 @@ class SecretTree(
 
         /** Maximum consumed generation entries to track per sender before pruning. */
         const val MAX_CONSUMED_GENERATIONS_PER_SENDER = 1000
-    }
-
-    init {
-        // Seed the root
-        treeSecrets[BinaryTree.root(leafCount)] = encryptionSecret
     }
 
     /**
@@ -252,36 +244,51 @@ class SecretTree(
         }
 
     /**
-     * Derive the leaf secret from the encryption secret using the tree structure.
+     * Derive the leaf secret from the encryption secret by walking DOWN the
+     * binary tree from the root to the target leaf (RFC 9420 §9).
+     *
+     * At each step we pick left or right based on which subtree contains the
+     * target. In an MLS left-balanced tree the left-subtree node indices are
+     * always strictly less than the current node, and the right-subtree
+     * indices strictly greater — so the direction is simply
+     * `targetNode < currentNode`.
+     *
+     * This also correctly handles non-power-of-2 leaf counts (3, 5, 6, 7, 9
+     * …) where the rightmost leaves live beneath "virtual" intermediate
+     * nodes that are beyond `nodeCount`. Walking down still succeeds because
+     * [BinaryTree.left] / [BinaryTree.right] give the correct descendants
+     * even for virtual nodes, and the target leaf is reachable via a chain
+     * of left/right steps that mixes real and virtual intermediates.
+     *
+     * The previous implementation derived the target's secret from
+     * `BinaryTree.parent(target)` which, for leaves on the right edge of a
+     * non-full tree, returned a high ancestor (often the root) that is NOT
+     * the target's direct parent. Its `left()` and `right()` then pointed
+     * at different nodes entirely, the target stayed un-cached, and the
+     * follow-up `return treeSecrets[nodeIndex]!!` either threw NPE (on
+     * JVM) or — when repeatedly re-entered — recursed into
+     * [getNodeSecret] until the stack was exhausted (on ART).
      */
     private fun getLeafSecret(leafIndex: Int): ByteArray {
-        val nodeIndex = BinaryTree.leafToNode(leafIndex)
-        return getNodeSecret(nodeIndex)
-    }
+        val targetNode = BinaryTree.leafToNode(leafIndex)
+        val rootIdx = BinaryTree.root(leafCount)
+        var currentSecret = encryptionSecret
+        var currentNode = rootIdx
 
-    /**
-     * Recursively derive a node's secret from its parent in the secret tree.
-     */
-    private fun getNodeSecret(nodeIndex: Int): ByteArray {
-        treeSecrets[nodeIndex]?.let { return it }
+        while (currentNode != targetNode) {
+            val goLeft = targetNode < currentNode
+            val label = if (goLeft) "left" else "right"
+            currentSecret =
+                MlsCryptoProvider.expandWithLabel(
+                    currentSecret,
+                    "tree",
+                    label.encodeToByteArray(),
+                    MlsCryptoProvider.HASH_OUTPUT_LENGTH,
+                )
+            currentNode = if (goLeft) BinaryTree.left(currentNode) else BinaryTree.right(currentNode)
+        }
 
-        val parentIdx = BinaryTree.parent(nodeIndex, BinaryTree.nodeCount(leafCount))
-        val parentSecret = getNodeSecret(parentIdx)
-
-        // Derive left and right children secrets
-        val leftIdx = BinaryTree.left(parentIdx)
-        val rightIdx = BinaryTree.right(parentIdx)
-
-        val leftSecret = MlsCryptoProvider.expandWithLabel(parentSecret, "tree", "left".encodeToByteArray(), MlsCryptoProvider.HASH_OUTPUT_LENGTH)
-        val rightSecret = MlsCryptoProvider.expandWithLabel(parentSecret, "tree", "right".encodeToByteArray(), MlsCryptoProvider.HASH_OUTPUT_LENGTH)
-
-        treeSecrets[leftIdx] = leftSecret
-        treeSecrets[rightIdx] = rightSecret
-
-        // Clear parent secret for forward secrecy
-        treeSecrets.remove(parentIdx)
-
-        return treeSecrets[nodeIndex]!!
+        return currentSecret
     }
 }
 

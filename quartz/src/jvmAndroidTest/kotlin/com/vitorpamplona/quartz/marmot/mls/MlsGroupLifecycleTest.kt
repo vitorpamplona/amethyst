@@ -176,7 +176,6 @@ class MlsGroupLifecycleTest {
     // because the commit_secret decryption from the UpdatePath does not
     // correctly walk the ratchet tree to find the common ancestor's path secret.
     // This causes AEAD decryption failures on cross-member messages.
-    @Ignore
     @Test
     fun testThreeMemberGroup_SequentialAdditions() {
         // Alice creates the group
@@ -243,7 +242,6 @@ class MlsGroupLifecycleTest {
     // -----------------------------------------------------------------------
 
     // BUG: processCommit key derivation diverges — see testThreeMemberGroup_SequentialAdditions
-    @Ignore
     @Test
     fun testExternalJoin_ZaraJoinsViaGroupInfo() {
         val alice = MlsGroup.create("alice".encodeToByteArray())
@@ -266,7 +264,6 @@ class MlsGroupLifecycleTest {
     }
 
     // BUG: processCommit key derivation diverges — see testThreeMemberGroup_SequentialAdditions
-    @Ignore
     @Test
     fun testExternalJoin_ExporterSecretsAgree() {
         val alice = MlsGroup.create("alice".encodeToByteArray())
@@ -312,7 +309,6 @@ class MlsGroupLifecycleTest {
     // -----------------------------------------------------------------------
 
     // BUG: processCommit key derivation diverges — see testThreeMemberGroup_SequentialAdditions
-    @Ignore
     @Test
     fun testSigningKeyRotation_EpochAdvances() {
         val alice = MlsGroup.create("alice".encodeToByteArray())
@@ -342,7 +338,6 @@ class MlsGroupLifecycleTest {
     }
 
     // BUG: processCommit key derivation diverges — see testThreeMemberGroup_SequentialAdditions
-    @Ignore
     @Test
     fun testEncryptDecryptAfterSigningKeyRotation() {
         val alice = MlsGroup.create("alice".encodeToByteArray())
@@ -412,7 +407,6 @@ class MlsGroupLifecycleTest {
     // -----------------------------------------------------------------------
 
     // BUG: processCommit key derivation diverges — see testThreeMemberGroup_SequentialAdditions
-    @Ignore
     @Test
     fun testPskProposal_EpochAdvancesWithPsk() {
         val alice = MlsGroup.create("alice".encodeToByteArray())
@@ -472,7 +466,11 @@ class MlsGroupLifecycleTest {
     // 12. Empty commit (no proposals, just UpdatePath for forward secrecy)
     // -----------------------------------------------------------------------
 
-    // BUG: processCommit key derivation diverges — see testThreeMemberGroup_SequentialAdditions
+    // BUG: empty-commit (no proposals, pure UpdatePath) diverges Alice's and
+    // Bob's exporter secrets after processCommit. Unrelated to the SecretTree
+    // non-full-tree fix — the other @Ignored "processCommit diverges" tests in
+    // this file and MlsGroupEdgeCaseTest now pass, but this one still fails.
+    // Tracked separately.
     @Ignore
     @Test
     fun testEmptyCommit_AdvancesEpoch() {
