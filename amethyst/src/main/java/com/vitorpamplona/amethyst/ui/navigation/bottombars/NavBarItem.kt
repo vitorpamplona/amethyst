@@ -24,6 +24,7 @@ import androidx.annotation.DrawableRes
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
 import androidx.compose.material.icons.automirrored.outlined.Article
+import androidx.compose.material.icons.automirrored.outlined.Chat
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material.icons.outlined.CollectionsBookmark
@@ -34,6 +35,7 @@ import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.MilitaryTech
 import androidx.compose.material.icons.outlined.Photo
 import androidx.compose.material.icons.outlined.PlayCircle
+import androidx.compose.material.icons.outlined.Sensors
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.SmartDisplay
 import androidx.compose.material.icons.outlined.Storefront
@@ -67,6 +69,9 @@ enum class NavBarItem {
     ARTICLES,
     PICTURES,
     SHORTS,
+    PUBLIC_CHATS,
+    FOLLOW_PACKS,
+    LIVE_STREAMS,
     LONGS,
     BADGES,
     PRODUCTS,
@@ -212,6 +217,27 @@ val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
                 labelRes = R.string.shorts,
                 icon = NavBarIcon.Vector(Icons.Outlined.PlayCircle),
                 resolveRoute = { Route.Shorts },
+            ),
+        NavBarItem.PUBLIC_CHATS to
+            NavBarItemDef(
+                id = NavBarItem.PUBLIC_CHATS,
+                labelRes = R.string.public_chats,
+                icon = NavBarIcon.Vector(Icons.AutoMirrored.Outlined.Chat),
+                resolveRoute = { Route.PublicChats },
+            ),
+        NavBarItem.FOLLOW_PACKS to
+            NavBarItemDef(
+                id = NavBarItem.FOLLOW_PACKS,
+                labelRes = R.string.follow_packs,
+                icon = NavBarIcon.Vector(Icons.Outlined.CollectionsBookmark),
+                resolveRoute = { Route.FollowPacks },
+            ),
+        NavBarItem.LIVE_STREAMS to
+            NavBarItemDef(
+                id = NavBarItem.LIVE_STREAMS,
+                labelRes = R.string.live_streams,
+                icon = NavBarIcon.Vector(Icons.Outlined.Sensors),
+                resolveRoute = { Route.LiveStreams },
             ),
         NavBarItem.LONGS to
             NavBarItemDef(
