@@ -1472,12 +1472,13 @@ class MlsGroup private constructor(
                     )
                 val gsBytes = groupSecrets.toTlsBytes()
 
-                // HPKE-encrypt to the member's init_key
+                // HPKE-encrypt to the member's init_key. Per RFC 9420
+                // §12.4.3.1, the HPKE context is the encrypted_group_info.
                 val hpkeCt =
                     MlsCryptoProvider.encryptWithLabel(
                         kp.initKey,
                         "Welcome",
-                        ByteArray(0),
+                        encryptedGroupInfo,
                         gsBytes,
                     )
 
@@ -1715,12 +1716,13 @@ class MlsGroup private constructor(
                 welcome.secrets.find { it.newMember.contentEquals(myRef) }
                     ?: throw IllegalArgumentException("Welcome does not contain secrets for our KeyPackage")
 
-            // HPKE-decrypt group secrets
+            // HPKE-decrypt group secrets. Per RFC 9420 §12.4.3.1, the HPKE
+            // context is the encrypted_group_info field of the Welcome.
             val gsBytes =
                 MlsCryptoProvider.decryptWithLabel(
                     bundle.initPrivateKey,
                     "Welcome",
-                    ByteArray(0),
+                    welcome.encryptedGroupInfo,
                     mySecrets.encryptedGroupSecrets.kemOutput,
                     mySecrets.encryptedGroupSecrets.ciphertext,
                 )
