@@ -214,4 +214,32 @@ class CryptoBasicsInteropTest {
             )
         }
     }
+
+    /**
+     * Decrypt the IETF KAT directly using the vector's kem_output and
+     * ciphertext. This is the test that would have caught the HPKE
+     * "eae_prk" label bug — a round-trip is not enough because both sides
+     * would have been wrong the same way.
+     */
+    @Test
+    fun testEncryptWithLabelDecryptsIetfVector() {
+        assertTrue(vectors.isNotEmpty(), "No cipher_suite==1 vectors found")
+
+        for (v in vectors) {
+            val ewl = v.encryptWithLabel
+            val plaintext =
+                MlsCryptoProvider.decryptWithLabel(
+                    ewl.priv.hexToByteArray(),
+                    ewl.label,
+                    ewl.context.hexToByteArray(),
+                    ewl.kemOutput.hexToByteArray(),
+                    ewl.ciphertext.hexToByteArray(),
+                )
+            assertContentEquals(
+                ewl.plaintext.hexToByteArray(),
+                plaintext,
+                "IETF encrypt_with_label KAT decrypt mismatch for label='${ewl.label}'",
+            )
+        }
+    }
 }
