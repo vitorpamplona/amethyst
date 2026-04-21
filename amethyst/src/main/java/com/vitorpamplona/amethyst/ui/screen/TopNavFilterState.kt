@@ -94,12 +94,6 @@ class TopNavFilterState(
             name = ResourceName(R.string.follow_list_mute_list),
         )
 
-    val chessFollow =
-        FeedDefinition(
-            code = TopFilter.Chess,
-            name = ResourceName(R.string.follow_list_chess),
-        )
-
     val mineFollow =
         FeedDefinition(
             code = TopFilter.Mine,

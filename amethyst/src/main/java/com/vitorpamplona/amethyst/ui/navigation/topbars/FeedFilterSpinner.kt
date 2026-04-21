@@ -602,10 +602,6 @@ private fun FeedIcon(
                 Icons.AutoMirrored.Outlined.VolumeOff
             }
 
-            is TopFilter.Chess -> {
-                Icons.Outlined.Groups
-            }
-
             is TopFilter.PeopleList -> {
                 Icons.AutoMirrored.Outlined.ViewList
             }

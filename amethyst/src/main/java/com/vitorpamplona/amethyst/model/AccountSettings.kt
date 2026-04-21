@@ -124,9 +124,6 @@ sealed class TopFilter(
     object AroundMe : TopFilter(" Around Me ")
 
     @Serializable
-    object Chess : TopFilter(" Chess ")
-
-    @Serializable
     object Mine : TopFilter(" Mine ")
 
     @Serializable
