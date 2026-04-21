@@ -30,16 +30,34 @@ preflight() {
   info "amy: $AMY_BIN"
 
   # Clone/build whitenoise-rs if needed (shared between both harnesses).
+  if [[ ! -d "$WN_REPO/.git" ]]; then
+    if [[ "$NO_BUILD" -eq 1 ]]; then
+      fail_msg "whitenoise-rs checkout missing at $WN_REPO and --no-build set"; exit 1
+    fi
+    step "cloning whitenoise-rs into $WN_REPO"
+    git clone --depth 1 https://github.com/marmot-protocol/whitenoise-rs.git "$WN_REPO" \
+      2>&1 | tee -a "$LOG_FILE"
+  fi
+
+  # Patch wnd's hardcoded discovery relays so $WHITENOISE_DISCOVERY_RELAYS
+  # wins — without this the daemon exits immediately in sandboxes / offline
+  # environments where public relays are unreachable.
+  local patch_file="$SCRIPT_DIR/headless/patches/whitenoise-discovery-env.patch"
+  local patch_marker="$WN_REPO/.headless-discovery-patched"
+  if [[ ! -f "$patch_marker" ]]; then
+    step "patching whitenoise-rs: honour WHITENOISE_DISCOVERY_RELAYS"
+    ( cd "$WN_REPO" && patch -p1 --forward --reject-file=- <"$patch_file" ) \
+      2>&1 | tee -a "$LOG_FILE"
+    touch "$patch_marker"
+    # Invalidate the previous build so the patched source is picked up.
+    rm -f "$WN_BIN" "$WND_BIN"
+  fi
+
   if [[ ! -x "$WN_BIN" || ! -x "$WND_BIN" ]]; then
     if [[ "$NO_BUILD" -eq 1 ]]; then
       fail_msg "wn/wnd not found and --no-build set"; exit 1
     fi
-    if [[ ! -d "$WN_REPO/.git" ]]; then
-      step "cloning whitenoise-rs into $WN_REPO"
-      git clone --depth 1 https://github.com/marmot-protocol/whitenoise-rs.git "$WN_REPO" \
-        2>&1 | tee -a "$LOG_FILE"
-    fi
-    step "building wn + wnd (~5 min first run)"
+    step "building wn + wnd (~5 min first run; incremental thereafter)"
     ( cd "$WN_REPO" && cargo build --release --features cli --bin wn --bin wnd ) \
       2>&1 | tee -a "$LOG_FILE"
   fi
@@ -143,8 +161,12 @@ start_daemon() {
   fi
   rm -f "$socket"
   mkdir -p "$data_dir/logs" "$data_dir/release"
-  nohup "$WND_BIN" --data-dir "$data_dir" --logs-dir "$data_dir/logs" \
-    >"$data_dir/logs/stdout.log" 2>"$data_dir/logs/stderr.log" &
+  # Point wnd's discovery plane at our loopback relay. Needs the env-var
+  # patch applied in preflight to take effect; without it wnd falls back
+  # to the baked-in public set and exits with NoRelayConnections.
+  WHITENOISE_DISCOVERY_RELAYS="$RELAY_URL" \
+    nohup "$WND_BIN" --data-dir "$data_dir" --logs-dir "$data_dir/logs" \
+      >"$data_dir/logs/stdout.log" 2>"$data_dir/logs/stderr.log" &
   echo "$!" > "$data_dir/pid"
   local deadline=$(( $(date +%s) + 30 ))
   while [[ $(date +%s) -lt $deadline ]]; do

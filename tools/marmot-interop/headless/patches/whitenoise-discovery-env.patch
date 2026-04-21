@@ -1,0 +1,23 @@
+--- a/src/relay_control/discovery.rs
++++ b/src/relay_control/discovery.rs
+@@ -87,6 +87,20 @@
+
+     /// Initial curated relay set from the planning doc.
+     pub(crate) fn curated_default_relays() -> Vec<RelayUrl> {
++        // marmot-interop-headless patch: honour $WHITENOISE_DISCOVERY_RELAYS
++        // (comma-separated list) when present, so the harness can force wnd
++        // to use a loopback relay instead of the baked-in public set.
++        if let Ok(from_env) = std::env::var("WHITENOISE_DISCOVERY_RELAYS") {
++            let parsed: Vec<RelayUrl> = from_env
++                .split(',')
++                .map(str::trim)
++                .filter(|s| !s.is_empty())
++                .filter_map(|u| RelayUrl::parse(u).ok())
++                .collect();
++            if !parsed.is_empty() {
++                return parsed;
++            }
++        }
+         [
+             "wss://index.hzrd149.com",
+             "wss://indexer.coracle.social",
