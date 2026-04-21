@@ -48,6 +48,7 @@ import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.feeds.WatchScrollToTop
 import com.vitorpamplona.amethyst.ui.feeds.rememberForeverLazyGridState
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -150,7 +151,7 @@ private fun BrowseEmojiSetsGridLoaded(
         columns = GridCells.Adaptive(minSize = 160.dp),
         state = gridState,
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(12.dp),
+        contentPadding = rememberFeedContentPadding(PaddingValues(12.dp)),
         verticalArrangement = Arrangement.spacedBy(12.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
