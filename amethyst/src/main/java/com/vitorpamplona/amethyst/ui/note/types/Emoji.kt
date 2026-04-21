@@ -35,6 +35,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -60,7 +61,6 @@ import com.vitorpamplona.amethyst.ui.theme.Size35Modifier
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.isTaggedAddressableNote
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
-import com.vitorpamplona.quartz.nip30CustomEmoji.taggedEmojis
 
 @Composable
 fun RenderEmojiPack(
@@ -96,7 +96,13 @@ fun RenderEmojiPack(
 ) {
     var expanded by remember { mutableStateOf(false) }
 
-    val allEmojis = remember(noteEvent) { noteEvent.taggedEmojis() }
+    val signer = accountViewModel.account.signer
+    // Decryption is suspending, so produceState yields the public list immediately
+    // and replaces with the merged public+private list once decryption resolves.
+    // Foreign packs (signer != author) silently keep public-only.
+    val allEmojis by produceState(initialValue = noteEvent.publicEmojis(), noteEvent, signer) {
+        value = noteEvent.allEmojis(signer)
+    }
 
     val emojisToShow =
         if (expanded) {

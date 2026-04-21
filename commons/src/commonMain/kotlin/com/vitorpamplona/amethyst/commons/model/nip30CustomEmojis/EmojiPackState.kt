@@ -25,9 +25,9 @@ import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.taggedAddresses
+import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiPackSelectionEvent
-import com.vitorpamplona.quartz.nip30CustomEmoji.taggedEmojis
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -81,21 +81,19 @@ class EmojiPackState(
                 emptyList(),
             )
 
-    fun convertEmojiPack(pack: EmojiPackEvent): List<EmojiMedia> =
-        pack.taggedEmojis().map {
-            EmojiMedia(it.code, it.url)
-        }
+    fun convertEmojiPack(pack: EmojiPackEvent): List<EmojiMedia> = pack.publicEmojis().toEmojiMedia()
 
-    fun mergePack(list: Array<NoteState>): List<EmojiMedia> =
+    // Decrypts private (NIP-51) emojis when this signer authored the pack so they
+    // surface alongside public ones in the `:` autocomplete. Foreign packs return
+    // public-only because privateTags refuses to decrypt for non-authors.
+    suspend fun convertEmojiPackWithPrivate(pack: EmojiPackEvent): List<EmojiMedia> = pack.allEmojis(signer).toEmojiMedia()
+
+    private fun List<EmojiUrlTag>.toEmojiMedia() = map { EmojiMedia(it.code, it.url) }
+
+    suspend fun mergePackWithPrivate(list: Array<NoteState>): List<EmojiMedia> =
         list
-            .mapNotNull {
-                val ev = it.note.event as? EmojiPackEvent
-                if (ev != null) {
-                    convertEmojiPack(ev)
-                } else {
-                    null
-                }
-            }.flatten()
+            .mapNotNull { it.note.event as? EmojiPackEvent }
+            .flatMap { convertEmojiPackWithPrivate(it) }
             .distinctBy { it.link }
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -105,7 +103,7 @@ class EmojiPackState(
                 if (emojiList != null) {
                     emitAll(
                         combineTransform(emojiList) {
-                            emit(mergePack(it))
+                            emit(mergePackWithPrivate(it))
                         },
                     )
                 } else {
@@ -113,7 +111,7 @@ class EmojiPackState(
                 }
             }.onStart {
                 emit(
-                    mergePack(
+                    mergePackWithPrivate(
                         convertEmojiSelectionPack(
                             getEmojiPackSelection(),
                         )?.map { it.value }?.toTypedArray() ?: emptyArray(),
@@ -128,9 +126,9 @@ class EmojiPackState(
 
     suspend fun addEmojiPack(emojiPack: Note): EmojiPackSelectionEvent {
         val emojiPackEvent = emojiPack.event
-        if (emojiPackEvent !is EmojiPackEvent) throw IllegalArgumentException("Cannot add an emoji pack to this kind of event.")
+        if (emojiPackEvent !is EmojiPackEvent) throw IllegalArgumentException("Note is not an EmojiPackEvent; cannot add to emoji list.")
 
-        val eventHint = emojiPack.toEventHint<EmojiPackEvent>() ?: throw IllegalArgumentException("Cannot add an emoji pack to this kind of event.")
+        val eventHint = emojiPack.toEventHint<EmojiPackEvent>() ?: throw IllegalArgumentException("Cannot build event hint for this emoji pack.")
 
         val usersEmojiList = getEmojiPackSelection()
         return if (usersEmojiList == null) {
@@ -143,7 +141,7 @@ class EmojiPackState(
     }
 
     suspend fun removeEmojiPack(emojiPack: Note): EmojiPackSelectionEvent? {
-        val usersEmojiList = getEmojiPackSelection() ?: throw IllegalArgumentException("Cannot remove an emoji pack to this kind of event.")
+        val usersEmojiList = getEmojiPackSelection() ?: throw IllegalArgumentException("No emoji pack selection exists to remove from.")
 
         val emojiPackEvent = emojiPack.event
         if (emojiPackEvent !is EmojiPackEvent) return null

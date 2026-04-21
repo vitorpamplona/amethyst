@@ -2399,4 +2399,40 @@
     <string name="ai_tone_more_direct">More Direct</string>
     <string name="ai_tone_punchy">Punchy</string>
     <string name="ai_tone_emojify">+ Emoji</string>
+
+    <!-- Emoji packs -->
+    <string name="emoji_packs_title">Emoji Packs</string>
+    <string name="emoji_pack_management_title">Add to Emoji List</string>
+    <string name="add_to_emoji_list">Add to my emoji list</string>
+    <string name="remove_from_emoji_list">Remove from my emoji list</string>
+    <string name="new_emoji_pack">New emoji pack</string>
+    <string name="edit_emoji_pack">Edit emoji pack</string>
+    <string name="emoji_shortcode_label">Shortcode (e.g. :smile:)</string>
+    <string name="emoji_shortcode_invalid">Only letters, numbers, hyphens, and underscores</string>
+    <string name="emoji_url_label">Image URL</string>
+    <string name="emoji_pack_address_label">Pack address (optional)</string>
+    <string name="emoji_pack_name_label">Pack name</string>
+    <string name="emoji_pack_description_label">Description (optional)</string>
+    <string name="emoji_pack_image_label">Cover image URL (optional)</string>
+    <string name="emoji_pack_upload_image_cta">Upload a cover image</string>
+    <string name="emoji_pack_upload_image_hint">Pick a square image to represent this emoji pack.</string>
+    <string name="no_emoji_packs">You don\'t have any emoji packs yet</string>
+    <string name="emoji_pack_count">%1$d emojis</string>
+    <string name="my_emoji_list_title">My Emoji List</string>
+    <string name="my_emoji_list_explainer">Emoji packs you\'ve added to your selection (NIP-51 kind 10030)</string>
+    <string name="my_emoji_list_empty">You haven\'t added any emoji packs to your list yet</string>
+    <string name="my_emoji_list_by_author">by %1$s</string>
+    <string name="add_emoji_fab">Add emoji</string>
+    <string name="emoji_add_dialog_title">Add custom emoji</string>
+    <string name="emoji_remove_dialog_title">Remove :%1$s:?</string>
+    <string name="emoji_long_press_hint">Long-press an emoji to remove it</string>
+    <string name="emoji_pack_is_in_list">\"%1$s\" is in your emoji list</string>
+    <string name="emoji_pack_is_not_in_list">\"%1$s\" is not in your emoji list</string>
+    <string name="emoji_pack_actions_dialog_title">Emoji pack actions</string>
+    <string name="manage_emoji_packs">My Emoji Packs</string>
+    <string name="browse_emoji_sets">Browse Emoji Sets</string>
+    <string name="emoji_private_toggle">Private</string>
+    <string name="emoji_private_badge">Private emoji</string>
+    <string name="emoji_public_explainer">Public emojis are visible to everyone and appear in your reaction menu and \":\" autocomplete picker when this pack is in your emoji list.</string>
+    <string name="emoji_private_explainer">Private emojis are stored encrypted on relays and visible only to you. They appear in your reaction menu and \":\" autocomplete just like public ones.</string>
 </resources>

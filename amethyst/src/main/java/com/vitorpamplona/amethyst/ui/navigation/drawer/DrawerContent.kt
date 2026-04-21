@@ -57,6 +57,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material.icons.outlined.CollectionsBookmark
 import androidx.compose.material.icons.outlined.Drafts
+import androidx.compose.material.icons.outlined.EmojiEmotions
 import androidx.compose.material.icons.outlined.GroupAdd
 import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.Language
@@ -561,6 +562,22 @@ fun ListContent(
             tint = MaterialTheme.colorScheme.onBackground,
             nav = nav,
             route = Route.BookmarkGroups,
+        )
+
+        NavigationRow(
+            title = R.string.manage_emoji_packs,
+            icon = Icons.Outlined.EmojiEmotions,
+            tint = MaterialTheme.colorScheme.onBackground,
+            nav = nav,
+            route = Route.EmojiPacks,
+        )
+
+        NavigationRow(
+            title = R.string.browse_emoji_sets,
+            icon = Icons.Outlined.EmojiEmotions,
+            tint = MaterialTheme.colorScheme.onBackground,
+            nav = nav,
+            route = Route.BrowseEmojiSets,
         )
 
         NavigationRow(

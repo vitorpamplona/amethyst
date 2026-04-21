@@ -57,6 +57,7 @@ import com.vitorpamplona.amethyst.model.nip02FollowLists.Kind3FollowListState
 import com.vitorpamplona.amethyst.model.nip03Timestamp.OtsState
 import com.vitorpamplona.amethyst.model.nip17Dms.DmInboxRelayState
 import com.vitorpamplona.amethyst.model.nip17Dms.DmRelayListState
+import com.vitorpamplona.amethyst.model.nip30CustomEmojis.OwnedEmojiPacksState
 import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcSignerState
 import com.vitorpamplona.amethyst.model.nip51Lists.BookmarkListState
 import com.vitorpamplona.amethyst.model.nip51Lists.HiddenUsersState
@@ -370,6 +371,7 @@ class Account(
     val bookmarkState = BookmarkListState(signer, cache, scope)
     val pinState = PinListState(signer, cache, scope)
     val emoji = EmojiPackState(signer, cache, scope)
+    val ownedEmojiPacks = OwnedEmojiPacksState(signer, cache, scope)
 
     val vanish = VanishRequestsState(signer, cache, client, scope)
 
@@ -482,6 +484,9 @@ class Account(
 
     val liveBadgesFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultBadgesFollowList)
     val liveBadgesFollowListsPerRelay = OutboxLoaderState(liveBadgesFollowLists, cache, scope).flow
+
+    val liveBrowseEmojiSetsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultBrowseEmojiSetsFollowList)
+    val liveBrowseEmojiSetsFollowListsPerRelay = OutboxLoaderState(liveBrowseEmojiSetsFollowLists, cache, scope).flow
 
     val liveCommunitiesFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultCommunitiesFollowList)
     val liveCommunitiesFollowListsPerRelay = OutboxLoaderState(liveCommunitiesFollowLists, cache, scope).flow
@@ -2343,6 +2348,33 @@ class Account(
 
     suspend fun addEmojiPack(emojiPack: Note) = sendMyPublicAndPrivateOutbox(emoji.addEmojiPack(emojiPack))
 
+    suspend fun createOwnedEmojiPack(
+        title: String,
+        description: String? = null,
+        image: String? = null,
+    ) = ownedEmojiPacks.createPack(title, description, image, this)
+
+    suspend fun updateOwnedEmojiPackMetadata(
+        dTag: String,
+        newTitle: String,
+        newDescription: String?,
+        newImage: String?,
+    ) = ownedEmojiPacks.updateMetadata(dTag, newTitle, newDescription, newImage, this)
+
+    suspend fun addEmojiToOwnedPack(
+        dTag: String,
+        emoji: com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag,
+        isPrivate: Boolean,
+    ) = ownedEmojiPacks.addEmoji(dTag, emoji, isPrivate, this)
+
+    suspend fun removeEmojiFromOwnedPack(
+        dTag: String,
+        shortcode: String,
+        isPrivate: Boolean,
+    ) = ownedEmojiPacks.removeEmoji(dTag, shortcode, isPrivate, this)
+
+    suspend fun deleteOwnedEmojiPack(dTag: String) = ownedEmojiPacks.deletePack(dTag, this)
+
     suspend fun addToGallery(
         idHex: HexKey,
         url: String,
@@ -2895,6 +2927,7 @@ class Account(
                     followLists.newNotes(newNotes)
                     labeledBookmarkLists.newNotes(newNotes)
                     interestSets.newNotes(newNotes)
+                    ownedEmojiPacks.newNotes(newNotes)
                 }
             }
         }
@@ -2907,6 +2940,7 @@ class Account(
                     followLists.deletedNotes(deletedNotes)
                     labeledBookmarkLists.deletedNotes(deletedNotes)
                     interestSets.deletedNotes(deletedNotes)
+                    ownedEmojiPacks.deletedNotes(deletedNotes)
                 }
             }
         }
