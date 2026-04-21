@@ -127,6 +127,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.DrawerSectionHeaderModifier
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.Font18SP
 import com.vitorpamplona.amethyst.ui.theme.IconRowTextModifier
@@ -742,33 +743,22 @@ fun CollapsibleSection(
 ) {
     var expanded by remember { mutableStateOf(true) }
     val sectionTitle = stringRes(title)
-    val toggleLabel =
-        stringRes(
-            if (expanded) R.string.drawer_collapse_section else R.string.drawer_expand_section,
-            sectionTitle,
-        )
 
     Column(modifier = Modifier.animateContentSize()) {
         Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .clickable(
-                        onClick = { expanded = !expanded },
-                        onClickLabel = toggleLabel,
-                    ).padding(top = 12.dp, bottom = 4.dp, start = 25.dp, end = 15.dp),
+            modifier = DrawerSectionHeaderModifier.clickable { expanded = !expanded },
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
                 modifier = Modifier.weight(1f),
-                text = sectionTitle.uppercase(),
+                text = sectionTitle,
                 fontSize = Font14SP,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Icon(
                 imageVector = if (expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
-                contentDescription = null,
+                contentDescription = sectionTitle,
                 modifier = Size22Modifier,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
