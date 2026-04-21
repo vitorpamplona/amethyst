@@ -403,6 +403,13 @@ class MlsGroup private constructor(
         // (i.e. no remaining member appears in the post-commit admin list).
         enforceNoAdminDepletion(proposals)
 
+        // Capture the pre-commit exporter secret BEFORE any mutation.
+        // Publishers of the outbound kind:445 MUST outer-encrypt with this
+        // key (epoch N) so that other existing members at epoch N can decrypt
+        // and process the commit. See CommitResult.preCommitExporterSecret.
+        val preCommitExporterSecret =
+            exporterSecret("marmot", "group-event".encodeToByteArray(), 32)
+
         val proposalOrRefs = proposals.map { ProposalOrRef.Inline(it.proposal) }
 
         // Check if we need an UpdatePath (required unless only SelfRemove)
@@ -563,6 +570,7 @@ class MlsGroup private constructor(
             welcomeBytes = welcomeBytes,
             groupInfoBytes = null,
             framedCommitBytes = framedCommitBytes,
+            preCommitExporterSecret = preCommitExporterSecret,
         )
     }
 
@@ -2071,7 +2079,9 @@ class MlsGroup private constructor(
 
     /**
      * Add a member to the group by their KeyPackage.
-     * Creates and applies a Commit with an Add proposal.
+     * Creates and applies a Commit with an Add proposal. The resulting
+     * [CommitResult.preCommitExporterSecret] is the key the outer kind:445
+     * MUST be encrypted with (RFC 9420 §12.4 + MDK parity).
      */
     fun addMember(keyPackageBytes: ByteArray): CommitResult {
         proposeAdd(keyPackageBytes)
@@ -2080,7 +2090,8 @@ class MlsGroup private constructor(
 
     /**
      * Remove a member from the group.
-     * Creates and applies a Commit with a Remove proposal.
+     * Creates and applies a Commit with a Remove proposal. See [addMember]
+     * for the pre-commit exporter key contract on the returned [CommitResult].
      */
     fun removeMember(targetLeafIndex: Int): CommitResult {
         proposeRemove(targetLeafIndex)

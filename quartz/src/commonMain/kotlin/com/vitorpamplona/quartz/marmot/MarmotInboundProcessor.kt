@@ -80,6 +80,21 @@ sealed class GroupEventResult {
     ) : GroupEventResult()
 
     /**
+     * The outer ChaCha20-Poly1305 layer could not be decrypted with the
+     * current-epoch exporter key or any retained prior-epoch key.
+     *
+     * This is the expected outcome whenever a member receives a kind:445
+     * from an epoch before they joined (via Welcome). Per MLS forward
+     * secrecy, the new member never held those keys, so the bytes are
+     * unreadable to them — and that is by design, not an error. Callers
+     * should surface this at DEBUG, not WARN.
+     */
+    data class UndecryptableOuterLayer(
+        val groupId: HexKey,
+        val retainedEpochCount: Int,
+    ) : GroupEventResult()
+
+    /**
      * The event could not be processed.
      */
     data class Error(
@@ -99,6 +114,20 @@ sealed class WelcomeResult {
     data class Joined(
         val nostrGroupId: HexKey,
         val needsKeyPackageRotation: Boolean,
+    ) : WelcomeResult()
+
+    /**
+     * The Welcome was for a group we're already a member of — benign replay.
+     *
+     * Happens after an app restart: the gift-wrapped Welcome (kind:1059) is
+     * still sitting on the relay and gets redelivered, but the KeyPackage
+     * bundle it referenced was already consumed and marked. Rather than
+     * logging a noisy "No matching KeyPackageBundle" error, we detect the
+     * replay up front by checking `groupManager.isMember(hintNostrGroupId)`
+     * and return this result. Callers should log at DEBUG.
+     */
+    data class AlreadyJoined(
+        val nostrGroupId: HexKey,
     ) : WelcomeResult()
 
     /**
@@ -176,15 +205,25 @@ class MarmotInboundProcessor(
         val result =
             try {
                 // Step 1: Outer ChaCha20-Poly1305 decryption
-                val mlsBytes = decryptOuterLayer(groupId, groupEvent.encryptedContent())
+                val mlsBytes = tryDecryptOuterLayer(groupId, groupEvent.encryptedContent())
+                if (mlsBytes == null) {
+                    // Expected when this kind:445 was encrypted with an epoch
+                    // key that predates our join (classical MLS forward
+                    // secrecy), or when the sender's epoch has drifted. Not
+                    // an error — callers should log at DEBUG.
+                    GroupEventResult.UndecryptableOuterLayer(
+                        groupId,
+                        retainedEpochCount = groupManager.retainedExporterSecrets(groupId).size,
+                    )
+                } else {
+                    // Step 2: Parse the MLS message
+                    val mlsMessage = MlsMessage.decodeTls(TlsReader(mlsBytes))
 
-                // Step 2: Parse the MLS message
-                val mlsMessage = MlsMessage.decodeTls(TlsReader(mlsBytes))
-
-                when (mlsMessage.wireFormat) {
-                    WireFormat.PRIVATE_MESSAGE -> processPrivateMessage(groupId, mlsMessage, groupEvent)
-                    WireFormat.PUBLIC_MESSAGE -> processPublicMessage(groupId, mlsMessage, groupEvent)
-                    else -> GroupEventResult.Error(groupId, "Unexpected wire format: ${mlsMessage.wireFormat}")
+                    when (mlsMessage.wireFormat) {
+                        WireFormat.PRIVATE_MESSAGE -> processPrivateMessage(groupId, mlsMessage, groupEvent)
+                        WireFormat.PUBLIC_MESSAGE -> processPublicMessage(groupId, mlsMessage, groupEvent)
+                        else -> GroupEventResult.Error(groupId, "Unexpected wire format: ${mlsMessage.wireFormat}")
+                    }
                 }
             } catch (e: Exception) {
                 GroupEventResult.Error(groupId, "Failed to process GroupEvent: ${e.message}", e)
@@ -244,6 +283,22 @@ class MarmotInboundProcessor(
                 .d("MarmotDbg") {
                     "MarmotInboundProcessor.processWelcome: welcomeBytes=${welcomeBytes.size}B looking up KeyPackage by ref=${keyPackageEventId.take(8)}…"
                 }
+
+            // Short-circuit if we're already a member of the group the
+            // Welcome is inviting us to. Happens every time the app
+            // restarts: the gift-wrapped kind:1059 is still on the relay
+            // and gets redelivered, but the KeyPackage bundle it
+            // referenced was already consumed + marked during the first
+            // processing. Without this check the fallthrough below would
+            // log a noisy "No matching KeyPackageBundle" warning for what
+            // is actually a benign replay.
+            if (hintNostrGroupId != null && groupManager.isMember(hintNostrGroupId)) {
+                com.vitorpamplona.quartz.utils.Log
+                    .d("MarmotDbg") {
+                        "MarmotInboundProcessor.processWelcome: already a member of group=${hintNostrGroupId.take(8)}… — treating Welcome as replay"
+                    }
+                return WelcomeResult.AlreadyJoined(hintNostrGroupId)
+            }
 
             // Find the KeyPackageBundle that was consumed.
             //
@@ -446,7 +501,12 @@ class MarmotInboundProcessor(
         commitEvent: GroupEvent,
     ): GroupEventResult =
         try {
-            val mlsBytes = decryptOuterLayer(groupId, commitEvent.encryptedContent())
+            val mlsBytes =
+                tryDecryptOuterLayer(groupId, commitEvent.encryptedContent())
+                    ?: return GroupEventResult.UndecryptableOuterLayer(
+                        groupId,
+                        retainedEpochCount = groupManager.retainedExporterSecrets(groupId).size,
+                    )
             val mlsMessage = MlsMessage.decodeTls(TlsReader(mlsBytes))
 
             when (mlsMessage.wireFormat) {
@@ -467,17 +527,44 @@ class MarmotInboundProcessor(
                 WireFormat.PUBLIC_MESSAGE -> {
                     val pubMsg = PublicMessage.decodeTls(TlsReader(mlsMessage.payload))
                     val tag = pubMsg.confirmationTag
-                    if (tag == null) {
-                        GroupEventResult.Error(groupId, "PublicMessage commit missing confirmation_tag")
-                    } else {
-                        groupManager.processCommit(
-                            nostrGroupId = groupId,
-                            commitBytes = pubMsg.content,
-                            senderLeafIndex = pubMsg.sender.leafIndex,
-                            confirmationTag = tag,
-                        )
-                        val group = groupManager.getGroup(groupId)
-                        GroupEventResult.CommitProcessed(groupId, group?.epoch ?: 0)
+                    val currentEpoch = groupManager.getGroup(groupId)?.epoch
+                    when {
+                        tag == null -> {
+                            GroupEventResult.Error(groupId, "PublicMessage commit missing confirmation_tag")
+                        }
+
+                        // Reject commits that are not for our current epoch.
+                        // Happens most commonly when our own already-applied
+                        // commit is echoed back from the relay after an app
+                        // restart (the in-memory dedup set is cleared), and
+                        // the outer layer decrypts via a retained epoch key.
+                        // Calling `processCommit` on a past-epoch commit
+                        // partially mutates tree / groupContext / epochSecrets
+                        // before throwing on the confirmation-tag check,
+                        // leaving the local state diverged from every other
+                        // member's — they then can't decrypt anything we
+                        // send next.
+                        currentEpoch != null && pubMsg.epoch < currentEpoch -> {
+                            GroupEventResult.Duplicate(groupId)
+                        }
+
+                        currentEpoch != null && pubMsg.epoch > currentEpoch -> {
+                            GroupEventResult.Error(
+                                groupId,
+                                "Commit epoch ${pubMsg.epoch} is ahead of local epoch $currentEpoch; ignoring",
+                            )
+                        }
+
+                        else -> {
+                            groupManager.processCommit(
+                                nostrGroupId = groupId,
+                                commitBytes = pubMsg.content,
+                                senderLeafIndex = pubMsg.sender.leafIndex,
+                                confirmationTag = tag,
+                            )
+                            val group = groupManager.getGroup(groupId)
+                            GroupEventResult.CommitProcessed(groupId, group?.epoch ?: 0)
+                        }
                     }
                 }
 
@@ -495,11 +582,17 @@ class MarmotInboundProcessor(
      *
      * After a commit advances the epoch, late-arriving messages encrypted
      * with the previous epoch's exporter key would fail without this fallback.
+     *
+     * Returns null when neither the current epoch key nor any retained key
+     * decrypts. This happens normally for commits/application messages from
+     * epochs that predate our join (we never held those keys), so callers
+     * should treat null as an expected "nothing to do here" outcome and log
+     * at DEBUG, not as an error.
      */
-    private fun decryptOuterLayer(
+    private fun tryDecryptOuterLayer(
         groupId: HexKey,
         encryptedContent: String,
-    ): ByteArray {
+    ): ByteArray? {
         // Try current epoch key first
         try {
             val exporterKey = groupManager.exporterSecret(groupId)
@@ -518,9 +611,6 @@ class MarmotInboundProcessor(
             }
         }
 
-        // All keys exhausted — throw to let callers produce an error result
-        throw IllegalStateException(
-            "Outer decryption failed with current and ${retainedKeys.size} retained epoch key(s)",
-        )
+        return null
     }
 }

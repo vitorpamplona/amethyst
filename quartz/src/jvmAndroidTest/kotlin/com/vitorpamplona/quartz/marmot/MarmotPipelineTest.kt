@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEventEncryption
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupManager
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupStateStore
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import kotlinx.coroutines.runBlocking
@@ -424,6 +425,450 @@ class MarmotPipelineTest {
 
             assertEquals(groupId1, result1.signedEvent.groupId())
             assertEquals(groupId2, result2.signedEvent.groupId())
+        }
+    }
+
+    @Test
+    fun testCreatorDoesNotDoubleApplyOwnCommitAfterRestart() {
+        // Root cause: after David restarts, his own add-member kind:445 that
+        // got echoed back from the relay is no longer marked as "already
+        // processed" (the dedup set lives in memory and isn't persisted).
+        // The inbound path then outer-decrypts it via a retained epoch key
+        // and feeds the commit into group.processCommit — which is NOT
+        // atomic, so it partially advances David's local state before failing
+        // with "Confirmation tag verification failed" (the tag was computed
+        // at the original epoch; David is already two epochs past).
+        //
+        // After this partial apply, David's epoch / tree / exporter_secret
+        // drift forward by one epoch while Eden and Fred stay put. Any
+        // subsequent message David sends uses a key nobody else has, and
+        // they log "Outer decryption failed with current and N retained
+        // epoch key(s)".
+        runBlocking {
+            val davidStore = TestGroupStateStore()
+            val davidMgr = MlsGroupManager(davidStore)
+            val edenMgr = MlsGroupManager(TestGroupStateStore())
+            val fredMgr = MlsGroupManager(TestGroupStateStore())
+            val davidId = ByteArray(32) { 0xD1.toByte() }
+            val edenId = ByteArray(32) { 0xE2.toByte() }
+            val fredId = ByteArray(32) { 0xF3.toByte() }
+
+            davidMgr.createGroup(groupId, davidId)
+            davidMgr.updateGroupExtensions(
+                groupId,
+                listOf(
+                    com.vitorpamplona.quartz.marmot.mip01Groups
+                        .MarmotGroupData(
+                            nostrGroupId = groupId,
+                            adminPubkeys = listOf(davidId.toHexKey()),
+                        ).toExtension(),
+                ),
+            )
+            val davidGroup = davidMgr.getGroup(groupId)!!
+            val edenBundle = davidGroup.createKeyPackage(edenId, ByteArray(0))
+            val fredBundle = davidGroup.createKeyPackage(fredId, ByteArray(0))
+
+            val addEden = davidMgr.addMember(groupId, edenBundle.keyPackage.toTlsBytes())
+            edenMgr.processWelcome(addEden.welcomeBytes!!, edenBundle)
+            val addFred = davidMgr.addMember(groupId, fredBundle.keyPackage.toTlsBytes())
+            fredMgr.processWelcome(addFred.welcomeBytes!!, fredBundle)
+            edenMgr.processCommit(
+                groupId,
+                addFred.commitBytes,
+                davidMgr.getGroup(groupId)!!.leafIndex,
+                ByteArray(0),
+            )
+
+            val preRestartEpoch = davidMgr.getGroup(groupId)!!.epoch
+            val preRestartExporter = davidMgr.exporterSecret(groupId)
+
+            // Simulate David's app restart.
+            val davidMgr2 = MlsGroupManager(davidStore)
+            davidMgr2.restoreAll()
+
+            // Now replay David's own echoed add-Eden commit that's still on
+            // the relay. After restart, the inbound dedup set is empty so
+            // the inbound pipeline does the full outer-decrypt via retained
+            // keys + processCommit on an already-applied commit.
+            val inbound =
+                com.vitorpamplona.quartz.marmot
+                    .MarmotInboundProcessor(
+                        groupManager = davidMgr2,
+                        keyPackageRotationManager =
+                            com.vitorpamplona.quartz.marmot.mip00KeyPackages
+                                .KeyPackageRotationManager(),
+                    )
+            val outbound = MarmotOutboundProcessor(davidMgr2)
+
+            // Re-encrypt the add-Eden framed commit with the pre-commit key
+            // so it looks exactly like what the relay would re-deliver.
+            val echoed =
+                outbound.buildCommitEvent(
+                    nostrGroupId = groupId,
+                    commitBytes = addEden.framedCommitBytes,
+                    exporterKey = addEden.preCommitExporterSecret,
+                )
+            val result = inbound.processGroupEvent(echoed.signedEvent)
+            assertIs<GroupEventResult.Duplicate>(
+                result,
+                "echoed already-applied commit must be treated as a no-op Duplicate",
+            )
+
+            val postEchoEpoch = davidMgr2.getGroup(groupId)!!.epoch
+            val postEchoExporter = davidMgr2.exporterSecret(groupId)
+
+            assertEquals(
+                preRestartEpoch,
+                postEchoEpoch,
+                "processing our own already-applied commit echo must NOT advance the local epoch",
+            )
+            kotlin.test.assertContentEquals(
+                preRestartExporter,
+                postEchoExporter,
+                "processing our own already-applied commit echo must NOT change the exporter secret",
+            )
+        }
+    }
+
+    @Test
+    fun testCreatorCanSendMessageAfterRestart() {
+        // Reproduces production symptom: David creates a group, adds Eden and
+        // Fred, sends messages — all fine. After David restarts the app
+        // (simulated here by save-state + fresh MlsGroupManager + restoreAll),
+        // his outbound kind:445 outer ChaCha20 layer suddenly uses a
+        // different key than Eden/Fred, and they fail with
+        // "Outer decryption failed with current and N retained epoch key(s)".
+        runBlocking {
+            val davidStore = TestGroupStateStore()
+            val davidMgr = MlsGroupManager(davidStore)
+            val edenMgr = MlsGroupManager(TestGroupStateStore())
+            val fredMgr = MlsGroupManager(TestGroupStateStore())
+
+            val davidId = ByteArray(32) { 0xD1.toByte() }
+            val edenId = ByteArray(32) { 0xE2.toByte() }
+            val fredId = ByteArray(32) { 0xF3.toByte() }
+
+            davidMgr.createGroup(groupId, davidId)
+            davidMgr.updateGroupExtensions(
+                nostrGroupId = groupId,
+                extensions =
+                    listOf(
+                        com.vitorpamplona.quartz.marmot.mip01Groups
+                            .MarmotGroupData(
+                                nostrGroupId = groupId,
+                                adminPubkeys = listOf(davidId.toHexKey()),
+                            ).toExtension(),
+                    ),
+            )
+            val davidGroup = davidMgr.getGroup(groupId)!!
+            val edenBundle = davidGroup.createKeyPackage(edenId, ByteArray(0))
+            val fredBundle = davidGroup.createKeyPackage(fredId, ByteArray(0))
+
+            // David adds Eden.
+            val addEden = davidMgr.addMember(groupId, edenBundle.keyPackage.toTlsBytes())
+            edenMgr.processWelcome(addEden.welcomeBytes!!, edenBundle)
+
+            // David adds Fred; Eden processes Alice's add-Fred commit.
+            val addFred = davidMgr.addMember(groupId, fredBundle.keyPackage.toTlsBytes())
+            fredMgr.processWelcome(addFred.welcomeBytes!!, fredBundle)
+            edenMgr.processCommit(
+                nostrGroupId = groupId,
+                commitBytes = addFred.commitBytes,
+                senderLeafIndex = davidMgr.getGroup(groupId)!!.leafIndex,
+                confirmationTag = ByteArray(0),
+            )
+
+            // Pre-restart sanity: all three share the same outer exporter key.
+            val preRestartDavidKey = davidMgr.exporterSecret(groupId)
+            kotlin.test.assertContentEquals(
+                preRestartDavidKey,
+                edenMgr.exporterSecret(groupId),
+                "Eden's exporter key should match David's before restart",
+            )
+            kotlin.test.assertContentEquals(
+                preRestartDavidKey,
+                fredMgr.exporterSecret(groupId),
+                "Fred's exporter key should match David's before restart",
+            )
+
+            // Simulate David's app restart: drop his in-memory manager and
+            // rebuild it from the persisted store.
+            val davidMgr2 = MlsGroupManager(davidStore)
+            davidMgr2.restoreAll()
+
+            val postRestartDavidKey = davidMgr2.exporterSecret(groupId)
+            kotlin.test.assertContentEquals(
+                preRestartDavidKey,
+                postRestartDavidKey,
+                "David's exporter key must survive a save+restore round-trip; " +
+                    "otherwise Eden/Fred can't decrypt his next outer layer.",
+            )
+
+            // David sends a message post-restart; Eden and Fred must decrypt.
+            val outbound = MarmotOutboundProcessor(davidMgr2)
+            val msg = "hi after restart"
+            val postRestartEvent =
+                outbound.buildGroupEventFromBytes(groupId, msg.encodeToByteArray())
+
+            val edenKey = edenMgr.exporterSecret(groupId)
+            val mlsBytesEden = GroupEventEncryption.decrypt(postRestartEvent.signedEvent.content, edenKey)
+            val edenDecrypted = edenMgr.decrypt(groupId, mlsBytesEden)
+            assertEquals(msg, edenDecrypted.content.decodeToString())
+        }
+    }
+
+    @Test
+    fun testFredEncryptsAfterJoiningThreeMemberGroup() {
+        // Reproduces the production StackOverflowError: the last-joined member
+        // (Fred at leafIndex=2 in a 3-member group) attempts to encrypt his
+        // first message and the SecretTree.getNodeSecret recursion never
+        // terminates.
+        runBlocking {
+            val aliceMgr = createGroupManager()
+            val bobMgr = createGroupManager()
+            val fredMgr = createGroupManager()
+
+            val aliceIdBytes = ByteArray(32) { 0xA1.toByte() }
+            aliceMgr.createGroup(groupId, aliceIdBytes)
+            aliceMgr.updateGroupExtensions(
+                nostrGroupId = groupId,
+                extensions =
+                    listOf(
+                        com.vitorpamplona.quartz.marmot.mip01Groups
+                            .MarmotGroupData(
+                                nostrGroupId = groupId,
+                                adminPubkeys = listOf(aliceIdBytes.toHexKey()),
+                            ).toExtension(),
+                    ),
+            )
+            val aliceGroup = aliceMgr.getGroup(groupId)!!
+            val bobBundle = aliceGroup.createKeyPackage(ByteArray(32) { 0xB2.toByte() }, ByteArray(0))
+            val fredBundle = aliceGroup.createKeyPackage(ByteArray(32) { 0xF3.toByte() }, ByteArray(0))
+
+            // Alice adds Bob.
+            val addBob = aliceMgr.addMember(groupId, bobBundle.keyPackage.toTlsBytes())
+            bobMgr.processWelcome(addBob.welcomeBytes!!, bobBundle)
+
+            // Alice adds Fred (he joins at leafIndex=2, in a 3-leaf tree).
+            val addFred = aliceMgr.addMember(groupId, fredBundle.keyPackage.toTlsBytes())
+            fredMgr.processWelcome(addFred.welcomeBytes!!, fredBundle)
+            // Bob (existing member at the pre-add-Fred epoch) receives and
+            // applies Alice's add-Fred commit to reach the same epoch as
+            // Alice + Fred. Without this, Bob can't decrypt Fred's subsequent
+            // application messages.
+            bobMgr.processCommit(
+                nostrGroupId = groupId,
+                commitBytes = addFred.commitBytes,
+                senderLeafIndex = aliceMgr.getGroup(groupId)!!.leafIndex,
+                confirmationTag = ByteArray(0),
+            )
+
+            // Sanity: Fred is at leafIndex=2, leafCount=3.
+            assertEquals(2, fredMgr.getGroup(groupId)!!.leafIndex)
+
+            // This is where production crashed with StackOverflowError.
+            val fredMsg = "hi from fred"
+            val fredCiphertext = fredMgr.encrypt(groupId, fredMsg.encodeToByteArray())
+
+            // And Alice & Bob must be able to decrypt it.
+            val aliceDecrypted = aliceMgr.decrypt(groupId, fredCiphertext)
+            assertEquals(fredMsg, aliceDecrypted.content.decodeToString())
+            val bobDecrypted = bobMgr.decrypt(groupId, fredCiphertext)
+            assertEquals(fredMsg, bobDecrypted.content.decodeToString())
+        }
+    }
+
+    @Test
+    fun testAddMemberExposesPreCommitExporterSecret() {
+        // Regression: before the fix, MarmotManager.addMember outer-encrypted
+        // the kind:445 commit with the POST-commit (epoch N+1) exporter key,
+        // which meant existing members at epoch N couldn't decrypt it. The
+        // fix captures the pre-commit key inside MlsGroup.commit() and ships
+        // it back via CommitResult.preCommitExporterSecret so MarmotManager
+        // can pass it to the outbound builder.
+        runBlocking {
+            val manager = createGroupManager()
+            manager.createGroup(groupId, "alice".encodeToByteArray())
+
+            val preEpochExporter = manager.exporterSecret(groupId)
+            val preEpoch = manager.getGroup(groupId)!!.epoch
+
+            val bobBundle =
+                manager
+                    .getGroup(groupId)!!
+                    .createKeyPackage("bob".encodeToByteArray(), ByteArray(0))
+            val result = manager.addMember(groupId, bobBundle.keyPackage.toTlsBytes())
+
+            // Local state advanced to N+1.
+            assertEquals(preEpoch + 1, manager.getGroup(groupId)!!.epoch)
+            // But the returned pre-commit exporter secret matches what the
+            // group held BEFORE advancing — the key existing members still at
+            // epoch N are holding.
+            kotlin.test.assertContentEquals(
+                preEpochExporter,
+                result.preCommitExporterSecret,
+            )
+            // The post-commit exporter (what groupManager.exporterSecret now
+            // returns) MUST differ — otherwise we haven't actually rotated.
+            kotlin.test.assertFalse(
+                manager.exporterSecret(groupId).contentEquals(preEpochExporter),
+                "post-commit exporter key must differ from the pre-commit one",
+            )
+            assertNotNull(result.welcomeBytes)
+        }
+    }
+
+    @Test
+    fun testCreatorCanAddTwoMembersAndAllDecryptFollowingMessage() {
+        // End-to-end regression for the David/Eden/Fred scenario: a group
+        // creator (Alice) adds two members (Bob then Carol) in sequence and
+        // then publishes an application message. Both members MUST be able to
+        // decrypt the message. Before the stage/merge fix, the add-Carol
+        // commit was outer-encrypted with the post-commit (epoch 2) key,
+        // leaving Bob stuck at epoch 1 and unable to decrypt any of Alice's
+        // subsequent application messages.
+        runBlocking {
+            val aliceMgr = createGroupManager()
+            val bobMgr = createGroupManager()
+            val carolMgr = createGroupManager()
+
+            // Use 32-byte identities so they fit the MarmotGroupData
+            // admin_pubkeys 32-byte slots.
+            val aliceIdBytes = ByteArray(32) { 0xA1.toByte() }
+            val bobIdBytes = ByteArray(32) { 0xB2.toByte() }
+            val carolIdBytes = ByteArray(32) { 0xC3.toByte() }
+            aliceMgr.createGroup(groupId, aliceIdBytes)
+            // Install the Marmot group data extension so the Welcome carries
+            // the NostrGroupData (MlsGroupManager.processWelcome requires it).
+            aliceMgr.updateGroupExtensions(
+                nostrGroupId = groupId,
+                extensions =
+                    listOf(
+                        com.vitorpamplona.quartz.marmot.mip01Groups
+                            .MarmotGroupData(
+                                nostrGroupId = groupId,
+                                adminPubkeys = listOf(aliceIdBytes.toHexKey()),
+                            ).toExtension(),
+                    ),
+            )
+            val aliceGroup = aliceMgr.getGroup(groupId)!!
+
+            // KeyPackages are just MLS artifacts carrying identity + init key;
+            // createKeyPackage on any group instance produces a usable bundle.
+            val bobBundle = aliceGroup.createKeyPackage(bobIdBytes, ByteArray(0))
+            val carolBundle = aliceGroup.createKeyPackage(carolIdBytes, ByteArray(0))
+
+            val outbound = MarmotOutboundProcessor(aliceMgr)
+
+            // --- Step 1: Alice adds Bob. CommitResult carries the pre-commit
+            //     exporter secret so buildCommitEvent can outer-encrypt with
+            //     the epoch-N (pre-Bob) key that Bob-less Alice held. ---
+            val addBobResult = aliceMgr.addMember(groupId, bobBundle.keyPackage.toTlsBytes())
+            val addBobCommitEvent =
+                outbound.buildCommitEvent(
+                    nostrGroupId = groupId,
+                    commitBytes = addBobResult.framedCommitBytes,
+                    exporterKey = addBobResult.preCommitExporterSecret,
+                )
+
+            // Bob joins via Welcome (emulated: we hand him the Welcome bytes).
+            bobMgr.processWelcome(addBobResult.welcomeBytes!!, bobBundle)
+
+            val epochAfterAddBob = aliceMgr.getGroup(groupId)!!.epoch
+            assertEquals(epochAfterAddBob, bobMgr.getGroup(groupId)!!.epoch)
+
+            // --- Step 2: Alice adds Carol. addCarolResult.preCommitExporterSecret
+            //     is the epoch-N (2-member) key that Bob still holds. ---
+            val addCarolResult = aliceMgr.addMember(groupId, carolBundle.keyPackage.toTlsBytes())
+            val addCarolCommitEvent =
+                outbound.buildCommitEvent(
+                    nostrGroupId = groupId,
+                    commitBytes = addCarolResult.framedCommitBytes,
+                    exporterKey = addCarolResult.preCommitExporterSecret,
+                )
+
+            // Carol joins via Welcome at the new epoch.
+            carolMgr.processWelcome(addCarolResult.welcomeBytes!!, carolBundle)
+
+            // *** The key assertion ***: Bob (still at epoch 1) receives the
+            // add-Carol kind:445 and must be able to:
+            //   (a) outer-decrypt using his current (epoch 1) exporter key,
+            //   (b) parse the MlsMessage → PublicMessage → COMMIT,
+            //   (c) apply the commit and advance to epoch 2.
+            val bobExporterAtE1 = bobMgr.exporterSecret(groupId)
+            kotlin.test.assertContentEquals(
+                bobExporterAtE1,
+                addCarolResult.preCommitExporterSecret,
+                "Bob's current exporter (pre-add-Carol) must match the " +
+                    "pre-commit key used to outer-encrypt the add-Carol commit; " +
+                    "otherwise Bob cannot decrypt and will be stuck on the old epoch.",
+            )
+
+            val decryptedMlsBytes =
+                GroupEventEncryption.decrypt(
+                    addCarolCommitEvent.signedEvent.content,
+                    bobExporterAtE1,
+                )
+            val mlsMessage =
+                com.vitorpamplona.quartz.marmot.mls.framing.MlsMessage
+                    .decodeTls(
+                        com.vitorpamplona.quartz.marmot.mls.codec
+                            .TlsReader(decryptedMlsBytes),
+                    )
+            val publicMessage =
+                com.vitorpamplona.quartz.marmot.mls.framing.PublicMessage
+                    .decodeTls(
+                        com.vitorpamplona.quartz.marmot.mls.codec
+                            .TlsReader(mlsMessage.payload),
+                    )
+            bobMgr.processCommit(
+                nostrGroupId = groupId,
+                commitBytes = publicMessage.content,
+                senderLeafIndex = publicMessage.sender.leafIndex,
+                confirmationTag = publicMessage.confirmationTag!!,
+            )
+
+            val epochAfterAddCarol = aliceMgr.getGroup(groupId)!!.epoch
+            assertEquals(epochAfterAddBob + 1, epochAfterAddCarol)
+            assertEquals(epochAfterAddCarol, bobMgr.getGroup(groupId)!!.epoch)
+            assertEquals(epochAfterAddCarol, carolMgr.getGroup(groupId)!!.epoch)
+
+            // --- Step 3: Alice sends an application message. Both members must decrypt. ---
+            val msg = "Hi from Alice"
+            val appEvent =
+                outbound.buildGroupEventFromBytes(groupId, msg.encodeToByteArray())
+
+            val bobKey = bobMgr.exporterSecret(groupId)
+            val carolKey = carolMgr.exporterSecret(groupId)
+            val aliceKey = aliceMgr.exporterSecret(groupId)
+            kotlin.test.assertContentEquals(aliceKey, bobKey, "Bob must share Alice's epoch-2 key")
+            kotlin.test.assertContentEquals(aliceKey, carolKey, "Carol must share Alice's epoch-2 key")
+
+            val bobMlsBytes = GroupEventEncryption.decrypt(appEvent.signedEvent.content, bobKey)
+            val bobDecrypted = bobMgr.decrypt(groupId, bobMlsBytes)
+            assertEquals(msg, bobDecrypted.content.decodeToString())
+
+            val carolMlsBytes = GroupEventEncryption.decrypt(appEvent.signedEvent.content, carolKey)
+            val carolDecrypted = carolMgr.decrypt(groupId, carolMlsBytes)
+            assertEquals(msg, carolDecrypted.content.decodeToString())
+
+            // --- Alice also receives her own echo (as the app does via the
+            // relay round-trip); this exercises the secretTree-based decrypt
+            // path with myLeafIndex != sender or when sentKeys misses.
+            val aliceMlsBytes = GroupEventEncryption.decrypt(appEvent.signedEvent.content, aliceKey)
+            val aliceDecrypted = aliceMgr.decrypt(groupId, aliceMlsBytes)
+            assertEquals(msg, aliceDecrypted.content.decodeToString())
+
+            // Send a second and third message to stress the secretTree ratchet
+            // and ensure getNodeSecret stays terminating across generations.
+            for (i in 1..3) {
+                val m = "msg-$i"
+                val ev = outbound.buildGroupEventFromBytes(groupId, m.encodeToByteArray())
+                val keyNow = aliceMgr.exporterSecret(groupId)
+                val bytes = GroupEventEncryption.decrypt(ev.signedEvent.content, keyNow)
+                val dec = bobMgr.decrypt(groupId, bytes)
+                assertEquals(m, dec.content.decodeToString())
+            }
         }
     }
 

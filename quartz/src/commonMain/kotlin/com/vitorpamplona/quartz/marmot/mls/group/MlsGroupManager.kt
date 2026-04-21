@@ -267,11 +267,9 @@ class MlsGroupManager(
     suspend fun commit(nostrGroupId: HexKey): CommitResult =
         mutex.withLock {
             val group = requireGroup(nostrGroupId)
-
-            // Retain current epoch secrets before transition
-            retainEpochSecrets(nostrGroupId, group)
-
+            val retainedBefore = group.retainedSecrets()
             val result = group.commit()
+            pushRetainedEpoch(nostrGroupId, retainedBefore)
             persistGroup(nostrGroupId)
             result
         }
@@ -292,10 +290,16 @@ class MlsGroupManager(
     ) = mutex.withLock {
         val group = requireGroup(nostrGroupId)
 
-        // Retain current epoch secrets before transition
-        retainEpochSecrets(nostrGroupId, group)
+        // Capture the outgoing epoch's secrets BEFORE advancing, but only
+        // commit them to the retention window once processCommit succeeds —
+        // otherwise a failed commit (e.g. "Duplicate encryption key" on an
+        // add-me relay echo) would pollute the window with a duplicate of
+        // the current epoch key, wasting the finite retention slots.
+        val retainedBefore = group.retainedSecrets()
 
         group.processCommit(commitBytes, senderLeafIndex, confirmationTag)
+
+        pushRetainedEpoch(nostrGroupId, retainedBefore)
         persistGroup(nostrGroupId)
     }
 
@@ -359,6 +363,12 @@ class MlsGroupManager(
 
     /**
      * Add a member and create a Commit.
+     *
+     * The returned [CommitResult.preCommitExporterSecret] is the key the
+     * outbound kind:445 MUST be outer-encrypted with (RFC 9420 §12.4 + MDK
+     * parity). The local group state advances to the new epoch before this
+     * function returns; publishers get one shot at the correct pre-commit
+     * key via the [CommitResult] payload.
      */
     suspend fun addMember(
         nostrGroupId: HexKey,
@@ -366,14 +376,16 @@ class MlsGroupManager(
     ): CommitResult =
         mutex.withLock {
             val group = requireGroup(nostrGroupId)
-            retainEpochSecrets(nostrGroupId, group)
+            val retainedBefore = group.retainedSecrets()
             val result = group.addMember(keyPackageBytes)
+            pushRetainedEpoch(nostrGroupId, retainedBefore)
             persistGroup(nostrGroupId)
             result
         }
 
     /**
-     * Remove a member and create a Commit.
+     * Remove a member and create a Commit. See [addMember] for the
+     * pre-commit exporter key contract on the returned [CommitResult].
      */
     suspend fun removeMember(
         nostrGroupId: HexKey,
@@ -381,8 +393,9 @@ class MlsGroupManager(
     ): CommitResult =
         mutex.withLock {
             val group = requireGroup(nostrGroupId)
-            retainEpochSecrets(nostrGroupId, group)
+            val retainedBefore = group.retainedSecrets()
             val result = group.removeMember(targetLeafIndex)
+            pushRetainedEpoch(nostrGroupId, retainedBefore)
             persistGroup(nostrGroupId)
             result
         }
@@ -391,31 +404,22 @@ class MlsGroupManager(
      * Rotate the signing key within a group and commit.
      *
      * Per MIP-00, members SHOULD self-update within 24 hours of joining.
-     * This creates an Update proposal with a fresh signing key and commits it.
-     *
-     * @param nostrGroupId hex-encoded Nostr group ID
-     * @return the [CommitResult] to publish
+     * See [addMember] for the pre-commit exporter key contract.
      */
     suspend fun rotateSigningKey(nostrGroupId: HexKey): CommitResult =
         mutex.withLock {
             val group = requireGroup(nostrGroupId)
-            retainEpochSecrets(nostrGroupId, group)
+            val retainedBefore = group.retainedSecrets()
             group.proposeSigningKeyRotation()
             val result = group.commit()
+            pushRetainedEpoch(nostrGroupId, retainedBefore)
             persistGroup(nostrGroupId)
             result
         }
 
     /**
      * Update group extensions (e.g., MIP-01 metadata) via a GroupContextExtensions proposal.
-     * Creates the proposal, commits it, and persists the new state.
-     *
-     * Authorization (MIP-01): extension updates require admin privileges once
-     * the group has at least one admin. During bootstrap — before any
-     * `admin_pubkeys` are configured — any member may seed the initial
-     * extension set (e.g. the creator installing the first
-     * [com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData] with
-     * themselves as admin).
+     * See [addMember] for the pre-commit exporter key contract.
      */
     suspend fun updateGroupExtensions(
         nostrGroupId: HexKey,
@@ -428,9 +432,10 @@ class MlsGroupManager(
             check(!adminsConfigured || group.isLocalAdmin()) {
                 "MIP-01: only admins may update group extensions"
             }
-            retainEpochSecrets(nostrGroupId, group)
+            val retainedBefore = group.retainedSecrets()
             group.proposeGroupContextExtensions(extensions)
             val result = group.commit()
+            pushRetainedEpoch(nostrGroupId, retainedBefore)
             persistGroup(nostrGroupId)
             result
         }
@@ -564,12 +569,18 @@ class MlsGroupManager(
         }
     }
 
-    private fun retainEpochSecrets(
+    /**
+     * Push a previously-captured [RetainedEpochSecrets] into the bounded
+     * retention window. Call after the epoch advance has been applied
+     * successfully so that failed commits don't pollute the window with
+     * duplicate current-epoch keys.
+     */
+    private fun pushRetainedEpoch(
         nostrGroupId: HexKey,
-        group: MlsGroup,
+        retainedBefore: RetainedEpochSecrets,
     ) {
         val retained = retainedEpochs.getOrPut(nostrGroupId) { mutableListOf() }
-        retained.add(group.retainedSecrets())
+        retained.add(retainedBefore)
 
         // Trim to retention window (keep only the most recent N-1 epochs)
         while (retained.size > EPOCH_RETENTION_WINDOW) {
