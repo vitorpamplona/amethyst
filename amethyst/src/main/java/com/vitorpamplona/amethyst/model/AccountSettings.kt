@@ -185,6 +185,8 @@ class AccountSettings(
     val defaultPicturesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultProductsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.AroundMe),
     val defaultShortsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
+    val defaultPublicChatsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
+    val defaultLiveStreamsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultLongsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultArticlesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.AllFollows),
     val defaultBadgesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Mine),
@@ -505,6 +507,28 @@ class AccountSettings(
     fun changeDefaultShortsFollowList(name: TopFilter) {
         if (defaultShortsFollowList.value != name) {
             defaultShortsFollowList.tryEmit(name)
+            saveAccountSettings()
+        }
+    }
+
+    fun changeDefaultPublicChatsFollowList(name: FeedDefinition) {
+        changeDefaultPublicChatsFollowList(name.code)
+    }
+
+    fun changeDefaultPublicChatsFollowList(name: TopFilter) {
+        if (defaultPublicChatsFollowList.value != name) {
+            defaultPublicChatsFollowList.tryEmit(name)
+            saveAccountSettings()
+        }
+    }
+
+    fun changeDefaultLiveStreamsFollowList(name: FeedDefinition) {
+        changeDefaultLiveStreamsFollowList(name.code)
+    }
+
+    fun changeDefaultLiveStreamsFollowList(name: TopFilter) {
+        if (defaultLiveStreamsFollowList.value != name) {
+            defaultLiveStreamsFollowList.tryEmit(name)
             saveAccountSettings()
         }
     }

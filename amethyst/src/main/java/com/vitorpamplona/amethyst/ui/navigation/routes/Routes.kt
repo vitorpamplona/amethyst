@@ -83,6 +83,12 @@ sealed class Route {
 
     @Serializable object Shorts : Route()
 
+    @Serializable object PublicChats : Route()
+
+    @Serializable object FollowPacks : Route()
+
+    @Serializable object LiveStreams : Route()
+
     @Serializable object Longs : Route()
 
     @Serializable object Articles : Route()

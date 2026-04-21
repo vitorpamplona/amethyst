@@ -53,6 +53,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.automirrored.outlined.Article
+import androidx.compose.material.icons.automirrored.outlined.Chat
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.outlined.AccountBalanceWallet
@@ -67,6 +68,7 @@ import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.MilitaryTech
 import androidx.compose.material.icons.outlined.Photo
 import androidx.compose.material.icons.outlined.PlayCircle
+import androidx.compose.material.icons.outlined.Sensors
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.SettingsInputAntenna
 import androidx.compose.material.icons.outlined.SmartDisplay
@@ -693,6 +695,30 @@ fun ListContent(
                 tint = MaterialTheme.colorScheme.onBackground,
                 nav = nav,
                 route = Route.Shorts,
+            )
+
+            NavigationRow(
+                title = R.string.public_chats,
+                icon = Icons.AutoMirrored.Outlined.Chat,
+                tint = MaterialTheme.colorScheme.onBackground,
+                nav = nav,
+                route = Route.PublicChats,
+            )
+
+            NavigationRow(
+                title = R.string.follow_packs,
+                icon = Icons.Outlined.CollectionsBookmark,
+                tint = MaterialTheme.colorScheme.onBackground,
+                nav = nav,
+                route = Route.FollowPacks,
+            )
+
+            NavigationRow(
+                title = R.string.live_streams,
+                icon = Icons.Outlined.Sensors,
+                tint = MaterialTheme.colorScheme.onBackground,
+                nav = nav,
+                route = Route.LiveStreams,
             )
 
             NavigationRow(
