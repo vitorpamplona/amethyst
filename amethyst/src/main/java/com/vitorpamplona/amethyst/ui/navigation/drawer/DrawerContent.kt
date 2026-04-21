@@ -573,14 +573,6 @@ fun ListContent(
         )
 
         NavigationRow(
-            title = R.string.browse_emoji_sets,
-            icon = Icons.Outlined.EmojiEmotions,
-            tint = MaterialTheme.colorScheme.onBackground,
-            nav = nav,
-            route = Route.BrowseEmojiSets,
-        )
-
-        NavigationRow(
             title = R.string.interest_sets_title,
             icon = Icons.Outlined.Tag,
             tint = MaterialTheme.colorScheme.onBackground,
@@ -602,31 +594,6 @@ fun ListContent(
             tint = MaterialTheme.colorScheme.onBackground,
             nav = nav,
             route = Route.Drafts,
-        )
-
-        NavigationRow(
-            title = R.string.discover_reads,
-            icon = Icons.AutoMirrored.Outlined.Article,
-            tint = MaterialTheme.colorScheme.onBackground,
-            nav = nav,
-            route = Route.Articles,
-        )
-
-        NavigationRow(
-            title = R.string.pictures,
-            icon = Icons.Outlined.Photo,
-            tint = MaterialTheme.colorScheme.onBackground,
-            nav = nav,
-            route = Route.Pictures,
-        )
-
-        NavigationRow(
-            title = R.string.polls,
-            icon = R.drawable.ic_poll,
-            iconReference = 1,
-            tint = MaterialTheme.colorScheme.onBackground,
-            nav = nav,
-            route = Route.Polls,
         )
 
         NavigationRow(
@@ -654,6 +621,31 @@ fun ListContent(
         )
 
         NavigationRow(
+            title = R.string.pictures,
+            icon = Icons.Outlined.Photo,
+            tint = MaterialTheme.colorScheme.onBackground,
+            nav = nav,
+            route = Route.Pictures,
+        )
+
+        NavigationRow(
+            title = R.string.polls,
+            icon = R.drawable.ic_poll,
+            iconReference = 1,
+            tint = MaterialTheme.colorScheme.onBackground,
+            nav = nav,
+            route = Route.Polls,
+        )
+
+        NavigationRow(
+            title = R.string.discover_reads,
+            icon = Icons.AutoMirrored.Outlined.Article,
+            tint = MaterialTheme.colorScheme.onBackground,
+            nav = nav,
+            route = Route.Articles,
+        )
+
+        NavigationRow(
             title = R.string.shorts,
             icon = Icons.Outlined.PlayCircle,
             tint = MaterialTheme.colorScheme.onBackground,
@@ -675,6 +667,14 @@ fun ListContent(
             tint = MaterialTheme.colorScheme.onBackground,
             nav = nav,
             route = Route.Wallet,
+        )
+
+        NavigationRow(
+            title = R.string.emoji_sets,
+            icon = Icons.Outlined.EmojiEmotions,
+            tint = MaterialTheme.colorScheme.onBackground,
+            nav = nav,
+            route = Route.BrowseEmojiSets,
         )
 
         NavigationRow(

@@ -511,7 +511,7 @@
     <string name="bookmark_list_hashtags_btn_label">View Hashtags</string>
     <string name="bookmark_list_feed_empty_msg">You do not have any bookmark lists yet. Tap the new button below to make one.</string>
 
-    <string name="interest_sets_title">Interest Sets</string>
+    <string name="interest_sets_title">Hashtag Sets</string>
     <string name="interest_sets_empty">You do not have any interest sets yet. Tap the new button below to make one.</string>
     <string name="interest_set_create_btn_label">New Interest Set</string>
     <string name="interest_set_creation_screen_title">New Interest Set</string>
@@ -2430,6 +2430,7 @@
     <string name="emoji_pack_is_not_in_list">\"%1$s\" is not in your emoji list</string>
     <string name="emoji_pack_actions_dialog_title">Emoji pack actions</string>
     <string name="manage_emoji_packs">My Emoji Packs</string>
+    <string name="emoji_sets">Emojis</string>
     <string name="browse_emoji_sets">Browse Emoji Sets</string>
     <string name="emoji_private_toggle">Private</string>
     <string name="emoji_private_badge">Private emoji</string>
