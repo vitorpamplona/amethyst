@@ -37,7 +37,6 @@ import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
-import com.vitorpamplona.quartz.nip28PublicChat.list.tags.ChannelTag
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip37Drafts.privateOutbox.PrivateOutboxRelayListEvent
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
@@ -55,8 +54,6 @@ import com.vitorpamplona.quartz.nip55AndroidSigner.api.CommandType
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.permission.Permission
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
-import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayInfo
-import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayType
 import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
@@ -67,31 +64,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.serialization.Serializable
-
-val DefaultChannels =
-    listOf(
-        // Anigma's Nostr
-        ChannelTag("25e5c82273a271cb1a840d0060391a0bf4965cafeb029d5ab55350b418953fbb", Constants.nos),
-        // Amethyst's Group
-        ChannelTag("42224859763652914db53052103f0b744df79dfc4efef7e950fc0802fc3df3c5", Constants.nos),
-    )
-
-val DefaultNIP65RelaySet = setOf(Constants.mom, Constants.nos, Constants.bitcoiner)
-
-val DefaultNIP65List =
-    listOf(
-        AdvertisedRelayInfo(Constants.mom, AdvertisedRelayType.BOTH),
-        AdvertisedRelayInfo(Constants.nos, AdvertisedRelayType.BOTH),
-        AdvertisedRelayInfo(Constants.bitcoiner, AdvertisedRelayType.BOTH),
-    )
-
-val DefaultGlobalRelays = listOf(Constants.wine, Constants.news)
-
-val DefaultDMRelayList = listOf(Constants.auth, Constants.oxchat, Constants.nos)
-
-val DefaultSearchRelayList = setOf(Constants.wine, Constants.where, Constants.nostoday, Constants.antiprimal, Constants.ditto)
-
-val DefaultIndexerRelayList = setOf(Constants.purplepages, Constants.coracle, Constants.userkinds, Constants.yabu, Constants.nostr1)
 
 val DefaultSignerPermissions =
     listOf(

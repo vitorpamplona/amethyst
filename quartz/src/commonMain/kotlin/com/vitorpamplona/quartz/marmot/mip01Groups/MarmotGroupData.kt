@@ -112,6 +112,21 @@ data class MarmotGroupData(
     fun hasImage(): Boolean = imageHash != null && imageKey != null && imageNonce != null
 
     /**
+     * Return a copy with [newRelays] unioned into [relays], de-duplicated and order-preserving.
+     *
+     * Every metadata-updating commit produced by the group creator or an admin SHOULD fold
+     * its author's own outbox into [relays] so new invitees learn a single canonical relay
+     * set for kind:445 from the Welcome, even when the inviter's outbox has drifted since
+     * the last commit. Both the UI and the CLI need this same merge rule — hence living
+     * on the data class.
+     */
+    fun withMergedRelays(newRelays: Collection<String>): MarmotGroupData {
+        if (newRelays.isEmpty()) return this
+        val merged = (relays + newRelays).distinct()
+        return if (merged == relays) this else copy(relays = merged)
+    }
+
+    /**
      * Encode this MarmotGroupData to TLS wire format bytes.
      * Mirrors the [decodeTls] format.
      *
@@ -184,6 +199,30 @@ data class MarmotGroupData(
         /** MLS extension type identifier for marmot_group_data */
         const val EXTENSION_ID: UShort = 0xF2EEu
         const val EXTENSION_ID_INT: Int = 0xF2EE
+
+        /**
+         * Build a freshly-minted [MarmotGroupData] for a group with no prior metadata —
+         * i.e. right after `MlsGroupManager.createGroup`. Creator becomes the sole admin
+         * and their outbox relays are stamped as the group's relay set.
+         *
+         * Both the Android UI (`AccountViewModel.updateMarmotGroupMetadata`) and the
+         * headless CLI need this same initial shape; keeping the factory here avoids
+         * subtle drift between them.
+         */
+        fun bootstrap(
+            nostrGroupId: HexKey,
+            creatorPubKey: HexKey,
+            outboxRelays: Collection<String>,
+            name: String = "",
+            description: String = "",
+        ): MarmotGroupData =
+            MarmotGroupData(
+                nostrGroupId = nostrGroupId,
+                name = name,
+                description = description,
+                adminPubkeys = listOf(creatorPubKey),
+                relays = outboxRelays.distinct(),
+            )
 
         /**
          * Find and decode the MarmotGroupData extension from a list of MLS extensions.

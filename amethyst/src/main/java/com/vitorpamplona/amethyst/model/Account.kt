@@ -2001,9 +2001,6 @@ class Account(
         val manager = marmotManager ?: return "Error: Marmot not initialized"
         if (!isWriteable()) return "Error: Account is read-only"
 
-        // Build filter for the member's KeyPackages
-        val filter = manager.subscriptionManager.keyPackageFilter(memberPubKey)
-
         // Per MIP-00, invitees advertise the relays that host their
         // KeyPackages in a kind:10051 KeyPackageRelayListEvent. Look
         // there first, then fall back to the invitee's NIP-65 outbox
@@ -2025,20 +2022,18 @@ class Account(
                 .outboxRelays()
                 ?.toSet()
                 .orEmpty()
-        val fetchRelays = memberKeyPackageRelays + memberOutbox + myOutbox
+        val fetchRelays =
+            com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageFetcher
+                .fetchRelaysFor(memberKeyPackageRelays, memberOutbox, myOutbox)
 
         Log.d("MarmotDbg") {
             "fetchKeyPackageAndAddMember: querying ${fetchRelays.size} relay(s) for ${memberPubKey.take(8)}… KeyPackage " +
                 "(memberKeyPackageRelays=${memberKeyPackageRelays.size}, memberOutbox=${memberOutbox.size}, myOutbox=${myOutbox.size}): ${fetchRelays.map { it.url }}"
         }
 
-        // Query across the combined relay set
-        val filterMap = fetchRelays.associateWith { listOf(filter) }
-
         val event =
-            client.fetchFirst(
-                filters = filterMap,
-            )
+            com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageFetcher
+                .fetchKeyPackage(client, memberPubKey, fetchRelays)
 
         if (event == null) {
             Log.w("MarmotDbg") {
@@ -2051,21 +2046,12 @@ class Account(
             "fetchKeyPackageAndAddMember: got KeyPackage event id=${event.id.take(8)}… kind=${event.kind} authored=${event.pubKey.take(8)}…"
         }
 
-        if (event !is com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent) {
-            Log.w("MarmotDbg") { "fetchKeyPackageAndAddMember: unexpected kind ${event.kind}" }
-            return "Error: Unexpected event type received"
-        }
-
         val keyPackageBase64 = event.keyPackageBase64()
         if (keyPackageBase64.isBlank()) {
             Log.w("MarmotDbg") { "fetchKeyPackageAndAddMember: KeyPackage event has empty content" }
             return "Error: KeyPackage event has empty content"
         }
 
-        val keyPackageBytes =
-            kotlin.io.encoding.Base64
-                .decode(keyPackageBase64)
-        val keyPackageEventId = event.id
         // The relays embedded in the WelcomeEvent tell the new member
         // where to subscribe for subsequent GroupEvents. Use our own
         // outbox — that's where we will publish them.
@@ -2077,9 +2063,7 @@ class Account(
 
         addMarmotGroupMember(
             nostrGroupId = nostrGroupId,
-            memberPubKey = memberPubKey,
-            keyPackageBytes = keyPackageBytes,
-            keyPackageEventId = keyPackageEventId,
+            keyPackageEvent = event,
             groupRelays = groupRelays,
         )
 
@@ -2092,14 +2076,13 @@ class Account(
      */
     suspend fun addMarmotGroupMember(
         nostrGroupId: HexKey,
-        memberPubKey: HexKey,
-        keyPackageBytes: ByteArray,
-        keyPackageEventId: HexKey,
+        keyPackageEvent: com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent,
         groupRelays: List<NormalizedRelayUrl>,
     ) {
+        val memberPubKey = keyPackageEvent.pubKey
         Log.d("MarmotDbg") {
             "addMarmotGroupMember: group=${nostrGroupId.take(8)}… member=${memberPubKey.take(8)}… " +
-                "keyPackageBytes=${keyPackageBytes.size}B groupRelays=${groupRelays.size}"
+                "groupRelays=${groupRelays.size}"
         }
         val manager = marmotManager ?: return
         if (!isWriteable()) return
@@ -2107,9 +2090,7 @@ class Account(
         val (commitEvent, welcomeDelivery) =
             manager.addMember(
                 nostrGroupId = nostrGroupId,
-                memberPubKey = memberPubKey,
-                keyPackageBytes = keyPackageBytes,
-                keyPackageEventId = keyPackageEventId,
+                keyPackageEvent = keyPackageEvent,
                 relays = groupRelays,
             )
 
@@ -2173,17 +2154,11 @@ class Account(
 
     /**
      * Relays where this account publishes kind:30443 KeyPackage events.
-     *
-     * Per MIP-00, these should match the relays advertised in the user's
-     * kind:10051 KeyPackage Relay List so that other clients can discover
-     * and fetch them. Falls back to the standard outbox set when no list
-     * has been configured yet, since that's also where the user's other
-     * write-oriented events land.
+     * Per MIP-00: prefer kind:10051 KeyPackage Relay List; fall back to NIP-65 outbox.
      */
-    fun keyPackagePublishRelays(): Set<NormalizedRelayUrl> {
-        val list = keyPackageRelayList.flow.value
-        return if (list.isNotEmpty()) list else outboxRelays.flow.value
-    }
+    fun keyPackagePublishRelays(): Set<NormalizedRelayUrl> =
+        com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageFetcher
+            .publishRelaysFor(keyPackageRelayList.flow.value, outboxRelays.flow.value)
 
     /**
      * Publish or rotate KeyPackage events.

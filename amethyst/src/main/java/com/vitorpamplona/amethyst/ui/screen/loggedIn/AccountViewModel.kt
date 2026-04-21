@@ -1453,14 +1453,12 @@ class AccountViewModel(
         nostrGroupId: String,
         text: String,
     ) {
-        val template =
-            com.vitorpamplona.quartz.nip01Core.signers.eventTemplate<com.vitorpamplona.quartz.nip01Core.core.Event>(
-                kind = 9,
-                description = text,
-            )
-        val innerEvent = account.signer.sign<com.vitorpamplona.quartz.nip01Core.core.Event>(template)
+        // Inner event construction lives on MarmotManager so CLI and UI don't drift.
+        // persistOwn=false because Account.sendMarmotGroupMessage routes the outer
+        // event through LocalCache which already handles own-message display.
+        val bundle = account.marmotManager?.buildTextMessage(nostrGroupId, text, persistOwn = false) ?: return
         val relays = marmotGroupRelays(nostrGroupId)
-        account.sendMarmotGroupMessage(nostrGroupId, innerEvent, relays)
+        account.sendMarmotGroupMessage(nostrGroupId, bundle.innerEvent, relays)
     }
 
     suspend fun sendMarmotGroupMediaMessage(
@@ -1558,7 +1556,6 @@ class AccountViewModel(
         name: String,
         description: String,
     ) {
-        val currentMetadata = account.marmotManager?.groupMetadata(nostrGroupId)
         // Stamp the inviter's outbox relays into the group metadata so that
         // every member ends up with a single canonical relay set for kind:445
         // GroupEvents. Without this, both the inviter and the invitee fall
@@ -1569,29 +1566,19 @@ class AccountViewModel(
         val outboxRelayStrings =
             account.outboxRelays.flow.value
                 .map { it.url }
-        val mergedRelays =
-            (currentMetadata?.relays.orEmpty() + outboxRelayStrings)
-                .distinct()
+        val currentMetadata = account.marmotManager?.groupMetadata(nostrGroupId)
         val updatedMetadata =
-            if (currentMetadata != null) {
-                currentMetadata.copy(
-                    name = name,
-                    description = description,
-                    relays = mergedRelays,
-                )
-            } else {
-                // No MarmotGroupData extension exists yet — this happens for groups
-                // created before initial metadata was persisted, or right after a
-                // fresh `createMarmotGroup`. Build a brand-new extension with the
-                // creator as the sole admin so the GCE proposal carries valid data.
-                com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData(
-                    nostrGroupId = nostrGroupId,
-                    name = name,
-                    description = description,
-                    adminPubkeys = listOf(account.signer.pubKey),
-                    relays = mergedRelays,
-                )
-            }
+            currentMetadata
+                ?.copy(name = name, description = description)
+                ?.withMergedRelays(outboxRelayStrings)
+                ?: com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
+                    .bootstrap(
+                        nostrGroupId = nostrGroupId,
+                        creatorPubKey = account.signer.pubKey,
+                        outboxRelays = outboxRelayStrings,
+                        name = name,
+                        description = description,
+                    )
         val relays = marmotGroupRelays(nostrGroupId)
         account.updateMarmotGroupMetadata(nostrGroupId, updatedMetadata, relays)
     }

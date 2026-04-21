@@ -1,13 +1,20 @@
 # Marmot Interop Test Harness
 
-Interactive harness that validates Amethyst's Marmot/MLS implementation against
-**whitenoise-rs** (https://github.com/marmot-protocol/whitenoise-rs), the
-reference Rust implementation that powers the White Noise Flutter app.
+Two flavours, same scenarios:
 
-The harness drives two `wn` daemons (Identities **B** and **C**) from the
-command line and prompts the human operator to perform the Amethyst-side steps
-in the mobile UI as **Identity A**. Every test records a pass/fail/skip result
-into a tab-separated log, and the summary is printed at the end of the run.
+- **`marmot-interop.sh`** — interactive. Drives B/C via `wn` and **prompts the
+  human** to perform each Amethyst-side step in the mobile UI (Identity A).
+  Use this for final UI verification.
+- **`marmot-interop-headless.sh`** — zero prompts. Drives A via the `amy` CLI
+  (`./gradlew :cli:installDist`) and B/C via `wn`. Runs every scenario
+  end-to-end and exits with a pass/fail summary. Use this for CI and for
+  iterating on the Nostr/Marmot plumbing without needing to touch a phone.
+
+Both harnesses validate Amethyst against **whitenoise-rs**
+(https://github.com/marmot-protocol/whitenoise-rs), the reference Rust
+implementation that powers the White Noise Flutter app. Every test records a
+pass/fail/skip result into a tab-separated log, and the summary is printed at
+the end of the run.
 
 ## What gets tested
 
