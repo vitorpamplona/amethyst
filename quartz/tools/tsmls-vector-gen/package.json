@@ -1,0 +1,12 @@
+{
+  "name": "tsmls-vector-gen",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "dependencies": {
+    "@noble/ciphers": "^2.2.0",
+    "@noble/curves": "^2.0.1",
+    "@noble/hashes": "^2.2.0",
+    "ts-mls": "2.0.0-rc.10"
+  }
+}
