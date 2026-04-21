@@ -35,6 +35,7 @@ import com.vitorpamplona.quartz.marmot.mls.framing.PublicMessage
 import com.vitorpamplona.quartz.marmot.mls.framing.Sender
 import com.vitorpamplona.quartz.marmot.mls.framing.SenderType
 import com.vitorpamplona.quartz.marmot.mls.framing.WireFormat
+import com.vitorpamplona.quartz.marmot.mls.framing.encodeSender
 import com.vitorpamplona.quartz.marmot.mls.messages.Commit
 import com.vitorpamplona.quartz.marmot.mls.messages.CommitResult
 import com.vitorpamplona.quartz.marmot.mls.messages.EncryptedGroupSecrets
@@ -577,7 +578,17 @@ class MlsGroup private constructor(
     // --- Message Encryption ---
 
     /**
-     * Encrypt an application message as a PrivateMessage (RFC 9420 Section 6.3).
+     * Encrypt an application message as a PrivateMessage (RFC 9420 §6.3).
+     *
+     * The AEAD plaintext is the serialized [PrivateMessageContent] for
+     * application messages (§6.3.1):
+     *
+     *     opaque application_data<V>;
+     *     FramedContentAuthData auth;   // = opaque signature<V>
+     *     opaque padding[N];            // zero padding
+     *
+     * The signature is computed with `SignWithLabel(., "FramedContentTBS",
+     * FramedContentTBS)` using the member's signature private key.
      */
     fun encrypt(plaintext: ByteArray): ByteArray {
         // Trim sentKeys if it grows too large
@@ -599,9 +610,33 @@ class MlsGroup private constructor(
             guardedNonce[i] = (guardedNonce[i].toInt() xor reuseGuard[i].toInt()).toByte()
         }
 
+        // Sign FramedContentTBS for this application message (RFC 9420 §6.1).
+        val signature =
+            MlsCryptoProvider.signWithLabel(
+                signingPrivateKey,
+                "FramedContentTBS",
+                buildApplicationFramedContentTbs(
+                    groupId = groupId,
+                    epoch = epoch,
+                    senderLeafIndex = myLeafIndex,
+                    authenticatedData = ByteArray(0),
+                    applicationData = plaintext,
+                    groupContext = groupContext,
+                ),
+            )
+
+        // Build PrivateMessageContent plaintext (RFC 9420 §6.3.1).
+        // Padding length is zero; RFC allows any non-negative padding
+        // provided the padding bytes themselves are zero.
+        val pmcWriter = TlsWriter()
+        pmcWriter.putOpaqueVarInt(plaintext) // application_data<V>
+        pmcWriter.putOpaqueVarInt(signature) // FramedContentAuthData.signature<V>
+        // (application messages have no confirmation_tag field)
+        val pmcPlaintext = pmcWriter.toByteArray()
+
         // Build PrivateContentAAD (RFC 9420 §6.3.2)
         val contentAad = buildPrivateContentAAD(groupId, epoch, ContentType.APPLICATION, ByteArray(0))
-        val ciphertext = MlsCryptoProvider.aeadEncrypt(kng.key, guardedNonce, contentAad, plaintext)
+        val ciphertext = MlsCryptoProvider.aeadEncrypt(kng.key, guardedNonce, contentAad, pmcPlaintext)
 
         // Build sender data plaintext: leaf_index || generation || reuse_guard
         val senderDataWriter = TlsWriter()
@@ -731,14 +766,85 @@ class MlsGroup private constructor(
 
         // Decrypt content with PrivateContentAAD (RFC 9420 §6.3.2)
         val contentAad = buildPrivateContentAAD(privMsg.groupId, privMsg.epoch, privMsg.contentType, privMsg.authenticatedData)
-        val plaintext = MlsCryptoProvider.aeadDecrypt(kng.key, guardedNonce, contentAad, privMsg.ciphertext)
+        val pmcPlaintext = MlsCryptoProvider.aeadDecrypt(kng.key, guardedNonce, contentAad, privMsg.ciphertext)
+
+        // Parse PrivateMessageContent (RFC 9420 §6.3.1) and verify the
+        // sender's FramedContentTBS signature before returning bytes.
+        require(privMsg.contentType == ContentType.APPLICATION) {
+            // Commit/Proposal-via-PrivateMessage decoding is not implemented.
+            "decrypt() only supports application-content PrivateMessages"
+        }
+        val pmcReader = TlsReader(pmcPlaintext)
+        val applicationData = pmcReader.readOpaqueVarInt()
+        val signature = pmcReader.readOpaqueVarInt()
+        // Remaining bytes are padding; all must be zero per §6.3.1.
+        while (pmcReader.hasRemaining) {
+            require(pmcReader.readBytes(1)[0] == 0.toByte()) {
+                "PrivateMessageContent padding must be zero"
+            }
+        }
+
+        val senderLeaf =
+            requireNotNull(tree.getLeaf(senderLeafIndex)) {
+                "Sender leaf is blank at index $senderLeafIndex"
+            }
+        require(
+            MlsCryptoProvider.verifyWithLabel(
+                senderLeaf.signatureKey,
+                "FramedContentTBS",
+                buildApplicationFramedContentTbs(
+                    groupId = privMsg.groupId,
+                    epoch = privMsg.epoch,
+                    senderLeafIndex = senderLeafIndex,
+                    authenticatedData = privMsg.authenticatedData,
+                    applicationData = applicationData,
+                    groupContext = groupContext,
+                ),
+                signature,
+            ),
+        ) { "FramedContentTBS signature verification failed" }
 
         return DecryptedMessage(
             senderLeafIndex = senderLeafIndex,
             contentType = privMsg.contentType,
-            content = plaintext,
+            content = applicationData,
             epoch = privMsg.epoch,
         )
+    }
+
+    /**
+     * Build FramedContentTBS for an application-content PrivateMessage
+     * (RFC 9420 §6.1). The signature over this is what lives in the
+     * PrivateMessageContent's FramedContentAuthData.
+     *
+     *     struct {
+     *         ProtocolVersion version = mls10;
+     *         WireFormat wire_format;     // = mls_private_message
+     *         FramedContent content;       // member sender, app body
+     *         GroupContext context;        // for member senders
+     *     } FramedContentTBS;
+     */
+    private fun buildApplicationFramedContentTbs(
+        groupId: ByteArray,
+        epoch: Long,
+        senderLeafIndex: Int,
+        authenticatedData: ByteArray,
+        applicationData: ByteArray,
+        groupContext: GroupContext,
+    ): ByteArray {
+        val w = TlsWriter()
+        w.putUint16(MlsMessage.MLS_VERSION_10)
+        w.putUint16(WireFormat.PRIVATE_MESSAGE.value)
+        // FramedContent
+        w.putOpaqueVarInt(groupId)
+        w.putUint64(epoch)
+        encodeSender(w, Sender(SenderType.MEMBER, senderLeafIndex))
+        w.putOpaqueVarInt(authenticatedData)
+        w.putUint8(ContentType.APPLICATION.value)
+        w.putOpaqueVarInt(applicationData) // application_data<V>
+        // GroupContext (member sender)
+        groupContext.encodeTls(w)
+        return w.toByteArray()
     }
 
     // --- Commit Processing ---

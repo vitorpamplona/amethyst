@@ -32,7 +32,6 @@ import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
@@ -159,30 +158,19 @@ class MdkWelcomeInteropTest {
     }
 
     /**
-     * Application-message interop currently fails because Amethyst's
-     * [MlsGroup.encrypt] / [MlsGroup.decrypt] treat the AEAD plaintext as
-     * raw application bytes — they skip the [RFC 9420 §6.3.1
-     * PrivateMessageContent] framing:
+     * RFC 9420 §6.3.1 PrivateMessageContent framing for application
+     * messages. Each of these ciphertexts was produced by openmls
+     * (the MLS backend under MDK / whitenoise); Amethyst must parse the
      *
      *   struct {
-     *       opaque application_data<V>;          // varint-prefixed payload
-     *       FramedContentAuthData auth;          // signature over FramedContentTBS
-     *       opaque padding[N];                   // zero-padding
+     *       opaque application_data<V>;   // varint-prefixed payload
+     *       opaque signature<V>;          // FramedContentTBS signature
+     *       opaque padding[N];            // zero padding
      *   } PrivateMessageContent;
      *
-     * Amethyst ↔ Amethyst round-trips pass (both sides omit framing), but
-     * when openmls/MDK/whitenoise sends a PrivateMessage Amethyst's
-     * `.decrypt` returns the entire PrivateMessageContent serialization —
-     * so plaintext comparisons fail (we see `0x0a 'H' 'e' ... auth... padding`
-     * instead of `'Hello Bob!'`).
-     *
-     * Full fix requires: (a) sign FramedContentTBS on the send side with a
-     * MAC over Application/Proposal and a confirmation_tag over Commit;
-     * (b) parse `application_data<V>` + `FramedContentAuthData` + padding
-     * on the receive side; (c) verify the signature / confirmation tag.
-     * Tracked separately — keeping this test as a reproducer.
+     * layout, verify the Ed25519 signature over FramedContentTBS using the
+     * sender's LeafNode.signature_key, and return only `application_data`.
      */
-    @Ignore
     @Test
     fun testBobDecryptsMdkApplicationMessagesFromAlice() {
         assertTrue(
