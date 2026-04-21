@@ -34,6 +34,16 @@ object Commands {
         args: Args,
     ): Int = InitCommands.init(dataDir, args)
 
+    suspend fun create(
+        dataDir: DataDir,
+        tail: Array<String>,
+    ): Int = CreateCommand.run(dataDir, tail)
+
+    suspend fun login(
+        dataDir: DataDir,
+        tail: Array<String>,
+    ): Int = LoginCommand.run(dataDir, tail)
+
     suspend fun whoami(dataDir: DataDir): Int = InitCommands.whoami(dataDir)
 
     suspend fun relay(

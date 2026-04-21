@@ -107,6 +107,14 @@ private suspend fun dispatch(argv: Array<String>): Int {
             Commands.init(dataDir, Args(tail))
         }
 
+        "create" -> {
+            Commands.create(dataDir, tail)
+        }
+
+        "login" -> {
+            Commands.login(dataDir, tail)
+        }
+
         "whoami" -> {
             Commands.whoami(dataDir)
         }
@@ -171,8 +179,10 @@ private fun printUsage() {
         |  amy [--data-dir PATH] <cmd> [args...]
         |
         |Identity:
-        |  init [--nsec NSEC]           create or import identity
-        |  whoami                        print current identity
+        |  init [--nsec NSEC]           create or import a bare identity (no defaults published)
+        |  create [--name NAME]         provision a full Amethyst-style account + publish bootstrap events
+        |  login KEY [--password X]     import (nsec|ncryptsec|mnemonic|npub|nprofile|hex|nip05)
+        |  whoami                       print current identity
         |
         |Relays:
         |  relay add URL [--type T]      T=nip65|inbox|key_package|all (default all)

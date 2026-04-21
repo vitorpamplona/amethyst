@@ -18,10 +18,15 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model
+package com.vitorpamplona.amethyst.commons.defaults
 
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 
+/**
+ * Relay URLs that Amethyst (and `amy`) seed new accounts with and use as
+ * sensible defaults across the app. Pure data — lives in commons so JVM /
+ * iOS / desktop builds get the same URLs without duplicating the list.
+ */
 object Constants {
     val nos = RelayUrlNormalizer.normalize("wss://nos.lol")
     val mom = RelayUrlNormalizer.normalize("wss://nostr.mom")

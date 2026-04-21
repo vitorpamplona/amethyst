@@ -31,20 +31,36 @@ import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip19Bech32.toNsec
 import java.io.File
 
-/** Persisted identity (hex keys + cached bech32 forms for convenience). */
+/**
+ * Persisted identity.
+ *
+ * [privKeyHex] may be null for read-only accounts imported from an `npub`,
+ * `nprofile` or NIP-05 — in that case [nsec] is also null and any CLI verb
+ * that needs to sign will fail with a clear error. `keyPair()` materialises
+ * a [KeyPair] with only `pubKey` set when no private key is available.
+ */
 data class Identity(
-    val privKeyHex: String,
+    val privKeyHex: String?,
     val pubKeyHex: String,
-    val nsec: String,
+    val nsec: String?,
     val npub: String,
 ) {
-    fun keyPair(): KeyPair = KeyPair(privKey = privKeyHex.hexToByteArray(), pubKey = pubKeyHex.hexToByteArray())
+    val hasPrivateKey: Boolean get() = privKeyHex != null
+
+    fun keyPair(): KeyPair =
+        if (privKeyHex != null) {
+            KeyPair(privKey = privKeyHex.hexToByteArray(), pubKey = pubKeyHex.hexToByteArray())
+        } else {
+            KeyPair(pubKey = pubKeyHex.hexToByteArray())
+        }
 
     companion object {
-        fun create(): Identity {
-            val kp = KeyPair()
-            val priv = kp.privKey!!
-            val pub = kp.pubKey
+        fun create(): Identity = fromPrivateKey(KeyPair().privKey!!)
+
+        fun fromNsec(nsec: String): Identity = fromPrivateKey(nsec.bechToBytes())
+
+        fun fromPrivateKey(priv: ByteArray): Identity {
+            val pub = KeyPair(privKey = priv).pubKey
             return Identity(
                 privKeyHex = priv.toHexKey(),
                 pubKeyHex = pub.toHexKey(),
@@ -53,16 +69,14 @@ data class Identity(
             )
         }
 
-        fun fromNsec(nsec: String): Identity {
-            val priv = nsec.bechToBytes()
-            val kp = KeyPair(privKey = priv)
-            return Identity(
-                privKeyHex = priv.toHexKey(),
-                pubKeyHex = kp.pubKey.toHexKey(),
-                nsec = priv.toNsec(),
-                npub = kp.pubKey.toNpub(),
+        /** Read-only identity (no private key). */
+        fun fromPublicKeyHex(pubHex: String): Identity =
+            Identity(
+                privKeyHex = null,
+                pubKeyHex = pubHex.lowercase(),
+                nsec = null,
+                npub = pubHex.hexToByteArray().toNpub(),
             )
-        }
     }
 }
 
