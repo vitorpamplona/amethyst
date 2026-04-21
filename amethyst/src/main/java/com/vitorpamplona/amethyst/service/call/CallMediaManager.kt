@@ -67,6 +67,7 @@ class CallMediaManager(
 
     private var cameraCapturer: CameraVideoCapturer? = null
     private var surfaceTextureHelper: SurfaceTextureHelper? = null
+    private var usingFrontCamera: Boolean = true
 
     private val _localVideoTrackFlow = MutableStateFlow<VideoTrack?>(null)
     val localVideoTrackFlow: StateFlow<VideoTrack?> = _localVideoTrackFlow.asStateFlow()
@@ -74,24 +75,39 @@ class CallMediaManager(
     private val _isVideoEnabled = MutableStateFlow(false)
     val isVideoEnabled: StateFlow<Boolean> = _isVideoEnabled.asStateFlow()
 
+    private val _isFrontCamera = MutableStateFlow(true)
+    val isFrontCamera: StateFlow<Boolean> = _isFrontCamera.asStateFlow()
+
     fun initialize(callType: CallType) {
         if (peerConnectionFactory != null) return
 
-        sharedEglBase = EglBase.create()
+        var egl: EglBase? = null
+        try {
+            egl = EglBase.create()
 
-        PeerConnectionFactory.initialize(
-            PeerConnectionFactory
-                .InitializationOptions
-                .builder(context)
-                .createInitializationOptions(),
-        )
+            PeerConnectionFactory.initialize(
+                PeerConnectionFactory
+                    .InitializationOptions
+                    .builder(context)
+                    .createInitializationOptions(),
+            )
 
-        peerConnectionFactory =
-            PeerConnectionFactory
-                .builder()
-                .setVideoDecoderFactory(DefaultVideoDecoderFactory(sharedEglBase!!.eglBaseContext))
-                .setVideoEncoderFactory(DefaultVideoEncoderFactory(sharedEglBase!!.eglBaseContext, true, true))
-                .createPeerConnectionFactory()
+            peerConnectionFactory =
+                PeerConnectionFactory
+                    .builder()
+                    .setVideoDecoderFactory(DefaultVideoDecoderFactory(egl.eglBaseContext))
+                    .setVideoEncoderFactory(DefaultVideoEncoderFactory(egl.eglBaseContext, true, true))
+                    .createPeerConnectionFactory()
+
+            sharedEglBase = egl
+        } catch (e: Exception) {
+            // Clean up partially-created resources to avoid leaking EglBase
+            egl?.release()
+            peerConnectionFactory?.dispose()
+            peerConnectionFactory = null
+            sharedEglBase = null
+            throw e
+        }
 
         localAudioSource = peerConnectionFactory?.createAudioSource(MediaConstraints())
         localAudioTrack = peerConnectionFactory?.createAudioTrack("audio0", localAudioSource)
@@ -101,6 +117,7 @@ class CallMediaManager(
         }
     }
 
+    @Synchronized
     fun createVideoResources() {
         if (localVideoSource != null) return
         val factory = peerConnectionFactory ?: return
@@ -112,22 +129,61 @@ class CallMediaManager(
         startCamera()
     }
 
+    var captureWidth: Int = 1280
+        private set
+    var captureHeight: Int = 720
+        private set
+    var captureFps: Int = 30
+        private set
+
+    fun setCaptureResolution(
+        width: Int,
+        height: Int,
+        fps: Int,
+    ) {
+        captureWidth = width
+        captureHeight = height
+        captureFps = fps
+    }
+
     fun startCamera() {
         if (cameraCapturer != null) return
         val source = localVideoSource ?: return
         val egl = sharedEglBase ?: return
 
         val enumerator = Camera2Enumerator(context)
-        val frontCamera = enumerator.deviceNames.firstOrNull { enumerator.isFrontFacing(it) }
-        val camera = frontCamera ?: enumerator.deviceNames.firstOrNull() ?: return
+        val preferred =
+            if (usingFrontCamera) {
+                enumerator.deviceNames.firstOrNull { enumerator.isFrontFacing(it) }
+            } else {
+                enumerator.deviceNames.firstOrNull { enumerator.isBackFacing(it) }
+            }
+        val camera = preferred ?: enumerator.deviceNames.firstOrNull() ?: return
 
         val helper = SurfaceTextureHelper.create("CaptureThread", egl.eglBaseContext)
         surfaceTextureHelper = helper
         cameraCapturer =
             enumerator.createCapturer(camera, null)?.also {
                 it.initialize(helper, context, source.capturerObserver)
-                it.startCapture(1280, 720, 30)
+                it.startCapture(captureWidth, captureHeight, captureFps)
             }
+    }
+
+    fun switchCamera() {
+        val capturer = cameraCapturer ?: return
+        capturer.switchCamera(
+            object : CameraVideoCapturer.CameraSwitchHandler {
+                override fun onCameraSwitchDone(isFront: Boolean) {
+                    usingFrontCamera = isFront
+                    _isFrontCamera.value = isFront
+                    Log.d(TAG) { "Camera switched: front=$isFront" }
+                }
+
+                override fun onCameraSwitchError(error: String?) {
+                    Log.e(TAG, "Camera switch failed: $error")
+                }
+            },
+        )
     }
 
     fun stopCamera() {
@@ -145,6 +201,7 @@ class CallMediaManager(
         localVideoTrack?.setEnabled(true)
         _isVideoEnabled.value = true
         _localVideoTrackFlow.value = localVideoTrack
+        startCamera()
     }
 
     fun disableVideo() {

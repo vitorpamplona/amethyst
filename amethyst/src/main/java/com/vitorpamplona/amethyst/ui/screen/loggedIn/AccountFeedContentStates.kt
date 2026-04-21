@@ -27,8 +27,11 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.feeds.ChannelFeedContentState
 import com.vitorpamplona.amethyst.ui.screen.TopNavFilterState
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.articles.dal.ArticlesFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.dal.BadgesFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.dal.ChatroomListKnownFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.dal.ChatroomListNewFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.list.dal.CommunitiesFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip23LongForm.DiscoverLongFormFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip28Chats.DiscoverChatFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip51FollowSets.DiscoverFollowSetsFeedFilter
@@ -37,6 +40,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip72Communities.D
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip90DVMs.DiscoverNIP89FeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip99Classifieds.DiscoverMarketplaceFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.drafts.dal.DraftEventsFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.browse.dal.BrowseEmojiSetsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.dal.HomeConversationsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.dal.HomeLiveFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.dal.HomeNewThreadFeedFilter
@@ -49,10 +53,13 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.pictures.dal.PictureFeedFil
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.dal.ClosedPollsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.dal.OpenPollsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.dal.PollsFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.products.dal.ProductsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.shorts.dal.ShortsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.dal.VideoFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.webBookmarks.dal.WebBookmarkFeedFilter
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class AccountFeedContentStates(
     val account: Account,
@@ -79,9 +86,16 @@ class AccountFeedContentStates(
     val openPollsFeed = FeedContentState(OpenPollsFeedFilter(account), scope, LocalCache)
     val closedPollsFeed = FeedContentState(ClosedPollsFeedFilter(account), scope, LocalCache)
 
+    val badgesFeed = FeedContentState(BadgesFeedFilter(account), scope, LocalCache)
+
+    val browseEmojiSetsFeed = FeedContentState(BrowseEmojiSetsFeedFilter(account), scope, LocalCache)
+    val communitiesList = FeedContentState(CommunitiesFeedFilter(account), scope, LocalCache)
+
     val picturesFeed = FeedContentState(PictureFeedFilter(account), scope, LocalCache)
+    val productsFeed = FeedContentState(ProductsFeedFilter(account), scope, LocalCache)
     val shortsFeed = FeedContentState(ShortsFeedFilter(account), scope, LocalCache)
     val longsFeed = FeedContentState(LongsFeedFilter(account), scope, LocalCache)
+    val articlesFeed = FeedContentState(ArticlesFeedFilter(account), scope, LocalCache)
 
     val notifications = CardFeedContentState(NotificationFeedFilter(account), scope)
     val notificationsOpenPolls = OpenPollsState(account, scope)
@@ -92,6 +106,19 @@ class AccountFeedContentStates(
     val drafts = FeedContentState(DraftEventsFeedFilter(account), scope, LocalCache)
 
     val webBookmarks = FeedContentState(WebBookmarkFeedFilter(account), scope, LocalCache)
+
+    init {
+        // Marmot group list changes (new group, group marked known, group
+        // metadata synced) don't flow through LocalCache.newEventBundles, so
+        // the additive update path can't see them. Force a full feed rebuild
+        // whenever the list changes so empty groups appear and placeholder
+        // rows get replaced by real messages.
+        scope.launch(Dispatchers.IO) {
+            account.marmotGroupList.groupListChanges.collect {
+                dmKnown.invalidateData()
+            }
+        }
+    }
 
     suspend fun init() {
         notificationSummary.initializeSuspend()
@@ -121,9 +148,16 @@ class AccountFeedContentStates(
         openPollsFeed.updateFeedWith(newNotes)
         closedPollsFeed.updateFeedWith(newNotes)
 
+        badgesFeed.updateFeedWith(newNotes)
+
+        browseEmojiSetsFeed.updateFeedWith(newNotes)
+        communitiesList.updateFeedWith(newNotes)
+
         picturesFeed.updateFeedWith(newNotes)
+        productsFeed.updateFeedWith(newNotes)
         shortsFeed.updateFeedWith(newNotes)
         longsFeed.updateFeedWith(newNotes)
+        articlesFeed.updateFeedWith(newNotes)
 
         notifications.updateFeedWith(newNotes)
         notificationSummary.invalidateInsertData(newNotes)
@@ -157,9 +191,16 @@ class AccountFeedContentStates(
         openPollsFeed.deleteFromFeed(newNotes)
         closedPollsFeed.deleteFromFeed(newNotes)
 
+        badgesFeed.deleteFromFeed(newNotes)
+
+        browseEmojiSetsFeed.deleteFromFeed(newNotes)
+        communitiesList.deleteFromFeed(newNotes)
+
         picturesFeed.deleteFromFeed(newNotes)
+        productsFeed.deleteFromFeed(newNotes)
         shortsFeed.deleteFromFeed(newNotes)
         longsFeed.deleteFromFeed(newNotes)
+        articlesFeed.deleteFromFeed(newNotes)
 
         notifications.deleteFromFeed(newNotes)
         notificationSummary.invalidateInsertData(newNotes)

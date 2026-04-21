@@ -58,8 +58,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
@@ -74,6 +77,8 @@ import coil3.compose.AsyncImage
 import coil3.compose.AsyncImagePainter
 import coil3.compose.SubcomposeAsyncImage
 import coil3.compose.SubcomposeAsyncImageContent
+import coil3.request.ImageRequest
+import coil3.size.Size
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
@@ -83,13 +88,15 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaLocalVideo
 import com.vitorpamplona.amethyst.commons.richtext.MediaPreloadedContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
+import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
-import com.vitorpamplona.amethyst.service.images.BlurhashWrapper
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView
 import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.openBlossomUriAsIntent
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.actions.InformationDialog
+import com.vitorpamplona.amethyst.ui.components.pdf.PdfPreviewCard
+import com.vitorpamplona.amethyst.ui.components.pdf.PdfViewerDialog
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.note.BlankNote
 import com.vitorpamplona.amethyst.ui.note.DownloadForOfflineIcon
@@ -139,14 +146,28 @@ fun ZoomableContentView(
     accountViewModel: AccountViewModel,
 ) {
     var dialogOpen by remember(content) { mutableStateOf(false) }
+    var sourceBounds by remember(content) { mutableStateOf<Rect?>(null) }
+    val boundsTrackingModifier =
+        Modifier.onGloballyPositioned { coordinates ->
+            sourceBounds = coordinates.boundsInWindow()
+        }
 
     when (content) {
         is MediaUrlImage -> {
-            SensitivityWarning(content.contentWarning, accountViewModel) {
+            val ratio = content.dim?.aspectRatio() ?: MediaAspectRatioCache.get(content.url)
+            ContentWarningGate(
+                isSensitive = content.contentWarning != null,
+                reasons = setOfNotNull(content.contentWarning),
+                preloadUrls = listOf(content.url),
+                accountViewModel = accountViewModel,
+                modifier = mediaSizingModifier(ratio, contentScale),
+                backdrop = (content.thumbhash ?: content.blurhash)?.let { { BlurhashBackdrop(content.blurhash, content.description, content.thumbhash) } },
+            ) {
                 TwoSecondController(content) { controllerVisible ->
                     val mainImageModifier =
                         Modifier
                             .fillMaxWidth()
+                            .then(boundsTrackingModifier)
                             .clickable { dialogOpen = true }
                     val loadedImageModifier = if (roundedCorner) MaterialTheme.colorScheme.imageModifier else Modifier.fillMaxWidth()
                     UrlImageView(content, contentScale, mainImageModifier, loadedImageModifier, controllerVisible, accountViewModel = accountViewModel)
@@ -155,8 +176,19 @@ fun ZoomableContentView(
         }
 
         is MediaUrlVideo -> {
-            SensitivityWarning(content.contentWarning, accountViewModel) {
-                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+            val ratio = content.dim?.aspectRatio() ?: MediaAspectRatioCache.get(content.url)
+            ContentWarningGate(
+                isSensitive = content.contentWarning != null,
+                reasons = setOfNotNull(content.contentWarning),
+                preloadUrls = emptyList(),
+                accountViewModel = accountViewModel,
+                modifier = mediaSizingModifier(ratio, contentScale),
+                backdrop = (content.thumbhash ?: content.blurhash)?.let { { BlurhashBackdrop(content.blurhash, content.description, content.thumbhash) } },
+            ) {
+                Box(
+                    modifier = Modifier.fillMaxWidth().then(boundsTrackingModifier),
+                    contentAlignment = Alignment.Center,
+                ) {
                     VideoView(
                         videoUri = content.url,
                         mimeType = content.mimeType,
@@ -170,6 +202,7 @@ fun ZoomableContentView(
                         nostrUriCallback = content.uri,
                         onDialog = { dialogOpen = true },
                         accountViewModel = accountViewModel,
+                        thumbhash = content.thumbhash,
                     )
                 }
             }
@@ -180,6 +213,7 @@ fun ZoomableContentView(
                 val mainImageModifier =
                     Modifier
                         .fillMaxWidth()
+                        .then(boundsTrackingModifier)
                         .clickable { dialogOpen = true }
                 val loadedImageModifier = if (roundedCorner) MaterialTheme.colorScheme.imageModifier else Modifier.fillMaxWidth()
 
@@ -189,7 +223,10 @@ fun ZoomableContentView(
 
         is MediaLocalVideo -> {
             content.localFile?.let {
-                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                Box(
+                    modifier = Modifier.fillMaxWidth().then(boundsTrackingModifier),
+                    contentAlignment = Alignment.Center,
+                ) {
                     VideoView(
                         videoUri = it.toUri().toString(),
                         mimeType = content.mimeType,
@@ -205,17 +242,36 @@ fun ZoomableContentView(
                 }
             }
         }
+
+        is MediaUrlPdf -> {
+            Box(modifier = Modifier.fillMaxWidth().then(boundsTrackingModifier)) {
+                PdfPreviewCard(
+                    content = content,
+                    accountViewModel = accountViewModel,
+                    onOpen = { dialogOpen = true },
+                )
+            }
+        }
     }
 
     if (dialogOpen) {
-        ZoomableImageDialog(
-            content,
-            images,
-            onDismiss = {
-                dialogOpen = false
-            },
-            accountViewModel,
-        )
+        if (content is MediaUrlPdf) {
+            PdfViewerDialog(
+                content = content,
+                accountViewModel = accountViewModel,
+                onDismiss = { dialogOpen = false },
+            )
+        } else {
+            ZoomableImageDialog(
+                imageUrl = content,
+                allImages = images,
+                sourceBounds = sourceBounds,
+                onDismiss = {
+                    dialogOpen = false
+                },
+                accountViewModel = accountViewModel,
+            )
+        }
     }
 }
 
@@ -238,6 +294,7 @@ fun LocalImageView(
     controllerVisible: MutableState<Boolean>,
     accountViewModel: AccountViewModel,
     alwayShowImage: Boolean = false,
+    fullResolution: Boolean = false,
 ) {
     if (content.localFileExists()) {
         val showImage =
@@ -248,10 +305,23 @@ fun LocalImageView(
             }
 
         val ratio = remember(content) { content.dim?.aspectRatio() ?: MediaAspectRatioCache.get(content.localFile.toString()) }
+        val context = LocalContext.current
+        val imageModel =
+            if (fullResolution) {
+                remember(content.localFile, context) {
+                    ImageRequest
+                        .Builder(context)
+                        .data(content.localFile)
+                        .size(Size.ORIGINAL)
+                        .build()
+                }
+            } else {
+                content.localFile
+            }
         CrossfadeIfEnabled(targetState = showImage.value, contentAlignment = Alignment.Center, accountViewModel = accountViewModel) { imageVisible ->
             if (imageVisible) {
                 SubcomposeAsyncImage(
-                    model = content.localFile,
+                    model = imageModel,
                     contentDescription = content.description,
                     contentScale = contentScale,
                     modifier = mainImageModifier,
@@ -260,13 +330,14 @@ fun LocalImageView(
                     when (state) {
                         is AsyncImagePainter.State.Loading,
                         -> {
-                            if (content.blurhash != null) {
+                            if (content.blurhash != null || content.thumbhash != null) {
                                 if (ratio != null) {
                                     DisplayBlurHash(
                                         content.blurhash,
                                         content.description,
                                         contentScale,
                                         loadedImageModifier.aspectRatio(ratio),
+                                        thumbhash = content.thumbhash,
                                     )
                                 } else {
                                     DisplayBlurHash(
@@ -274,6 +345,7 @@ fun LocalImageView(
                                         content.description,
                                         contentScale,
                                         loadedImageModifier,
+                                        thumbhash = content.thumbhash,
                                     )
                                 }
                             } else {
@@ -319,7 +391,7 @@ fun LocalImageView(
                     }
                 }
             } else {
-                if (content.blurhash != null && ratio != null) {
+                if ((content.blurhash != null || content.thumbhash != null) && ratio != null) {
                     DisplayBlurHash(
                         content.blurhash,
                         content.description,
@@ -327,6 +399,7 @@ fun LocalImageView(
                         loadedImageModifier
                             .aspectRatio(ratio)
                             .clickable { showImage.value = true },
+                        thumbhash = content.thumbhash,
                     )
                     IconButton(
                         modifier = Modifier.size(Size75dp),
@@ -353,6 +426,7 @@ fun UrlImageView(
     controllerVisible: MutableState<Boolean>,
     accountViewModel: AccountViewModel,
     alwayShowImage: Boolean = false,
+    fullResolution: Boolean = false,
 ) {
     val ratio = content.dim?.aspectRatio() ?: MediaAspectRatioCache.get(content.url)
 
@@ -363,10 +437,24 @@ fun UrlImageView(
             )
         }
 
+    val context = LocalContext.current
+    val imageModel =
+        if (fullResolution) {
+            remember(content.url, context) {
+                ImageRequest
+                    .Builder(context)
+                    .data(content.url)
+                    .size(Size.ORIGINAL)
+                    .build()
+            }
+        } else {
+            content.url
+        }
+
     CrossfadeIfEnabled(targetState = showImage.value, contentAlignment = Alignment.Center, accountViewModel = accountViewModel) {
         if (it) {
             SubcomposeAsyncImage(
-                model = content.url,
+                model = imageModel,
                 contentDescription = content.description,
                 contentScale = contentScale,
                 modifier = mainImageModifier,
@@ -375,7 +463,7 @@ fun UrlImageView(
                 when (state) {
                     is AsyncImagePainter.State.Loading,
                     -> {
-                        if (content.blurhash != null) {
+                        if (content.blurhash != null || content.thumbhash != null) {
                             if (ratio != null) {
                                 val modifier =
                                     if (contentScale == ContentScale.Crop) {
@@ -389,6 +477,7 @@ fun UrlImageView(
                                     content.description,
                                     ContentScale.Crop,
                                     modifier,
+                                    thumbhash = content.thumbhash,
                                 )
                             } else {
                                 DisplayBlurHash(
@@ -396,6 +485,7 @@ fun UrlImageView(
                                     content.description,
                                     ContentScale.Crop,
                                     loadedImageModifier,
+                                    thumbhash = content.thumbhash,
                                 )
                             }
                         } else {
@@ -430,7 +520,7 @@ fun UrlImageView(
                 }
             }
         } else {
-            if (content.blurhash != null && ratio != null) {
+            if ((content.blurhash != null || content.thumbhash != null) && ratio != null) {
                 val modifier =
                     if (contentScale == ContentScale.Crop) {
                         loadedImageModifier.clickable { showImage.value = true }
@@ -443,6 +533,7 @@ fun UrlImageView(
                     content.description,
                     contentScale,
                     modifier,
+                    thumbhash = content.thumbhash,
                 )
                 IconButton(
                     modifier = Modifier.size(Size75dp),
@@ -701,11 +792,14 @@ fun DisplayBlurHash(
     description: String?,
     contentScale: ContentScale,
     modifier: Modifier,
+    thumbhash: String? = null,
 ) {
-    if (blurhash == null) return
+    val model =
+        com.vitorpamplona.amethyst.service.images
+            .placeholderModel(thumbhash, blurhash) ?: return
 
     AsyncImage(
-        model = BlurhashWrapper(blurhash),
+        model = model,
         contentDescription = description,
         contentScale = contentScale,
         modifier = modifier,

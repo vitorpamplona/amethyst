@@ -23,10 +23,14 @@ package com.vitorpamplona.amethyst.service.call
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import com.vitorpamplona.amethyst.service.notifications.NotificationUtils
-import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.GlobalScope
+import com.vitorpamplona.amethyst.service.call.notification.CallNotifier
+import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+
+private const val TAG = "CallNotificationReceiver"
 
 /**
  * Handles the Reject action from the incoming call notification.
@@ -36,24 +40,43 @@ import kotlinx.coroutines.launch
  * notification trampoline restrictions.
  */
 class CallNotificationReceiver : BroadcastReceiver() {
-    @OptIn(DelicateCoroutinesApi::class)
     override fun onReceive(
         context: Context,
         intent: Intent,
     ) {
-        when (intent.action) {
-            ACTION_REJECT_CALL -> {
-                NotificationUtils.cancelCallNotification(context)
+        Log.d(TAG) { "onReceive action=${intent.action} thread=${Thread.currentThread().name}" }
+        val callManager = CallSessionBridge.callManager
+        if (callManager == null) {
+            Log.e(TAG) { "onReceive: callManager is null — cannot process ${intent.action}" }
+            return
+        }
+        val pendingResult = goAsync()
+        val scope = CoroutineScope(SupervisorJob() + kotlinx.coroutines.Dispatchers.Main.immediate)
+        scope.launch {
+            try {
+                when (intent.action) {
+                    ACTION_REJECT_CALL -> {
+                        Log.d(TAG) { "REJECT_CALL: state=${callManager.state.value::class.simpleName}" }
+                        CallNotifier.cancelIncomingCall(context)
+                        callManager.rejectCall()
+                        Log.d(TAG) { "REJECT_CALL: after rejectCall(), state=${callManager.state.value::class.simpleName}" }
+                    }
 
-                val callManager = CallSessionBridge.callManager ?: return
-                GlobalScope.launch {
-                    callManager.rejectCall()
+                    ACTION_HANGUP_CALL -> {
+                        Log.d(TAG) { "HANGUP_CALL: state=${callManager.state.value::class.simpleName}" }
+                        callManager.hangup()
+                        Log.d(TAG) { "HANGUP_CALL: after hangup(), state=${callManager.state.value::class.simpleName}" }
+                    }
                 }
+            } finally {
+                pendingResult.finish()
+                scope.cancel()
             }
         }
     }
 
     companion object {
         const val ACTION_REJECT_CALL = "com.vitorpamplona.amethyst.REJECT_CALL"
+        const val ACTION_HANGUP_CALL = "com.vitorpamplona.amethyst.HANGUP_CALL"
     }
 }

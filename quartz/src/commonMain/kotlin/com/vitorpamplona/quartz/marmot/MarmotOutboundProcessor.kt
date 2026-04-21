@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.marmot
 
+import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEventEncryption
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupManager
@@ -27,6 +28,8 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip40Expiration.expiration
+import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
  * Result of building an outbound GroupEvent.
@@ -92,12 +95,18 @@ class MarmotOutboundProcessor(
         val exporterKey = groupManager.exporterSecret(nostrGroupId)
         val encryptedContent = GroupEventEncryption.encrypt(mlsCiphertext, exporterKey)
 
-        // Step 3: Build the GroupEvent template
+        // Step 3: Build the GroupEvent template (auto-apply NIP-40 expiration
+        // if the group has disappearing_message_secs configured per MIP-01/03).
+        val createdAt = TimeUtils.now()
+        val expirationTime = disappearingExpiration(nostrGroupId, createdAt)
         val template =
             GroupEvent.build(
                 encryptedContentBase64 = encryptedContent,
                 nostrGroupId = nostrGroupId,
-            )
+                createdAt = createdAt,
+            ) {
+                if (expirationTime != null) expiration(expirationTime)
+            }
 
         // Step 4: Sign with a fresh ephemeral keypair
         val ephemeralSigner = NostrSignerInternal(KeyPair())
@@ -112,20 +121,29 @@ class MarmotOutboundProcessor(
     /**
      * Build a GroupEvent carrying a Commit for publishing.
      *
-     * Used after MlsGroupManager.commit() or addMember()/removeMember().
-     * The commit bytes are already MLS-formatted.
+     * Used after MlsGroupManager.stageAddMember()/stageRemoveMember()/etc.
+     * The commit bytes are already MLS-formatted (PublicMessage envelope).
      *
      * @param nostrGroupId the Nostr group ID
-     * @param commitBytes the raw MLS commit bytes from CommitResult
+     * @param commitBytes the framed MLS commit bytes from [com.vitorpamplona.quartz.marmot.mls.group.StagedCommit.framedCommitBytes]
+     * @param exporterKey optional explicit outer-encryption key. Callers
+     *     publishing a Commit MUST pass the **pre-commit** exporter secret
+     *     (from [com.vitorpamplona.quartz.marmot.mls.group.StagedCommit.preCommitExporterSecret])
+     *     so that other existing members at epoch N can decrypt and process
+     *     the commit. If null, falls back to the current epoch's exporter
+     *     secret — which is only correct when the commit has *not* been
+     *     applied locally yet (i.e. this call is made before
+     *     [com.vitorpamplona.quartz.marmot.mls.group.MlsGroup.mergeStagedCommit]).
      * @return the signed GroupEvent ready for relay publishing
      */
     suspend fun buildCommitEvent(
         nostrGroupId: HexKey,
         commitBytes: ByteArray,
+        exporterKey: ByteArray? = null,
     ): OutboundGroupEvent {
         // Outer ChaCha20-Poly1305 encryption of the MLS commit
-        val exporterKey = groupManager.exporterSecret(nostrGroupId)
-        val encryptedContent = GroupEventEncryption.encrypt(commitBytes, exporterKey)
+        val outerKey = exporterKey ?: groupManager.exporterSecret(nostrGroupId)
+        val encryptedContent = GroupEventEncryption.encrypt(commitBytes, outerKey)
 
         // Build the GroupEvent template
         val template =
@@ -142,5 +160,23 @@ class MarmotOutboundProcessor(
             signedEvent = signedEvent,
             nostrGroupId = nostrGroupId,
         )
+    }
+
+    /**
+     * Compute the NIP-40 expiration timestamp for outbound application messages,
+     * or `null` when the group does not have disappearing messages configured.
+     *
+     * Per MIP-01/MIP-03, when `disappearing_message_secs` is set in the Marmot
+     * Group Data Extension, clients MUST auto-apply an `expiration` tag on
+     * kind:445 events at `created_at + disappearing_message_secs`.
+     */
+    private fun disappearingExpiration(
+        nostrGroupId: HexKey,
+        createdAt: Long,
+    ): Long? {
+        val extensions = groupManager.getGroup(nostrGroupId)?.extensions ?: return null
+        val marmotData = MarmotGroupData.fromExtensions(extensions) ?: return null
+        val secs = marmotData.disappearingMessageSecs ?: return null
+        return createdAt + secs.toLong()
     }
 }

@@ -73,7 +73,8 @@ object MlsCryptoProvider {
      *     opaque context<V> = Context;
      * } KDFLabel;
      * ```
-     * Label and context lengths use QUIC-style variable-length integer encoding.
+     * Both the label and the context use the QUIC-style variable-length
+     * integer (`<V>`) prefix defined in RFC 9420 Section 2.1.
      */
     fun expandWithLabel(
         secret: ByteArray,

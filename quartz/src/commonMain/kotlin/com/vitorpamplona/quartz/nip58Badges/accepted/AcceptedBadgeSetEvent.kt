@@ -25,10 +25,11 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.tagArray
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
-import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
@@ -80,13 +81,18 @@ class AcceptedBadgeSetEvent(
             acceptedBadges: List<AcceptedBadge> = emptyList(),
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<AcceptedBadgeSetEvent>.() -> Unit = {},
-        ) = eventTemplate(KIND, "", createdAt) {
-            dTag(STANDARD_D_TAG)
-            alt(ALT_DESCRIPTION)
-            if (acceptedBadges.isNotEmpty()) {
-                acceptedBadges(acceptedBadges)
-            }
-            initializer()
+        ): EventTemplate<AcceptedBadgeSetEvent> {
+            // TagArrayBuilder groups tags by name, which would scramble the
+            // alternating a/e pairs NIP-58 requires. Build the prefix tags via
+            // the builder, then append the ordered pair tags verbatim.
+            val prefix =
+                tagArray<AcceptedBadgeSetEvent> {
+                    dTag(STANDARD_D_TAG)
+                    alt(ALT_DESCRIPTION)
+                    initializer()
+                }
+            val pairs = AcceptedBadge.assemble(acceptedBadges).toTypedArray()
+            return EventTemplate(createdAt, KIND, prefix + pairs, "")
         }
     }
 }

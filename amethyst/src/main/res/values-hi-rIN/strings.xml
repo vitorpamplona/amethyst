@@ -270,6 +270,7 @@
         वे उत्कृष्ट हैं खुले समुदायों के लिए विशिष्ट विषयों पर। इनमें से कुछ समुदाएँ अस्थायी हैं।
     तथा इसीलिए समय के साथ चर्चा सन्देश अदृश्य हो जाते हैं</string>
     <string name="public_chat">सार्वजनिक चर्चा</string>
+    <string name="marmot_group">एमएलएस॰ समूह</string>
     <string name="public_chat_title">सार्वजनिक चर्चा उपतथ्य</string>
     <string name="public_chat_explainer">सार्वजनिक चर्चाएँ सबके लिए दृश्यमान हैं नोस्टर पर तथा सभी
          इनमें भाग ले सकते हैं। ये उत्कृष्ट हैं खुले समुदायों के लिए विशिष्ट विषयों के प्रसंग में।
@@ -391,6 +392,7 @@
     <string name="pictures">चित्र</string>
     <string name="shorts">छोटे</string>
     <string name="longs">चलचित्र</string>
+    <string name="articles">लेख</string>
     <string name="private_bookmarks">निजी स्मर्तव्य</string>
     <string name="public_bookmarks">सार्वजनिक स्मर्तव्य</string>
     <string name="add_to_private_bookmarks">निजी स्मर्तव्य सूची में जोडें</string>
@@ -398,6 +400,7 @@
     <string name="remove_from_private_bookmarks">निजी स्मर्तव्य सूची से हटाएँ</string>
     <string name="remove_from_public_bookmarks">सार्वजनिक स्मर्तव्य सूची से हटाएँ</string>
     <string name="pinned_notes">टँगे गए पत्र</string>
+    <string name="pinned_notes_explainer">आपके टँगे गए टीकाएँ</string>
     <string name="pin_to_profile">परिचय के साथ जोडें</string>
     <string name="unpin_from_profile">परिचय से निकालें</string>
     <string name="bookmark_lists">स्मर्त्तव्य सूची</string>
@@ -703,6 +706,7 @@
     <string name="call_unmute">मौन हटाएँ</string>
     <string name="call_camera_on">चित्रग्राहक चालू</string>
     <string name="call_camera_off">चित्रग्राहक निष्क्रिय</string>
+    <string name="call_switch_camera">अन्य चित्रग्राहक</string>
     <string name="call_speaker">वक्ता</string>
     <string name="call_earpiece">कर्णयन्त्र</string>
     <string name="call_bluetooth">ब्लूटूथ</string>
@@ -714,6 +718,21 @@
     <string name="call_failed_start">आह्वान आरम्भ करने में असफल</string>
     <string name="call_failed_accept">आह्वान स्वीकार करने में असफल</string>
     <string name="call_failed_session">आह्वान सत्र बनानें में असफल</string>
+    <string name="call_settings">आह्वान स्थापना विकल्प</string>
+    <string name="call_settings_enable_calls">ध्वनि तथा दृश्य आह्वान सक्षम करें</string>
+    <string name="call_settings_enable_calls_description">जब अक्षम तब आह्वान घुण्डियाँ अदृश्य किए जाएँगे चर्चा पटल से तथा सभी आगामी आह्वान मौनतः उपेक्षित होंगे।</string>
+    <string name="call_settings_video_quality">दृश्य गुणवत्ता</string>
+    <string name="call_settings_max_bitrate">अधिकतम दृश्य द्व्यंकगति</string>
+    <string name="call_settings_turn_servers">टर्ण॰ / स्टन॰ सेवासंगणक</string>
+    <string name="call_settings_turn_description">मूलविकल्प स्टन॰ तथा टर्ण॰ सेवासंगणक सर्वदा समावेशित। विशिष्ट टर्ण॰ सेवासंगणक जोडें प्रतिबन्धनकारी संचारजालों के लिए।</string>
+    <string name="call_settings_default_servers">मूलविकल्प सेवासंगणक (सर्वदा सक्रिय)</string>
+    <string name="call_settings_custom_turn">विशिष्ट टर्ण॰ सेवासंगणक</string>
+    <string name="call_settings_no_custom_turn">कोई विशिष्ट टर्ण॰ सेवासंगणक समाकृत नहीं।</string>
+    <string name="call_settings_add_turn">टर्ण॰ सेवासंगणक जोडें</string>
+    <string name="call_settings_remove_turn">हटाएँ</string>
+    <string name="call_settings_turn_url">सेवासंगणक जालपता</string>
+    <string name="call_settings_turn_username">उपयोगकर्ता नाम</string>
+    <string name="call_settings_turn_credential">योग्यता प्रमाण</string>
     <string name="reply_notify">सूचित करें : </string>
     <string name="channel_list_join_conversation">संवाद में जुड जाएँ</string>
     <string name="channel_list_user_or_group_id">उपयोगकर्ता अथवा झुण्ड विभेदक</string>
@@ -878,6 +897,7 @@
     <string name="settings">स्थापना विकल्प</string>
     <string name="account_settings">लेखा स्थापना विकल्प</string>
     <string name="app_settings">क्रमक स्थापना विकल्प</string>
+    <string name="danger_zone">संकट क्षेत्र</string>
     <string name="connectivity_type_always">सर्वदा</string>
     <string name="connectivity_type_wifi_only">केवल वै॰फै॰</string>
     <string name="connectivity_type_unmetered_wifi_only">मात्रांकन रहित वैफै॰</string>
@@ -926,6 +946,7 @@
     <string name="geohash_exclusive_explainer">स्थल के अनुचर ही देखेंगे। आपके सामान्य अनुचर नहीं देखेंगे।</string>
     <string name="hashtag_exclusive">विषयसूचक विशेष पत्र</string>
     <string name="hashtag_exclusive_explainer">केवल विषयसूचक के अनुचर इसे देखेंगे। आपके सामान्य अनुचर नहीं देखेंगे।</string>
+    <string name="long_form_reading_minutes">%1$d मिन॰ पठन</string>
     <string name="loading_location">स्थान प्राप्त किया जा रहा है</string>
     <string name="lack_location_permissions">स्थान प्राप्त करने की अनुमति नहीं</string>
     <string name="add_sensitive_content_explainer">आपके विषयवस्तु दिखाने से पूर्व संवेदनशील विषयवस्तु चेतावनी जोडता है। यह आदर्श है किसी कार्यालय अनुचित विषयवस्तु के लिए अथवा जो कुछ लोगों के लिए आपत्तिजनक अथवा व्याकुल करनेवाला लग सकता है</string>
@@ -934,6 +955,7 @@
     <string name="new_feature_nip17_might_not_be_available_description">इस कार्यशैली सक्षम करने के लिए अमेथिस्ट के द्वारा निप॰-१७ संदेश (उपहारकोषयुक्त, आच्छादित सीधा तथा झुण्ड संदेश) भेजना पडेगा। यह निप॰-१७ नया है तथा अनेक ग्राहक इसे कार्यान्वित किया नहीं अब तक। सुनिश्चित करें कि प्राप्तकर्ता एक अनुकूल ग्राहक का प्रयोग कर रहे हैं।</string>
     <string name="new_feature_nip17_activate">सक्रिय करें</string>
     <string name="messages_create_public_chat">सार्वजनिक</string>
+    <string name="messages_create_group">समूह</string>
     <string name="messages_create_public_private_chat_description">नया निजी अथवा सार्वजनिक झुण्ड</string>
     <string name="messages_relay_based">पुनःप्रसारक</string>
     <string name="messages_new_message">निजी</string>
@@ -1142,6 +1164,8 @@
     <string name="media_compression_quality_uncompressed">असंकुचित</string>
     <string name="video_codec_h265_label">उच्च कार्यक्षमता चलचित्र संकुचनविस्तारण अथवा एच॰२६५ क्रमलेख का प्रयोग करें</string>
     <string name="video_codec_h265_description">अधिक गुणवत्ता के साथ सूक्ष्मतर अभिलेख आकार परन्तु एच॰२६५ चालन सभी यन्त्रों द्वारा अवलम्बित नहीं।</string>
+    <string name="convert_gif_to_mp4_label">जिफ॰ से एमपी४॰ में परिवर्तित करें</string>
+    <string name="convert_gif_to_mp4_description">चलन्त जिफ॰ से एमपी४॰ में परिवर्तित करता है सूक्ष्मतर अभिलेख आकार तथा अधिक चालन अनुकूलता के लिए।</string>
     <string name="strip_metadata_label">निजी परितथ्य हटाएँ</string>
     <string name="strip_metadata_description">निजी परितथ्य हटाने का प्रयास करता है आलम्बित चित्रध्वनिदृश्य अभिलेखों से आरोहण पूर्व</string>
     <string name="metadata_strip_failed_title">परितथ्य हटाने में असफल</string>
@@ -1187,6 +1211,27 @@
     <string name="wallet_filter_all">सभी</string>
     <string name="wallet_filter_zaps">ज्साप</string>
     <string name="wallet_filter_non_zaps">ज्साप अतिरिक्त</string>
+    <string name="wallet_add">धनकोष जोडें</string>
+    <string name="wallet_default">मूलविकल्प</string>
+    <string name="wallet_set_default">मूलविकल्पतः स्थापित करें</string>
+    <string name="wallet_remove">हटाएँ</string>
+    <string name="wallet_remove_confirm">क्या इस धनकोष को हटाएँ।</string>
+    <string name="wallet_remove_confirm_description">यह धनकोष संयोजन को हटाएगा। आप इसे कभी भी पुनः जोड सकते हैं।</string>
+    <string name="wallet_name">धनकोष नाम</string>
+    <string name="wallet_name_hint">मेरा धनकोष</string>
+    <string name="wallet_your_wallets">आपके धनकोष</string>
+    <string name="wallet_manage">धनकोष प्रबन्धन</string>
+    <string name="wallet_no_wallets">कोई धनकोष संयोजित नहीं</string>
+    <string name="wallet_no_wallets_description">एक अथवा अधिक नोस्टर धनकोष संयोजन जोडें भुगतान भेजने तथा प्राप्त करने के लिए।</string>
+    <string name="wallet_add_connection">नोस्टर धनकोष संयोजन जोडें</string>
+    <string name="wallet_paste_uri">nostr+walletconnect:// पता चिपकाएँ</string>
+    <string name="wallet_save">अभिलेखन करें</string>
+    <string name="wallet_rename">पुनःनामकरण</string>
+    <string name="wallet_rename_title">धनकोष पुनःनामकरण</string>
+    <string name="wallet_edit">सम्पादन</string>
+    <string name="wallet_invalid_uri">अमान्य नोस्टर धनकोष संयोजन पता</string>
+    <string name="wallet_move_up">ऊर्ध्वगमन</string>
+    <string name="wallet_move_down">अधोगमन</string>
     <string name="route_security_filters">सुरक्षार्थ छलनियाँ</string>
     <string name="route_import_follows">अनुचरित आयात करें</string>
     <string name="new_post">नया पत्र प्रकाशन</string>
@@ -1295,6 +1340,7 @@
     <string name="inbox_relays_not_found_examples">ये अच्छे विकल्प हैं :\n - nos.lol\n - nostr.mom\n - nostr.bitcoiner.social</string>
     <string name="dm_upload">सीधा संदेश आरोहण</string>
     <string name="relay_settings">पुनःप्रसारक स्थापना विकल्प</string>
+    <string name="relay_reorder">पुनःक्रमबद्ध पुनःप्रसारक</string>
     <string name="public_home_section">सार्वजनिक मुख्य पुनःप्रसारक</string>
     <string name="public_home_section_explainer_profile">प्रयोक्ता अपने विषयवस्तुओं को इन पुनःप्रसारकों को भेज रहा है</string>
     <string name="public_home_section_explainer">यह पुनःप्रसारक प्रकार आपके सभी विषयवस्तु रखता है। अमेथिस्ट आपके पत्रों को प्रकाशित करने के लिए यहाँ भेजेगा तथा अन्य लोग आपके विषयवस्तु ढूँढने के लिए इनका प्रयोग करेंगे। १ - ३ पुनःप्रसारकों को जोडें। ये व्यक्तिगत अथवा सशुल्क अथवा सार्वजनिक पुनःप्रसारक हो सकते हैं।</string>
@@ -1304,6 +1350,9 @@
     <string name="private_inbox_section">सीधा संदेश आगतपेटिका पुनःप्रसारक</string>
     <string name="private_inbox_section_explainer_profile">प्रयोक्ता इन पुनःप्रसारकों पर सीधा सन्देश प्राप्त कर रहा है</string>
     <string name="private_inbox_section_explainer">आपके निजी आगतपेटिका के रूप में १ - ३ पुनःप्रसारकों को जोडें। अन्य लोग इनका उपयोग करेंगे आपको सी॰सं॰ भेजने के लिए। सी॰सं॰ आगतपेटिका पुनःप्रसारकों को किसी से भी सन्देश स्वीकारना चाहिए पर उनका अवरोहण अनुमति केवल आपको देना चाहिए। ये अच्छे विकल्प हैं :\n - inbox.nostr.wine (सशुल्क)\n - auth.nostr1.com (शुल्करहित)\n - you.nostr1.com (व्यक्तिगत पुनःप्रसारक - सशुल्क)</string>
+    <string name="keypackages">कुंचिकापोटलियाँ</string>
+    <string name="keypackage_section">कुंचिकापोटली पुनःप्रसारक</string>
+    <string name="keypackage_section_explainer">पुनःप्रसारक जहाँ आपके एमएलएस॰ कुंचिकापोटलियाँ प्रकाशित होंगे (मिप॰००)। अन्य प्रयोक्ता इन कुंचिकापोटलियों को प्राप्त करेंगे आपको आमन्त्रित करने के लिए मार्मोट॰ समूह चर्चाओं में। १ - ३ पुनःप्रसारकों को जोडें जो आप से कुंचिकापोटली घटनाएँ स्वीकारते हों तथा सार्वजनिक पठन की अनुमती देते हों।</string>
     <string name="private_outbox_section">निजी पुनःप्रसारक</string>
     <string name="private_outbox_section_explainer">१ - ३ पुनःप्रसारकों को जोडें उन घटनाओं को रखने के लिए जो कोई अन्य नहीं देख सकता जैसे कि पाण्डुलिपियाँ अथवा क्रमक के स्थापना विकल्प। आदर्शतः ये पुनःप्रसारक स्थानीय होने चाहिए अथवा प्रत्येक उपयोगकर्ता के विषयवस्तु अवरोहण के पूर्व परिचय प्रमाणीकरण अनिवार्य होना चाहिए।</string>
     <string name="kind_3_section">सामान्य पुनःप्रसारक</string>
@@ -1681,6 +1730,7 @@
     <string name="kind_shorts">छोटे</string>
     <string name="kind_voice_msg">ध्वनि सन्देश</string>
     <string name="kind_voice_reply">ध्वनि उत्तर</string>
+    <string name="kind_wake">जगाना</string>
     <string name="kind_web_bookmark">जाल स्मर्त्तव्यचिह्न</string>
     <string name="kind_wiki">विकि॰</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">एक बढिया सूचनावली के साथ आरम्भ करें उन लोगों का अनुचरण करके जिनको आपके द्वारा विश्वास प्राप्त कोई व्यक्ति करते हैं।</string>
@@ -1782,6 +1832,45 @@
     <string name="profile_actions_dialog_title">परिचय कार्य</string>
     <string name="media_actions_dialog_title">अभिलेख कार्य</string>
     <string name="playback_actions_dialog_title">चालन</string>
+    <string name="video_quality_auto">स्वचालित</string>
+    <!-- HLS multi-resolution video sharing -->
+    <string name="share_hls_video">एचएलएस॰ आरोहण</string>
+    <string name="share_hls_video_drawer_description">बहुसुलझाव एचएलएस॰ प्रकाशित करें आपके प्रसारसंगणक में</string>
+    <string name="hls_pick_video_primary">दृश्याभिलेख चुनें</string>
+    <string name="hls_pick_video_helper">आपका दृश्याभिलेख अनेक सुलझावों में परिवर्तित किया जाएगा जिससे दर्शकों को स्निग्ध चालन प्राप्त होगा किसी भी संयोजन पर।</string>
+    <string name="hls_change_video">परिवर्तन</string>
+    <string name="hls_title_label">शीर्षक</string>
+    <string name="hls_title_placeholder">आपके दृश्याभिलेख को एक शीर्षक दें</string>
+    <string name="hls_description_label">विवरण</string>
+    <string name="hls_description_placeholder">यह दृश्याभिलेख किस विषय पर है।</string>
+    <string name="hls_content_warning_reason_placeholder">कारण (विकल्पात्मक)</string>
+    <string name="hls_codec_label">संविस्तारक</string>
+    <string name="hls_codec_h265">एच॰२६५ (अधिक संकुचन)</string>
+    <string name="hls_codec_h264">एच॰२६४</string>
+    <string name="hls_codec_fallback_notice">एच॰२६५ इस यन्त्र पर उपलब्ध नहीं। एच॰२६४ तक पुनःपतन।</string>
+    <string name="hls_renditions_label">अभिव्यक्तियाँ</string>
+    <string name="hls_renditions_source_format">स्रोत सुलझाव : %1$dघ्न%2$d</string>
+    <string name="hls_renditions_produce_format">उत्पाद्य : %1$s</string>
+    <string name="hls_renditions_skipped_format">(%1$s त्यक्त - स्रोत ऊपर)</string>
+    <string name="hls_rendition_bitrate_kbps_format">%1$d सहस्रांकप्रतिसेकण्ड</string>
+    <string name="hls_rendition_above_source">स्रोत ऊपर - त्यक्तव्य</string>
+    <string name="hls_publish_button">उच्छनिरूपण दृश्याभिलेख प्रकाशित करें</string>
+    <string name="hls_publishing_header_format">प्रकाशन चालू \"%1$s\"…</string>
+    <string name="hls_state_transcoding_format">संकुचनान्तरण चालू %1$s</string>
+    <string name="hls_state_uploading_idle">आरोहण</string>
+    <string name="hls_state_uploading_format">आरोहण चालू %2$d में से %1$d</string>
+    <string name="hls_state_uploading_with_label_format">आरोहण चालू %1$s (%3$d में से %2$d)</string>
+    <string name="hls_state_uploaded_format">आरोहण कृत %2$d में से %1$d</string>
+    <string name="hls_state_publishing">घटना प्रकाशन चालू…</string>
+    <string name="hls_state_success_title">दृश्याभिलेख प्रकाशित</string>
+    <string name="hls_state_success_body">आपका उच्छनिरूपण दृश्याभिलेख नोस्टर पर चलन्त है।</string>
+    <string name="hls_state_failure_title">कुछ गडबड हुआ</string>
+    <string name="hls_view_note">टीका देखें</string>
+    <string name="hls_done">हो गया</string>
+    <string name="hls_try_again">पुनः प्रयास करें</string>
+    <string name="hls_draft_note_after_upload">टीका सम्पादन आरोहण पश्चात</string>
+    <string name="hls_draft_note_after_upload_explainer">टीका सम्पादक खोलें शीर्षक विवरण तथा दृश्याभिलेख योजक जानकारी से पूर्वयुक्त जिसे आप शोधन कर सकते है प्रकाशन पूर्व।</string>
+    <string name="hls_draft_note_button">टीका सम्पादन</string>
     <string name="pack_actions_dialog_title">पोटली कार्य</string>
     <string name="list_actions_dialog_title">सूची कार्य</string>
     <string name="bookmark_item_actions_dialog_title">स्मर्त्तव्यचिह्न कार्य</string>
@@ -1940,4 +2029,18 @@
     <string name="relay_members_removed">%1$d सदस्य हटाए गए पुनःप्रसारक से</string>
     <string name="relay_join_request">पुनःप्रसारक से जुडने का अनुरोध</string>
     <string name="relay_leave_request">पुनःप्रसारक से चले जाने का अनुरोध</string>
+    <string name="ai_writing_help">एआई॰ लेखन सहायता</string>
+    <string name="ai_writing_setting_title">लेख शोधन प्रस्ताव करें</string>
+    <string name="ai_writing_setting_description">यन्त्र स्थित एआई॰ प्रतिरूप का प्रयोग करता है लेख सुधार तथा स्वर परिवर्तन प्रस्तावों के लिए।</string>
+    <string name="ai_writing_use_this">इसका प्रयोग करें</string>
+    <string name="ai_writing_dismiss">हटाएँ</string>
+    <string name="ai_tone_correct">सम्यक</string>
+    <string name="ai_tone_rephrase">वाक्याम्श पुनःसम्पादन</string>
+    <string name="ai_tone_shorter">सूक्ष्मतर</string>
+    <string name="ai_tone_elaborate">विस्तार</string>
+    <string name="ai_tone_friendly">मित्रतापूर्ण</string>
+    <string name="ai_tone_professional">व्यावसायिक</string>
+    <string name="ai_tone_more_direct">अधिक सीधा</string>
+    <string name="ai_tone_punchy">आघाती</string>
+    <string name="ai_tone_emojify">चित्राक्षर युक्त</string>
 </resources>

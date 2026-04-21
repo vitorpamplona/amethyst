@@ -78,7 +78,7 @@ class MlsGroupLifecycleTest {
         assertEquals(2, alice.memberCount)
 
         // Bob processes the Welcome to join the group
-        val bob = MlsGroup.processWelcome(result.welcomeBytes!!, bobBundle)
+        val bob = MlsGroup.processWelcome(result.welcomeBytes, bobBundle)
         assertEquals(1L, bob.epoch, "Bob should be at same epoch as Alice after Welcome")
         assertEquals(2, bob.memberCount, "Bob should see 2 members")
     }
@@ -176,7 +176,6 @@ class MlsGroupLifecycleTest {
     // because the commit_secret decryption from the UpdatePath does not
     // correctly walk the ratchet tree to find the common ancestor's path secret.
     // This causes AEAD decryption failures on cross-member messages.
-    @Ignore
     @Test
     fun testThreeMemberGroup_SequentialAdditions() {
         // Alice creates the group
@@ -192,7 +191,7 @@ class MlsGroupLifecycleTest {
         // Alice adds Carol (Bob processes Alice's commit)
         val carolBundle = createStandaloneKeyPackage("carol")
         val addCarolResult = alice.addMember(carolBundle.keyPackage.toTlsBytes())
-        bob.processCommit(addCarolResult.commitBytes, alice.leafIndex)
+        bob.processCommit(addCarolResult.commitBytes, alice.leafIndex, ByteArray(0))
         val carol = MlsGroup.processWelcome(addCarolResult.welcomeBytes!!, carolBundle)
 
         assertEquals(2L, alice.epoch)
@@ -230,7 +229,7 @@ class MlsGroupLifecycleTest {
         val addCarolResult = bob.addMember(carolBundle.keyPackage.toTlsBytes())
 
         // Alice processes Bob's commit
-        alice.processCommit(addCarolResult.commitBytes, bob.leafIndex)
+        alice.processCommit(addCarolResult.commitBytes, bob.leafIndex, ByteArray(0))
 
         assertEquals(2L, alice.epoch)
         assertEquals(2L, bob.epoch)
@@ -243,7 +242,6 @@ class MlsGroupLifecycleTest {
     // -----------------------------------------------------------------------
 
     // BUG: processCommit key derivation diverges — see testThreeMemberGroup_SequentialAdditions
-    @Ignore
     @Test
     fun testExternalJoin_ZaraJoinsViaGroupInfo() {
         val alice = MlsGroup.create("alice".encodeToByteArray())
@@ -254,7 +252,7 @@ class MlsGroupLifecycleTest {
         assertEquals(1L, zara.epoch)
 
         // Alice processes the external commit
-        alice.processCommit(commitBytes, zara.leafIndex)
+        alice.processCommit(commitBytes, zara.leafIndex, ByteArray(0))
         assertEquals(1L, alice.epoch)
         assertEquals(2, alice.memberCount)
 
@@ -266,14 +264,13 @@ class MlsGroupLifecycleTest {
     }
 
     // BUG: processCommit key derivation diverges — see testThreeMemberGroup_SequentialAdditions
-    @Ignore
     @Test
     fun testExternalJoin_ExporterSecretsAgree() {
         val alice = MlsGroup.create("alice".encodeToByteArray())
         val groupInfoBytes = alice.groupInfo().toTlsBytes()
 
         val (zara, commitBytes) = MlsGroup.externalJoin(groupInfoBytes, "zara".encodeToByteArray())
-        alice.processCommit(commitBytes, zara.leafIndex)
+        alice.processCommit(commitBytes, zara.leafIndex, ByteArray(0))
 
         val aliceKey = alice.exporterSecret("marmot", "group-event".encodeToByteArray(), 32)
         val zaraKey = zara.exporterSecret("marmot", "group-event".encodeToByteArray(), 32)
@@ -312,7 +309,6 @@ class MlsGroupLifecycleTest {
     // -----------------------------------------------------------------------
 
     // BUG: processCommit key derivation diverges — see testThreeMemberGroup_SequentialAdditions
-    @Ignore
     @Test
     fun testSigningKeyRotation_EpochAdvances() {
         val alice = MlsGroup.create("alice".encodeToByteArray())
@@ -327,7 +323,7 @@ class MlsGroupLifecycleTest {
         val commitResult = alice.commit()
 
         // Bob processes Alice's rotation commit
-        bob.processCommit(commitResult.commitBytes, alice.leafIndex)
+        bob.processCommit(commitResult.commitBytes, alice.leafIndex, ByteArray(0))
 
         assertEquals(2L, alice.epoch)
         assertEquals(2L, bob.epoch)
@@ -342,7 +338,6 @@ class MlsGroupLifecycleTest {
     }
 
     // BUG: processCommit key derivation diverges — see testThreeMemberGroup_SequentialAdditions
-    @Ignore
     @Test
     fun testEncryptDecryptAfterSigningKeyRotation() {
         val alice = MlsGroup.create("alice".encodeToByteArray())
@@ -353,7 +348,7 @@ class MlsGroupLifecycleTest {
         // Alice rotates her signing key
         alice.proposeSigningKeyRotation()
         val commitResult = alice.commit()
-        bob.processCommit(commitResult.commitBytes, alice.leafIndex)
+        bob.processCommit(commitResult.commitBytes, alice.leafIndex, ByteArray(0))
 
         // Both directions should still work after rotation
         val msg1 = "After rotation from Alice".encodeToByteArray()
@@ -412,7 +407,6 @@ class MlsGroupLifecycleTest {
     // -----------------------------------------------------------------------
 
     // BUG: processCommit key derivation diverges — see testThreeMemberGroup_SequentialAdditions
-    @Ignore
     @Test
     fun testPskProposal_EpochAdvancesWithPsk() {
         val alice = MlsGroup.create("alice".encodeToByteArray())
@@ -433,7 +427,7 @@ class MlsGroupLifecycleTest {
         val commitResult = alice.commit()
 
         // Bob processes the commit
-        bob.processCommit(commitResult.commitBytes, alice.leafIndex)
+        bob.processCommit(commitResult.commitBytes, alice.leafIndex, ByteArray(0))
 
         assertEquals(epochBefore + 1, alice.epoch)
         assertEquals(alice.epoch, bob.epoch)
@@ -464,7 +458,7 @@ class MlsGroupLifecycleTest {
         assertNotNull(alice.reInitPending, "ReInit should be pending after commit")
 
         // Bob processes and should also see reInit
-        bob.processCommit(commitResult.commitBytes, alice.leafIndex)
+        bob.processCommit(commitResult.commitBytes, alice.leafIndex, ByteArray(0))
         assertNotNull(bob.reInitPending, "Bob should also see ReInit pending")
     }
 
@@ -472,7 +466,11 @@ class MlsGroupLifecycleTest {
     // 12. Empty commit (no proposals, just UpdatePath for forward secrecy)
     // -----------------------------------------------------------------------
 
-    // BUG: processCommit key derivation diverges — see testThreeMemberGroup_SequentialAdditions
+    // BUG: empty-commit (no proposals, pure UpdatePath) diverges Alice's and
+    // Bob's exporter secrets after processCommit. Unrelated to the SecretTree
+    // non-full-tree fix — the other @Ignored "processCommit diverges" tests in
+    // this file and MlsGroupEdgeCaseTest now pass, but this one still fails.
+    // Tracked separately.
     @Ignore
     @Test
     fun testEmptyCommit_AdvancesEpoch() {
@@ -485,7 +483,7 @@ class MlsGroupLifecycleTest {
 
         // Alice commits with no proposals (purely for forward secrecy / UpdatePath)
         val commitResult = alice.commit()
-        bob.processCommit(commitResult.commitBytes, alice.leafIndex)
+        bob.processCommit(commitResult.commitBytes, alice.leafIndex, ByteArray(0))
 
         assertEquals(epochBefore + 1, alice.epoch)
         assertEquals(alice.epoch, bob.epoch)

@@ -20,6 +20,9 @@
  */
 package com.vitorpamplona.quartz.marmot.mip03GroupMessages
 
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+
 /**
  * Deterministic commit conflict resolution for MLS over Nostr (MIP-03).
  *
@@ -82,6 +85,7 @@ object CommitOrdering {
      * to determine which commit wins for each (group, epoch).
      */
     class EpochCommitTracker {
+        private val mutex = Mutex()
         private val pendingByGroupEpoch = mutableMapOf<GroupEpochKey, MutableList<GroupEvent>>()
 
         companion object {
@@ -96,11 +100,11 @@ object CommitOrdering {
          * @param epoch the MLS epoch number this commit targets
          * @param commit the GroupEvent containing the commit
          */
-        fun addCommit(
+        suspend fun addCommit(
             groupId: String,
             epoch: Long,
             commit: GroupEvent,
-        ) {
+        ) = mutex.withLock {
             val key = GroupEpochKey(groupId, epoch)
             pendingByGroupEpoch.getOrPut(key) { mutableListOf() }.add(commit)
 
@@ -119,10 +123,13 @@ object CommitOrdering {
         /**
          * Returns pending commits for a specific group and epoch.
          */
-        fun pendingForEpoch(
+        suspend fun pendingForEpoch(
             groupId: String,
             epoch: Long,
-        ): List<GroupEvent> = pendingByGroupEpoch[GroupEpochKey(groupId, epoch)] ?: emptyList()
+        ): List<GroupEvent> =
+            mutex.withLock {
+                pendingByGroupEpoch[GroupEpochKey(groupId, epoch)]?.toList() ?: emptyList()
+            }
 
         /**
          * Resolves the winning commit for a specific group and epoch.
@@ -131,31 +138,39 @@ object CommitOrdering {
          * @param epoch the MLS epoch to resolve
          * @return the winning commit, or null if no commits exist for this (group, epoch)
          */
-        fun resolve(
+        suspend fun resolve(
             groupId: String,
             epoch: Long,
-        ): GroupEvent? = selectWinner(pendingByGroupEpoch[GroupEpochKey(groupId, epoch)] ?: emptyList())
+        ): GroupEvent? =
+            mutex.withLock {
+                selectWinner(pendingByGroupEpoch[GroupEpochKey(groupId, epoch)] ?: emptyList())
+            }
 
         /**
          * Clears pending commits for a (group, epoch) after it has been resolved.
          */
-        fun clearEpoch(
+        suspend fun clearEpoch(
             groupId: String,
             epoch: Long,
-        ) {
+        ) = mutex.withLock {
             pendingByGroupEpoch.remove(GroupEpochKey(groupId, epoch))
+            Unit
         }
 
         /**
          * Returns all (group, epoch) keys that have pending commits.
          */
-        fun pendingGroupEpochs(): Set<GroupEpochKey> = pendingByGroupEpoch.keys.toSet()
+        suspend fun pendingGroupEpochs(): Set<GroupEpochKey> =
+            mutex.withLock {
+                pendingByGroupEpoch.keys.toSet()
+            }
 
         /**
          * Clears all pending state.
          */
-        fun clear() {
-            pendingByGroupEpoch.clear()
-        }
+        suspend fun clear() =
+            mutex.withLock {
+                pendingByGroupEpoch.clear()
+            }
     }
 }

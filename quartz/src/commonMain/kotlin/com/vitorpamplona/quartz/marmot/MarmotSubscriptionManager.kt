@@ -107,21 +107,24 @@ class MarmotSubscriptionManager(
 
     /**
      * Returns all active group IDs being tracked.
+     * Non-suspend snapshot version for callers that cannot be suspend (e.g., filter builders).
      */
-    fun activeGroupIds(): Set<HexKey> = groupSubscriptions.filter { it.value.active }.keys
+    fun activeGroupIdsSnapshot(): Set<HexKey> = groupSubscriptions.filter { it.value.active }.keys.toSet()
+
+    /**
+     * Returns all active group IDs being tracked.
+     */
+    suspend fun activeGroupIds(): Set<HexKey> = mutex.withLock { groupSubscriptions.filter { it.value.active }.keys.toSet() }
 
     /**
      * Check if a group is currently subscribed.
      */
-    fun isSubscribed(nostrGroupId: HexKey): Boolean = groupSubscriptions[nostrGroupId]?.active == true
+    suspend fun isSubscribed(nostrGroupId: HexKey): Boolean = mutex.withLock { groupSubscriptions[nostrGroupId]?.active == true }
 
     /**
-     * Build filters for all active group subscriptions.
-     *
-     * Returns one [Filter] per active group (kind:445 filtered by `h` tag),
-     * using the tracked `since` timestamp for pagination.
+     * Non-suspend snapshot version of activeGroupFilters for callers that cannot be suspend.
      */
-    fun activeGroupFilters(): List<Filter> =
+    fun activeGroupFiltersSnapshot(): List<Filter> =
         groupSubscriptions.values
             .filter { it.active }
             .map { state ->
@@ -133,16 +136,37 @@ class MarmotSubscriptionManager(
             }
 
     /**
+     * Build filters for all active group subscriptions.
+     *
+     * Returns one [Filter] per active group (kind:445 filtered by `h` tag),
+     * using the tracked `since` timestamp for pagination.
+     */
+    suspend fun activeGroupFilters(): List<Filter> =
+        mutex.withLock {
+            groupSubscriptions.values
+                .filter { it.active }
+                .map { state ->
+                    if (state.since != null) {
+                        MarmotFilters.groupEventsByGroupIdSince(state.nostrGroupId, state.since!!)
+                    } else {
+                        MarmotFilters.groupEventsByGroupId(state.nostrGroupId)
+                    }
+                }
+        }
+
+    /**
      * Build the gift wrap filter for receiving Welcome messages.
      *
      * Returns a single filter for kind:1059 addressed to the user's pubkey,
      * using the tracked `since` timestamp for pagination.
      */
-    fun giftWrapFilter(): Filter =
-        if (giftWrapSince != null) {
-            MarmotFilters.giftWrapsForUserSince(userPubKey, giftWrapSince!!)
-        } else {
-            MarmotFilters.giftWrapsForUser(userPubKey)
+    suspend fun giftWrapFilter(): Filter =
+        mutex.withLock {
+            if (giftWrapSince != null) {
+                MarmotFilters.giftWrapsForUserSince(userPubKey, giftWrapSince!!)
+            } else {
+                MarmotFilters.giftWrapsForUser(userPubKey)
+            }
         }
 
     /**
@@ -174,7 +198,7 @@ class MarmotSubscriptionManager(
      * The platform layer should send these filters to the relay client
      * whenever subscriptions change or on reconnection.
      */
-    fun buildFilters(): List<Filter> {
+    suspend fun buildFilters(): List<Filter> {
         val filters = mutableListOf<Filter>()
         filters.addAll(activeGroupFilters())
         filters.add(giftWrapFilter())

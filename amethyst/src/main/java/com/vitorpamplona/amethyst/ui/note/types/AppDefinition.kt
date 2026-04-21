@@ -47,7 +47,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
@@ -101,6 +104,7 @@ fun RenderAppDefinition(
 
             if (!theAppMetadata.banner.isNullOrBlank()) {
                 var zoomImageDialogOpen by remember { mutableStateOf(false) }
+                var bannerSourceBounds by remember { mutableStateOf<Rect?>(null) }
 
                 AsyncImage(
                     model = theAppMetadata.banner,
@@ -110,6 +114,7 @@ fun RenderAppDefinition(
                         Modifier
                             .fillMaxWidth()
                             .height(125.dp)
+                            .onGloballyPositioned { bannerSourceBounds = it.boundsInWindow() }
                             .combinedClickable(
                                 onClick = {},
                                 onLongClick = {
@@ -125,6 +130,7 @@ fun RenderAppDefinition(
                 if (zoomImageDialogOpen) {
                     ZoomableImageDialog(
                         imageUrl = RichTextParser.parseImageOrVideo(theAppMetadata.banner!!),
+                        sourceBounds = bannerSourceBounds,
                         onDismiss = { zoomImageDialogOpen = false },
                         accountViewModel = accountViewModel,
                     )
@@ -153,6 +159,7 @@ fun RenderAppDefinition(
                     verticalAlignment = Alignment.Bottom,
                 ) {
                     var zoomImageDialogOpen by remember { mutableStateOf(false) }
+                    var pictureSourceBounds by remember { mutableStateOf<Rect?>(null) }
                     Box(Modifier.size(100.dp)) {
                         theAppMetadata.picture?.let { picture ->
                             AsyncImage(
@@ -168,6 +175,7 @@ fun RenderAppDefinition(
                                         ).clip(shape = CircleShape)
                                         .fillMaxSize()
                                         .background(MaterialTheme.colorScheme.background)
+                                        .onGloballyPositioned { pictureSourceBounds = it.boundsInWindow() }
                                         .combinedClickable(
                                             onClick = { zoomImageDialogOpen = true },
                                             onLongClick = {
@@ -181,6 +189,7 @@ fun RenderAppDefinition(
                             if (zoomImageDialogOpen) {
                                 ZoomableImageDialog(
                                     imageUrl = RichTextParser.parseImageOrVideo(theAppMetadata.picture!!),
+                                    sourceBounds = pictureSourceBounds,
                                     onDismiss = { zoomImageDialogOpen = false },
                                     accountViewModel = accountViewModel,
                                 )

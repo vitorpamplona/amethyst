@@ -51,17 +51,24 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.automirrored.outlined.Article
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material.icons.outlined.CollectionsBookmark
 import androidx.compose.material.icons.outlined.Drafts
+import androidx.compose.material.icons.outlined.EmojiEmotions
 import androidx.compose.material.icons.outlined.GroupAdd
+import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.Language
+import androidx.compose.material.icons.outlined.MilitaryTech
 import androidx.compose.material.icons.outlined.Photo
 import androidx.compose.material.icons.outlined.PlayCircle
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.SettingsInputAntenna
 import androidx.compose.material.icons.outlined.SmartDisplay
+import androidx.compose.material.icons.outlined.Storefront
+import androidx.compose.material.icons.outlined.Tag
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -118,7 +125,6 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.Font18SP
-import com.vitorpamplona.amethyst.ui.theme.IconRowModifier
 import com.vitorpamplona.amethyst.ui.theme.IconRowTextModifier
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size22Modifier
@@ -559,6 +565,30 @@ fun ListContent(
         )
 
         NavigationRow(
+            title = R.string.manage_emoji_packs,
+            icon = Icons.Outlined.EmojiEmotions,
+            tint = MaterialTheme.colorScheme.onBackground,
+            nav = nav,
+            route = Route.EmojiPacks,
+        )
+
+        NavigationRow(
+            title = R.string.browse_emoji_sets,
+            icon = Icons.Outlined.EmojiEmotions,
+            tint = MaterialTheme.colorScheme.onBackground,
+            nav = nav,
+            route = Route.BrowseEmojiSets,
+        )
+
+        NavigationRow(
+            title = R.string.interest_sets_title,
+            icon = Icons.Outlined.Tag,
+            tint = MaterialTheme.colorScheme.onBackground,
+            nav = nav,
+            route = Route.InterestSets,
+        )
+
+        NavigationRow(
             title = R.string.web_bookmarks,
             icon = Icons.Outlined.Language,
             tint = MaterialTheme.colorScheme.onBackground,
@@ -575,6 +605,22 @@ fun ListContent(
         )
 
         NavigationRow(
+            title = R.string.discover_reads,
+            icon = Icons.AutoMirrored.Outlined.Article,
+            tint = MaterialTheme.colorScheme.onBackground,
+            nav = nav,
+            route = Route.Articles,
+        )
+
+        NavigationRow(
+            title = R.string.pictures,
+            icon = Icons.Outlined.Photo,
+            tint = MaterialTheme.colorScheme.onBackground,
+            nav = nav,
+            route = Route.Pictures,
+        )
+
+        NavigationRow(
             title = R.string.polls,
             icon = R.drawable.ic_poll,
             iconReference = 1,
@@ -584,11 +630,27 @@ fun ListContent(
         )
 
         NavigationRow(
-            title = R.string.pictures,
-            icon = Icons.Outlined.Photo,
+            title = R.string.badges,
+            icon = Icons.Outlined.MilitaryTech,
             tint = MaterialTheme.colorScheme.onBackground,
             nav = nav,
-            route = Route.Pictures,
+            route = Route.Badges,
+        )
+
+        NavigationRow(
+            title = R.string.communities,
+            icon = Icons.Outlined.Groups,
+            tint = MaterialTheme.colorScheme.onBackground,
+            nav = nav,
+            route = Route.Communities,
+        )
+
+        NavigationRow(
+            title = R.string.discover_marketplace,
+            icon = Icons.Outlined.Storefront,
+            tint = MaterialTheme.colorScheme.onBackground,
+            nav = nav,
+            route = Route.Products,
         )
 
         NavigationRow(
@@ -613,6 +675,14 @@ fun ListContent(
             tint = MaterialTheme.colorScheme.onBackground,
             nav = nav,
             route = Route.Wallet,
+        )
+
+        NavigationRow(
+            title = R.string.share_hls_video,
+            icon = Icons.Outlined.SettingsInputAntenna,
+            tint = MaterialTheme.colorScheme.onBackground,
+            nav = nav,
+            route = Route.NewHlsVideo,
         )
 
         if (isDebug) {
@@ -724,9 +794,12 @@ fun IconRow(
 
     Row(
         modifier =
-            IconRowModifier.clickable(
-                onClick = onClick,
-            ),
+            Modifier
+                .fillMaxWidth()
+                .clickable(
+                    onClick = onClick,
+                    onClickLabel = title,
+                ).padding(vertical = 15.dp, horizontal = 25.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
@@ -754,10 +827,12 @@ fun IconRow(
 
     Row(
         modifier =
-            IconRowModifier.clickable(
-                onClickLabel = title,
-                onClick = onClick,
-            ),
+            Modifier
+                .fillMaxWidth()
+                .clickable(
+                    onClick = onClick,
+                    onClickLabel = title,
+                ).padding(vertical = 15.dp, horizontal = 25.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
@@ -784,8 +859,8 @@ fun IconRowRelays(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(vertical = 15.dp, horizontal = 25.dp)
-                .clickable(onClick = onClick),
+                .clickable(onClick = onClick)
+                .padding(vertical = 15.dp, horizontal = 25.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(

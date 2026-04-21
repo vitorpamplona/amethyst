@@ -29,12 +29,14 @@ import com.vitorpamplona.quartz.marmot.MarmotWelcomeSender
 import com.vitorpamplona.quartz.marmot.OutboundGroupEvent
 import com.vitorpamplona.quartz.marmot.WelcomeDelivery
 import com.vitorpamplona.quartz.marmot.WelcomeResult
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageBundleStore
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRotationManager
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageUtils
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
 import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
+import com.vitorpamplona.quartz.marmot.mls.group.MarmotMessageStore
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupManager
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupStateStore
 import com.vitorpamplona.quartz.marmot.mls.tree.Credential
@@ -63,9 +65,11 @@ import kotlin.io.encoding.ExperimentalEncodingApi
 class MarmotManager(
     val signer: NostrSigner,
     store: MlsGroupStateStore,
+    val messageStore: MarmotMessageStore? = null,
+    val keyPackageStore: KeyPackageBundleStore? = null,
 ) {
     val groupManager = MlsGroupManager(store)
-    val keyPackageRotationManager = KeyPackageRotationManager()
+    val keyPackageRotationManager = KeyPackageRotationManager(keyPackageStore)
     val subscriptionManager = MarmotSubscriptionManager(signer.pubKey)
     val inboundProcessor = MarmotInboundProcessor(groupManager, keyPackageRotationManager)
     val outboundProcessor = MarmotOutboundProcessor(groupManager)
@@ -76,10 +80,15 @@ class MarmotManager(
      * Call once during Account initialization.
      */
     suspend fun restoreAll() {
+        Log.d("MarmotManager") { "restoreAll(): begin for ${signer.pubKey.take(8)}…" }
         try {
             groupManager.restoreAll()
-            subscriptionManager.syncWithGroupManager(groupManager.activeGroupIds())
-            Log.d("MarmotManager", "Restored ${groupManager.activeGroupIds().size} groups")
+            val activeIds = groupManager.activeGroupIds()
+            subscriptionManager.syncWithGroupManager(activeIds)
+            // Also restore previously-published KeyPackage bundles so that
+            // Welcomes referencing them remain processable across restarts.
+            keyPackageRotationManager.restoreFromStore()
+            Log.d("MarmotManager") { "restoreAll(): done, ${activeIds.size} groups: $activeIds" }
         } catch (e: Exception) {
             Log.e("MarmotManager", "Failed to restore Marmot state", e)
         }
@@ -106,6 +115,7 @@ class MarmotManager(
 
             is GroupEventResult.CommitPending,
             is GroupEventResult.Duplicate,
+            is GroupEventResult.UndecryptableOuterLayer,
             is GroupEventResult.Error,
             -> {}
         }
@@ -119,20 +129,14 @@ class MarmotManager(
      */
     suspend fun processWelcome(
         welcomeEvent: WelcomeEvent,
-        nostrGroupId: HexKey,
+        hintNostrGroupId: HexKey? = welcomeEvent.nostrGroupId(),
     ): WelcomeResult {
-        // Validate that the provided nostrGroupId matches the WelcomeEvent's h-tag if present
-        val eventGroupId = welcomeEvent.nostrGroupId()
-        if (eventGroupId != null && eventGroupId != nostrGroupId) {
-            return WelcomeResult.Error(
-                "nostrGroupId mismatch: expected $nostrGroupId but WelcomeEvent has $eventGroupId",
-            )
-        }
-
-        val result = inboundProcessor.processWelcome(welcomeEvent, nostrGroupId)
+        // nostrGroupId is derived from the MLS GroupContext's NostrGroupData extension.
+        // The h-tag value (hintNostrGroupId) is validated against the MLS content inside
+        // inboundProcessor, so senders that omit the h-tag are handled transparently.
+        val result = inboundProcessor.processWelcome(welcomeEvent, hintNostrGroupId)
 
         if (result is WelcomeResult.Joined) {
-            // Update subscription state for the new group
             subscriptionManager.subscribeGroup(result.nostrGroupId)
             Log.d("MarmotManager", "Joined group ${result.nostrGroupId}")
         }
@@ -175,8 +179,24 @@ class MarmotManager(
             "KeyPackage credential identity does not match memberPubKey"
         }
 
+        // Per RFC 9420 §12.4 (and MDK), the outbound kind:445 MUST be
+        // outer-encrypted with the pre-commit (epoch-N) exporter secret so
+        // that other existing members still at epoch N can decrypt and
+        // process the commit. CommitResult.preCommitExporterSecret carries
+        // that key; the local group state has already advanced to N+1 by
+        // the time addMember returns, so we can't read it from the group
+        // any more.
         val commitResult = groupManager.addMember(nostrGroupId, keyPackageBytes)
-        val commitEvent = outboundProcessor.buildCommitEvent(nostrGroupId, commitResult.commitBytes)
+        val commitEvent =
+            outboundProcessor.buildCommitEvent(
+                nostrGroupId = nostrGroupId,
+                commitBytes = commitResult.framedCommitBytes,
+                exporterKey = commitResult.preCommitExporterSecret,
+            )
+        // The published kind:445 will echo back from the relay — without this
+        // dedup our own inbound pipeline would try to re-apply a commit whose
+        // epoch we've already merged.
+        inboundProcessor.markEventProcessed(commitEvent.signedEvent.id)
 
         val welcomeDelivery =
             welcomeSender.wrapWelcome(
@@ -194,9 +214,11 @@ class MarmotManager(
      * Create a new MLS group.
      */
     suspend fun createGroup(nostrGroupId: HexKey): HexKey {
+        Log.d("MarmotManager") { "createGroup($nostrGroupId): by ${signer.pubKey.take(8)}…" }
         val identity = signer.pubKey.hexToByteArray()
         groupManager.createGroup(nostrGroupId, identity)
         subscriptionManager.subscribeGroup(nostrGroupId)
+        Log.d("MarmotManager") { "createGroup($nostrGroupId): persisted and subscribed" }
         return nostrGroupId
     }
 
@@ -215,8 +237,42 @@ class MarmotManager(
         // Now clean up group state
         groupManager.removeGroupState(nostrGroupId)
         subscriptionManager.unsubscribeGroup(nostrGroupId)
+        try {
+            messageStore?.delete(nostrGroupId)
+        } catch (e: Exception) {
+            Log.w("MarmotManager", "Failed to delete persisted messages for $nostrGroupId: ${e.message}")
+        }
         return outboundEvent
     }
+
+    /**
+     * Persist a freshly decrypted inner event for restart recovery.
+     * Marmot MLS application messages cannot be re-decrypted after the
+     * ratchet advances, so the only way to restore them across app restarts
+     * is to capture the plaintext at decryption time.
+     */
+    suspend fun persistDecryptedMessage(
+        nostrGroupId: HexKey,
+        innerEventJson: String,
+    ) {
+        try {
+            messageStore?.appendMessage(nostrGroupId, innerEventJson)
+        } catch (e: Exception) {
+            Log.w("MarmotManager", "Failed to persist Marmot message for $nostrGroupId: ${e.message}")
+        }
+    }
+
+    /**
+     * Load all persisted inner event JSONs for a group, in append order.
+     * Returns an empty list if no message store is configured or none exist.
+     */
+    suspend fun loadStoredMessages(nostrGroupId: HexKey): List<String> =
+        try {
+            messageStore?.loadMessages(nostrGroupId) ?: emptyList()
+        } catch (e: Exception) {
+            Log.w("MarmotManager", "Failed to load persisted messages for $nostrGroupId: ${e.message}")
+            emptyList()
+        }
 
     /**
      * Remove a member from a group.
@@ -227,7 +283,14 @@ class MarmotManager(
         targetLeafIndex: Int,
     ): OutboundGroupEvent {
         val commitResult = groupManager.removeMember(nostrGroupId, targetLeafIndex)
-        return outboundProcessor.buildCommitEvent(nostrGroupId, commitResult.commitBytes)
+        val commitEvent =
+            outboundProcessor.buildCommitEvent(
+                nostrGroupId = nostrGroupId,
+                commitBytes = commitResult.framedCommitBytes,
+                exporterKey = commitResult.preCommitExporterSecret,
+            )
+        inboundProcessor.markEventProcessed(commitEvent.signedEvent.id)
+        return commitEvent
     }
 
     /**
@@ -238,8 +301,16 @@ class MarmotManager(
         nostrGroupId: HexKey,
         metadata: MarmotGroupData,
     ): OutboundGroupEvent {
-        val commitResult = groupManager.updateGroupExtensions(nostrGroupId, listOf(metadata.toExtension()))
-        return outboundProcessor.buildCommitEvent(nostrGroupId, commitResult.commitBytes)
+        val commitResult =
+            groupManager.updateGroupExtensions(nostrGroupId, listOf(metadata.toExtension()))
+        val commitEvent =
+            outboundProcessor.buildCommitEvent(
+                nostrGroupId = nostrGroupId,
+                commitBytes = commitResult.framedCommitBytes,
+                exporterKey = commitResult.preCommitExporterSecret,
+            )
+        inboundProcessor.markEventProcessed(commitEvent.signedEvent.id)
+        return commitEvent
     }
 
     // --- KeyPackage Management ---
@@ -251,10 +322,11 @@ class MarmotManager(
     @OptIn(ExperimentalEncodingApi::class)
     suspend fun generateKeyPackageEvent(
         relays: List<NormalizedRelayUrl>,
-        dTagSlot: String = KeyPackageUtils.PRIMARY_SLOT,
+        slotName: String = KeyPackageUtils.PRIMARY_SLOT,
     ): KeyPackageEvent {
+        val dTag = keyPackageRotationManager.getOrCreateSlotDTag(slotName)
         val identity = signer.pubKey.hexToByteArray()
-        val bundle = keyPackageRotationManager.generateKeyPackage(identity, dTagSlot)
+        val bundle = keyPackageRotationManager.generateKeyPackage(identity, dTag)
 
         val keyPackageBytes = bundle.keyPackage.toTlsBytes()
         val keyPackageBase64 = Base64.encode(keyPackageBytes)
@@ -263,12 +335,17 @@ class MarmotManager(
         val template =
             KeyPackageEvent.build(
                 keyPackageBase64 = keyPackageBase64,
-                dTagSlot = dTagSlot,
+                dTagSlot = dTag,
                 keyPackageRef = keyPackageRef,
                 relays = relays,
             )
 
-        return signer.sign(template)
+        val signed = signer.sign<KeyPackageEvent>(template)
+        // Welcome receivers identify the consumed KeyPackage by its Nostr
+        // event id (the MIP-02 "e" tag), not by the MLS reference hash, so
+        // remember the mapping right after we know the signed event id.
+        keyPackageRotationManager.recordPublishedEventId(dTag, signed.id)
+        return signed
     }
 
     /**
@@ -294,20 +371,22 @@ class MarmotManager(
                     keyPackageRef = keyPackageRef,
                     relays = relays,
                 )
-            signer.sign<KeyPackageEvent>(template)
+            val signed = signer.sign<KeyPackageEvent>(template)
+            keyPackageRotationManager.recordPublishedEventId(slot, signed.id)
+            signed
         }
     }
 
     /**
      * Check if KeyPackage rotation is needed.
      */
-    fun needsKeyPackageRotation(): Boolean = keyPackageRotationManager.needsRotation()
+    suspend fun needsKeyPackageRotation(): Boolean = keyPackageRotationManager.needsRotation()
 
     /**
      * Check if there are active (locally generated) KeyPackages.
      * Returns true if at least one KeyPackage has been generated and not yet consumed.
      */
-    fun hasActiveKeyPackages(): Boolean = keyPackageRotationManager.hasActiveKeyPackages()
+    suspend fun hasActiveKeyPackages(): Boolean = keyPackageRotationManager.hasActiveKeyPackages()
 
     /**
      * Check if a specific group membership exists.
@@ -352,6 +431,12 @@ class MarmotManager(
     fun groupEpoch(nostrGroupId: HexKey): Long? = groupManager.getGroup(nostrGroupId)?.epoch
 
     /**
+     * Get the MIP-04 media exporter secret for a group.
+     * MLS-Exporter("marmot", "encrypted-media", 32)
+     */
+    fun mediaExporterSecret(nostrGroupId: HexKey): ByteArray = groupManager.mediaExporterSecret(nostrGroupId)
+
+    /**
      * Get the MIP-01 group metadata from the MLS GroupContext extensions.
      * Returns null if the group doesn't exist or has no MarmotGroupData extension.
      */
@@ -379,7 +464,9 @@ class MarmotManager(
             chatroom.adminPubkeys.value = metadata.adminPubkeys
             chatroom.relays.value = metadata.relays
         }
-        chatroom.memberCount.value = memberCount(nostrGroupId)
+        val members = memberPubkeys(nostrGroupId)
+        chatroom.members.value = members
+        chatroom.memberCount.value = members.size
     }
 }
 

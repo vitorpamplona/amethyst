@@ -63,6 +63,11 @@ class VideoSegment(
 ) : Segment(segment)
 
 @Immutable
+class PdfSegment(
+    segment: String,
+) : Segment(segment)
+
+@Immutable
 class LinkSegment(
     segment: String,
 ) : Segment(segment)

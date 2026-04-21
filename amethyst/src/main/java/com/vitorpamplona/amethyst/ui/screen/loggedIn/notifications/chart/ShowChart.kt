@@ -51,7 +51,7 @@ fun makeLine(color: Color): Line =
                         ),
                 ),
             ),
-        pointConnector = LineCartesianLayer.PointConnector.cubic(),
+        interpolator = LineCartesianLayer.Interpolator.cubic(),
     )
 
 val chartLayers =

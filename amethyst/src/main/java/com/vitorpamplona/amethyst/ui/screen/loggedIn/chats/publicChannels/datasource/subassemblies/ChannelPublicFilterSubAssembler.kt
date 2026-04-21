@@ -39,10 +39,22 @@ class ChannelPublicFilterSubAssembler(
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter>? =
         when (val channel = key.channel) {
-            is EphemeralChatChannel -> filterMessagesToEphemeralChat(channel, since)
-            is PublicChatChannel -> filterMessagesToPublicChat(channel, since)
-            is LiveActivitiesChannel -> filterMessagesToLiveActivities(channel, since)
-            else -> null
+            is EphemeralChatChannel -> {
+                filterMessagesToEphemeralChat(channel, since)
+            }
+
+            is PublicChatChannel -> {
+                filterMessagesToPublicChat(channel, since)
+            }
+
+            is LiveActivitiesChannel -> {
+                filterMessagesToLiveActivities(channel, since) +
+                    filterGoalForLiveActivities(channel, since)
+            }
+
+            else -> {
+                null
+            }
         }
 
     override fun id(key: ChannelQueryState) = key.channel

@@ -24,8 +24,8 @@ package com.vitorpamplona.quartz.marmot.mls.crypto
  * Ed25519 digital signature operations for MLS ciphersuite 0x0001.
  *
  * Platform-specific implementations:
- * - JVM/Android: java.security EdDSA (Java 15+, Android API 33+)
- * - Native: expect/actual with kotlinx-crypto or platform crypto
+ * - JVM/Android: Pure Kotlin implementation
+ * - Native: Pure Kotlin implementation
  */
 expect object Ed25519 {
     /**

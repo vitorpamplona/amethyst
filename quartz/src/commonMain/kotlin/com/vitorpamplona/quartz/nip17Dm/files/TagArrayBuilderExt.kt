@@ -44,6 +44,7 @@ import com.vitorpamplona.quartz.nip94FileMetadata.tags.ServiceTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.SizeTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.SummaryTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.ThumbTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.ThumbhashTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.TorrentInfoHash
 
 fun TagArrayBuilder<ChatMessageEncryptedFileHeaderEvent>.reply(msg: MarkedETag) = add(msg.toTagArray())
@@ -69,6 +70,8 @@ fun TagArrayBuilder<ChatMessageEncryptedFileHeaderEvent>.fileSize(size: Int) = a
 fun TagArrayBuilder<ChatMessageEncryptedFileHeaderEvent>.dimension(dim: DimensionTag) = add(DimensionTag.assemble(dim))
 
 fun TagArrayBuilder<ChatMessageEncryptedFileHeaderEvent>.blurhash(blurhash: String) = add(BlurhashTag.assemble(blurhash))
+
+fun TagArrayBuilder<ChatMessageEncryptedFileHeaderEvent>.thumbhash(thumbhash: String) = add(ThumbhashTag.assemble(thumbhash))
 
 fun TagArrayBuilder<ChatMessageEncryptedFileHeaderEvent>.originalHash(hash: HexKey) = add(OriginalHashTag.assemble(hash))
 

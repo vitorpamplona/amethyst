@@ -53,6 +53,7 @@ fun PublicChatChannelScreen(
             }
         },
         accountViewModel = accountViewModel,
+        allowBarHide = false,
     ) {
         Column(Modifier.padding(it)) {
             PublicChatChannelView(channelId, draft, replyTo, accountViewModel, nav)

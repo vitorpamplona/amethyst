@@ -29,11 +29,15 @@ import kotlin.io.encoding.ExperimentalEncodingApi
  * Handles the outer ChaCha20-Poly1305 encryption layer for Marmot GroupEvents (MIP-03).
  *
  * The encryption flow:
- *   Encrypt: content = base64(randomNonce(12) || ChaCha20-Poly1305.encrypt(key, nonce, mlsMessageBytes, aad=""))
+ *   Encrypt: content = base64(randomNonce(12) || ChaCha20-Poly1305.encrypt(key, nonce, mlsMessageBytes, aad=empty))
  *   Decrypt: decode base64, split nonce (first 12 bytes) from ciphertext+tag, decrypt with empty AAD
  *
+ * Per MIP-03, the AAD is the empty byte string. Earlier versions of this
+ * implementation bound `nostr_group_id` into the AAD; that was corrected to
+ * match the spec, which necessarily breaks decryption of messages produced
+ * by the old (non-compliant) encoder.
+ *
  * The key is derived from MLS-Exporter("marmot", "group-event", 32) by the MLS engine.
- * Since the MLS engine is not yet integrated, this helper accepts the 32-byte key as a parameter.
  */
 object GroupEventEncryption {
     private val EMPTY_AAD = ByteArray(0)

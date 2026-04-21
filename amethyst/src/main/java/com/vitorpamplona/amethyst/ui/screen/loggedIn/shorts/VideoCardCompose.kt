@@ -42,16 +42,20 @@ import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
+import com.vitorpamplona.amethyst.ui.components.BlurhashBackdrop
+import com.vitorpamplona.amethyst.ui.components.ContentWarningGate
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
+import com.vitorpamplona.amethyst.ui.components.collectContentWarningReasons
+import com.vitorpamplona.amethyst.ui.components.mediaSizingModifier
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.ReactionsRow
-import com.vitorpamplona.amethyst.ui.note.observeEdits
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.UserCardHeader
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitiveOrNSFW
 import com.vitorpamplona.quartz.nip71Video.VideoEvent
 import kotlin.text.ifEmpty
 
@@ -63,7 +67,6 @@ fun VideoCardCompose(
 ) {
     val event = (baseNote.event as? VideoEvent) ?: return
     val backgroundColor = remember { mutableStateOf(Color.Transparent) }
-    val editState = observeEdits(baseNote = baseNote, accountViewModel = accountViewModel)
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -79,7 +82,7 @@ fun VideoCardCompose(
             baseNote = baseNote,
             showReactionDetail = true,
             addPadding = true,
-            editState = editState,
+            editState = null,
             accountViewModel = accountViewModel,
             nav = nav,
         )
@@ -100,11 +103,13 @@ private fun VideoCardImage(
     val event = (event as? Event) ?: return
 
     val imeta = videoEvent.imetaTags().getOrNull(0) ?: return
+    val isSensitive = remember(note) { event.isSensitiveOrNSFW() }
+    val reasons = remember(note) { collectContentWarningReasons(event) }
+    val isImage = remember(note) { imeta.mimeType?.startsWith("image/") == true || RichTextParser.isImageUrl(imeta.url) }
 
     val content by
         remember(note) {
             val description = event.content.ifEmpty { null } ?: imeta.alt ?: event.alt()
-            val isImage = imeta.mimeType?.startsWith("image/") == true || RichTextParser.isImageUrl(imeta.url)
 
             mutableStateOf<BaseMediaContent>(
                 if (isImage) {
@@ -116,6 +121,7 @@ private fun VideoCardImage(
                         dim = imeta.dimension,
                         uri = note.toNostrUri(),
                         mimeType = imeta.mimeType,
+                        thumbhash = imeta.thumbhash,
                     )
                 } else {
                     MediaUrlVideo(
@@ -127,12 +133,22 @@ private fun VideoCardImage(
                         uri = note.toNostrUri(),
                         authorName = note.author?.toBestDisplayName(),
                         mimeType = imeta.mimeType,
+                        thumbhash = imeta.thumbhash,
                     )
                 },
             )
         }
 
-    SensitivityWarning(note = note, accountViewModel = accountViewModel) {
+    val ratio = imeta.dimension?.aspectRatio() ?: MediaAspectRatioCache.get(imeta.url)
+
+    ContentWarningGate(
+        isSensitive = isSensitive,
+        reasons = reasons,
+        preloadUrls = if (isImage) listOf(imeta.url) else emptyList(),
+        accountViewModel = accountViewModel,
+        modifier = mediaSizingModifier(ratio, ContentScale.FillWidth),
+        backdrop = (imeta.thumbhash ?: imeta.blurhash)?.let { { BlurhashBackdrop(imeta.blurhash, content.description, imeta.thumbhash) } },
+    ) {
         ZoomableContentView(
             content = content,
             roundedCorner = false,

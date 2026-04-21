@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.aroundMe.LocationTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.chess.ChessTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.favoriteAlgoFeeds.FavoriteAlgoFeedTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.global.GlobalTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.hashtag.HashtagTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.allcommunities.AllCommunitiesTopNavPerRelayFilterSet
@@ -42,6 +43,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip01Core.f
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip64Chess.filterHomePostsByChess
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip72Communities.filterHomePostsByAllCommunities
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip72Communities.filterHomePostsByCommunity
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip90AlgoFeeds.filterHomePostsByAlgoFeedIds
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
@@ -74,6 +76,7 @@ class HomeOutboxEventsEoseManager(
             is MutedAuthorsTopNavPerRelayFilterSet -> filterHomePostsByAuthors(feedSettings, since, newThreadSince, repliesSince)
             is RelayTopNavPerRelayFilterSet -> filterHomePostsByRelay(feedSettings, since, newThreadSince, repliesSince)
             is SingleCommunityTopNavPerRelayFilterSet -> filterHomePostsByCommunity(feedSettings, since, newThreadSince)
+            is FavoriteAlgoFeedTopNavPerRelayFilterSet -> filterHomePostsByAlgoFeedIds(feedSettings, since, newThreadSince)
             else -> emptyList()
         }
     }

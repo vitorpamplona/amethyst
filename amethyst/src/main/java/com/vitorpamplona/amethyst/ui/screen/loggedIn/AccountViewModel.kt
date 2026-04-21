@@ -49,6 +49,7 @@ import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.commons.model.observables.CreatedAtComparator
+import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.ui.notifications.CardFeedState
 import com.vitorpamplona.amethyst.logTime
@@ -66,7 +67,6 @@ import com.vitorpamplona.amethyst.model.privacyOptions.RoleBasedHttpClientBuilde
 import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.service.broadcast.BroadcastTracker
-import com.vitorpamplona.amethyst.service.call.CallController
 import com.vitorpamplona.amethyst.service.cashu.CashuToken
 import com.vitorpamplona.amethyst.service.cashu.melt.MeltProcessor
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
@@ -88,7 +88,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CombinedZap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync.EventSync
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
-import com.vitorpamplona.amethyst.ui.tor.TorType
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryReadingStateEvent
@@ -107,6 +106,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.auth.RelayAuthenticator
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
+import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.people.PubKeyReferenceTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
@@ -131,12 +131,14 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip19Bech32.entities.NRelay
 import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
 import com.vitorpamplona.quartz.nip28PublicChat.base.IsInPublicChatChannel
+import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
 import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
@@ -145,6 +147,7 @@ import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.NIP90ContentDiscoveryResponseEvent
+import com.vitorpamplona.quartz.nip92IMeta.imeta
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Log
@@ -199,40 +202,20 @@ class AccountViewModel(
                     account.publishCallSignaling(wrap)
                 }
             },
+            isCallsEnabled = { account.settings.callsEnabled.value },
         )
 
-    var callController: CallController? = null
-        private set
-
-    @Synchronized
-    fun initCallController(context: Context) {
-        if (callController != null) return
-
-        // Wire EventProcessor before creating CallController so events aren't dropped
+    init {
+        // Wire the signaling event processor eagerly so incoming call
+        // events are routed to CallManager even before any CallActivity
+        // is launched. Previously this was deferred to initCallController,
+        // which could miss events if the UI hadn't mounted yet.
         account.newNotesPreProcessor.callManager = callManager
 
-        val controller =
-            CallController(
-                context = context,
-                callManager = callManager,
-                scope = viewModelScope,
-                publishWrap = { wrap -> account.publishCallSignaling(wrap) },
-                signerProvider = { account.signer },
-                localPubKey = account.signer.pubKey,
-            )
-
-        // Set callbacks before exposing controller to avoid timing races
-        callManager.onAnswerReceived = { event -> controller.onCallAnswerReceived(event.pubKey, event.sdpAnswer()) }
-        callManager.onIceCandidateReceived = { event -> controller.onIceCandidateReceived(event) }
-        callManager.onNewPeerInGroupCall = { peerPubKey -> controller.onNewPeerInGroupCall(peerPubKey) }
-        callManager.onMidCallOfferReceived = { peerPubKey, sdpOffer -> controller.onMidCallOfferReceived(peerPubKey, sdpOffer) }
-        callManager.onPeerLeft = { peerPubKey -> controller.disposePeerSession(peerPubKey) }
-        callController = controller
-
-        // Populate CallSessionBridge so CallActivity can launch even when the app
-        // is in the background (e.g. full-screen incoming call intent).
+        // Populate CallSessionBridge so CallActivity and background
+        // receivers can reach callManager + accountViewModel.
         com.vitorpamplona.amethyst.service.call.CallSessionBridge
-            .set(callManager, controller, this)
+            .set(callManager, this)
     }
 
     val eventSync =
@@ -937,6 +920,10 @@ class AccountViewModel(
         }
     }
 
+    fun removeDeletedPins(deletedNotes: Set<Note>) {
+        launchSigner { account.removeDeletedPins(deletedNotes) }
+    }
+
     fun addPrivateBookmark(note: Note) {
         if (settings.isCompleteUIMode()) {
             launchSigner {
@@ -1004,6 +991,20 @@ class AccountViewModel(
         } else {
             launchSigner { account.removeBookmark(note, false) }
         }
+    }
+
+    fun removeDeletedBookmarks(
+        deletedEventIds: Set<String>,
+        deletedAddresses: Set<Address>,
+    ) {
+        launchSigner { account.removeDeletedBookmarks(deletedEventIds, deletedAddresses) }
+    }
+
+    fun removeDeletedOldBookmarks(
+        deletedEventIds: Set<String>,
+        deletedAddresses: Set<Address>,
+    ) {
+        launchSigner { account.removeDeletedOldBookmarks(deletedEventIds, deletedAddresses) }
     }
 
     fun broadcast(note: Note) = launchSigner { account.broadcast(note) }
@@ -1105,6 +1106,12 @@ class AccountViewModel(
     fun followHashtag(tag: String) = launchSigner { account.followHashtag(tag) }
 
     fun unfollowHashtag(tag: String) = launchSigner { account.unfollowHashtag(tag) }
+
+    fun followFavoriteAlgoFeed(dvm: AddressBookmark) = launchSigner { account.followFavoriteAlgoFeed(dvm) }
+
+    fun unfollowFavoriteAlgoFeed(dvm: Address) = launchSigner { account.unfollowFavoriteAlgoFeed(dvm) }
+
+    fun refreshFavoriteAlgoFeed(dvm: Address) = account.favoriteAlgoFeedsOrchestrator.refresh(dvm)
 
     fun followRelayFeed(url: NormalizedRelayUrl) = launchSigner { account.followRelayFeed(url) }
 
@@ -1456,6 +1463,29 @@ class AccountViewModel(
         account.sendMarmotGroupMessage(nostrGroupId, innerEvent, relays)
     }
 
+    suspend fun sendMarmotGroupMediaMessage(
+        nostrGroupId: String,
+        url: String,
+        imeta: com.vitorpamplona.quartz.nip92IMeta.IMetaTag,
+        caption: String? = null,
+    ) {
+        val template =
+            eventTemplate(
+                kind = 9,
+                description = url,
+            ) {
+                imeta(imeta)
+                if (!caption.isNullOrEmpty()) {
+                    alt(caption)
+                }
+            }
+        val innerEvent = account.signer.sign(template)
+        val relays = marmotGroupRelays(nostrGroupId)
+        account.sendMarmotGroupMessage(nostrGroupId, innerEvent, relays)
+    }
+
+    fun marmotMediaExporterSecret(nostrGroupId: String): ByteArray? = account.marmotManager?.mediaExporterSecret(nostrGroupId)
+
     suspend fun createMarmotGroup(nostrGroupId: String) {
         account.createMarmotGroup(nostrGroupId)
     }
@@ -1464,7 +1494,28 @@ class AccountViewModel(
         account.publishMarmotKeyPackage()
     }
 
-    fun hasPublishedKeyPackage(): Boolean = account.hasPublishedKeyPackage()
+    suspend fun hasPublishedKeyPackage(): Boolean = account.hasPublishedKeyPackage()
+
+    /**
+     * Whether this account has a kind:10051 KeyPackage Relay List (MIP-00)
+     * advertising where it publishes KeyPackages.
+     */
+    fun hasKeyPackageRelayList(): Boolean =
+        account.keyPackageRelayList.flow.value
+            .isNotEmpty()
+
+    /**
+     * Publishes a kind:10051 KeyPackage Relay List seeded from the account's
+     * current outbox relays. Used when the user opts in from the
+     * "Create Group" warning dialog.
+     */
+    suspend fun saveKeyPackageRelayListFromOutbox() {
+        val outbox =
+            account.outboxRelays.flow.value
+                .toList()
+        if (outbox.isEmpty()) return
+        account.saveKeyPackageRelayList(outbox)
+    }
 
     suspend fun leaveMarmotGroup(nostrGroupId: String) {
         val relays = marmotGroupRelays(nostrGroupId)
@@ -1507,21 +1558,49 @@ class AccountViewModel(
         name: String,
         description: String,
     ) {
-        val currentMetadata =
-            account.marmotManager?.groupMetadata(nostrGroupId)
-                ?: throw IllegalStateException("Group metadata not found")
+        val currentMetadata = account.marmotManager?.groupMetadata(nostrGroupId)
+        // Stamp the inviter's outbox relays into the group metadata so that
+        // every member ends up with a single canonical relay set for kind:445
+        // GroupEvents. Without this, both the inviter and the invitee fall
+        // back to their *own* home/outbox relays — which usually do not
+        // overlap, so kind:445 messages never reach the other side. The
+        // welcome carries the metadata, so the invitee learns the relays at
+        // join time.
+        val outboxRelayStrings =
+            account.outboxRelays.flow.value
+                .map { it.url }
+        val mergedRelays =
+            (currentMetadata?.relays.orEmpty() + outboxRelayStrings)
+                .distinct()
         val updatedMetadata =
-            currentMetadata.copy(
-                name = name,
-                description = description,
-            )
+            if (currentMetadata != null) {
+                currentMetadata.copy(
+                    name = name,
+                    description = description,
+                    relays = mergedRelays,
+                )
+            } else {
+                // No MarmotGroupData extension exists yet — this happens for groups
+                // created before initial metadata was persisted, or right after a
+                // fresh `createMarmotGroup`. Build a brand-new extension with the
+                // creator as the sole admin so the GCE proposal carries valid data.
+                com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData(
+                    nostrGroupId = nostrGroupId,
+                    name = name,
+                    description = description,
+                    adminPubkeys = listOf(account.signer.pubKey),
+                    relays = mergedRelays,
+                )
+            }
         val relays = marmotGroupRelays(nostrGroupId)
         account.updateMarmotGroupMetadata(nostrGroupId, updatedMetadata, relays)
     }
 
     override fun onCleared() {
         Log.d("AccountViewModel", "onCleared")
-        callController?.cleanup()
+        callManager.dispose()
+        com.vitorpamplona.amethyst.service.call.CallSessionBridge
+            .clear()
         feedStates.destroy()
         super.onCleared()
     }
@@ -1748,8 +1827,8 @@ class AccountViewModel(
         onReady: (event: Note) -> Unit,
     ) {
         launchSigner {
-            account.requestDVMContentDiscovery(dvmPublicKey) {
-                onReady(LocalCache.getOrCreateNote(it.id))
+            account.requestDVMContentDiscovery(dvmPublicKey) { request, _ ->
+                onReady(LocalCache.getOrCreateNote(request.id))
             }
         }
     }

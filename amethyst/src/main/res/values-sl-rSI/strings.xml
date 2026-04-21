@@ -281,6 +281,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
         So odlične za odprte skupnosti, povezane s specifičnimi temami. Nekatere od teh skupin so kratkotrajne
     zato sporočila v klepetu sčasoma izginejo</string>
     <string name="public_chat">Javni pogovor</string>
+    <string name="marmot_group">MLS skupina</string>
     <string name="public_chat_title">Metapodatki Javnega Klepeta</string>
     <string name="public_chat_explainer">Javni klepeti so vidni vsem na Nostru in vsakdo
         se lahko pridruži. So odlični za odprte skupnosti o specifičnih temah.
@@ -402,6 +403,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="pictures">Fotografije</string>
     <string name="shorts">Kratki posnetki</string>
     <string name="longs">Videoposnetki</string>
+    <string name="articles">Članki</string>
     <string name="private_bookmarks">Privatni zaznamki</string>
     <string name="public_bookmarks">Javni zaznamki</string>
     <string name="add_to_private_bookmarks">Dodaj v privatne zaznamke</string>
@@ -409,8 +411,12 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="remove_from_private_bookmarks">Odstrani iz privatnih zaznamkov</string>
     <string name="remove_from_public_bookmarks">Odstrani iz javnih zaznamkov</string>
     <string name="pinned_notes">Pripeti zapiski</string>
+    <string name="pinned_notes_explainer">Vaši pripeti zapiski</string>
     <string name="pin_to_profile">Pripni k profilu</string>
     <string name="unpin_from_profile">Odpni od profila</string>
+    <string name="deleted_items_banner_title">%1$d elementov na tem seznamu je avtor izbrisal.</string>
+    <string name="deleted_items_banner_remove">Odstrani iz seznama</string>
+    <string name="deleted_items_banner_dismiss">Prekliči</string>
     <string name="bookmark_lists">Seznam zaznamkov</string>
     <string name="bookmark_list_icon_label">Ikona za seznam zaznamkov</string>
     <string name="bookmark_list_creation_screen_title">Nov seznam zaznamkov</string>
@@ -622,11 +628,11 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="follow_set_rename_dialog_indicator_first_part">Preimenuješ iz </string>
     <string name="follow_set_rename_dialog_indicator_second_part"> v..</string>
     <string name="connect_through_your_orbot_setup_short">Prevzeta vrata so 9050</string>
-    <string name="connect_through_your_orbot_setup_markdown">        ## Poveži se preko Tor omrežja z Orbot aplikacijo
-        \n\n1. Namesti [Orbot aplikacijo](https://play.google.com/store/apps/details?id=org.torproject.android)
+    <string name="connect_through_your_orbot_setup_markdown">        ## Poveži se preko Tor omrežja z Orbot
+        \n\n1. Namesti [Orbot](https://play.google.com/store/apps/details?id=org.torproject.android)
         \n2. Zaženi Orbot aplikacijo
         \n3. V Orbot aplikaciji, preveri \"Socks port\". Pradnastavitev uporablja vrata 9050
-        \n4. Po potrebi spremenite vrata v Orbot aplikaciji
+        \n4. Po potrebi spremenite vrata v Orbot 
         \n5. Prilagodi vrata na tem zaslonu
         \n6. Pritisni gumb aktiviraj za uporabo Orbot aplikacije kot proxy
     </string>
@@ -714,6 +720,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="call_unmute">Vklopi zvok</string>
     <string name="call_camera_on">Vklopljena kamera</string>
     <string name="call_camera_off">Izklopljena kamera</string>
+    <string name="call_switch_camera">Zamenjaj kamero</string>
     <string name="call_speaker">Zvočnik</string>
     <string name="call_earpiece">Slušalka</string>
     <string name="call_bluetooth">Bluetooth</string>
@@ -725,6 +732,21 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="call_failed_start">Klic ni uspel</string>
     <string name="call_failed_accept">Sprejem klica ni uspel</string>
     <string name="call_failed_session">Vzpostavitev klicne seje ni uspela</string>
+    <string name="call_settings">Klicne nastavitve</string>
+    <string name="call_settings_enable_calls">Vklop glasovnih in video klicev</string>
+    <string name="call_settings_enable_calls_description">Če funkcijo izklopite, bodo gumbi za klice skriti, vsi dohodni klici pa se bodo tiho zavrnili.</string>
+    <string name="call_settings_video_quality">Kakovost videa</string>
+    <string name="call_settings_max_bitrate">Najvišja bitna hitrost videa</string>
+    <string name="call_settings_turn_servers">Strežniki TURN / STUN</string>
+    <string name="call_settings_turn_description">Privzeti strežniki STUN in TURN so vedno vključeni. Za omejena omrežja dodajte strežnike TURN po meri.</string>
+    <string name="call_settings_default_servers">Privzeti strežniki (vedno aktivni)</string>
+    <string name="call_settings_custom_turn">Strežniki TURN po meri</string>
+    <string name="call_settings_no_custom_turn">Ni nastavljenih strežnikov TURN po meri.</string>
+    <string name="call_settings_add_turn">Dodaj TURN strežnik</string>
+    <string name="call_settings_remove_turn">Odstrani</string>
+    <string name="call_settings_turn_url">URL strežnika</string>
+    <string name="call_settings_turn_username">Uporabniško ime</string>
+    <string name="call_settings_turn_credential">Akreditivi</string>
     <string name="reply_notify">Obvesti: </string>
     <string name="channel_list_join_conversation">Pridruži se pogovoru</string>
     <string name="channel_list_user_or_group_id">ID uporabnika ali skupine</string>
@@ -938,6 +960,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="geohash_exclusive_explainer">To bodo videli samo sledilci lokacije. Vaši splošni sledilci tega ne bodo videli.</string>
     <string name="hashtag_exclusive">Ekskluzivna objava ključnika</string>
     <string name="hashtag_exclusive_explainer">Vidno bo le sledilcem tega ključnika. Tvoji splošni sledilci tega ne bojo videli.</string>
+    <string name="long_form_reading_minutes">%1$d min branja</string>
     <string name="loading_location">Nalaganje lokacije</string>
     <string name="lack_location_permissions">Brez dovoljenj za lokacijo</string>
     <string name="add_sensitive_content_explainer">Doda opozorilo o občutljivi vsebini pred prikazom vaše vsebine. To je primerno za vsebino NSFW ali vsebino, ki jo nekateri lahko smatrajo za žaljivo ali vznemirjajočo</string>
@@ -946,6 +969,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="new_feature_nip17_might_not_be_available_description">Za aktivacijo tega načina mora Amethyst poslati sporočilo NIP-17 (GiftWrapped, šifrirana neposredna in skupinska sporočila). NIP-17 je nov in večina Nostr odjemalcev ga še ni implementirala. Prepričajte se, da prejemnik uporablja združljiv Nostr odjemalec.</string>
     <string name="new_feature_nip17_activate">Aktiviraj</string>
     <string name="messages_create_public_chat">Javno</string>
+    <string name="messages_create_group">Skupina</string>
     <string name="messages_create_public_private_chat_description">Nova javna ali zasebna skupina</string>
     <string name="messages_relay_based">Rele</string>
     <string name="messages_new_message">Zasebno</string>
@@ -1168,7 +1192,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="route">Pot</string>
     <string name="route_home">Domov</string>
     <string name="route_search">Iskanje</string>
-    <string name="route_discover">Razišči</string>
+    <string name="route_discover">Odkrij</string>
     <string name="route_messages">Sporočila</string>
     <string name="route_notifications">Obvestila</string>
     <string name="route_global">Globalno</string>
@@ -1341,6 +1365,9 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="private_inbox_section">Releji predala zasebnih sporočil</string>
     <string name="private_inbox_section_explainer_profile">Uporabnik prejema ZS prek teh relejev</string>
     <string name="private_inbox_section_explainer">Vnesite 1–3 releje, ki bodo služili kot vaš predal za zasebna sporočila. Drugi bodo te releje uporabljali za pošiljanje zasebnih sporočil vam. Releji za zasebna sporočila bi morali sprejeti katero koli sporočilo od kogar koli, vendar samo vam dovoliti njihov prenos. Dobre možnosti so:\n - inbox.nostr.wine (plačljiv)\n - auth.nostr1.com (brezplačen)\n - you.nostr1.com (osebni releji - plačljivi)</string>
+    <string name="keypackages">KeyPackage-i</string>
+    <string name="keypackage_section">KeyPackage Releji</string>
+    <string name="keypackage_section_explainer">Releji, kjer so objavljeni vaši MLS KeyPackage-i (MIP-00). Drugi uporabniki jih pridobijo, da vas lahko povabijo v skupinske klepete Marmot. Vstavite od 1 do 3 releje, ki sprejemajo vaše KeyPackage dogodke in omogočajo javno branje.</string>
     <string name="private_outbox_section">Zasebni domači releji</string>
     <string name="private_outbox_section_explainer">Vnesite 1–3 releje za shranjevanje dogodkov, ki jih nihče drug ne more videti, kot so vaši osnutki in/ali nastavitve aplikacije. Idealno je, da so ti releji bodisi lokalni ali zahtevajo preverjanje pristnosti pred prenosom vsebine posameznega uporabnika.</string>
     <string name="kind_3_section">Splošni releji</string>
@@ -1478,7 +1505,20 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="feed_group_locations">Lokacije</string>
     <string name="feed_group_communities">Skupnosti</string>
     <string name="feed_group_lists">Seznami</string>
+    <string name="feed_group_dvms">Algoritmi vsebin</string>
+    <string name="follow_list_all_favorite_dvms">Vsi priljubljeni algoritmi vsebin</string>
     <string name="feed_group_relays">Releji</string>
+    <string name="add_dvm_to_favorites">Dodaj algoritem vsebin med priljubljene</string>
+    <string name="remove_dvm_from_favorites">Odstrani iz priljubljenih</string>
+    <string name="favorite_dvms_title">Priljubljeni algoritmi vsebin</string>
+    <string name="favorite_dvms_explainer">Algoritmi vsebin, ki jih tukaj označite z zvezdico, se bodo prikazali kot filtri na začetnem zaslonu. Za nove odprite »Odkrij«.</string>
+    <string name="favorite_dvms_empty">Še nimate priljubljenih algoritmov vsebin. Odprite »Odkrij«, izberite enega in ga označite z zvezdico, da ga dodate sem.</string>
+    <string name="dvm_home_status_requesting">Poizvedba pri %1$s za vsebine…</string>
+    <string name="dvm_home_status_requesting_all">Pridobivanje vsebin iz vaših najljubših algoritmov…</string>
+    <string name="dvm_home_status_processing">Priprava vaših vsebin…</string>
+    <string name="dvm_home_status_payment_required">Ta algoritem vsebin zahteva plačilo</string>
+    <string name="dvm_home_status_error">Napaka algoritma pri osveževanju vsebin</string>
+    <string name="dvm_home_retry">Poskusi znova</string>
     <string name="temporary_account">Odjava ob zaklepu naprave</string>
     <string name="private_message">Zasebno sporočilo</string>
     <string name="public_message">Javno sporočilo</string>
@@ -1820,6 +1860,45 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="profile_actions_dialog_title">Možnosti profila</string>
     <string name="media_actions_dialog_title">Možnosti predstavnosti</string>
     <string name="playback_actions_dialog_title">Predvajaj</string>
+    <string name="video_quality_auto">Samodejno</string>
+    <!-- HLS multi-resolution video sharing -->
+    <string name="share_hls_video">Naloži HLS</string>
+    <string name="share_hls_video_drawer_description">Objava HLS v več ločljivostih na medijski strežnik</string>
+    <string name="hls_pick_video_primary">Izberi video</string>
+    <string name="hls_pick_video_helper">Vaš video bo pripravljen v več ločljivostih, da bo predvajanje teklo gladko na vsaki povezavi.</string>
+    <string name="hls_change_video">Sprememba</string>
+    <string name="hls_title_label">Naslov</string>
+    <string name="hls_title_placeholder">Dodajte naslov videa</string>
+    <string name="hls_description_label">Opis</string>
+    <string name="hls_description_placeholder">Kaj je vsebina tega videa?</string>
+    <string name="hls_content_warning_reason_placeholder">Razlog (neobvezno)</string>
+    <string name="hls_codec_label">Kodek</string>
+    <string name="hls_codec_h265">H.265 (boljše stiskanje)</string>
+    <string name="hls_codec_h264">H.264</string>
+    <string name="hls_codec_fallback_notice">Naprava ne podpira H.265 — izbran bo H.264.</string>
+    <string name="hls_renditions_label">Izvedbe</string>
+    <string name="hls_renditions_source_format">Resolucija vira: %1$d×%2$d</string>
+    <string name="hls_renditions_produce_format">Ustvarilo bo: %1$s</string>
+    <string name="hls_renditions_skipped_format">(%1$s preskočen — zgornji vir)</string>
+    <string name="hls_rendition_bitrate_kbps_format">%1$d kbps</string>
+    <string name="hls_rendition_above_source">Zgornji vir — bo preskočen</string>
+    <string name="hls_publish_button">Objavite HD video</string>
+    <string name="hls_publishing_header_format">Objavljam “%1$s”…</string>
+    <string name="hls_state_transcoding_format">Priprava videa: %1$s</string>
+    <string name="hls_state_uploading_idle">Naložite</string>
+    <string name="hls_state_uploading_format">Nalagam %1$d of %2$d</string>
+    <string name="hls_state_uploading_with_label_format">Nalagam %1$s (%2$d of %3$d)</string>
+    <string name="hls_state_uploaded_format">Naloženo  %1$d of %2$d</string>
+    <string name="hls_state_publishing">Dogodek se objavlja…</string>
+    <string name="hls_state_success_title">Video je objavljen</string>
+    <string name="hls_state_success_body">Vaš HD-video je dostopen na Nostru.</string>
+    <string name="hls_state_failure_title">Prišlo je do napake</string>
+    <string name="hls_view_note">Poglej zapisek</string>
+    <string name="hls_done">Končano</string>
+    <string name="hls_try_again">Poskusi znova</string>
+    <string name="hls_draft_note_after_upload">Osnutek zapiska po nalaganju</string>
+    <string name="hls_draft_note_after_upload_explainer">Odpri urejevalnik z že izpolnjenim naslovom, opisom in povezavo do videa, da ga lahko pred objavo še dodelaš.</string>
+    <string name="hls_draft_note_button">Osnutek zapiska</string>
     <string name="pack_actions_dialog_title">Možnosti paketa</string>
     <string name="list_actions_dialog_title">Možnosti seznama</string>
     <string name="bookmark_item_actions_dialog_title">Možnosti zaznamkov</string>

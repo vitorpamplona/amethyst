@@ -21,28 +21,33 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.default
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SecondaryScrollableTabRow
+import androidx.compose.material3.SecondaryTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
+import com.vitorpamplona.amethyst.ui.components.DeletedItemsBanner
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
@@ -50,7 +55,6 @@ import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.default.dal.BookmarkPrivateFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.default.dal.BookmarkPublicFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.default.dal.PinnedNotesFeedViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
 import kotlinx.coroutines.launch
@@ -72,16 +76,7 @@ fun BookmarkListScreen(
             factory = BookmarkPrivateFeedViewModel.Factory(accountViewModel.account),
         )
 
-    val pinnedNotesFeedViewModel: PinnedNotesFeedViewModel =
-        viewModel(
-            key = "NostrPinnedNotesFeedViewModel",
-            factory = PinnedNotesFeedViewModel.Factory(accountViewModel.account),
-        )
-
     val bookmarkState by accountViewModel.account.bookmarkState.bookmarks
-        .collectAsStateWithLifecycle(null)
-
-    val pinState by accountViewModel.account.pinState.pinnedNotesList
         .collectAsStateWithLifecycle(null)
 
     LaunchedEffect(bookmarkState) {
@@ -89,14 +84,10 @@ fun BookmarkListScreen(
         privateFeedViewModel.invalidateData()
     }
 
-    LaunchedEffect(pinState) {
-        pinnedNotesFeedViewModel.invalidateData()
-    }
+    // Preload all bookmarked events so they don't load one-by-one when scrolling
+    PreloadBookmarkEvents(bookmarkState, accountViewModel)
 
-    // Preload all bookmarked and pinned events so they don't load one-by-one when scrolling
-    PreloadBookmarkEvents(bookmarkState, pinState, accountViewModel)
-
-    RenderBookmarkScreen(publicFeedViewModel, privateFeedViewModel, pinnedNotesFeedViewModel, accountViewModel, nav)
+    RenderBookmarkScreen(publicFeedViewModel, privateFeedViewModel, bookmarkState, accountViewModel, nav)
 }
 
 @Composable
@@ -104,23 +95,45 @@ fun BookmarkListScreen(
 private fun RenderBookmarkScreen(
     publicFeedViewModel: BookmarkPublicFeedViewModel,
     privateFeedViewModel: BookmarkPrivateFeedViewModel,
-    pinnedNotesFeedViewModel: PinnedNotesFeedViewModel,
+    bookmarkState: com.vitorpamplona.amethyst.commons.model.nip51Lists.BookmarkListState.BookmarkList?,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val pagerState = rememberPagerState { 3 }
+    val pagerState = rememberPagerState { 2 }
     val coroutineScope = rememberCoroutineScope()
+
+    val cache = accountViewModel.account.cache
+    val deletedEventIds = remember(bookmarkState) { mutableSetOf<String>() }
+    val deletedAddresses = remember(bookmarkState) { mutableSetOf<com.vitorpamplona.quartz.nip01Core.core.Address>() }
+    val deletedCount =
+        remember(bookmarkState) {
+            deletedEventIds.clear()
+            deletedAddresses.clear()
+            val all = bookmarkState?.public.orEmpty() + bookmarkState?.private.orEmpty()
+            all.forEach { note ->
+                val event = note.event
+                if (event != null && cache.hasBeenDeleted(event)) {
+                    deletedEventIds.add(note.idHex)
+                    if (note is AddressableNote) deletedAddresses.add(note.address)
+                }
+            }
+            deletedEventIds.size + deletedAddresses.size
+        }
+
+    var bannerDismissed by remember { mutableStateOf(false) }
+    LaunchedEffect(deletedCount) {
+        if (deletedCount == 0) bannerDismissed = false
+    }
 
     DisappearingScaffold(
         isInvertedLayout = false,
         topBar = {
             Column {
                 TopBarWithBackButton(stringRes(id = R.string.bookmarks_title), nav::popBack)
-                SecondaryScrollableTabRow(
-                    containerColor = Color.Transparent,
+                SecondaryTabRow(
+                    containerColor = MaterialTheme.colorScheme.background,
                     contentColor = MaterialTheme.colorScheme.onBackground,
                     selectedTabIndex = pagerState.currentPage,
-                    edgePadding = 8.dp,
                     modifier = TabRowHeight,
                 ) {
                     Tab(
@@ -133,18 +146,13 @@ private fun RenderBookmarkScreen(
                         onClick = { coroutineScope.launch { pagerState.animateScrollToPage(1) } },
                         text = { Text(text = stringRes(R.string.public_bookmarks)) },
                     )
-                    Tab(
-                        selected = pagerState.currentPage == 2,
-                        onClick = { coroutineScope.launch { pagerState.animateScrollToPage(2) } },
-                        text = { Text(text = stringRes(R.string.pinned_notes)) },
-                    )
                 }
             }
         },
         accountViewModel = accountViewModel,
-    ) {
-        Column(Modifier.padding(it).fillMaxHeight()) {
-            HorizontalPager(state = pagerState) { page ->
+    ) { paddingValues ->
+        Box(modifier = Modifier.fillMaxSize()) {
+            HorizontalPager(state = pagerState, modifier = Modifier.fillMaxHeight()) { page ->
                 when (page) {
                     0 -> {
                         RefresheableFeedView(
@@ -163,16 +171,25 @@ private fun RenderBookmarkScreen(
                             nav = nav,
                         )
                     }
-
-                    2 -> {
-                        RefresheableFeedView(
-                            pinnedNotesFeedViewModel,
-                            null,
-                            accountViewModel = accountViewModel,
-                            nav = nav,
-                        )
-                    }
                 }
+            }
+
+            if (!bannerDismissed && deletedCount > 0) {
+                DeletedItemsBanner(
+                    count = deletedCount,
+                    onRemove = {
+                        accountViewModel.removeDeletedBookmarks(
+                            deletedEventIds.toSet(),
+                            deletedAddresses.toSet(),
+                        )
+                        bannerDismissed = true
+                    },
+                    onDismiss = { bannerDismissed = true },
+                    modifier =
+                        Modifier
+                            .align(Alignment.TopCenter)
+                            .padding(top = paddingValues.calculateTopPadding()),
+                )
             }
         }
     }
@@ -181,15 +198,14 @@ private fun RenderBookmarkScreen(
 @Composable
 private fun PreloadBookmarkEvents(
     bookmarkState: com.vitorpamplona.amethyst.commons.model.nip51Lists.BookmarkListState.BookmarkList?,
-    pinState: List<com.vitorpamplona.amethyst.model.Note>?,
     accountViewModel: AccountViewModel,
 ) {
     val eventFinder = accountViewModel.dataSources().eventFinder
     val account = accountViewModel.account
 
     val queries =
-        remember(bookmarkState, pinState) {
-            val allNotes = (bookmarkState?.public.orEmpty() + bookmarkState?.private.orEmpty() + pinState.orEmpty())
+        remember(bookmarkState) {
+            val allNotes = bookmarkState?.public.orEmpty() + bookmarkState?.private.orEmpty()
             allNotes
                 .filter { it.event == null }
                 .map { EventFinderQueryState(it, account) }

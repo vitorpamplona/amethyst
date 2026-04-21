@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.call
 
+import com.vitorpamplona.amethyst.model.CallTurnServer
 import org.webrtc.PeerConnection
 
 object IceServerConfig {
@@ -49,23 +50,25 @@ object IceServerConfig {
                 .createIceServer(),
         )
 
-    fun buildIceServers(userTurnServers: List<TurnServerConfig> = emptyList()): List<PeerConnection.IceServer> {
-        val servers = (defaultStunServers + defaultTurnServers).toMutableList()
-        userTurnServers.forEach { turn ->
-            servers.add(
-                PeerConnection.IceServer
-                    .builder(turn.url)
-                    .setUsername(turn.username)
-                    .setPassword(turn.credential)
-                    .createIceServer(),
-            )
-        }
-        return servers
+    /**
+     * Builds the ICE server list.  If the user has configured custom TURN
+     * servers they replace the built-in OpenRelay defaults so that
+     * credentials can be rotated without an app update.  STUN servers
+     * are always included.
+     */
+    fun buildIceServers(userTurnServers: List<CallTurnServer> = emptyList()): List<PeerConnection.IceServer> {
+        val turnServers =
+            if (userTurnServers.isNotEmpty()) {
+                userTurnServers.map { turn ->
+                    PeerConnection.IceServer
+                        .builder(turn.url)
+                        .setUsername(turn.username)
+                        .setPassword(turn.credential)
+                        .createIceServer()
+                }
+            } else {
+                defaultTurnServers
+            }
+        return defaultStunServers + turnServers
     }
 }
-
-data class TurnServerConfig(
-    val url: String,
-    val username: String,
-    val credential: String,
-)

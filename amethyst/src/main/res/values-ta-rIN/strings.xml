@@ -372,6 +372,7 @@
     <string name="community_no_descriptor">இந்த சமூகத்தின் விளக்கமும் விதிகளும் இன்னும் சேர்க்கபடவில்லை. உரிமையாளரை அணுகி அவற்றை சேர்க்க கோரவும்</string>
     <!-- Kind display names for relay subscription filter chips -->
     <!-- M3 Action Dialog titles -->
+    <!-- HLS multi-resolution video sharing -->
     <!-- NIP-75 Zap Goals -->
     <!-- NIP-86 Relay Management -->
 </resources>

@@ -20,16 +20,30 @@
  */
 package com.vitorpamplona.quartz.nip34Git.repository
 
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip34Git.repository.tags.CloneTag
 import com.vitorpamplona.quartz.nip34Git.repository.tags.DescriptionTag
+import com.vitorpamplona.quartz.nip34Git.repository.tags.EucTag
+import com.vitorpamplona.quartz.nip34Git.repository.tags.MaintainersTag
 import com.vitorpamplona.quartz.nip34Git.repository.tags.NameTag
+import com.vitorpamplona.quartz.nip34Git.repository.tags.RelaysTag
 import com.vitorpamplona.quartz.nip34Git.repository.tags.WebTag
 
 fun TagArrayBuilder<GitRepositoryEvent>.name(name: String) = addUnique(NameTag.assemble(name))
 
 fun TagArrayBuilder<GitRepositoryEvent>.description(description: String) = addUnique(DescriptionTag.assemble(description))
 
-fun TagArrayBuilder<GitRepositoryEvent>.webUrl(webUrl: String) = addUnique(WebTag.assemble(webUrl))
+fun TagArrayBuilder<GitRepositoryEvent>.webUrl(webUrl: String) = add(WebTag.assemble(webUrl))
 
-fun TagArrayBuilder<GitRepositoryEvent>.cloneUrl(cloneUrl: String) = addUnique(CloneTag.assemble(cloneUrl))
+fun TagArrayBuilder<GitRepositoryEvent>.webUrls(webUrls: List<String>) = addAll(webUrls.map(WebTag::assemble))
+
+fun TagArrayBuilder<GitRepositoryEvent>.cloneUrl(cloneUrl: String) = add(CloneTag.assemble(cloneUrl))
+
+fun TagArrayBuilder<GitRepositoryEvent>.cloneUrls(cloneUrls: List<String>) = addAll(cloneUrls.map(CloneTag::assemble))
+
+fun TagArrayBuilder<GitRepositoryEvent>.relays(relays: List<String>) = addUnique(RelaysTag.assemble(relays))
+
+fun TagArrayBuilder<GitRepositoryEvent>.maintainers(maintainers: List<HexKey>) = addUnique(MaintainersTag.assemble(maintainers))
+
+fun TagArrayBuilder<GitRepositoryEvent>.euc(commit: String) = addUnique(EucTag.assemble(commit))

@@ -91,11 +91,34 @@ data class UpdatePath(
 
 /**
  * Result of creating a Commit: the MLS messages to distribute.
+ *
+ * [commitBytes] is the raw TLS-encoded [Commit] struct (RFC 9420 §12.4), useful
+ * for unit tests and the [com.vitorpamplona.quartz.marmot.mls.group.MlsGroup.processCommit]
+ * entry point. For on-the-wire distribution, callers MUST publish
+ * [framedCommitBytes] (the MlsMessage(PublicMessage(FramedContent(commit))) envelope)
+ * so that receivers can parse the sender's leaf index and confirmation tag.
  */
 data class CommitResult(
     val commitBytes: ByteArray,
     val welcomeBytes: ByteArray?,
     val groupInfoBytes: ByteArray?,
+    /**
+     * Fully-framed commit ready for the MIP-03 outer ChaCha20 encryption.
+     * Wire format: MlsMessage(version=mls10, wireFormat=mls_public_message, payload=PublicMessage(...)).
+     */
+    val framedCommitBytes: ByteArray = commitBytes,
+    /**
+     * `MLS-Exporter("marmot", "group-event", 32)` evaluated at the **pre-commit**
+     * epoch (N) — the key the group had when this commit was computed, before
+     * local state advanced to N+1. Publishers of the kind:445 MUST ChaCha20-wrap
+     * the commit with this key (RFC 9420 §12.4 and MDK parity). Using the
+     * post-commit (N+1) key makes the commit unreadable to existing members
+     * still at epoch N — the exact scenario that caused Eden to stall at
+     * epoch 1 and never decrypt any of David's subsequent messages.
+     *
+     * Empty by default for the test-only entry points that don't need it.
+     */
+    val preCommitExporterSecret: ByteArray = ByteArray(0),
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

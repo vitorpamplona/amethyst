@@ -85,6 +85,7 @@ import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
+import com.vitorpamplona.amethyst.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
@@ -356,7 +357,7 @@ fun RenderThreadFeed(
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = FeedPadding,
+        contentPadding = rememberFeedContentPadding(FeedPadding),
         state = listState,
     ) {
         itemsIndexed(
@@ -922,6 +923,7 @@ private fun RenderClassifiedsReaderForThread(
                 dim = it.dimension,
                 uri = note.toNostrUri(),
                 mimeType = it.mimeType,
+                thumbhash = it.thumbhash,
             )
         }
 

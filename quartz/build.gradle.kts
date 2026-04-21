@@ -1,8 +1,6 @@
 import com.vanniktech.maven.publish.KotlinMultiplatform
 import com.vanniktech.maven.publish.SourcesJar
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import org.jetbrains.kotlin.gradle.plugin.mpp.NativeBuildType.DEBUG
-import org.jetbrains.kotlin.gradle.plugin.mpp.NativeBuildType.RELEASE
 import org.jetbrains.kotlin.gradle.targets.native.tasks.KotlinNativeTest
 
 
@@ -16,14 +14,6 @@ plugins {
 kotlin {
     compilerOptions {
         freeCompilerArgs.add("-Xexpect-actual-classes")
-        // Remove Kotlin null-check assertions on parameters, return values, and receivers.
-        // These generate invokestatic Intrinsics.checkNotNullParameter at the entry of every
-        // function that takes non-null reference types (~4,000+ calls per Schnorr verify).
-        // Safe for this module: all internal secp256k1 code uses non-null LongArray params
-        // that are never null. Each check costs ~2-3ns on ART, totaling ~8-12μs per verify.
-        freeCompilerArgs.add("-Xno-param-assertions")
-        freeCompilerArgs.add("-Xno-call-assertions")
-        freeCompilerArgs.add("-Xno-receiver-assertions")
     }
     jvm {
         compilerOptions {
@@ -87,6 +77,8 @@ kotlin {
 
     linuxX64()
 
+    macosArm64()
+
     // This makes sure that the resource file directory is visible for iOS tests.
     val rootDir = "${rootProject.rootDir.path}/quartz/src/commonTest/resources"
 
@@ -143,6 +135,9 @@ kotlin {
 
                 // Negentropy set reconciliation (NIP-77)
                 api(libs.negentropy.kmp)
+
+                implementation("io.github.andreypfau:kotlinx-crypto-hmac:0.0.4")
+                implementation("io.github.andreypfau:kotlinx-crypto-sha2:0.0.4")
             }
         }
 
@@ -297,14 +292,30 @@ kotlin {
             dependsOn(iosTest.get())
         }
 
+        val macosMain =
+            create("macosMain") {
+                dependsOn(appleMain)
+            }
+
+        val macosTest =
+            create("macosTest") {
+                dependsOn(appleTest)
+            }
+
+        val macosArm64Main by getting {
+            dependsOn(macosMain)
+        }
+
+        val macosArm64Test by getting {
+            dependsOn(macosTest)
+        }
+
         val linuxMain =
             create("linuxMain") {
                 dependsOn(nativeMain)
                 dependencies {
                     implementation(libs.net.thauvin.erik.urlencoder.lib)
                     implementation(libs.dev.whyoleg.cryptography.provider.apple.optimal)
-                    implementation("io.github.andreypfau:kotlinx-crypto-hmac:0.0.4")
-                    implementation("io.github.andreypfau:kotlinx-crypto-sha2:0.0.4")
                 }
             }
 

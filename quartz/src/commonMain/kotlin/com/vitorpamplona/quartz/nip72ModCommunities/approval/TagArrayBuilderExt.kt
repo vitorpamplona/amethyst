@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.toATag
 import com.vitorpamplona.quartz.nip01Core.tags.events.toETagArray
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 
 fun TagArrayBuilder<CommunityPostApprovalEvent>.community(event: EventHintBundle<CommunityDefinitionEvent>) = add(event.toATag().toATagArray())
@@ -37,6 +38,4 @@ fun TagArrayBuilder<CommunityPostApprovalEvent>.approved(event: EventHintBundle<
     }
 }
 
-fun TagArrayBuilder<CommunityPostApprovalEvent>.notifyAuthor(event: EventHintBundle<Event>) {
-    add(event.toETagArray())
-}
+fun TagArrayBuilder<CommunityPostApprovalEvent>.notifyAuthor(event: EventHintBundle<Event>) = add(PTag.assemble(event.event.pubKey, event.authorHomeRelay))

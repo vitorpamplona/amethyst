@@ -38,11 +38,8 @@ import coil3.asDrawable
 import coil3.request.ImageRequest
 import coil3.request.allowHardware
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
-import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -51,14 +48,11 @@ object NotificationUtils {
     private var zapChannel: NotificationChannel? = null
     private var reactionChannel: NotificationChannel? = null
     private var chessChannel: NotificationChannel? = null
-    private var callChannel: NotificationChannel? = null
 
     private const val DM_GROUP_KEY = "com.vitorpamplona.amethyst.DM_NOTIFICATION"
     private const val ZAP_GROUP_KEY = "com.vitorpamplona.amethyst.ZAP_NOTIFICATION"
     private const val REACTION_GROUP_KEY = "com.vitorpamplona.amethyst.REACTION_NOTIFICATION"
     private const val CHESS_GROUP_KEY = "com.vitorpamplona.amethyst.CHESS_NOTIFICATION"
-    private const val CALL_CHANNEL_ID = "com.vitorpamplona.amethyst.CALL_CHANNEL"
-    private const val CALL_NOTIFICATION_ID = 0x50000
 
     const val REPLY_ACTION = "com.vitorpamplona.amethyst.REPLY_ACTION"
     const val MARK_READ_ACTION = "com.vitorpamplona.amethyst.MARK_READ_ACTION"
@@ -520,144 +514,6 @@ object NotificationUtils {
                 )
 
         notify(summaryId, summaryBuilder.build())
-    }
-
-    fun getOrCreateCallChannel(applicationContext: Context): NotificationChannel {
-        if (callChannel != null) return callChannel!!
-
-        callChannel =
-            NotificationChannel(
-                CALL_CHANNEL_ID,
-                stringRes(applicationContext, R.string.app_notification_calls_channel_name),
-                NotificationManager.IMPORTANCE_HIGH,
-            ).apply {
-                description = stringRes(applicationContext, R.string.app_notification_calls_channel_description)
-                // Silence the notification sound — CallAudioManager plays the ringtone
-                setSound(null, null)
-                enableVibration(false)
-            }
-
-        val notificationManager: NotificationManager =
-            applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-
-        notificationManager.createNotificationChannel(callChannel!!)
-
-        return callChannel!!
-    }
-
-    fun sendCallNotification(
-        callerName: String,
-        callerBitmap: Bitmap?,
-        uri: String,
-        applicationContext: Context,
-    ) {
-        val notificationManager: NotificationManager =
-            applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-
-        val channel = getOrCreateCallChannel(applicationContext)
-
-        // Tapping the notification opens the CallActivity
-        val contentIntent =
-            Intent(applicationContext, com.vitorpamplona.amethyst.ui.call.CallActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
-            }
-
-        val contentPendingIntent =
-            PendingIntent.getActivity(
-                applicationContext,
-                CALL_NOTIFICATION_ID,
-                contentIntent,
-                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-            )
-
-        // Accept launches CallActivity directly (not via BroadcastReceiver)
-        // to comply with Android 12+ notification trampoline restrictions.
-        val acceptIntent =
-            Intent(applicationContext, com.vitorpamplona.amethyst.ui.call.CallActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
-                putExtra(com.vitorpamplona.amethyst.ui.call.CallActivity.EXTRA_ACCEPT_CALL, true)
-            }
-
-        val acceptPendingIntent =
-            PendingIntent.getActivity(
-                applicationContext,
-                CALL_NOTIFICATION_ID + 1,
-                acceptIntent,
-                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-            )
-
-        val rejectIntent =
-            Intent(applicationContext, com.vitorpamplona.amethyst.service.call.CallNotificationReceiver::class.java).apply {
-                action = com.vitorpamplona.amethyst.service.call.CallNotificationReceiver.ACTION_REJECT_CALL
-            }
-
-        val rejectPendingIntent =
-            PendingIntent.getBroadcast(
-                applicationContext,
-                CALL_NOTIFICATION_ID + 2,
-                rejectIntent,
-                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-            )
-
-        val builder =
-            NotificationCompat
-                .Builder(applicationContext, channel.id)
-                .setSmallIcon(R.drawable.amethyst)
-                .setContentTitle(stringRes(applicationContext, R.string.call_incoming))
-                .setContentText(callerName)
-                .setLargeIcon(callerBitmap)
-                .setContentIntent(contentPendingIntent)
-                .setFullScreenIntent(contentPendingIntent, true)
-                .setPriority(NotificationCompat.PRIORITY_HIGH)
-                .setCategory(NotificationCompat.CATEGORY_CALL)
-                .setAutoCancel(true)
-                .setOngoing(true)
-                .setTimeoutAfter(60_000)
-                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-                .addAction(R.drawable.amethyst, stringRes(applicationContext, R.string.call_reject), rejectPendingIntent)
-                .addAction(R.drawable.amethyst, stringRes(applicationContext, R.string.call_accept), acceptPendingIntent)
-
-        notificationManager.notify("call", CALL_NOTIFICATION_ID, builder.build())
-    }
-
-    fun cancelCallNotification(applicationContext: Context) {
-        val notificationManager: NotificationManager =
-            applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        notificationManager.cancel("call", CALL_NOTIFICATION_ID)
-    }
-
-    suspend fun showIncomingCallNotification(
-        callerPubKey: String,
-        context: Context,
-    ) {
-        val callerUser = LocalCache.getUserIfExists(callerPubKey)
-        val callerName = callerUser?.toBestDisplayName() ?: callerPubKey.take(8) + "..."
-        val uri = "nostr:${callerPubKey.hexToByteArray().toNpub()}"
-
-        val callerBitmap =
-            callerUser?.profilePicture()?.let { pictureUrl ->
-                withContext(Dispatchers.IO) {
-                    try {
-                        val request =
-                            ImageRequest
-                                .Builder(context)
-                                .data(pictureUrl)
-                                .allowHardware(false)
-                                .build()
-                        val result = coil3.ImageLoader(context).execute(request)
-                        (result.image?.asDrawable(context.resources) as? BitmapDrawable)?.bitmap
-                    } catch (_: Exception) {
-                        null
-                    }
-                }
-            }
-
-        sendCallNotification(
-            callerName = callerName,
-            callerBitmap = callerBitmap,
-            uri = uri,
-            applicationContext = context,
-        )
     }
 
     private fun NotificationManager.isDuplicate(notId: Int): Boolean {

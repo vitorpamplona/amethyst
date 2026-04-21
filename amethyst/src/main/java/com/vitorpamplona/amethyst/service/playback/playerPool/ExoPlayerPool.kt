@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.service.playback.playerPool
 
 import android.content.Context
 import androidx.annotation.OptIn
+import androidx.media3.common.C
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import com.vitorpamplona.quartz.utils.Log
@@ -81,6 +82,13 @@ class ExoPlayerPool(
                 player.stop()
                 player.clearVideoSurface()
                 player.clearMediaItems()
+
+                // Clear any video quality overrides so the next video starts with Auto
+                player.trackSelectionParameters =
+                    player.trackSelectionParameters
+                        .buildUpon()
+                        .clearOverridesOfType(C.TRACK_TYPE_VIDEO)
+                        .build()
 
                 if (playerPool.size < poolSize) {
                     if (!playerPool.contains(player)) {

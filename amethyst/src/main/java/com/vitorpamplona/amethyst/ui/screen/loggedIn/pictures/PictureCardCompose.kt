@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.pictures
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -39,15 +40,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
+import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.AutoNonlazyGrid
-import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
+import com.vitorpamplona.amethyst.ui.components.BlurhashBackdrop
+import com.vitorpamplona.amethyst.ui.components.BlurhashGridBackdrop
+import com.vitorpamplona.amethyst.ui.components.ContentWarningGate
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
+import com.vitorpamplona.amethyst.ui.components.collectContentWarningReasons
+import com.vitorpamplona.amethyst.ui.components.mediaSizingModifier
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.ReactionsRow
-import com.vitorpamplona.amethyst.ui.note.observeEdits
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.UserCardHeader
+import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitiveOrNSFW
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import kotlinx.collections.immutable.toImmutableList
 
@@ -59,7 +65,6 @@ fun PictureCardCompose(
 ) {
     val event = (baseNote.event as? PictureEvent) ?: return
     val backgroundColor = remember { mutableStateOf(Color.Transparent) }
-    val editState = observeEdits(baseNote = baseNote, accountViewModel = accountViewModel)
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -75,7 +80,7 @@ fun PictureCardCompose(
             baseNote = baseNote,
             showReactionDetail = true,
             addPadding = true,
-            editState = editState,
+            editState = null,
             accountViewModel = accountViewModel,
             nav = nav,
         )
@@ -92,7 +97,9 @@ private fun PictureCardImage(
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
 ) {
-    val uri = note.toNostrUri()
+    val uri = remember(note) { note.toNostrUri() }
+    val isSensitive = remember(note) { event.isSensitiveOrNSFW() }
+    val reasons = remember(note) { collectContentWarningReasons(event) }
 
     val images by
         remember(note) {
@@ -108,31 +115,50 @@ private fun PictureCardImage(
                             dim = it.dimension,
                             uri = uri,
                             mimeType = it.mimeType,
+                            thumbhash = it.thumbhash,
                         )
                     }.toImmutableList(),
             )
         }
 
-    if (images.isNotEmpty()) {
-        SensitivityWarning(note = note, accountViewModel = accountViewModel) {
-            if (images.size == 1) {
+    if (images.isEmpty()) return
+
+    if (images.size == 1) {
+        val single = images.first()
+        val ratio = single.dim?.aspectRatio() ?: MediaAspectRatioCache.get(single.url)
+        ContentWarningGate(
+            isSensitive = isSensitive,
+            reasons = reasons,
+            preloadUrls = listOf(single.url),
+            accountViewModel = accountViewModel,
+            modifier = mediaSizingModifier(ratio, ContentScale.FillWidth),
+            backdrop = (single.thumbhash ?: single.blurhash)?.let { { BlurhashBackdrop(single.blurhash, single.description, single.thumbhash) } },
+        ) {
+            ZoomableContentView(
+                content = single,
+                images = images,
+                roundedCorner = false,
+                contentScale = ContentScale.FillWidth,
+                accountViewModel = accountViewModel,
+            )
+        }
+    } else {
+        ContentWarningGate(
+            isSensitive = isSensitive,
+            reasons = reasons,
+            preloadUrls = images.map { it.url },
+            accountViewModel = accountViewModel,
+            modifier = Modifier.fillMaxWidth().aspectRatio(1f),
+            backdrop = { BlurhashGridBackdrop(images) },
+        ) {
+            AutoNonlazyGrid(images.size) {
                 ZoomableContentView(
-                    content = images.first(),
+                    content = images[it],
                     images = images,
                     roundedCorner = false,
-                    contentScale = ContentScale.FillWidth,
+                    contentScale = ContentScale.Crop,
                     accountViewModel = accountViewModel,
                 )
-            } else {
-                AutoNonlazyGrid(images.size) {
-                    ZoomableContentView(
-                        content = images[it],
-                        images = images,
-                        roundedCorner = false,
-                        contentScale = ContentScale.Crop,
-                        accountViewModel = accountViewModel,
-                    )
-                }
             }
         }
     }

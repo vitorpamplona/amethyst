@@ -153,7 +153,7 @@ class MlsConformanceTest {
         // Must contain external_pub extension (type 0x0003)
         val externalPubExt = decoded.extensions.find { it.extensionType == 0x0003 }
         assertTrue(externalPubExt != null, "GroupInfo must contain external_pub extension")
-        assertEquals(32, externalPubExt!!.extensionData.size, "external_pub must be 32 bytes (X25519)")
+        assertEquals(32, externalPubExt.extensionData.size, "external_pub must be 32 bytes (X25519)")
     }
 
     @Test
@@ -410,7 +410,7 @@ class MlsConformanceTest {
 
         assertTrue(result.commitBytes.isNotEmpty(), "Commit bytes must not be empty")
         assertTrue(result.welcomeBytes != null, "Add commit must produce Welcome")
-        assertTrue(result.welcomeBytes!!.isNotEmpty(), "Welcome bytes must not be empty")
+        assertTrue(result.welcomeBytes.isNotEmpty(), "Welcome bytes must not be empty")
 
         // Commit should be deserializable
         val commit =

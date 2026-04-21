@@ -39,6 +39,7 @@ import com.vitorpamplona.quartz.nip94FileMetadata.tags.ServiceTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.SizeTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.SummaryTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.ThumbTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.ThumbhashTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.TorrentInfoHash
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.UrlTag
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -69,6 +70,8 @@ class ProfileGalleryEntryEvent(
     fun torrentInfoHash() = tags.firstNotNullOfOrNull(TorrentInfoHash::parse)
 
     fun blurhash() = tags.firstNotNullOfOrNull(BlurhashTag::parse)
+
+    fun thumbhash() = tags.firstNotNullOfOrNull(ThumbhashTag::parse)
 
     fun image() = tags.firstNotNullOfOrNull(ImageTag::parse)
 

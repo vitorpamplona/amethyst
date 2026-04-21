@@ -38,19 +38,19 @@ package com.vitorpamplona.quartz.utils.secp256k1
  *   Benchmark confirmed: unfused path is equal or faster on HotSpot JVM 21.
  */
 internal actual fun fieldMulReduce(
-    out: LongArray,
-    a: LongArray,
-    b: LongArray,
-    w: LongArray,
+    out: Fe4,
+    a: Fe4,
+    b: Fe4,
+    w: Wide8,
 ) {
     U256.mulWide(w, a, b)
     FieldP.reduceWide(out, w)
 }
 
 internal actual fun fieldSqrReduce(
-    out: LongArray,
-    a: LongArray,
-    w: LongArray,
+    out: Fe4,
+    a: Fe4,
+    w: Wide8,
 ) {
     U256.sqrWide(w, a)
     FieldP.reduceWide(out, w)

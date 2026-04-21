@@ -106,7 +106,7 @@ fun ChannelFabColumn(nav: INav) {
 
                 FloatingActionButton(
                     onClick = {
-                        nav.nav(Route.MarmotGroupList)
+                        nav.nav(Route.CreateMarmotGroup)
                         isOpen = false
                     },
                     modifier = Size55Modifier,
@@ -114,7 +114,7 @@ fun ChannelFabColumn(nav: INav) {
                     containerColor = MaterialTheme.colorScheme.primary,
                 ) {
                     Text(
-                        text = "MLS\nGroups",
+                        text = stringRes(R.string.messages_create_group),
                         color = Color.White,
                         textAlign = TextAlign.Center,
                         fontSize = Font12SP,

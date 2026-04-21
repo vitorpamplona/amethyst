@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.navigation.bottombars
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.RowScope
@@ -71,6 +72,7 @@ private fun RenderBottomMenu(
         modifier =
             Modifier
                 .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.background)
                 .windowInsetsPadding(windowInsets)
                 .consumeWindowInsets(windowInsets)
                 .height(50.dp),

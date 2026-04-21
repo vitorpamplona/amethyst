@@ -36,6 +36,7 @@ import com.vitorpamplona.amethyst.commons.call.CallManager
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.call.notification.CallNotifier
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.sendChessNotification
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.sendDMNotification
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.sendReactionNotification
@@ -46,6 +47,8 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinder
 import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.experimental.notifications.wake.WakeUpEvent
+import com.vitorpamplona.quartz.marmot.WelcomeResult
+import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
@@ -71,8 +74,10 @@ import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import java.math.BigDecimal
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -165,6 +170,10 @@ class EventNotificationConsumer(
 
                     is WakeUpEvent -> {
                         wakeUpFor(innerEvent, innerNote, account)
+                    }
+
+                    is WelcomeEvent -> {
+                        notify(innerEvent, account)
                     }
                 }
             }
@@ -429,6 +438,67 @@ class EventNotificationConsumer(
                 }
             }
         }
+    }
+
+    private suspend fun notify(
+        event: WelcomeEvent,
+        account: Account,
+    ) {
+        Log.d(TAG, "New Marmot Welcome to Notify")
+
+        // old event being re-broadcast
+        if (event.createdAt < TimeUtils.fifteenMinutesAgo()) return
+        // a welcome we ourselves emitted
+        if (event.pubKey == account.signer.pubKey) return
+
+        val nostrGroupId = event.nostrGroupId() ?: return
+        val manager = account.marmotManager ?: return
+
+        // Best-effort: process the welcome here so the chatroom is hydrated
+        // before composing the notification body. The push-notification
+        // background path does NOT go through Account.eventProcessor, so
+        // without this the invitee would only join the group later, when
+        // they next open the app and the relay subscription redelivers.
+        if (!manager.isMember(nostrGroupId)) {
+            try {
+                val result = manager.processWelcome(event, nostrGroupId)
+                if (result is WelcomeResult.Joined) {
+                    val chatroom = account.marmotGroupList.getOrCreateGroup(result.nostrGroupId)
+                    manager.syncMetadataTo(result.nostrGroupId, chatroom)
+                    account.marmotGroupList.notifyGroupChanged(result.nostrGroupId)
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.w(TAG) { "Failed to process Marmot Welcome from notification path: ${e.message}" }
+            }
+        }
+
+        val chatroom = account.marmotGroupList.getOrCreateGroup(nostrGroupId)
+        val groupName = chatroom.displayName.value?.takeIf { it.isNotBlank() } ?: "a private group"
+        val inviter = LocalCache.getOrCreateUser(event.pubKey)
+        val inviterName = inviter.toBestDisplayName()
+        val inviterPicture = inviter.profilePicture()
+
+        val accountNpub =
+            account.signer.pubKey
+                .hexToByteArray()
+                .toNpub()
+        // marmot:<groupHex>?account=<npub> — parsed by uriToRoute below.
+        val noteUri = "marmot:$nostrGroupId$ACCOUNT_QUERY_PARAM$accountNpub"
+
+        notificationManager()
+            .sendDMNotification(
+                id = event.id,
+                messageBody = "You've been added to $groupName",
+                senderName = inviterName,
+                time = event.createdAt,
+                pictureUrl = inviterPicture,
+                uri = noteUri,
+                applicationContext = applicationContext,
+                accountNpub = accountNpub,
+                accountPictureUrl = account.userProfile().profilePicture(),
+                chatroomMembers = null,
+            )
     }
 
     suspend fun decryptZapContentAuthor(
@@ -699,11 +769,32 @@ class EventNotificationConsumer(
 
         if (TimeUtils.now() - event.createdAt > CallManager.MAX_EVENT_AGE_SECONDS) return
 
-        val callerUser = LocalCache.getUserIfExists(event.pubKey)
-        val callerName = callerUser?.toBestDisplayName() ?: event.pubKey.take(8) + "..."
+        val callerUser = LocalCache.getOrCreateUser(event.pubKey)
+
+        // If the caller's metadata hasn't been loaded yet (e.g. fresh process from
+        // a push notification), briefly subscribe to the user finder so we can
+        // resolve the user's display name instead of showing the raw pubkey.
+        if (callerUser.metadataOrNull()?.bestName() == null) {
+            val authorState = UserFinderQueryState(callerUser, account)
+            try {
+                Amethyst.instance.sources.userFinder
+                    .subscribe(authorState)
+                withTimeoutOrNull(5_000L) {
+                    callerUser
+                        .metadata()
+                        .flow
+                        .first { it?.info?.bestName() != null }
+                }
+            } finally {
+                Amethyst.instance.sources.userFinder
+                    .unsubscribe(authorState)
+            }
+        }
+
+        val callerName = callerUser.toBestDisplayName()
 
         val callerBitmap =
-            callerUser?.profilePicture()?.let { pictureUrl ->
+            callerUser.profilePicture()?.let { pictureUrl ->
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                     try {
                         val request =
@@ -720,13 +811,11 @@ class EventNotificationConsumer(
                 }
             }
 
-        NotificationUtils
-            .sendCallNotification(
-                callerName = callerName,
-                callerBitmap = callerBitmap,
-                uri = "nostr:${event.pubKey.hexToByteArray().toNpub()}",
-                applicationContext = applicationContext,
-            )
+        CallNotifier.send(
+            callerName = callerName,
+            callerBitmap = callerBitmap,
+            applicationContext = applicationContext,
+        )
     }
 
     fun notificationManager(): NotificationManager =

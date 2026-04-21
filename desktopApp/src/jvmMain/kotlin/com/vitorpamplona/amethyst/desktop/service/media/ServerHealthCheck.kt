@@ -20,20 +20,12 @@
  */
 package com.vitorpamplona.amethyst.desktop.service.media
 
+import com.vitorpamplona.amethyst.desktop.network.DesktopHttpClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
 import okhttp3.Request
-import java.util.concurrent.TimeUnit
 
 object ServerHealthCheck {
-    private val httpClient =
-        OkHttpClient
-            .Builder()
-            .connectTimeout(5, TimeUnit.SECONDS)
-            .readTimeout(5, TimeUnit.SECONDS)
-            .build()
-
     enum class ServerStatus {
         ONLINE,
         OFFLINE,
@@ -53,7 +45,7 @@ object ServerHealthCheck {
                         .url(url)
                         .head()
                         .build()
-                val response = httpClient.newCall(request).execute()
+                val response = DesktopHttpClient.currentClient().newCall(request).execute()
                 response.use {
                     if (it.isSuccessful || it.code == 405) ServerStatus.ONLINE else ServerStatus.OFFLINE
                 }

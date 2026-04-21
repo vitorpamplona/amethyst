@@ -59,7 +59,7 @@ import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.call.CallManager
 import com.vitorpamplona.amethyst.commons.call.CallState
-import com.vitorpamplona.amethyst.service.call.CallController
+import com.vitorpamplona.amethyst.ui.call.session.CallSession
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.coroutines.delay
@@ -68,7 +68,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun CallScreen(
     callManager: CallManager,
-    callController: CallController?,
+    callSession: CallSession?,
     accountViewModel: AccountViewModel,
     onCallEnded: () -> Unit,
     isInPipMode: Boolean = false,
@@ -77,7 +77,7 @@ fun CallScreen(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val emptyStringFlow = remember { kotlinx.coroutines.flow.MutableStateFlow<String?>(null) }
-    val errorMessage by (callController?.errorMessage ?: emptyStringFlow).collectAsState()
+    val errorMessage by (callSession?.errorMessage ?: emptyStringFlow).collectAsState()
 
     BackHandler(enabled = callState !is CallState.Idle && callState !is CallState.Ended) {
         scope.launch { callManager.hangup() }
@@ -124,7 +124,7 @@ fun CallScreen(
                     val isVideoCall = state.callType == com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType.VIDEO
                     val acceptWithPermission =
                         rememberCallWithPermission(context, isVideo = isVideoCall) {
-                            callController?.acceptIncomingCall(state.sdpOffer)
+                            callSession?.accept(state.sdpOffer)
                         }
                     IncomingCallUI(
                         groupMembers = otherMembers,
@@ -155,17 +155,17 @@ fun CallScreen(
 
             is CallState.Connected -> {
                 if (isInPipMode) {
-                    PipConnectedCallUI(state = state, callController = callController, accountViewModel = accountViewModel)
+                    PipConnectedCallUI(state = state, callSession = callSession, accountViewModel = accountViewModel)
                 } else {
                     ConnectedCallUI(
                         state = state,
-                        callController = callController,
+                        callSession = callSession,
                         accountViewModel = accountViewModel,
                         onHangup = { scope.launch { callManager.hangup() } },
-                        onToggleMute = { callController?.toggleAudioMute() },
-                        onToggleVideo = { callController?.toggleVideo() },
-                        onCycleAudioRoute = { callController?.cycleAudioRoute() },
-                        onInvitePeer = { peerPubKey -> callController?.invitePeer(peerPubKey) },
+                        onToggleMute = { callSession?.toggleMute() },
+                        onToggleVideo = { callSession?.toggleVideo() },
+                        onCycleAudioRoute = { callSession?.cycleAudioRoute() },
+                        onInvitePeer = { peerPubKey -> callSession?.invitePeer(peerPubKey) },
                     )
                 }
             }
@@ -195,11 +195,14 @@ fun CallScreen(
                 Snackbar(
                     modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp),
                     action = {
-                        Text(
-                            stringRes(R.string.call_dismiss),
-                            modifier = Modifier.padding(8.dp),
-                            color = MaterialTheme.colorScheme.inversePrimary,
-                        )
+                        androidx.compose.material3.TextButton(
+                            onClick = { callSession?.clearError() },
+                        ) {
+                            Text(
+                                stringRes(R.string.call_dismiss),
+                                color = MaterialTheme.colorScheme.inversePrimary,
+                            )
+                        }
                     },
                 ) {
                     Text(error)

@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.model.topNavFeeds
 
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.TopFilter
+import com.vitorpamplona.amethyst.model.algoFeeds.FavoriteAlgoFeedsOrchestrator
 import com.vitorpamplona.amethyst.model.nip02FollowLists.Kind3FollowListState
 import com.vitorpamplona.amethyst.model.serverList.MergedFollowListsState
 import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsFeedFlow
@@ -30,11 +31,15 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.allUserFollows.Kind3UserFoll
 import com.vitorpamplona.amethyst.model.topNavFeeds.aroundMe.AroundMeFeedFlow
 import com.vitorpamplona.amethyst.model.topNavFeeds.aroundMe.GeohashFeedFlow
 import com.vitorpamplona.amethyst.model.topNavFeeds.chess.ChessFeedFlow
+import com.vitorpamplona.amethyst.model.topNavFeeds.favoriteAlgoFeeds.AllFavoriteAlgoFeedsFlow
+import com.vitorpamplona.amethyst.model.topNavFeeds.favoriteAlgoFeeds.FavoriteAlgoFeedFlow
 import com.vitorpamplona.amethyst.model.topNavFeeds.global.GlobalFeedFlow
 import com.vitorpamplona.amethyst.model.topNavFeeds.hashtag.HashtagFeedFlow
+import com.vitorpamplona.amethyst.model.topNavFeeds.hashtag.MultiHashtagFeedFlow
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.NoteFeedFlow
 import com.vitorpamplona.amethyst.model.topNavFeeds.relay.RelayFeedFlow
 import com.vitorpamplona.amethyst.service.location.LocationState
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
@@ -62,6 +67,9 @@ class FeedTopNavFilterState(
     val caches: FeedDecryptionCaches,
     val signer: NostrSigner,
     val scope: CoroutineScope,
+    val favoriteAlgoFeedsOrchestrator: FavoriteAlgoFeedsOrchestrator,
+    val favoriteAlgoFeedAddresses: StateFlow<Set<Address>>,
+    val interestSetHashtags: StateFlow<Map<String, Set<String>>> = MutableStateFlow(emptyMap()),
 ) {
     fun loadFlowsFor(listName: TopFilter): IFeedFlowsType =
         when (listName) {
@@ -87,6 +95,10 @@ class FeedTopNavFilterState(
 
             TopFilter.Chess -> {
                 ChessFeedFlow(followsRelays, proxyRelays)
+            }
+
+            TopFilter.Mine -> {
+                AllFollowsFeedFlow(allFollows, followsRelays, blockedRelays, proxyRelays)
             }
 
             is TopFilter.Community -> {
@@ -139,8 +151,31 @@ class FeedTopNavFilterState(
                 HashtagFeedFlow(listName.tag, followsRelays, proxyRelays)
             }
 
+            is TopFilter.InterestSet -> {
+                val hashtags = interestSetHashtags.value[listName.address.dTag].orEmpty()
+                MultiHashtagFeedFlow(hashtags, followsRelays, proxyRelays)
+            }
+
             is TopFilter.Relay -> {
                 RelayFeedFlow(listName.url.normalizeRelayUrl())
+            }
+
+            is TopFilter.FavoriteAlgoFeed -> {
+                FavoriteAlgoFeedFlow(
+                    feedAddress = listName.address,
+                    orchestrator = favoriteAlgoFeedsOrchestrator,
+                    outboxRelays = followsRelays,
+                    proxyRelays = proxyRelays,
+                )
+            }
+
+            TopFilter.AllFavoriteAlgoFeeds -> {
+                AllFavoriteAlgoFeedsFlow(
+                    favoriteAlgoFeedAddresses = favoriteAlgoFeedAddresses,
+                    orchestrator = favoriteAlgoFeedsOrchestrator,
+                    outboxRelays = followsRelays,
+                    proxyRelays = proxyRelays,
+                )
             }
         }
 

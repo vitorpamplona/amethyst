@@ -21,15 +21,24 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup
 
 import android.widget.Toast
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
@@ -47,7 +56,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -55,18 +63,29 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.marmot.GroupMemberInfo
+import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
+import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.note.RenderRelayIcon
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
+import com.vitorpamplona.amethyst.ui.theme.LargeRelayIconModifier
+import com.vitorpamplona.amethyst.ui.theme.allGoodColor
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.amethyst.ui.theme.ripple24dp
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrlOrNull
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -85,17 +104,13 @@ fun MarmotGroupInfoScreen(
     val groupDescription by chatroom.description.collectAsStateWithLifecycle()
     val adminPubkeys by chatroom.adminPubkeys.collectAsStateWithLifecycle()
     val groupRelays by chatroom.relays.collectAsStateWithLifecycle()
-    var members by remember { mutableStateOf(emptyList<GroupMemberInfo>()) }
+    val relayActivity by chatroom.relayActivity.collectAsStateWithLifecycle()
+    val members by chatroom.members.collectAsStateWithLifecycle()
     var showLeaveDialog by remember { mutableStateOf(false) }
     var isLeaving by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val myPubkey = accountViewModel.account.signer.pubKey
     val context = LocalContext.current
-
-    LaunchedEffect(nostrGroupId) {
-        members = accountViewModel.marmotGroupMembers(nostrGroupId)
-        chatroom.memberCount.value = members.size
-    }
 
     Scaffold(
         topBar = {
@@ -160,11 +175,11 @@ fun MarmotGroupInfoScreen(
                         modifier = Modifier.padding(top = 4.dp),
                     )
                     if (groupRelays.isNotEmpty()) {
-                        Text(
-                            text = "Relays: ${groupRelays.joinToString(", ")}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(top = 2.dp),
+                        GroupRelayList(
+                            relayUrls = groupRelays,
+                            relayActivity = relayActivity,
+                            accountViewModel = accountViewModel,
+                            nav = nav,
                         )
                     }
                     val epoch = accountViewModel.account.marmotManager?.groupEpoch(nostrGroupId)
@@ -343,4 +358,118 @@ fun LeaveGroupDialog(
             }
         },
     )
+}
+
+/** Window (in seconds) within which a relay is considered actively carrying this group's traffic. */
+private const val RELAY_ACTIVITY_WINDOW_SECS = 7L * 24 * 60 * 60
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun GroupRelayList(
+    relayUrls: List<String>,
+    relayActivity: Map<NormalizedRelayUrl, Long>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val normalized =
+        remember(relayUrls) {
+            relayUrls.mapNotNull { url -> url.normalizeRelayUrlOrNull()?.let { url to it } }
+        }
+
+    if (normalized.isEmpty()) return
+
+    Column(modifier = Modifier.padding(top = 8.dp)) {
+        Text(
+            text = "Relays",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        FlowRow(
+            modifier = Modifier.padding(top = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            val nowSeconds = System.currentTimeMillis() / 1000L
+            normalized.forEach { (raw, relay) ->
+                val lastSeen = relayActivity[relay]
+                val isActive = lastSeen != null && (nowSeconds - lastSeen) <= RELAY_ACTIVITY_WINDOW_SECS
+                GroupRelayTile(
+                    relay = relay,
+                    fallbackUrl = raw,
+                    isActive = isActive,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun GroupRelayTile(
+    relay: NormalizedRelayUrl,
+    fallbackUrl: String,
+    isActive: Boolean,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val relayInfo by loadRelayInfo(relay)
+    val clipboardManager = LocalClipboard.current
+    val scope = rememberCoroutineScope()
+
+    val clickableModifier =
+        remember(relay) {
+            Modifier
+                .size(55.dp)
+                .combinedClickable(
+                    indication = ripple24dp,
+                    interactionSource = MutableInteractionSource(),
+                    onLongClick = {
+                        scope.launch {
+                            clipboardManager.setText(relay.url)
+                        }
+                    },
+                    onClick = { nav.nav(Route.RelayInfo(relay.url)) },
+                )
+        }
+
+    Box(
+        modifier = clickableModifier,
+        contentAlignment = Alignment.Center,
+    ) {
+        RenderRelayIcon(
+            displayUrl = relayInfo.id ?: fallbackUrl,
+            iconUrl = relayInfo.icon,
+            loadProfilePicture = accountViewModel.settings.showProfilePictures(),
+            pingInMs = 0,
+            loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+            iconModifier = LargeRelayIconModifier,
+        )
+
+        val dotColor =
+            if (isActive) {
+                MaterialTheme.colorScheme.allGoodColor
+            } else {
+                MaterialTheme.colorScheme.placeholderText
+            }
+
+        Box(
+            modifier =
+                Modifier
+                    .align(Alignment.BottomEnd)
+                    .size(12.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surface)
+                    .padding(2.dp),
+        ) {
+            Box(
+                modifier =
+                    Modifier
+                        .size(8.dp)
+                        .clip(CircleShape)
+                        .background(dotColor),
+            )
+        }
+    }
 }

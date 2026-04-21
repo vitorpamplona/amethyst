@@ -12,7 +12,12 @@ plugins {
     alias(libs.plugins.serialization)
 }
 
+// Shared app version for all subprojects — read from gradle/libs.versions.toml.
+// Android versionCode stays local in amethyst/build.gradle (must be monotonic int).
+// Desktop packageVersion inherits via project.version in desktopApp/build.gradle.kts.
 allprojects {
+    version = libs.versions.app.get()
+
     configurations.configureEach {
         resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
     }

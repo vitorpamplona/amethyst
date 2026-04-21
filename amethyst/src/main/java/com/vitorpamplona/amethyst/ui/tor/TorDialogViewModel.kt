@@ -24,6 +24,14 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
+import com.vitorpamplona.amethyst.commons.tor.TorPresetType
+import com.vitorpamplona.amethyst.commons.tor.TorSettings
+import com.vitorpamplona.amethyst.commons.tor.TorType
+import com.vitorpamplona.amethyst.commons.tor.torDefaultPreset
+import com.vitorpamplona.amethyst.commons.tor.torFullyPrivate
+import com.vitorpamplona.amethyst.commons.tor.torOnlyWhenNeededPreset
+import com.vitorpamplona.amethyst.commons.tor.torSmallPayloadsPreset
+import com.vitorpamplona.amethyst.commons.tor.whichPreset
 
 @Stable
 class TorDialogViewModel : ViewModel() {

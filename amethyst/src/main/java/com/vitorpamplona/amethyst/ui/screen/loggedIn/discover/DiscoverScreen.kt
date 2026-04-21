@@ -69,6 +69,7 @@ import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.feeds.rememberForeverPagerState
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -220,7 +221,7 @@ private fun DiscoverPages(
             Column {
                 DiscoveryTopBar(accountViewModel, nav)
                 SecondaryScrollableTabRow(
-                    containerColor = Color.Transparent,
+                    containerColor = MaterialTheme.colorScheme.background,
                     contentColor = MaterialTheme.colorScheme.onBackground,
                     selectedTabIndex = pagerState.currentPage,
                     modifier = TabRowHeight,
@@ -264,7 +265,7 @@ private fun DiscoverPages(
         },
         accountViewModel = accountViewModel,
     ) {
-        HorizontalPager(state = pagerState, contentPadding = it) { page ->
+        HorizontalPager(state = pagerState) { page ->
             if (page >= 0 && page < feedTabs.size) {
                 val tab = feedTabs[page]
                 RefresheableBox(tab.feedState, true) {
@@ -466,7 +467,7 @@ private fun DiscoverFeedLoaded(
     val items by loaded.feed.collectAsStateWithLifecycle()
 
     LazyColumn(
-        contentPadding = FeedPadding,
+        contentPadding = rememberFeedContentPadding(FeedPadding),
         state = listState,
     ) {
         itemsIndexed(items.list, key = { _, item -> item.idHex }) { _, item ->
@@ -502,7 +503,7 @@ private fun DiscoverFeedColumnsLoaded(
 
     LazyVerticalGrid(
         columns = GridCells.Fixed(2),
-        contentPadding = FeedPadding,
+        contentPadding = rememberFeedContentPadding(FeedPadding),
         state = listState,
     ) {
         itemsIndexed(items.list, key = { _, item -> item.idHex }) { _, item ->

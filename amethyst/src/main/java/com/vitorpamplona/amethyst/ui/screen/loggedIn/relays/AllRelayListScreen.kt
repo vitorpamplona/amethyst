@@ -75,6 +75,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.feeds.RelayFeedsList
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.feeds.renderRelayFeedsItems
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.indexer.IndexerRelayListViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.indexer.renderIndexerItems
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.keyPackage.KeyPackageRelayListViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.keyPackage.renderKeyPackageItems
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.local.LocalRelayListViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.local.renderLocalItems
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.nip37.PrivateOutboxRelayListViewModel
@@ -101,6 +103,7 @@ fun AllRelayListScreen(
     nav: INav,
 ) {
     val dmViewModel: DMRelayListViewModel = viewModel()
+    val keyPackageViewModel: KeyPackageRelayListViewModel = viewModel()
     val nip65ViewModel: Nip65RelayListViewModel = viewModel()
     val privateOutboxViewModel: PrivateOutboxRelayListViewModel = viewModel()
     val searchViewModel: SearchRelayListViewModel = viewModel()
@@ -114,6 +117,7 @@ fun AllRelayListScreen(
     val relayFeedsViewModel: RelayFeedsListViewModel = viewModel()
 
     dmViewModel.init(accountViewModel)
+    keyPackageViewModel.init(accountViewModel)
     nip65ViewModel.init(accountViewModel)
     searchViewModel.init(accountViewModel)
     localViewModel.init(accountViewModel)
@@ -128,6 +132,7 @@ fun AllRelayListScreen(
 
     LaunchedEffect(accountViewModel) {
         dmViewModel.load()
+        keyPackageViewModel.load()
         nip65ViewModel.load()
         searchViewModel.load()
         localViewModel.load()
@@ -143,6 +148,7 @@ fun AllRelayListScreen(
 
     MappedAllRelayListView(
         dmViewModel,
+        keyPackageViewModel,
         nip65ViewModel,
         searchViewModel,
         localViewModel,
@@ -163,6 +169,7 @@ fun AllRelayListScreen(
 @Composable
 fun MappedAllRelayListView(
     dmViewModel: DMRelayListViewModel,
+    keyPackageViewModel: KeyPackageRelayListViewModel,
     nip65ViewModel: Nip65RelayListViewModel,
     searchViewModel: SearchRelayListViewModel,
     localViewModel: LocalRelayListViewModel,
@@ -178,6 +185,7 @@ fun MappedAllRelayListView(
     nav: INav,
 ) {
     val dmFeedState by dmViewModel.relays.collectAsStateWithLifecycle()
+    val keyPackageFeedState by keyPackageViewModel.relays.collectAsStateWithLifecycle()
     val homeFeedState by nip65ViewModel.homeRelays.collectAsStateWithLifecycle()
     val notifFeedState by nip65ViewModel.notificationRelays.collectAsStateWithLifecycle()
     val privateOutboxFeedState by privateOutboxViewModel.relays.collectAsStateWithLifecycle()
@@ -194,6 +202,7 @@ fun MappedAllRelayListView(
     val outboxCounts by nip65ViewModel.homeCountResults.collectAsStateWithLifecycle()
     val inboxCounts by nip65ViewModel.notifCountResults.collectAsStateWithLifecycle()
     val dmCounts by dmViewModel.countResults.collectAsStateWithLifecycle()
+    val keyPackageCounts by keyPackageViewModel.countResults.collectAsStateWithLifecycle()
     val privateHomeCounts by privateOutboxViewModel.countResults.collectAsStateWithLifecycle()
     val proxyCounts by proxyViewModel.countResults.collectAsStateWithLifecycle()
     val indexerCounts by indexerViewModel.countResults.collectAsStateWithLifecycle()
@@ -213,6 +222,11 @@ fun MappedAllRelayListView(
         rememberRelayDragState(
             onMove = { from, to -> dmViewModel.moveRelay(from, to) },
             itemCount = { dmFeedState.size },
+        )
+    val keyPackageDragState =
+        rememberRelayDragState(
+            onMove = { from, to -> keyPackageViewModel.moveRelay(from, to) },
+            itemCount = { keyPackageFeedState.size },
         )
     val privateOutboxDragState =
         rememberRelayDragState(
@@ -284,6 +298,7 @@ fun MappedAllRelayListView(
                 },
                 onCancel = {
                     dmViewModel.clear()
+                    keyPackageViewModel.clear()
                     nip65ViewModel.clear()
                     searchViewModel.clear()
                     localViewModel.clear()
@@ -298,6 +313,7 @@ fun MappedAllRelayListView(
                 },
                 onPost = {
                     dmViewModel.create()
+                    keyPackageViewModel.create()
                     nip65ViewModel.create()
                     searchViewModel.create()
                     localViewModel.create()
@@ -315,7 +331,8 @@ fun MappedAllRelayListView(
     ) { pad ->
         val anyDragging =
             homeDragState.isDragging || notifDragState.isDragging ||
-                dmDragState.isDragging || privateOutboxDragState.isDragging ||
+                dmDragState.isDragging || keyPackageDragState.isDragging ||
+                privateOutboxDragState.isDragging ||
                 proxyDragState.isDragging || broadcastDragState.isDragging ||
                 indexerDragState.isDragging || searchDragState.isDragging ||
                 localDragState.isDragging || trustedDragState.isDragging ||
@@ -362,6 +379,15 @@ fun MappedAllRelayListView(
                 )
             }
             renderDMItems(dmFeedState, dmViewModel, accountViewModel, nav, dmCounts, dmDragState)
+
+            item {
+                SettingsCategory(
+                    R.string.keypackage_section,
+                    R.string.keypackage_section_explainer,
+                    SettingsCategorySpacingWithHorzBorderModifier,
+                )
+            }
+            renderKeyPackageItems(keyPackageFeedState, keyPackageViewModel, accountViewModel, nav, keyPackageCounts, keyPackageDragState)
 
             item {
                 SettingsCategory(

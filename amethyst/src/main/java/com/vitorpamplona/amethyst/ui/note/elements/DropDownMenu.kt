@@ -30,6 +30,7 @@ import androidx.compose.material.icons.outlined.CellTower
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.EmojiEmotions
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.LockOpen
 import androidx.compose.material.icons.outlined.PersonAdd
@@ -69,8 +70,10 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.report.ReportNoteDialog
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size24Modifier
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.isTaggedAddressableNote
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitiveOrNSFW
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.combine
@@ -114,6 +117,7 @@ data class DropDownParams(
     val isLoggedUser: Boolean,
     val isSensitive: Boolean,
     val showSensitiveContent: Boolean?,
+    val isEmojiPackInMyList: Boolean = false,
 )
 
 @Composable
@@ -284,14 +288,29 @@ fun NoteDropDownMenu(
                     }
                 }
             }
-            val noteBookmarkType = if (note.event is LongTextNoteEvent) stringRes(R.string.article) else stringRes(R.string.post)
-            M3ActionRow(icon = Icons.Outlined.BookmarkAdd, text = stringRes(R.string.manage_bookmark_label, noteBookmarkType)) {
-                if (note.event is LongTextNoteEvent) {
-                    nav.nav(Route.ArticleBookmarkManagement((note as AddressableNote).address))
-                } else {
-                    nav.nav(Route.PostBookmarkManagement(note.idHex))
+            // Emoji packs belong in the user's emoji list (kind 10030), not the bookmark list.
+            if (note.event is EmojiPackEvent) {
+                val emojiText =
+                    if (state.isEmojiPackInMyList) {
+                        stringRes(R.string.remove_from_emoji_list)
+                    } else {
+                        stringRes(R.string.add_to_emoji_list)
+                    }
+                M3ActionRow(icon = Icons.Outlined.EmojiEmotions, text = emojiText) {
+                    val address = (note as AddressableNote).address
+                    nav.nav(Route.EmojiPackSelection(kind = EmojiPackEvent.KIND, pubKeyHex = address.pubKeyHex, dTag = address.dTag))
+                    onDismiss()
                 }
-                onDismiss()
+            } else {
+                val noteBookmarkType = if (note.event is LongTextNoteEvent) stringRes(R.string.article) else stringRes(R.string.post)
+                M3ActionRow(icon = Icons.Outlined.BookmarkAdd, text = stringRes(R.string.manage_bookmark_label, noteBookmarkType)) {
+                    if (note.event is LongTextNoteEvent) {
+                        nav.nav(Route.ArticleBookmarkManagement((note as AddressableNote).address))
+                    } else {
+                        nav.nav(Route.PostBookmarkManagement(note.idHex))
+                    }
+                    onDismiss()
+                }
             }
             if (state.isPrivateBookmarkNote) {
                 M3ActionRow(icon = Icons.Outlined.LockOpen, text = stringRes(R.string.remove_from_private_bookmarks)) {
@@ -345,12 +364,20 @@ fun observeBookmarksFollowsAndAccount(
     note: Note,
     accountViewModel: AccountViewModel,
 ) = remember(note) {
+    val noteIdForEmoji = if (note.event is EmojiPackEvent) note.idHex else null
     combine(
         accountViewModel.account.kind3FollowList.flow,
         accountViewModel.account.bookmarkState.bookmarks,
         accountViewModel.account.pinState.pinnedEventIdSet,
         accountViewModel.showSensitiveContent(),
-    ) { follows, bookmarks, pinnedIds, showSensitiveContent ->
+        accountViewModel.account.emoji.getEmojiPackSelectionFlow(),
+    ) { follows, bookmarks, pinnedIds, showSensitiveContent, emojiSelectionState ->
+        val isEmojiPackInMyList =
+            if (noteIdForEmoji != null) {
+                emojiSelectionState.note.event?.isTaggedAddressableNote(noteIdForEmoji) == true
+            } else {
+                false
+            }
         DropDownParams(
             isFollowingAuthor = note.author?.pubkeyHex in follows.authors,
             isPrivateBookmarkNote = note in bookmarks.private,
@@ -359,6 +386,7 @@ fun observeBookmarksFollowsAndAccount(
             isLoggedUser = accountViewModel.isLoggedUser(note.author),
             isSensitive = note.event?.isSensitiveOrNSFW() ?: false,
             showSensitiveContent = showSensitiveContent,
+            isEmojiPackInMyList = isEmojiPackInMyList,
         )
     }.onStart {
         emit(
@@ -370,6 +398,12 @@ fun observeBookmarksFollowsAndAccount(
                 isLoggedUser = accountViewModel.isLoggedUser(note.author),
                 isSensitive = note.event?.isSensitiveOrNSFW() ?: false,
                 showSensitiveContent = accountViewModel.showSensitiveContent().value,
+                isEmojiPackInMyList =
+                    noteIdForEmoji?.let {
+                        accountViewModel.account.emoji
+                            .getEmojiPackSelection()
+                            ?.isTaggedAddressableNote(it) == true
+                    } ?: false,
             ),
         )
     }.flowOn(Dispatchers.IO)

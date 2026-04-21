@@ -42,9 +42,11 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_PHONE_CALL" />
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
 
     <!-- Phone calls -->
+    <uses-permission android:name="android.permission.MANAGE_OWN_CALLS" />
     <uses-permission android:name="android.permission.VIBRATE"/>
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
@@ -212,7 +214,7 @@
         <activity
             android:name=".ui.call.CallActivity"
             android:autoRemoveFromRecents="true"
-            android:configChanges="orientation|screenLayout|screenSize|smallestScreenSize|keyboardHidden|keyboard|uiMode"
+            android:configChanges="orientation|screenLayout|screenSize|smallestScreenSize|keyboardHidden|keyboard|uiMode|navigation|fontScale|density"
             android:supportsPictureInPicture="true"
             android:launchMode="singleTop"
             android:exported="false"
@@ -247,8 +249,8 @@
 
         <service
             android:name=".service.call.CallForegroundService"
-            android:foregroundServiceType="microphone|camera"
-            android:stopWithTask="true"
+            android:foregroundServiceType="microphone|camera|phoneCall"
+            android:stopWithTask="false"
             android:exported="false" />
 
         <provider

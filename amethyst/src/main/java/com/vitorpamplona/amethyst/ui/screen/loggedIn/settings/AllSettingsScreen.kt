@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.CloudUpload
 import androidx.compose.material.icons.outlined.DeleteForever
@@ -36,6 +37,8 @@ import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.GroupAdd
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Key
+import androidx.compose.material.icons.outlined.MilitaryTech
+import androidx.compose.material.icons.outlined.Phone
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material.icons.outlined.Settings
@@ -122,6 +125,20 @@ fun AllSettingsScreen(
             )
             HorizontalDivider()
             SettingsNavigationRow(
+                title = R.string.profile_badges_title,
+                icon = Icons.Outlined.MilitaryTech,
+                tint = tint,
+                onClick = { nav.nav(Route.ProfileBadges) },
+            )
+            HorizontalDivider()
+            SettingsNavigationRow(
+                title = R.string.favorite_dvms_title,
+                icon = Icons.Outlined.AutoAwesome,
+                tint = tint,
+                onClick = { nav.nav(Route.EditFavoriteAlgoFeeds) },
+            )
+            HorizontalDivider()
+            SettingsNavigationRow(
                 title = R.string.reactions,
                 icon = Icons.Outlined.FavoriteBorder,
                 tint = tint,
@@ -140,6 +157,13 @@ fun AllSettingsScreen(
                 icon = Icons.Outlined.Security,
                 tint = tint,
                 onClick = { nav.nav(Route.SecurityFilters) },
+            )
+            HorizontalDivider()
+            SettingsNavigationRow(
+                title = R.string.call_settings,
+                icon = Icons.Outlined.Phone,
+                tint = tint,
+                onClick = { nav.nav(Route.CallSettings) },
             )
             HorizontalDivider()
             SettingsNavigationRow(

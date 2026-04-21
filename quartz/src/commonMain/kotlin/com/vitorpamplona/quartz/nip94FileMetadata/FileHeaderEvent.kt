@@ -38,6 +38,7 @@ import com.vitorpamplona.quartz.nip94FileMetadata.tags.ServiceTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.SizeTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.SummaryTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.ThumbTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.ThumbhashTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.TorrentInfoHash
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.UrlTag
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -68,6 +69,8 @@ class FileHeaderEvent(
     fun torrentInfoHash() = tags.firstNotNullOfOrNull(TorrentInfoHash::parse)
 
     fun blurhash() = tags.firstNotNullOfOrNull(BlurhashTag::parse)
+
+    fun thumbhash() = tags.firstNotNullOfOrNull(ThumbhashTag::parse)
 
     fun image() = tags.firstNotNullOfOrNull(ImageTag::parse)
 
@@ -106,6 +109,7 @@ class FileHeaderEvent(
             size: Int? = null,
             dimension: DimensionTag? = null,
             blurhash: String? = null,
+            thumbhash: String? = null,
             originalHash: String? = null,
             magnetUri: String? = null,
             torrentInfoHash: String? = null,
@@ -120,6 +124,7 @@ class FileHeaderEvent(
             mimeType?.let { mimeType(it) }
             dimension?.let { dimension(it) }
             blurhash?.let { blurhash(it) }
+            thumbhash?.let { thumbhash(it) }
             originalHash?.let { originalHash(it) }
             magnetUri?.let { magnet(it) }
             torrentInfoHash?.let { torrentInfohash(it) }

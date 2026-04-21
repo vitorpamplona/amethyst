@@ -21,13 +21,12 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM
 
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import com.vitorpamplona.amethyst.service.call.CallSessionBridge
 import com.vitorpamplona.amethyst.ui.call.CallActivity
 import com.vitorpamplona.amethyst.ui.call.rememberCallWithPermission
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
@@ -49,18 +48,24 @@ fun ChatroomScreen(
     nav: INav,
 ) {
     val context = LocalContext.current
-    val isCallSupported = roomId.users.size <= 5
+    val callsEnabled by accountViewModel.account.settings.callsEnabled
+        .collectAsState()
+    val isCallSupported = roomId.users.size <= 5 && callsEnabled
     val startVoiceCall =
         rememberCallWithPermission(context) {
-            CallSessionBridge.set(accountViewModel.callManager, accountViewModel.callController, accountViewModel)
-            accountViewModel.callController?.initiateGroupCall(roomId.users.toSet(), CallType.VOICE)
-            CallActivity.launch(context)
+            CallActivity.launchForOutgoingCall(
+                context,
+                roomId.users.toSet(),
+                CallType.VOICE,
+            )
         }
     val startVideoCall =
         rememberCallWithPermission(context, isVideo = true) {
-            CallSessionBridge.set(accountViewModel.callManager, accountViewModel.callController, accountViewModel)
-            accountViewModel.callController?.initiateGroupCall(roomId.users.toSet(), CallType.VIDEO)
-            CallActivity.launch(context)
+            CallActivity.launchForOutgoingCall(
+                context,
+                roomId.users.toSet(),
+                CallType.VIDEO,
+            )
         }
 
     DisappearingScaffold(
@@ -75,8 +80,9 @@ fun ChatroomScreen(
             )
         },
         accountViewModel = accountViewModel,
+        allowBarHide = false,
     ) {
-        Column(Modifier.padding(it).consumeWindowInsets(it).statusBarsPadding()) {
+        Column(Modifier.padding(it)) {
             ChatroomView(
                 room = roomId,
                 draftMessage = draftMessage,

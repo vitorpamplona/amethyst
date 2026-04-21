@@ -31,6 +31,7 @@ class UiSettingsFlow(
     val preferredLanguage: MutableStateFlow<String?> = MutableStateFlow(null),
     val automaticallyShowImages: MutableStateFlow<ConnectivityType> = MutableStateFlow(ConnectivityType.ALWAYS),
     val automaticallyStartPlayback: MutableStateFlow<ConnectivityType> = MutableStateFlow(ConnectivityType.ALWAYS),
+    val automaticallyPlayVideos: MutableStateFlow<BooleanType> = MutableStateFlow(BooleanType.ALWAYS),
     val automaticallyShowUrlPreview: MutableStateFlow<ConnectivityType> = MutableStateFlow(ConnectivityType.ALWAYS),
     val automaticallyHideNavigationBars: MutableStateFlow<BooleanType> = MutableStateFlow(BooleanType.ALWAYS),
     val automaticallyShowProfilePictures: MutableStateFlow<ConnectivityType> = MutableStateFlow(ConnectivityType.ALWAYS),
@@ -46,6 +47,7 @@ class UiSettingsFlow(
             preferredLanguage,
             automaticallyShowImages,
             automaticallyStartPlayback,
+            automaticallyPlayVideos,
             automaticallyShowUrlPreview,
             automaticallyHideNavigationBars,
             automaticallyShowProfilePictures,
@@ -64,14 +66,15 @@ class UiSettingsFlow(
                 flows[1] as String?,
                 flows[2] as ConnectivityType,
                 flows[3] as ConnectivityType,
-                flows[4] as ConnectivityType,
-                flows[5] as BooleanType,
-                flows[6] as ConnectivityType,
-                flows[7] as Boolean,
+                flows[4] as BooleanType,
+                flows[5] as ConnectivityType,
+                flows[6] as BooleanType,
+                flows[7] as ConnectivityType,
                 flows[8] as Boolean,
-                flows[9] as FeatureSetType,
-                flows[10] as ProfileGalleryType,
-                flows[11] as BooleanType,
+                flows[9] as Boolean,
+                flows[10] as FeatureSetType,
+                flows[11] as ProfileGalleryType,
+                flows[12] as BooleanType,
             )
         }
 
@@ -81,6 +84,7 @@ class UiSettingsFlow(
             preferredLanguage.value,
             automaticallyShowImages.value,
             automaticallyStartPlayback.value,
+            automaticallyPlayVideos.value,
             automaticallyShowUrlPreview.value,
             automaticallyHideNavigationBars.value,
             automaticallyShowProfilePictures.value,
@@ -108,6 +112,10 @@ class UiSettingsFlow(
         }
         if (automaticallyStartPlayback.value != torSettings.automaticallyStartPlayback) {
             automaticallyStartPlayback.tryEmit(torSettings.automaticallyStartPlayback)
+            any = true
+        }
+        if (automaticallyPlayVideos.value != torSettings.automaticallyPlayVideos) {
+            automaticallyPlayVideos.tryEmit(torSettings.automaticallyPlayVideos)
             any = true
         }
         if (automaticallyShowUrlPreview.value != torSettings.automaticallyShowUrlPreview) {
@@ -165,6 +173,7 @@ class UiSettingsFlow(
                 MutableStateFlow(uiSettings.preferredLanguage),
                 MutableStateFlow(uiSettings.automaticallyShowImages),
                 MutableStateFlow(uiSettings.automaticallyStartPlayback),
+                MutableStateFlow(uiSettings.automaticallyPlayVideos),
                 MutableStateFlow(uiSettings.automaticallyShowUrlPreview),
                 MutableStateFlow(uiSettings.automaticallyHideNavigationBars),
                 MutableStateFlow(uiSettings.automaticallyShowProfilePictures),

@@ -68,6 +68,7 @@ fun VideoView(
     onDialog: (() -> Unit)? = null,
     accountViewModel: AccountViewModel,
     alwaysShowVideo: Boolean = false,
+    thumbhash: String? = null,
 ) {
     val borderModifier =
         if (roundedCorner) {
@@ -78,7 +79,7 @@ fun VideoView(
             Modifier
         }
 
-    VideoView(videoUri, mimeType, title, thumb, borderModifier, contentScale, waveform, artworkUri, authorName, dimensions, blurhash, nostrUriCallback, onDialog, alwaysShowVideo, accountViewModel = accountViewModel)
+    VideoView(videoUri, mimeType, title, thumb, borderModifier, contentScale, waveform, artworkUri, authorName, dimensions, blurhash, nostrUriCallback, onDialog, alwaysShowVideo, accountViewModel = accountViewModel, thumbhash = thumbhash)
 }
 
 @Composable
@@ -99,15 +100,16 @@ fun VideoView(
     alwaysShowVideo: Boolean = false,
     showControls: Boolean = true,
     accountViewModel: AccountViewModel,
+    thumbhash: String? = null,
 ) {
-    val automaticallyStartPlayback =
-        remember {
-            mutableStateOf(
-                if (alwaysShowVideo) true else accountViewModel.settings.startVideoPlayback(),
-            )
-        }
+    val initialAutoStart = if (alwaysShowVideo) true else accountViewModel.settings.startVideoPlayback()
+    val automaticallyStartPlayback = remember { mutableStateOf(initialAutoStart) }
 
-    if (blurhash == null) {
+    // Once the video is being shown, only honor the user's autoplay preference when it was auto-loaded.
+    // If the user manually tapped the download button, they want it to play.
+    val autoplay = alwaysShowVideo || (initialAutoStart && accountViewModel.settings.autoPlayVideos()) || (!initialAutoStart && automaticallyStartPlayback.value)
+
+    if (blurhash == null && thumbhash == null) {
         val ratio = dimensions?.aspectRatio() ?: MediaAspectRatioCache.get(videoUri)
 
         val modifier =
@@ -135,8 +137,9 @@ fun VideoView(
                     artworkUri = artworkUri,
                     authorName = authorName,
                     nostrUriCallback = nostrUriCallback,
-                    automaticallyStartPlayback = automaticallyStartPlayback.value,
+                    automaticallyStartPlayback = autoplay,
                     onZoom = onDialog,
+                    hasBlurhash = false,
                     accountViewModel = accountViewModel,
                     showControls = showControls,
                 )
@@ -153,12 +156,13 @@ fun VideoView(
             }
 
         Box(modifier, contentAlignment = Alignment.Center) {
-            // Always displays Blurharh to avoid size flickering
+            // Always displays a placeholder (thumbhash preferred, blurhash fallback) to avoid size flickering
             DisplayBlurHash(
                 blurhash,
                 null,
                 contentScale,
                 if (ratio != null) borderModifier.aspectRatio(ratio) else borderModifier,
+                thumbhash = thumbhash,
             )
 
             if (!automaticallyStartPlayback.value) {
@@ -181,8 +185,9 @@ fun VideoView(
                     artworkUri = artworkUri,
                     authorName = authorName,
                     nostrUriCallback = nostrUriCallback,
-                    automaticallyStartPlayback = automaticallyStartPlayback.value,
+                    automaticallyStartPlayback = autoplay,
                     onZoom = onDialog,
+                    hasBlurhash = true,
                     accountViewModel = accountViewModel,
                     showControls = showControls,
                 )

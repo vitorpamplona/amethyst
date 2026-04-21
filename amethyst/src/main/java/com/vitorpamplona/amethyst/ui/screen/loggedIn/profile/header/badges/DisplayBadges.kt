@@ -20,17 +20,44 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.badges
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
@@ -43,12 +70,11 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNo
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.BadgePictureModifier
-import com.vitorpamplona.amethyst.ui.theme.Size35Modifier
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip58Badges.accepted.AcceptedBadgeSetEvent
 import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
@@ -60,8 +86,12 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.launch
+
+private val ProfileBadgeSize = 44.dp
+private val ProfileBadgeShape = RoundedCornerShape(8.dp)
+private const val VISIBLE_BADGE_LIMIT = 8
 
 @Composable
 fun DisplayBadges(
@@ -75,91 +105,242 @@ fun DisplayBadges(
     val oldNote = accountViewModel.getOrCreateAddressableNote(oldDesign)
     val newNote = accountViewModel.getOrCreateAddressableNote(newDesign)
 
-    WatchAndRenderBadgeList(oldNote, newNote, accountViewModel, nav)
+    WatchAndRenderBadgeList(baseUser, oldNote, newNote, accountViewModel, nav)
 }
 
 @Composable
 private fun WatchAndRenderBadgeList(
+    baseUser: User,
     oldNote: AddressableNote,
     newNote: AddressableNote,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    // Subscribe in the relay for changes in this note.
     EventFinderFilterAssemblerSubscription(oldNote, accountViewModel)
     EventFinderFilterAssemblerSubscription(newNote, accountViewModel)
 
-    // Subscribe in the LocalCache for changes that arrive in the device
     val flow =
         remember(oldNote, newNote) {
             combine(
                 oldNote.flow().metadata.stateFlow,
                 newNote.flow().metadata.stateFlow,
-            ) { oldNote, newNote ->
-                val oldProfileBadgeEvent = oldNote.note.event as? AcceptedBadgeSetEvent
-                val newProfileBadgeEvent = newNote.note.event as? ProfileBadgesEvent
+            ) { oldNoteState, newNoteState ->
+                val oldEvent = oldNoteState.note.event as? AcceptedBadgeSetEvent
+                val newEvent = newNoteState.note.event as? ProfileBadgesEvent
 
-                newProfileBadgeEvent?.badgeAwardEvents()?.toImmutableList()
-                    ?: oldProfileBadgeEvent?.badgeAwardEvents()?.toImmutableList()
+                newEvent?.badgeAwardEvents()?.toImmutableList()
+                    ?: oldEvent?.badgeAwardEvents()?.toImmutableList()
+                    ?: persistentListOf()
             }.distinctUntilChanged()
                 .flowOn(Dispatchers.IO)
         }
 
-    // Subscribe in the LocalCache for changes that arrive in the device
     val badgeList by flow.collectAsStateWithLifecycle(persistentListOf())
 
-    badgeList?.let { list -> RenderBadgeList(list, accountViewModel, nav) }
+    if (badgeList.isEmpty()) return
+
+    val isMe = baseUser.pubkeyHex == accountViewModel.userProfile().pubkeyHex
+    RenderProfileBadgeStrip(badgeList, isMe, accountViewModel, nav)
 }
 
-@Composable
 @OptIn(ExperimentalLayoutApi::class)
-private fun RenderBadgeList(
+@Composable
+private fun RenderProfileBadgeStrip(
     list: ImmutableList<ETag>,
+    isMe: Boolean,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    FlowRow(
-        verticalArrangement = Arrangement.Center,
-        modifier = Modifier.padding(vertical = 5.dp),
-    ) {
-        list.forEach { badgeAwardEvent -> LoadAndRenderBadge(badgeAwardEvent, accountViewModel, nav) }
+    var showAllSheet by rememberSaveable { mutableStateOf(false) }
+    val visible = remember(list) { list.take(VISIBLE_BADGE_LIMIT) }
+    val overflow = (list.size - VISIBLE_BADGE_LIMIT).coerceAtLeast(0)
+
+    Column(modifier = Modifier.padding(vertical = 6.dp)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(
+                text = stringRes(R.string.profile_badges_header, list.size),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f),
+            )
+            if (isMe) {
+                IconButton(
+                    onClick = { nav.nav(Route.ProfileBadges) },
+                    modifier = Modifier.size(32.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Settings,
+                        contentDescription = stringRes(R.string.profile_badges_title),
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            visible.forEach { eTag ->
+                LoadDefinitionForAward(eTag, accountViewModel) { defNote ->
+                    BadgeThumb(defNote, accountViewModel, nav)
+                }
+            }
+            if (overflow > 0) {
+                OverflowChip(overflow) { showAllSheet = true }
+            }
+        }
+    }
+
+    if (showAllSheet) {
+        AllBadgesSheet(
+            awards = list,
+            accountViewModel = accountViewModel,
+            nav = nav,
+            onDismiss = { showAllSheet = false },
+        )
     }
 }
 
 @Composable
-private fun LoadAndRenderBadge(
-    badgeAwardEvent: ETag,
+private fun OverflowChip(
+    count: Int,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier =
+            Modifier
+                .size(ProfileBadgeSize)
+                .clip(ProfileBadgeShape)
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = "+$count",
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AllBadgesSheet(
+    awards: ImmutableList<ETag>,
     accountViewModel: AccountViewModel,
     nav: INav,
+    onDismiss: () -> Unit,
 ) {
-    val baseNote =
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val scope = rememberCoroutineScope()
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+    ) {
+        Text(
+            text = stringRes(R.string.profile_badges_header, awards.size),
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+        )
+        LazyColumn(modifier = Modifier.fillMaxWidth()) {
+            items(items = awards, key = { it.eventId }) { eTag ->
+                LoadDefinitionForAward(eTag, accountViewModel) { defNote ->
+                    BadgeSheetRow(
+                        defNote = defNote,
+                        accountViewModel = accountViewModel,
+                        onClick = {
+                            val route = routeFor(defNote, accountViewModel.account)
+                            scope.launch {
+                                sheetState.hide()
+                                onDismiss()
+                                route?.let { nav.nav(it) }
+                            }
+                        },
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun BadgeSheetRow(
+    defNote: Note,
+    accountViewModel: AccountViewModel,
+    onClick: () -> Unit,
+) {
+    val event by observeNoteEvent<BadgeDefinitionEvent>(defNote, accountViewModel)
+    val definition = event ?: return
+
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(horizontal = 20.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        RenderBadgeImage(
+            id = definition.id,
+            name = definition.name(),
+            image =
+                definition.thumb()?.ifBlank { null }
+                    ?: definition.image()?.ifBlank { null },
+            accountViewModel = accountViewModel,
+        )
+        Spacer(modifier = Modifier.size(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = definition.name()?.ifBlank { null } ?: stringRes(R.string.badge_untitled),
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            definition.description()?.takeIf { it.isNotBlank() }?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun LoadDefinitionForAward(
+    eTag: ETag,
+    accountViewModel: AccountViewModel,
+    content: @Composable (Note) -> Unit,
+) {
+    val awardNote =
         produceState(
-            LocalCache.getNoteIfExists(badgeAwardEvent),
-            badgeAwardEvent,
+            LocalCache.getNoteIfExists(eTag),
+            eTag,
         ) {
-            val newValue = LocalCache.checkGetOrCreateNote(badgeAwardEvent)
+            val newValue = LocalCache.checkGetOrCreateNote(eTag)
             if (newValue != value) {
                 value = newValue
             }
         }
 
-    baseNote.value?.let {
-        ObserveAndRenderBadge(it, accountViewModel, nav)
-    }
-}
-
-@Composable
-private fun ObserveAndRenderBadge(
-    it: Note,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    val badgeAwardState by observeNoteEvent<BadgeAwardEvent>(it, accountViewModel)
-    val badgeDefinitionId = badgeAwardState?.awardDefinition()?.firstOrNull()
-    if (badgeDefinitionId != null) {
-        LoadAddressableNote(badgeDefinitionId, accountViewModel) { badgeDefNote ->
-            badgeDefNote?.let {
-                BadgeThumb(it, accountViewModel, nav)
+    awardNote.value?.let { note ->
+        val awardEvent by observeNoteEvent<BadgeAwardEvent>(note, accountViewModel)
+        awardEvent?.awardDefinition()?.firstOrNull()?.let { defAddr ->
+            LoadAddressableNote(defAddr, accountViewModel) { defNote ->
+                defNote?.let { content(it) }
             }
         }
     }
@@ -173,13 +354,16 @@ fun BadgeThumb(
 ) {
     Box(
         modifier =
-            Size35Modifier.clickable(
-                onClick = {
-                    nav.nav {
-                        routeFor(baseNote, accountViewModel.account)
-                    }
-                },
-            ),
+            Modifier
+                .size(ProfileBadgeSize)
+                .clip(ProfileBadgeShape)
+                .clickable(
+                    onClick = {
+                        nav.nav {
+                            routeFor(baseNote, accountViewModel.account)
+                        }
+                    },
+                ),
     ) {
         WatchAndRenderBadgeImage(baseNote, accountViewModel)
     }
@@ -215,11 +399,13 @@ private fun RenderBadgeImage(
             stringRes(id = R.string.badge_award_image)
         }
 
+    val modifier = Modifier.size(ProfileBadgeSize).clip(ProfileBadgeShape)
+
     if (image == null) {
         RobohashAsyncImage(
             robot = "badgenotfound",
             contentDescription = description,
-            modifier = BadgePictureModifier,
+            modifier = modifier,
             loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
         )
     } else {
@@ -227,7 +413,7 @@ private fun RenderBadgeImage(
             robot = id,
             model = image,
             contentDescription = description,
-            modifier = BadgePictureModifier,
+            modifier = modifier,
             loadProfilePicture = accountViewModel.settings.showProfilePictures(),
             loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
         )

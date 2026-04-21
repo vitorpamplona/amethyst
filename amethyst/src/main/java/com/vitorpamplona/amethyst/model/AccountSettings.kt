@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.screen.FeedDefinition
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
@@ -42,6 +43,7 @@ import com.vitorpamplona.quartz.nip37Drafts.privateOutbox.PrivateOutboxRelayList
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.favoriteAlgoFeedsList.FavoriteAlgoFeedsListEvent
 import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
 import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
@@ -125,6 +127,9 @@ sealed class TopFilter(
     object Chess : TopFilter(" Chess ")
 
     @Serializable
+    object Mine : TopFilter(" Mine ")
+
+    @Serializable
     class PeopleList(
         val address: Address,
     ) : TopFilter(address.toValue())
@@ -153,6 +158,18 @@ sealed class TopFilter(
     class Relay(
         val url: String,
     ) : TopFilter("Relay/$url")
+
+    @Serializable
+    class FavoriteAlgoFeed(
+        val address: Address,
+    ) : TopFilter("FavoriteAlgoFeed/${address.toValue()}")
+
+    @Serializable object AllFavoriteAlgoFeeds : TopFilter(" All Favourite DVMs ")
+
+    @Serializable
+    class InterestSet(
+        val address: Address,
+    ) : TopFilter("InterestSet/${address.toValue()}")
 }
 
 @Stable
@@ -169,8 +186,13 @@ class AccountSettings(
     val defaultDiscoveryFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultPollsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultPicturesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
+    val defaultProductsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.AroundMe),
     val defaultShortsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultLongsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
+    val defaultArticlesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.AllFollows),
+    val defaultBadgesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Mine),
+    val defaultBrowseEmojiSetsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
+    val defaultCommunitiesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.AllFollows),
     val nwcWallets: MutableStateFlow<List<NwcWalletEntryNorm>> = MutableStateFlow(emptyList()),
     val defaultNwcWalletId: MutableStateFlow<String?> = MutableStateFlow(null),
     var hideDeleteRequestDialog: Boolean = false,
@@ -179,6 +201,7 @@ class AccountSettings(
     var backupUserMetadata: MetadataEvent? = null,
     var backupContactList: ContactListEvent? = null,
     var backupDMRelayList: ChatMessageRelayListEvent? = null,
+    var backupKeyPackageRelayList: KeyPackageRelayListEvent? = null,
     var backupNIP65RelayList: AdvertisedRelayListEvent? = null,
     var backupSearchRelayList: SearchRelayListEvent? = null,
     var backupIndexRelayList: IndexerRelayListEvent? = null,
@@ -191,6 +214,7 @@ class AccountSettings(
     var backupChannelList: ChannelListEvent? = null,
     var backupCommunityList: CommunityListEvent? = null,
     var backupHashtagList: HashtagListEvent? = null,
+    var backupFavoriteAlgoFeedsList: FavoriteAlgoFeedsListEvent? = null,
     var backupGeohashList: GeohashListEvent? = null,
     var backupEphemeralChatList: EphemeralChatListEvent? = null,
     var backupTrustProviderList: TrustProviderListEvent? = null,
@@ -200,6 +224,10 @@ class AccountSettings(
     val viewedPollResultNoteIds: MutableStateFlow<Map<String, Long>> = MutableStateFlow(mapOf()),
     val pendingAttestations: MutableStateFlow<Map<HexKey, String>> = MutableStateFlow(mapOf()),
     var backupNipA3PaymentTargets: PaymentTargetsEvent? = null,
+    var callTurnServers: List<CallTurnServer> = emptyList(),
+    var callVideoResolution: CallVideoResolution = CallVideoResolution.HD_720,
+    var callMaxBitrateBps: Int = 1_500_000,
+    val callsEnabled: MutableStateFlow<Boolean> = MutableStateFlow(true),
 ) : EphemeralChatRepository,
     PublicChatListRepository {
     val saveable = MutableStateFlow(AccountSettingsUpdater(null))
@@ -440,6 +468,17 @@ class AccountSettings(
         }
     }
 
+    fun changeDefaultCommunitiesFollowList(name: FeedDefinition) {
+        changeDefaultCommunitiesFollowList(name.code)
+    }
+
+    fun changeDefaultCommunitiesFollowList(name: TopFilter) {
+        if (defaultCommunitiesFollowList.value != name) {
+            defaultCommunitiesFollowList.tryEmit(name)
+            saveAccountSettings()
+        }
+    }
+
     fun changeDefaultPicturesFollowList(name: FeedDefinition) {
         changeDefaultPicturesFollowList(name.code)
     }
@@ -447,6 +486,17 @@ class AccountSettings(
     fun changeDefaultPicturesFollowList(name: TopFilter) {
         if (defaultPicturesFollowList.value != name) {
             defaultPicturesFollowList.tryEmit(name)
+            saveAccountSettings()
+        }
+    }
+
+    fun changeDefaultProductsFollowList(name: FeedDefinition) {
+        changeDefaultProductsFollowList(name.code)
+    }
+
+    fun changeDefaultProductsFollowList(name: TopFilter) {
+        if (defaultProductsFollowList.value != name) {
+            defaultProductsFollowList.tryEmit(name)
             saveAccountSettings()
         }
     }
@@ -469,6 +519,39 @@ class AccountSettings(
     fun changeDefaultLongsFollowList(name: TopFilter) {
         if (defaultLongsFollowList.value != name) {
             defaultLongsFollowList.tryEmit(name)
+            saveAccountSettings()
+        }
+    }
+
+    fun changeDefaultArticlesFollowList(name: FeedDefinition) {
+        changeDefaultArticlesFollowList(name.code)
+    }
+
+    fun changeDefaultArticlesFollowList(name: TopFilter) {
+        if (defaultArticlesFollowList.value != name) {
+            defaultArticlesFollowList.tryEmit(name)
+            saveAccountSettings()
+        }
+    }
+
+    fun changeDefaultBadgesFollowList(name: FeedDefinition) {
+        changeDefaultBadgesFollowList(name.code)
+    }
+
+    fun changeDefaultBadgesFollowList(name: TopFilter) {
+        if (defaultBadgesFollowList.value != name) {
+            defaultBadgesFollowList.tryEmit(name)
+            saveAccountSettings()
+        }
+    }
+
+    fun changeDefaultBrowseEmojiSetsFollowList(name: FeedDefinition) {
+        changeDefaultBrowseEmojiSetsFollowList(name.code)
+    }
+
+    fun changeDefaultBrowseEmojiSetsFollowList(name: TopFilter) {
+        if (defaultBrowseEmojiSetsFollowList.value != name) {
+            defaultBrowseEmojiSetsFollowList.tryEmit(name)
             saveAccountSettings()
         }
     }
@@ -562,6 +645,16 @@ class AccountSettings(
         // Events might be different objects, we have to compare their ids.
         if (backupDMRelayList?.id != newDMRelayList.id) {
             backupDMRelayList = newDMRelayList
+            saveAccountSettings()
+        }
+    }
+
+    fun updateKeyPackageRelayList(newKeyPackageRelayList: KeyPackageRelayListEvent?) {
+        if (newKeyPackageRelayList == null || newKeyPackageRelayList.tags.isEmpty()) return
+
+        // Events might be different objects, we have to compare their ids.
+        if (backupKeyPackageRelayList?.id != newKeyPackageRelayList.id) {
+            backupKeyPackageRelayList = newKeyPackageRelayList
             saveAccountSettings()
         }
     }
@@ -674,6 +767,16 @@ class AccountSettings(
         // Events might be different objects, we have to compare their ids.
         if (backupHashtagList?.id != newHashtagList.id) {
             backupHashtagList = newHashtagList
+            saveAccountSettings()
+        }
+    }
+
+    fun updateFavoriteAlgoFeedsListTo(newFavoriteDvmList: FavoriteAlgoFeedsListEvent?) {
+        if (newFavoriteDvmList == null || newFavoriteDvmList.tags.isEmpty()) return
+
+        // Events might be different objects, we have to compare their ids.
+        if (backupFavoriteAlgoFeedsList?.id != newFavoriteDvmList.id) {
+            backupFavoriteAlgoFeedsList = newFavoriteDvmList
             saveAccountSettings()
         }
     }
@@ -920,4 +1023,49 @@ class AccountSettings(
         } else {
             false
         }
+
+    // ---
+    // Call settings
+    // ---
+
+    fun changeCallTurnServers(servers: List<CallTurnServer>) {
+        callTurnServers = servers
+        saveAccountSettings()
+    }
+
+    fun changeCallVideoResolution(resolution: CallVideoResolution) {
+        callVideoResolution = resolution
+        saveAccountSettings()
+    }
+
+    fun changeCallMaxBitrateBps(bitrate: Int) {
+        callMaxBitrateBps = bitrate
+        saveAccountSettings()
+    }
+
+    fun changeCallsEnabled(enabled: Boolean) {
+        if (callsEnabled.value != enabled) {
+            callsEnabled.tryEmit(enabled)
+            saveAccountSettings()
+        }
+    }
+}
+
+@Serializable
+data class CallTurnServer(
+    val url: String,
+    val username: String,
+    val credential: String,
+)
+
+@Serializable
+enum class CallVideoResolution(
+    val width: Int,
+    val height: Int,
+    val fps: Int,
+    val label: String,
+) {
+    SD_480(640, 480, 30, "480p"),
+    HD_720(1280, 720, 30, "720p (default)"),
+    FHD_1080(1920, 1080, 30, "1080p"),
 }

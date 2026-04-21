@@ -20,11 +20,19 @@
  */
 package com.vitorpamplona.quartz.nip30CustomEmoji
 
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import kotlin.test.Test
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class Nip30Test {
+    companion object {
+        private const val TEST_PUBKEY = "0000000000000000000000000000000000000000000000000000000000000abc"
+    }
+
     @Test()
     fun parseEmoji() {
         val tags = mapOf(":soapbox:" to "http://soapbox")
@@ -163,5 +171,64 @@ class Nip30Test {
         assertEquals("\u200Bを食べました\u200B", (result[i++] as CustomEmoji.TextType).text)
         assertEquals("https://media.misskeyusercontent.com/misskey/f6294900-f678-43cc-bc36-3ee5deeca4c2.gif", (result[i++] as CustomEmoji.ImageUrlType).url)
         assertEquals("\u200B\n#ioメシヨソイゲーム\nhttps://misskey.io/play/9g3qza4jow", (result[i] as CustomEmoji.TextType).text)
+    }
+
+    @Test
+    fun emojiTagWithoutEmojiSetRoundtrip() {
+        val tag = EmojiUrlTag("soapbox", "http://soapbox")
+        assertContentEquals(arrayOf("emoji", "soapbox", "http://soapbox"), tag.toTagArray())
+        assertEquals(tag, EmojiUrlTag.parse(tag.toTagArray()))
+    }
+
+    @Test
+    fun emojiTagWithEmojiSetRoundtrip() {
+        val setAddress = Address(30030, TEST_PUBKEY, "emojis-fall")
+        val tag = EmojiUrlTag("soapbox", "http://soapbox", setAddress)
+        assertContentEquals(arrayOf("emoji", "soapbox", "http://soapbox", setAddress.toValue()), tag.toTagArray())
+        assertEquals(tag, EmojiUrlTag.parse(tag.toTagArray()))
+    }
+
+    @Test
+    fun parseIgnoresTrailingFields() {
+        val setAddress = Address(30030, TEST_PUBKEY, "pack")
+        val tag = arrayOf("emoji", "soapbox", "http://soapbox", setAddress.toValue(), "extra")
+        val parsed = EmojiUrlTag.parse(tag)
+        assertEquals(EmojiUrlTag("soapbox", "http://soapbox", setAddress), parsed)
+    }
+
+    @Test
+    fun parseMalformedEmojiSetAddressYieldsNull() {
+        val tag = arrayOf("emoji", "soapbox", "http://soapbox", "not-an-address")
+        val parsed = EmojiUrlTag.parse(tag)
+        assertEquals(EmojiUrlTag("soapbox", "http://soapbox", null), parsed)
+    }
+
+    @Test
+    fun parseRejectsWrongTagName() {
+        assertNull(EmojiUrlTag.parse(arrayOf("t", "soapbox", "http://soapbox")))
+    }
+
+    @Test
+    fun parseRejectsTooFewFields() {
+        assertNull(EmojiUrlTag.parse(arrayOf("emoji", "soapbox")))
+    }
+
+    @Test
+    fun validShortcodesAcceptAlphanumericUnderscoreHyphen() {
+        assertTrue(EmojiUrlTag.isValidShortcode("soapbox"))
+        assertTrue(EmojiUrlTag.isValidShortcode("Soap_Box-123"))
+        assertTrue(EmojiUrlTag.isValidShortcode("ABC"))
+        assertTrue(EmojiUrlTag.isValidShortcode("007"))
+    }
+
+    @Test
+    fun invalidShortcodesRejected() {
+        assertFalse(EmojiUrlTag.isValidShortcode(""))
+        assertFalse(EmojiUrlTag.isValidShortcode("soap box"))
+        assertFalse(EmojiUrlTag.isValidShortcode("soap:box"))
+        assertFalse(EmojiUrlTag.isValidShortcode("soap.box"))
+        assertFalse(EmojiUrlTag.isValidShortcode("soap/box"))
+        assertFalse(EmojiUrlTag.isValidShortcode("soap!"))
+        assertFalse(EmojiUrlTag.isValidShortcode("絵文字"))
     }
 }

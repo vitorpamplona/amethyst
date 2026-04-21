@@ -30,15 +30,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Article
-import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Extension
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationRail
@@ -49,11 +41,8 @@ import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.domain.nip46.SignerConnectionState
@@ -68,29 +57,10 @@ import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscription
 import com.vitorpamplona.amethyst.desktop.ui.ZapFeedback
 import com.vitorpamplona.amethyst.desktop.ui.components.RelayHealthIndicator
 import com.vitorpamplona.amethyst.desktop.ui.media.LocalIsImmersiveFullscreen
+import com.vitorpamplona.amethyst.desktop.ui.tor.LocalTorState
+import com.vitorpamplona.amethyst.desktop.ui.tor.TorStatusIndicator
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect.Nip47URINorm
 import kotlinx.coroutines.CoroutineScope
-
-private data class NavItem(
-    val type: DeckColumnType,
-    val icon: ImageVector,
-    val label: String,
-)
-
-private val navItems =
-    listOf(
-        NavItem(DeckColumnType.HomeFeed, Icons.Default.Home, "Home"),
-        NavItem(DeckColumnType.Reads, Icons.AutoMirrored.Filled.Article, "Reads"),
-        NavItem(DeckColumnType.Drafts, Icons.AutoMirrored.Filled.Article, "Drafts"),
-        NavItem(DeckColumnType.MyHighlights, Icons.AutoMirrored.Filled.Article, "Highlights"),
-        NavItem(DeckColumnType.Search, Icons.Default.Search, "Search"),
-        NavItem(DeckColumnType.Bookmarks, Icons.Default.Bookmark, "Bookmarks"),
-        NavItem(DeckColumnType.Messages, Icons.Default.Email, "Messages"),
-        NavItem(DeckColumnType.Notifications, Icons.Default.Notifications, "Notifications"),
-        NavItem(DeckColumnType.MyProfile, Icons.Default.Person, "Profile"),
-        NavItem(DeckColumnType.Chess, Icons.Default.Extension, "Chess"),
-        NavItem(DeckColumnType.Settings, Icons.Default.Settings, "Settings"),
-    )
 
 @Composable
 fun SinglePaneLayout(
@@ -104,6 +74,9 @@ fun SinglePaneLayout(
     highlightStore: DesktopHighlightStore,
     draftStore: com.vitorpamplona.amethyst.desktop.service.drafts.DesktopDraftStore,
     appScope: CoroutineScope,
+    singlePaneState: SinglePaneState,
+    pinnedNavBarState: PinnedNavBarState,
+    onOpenAppDrawer: () -> Unit,
     onShowComposeDialog: () -> Unit,
     onShowReplyDialog: (com.vitorpamplona.quartz.nip01Core.core.Event) -> Unit,
     onZapFeedback: (ZapFeedback) -> Unit,
@@ -112,7 +85,7 @@ fun SinglePaneLayout(
     lastRelayEventAt: Long? = null,
     modifier: Modifier = Modifier,
 ) {
-    var currentColumnType by remember { mutableStateOf<DeckColumnType>(DeckColumnType.HomeFeed) }
+    val currentColumnType by singlePaneState.currentScreen.collectAsState()
     val navState = remember { ColumnNavigationState() }
     val navStack by navState.stack.collectAsState()
     val currentOverlay = navStack.lastOrNull()
@@ -125,23 +98,24 @@ fun SinglePaneLayout(
                 modifier = Modifier.width(80.dp).fillMaxHeight(),
                 containerColor = MaterialTheme.colorScheme.surfaceVariant,
             ) {
-                navItems.forEach { item ->
+                val pinnedScreens by pinnedNavBarState.pinnedScreens.collectAsState()
+                pinnedScreens.forEach { screenType ->
                     NavigationRailItem(
-                        selected = currentColumnType == item.type && navStack.isEmpty(),
+                        selected = currentColumnType == screenType && navStack.isEmpty(),
                         onClick = {
-                            currentColumnType = item.type
+                            singlePaneState.navigate(screenType)
                             navState.clear()
                         },
                         icon = {
                             Icon(
-                                item.icon,
-                                contentDescription = item.label,
+                                screenType.icon(),
+                                contentDescription = screenType.title(),
                                 modifier = Modifier.size(22.dp),
                             )
                         },
                         label = {
                             Text(
-                                item.label,
+                                screenType.title(),
                                 style = MaterialTheme.typography.labelSmall,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
@@ -149,6 +123,25 @@ fun SinglePaneLayout(
                         },
                     )
                 }
+
+                NavigationRailItem(
+                    selected = false,
+                    onClick = onOpenAppDrawer,
+                    icon = {
+                        Icon(
+                            Icons.Default.Apps,
+                            contentDescription = "App Drawer",
+                            modifier = Modifier.size(22.dp),
+                        )
+                    },
+                    label = {
+                        Text(
+                            "More",
+                            style = MaterialTheme.typography.labelSmall,
+                            maxLines = 1,
+                        )
+                    },
+                )
 
                 Spacer(Modifier.weight(1f))
 
@@ -161,6 +154,17 @@ fun SinglePaneLayout(
                 BunkerHeartbeatIndicator(
                     signerConnectionState = signerConnectionState,
                     lastPingTimeSec = lastPingTimeSec,
+                    modifier = Modifier.padding(bottom = 4.dp),
+                )
+
+                // Tor status — always last so it's never pushed off screen
+                val torState = LocalTorState.current
+                TorStatusIndicator(
+                    status = torState.status,
+                    onClick = {
+                        singlePaneState.navigate(DeckColumnType.Settings)
+                        navState.clear()
+                    },
                     modifier = Modifier.padding(bottom = 12.dp),
                 )
             }

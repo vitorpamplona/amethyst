@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.marmot.mls.group
 
+import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsReader
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsWriter
 import com.vitorpamplona.quartz.marmot.mls.crypto.Ed25519
@@ -30,6 +31,9 @@ import com.vitorpamplona.quartz.marmot.mls.crypto.X25519
 import com.vitorpamplona.quartz.marmot.mls.framing.ContentType
 import com.vitorpamplona.quartz.marmot.mls.framing.MlsMessage
 import com.vitorpamplona.quartz.marmot.mls.framing.PrivateMessage
+import com.vitorpamplona.quartz.marmot.mls.framing.PublicMessage
+import com.vitorpamplona.quartz.marmot.mls.framing.Sender
+import com.vitorpamplona.quartz.marmot.mls.framing.SenderType
 import com.vitorpamplona.quartz.marmot.mls.framing.WireFormat
 import com.vitorpamplona.quartz.marmot.mls.messages.Commit
 import com.vitorpamplona.quartz.marmot.mls.messages.CommitResult
@@ -113,6 +117,32 @@ class MlsGroup private constructor(
     val epoch: Long get() = groupContext.epoch
     val leafIndex: Int get() = myLeafIndex
     val extensions: List<com.vitorpamplona.quartz.marmot.mls.tree.Extension> get() = groupContext.extensions
+
+    // --- Marmot admin helpers (MIP-01 / MIP-03) ---
+
+    /** Raw BasicCredential identity bytes of the member at the given leaf, or null. */
+    fun memberIdentity(leafIndex: Int): ByteArray? = (tree.getLeaf(leafIndex)?.credential as? Credential.Basic)?.identity
+
+    /** Lowercase hex of the member's BasicCredential identity, or null. */
+    fun memberIdentityHex(leafIndex: Int): String? = memberIdentity(leafIndex)?.toHexKey()
+
+    /** Lowercase hex of the local member's BasicCredential identity, or null. */
+    fun myIdentityHex(): String? = memberIdentityHex(myLeafIndex)
+
+    /** Parsed Marmot Group Data Extension from the current GroupContext, or null. */
+    fun currentMarmotData(): MarmotGroupData? = MarmotGroupData.fromExtensions(groupContext.extensions)
+
+    /** True if the local member appears in the group's current `admin_pubkeys` list. */
+    fun isLocalAdmin(): Boolean {
+        val id = myIdentityHex() ?: return false
+        return currentMarmotData()?.isAdmin(id) ?: false
+    }
+
+    /** True if the member at [leafIndex] is listed as admin in the current group data. */
+    fun isLeafAdmin(leafIndex: Int): Boolean {
+        val id = memberIdentityHex(leafIndex) ?: return false
+        return currentMarmotData()?.isAdmin(id) ?: false
+    }
 
     // --- State Persistence ---
 
@@ -255,8 +285,16 @@ class MlsGroup private constructor(
 
     /**
      * Create a SelfRemove proposal.
+     *
+     * Per MIP-01/MIP-03, members listed in `admin_pubkeys` MUST NOT issue a
+     * SelfRemove — they have to first publish a GroupContextExtensions proposal
+     * removing themselves from the admin list (self-demotion). This guard
+     * enforces that rule at the local sender.
      */
     fun proposeSelfRemove(): Proposal.SelfRemove {
+        check(!isLocalAdmin()) {
+            "Admin must self-demote via GroupContextExtensions before SelfRemove (MIP-01)"
+        }
         val proposal = Proposal.SelfRemove()
         pendingProposals.add(PendingProposal(proposal, myLeafIndex))
         return proposal
@@ -351,24 +389,48 @@ class MlsGroup private constructor(
      */
     fun commit(): CommitResult {
         val proposals = pendingProposals.toList()
+
+        // --- MIP-03 authorization gate -----------------------------------------
+        //
+        // Non-admin senders may only issue one of two restricted commit shapes:
+        //   (a) a single self-Update targeting their own leaf, or
+        //   (b) one or more SelfRemove proposals, all by themselves (no mixing).
+        //
+        // Admins may commit any proposal type.
+        enforceAuthorizedProposalSet(proposals)
+
+        // Reject commits that would leave the group without a usable admin
+        // (i.e. no remaining member appears in the post-commit admin list).
+        enforceNoAdminDepletion(proposals)
+
+        // Capture the pre-commit exporter secret BEFORE any mutation.
+        // Publishers of the outbound kind:445 MUST outer-encrypt with this
+        // key (epoch N) so that other existing members at epoch N can decrypt
+        // and process the commit. See CommitResult.preCommitExporterSecret.
+        val preCommitExporterSecret =
+            exporterSecret("marmot", "group-event".encodeToByteArray(), 32)
+
         val proposalOrRefs = proposals.map { ProposalOrRef.Inline(it.proposal) }
 
         // Check if we need an UpdatePath (required unless only SelfRemove)
         val needsPath = proposals.any { it.proposal !is Proposal.SelfRemove }
 
-        // Apply proposals to tree FIRST (RFC 9420 Section 12.4.1)
-        // The UpdatePath is computed after proposals are applied.
+        // Apply proposals to tree FIRST (RFC 9420 Section 12.4.2)
+        // Order: Updates/Removes first, then Adds (so blank slots are freed before reuse)
         val addedMembers = mutableListOf<Pair<Int, MlsKeyPackage>>()
+        val addProposals = mutableListOf<PendingProposal>()
         for (pending in proposals) {
-            val p = pending.proposal
-            if (p is Proposal.Add) {
-                // applyProposal calls tree.addLeaf() which returns the actual leaf index
-                // (may reuse a blank slot instead of appending)
-                val leafIndex = applyProposalAdd(p)
-                addedMembers.add(leafIndex to p.keyPackage)
+            if (pending.proposal is Proposal.Add) {
+                addProposals.add(pending)
             } else {
-                applyProposal(p, pending.senderLeafIndex)
+                applyProposal(pending.proposal, pending.senderLeafIndex)
             }
+        }
+        // Apply Adds after Removes/Updates
+        for (pending in addProposals) {
+            val p = pending.proposal as Proposal.Add
+            val leafIndex = applyProposalAdd(p)
+            addedMembers.add(leafIndex to p.keyPackage)
         }
 
         // Generate new path secrets on the updated tree
@@ -450,7 +512,10 @@ class MlsGroup private constructor(
         val newConfirmedTranscriptHash = MlsCryptoProvider.hash(confirmedInput.toByteArray())
 
         val newTreeHash = tree.treeHash()
-        val newEpoch = groupContext.epoch + 1
+        val oldEpoch = groupContext.epoch
+        val preCommitGroupId = groupContext.groupId
+        val committerLeafIndex = myLeafIndex
+        val newEpoch = oldEpoch + 1
 
         groupContext =
             groupContext.copy(
@@ -492,13 +557,27 @@ class MlsGroup private constructor(
         sentKeys.clear()
 
         val commitBytes = commit.toTlsBytes()
-        return CommitResult(commitBytes, welcomeBytes, null)
+        val framedCommitBytes =
+            framePublicMessageCommit(
+                groupId = preCommitGroupId,
+                epoch = oldEpoch,
+                senderLeafIndex = committerLeafIndex,
+                commitBytes = commitBytes,
+                confirmationTag = confirmationTag,
+            )
+        return CommitResult(
+            commitBytes = commitBytes,
+            welcomeBytes = welcomeBytes,
+            groupInfoBytes = null,
+            framedCommitBytes = framedCommitBytes,
+            preCommitExporterSecret = preCommitExporterSecret,
+        )
     }
 
     // --- Message Encryption ---
 
     /**
-     * Encrypt an application message as a PrivateMessage.
+     * Encrypt an application message as a PrivateMessage (RFC 9420 Section 6.3).
      */
     fun encrypt(plaintext: ByteArray): ByteArray {
         // Trim sentKeys if it grows too large
@@ -512,32 +591,46 @@ class MlsGroup private constructor(
 
         val kng = secretTree.nextApplicationKeyNonce(myLeafIndex)
         sentKeys[kng.generation] = kng
-        val ciphertext = MlsCryptoProvider.aeadEncrypt(kng.key, kng.nonce, ByteArray(0), plaintext)
 
-        // Encrypt sender data
+        // Generate 4-byte reuse_guard and XOR into the first 4 nonce bytes (RFC 9420 §6.3.1)
+        val reuseGuard = MlsCryptoProvider.randomBytes(REUSE_GUARD_LENGTH)
+        val guardedNonce = kng.nonce.copyOf()
+        for (i in 0 until REUSE_GUARD_LENGTH) {
+            guardedNonce[i] = (guardedNonce[i].toInt() xor reuseGuard[i].toInt()).toByte()
+        }
+
+        // Build PrivateContentAAD (RFC 9420 §6.3.2)
+        val contentAad = buildPrivateContentAAD(groupId, epoch, ContentType.APPLICATION, ByteArray(0))
+        val ciphertext = MlsCryptoProvider.aeadEncrypt(kng.key, guardedNonce, contentAad, plaintext)
+
+        // Build sender data plaintext: leaf_index || generation || reuse_guard
+        val senderDataWriter = TlsWriter()
+        senderDataWriter.putUint32(myLeafIndex.toLong())
+        senderDataWriter.putUint32(kng.generation.toLong())
+        senderDataWriter.putBytes(reuseGuard)
+        val senderDataPlain = senderDataWriter.toByteArray()
+
+        // Derive sender data key/nonce using ciphertext sample (RFC 9420 §6.3.1)
+        val ciphertextSample = ciphertext.copyOfRange(0, minOf(ciphertext.size, MlsCryptoProvider.AEAD_KEY_LENGTH))
         val senderDataKey =
             MlsCryptoProvider.expandWithLabel(
                 epochSecrets.senderDataSecret,
                 "key",
-                ByteArray(0),
+                ciphertextSample,
                 MlsCryptoProvider.AEAD_KEY_LENGTH,
             )
         val senderDataNonce =
             MlsCryptoProvider.expandWithLabel(
                 epochSecrets.senderDataSecret,
                 "nonce",
-                ByteArray(0),
+                ciphertextSample,
                 MlsCryptoProvider.AEAD_NONCE_LENGTH,
             )
 
-        val senderDataWriter =
-            com.vitorpamplona.quartz.marmot.mls.codec
-                .TlsWriter()
-        senderDataWriter.putUint32(myLeafIndex.toLong())
-        senderDataWriter.putUint32(kng.generation.toLong())
-        val senderDataPlain = senderDataWriter.toByteArray()
+        // Build SenderDataAAD (RFC 9420 §6.3.1)
+        val senderDataAad = buildSenderDataAAD(groupId, epoch, ContentType.APPLICATION)
         val encryptedSenderData =
-            MlsCryptoProvider.aeadEncrypt(senderDataKey, senderDataNonce, ByteArray(0), senderDataPlain)
+            MlsCryptoProvider.aeadEncrypt(senderDataKey, senderDataNonce, senderDataAad, senderDataPlain)
 
         val msg =
             PrivateMessage(
@@ -564,7 +657,7 @@ class MlsGroup private constructor(
         }
 
     /**
-     * Decrypt an application message from a PrivateMessage.
+     * Decrypt an application message from a PrivateMessage (RFC 9420 Section 6.3).
      * @throws IllegalArgumentException if the message format is invalid
      * @throws javax.crypto.AEADBadTagException if decryption fails
      */
@@ -582,26 +675,40 @@ class MlsGroup private constructor(
             "Message group ID doesn't match current group"
         }
 
-        // Decrypt sender data
+        // Derive sender data key/nonce using ciphertext sample (RFC 9420 §6.3.1)
+        val ciphertextSample =
+            privMsg.ciphertext.copyOfRange(0, minOf(privMsg.ciphertext.size, MlsCryptoProvider.AEAD_KEY_LENGTH))
         val senderDataKey =
             MlsCryptoProvider.expandWithLabel(
                 epochSecrets.senderDataSecret,
                 "key",
-                ByteArray(0),
+                ciphertextSample,
                 MlsCryptoProvider.AEAD_KEY_LENGTH,
             )
         val senderDataNonce =
             MlsCryptoProvider.expandWithLabel(
                 epochSecrets.senderDataSecret,
                 "nonce",
-                ByteArray(0),
+                ciphertextSample,
                 MlsCryptoProvider.AEAD_NONCE_LENGTH,
             )
+
+        // Build SenderDataAAD and decrypt sender data (RFC 9420 §6.3.1)
+        val senderDataAad = buildSenderDataAAD(privMsg.groupId, privMsg.epoch, privMsg.contentType)
         val senderDataPlain =
-            MlsCryptoProvider.aeadDecrypt(senderDataKey, senderDataNonce, ByteArray(0), privMsg.encryptedSenderData)
+            MlsCryptoProvider.aeadDecrypt(senderDataKey, senderDataNonce, senderDataAad, privMsg.encryptedSenderData)
         val senderReader = TlsReader(senderDataPlain)
         val senderLeafIndex = senderReader.readUint32().toInt()
         val generation = senderReader.readUint32().toInt()
+        val reuseGuard = senderReader.readBytes(REUSE_GUARD_LENGTH)
+
+        // Validate sender leaf index and membership (RFC 9420 §6.3.1)
+        require(senderLeafIndex in 0 until tree.leafCount) {
+            "Sender leaf index $senderLeafIndex out of range [0, ${tree.leafCount})"
+        }
+        require(tree.getLeaf(senderLeafIndex) != null) {
+            "Sender leaf is blank at index $senderLeafIndex (not a group member)"
+        }
 
         // Get the key/nonce for this sender+generation
         // If we sent this message ourselves, use the cached key to avoid ratchet conflict
@@ -612,8 +719,15 @@ class MlsGroup private constructor(
                 secretTree.applicationKeyNonceForGeneration(senderLeafIndex, generation)
             }
 
-        // Decrypt content
-        val plaintext = MlsCryptoProvider.aeadDecrypt(kng.key, kng.nonce, ByteArray(0), privMsg.ciphertext)
+        // Apply reuse_guard XOR to nonce (RFC 9420 §6.3.1)
+        val guardedNonce = kng.nonce.copyOf()
+        for (i in 0 until REUSE_GUARD_LENGTH) {
+            guardedNonce[i] = (guardedNonce[i].toInt() xor reuseGuard[i].toInt()).toByte()
+        }
+
+        // Decrypt content with PrivateContentAAD (RFC 9420 §6.3.2)
+        val contentAad = buildPrivateContentAAD(privMsg.groupId, privMsg.epoch, privMsg.contentType, privMsg.authenticatedData)
+        val plaintext = MlsCryptoProvider.aeadDecrypt(kng.key, guardedNonce, contentAad, privMsg.ciphertext)
 
         return DecryptedMessage(
             senderLeafIndex = senderLeafIndex,
@@ -635,7 +749,7 @@ class MlsGroup private constructor(
     fun processCommit(
         commitBytes: ByteArray,
         senderLeafIndex: Int,
-        confirmationTag: ByteArray? = null,
+        confirmationTag: ByteArray,
     ) {
         val commit = Commit.decodeTls(TlsReader(commitBytes))
 
@@ -660,14 +774,17 @@ class MlsGroup private constructor(
         }
 
         // Apply proposals (resolve references from pending pool)
+        // Collect all resolved proposals for key schedule computation
+        val resolvedProposals = mutableListOf<Proposal>()
         for (proposalOrRef in commit.proposals) {
             when (proposalOrRef) {
                 is ProposalOrRef.Inline -> {
                     applyProposal(proposalOrRef.proposal, senderLeafIndex)
+                    resolvedProposals.add(proposalOrRef.proposal)
                 }
 
                 is ProposalOrRef.Reference -> {
-                    // Resolve proposal by reference hash from pending proposals
+                    // Resolve proposal by reference hash from pending proposals (RFC 9420 §12.4.2)
                     val refHash = proposalOrRef.proposalRef
                     val resolved =
                         pendingProposals.find { pending ->
@@ -675,9 +792,11 @@ class MlsGroup private constructor(
                             val hash = MlsCryptoProvider.refHash("MLS 1.0 Proposal Reference", proposalBytes)
                             hash.contentEquals(refHash)
                         }
-                    if (resolved != null) {
-                        applyProposal(resolved.proposal, resolved.senderLeafIndex)
+                    requireNotNull(resolved) {
+                        "Commit references unknown proposal (ref not found in pending proposals)"
                     }
+                    applyProposal(resolved.proposal, resolved.senderLeafIndex)
+                    resolvedProposals.add(resolved.proposal)
                 }
             }
         }
@@ -690,11 +809,24 @@ class MlsGroup private constructor(
             require(verifyLeafNodeSignature(updatePath.leafNode, groupId, senderLeafIndex)) {
                 "Invalid LeafNode signature in UpdatePath"
             }
+
+            // For external commits the sender's leaf is not yet in the tree.
+            // Grow the tree with a blank slot so directPath / sibling-hash
+            // calculations don't walk past the current tree bounds and loop
+            // forever (BinaryTree.parent has no termination when the node
+            // index exceeds nodeCount from an out-of-bounds start).
+            if (isExternalCommit && senderLeafIndex >= tree.leafCount) {
+                tree.setLeaf(senderLeafIndex, null)
+            }
+
+            // Capture sibling tree hashes BEFORE applying UpdatePath (needed for parent hash verification)
+            val preUpdateSiblingHashes = capturePreUpdateSiblingHashes(senderLeafIndex)
+
             tree.setLeaf(senderLeafIndex, updatePath.leafNode)
             tree.applyUpdatePath(senderLeafIndex, updatePath.nodes)
 
-            // Verify parent hash chain (RFC 9420 Section 7.9.2)
-            require(verifyParentHash(senderLeafIndex, updatePath)) {
+            // Verify parent hash chain (RFC 9420 Section 7.9.2) using pre-update sibling hashes
+            require(verifyParentHash(senderLeafIndex, updatePath, preUpdateSiblingHashes)) {
                 "Parent hash verification failed for UpdatePath"
             }
 
@@ -724,10 +856,12 @@ class MlsGroup private constructor(
                             ct.ciphertext,
                         )
 
-                    // Derive remaining path secrets up to root
-                    val remainingPath = directPath.drop(commonAncestorIdx)
+                    // Derive remaining path secrets from common ancestor up to root.
+                    // pathSecret is the secret AT commonAncestorIdx, so we derive
+                    // (directPath.size - commonAncestorIdx - 1) more steps to reach root.
+                    val remainingSteps = directPath.size - commonAncestorIdx - 1
                     var currentSecret = pathSecret
-                    for (nodeIdx in remainingPath) {
+                    repeat(remainingSteps) {
                         currentSecret = MlsCryptoProvider.deriveSecret(currentSecret, "path")
                     }
                     commitSecret = currentSecret
@@ -755,19 +889,12 @@ class MlsGroup private constructor(
                 confirmedTranscriptHash = newConfirmedTranscriptHash,
             )
 
-        // Compute PSK secret from any PSK proposals in the commit
-        val commitPskProposals =
-            commit.proposals.mapNotNull {
-                when (it) {
-                    is ProposalOrRef.Inline -> it.proposal
-                    is ProposalOrRef.Reference -> null
-                }
-            }
-        val pskSecret = computePskSecret(commitPskProposals)
+        // Compute PSK secret from all resolved proposals (both inline and by-reference)
+        val pskSecret = computePskSecret(resolvedProposals)
 
         // Check for ExternalInit proposal — overrides init_secret (RFC 9420 Section 8.3)
         val externalInitProposal =
-            commitPskProposals.filterIsInstance<Proposal.ExternalInit>().firstOrNull()
+            resolvedProposals.filterIsInstance<Proposal.ExternalInit>().firstOrNull()
         val effectiveInitSecret =
             if (externalInitProposal != null) {
                 deriveExternalInitSecret(externalInitProposal.kemOutput)
@@ -780,19 +907,23 @@ class MlsGroup private constructor(
         initSecret = epochSecrets.initSecret
         secretTree = SecretTree(epochSecrets.encryptionSecret, tree.leafCount)
 
-        // Verify confirmation tag (RFC 9420 Section 6.1)
-        if (confirmationTag != null) {
-            val expectedTag = computeConfirmationTag(epochSecrets.confirmationKey, newConfirmedTranscriptHash)
+        // Verify confirmation tag (RFC 9420 Section 6.1). In real message
+        // flows the tag is carried on the wrapping PublicMessage and must be
+        // verified. Callers that process a raw commit payload and have
+        // verified the tag externally (or for test harnesses that work with
+        // `Commit.toTlsBytes()` directly) pass `ByteArray(0)`; in that mode
+        // we skip the comparison. Any non-empty tag is still checked.
+        val expectedTag = computeConfirmationTag(epochSecrets.confirmationKey, newConfirmedTranscriptHash)
+        if (confirmationTag.isNotEmpty()) {
             require(constantTimeEquals(confirmationTag, expectedTag)) {
                 "Confirmation tag verification failed"
             }
         }
 
-        // Update interim_transcript_hash for next epoch
-        val computedTag = computeConfirmationTag(epochSecrets.confirmationKey, newConfirmedTranscriptHash)
+        // Update interim_transcript_hash for next epoch (reuse verified expectedTag)
         val interimInput = TlsWriter()
         interimInput.putBytes(newConfirmedTranscriptHash)
-        interimInput.putOpaqueVarInt(computedTag)
+        interimInput.putOpaqueVarInt(expectedTag)
         interimTranscriptHash = MlsCryptoProvider.hash(interimInput.toByteArray())
 
         pendingProposals.clear()
@@ -918,31 +1049,23 @@ class MlsGroup private constructor(
     private fun buildConfirmedTranscriptHashInput(
         commit: Commit,
         senderLeafIndex: Int,
-    ): ByteArray {
-        val writer = TlsWriter()
-        // wire_format: PublicMessage = 1
-        writer.putUint16(WireFormat.PUBLIC_MESSAGE.value)
-        // FramedContent: group_id, epoch, sender, authenticated_data, content_type, content
-        writer.putOpaqueVarInt(groupId)
-        writer.putUint64(epoch)
-        // Sender: member type (1) + leaf_index
-        writer.putUint8(1) // SenderType.MEMBER
-        writer.putUint32(senderLeafIndex.toLong())
-        writer.putOpaqueVarInt(ByteArray(0)) // authenticated_data (empty)
-        writer.putUint8(ContentType.COMMIT.value) // content_type
-        commit.encodeTls(writer) // content = Commit
-        // signature (placeholder — in a full implementation this would be the actual signature)
-        writer.putOpaqueVarInt(ByteArray(0))
-        return writer.toByteArray()
-    }
+    ): ByteArray = buildConfirmedTranscriptHashInput(commit, senderLeafIndex, groupId, epoch)
 
-    private fun computeConfirmationTag(
-        confirmationKey: ByteArray,
-        confirmedTranscriptHash: ByteArray,
-    ): ByteArray {
-        val mac = MacInstance("HmacSHA256", confirmationKey)
-        mac.update(confirmedTranscriptHash)
-        return mac.doFinal()
+    /**
+     * Capture sibling tree hashes BEFORE the UpdatePath is applied.
+     * Returns a map of direct-path-index to sibling tree hash.
+     */
+    private fun capturePreUpdateSiblingHashes(senderLeafIndex: Int): Map<Int, ByteArray> {
+        val directPath = BinaryTree.directPath(senderLeafIndex, tree.leafCount)
+        val nodeCount = BinaryTree.nodeCount(tree.leafCount)
+        val result = mutableMapOf<Int, ByteArray>()
+        for ((i, _) in directPath.withIndex()) {
+            val childIdx =
+                if (i == 0) BinaryTree.leafToNode(senderLeafIndex) else directPath[i - 1]
+            val siblingIdx = BinaryTree.sibling(childIdx, nodeCount)
+            result[i] = tree.treeHashNode(siblingIdx)
+        }
+        return result
     }
 
     /**
@@ -956,18 +1079,31 @@ class MlsGroup private constructor(
      *   opaque parent_hash<V>;           // parent's own parent_hash
      *   opaque original_sibling_tree_hash<V>; // tree hash of the sibling subtree
      * }
+     *
+     * @param preUpdateSiblingHashes sibling hashes captured BEFORE the UpdatePath was applied
      */
     private fun verifyParentHash(
         senderLeafIndex: Int,
         updatePath: UpdatePath,
+        preUpdateSiblingHashes: Map<Int, ByteArray>,
     ): Boolean {
         val directPath = BinaryTree.directPath(senderLeafIndex, tree.leafCount)
         if (directPath.isEmpty()) return true
 
-        val leafParentHash = updatePath.leafNode.parentHash ?: return true
-        if (leafParentHash.isEmpty()) return true
-
-        val nodeCount = BinaryTree.nodeCount(tree.leafCount)
+        // RFC 9420 §7.9.2 requires COMMIT leaf nodes to carry a non-empty
+        // parent_hash chained up to the root. This implementation does NOT
+        // yet compute that chain on the sending side (applyUpdatePath sets
+        // parent_hash = ByteArray(0) for every parent node on the path).
+        // Until the chain is implemented, treat an empty leaf parent_hash
+        // as "self-produced commit, chain not computed" and skip the chain
+        // verification. A compliant peer that does compute parent_hash will
+        // still be validated against our computed chain below — so if they
+        // disagree with us, we'll reject them.
+        //
+        // TODO: compute parent_hash per RFC 9420 §7.9.2 in [commit] and then
+        //   tighten this verifier back to "MUST be non-empty".
+        val leafParentHash = updatePath.leafNode.parentHash
+        if (leafParentHash == null || leafParentHash.isEmpty()) return true
 
         // Walk up the direct path, verifying each parent_hash link
         var expectedParentHash = leafParentHash
@@ -975,14 +1111,8 @@ class MlsGroup private constructor(
             val pathNode = tree.getNode(pathNodeIdx) ?: continue
 
             if (pathNode is com.vitorpamplona.quartz.marmot.mls.tree.TreeNode.Parent) {
-                // Compute the parent hash for this node
-                val childIdx =
-                    if (i == 0) BinaryTree.leafToNode(senderLeafIndex) else directPath[i - 1]
-                val siblingIdx = BinaryTree.sibling(childIdx, nodeCount)
-
-                // original_sibling_tree_hash = tree hash of the sibling subtree
-                // (computed BEFORE the UpdatePath was applied)
-                val siblingHash = tree.treeHashNode(siblingIdx)
+                // Use the pre-update sibling tree hash (captured before UpdatePath was applied)
+                val siblingHash = preUpdateSiblingHashes[i] ?: continue
 
                 // ParentHashInput
                 val phi = TlsWriter()
@@ -1039,6 +1169,53 @@ class MlsGroup private constructor(
     }
 
     /**
+     * Build PrivateContentAAD (RFC 9420 §6.3.2):
+     * ```
+     * struct {
+     *     opaque group_id<V>;
+     *     uint64 epoch;
+     *     ContentType content_type;
+     *     opaque authenticated_data<V>;
+     * } PrivateContentAAD;
+     * ```
+     */
+    private fun buildPrivateContentAAD(
+        groupId: ByteArray,
+        epoch: Long,
+        contentType: ContentType,
+        authenticatedData: ByteArray,
+    ): ByteArray {
+        val writer = TlsWriter()
+        writer.putOpaqueVarInt(groupId)
+        writer.putUint64(epoch)
+        writer.putUint8(contentType.value)
+        writer.putOpaqueVarInt(authenticatedData)
+        return writer.toByteArray()
+    }
+
+    /**
+     * Build SenderDataAAD (RFC 9420 §6.3.1):
+     * ```
+     * struct {
+     *     opaque group_id<V>;
+     *     uint64 epoch;
+     *     ContentType content_type;
+     * } SenderDataAAD;
+     * ```
+     */
+    private fun buildSenderDataAAD(
+        groupId: ByteArray,
+        epoch: Long,
+        contentType: ContentType,
+    ): ByteArray {
+        val writer = TlsWriter()
+        writer.putOpaqueVarInt(groupId)
+        writer.putUint64(epoch)
+        writer.putUint8(contentType.value)
+        return writer.toByteArray()
+    }
+
+    /**
      * Constant-time byte array comparison to prevent timing side-channels.
      * Returns true only if both arrays have the same length and contents.
      */
@@ -1058,14 +1235,115 @@ class MlsGroup private constructor(
      * Apply an Add proposal and return the assigned leaf index.
      */
     private fun applyProposalAdd(proposal: Proposal.Add): Int {
-        val lifetime = proposal.keyPackage.leafNode.lifetime
+        val leafNode = proposal.keyPackage.leafNode
+
+        // Validate lifetime
+        val lifetime = leafNode.lifetime
         if (lifetime != null) {
             val now = TimeUtils.now()
             require(now >= lifetime.notBefore && now <= lifetime.notAfter) {
                 "KeyPackage lifetime expired or not yet valid"
             }
         }
-        return tree.addLeaf(proposal.keyPackage.leafNode)
+
+        // Validate capabilities (RFC 9420 §12.1.1)
+        val caps = leafNode.capabilities
+        require(1 in caps.versions) {
+            "KeyPackage does not support MLS protocol version 1"
+        }
+        require(1 in caps.ciphersuites) {
+            "KeyPackage does not support ciphersuite 0x0001"
+        }
+
+        return tree.addLeaf(leafNode)
+    }
+
+    /**
+     * MIP-03 authorization gate for local commits.
+     *
+     * Once the group has at least one admin configured in `admin_pubkeys`,
+     * non-admin senders may only issue:
+     *   - a single self-Update proposal, or
+     *   - one-or-more SelfRemove proposals authored by this member
+     *
+     * Admins may commit any proposal type. Before any admin is configured
+     * (group bootstrap) the check is relaxed, mirroring the bootstrap policy
+     * in [MlsGroupManager.updateGroupExtensions].
+     */
+    private fun enforceAuthorizedProposalSet(proposals: List<PendingProposal>) {
+        if (proposals.isEmpty()) return
+        val marmot = currentMarmotData()
+        val adminsConfigured = marmot != null && marmot.adminPubkeys.isNotEmpty()
+        if (!adminsConfigured || isLocalAdmin()) return
+
+        val allSelfRemove =
+            proposals.all { it.proposal is Proposal.SelfRemove && it.senderLeafIndex == myLeafIndex }
+        if (allSelfRemove) return
+
+        val singleSelfUpdate =
+            proposals.size == 1 &&
+                proposals[0].proposal is Proposal.Update &&
+                proposals[0].senderLeafIndex == myLeafIndex
+        if (singleSelfUpdate) return
+
+        throw IllegalStateException(
+            "MIP-03: non-admin members may only commit a single self-Update or SelfRemove-only " +
+                "proposals; got ${proposals.map { it.proposal::class.simpleName }}",
+        )
+    }
+
+    /**
+     * Reject any commit that would leave the group without at least one member
+     * still listed in `admin_pubkeys` (MIP-03 admin depletion guard).
+     *
+     * We simulate the post-commit member set and the post-commit `admin_pubkeys`
+     * list, then require a non-empty intersection. The guard is only active
+     * once the group has a configured admin set — it does not kick in during
+     * bootstrap before any admin is named.
+     */
+    private fun enforceNoAdminDepletion(proposals: List<PendingProposal>) {
+        val currentAdmins = currentMarmotData()?.adminPubkeys?.toSet().orEmpty()
+        if (currentAdmins.isEmpty()) return // Bootstrap: no admins yet, nothing to deplete.
+
+        // Resolve the effective admin list after any GroupContextExtensions
+        // proposal in this commit. If none is present, keep the current list.
+        val gce =
+            proposals
+                .asSequence()
+                .map { it.proposal }
+                .filterIsInstance<Proposal.GroupContextExtensions>()
+                .lastOrNull()
+        val projectedMarmot =
+            if (gce != null) {
+                MarmotGroupData.fromExtensions(gce.extensions)
+            } else {
+                currentMarmotData()
+            }
+        val adminSet = projectedMarmot?.adminPubkeys?.toSet().orEmpty()
+        check(adminSet.isNotEmpty()) {
+            "MIP-03: commit would empty admin_pubkeys (admin depletion)"
+        }
+
+        // Compute which leaves remain after applying Removes/SelfRemoves.
+        val removedLeaves = mutableSetOf<Int>()
+        for (pending in proposals) {
+            when (val p = pending.proposal) {
+                is Proposal.Remove -> removedLeaves.add(p.removedLeafIndex)
+                is Proposal.SelfRemove -> removedLeaves.add(pending.senderLeafIndex)
+                else -> Unit
+            }
+        }
+
+        val remainingAdminIdentities = mutableSetOf<String>()
+        for (i in 0 until tree.leafCount) {
+            if (i in removedLeaves) continue
+            val id = memberIdentityHex(i) ?: continue
+            if (id in adminSet) remainingAdminIdentities.add(id)
+        }
+
+        check(remainingAdminIdentities.isNotEmpty()) {
+            "MIP-03: commit would leave the group without any admin members"
+        }
     }
 
     private fun applyProposal(
@@ -1149,11 +1427,9 @@ class MlsGroup private constructor(
                 groupContext = groupContext,
                 extensions = listOf(ratchetTreeExtension),
                 confirmationTag =
-                    MlsCryptoProvider.expandWithLabel(
+                    computeConfirmationTag(
                         epochSecrets.confirmationKey,
-                        "confirmation",
                         groupContext.confirmedTranscriptHash,
-                        MlsCryptoProvider.HASH_OUTPUT_LENGTH,
                     ),
                 signer = myLeafIndex,
                 signature = ByteArray(0),
@@ -1223,10 +1499,86 @@ class MlsGroup private constructor(
 
     companion object {
         private const val MAX_SENT_KEYS = 10_000
+        private const val REUSE_GUARD_LENGTH = 4
         private const val RATCHET_TREE_EXTENSION_TYPE = 0x0001
+
+        /**
+         * Wrap a raw [Commit] (as [commitBytes]) in an MlsMessage(PublicMessage(...))
+         * envelope so it can be published on the wire (RFC 9420 §6 / §6.2).
+         *
+         * The receiver uses the sender's leaf index and the confirmation_tag from
+         * the [PublicMessage] header to drive [MlsGroup.processCommit]. The
+         * `signature` and `membership_tag` opaque fields are intentionally empty —
+         * the current implementation does not verify them on inbound commits,
+         * but the TLS structure must still be present so decoding succeeds.
+         */
+        internal fun framePublicMessageCommit(
+            groupId: ByteArray,
+            epoch: Long,
+            senderLeafIndex: Int,
+            commitBytes: ByteArray,
+            confirmationTag: ByteArray,
+        ): ByteArray {
+            val publicMessage =
+                PublicMessage(
+                    groupId = groupId,
+                    epoch = epoch,
+                    sender = Sender(SenderType.MEMBER, senderLeafIndex),
+                    authenticatedData = ByteArray(0),
+                    contentType = ContentType.COMMIT,
+                    content = commitBytes,
+                    signature = ByteArray(0),
+                    confirmationTag = confirmationTag,
+                    membershipTag = ByteArray(0),
+                )
+            return MlsMessage.fromPublicMessage(publicMessage).toTlsBytes()
+        }
+
+        /**
+         * Build ConfirmedTranscriptHashInput (RFC 9420 Section 8.2) — static version
+         * usable from both instance methods and companion object factory methods.
+         */
+        private fun buildConfirmedTranscriptHashInput(
+            commit: Commit,
+            senderLeafIndex: Int,
+            groupId: ByteArray,
+            epoch: Long,
+        ): ByteArray {
+            val writer = TlsWriter()
+            writer.putUint16(WireFormat.PUBLIC_MESSAGE.value)
+            writer.putOpaqueVarInt(groupId)
+            writer.putUint64(epoch)
+            writer.putUint8(1) // SenderType.MEMBER
+            writer.putUint32(senderLeafIndex.toLong())
+            writer.putOpaqueVarInt(ByteArray(0)) // authenticated_data
+            writer.putUint8(ContentType.COMMIT.value)
+            commit.encodeTls(writer)
+            writer.putOpaqueVarInt(ByteArray(0)) // signature placeholder
+            return writer.toByteArray()
+        }
+
+        /**
+         * Compute confirmation_tag = MAC(confirmation_key, confirmed_transcript_hash).
+         * Static version usable from companion object factory methods.
+         */
+        private fun computeConfirmationTag(
+            confirmationKey: ByteArray,
+            confirmedTranscriptHash: ByteArray,
+        ): ByteArray {
+            val mac = MacInstance("HmacSHA256", confirmationKey)
+            mac.update(confirmedTranscriptHash)
+            return mac.doFinal()
+        }
+
         private const val REQUIRED_CAPABILITIES_EXTENSION_TYPE = 0x0002
         private const val EXTERNAL_PUB_EXTENSION_TYPE = 0x0003
         private const val EXTERNAL_SENDERS_EXTENSION_TYPE = 0x0004
+
+        /** MLS self_remove proposal type (MIP-00 / MIP-03). */
+        private const val SELF_REMOVE_PROPOSAL_TYPE = 0x000A
+
+        /** Marmot Group Data Extension type (MIP-01). */
+        private const val MARMOT_GROUP_DATA_EXTENSION_TYPE = 0xF2EE
 
         /** Known extension types that this implementation accepts. */
         private val KNOWN_EXTENSION_TYPES =
@@ -1235,7 +1587,45 @@ class MlsGroup private constructor(
                 REQUIRED_CAPABILITIES_EXTENSION_TYPE,
                 EXTERNAL_PUB_EXTENSION_TYPE,
                 EXTERNAL_SENDERS_EXTENSION_TYPE,
-                0xF2EE, // Marmot group data extension
+                MARMOT_GROUP_DATA_EXTENSION_TYPE,
+            )
+
+        /**
+         * Build an MLS `required_capabilities` extension that marks Marmot's
+         * mandatory interop set as required for all members (RFC 9420 §7.2):
+         *   extensions  = [marmot_group_data (0xF2EE)]
+         *   proposals   = [self_remove (0x000A)]
+         *   credentials = [Basic (0x0001)]
+         */
+        private fun buildMarmotRequiredCapabilitiesExtension(): Extension {
+            val writer = TlsWriter()
+            // extensions<V>: uint16 each
+            val exts = TlsWriter()
+            exts.putUint16(MARMOT_GROUP_DATA_EXTENSION_TYPE)
+            writer.putOpaqueVarInt(exts.toByteArray())
+            // proposals<V>: uint16 each
+            val props = TlsWriter()
+            props.putUint16(SELF_REMOVE_PROPOSAL_TYPE)
+            writer.putOpaqueVarInt(props.toByteArray())
+            // credentials<V>: uint16 each
+            val creds = TlsWriter()
+            creds.putUint16(Credential.CREDENTIAL_TYPE_BASIC)
+            writer.putOpaqueVarInt(creds.toByteArray())
+            return Extension(
+                extensionType = REQUIRED_CAPABILITIES_EXTENSION_TYPE,
+                extensionData = writer.toByteArray(),
+            )
+        }
+
+        /**
+         * Default MLS leaf Capabilities that advertise support for Marmot's
+         * required extensions and proposals so new members can join a group
+         * whose `required_capabilities` lists them.
+         */
+        private fun marmotLeafCapabilities(): Capabilities =
+            Capabilities(
+                extensions = listOf(MARMOT_GROUP_DATA_EXTENSION_TYPE),
+                proposals = listOf(SELF_REMOVE_PROPOSAL_TYPE),
             )
 
         /**
@@ -1274,6 +1664,7 @@ class MlsGroup private constructor(
                     epoch = 0,
                     treeHash = treeHash,
                     confirmedTranscriptHash = ByteArray(0),
+                    extensions = listOf(buildMarmotRequiredCapabilitiesExtension()),
                 )
 
             // Initial key schedule with zero secrets
@@ -1481,6 +1872,15 @@ class MlsGroup private constructor(
                     ?: throw IllegalArgumentException("GroupInfo missing ratchet_tree extension")
             val tree = RatchetTree.decodeTls(TlsReader(ratchetTreeExt.extensionData))
 
+            // Verify GroupInfo signature (RFC 9420 Section 12.4.3.1)
+            val signerLeaf = tree.getLeaf(groupInfo.signer)
+            requireNotNull(signerLeaf) {
+                "Signer leaf is null at index ${groupInfo.signer} — cannot verify GroupInfo signature"
+            }
+            require(groupInfo.verifySignature(signerLeaf.signatureKey)) {
+                "Invalid GroupInfo signature in externalJoin"
+            }
+
             // Extract external_pub from extensions
             val externalPubExt =
                 groupInfo.extensions.find { it.extensionType == EXTERNAL_PUB_EXTENSION_TYPE }
@@ -1568,18 +1968,34 @@ class MlsGroup private constructor(
                     ByteArray(MlsCryptoProvider.HASH_OUTPUT_LENGTH)
                 }
 
+            // Update transcript hashes for external join commit
+            val confirmedTranscriptHashInput =
+                buildConfirmedTranscriptHashInput(commit, myLeafIndex, groupContext.groupId, groupContext.epoch)
+            val confirmedInput = TlsWriter()
+            confirmedInput.putBytes(ByteArray(0)) // initial interim transcript hash
+            confirmedInput.putBytes(confirmedTranscriptHashInput)
+            val newConfirmedTranscriptHash = MlsCryptoProvider.hash(confirmedInput.toByteArray())
+
             val newTreeHash = tree.treeHash()
             val newEpoch = groupContext.epoch + 1
             val newGroupContext =
                 groupContext.copy(
                     epoch = newEpoch,
                     treeHash = newTreeHash,
+                    confirmedTranscriptHash = newConfirmedTranscriptHash,
                 )
 
             val keySchedule = KeySchedule(newGroupContext.toTlsBytes())
             val epochSecrets = keySchedule.deriveEpochSecrets(commitSecret, externalInitSecret)
 
             val secretTree = SecretTree(epochSecrets.encryptionSecret, tree.leafCount)
+
+            // Compute interim transcript hash
+            val confirmationTag = computeConfirmationTag(epochSecrets.confirmationKey, newConfirmedTranscriptHash)
+            val interimInput = TlsWriter()
+            interimInput.putBytes(newConfirmedTranscriptHash)
+            interimInput.putOpaqueVarInt(confirmationTag)
+            val interimTranscriptHash = MlsCryptoProvider.hash(interimInput.toByteArray())
 
             val group =
                 MlsGroup(
@@ -1591,7 +2007,7 @@ class MlsGroup private constructor(
                     initSecret = epochSecrets.initSecret,
                     signingPrivateKey = sigKp.privateKey,
                     encryptionPrivateKey = encKp.privateKey,
-                    interimTranscriptHash = ByteArray(0),
+                    interimTranscriptHash = interimTranscriptHash,
                 )
 
             return Pair(group, commitBytes)
@@ -1640,7 +2056,9 @@ class MlsGroup private constructor(
                     encryptionKey = encryptionKey,
                     signatureKey = signatureKey,
                     credential = Credential.Basic(identity),
-                    capabilities = Capabilities(),
+                    // Advertise MIP-01/MIP-03 required capabilities so we can be
+                    // added to compliant groups that mark them as required.
+                    capabilities = marmotLeafCapabilities(),
                     leafNodeSource = source,
                     lifetime =
                         if (source == LeafNodeSource.KEY_PACKAGE) {
@@ -1661,7 +2079,9 @@ class MlsGroup private constructor(
 
     /**
      * Add a member to the group by their KeyPackage.
-     * Creates and applies a Commit with an Add proposal.
+     * Creates and applies a Commit with an Add proposal. The resulting
+     * [CommitResult.preCommitExporterSecret] is the key the outer kind:445
+     * MUST be encrypted with (RFC 9420 §12.4 + MDK parity).
      */
     fun addMember(keyPackageBytes: ByteArray): CommitResult {
         proposeAdd(keyPackageBytes)
@@ -1670,7 +2090,8 @@ class MlsGroup private constructor(
 
     /**
      * Remove a member from the group.
-     * Creates and applies a Commit with a Remove proposal.
+     * Creates and applies a Commit with a Remove proposal. See [addMember]
+     * for the pre-commit exporter key contract on the returned [CommitResult].
      */
     fun removeMember(targetLeafIndex: Int): CommitResult {
         proposeRemove(targetLeafIndex)
@@ -1679,8 +2100,14 @@ class MlsGroup private constructor(
 
     /**
      * Remove self from the group.
+     *
+     * Per MIP-01/MIP-03, admins must self-demote first; this helper rejects
+     * calls from a member currently listed in `admin_pubkeys`.
      */
     fun selfRemove(): ByteArray {
+        check(!isLocalAdmin()) {
+            "Admin must self-demote via GroupContextExtensions before SelfRemove (MIP-01)"
+        }
         val proposal = Proposal.SelfRemove()
         return proposal.toTlsBytes()
     }

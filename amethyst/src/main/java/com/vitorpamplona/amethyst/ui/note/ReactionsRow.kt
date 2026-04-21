@@ -197,7 +197,7 @@ fun ReactionsRow(
     baseNote: Note,
     showReactionDetail: Boolean,
     addPadding: Boolean,
-    editState: State<GenericLoadable<EditState>>,
+    editState: State<GenericLoadable<EditState>>?,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -219,7 +219,7 @@ private fun InnerReactionRow(
     showReactionDetail: Boolean,
     addPadding: Boolean,
     wantsToSeeReactions: MutableState<Boolean>,
-    editState: State<GenericLoadable<EditState>>,
+    editState: State<GenericLoadable<EditState>>?,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -666,7 +666,7 @@ private fun WatchZapAndRenderGallery(
 @Composable
 private fun BoostWithDialog(
     baseNote: Note,
-    editState: State<GenericLoadable<EditState>>,
+    editState: State<GenericLoadable<EditState>>?,
     grayTint: Color,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -682,7 +682,7 @@ private fun BoostWithDialog(
                 Route.NewShortNote(
                     quote = baseNote.idHex,
                     version =
-                        (editState.value as? GenericLoadable.Loaded)
+                        (editState?.value as? GenericLoadable.Loaded)
                             ?.loaded
                             ?.modificationToShow
                             ?.value
@@ -704,7 +704,7 @@ private fun BoostWithDialog(
                     baseReplyTo = replyTo?.idHex,
                     fork = baseNote.idHex,
                     version =
-                        (editState.value as? GenericLoadable.Loaded)
+                        (editState?.value as? GenericLoadable.Loaded)
                             ?.loaded
                             ?.modificationToShow
                             ?.value

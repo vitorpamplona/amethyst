@@ -21,18 +21,22 @@
 package com.vitorpamplona.quartz.nip72ModCommunities.definition
 
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip23LongContent.tags.ImageTag
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.tags.DescriptionTag
+import com.vitorpamplona.quartz.nip72ModCommunities.definition.tags.ImageTag
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.tags.ModeratorTag
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.tags.NameTag
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.tags.RelayTag
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.tags.RulesTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 
 fun TagArrayBuilder<CommunityDefinitionEvent>.name(name: String) = addUnique(NameTag.assemble(name))
 
 fun TagArrayBuilder<CommunityDefinitionEvent>.description(description: String) = addUnique(DescriptionTag.assemble(description))
 
-fun TagArrayBuilder<CommunityDefinitionEvent>.image(webUrl: String) = addUnique(ImageTag.assemble(webUrl))
+fun TagArrayBuilder<CommunityDefinitionEvent>.image(
+    webUrl: String,
+    dimensions: DimensionTag? = null,
+) = addUnique(ImageTag.assemble(webUrl, dimensions))
 
 fun TagArrayBuilder<CommunityDefinitionEvent>.rules(rules: String) = addUnique(RulesTag.assemble(rules))
 

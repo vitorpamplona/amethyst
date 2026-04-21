@@ -225,9 +225,11 @@ class MlsGroupEdgeCaseTest {
     // 6. Multiple epochs of encrypt/decrypt
     // -----------------------------------------------------------------------
 
-    // BUG: processCommit key derivation diverges — commit_secret decryption from
-    // UpdatePath does not correctly derive matching epoch secrets between commit()
-    // and processCommit(). See MlsGroupLifecycleTest.testThreeMemberGroup_SequentialAdditions.
+    // BUG: same empty-commit (no proposals, pure UpdatePath) divergence as
+    // MlsGroupLifecycleTest.testEmptyCommit_AdvancesEpoch. The
+    // SecretTree.getNodeSecret non-full-tree fix doesn't address this — after
+    // 5 empty commits Alice and Bob's ratchet secrets diverge and AEAD
+    // decryption fails with "Tag mismatch". Tracked separately.
     @Ignore
     @Test
     fun testMultipleEpochTransitions_EncryptDecryptStillWorks() {
@@ -239,10 +241,9 @@ class MlsGroupEdgeCaseTest {
         // Advance through several epochs with empty commits
         for (i in 0 until 5) {
             val commitResult = alice.commit()
-            bob.processCommit(commitResult.commitBytes, alice.leafIndex)
+            bob.processCommit(commitResult.commitBytes, alice.leafIndex, ByteArray(0))
         }
 
-        assertEquals(7L, alice.epoch) // epoch 0 + addMember(1) + 5 commits = 6... wait
         // epoch 0 (create) -> epoch 1 (add bob) -> 5 empty commits = epoch 6
         assertEquals(6L, alice.epoch)
         assertEquals(alice.epoch, bob.epoch)
@@ -277,7 +278,7 @@ class MlsGroupEdgeCaseTest {
 
         for (i in 0 until 3) {
             val commitResult = alice.commit()
-            bob.processCommit(commitResult.commitBytes, alice.leafIndex)
+            bob.processCommit(commitResult.commitBytes, alice.leafIndex, ByteArray(0))
             keys.add(alice.exporterSecret("marmot", "group-event".encodeToByteArray(), 32))
         }
 

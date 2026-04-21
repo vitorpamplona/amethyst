@@ -28,13 +28,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -42,7 +45,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.Nip05State
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.ActionTopBar
@@ -62,8 +68,9 @@ fun AddMemberScreen(
     nav: INav,
 ) {
     var searchInput by remember { mutableStateOf("") }
-    var selectedUser by remember { mutableStateOf<User?>(null) }
+    val selectedUsers = remember { mutableStateListOf<User>() }
     var statusMessage by remember { mutableStateOf<String?>(null) }
+    var isError by remember { mutableStateOf(false) }
     var isAdding by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
@@ -82,30 +89,62 @@ fun AddMemberScreen(
                 postRes = com.vitorpamplona.amethyst.R.string.add,
                 onCancel = { nav.popBack() },
                 onPost = {
-                    val pubkey = selectedUser?.pubkeyHex
-                    if (pubkey == null) {
-                        statusMessage = "Error: No user selected"
+                    if (selectedUsers.isEmpty()) {
+                        statusMessage = "No users selected"
+                        isError = true
                         return@ActionTopBar
                     }
                     isAdding = true
-                    statusMessage = "Fetching KeyPackage..."
+                    isError = false
+                    val usersToAdd = selectedUsers.toList()
                     scope.launch(Dispatchers.IO) {
-                        try {
-                            val result =
-                                accountViewModel.addMarmotGroupMember(nostrGroupId, pubkey)
-                            statusMessage = result
-                            if (result.startsWith("Success")) {
-                                nav.popBack()
-                            } else {
-                                isAdding = false
+                        var successCount = 0
+                        val failures = mutableListOf<Pair<User, String>>()
+                        for ((index, user) in usersToAdd.withIndex()) {
+                            statusMessage =
+                                "Adding ${user.toBestDisplayName()} (${index + 1}/${usersToAdd.size})..."
+                            isError = false
+                            try {
+                                val result =
+                                    accountViewModel.addMarmotGroupMember(
+                                        nostrGroupId,
+                                        user.pubkeyHex,
+                                    )
+                                if (result.startsWith("Success")) {
+                                    successCount++
+                                } else {
+                                    failures.add(user to result.removePrefix("Error: "))
+                                }
+                            } catch (e: Exception) {
+                                failures.add(user to (e.message ?: "unknown error"))
                             }
-                        } catch (e: Exception) {
-                            statusMessage = "Error: ${e.message}"
+                        }
+
+                        if (failures.isEmpty()) {
+                            nav.popBack()
+                        } else {
+                            statusMessage =
+                                buildString {
+                                    if (successCount > 0) {
+                                        append("Added $successCount. ")
+                                    }
+                                    append("Failed: ")
+                                    append(
+                                        failures.joinToString("; ") { (user, reason) ->
+                                            "${user.toBestDisplayName()} ($reason)"
+                                        },
+                                    )
+                                }
+                            isError = true
+                            // Keep failed users in the list for retry, drop successful ones
+                            val failedUsers = failures.map { it.first }.toSet()
+                            selectedUsers.clear()
+                            selectedUsers.addAll(failedUsers)
                             isAdding = false
                         }
                     }
                 },
-                isActive = { !isAdding && selectedUser != null },
+                isActive = { !isAdding && selectedUsers.isNotEmpty() },
             )
         },
     ) { padding ->
@@ -116,17 +155,25 @@ fun AddMemberScreen(
                     .consumeWindowInsets(padding)
                     .imePadding(),
         ) {
-            // Selected user display
-            if (selectedUser != null) {
-                SelectedUserRow(
-                    user = selectedUser!!,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                    onClear = {
-                        selectedUser = null
-                        statusMessage = null
-                    },
-                )
+            // Selected users list
+            if (selectedUsers.isNotEmpty()) {
+                selectedUsers.toList().forEachIndexed { index, user ->
+                    SelectedUserRow(
+                        user = user,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                        enabled = !isAdding,
+                        onClear = {
+                            selectedUsers.remove(user)
+                            statusMessage = null
+                            isError = false
+                        },
+                    )
+                    if (index < selectedUsers.lastIndex) {
+                        HorizontalDivider()
+                    }
+                }
+                HorizontalDivider()
             }
 
             // Search field
@@ -134,7 +181,7 @@ fun AddMemberScreen(
                 value = searchInput,
                 onValueChange = { newValue ->
                     searchInput = newValue
-                    statusMessage = null
+                    if (!isError) statusMessage = null
                     if (newValue.length > 2) {
                         userSuggestions.processCurrentWord(newValue)
                     } else {
@@ -148,7 +195,7 @@ fun AddMemberScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp),
                 singleLine = true,
-                enabled = selectedUser == null && !isAdding,
+                enabled = !isAdding,
             )
 
             if (statusMessage != null) {
@@ -157,7 +204,7 @@ fun AddMemberScreen(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                     style = MaterialTheme.typography.bodySmall,
                     color =
-                        if (statusMessage!!.startsWith("Error")) {
+                        if (isError) {
                             MaterialTheme.colorScheme.error
                         } else {
                             MaterialTheme.colorScheme.primary
@@ -168,11 +215,13 @@ fun AddMemberScreen(
             Spacer(modifier = Modifier.height(4.dp))
 
             // User suggestion list
-            if (selectedUser == null && searchInput.length > 2) {
+            if (!isAdding && searchInput.length > 2) {
                 ShowUserSuggestionList(
                     userSuggestions = userSuggestions,
                     onSelect = { user ->
-                        selectedUser = user
+                        if (selectedUsers.none { it.pubkeyHex == user.pubkeyHex }) {
+                            selectedUsers.add(user)
+                        }
                         searchInput = ""
                         userSuggestions.reset()
                     },
@@ -197,6 +246,7 @@ private fun SelectedUserRow(
     user: User,
     accountViewModel: AccountViewModel,
     nav: INav,
+    enabled: Boolean,
     onClear: () -> Unit,
 ) {
     Row(
@@ -219,15 +269,38 @@ private fun SelectedUserRow(
                 text = user.toBestDisplayName(),
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
-            Text(
-                text = "${user.pubkeyHex.take(16)}...",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            UserSecondaryLine(user)
         }
-        androidx.compose.material3.TextButton(onClick = onClear) {
-            Text("Clear")
+        TextButton(onClick = onClear, enabled = enabled) {
+            Text("Remove")
         }
     }
+}
+
+@Composable
+private fun UserSecondaryLine(user: User) {
+    val nip05StateMetadata by user.nip05State().flow.collectAsStateWithLifecycle()
+
+    val text =
+        when (val state = nip05StateMetadata) {
+            is Nip05State.Exists -> {
+                val name = state.nip05.name
+                if (name == "_") state.nip05.domain else "$name@${state.nip05.domain}"
+            }
+
+            else -> {
+                user.pubkeyDisplayHex()
+            }
+        }
+
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+    )
 }

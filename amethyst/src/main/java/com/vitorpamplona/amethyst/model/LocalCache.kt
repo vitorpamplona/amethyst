@@ -65,6 +65,7 @@ import com.vitorpamplona.quartz.experimental.notifications.wake.WakeUpEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
@@ -148,9 +149,11 @@ import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
+import com.vitorpamplona.quartz.nip51Lists.favoriteAlgoFeedsList.FavoriteAlgoFeedsListEvent
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
 import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
+import com.vitorpamplona.quartz.nip51Lists.interestSet.InterestSetEvent
 import com.vitorpamplona.quartz.nip51Lists.labeledBookmarkList.LabeledBookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
@@ -166,9 +169,11 @@ import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarEvent
 import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.clip.LiveActivitiesClipEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresenceEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.raid.LiveActivitiesRaidEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
@@ -1492,6 +1497,44 @@ object LocalCache : ILocalCache, ICacheProvider {
         return new
     }
 
+    fun consume(
+        event: LiveActivitiesRaidEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ): Boolean {
+        val fromAddress = event.fromAddress()
+        val toAddress = event.toAddress()
+        if (fromAddress == null && toAddress == null) return false
+
+        val new = consumeRegularEvent(event, relay, wasVerified)
+
+        if (new) {
+            val note = getOrCreateNote(event.id)
+            fromAddress?.let { getOrCreateLiveChannel(it).addNote(note, relay) }
+            toAddress?.let { getOrCreateLiveChannel(it).addNote(note, relay) }
+        }
+
+        return new
+    }
+
+    fun consume(
+        event: LiveActivitiesClipEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ): Boolean {
+        val activityAddress = event.activityAddress() ?: return false
+
+        val new = consumeRegularEvent(event, relay, wasVerified)
+
+        if (new) {
+            val channel = getOrCreateLiveChannel(activityAddress)
+            val note = getOrCreateNote(event.id)
+            channel.addNote(note, relay)
+        }
+
+        return new
+    }
+
     @Suppress("UNUSED_PARAMETER")
     fun consume(
         event: ChannelHideMessageEvent,
@@ -1512,8 +1555,14 @@ object LocalCache : ILocalCache, ICacheProvider {
         wasVerified: Boolean,
     ): Boolean {
         val note = getOrCreateNote(event.id)
-        // Already processed this event.
-        if (note.event != null) return false
+
+        // Already processed this event — still ensure it's routed into any live-activity
+        // channel(s) it references. A zap that was first consumed by, e.g., the notifications
+        // subscription must still appear in the stream's chat when the user opens the stream.
+        if (note.event != null) {
+            attachZapToLiveActivityChannel(event, note, relay)
+            return false
+        }
 
         if (wasVerified || justVerify(event)) {
             val existingZapRequest = event.zapRequest?.id?.let { getNoteIfExists(it) }
@@ -1538,12 +1587,35 @@ object LocalCache : ILocalCache, ICacheProvider {
 
             repliesTo.forEach { it.addZap(zapRequest, note) }
 
+            attachZapToLiveActivityChannel(event, note, relay)
+
             refreshNewNoteObservers(note)
 
             return true
         }
 
         return false
+    }
+
+    private fun attachZapToLiveActivityChannel(
+        event: LnZapEvent,
+        note: Note,
+        relay: NormalizedRelayUrl?,
+    ) {
+        // Match zap.stream: only show zaps whose receiver is the live activity host.
+        val hosts = event.zappedAuthor().toHashSet()
+        if (hosts.isEmpty()) return
+
+        // Route into every live-activity address this zap references (zap.stream uses one, but
+        // a receipt could legitimately reference multiple simulcasted streams).
+        event.tags
+            .asSequence()
+            .mapNotNull(ATag::parseAddress)
+            .filter { it.kind == LiveActivitiesEvent.KIND && it.pubKeyHex in hosts }
+            .distinct()
+            .forEach { address ->
+                getOrCreateLiveChannel(address).addNote(note, relay)
+            }
     }
 
     fun consume(
@@ -2627,20 +2699,25 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is RelayFeedsListEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is JesterEvent -> consumeRegularEvent(event, relay, wasVerified)
                 is KeyPackageEvent -> consumeBaseReplaceable(event, relay, wasVerified)
+                is KeyPackageRelayListEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is LiveChessGameChallengeEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is LiveChessGameAcceptEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is LiveChessMoveEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is LiveChessGameEndEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is LiveChessDrawOfferEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is HashtagListEvent -> consumeBaseReplaceable(event, relay, wasVerified)
+                is FavoriteAlgoFeedsListEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is HighlightEvent -> consumeRegularEvent(event, relay, wasVerified)
                 is IndexerRelayListEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is InteractiveStoryPrologueEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is InteractiveStorySceneEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is InteractiveStoryReadingStateEvent -> consumeBaseReplaceable(event, relay, wasVerified)
+                is InterestSetEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is LabeledBookmarkListEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is LiveActivitiesEvent -> consume(event, relay, wasVerified)
                 is LiveActivitiesChatMessageEvent -> consume(event, relay, wasVerified)
+                is LiveActivitiesRaidEvent -> consume(event, relay, wasVerified)
+                is LiveActivitiesClipEvent -> consume(event, relay, wasVerified)
                 is MeetingSpaceEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is MeetingRoomEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is MeetingRoomPresenceEvent -> consumeBaseReplaceable(event, relay, wasVerified)

@@ -129,17 +129,17 @@ install_sdk_package() {
   echo "Installed to $dest_dir"
 }
 
-# Install Android platform 36
+# Install Android platform 37
 install_sdk_package \
-  "$SDK_REPO_BASE/platform-36_r02.zip" \
-  "$ANDROID_SDK_DIR/platforms/android-36" \
-  "android-36"
+  "$SDK_REPO_BASE/platform-37.0_r01.zip" \
+  "$ANDROID_SDK_DIR/platforms/android-37" \
+  "android-37.0"
 
-# Install build-tools 36.0.0 (zip uses "android-16" as inner dir name)
+# Install build-tools 37.0.0 (zip uses "android-37.0" as inner dir name)
 install_sdk_package \
-  "$SDK_REPO_BASE/build-tools_r36_linux.zip" \
-  "$ANDROID_SDK_DIR/build-tools/36.0.0" \
-  "android-16"
+  "$SDK_REPO_BASE/build-tools_r37_linux.zip" \
+  "$ANDROID_SDK_DIR/build-tools/37.0.0" \
+  "android-37.0"
 
 # Install platform-tools
 install_sdk_package \
@@ -173,6 +173,43 @@ if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
   echo "export ANDROID_SDK_ROOT=$ANDROID_SDK_DIR" >> "$CLAUDE_ENV_FILE"
   echo "export PATH=\$PATH:$ANDROID_SDK_DIR/platform-tools" >> "$CLAUDE_ENV_FILE"
 fi
+
+# --- Kotlin/Native: pre-install native dependencies (GCC sysroot, LLDB) ---
+# The K/N compiler downloads these on first use, but that fails through the proxy.
+# Pre-download them so K/N benchmarks and linuxX64 compilation work out of the box.
+KONAN_DIR="/root/.konan"
+KONAN_DEPS_URL="https://download.jetbrains.com/kotlin/native"
+KONAN_DEPS_DIR="$KONAN_DIR/dependencies"
+
+install_konan_dep() {
+  local dep_name="$1"
+  local url="$2"  # full download URL
+  # Already extracted?
+  if [ -d "$KONAN_DEPS_DIR/$dep_name" ]; then
+    return 0
+  fi
+  local archive="$dep_name.tar.gz"
+  local cache_dir="$KONAN_DEPS_DIR/cache"
+  mkdir -p "$cache_dir"
+  if [ ! -f "$cache_dir/$archive" ]; then
+    echo "Downloading K/N dependency $dep_name..."
+    curl -fsSL "$url" -o "$cache_dir/$archive" || {
+      echo "Failed to download $dep_name" >&2; return 1
+    }
+  fi
+  echo "Extracting $dep_name..."
+  tar -xzf "$cache_dir/$archive" -C "$KONAN_DEPS_DIR"
+}
+
+# Dependencies for linuxX64 target (from konan.properties for Kotlin 2.3.20)
+install_konan_dep "x86_64-unknown-linux-gnu-gcc-8.3.0-glibc-2.19-kernel-4.9-2" \
+  "$KONAN_DEPS_URL/x86_64-unknown-linux-gnu-gcc-8.3.0-glibc-2.19-kernel-4.9-2.tar.gz"
+install_konan_dep "lldb-4-linux" \
+  "$KONAN_DEPS_URL/lldb-4-linux.tar.gz"
+install_konan_dep "llvm-19-x86_64-linux-essentials-109" \
+  "$KONAN_DEPS_URL/resources/llvm/19-x86_64-linux/llvm-19-x86_64-linux-essentials-109.tar.gz"
+install_konan_dep "libffi-3.2.1-2-linux-x86-64" \
+  "$KONAN_DEPS_URL/libffi-3.2.1-2-linux-x86-64.tar.gz"
 
 cd "$CLAUDE_PROJECT_DIR"
 ./gradlew --version > /dev/null 2>&1

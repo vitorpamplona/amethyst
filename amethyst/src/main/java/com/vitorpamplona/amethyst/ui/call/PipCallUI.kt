@@ -43,7 +43,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.commons.call.CallState
-import com.vitorpamplona.amethyst.service.call.CallController
+import com.vitorpamplona.amethyst.ui.call.session.CallSession
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.delay
@@ -84,7 +84,7 @@ fun PipCallUI(
 @Composable
 fun PipConnectedCallUI(
     state: CallState.Connected,
-    callController: CallController?,
+    callSession: CallSession?,
     accountViewModel: AccountViewModel,
 ) {
     var elapsed by remember { mutableLongStateOf(0L) }
@@ -98,11 +98,10 @@ fun PipConnectedCallUI(
 
     val emptyTracksFlow = remember { kotlinx.coroutines.flow.MutableStateFlow<Map<String, VideoTrack>>(emptyMap()) }
     val emptySetFlow = remember { kotlinx.coroutines.flow.MutableStateFlow<Set<String>>(emptySet()) }
-    val remoteVideoTracks by (callController?.remoteVideoTracks ?: emptyTracksFlow).collectAsState()
-    val activePeerVideos by (callController?.activePeerVideos ?: emptySetFlow).collectAsState()
+    val remoteVideoTracks by (callSession?.remoteVideoTracks ?: emptyTracksFlow).collectAsState()
+    val activePeerVideos by (callSession?.activePeerVideos ?: emptySetFlow).collectAsState()
     val defaultFalse = remember { kotlinx.coroutines.flow.MutableStateFlow(false) }
-    val isRemoteVideoActive by (callController?.isRemoteVideoActive ?: defaultFalse).collectAsState()
-    val isVideoEnabled by (callController?.isVideoEnabled ?: defaultFalse).collectAsState()
+    val isVideoEnabled by (callSession?.isVideoEnabled ?: defaultFalse).collectAsState()
     val hasActiveVideo =
         state.callType == com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType.VIDEO ||
             isVideoEnabled ||
@@ -125,7 +124,7 @@ fun PipConnectedCallUI(
             if (activeTrack != null) {
                 VideoRenderer(
                     videoTrack = activeTrack,
-                    eglBase = callController?.getEglBase(),
+                    eglBase = callSession?.getEglBase(),
                     modifier = Modifier.fillMaxSize(),
                     mirror = false,
                 )
@@ -142,7 +141,17 @@ fun PipConnectedCallUI(
                     )
                 }
             }
-        } else if (!isRemoteVideoActive) {
+            // Show timer overlay on top of video
+            Text(
+                text = formatDuration(elapsed),
+                color = Color.White.copy(alpha = 0.7f),
+                fontSize = 10.sp,
+                modifier =
+                    Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 4.dp),
+            )
+        } else {
             Column(
                 modifier = Modifier.fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -161,15 +170,5 @@ fun PipConnectedCallUI(
                 )
             }
         }
-
-        Text(
-            text = formatDuration(elapsed),
-            color = Color.White.copy(alpha = 0.7f),
-            fontSize = 10.sp,
-            modifier =
-                Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(top = 4.dp),
-        )
     }
 }

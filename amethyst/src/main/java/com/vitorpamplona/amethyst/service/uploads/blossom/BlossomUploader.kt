@@ -28,8 +28,8 @@ import android.webkit.MimeTypeMap
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.HttpStatusMessages
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
-import com.vitorpamplona.amethyst.service.uploads.BlurhashMetadataCalculator
 import com.vitorpamplona.amethyst.service.uploads.MediaUploadResult
+import com.vitorpamplona.amethyst.service.uploads.PreviewMetadataCalculator
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
@@ -45,7 +45,9 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody
 import okhttp3.coroutines.executeAsync
+import okio.Buffer
 import okio.BufferedSink
+import okio.ForwardingSource
 import okio.source
 import java.io.File
 import java.io.InputStream
@@ -76,6 +78,7 @@ class BlossomUploader {
         okHttpClient: (String) -> OkHttpClient,
         httpAuth: suspend (hash: HexKey, size: Long, alt: String) -> BlossomAuthorizationEvent?,
         context: Context,
+        onProgress: ((bytesWritten: Long, totalBytes: Long) -> Unit)? = null,
     ): MediaUploadResult {
         checkNotInMainThread()
 
@@ -92,7 +95,7 @@ class BlossomUploader {
                 hashBytes.toHexKey() to totalBytes
             }
 
-        val localMetadata = BlurhashMetadataCalculator.computeFromUri(context, uri, myContentType)
+        val localMetadata = PreviewMetadataCalculator.computeFromUri(context, uri, myContentType)
 
         val imageInputStream = contentResolver.openInputStream(uri)
         checkNotNull(imageInputStream) { "Can't open the image input stream" }
@@ -111,6 +114,7 @@ class BlossomUploader {
                     okHttpClient,
                     httpAuth,
                     context,
+                    onProgress,
                 )
             }.mergeLocalMetadata(localMetadata)
     }
@@ -132,6 +136,7 @@ class BlossomUploader {
         okHttpClient: (String) -> OkHttpClient,
         httpAuth: suspend (hash: HexKey, size: Long, alt: String) -> BlossomAuthorizationEvent?,
         context: Context,
+        onProgress: ((bytesWritten: Long, totalBytes: Long) -> Unit)? = null,
     ): MediaUploadResult {
         checkNotInMainThread()
 
@@ -151,7 +156,30 @@ class BlossomUploader {
                 override fun contentLength() = length
 
                 override fun writeTo(sink: BufferedSink) {
-                    inputStream.source().use(sink::writeAll)
+                    if (onProgress == null) {
+                        inputStream.source().use(sink::writeAll)
+                    } else {
+                        // Close the outer counting wrapper — ForwardingSource.close delegates
+                        // to the underlying source, so one `use` on the outermost wrapper
+                        // covers the whole chain. Canonical okio pattern.
+                        val countingSource =
+                            object : ForwardingSource(inputStream.source()) {
+                                var totalRead = 0L
+
+                                override fun read(
+                                    sink: Buffer,
+                                    byteCount: Long,
+                                ): Long {
+                                    val n = super.read(sink, byteCount)
+                                    if (n > 0) {
+                                        totalRead += n
+                                        onProgress(totalRead, length)
+                                    }
+                                    return n
+                                }
+                            }
+                        countingSource.use { sink.writeAll(it) }
+                    }
                 }
             }
 

@@ -825,6 +825,7 @@ private suspend fun sendEncryptedFiles(
                         null
                     },
                 blurhash = result.metadata.blurhash,
+                thumbhash = result.metadata.thumbhash,
                 originalHash = result.metadata.sha256,
             )
         account.sendNip17EncryptedFile(template)
