@@ -365,9 +365,9 @@ fun testOsDetection() {
 
 ---
 
-## Current Issues in Amethyst
+## Current Pattern in Amethyst
 
-**Main.kt:105-123** hardcodes `ctrl = true`:
+`Main.kt` (MenuBar starting at L234) already branches on `isMacOS` (L120) for every shortcut. When adding a new menu item, follow the same pattern — **do not** hardcode `ctrl = true`:
 
 ```kotlin
 // ❌ WRONG: Hardcoded Ctrl (doesn't work on macOS)
@@ -378,7 +378,7 @@ Item(
 )
 ```
 
-**Fix:**
+**Current pattern (what Main.kt does):**
 
 ```kotlin
 // ✅ CORRECT: OS-aware

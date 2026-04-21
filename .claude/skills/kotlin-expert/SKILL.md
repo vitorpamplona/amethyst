@@ -795,6 +795,7 @@ Passing lambda to function?
 - `references/sealed-class-catalog.md` - All sealed types in quartz
 - `references/dsl-builder-examples.md` - TagArrayBuilder, other DSL patterns
 - `references/immutability-patterns.md` - @Immutable usage, data classes, collections
+- `references/common-utilities.md` - Canonical helpers: `NumberFormatters`, `TimeUtils`, `Hex`, `PubKeyFormatter`, `CoroutinesExt.launchIO`, `OptimizedJsonMapper`, etc.
 
 ### Codebase Examples
 - AccountManager.kt:36-50 - sealed class AccountState, StateFlow pattern

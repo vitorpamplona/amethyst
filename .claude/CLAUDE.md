@@ -40,12 +40,12 @@ amethyst/
 | Layer | Technology |
 |-------|------------|
 | **Core** | Quartz (Nostr KMP) |
-| **UI** | Compose Multiplatform 1.7.x |
+| **UI** | Compose Multiplatform 1.10.3 |
 | **Async** | kotlinx.coroutines + Flow |
 | **Network** | OkHttp (JVM) |
 | **Serialization** | Jackson |
 | **DI** | Manual / Koin |
-| **Build** | Gradle 8.x, Kotlin 2.1.0 |
+| **Build** | Gradle 8.x, Kotlin 2.3.20 |
 
 ## Skills
 
@@ -53,14 +53,21 @@ Specialized skills provide domain expertise with bundled resources and patterns:
 
 | Skill | Expertise | When to Use |
 |-------|-----------|-------------|
-| `nostr-expert` | Nostr protocol (Quartz library) | Event types, NIPs, tags, signing, Bech32 |
-| `kotlin-expert` | Advanced Kotlin patterns | StateFlow, sealed classes, @Immutable, DSLs |
+| `nostr-expert` | Nostr protocol (Quartz library) | Event types, NIPs, tags, signing, Bech32, NIP-44, LargeCache |
+| `kotlin-expert` | Advanced Kotlin patterns | StateFlow, sealed classes, @Immutable, DSLs, common utilities |
 | `kotlin-coroutines` | Advanced async patterns | supervisorScope, callbackFlow, relay pools, testing |
 | `kotlin-multiplatform` | Platform abstraction | expect/actual, source sets, sharing decisions |
-| `compose-expert` | Shared UI components | Material3, state hoisting, recomposition |
-| `android-expert` | Android platform | Navigation, permissions, lifecycle, Material3 |
-| `desktop-expert` | Desktop platform | Window, MenuBar, Tray, keyboard shortcuts |
+| `compose-expert` | Shared UI components | Material3, state hoisting, recomposition, rich-text parsing |
+| `android-expert` | Android platform | Navigation, permissions, lifecycle, Material3, Coil image loading |
+| `desktop-expert` | Desktop platform | Window, MenuBar, keyboard shortcuts, DeckLayout |
 | `gradle-expert` | Build system | Dependencies, versioning, packaging, optimization |
+| `account-state` | `Account` + `LocalCache` | Per-user StateFlows, event store, adding account-scoped settings |
+| `relay-client` | Subscriptions & filter assembly | `ComposeSubscriptionManager`, assemblers, preloaders, EOSE |
+| `feed-patterns` | Feeds & DAL | `FeedFilter`, `AdditiveComplexFeedFilter`, `FeedViewModel` family |
+| `auth-signers` | `NostrSigner` implementations | Local, NIP-46 bunker, NIP-55 Android external signer |
+| `quartz-integration` | Quartz as an external library | Gradle setup, `NostrClient`, `KeyPair`, for external projects |
+| `find-missing-translations` | Utility | Extract untranslated Android strings |
+| `find-non-lambda-logs` | Utility | Audit Log calls for lambda overloads |
 
 ## Workflow
 

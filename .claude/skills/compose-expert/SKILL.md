@@ -520,6 +520,7 @@ fun FeedList(items: List<Item>) {
 - **references/shared-composables-catalog.md** - Complete catalog of shared UI components
 - **references/state-patterns.md** - State management patterns with visual examples
 - **references/icon-assets.md** - Custom ImageVector icon patterns
+- **references/rich-text-parsing.md** - `RichTextParser`, `UrlParser`, `GalleryParser`, `Patterns`, `MediaContentModels`; NIP-92 imeta enrichment
 - **scripts/find-composables.sh** - Find all @Composable functions in codebase
 
 ## Quick Reference

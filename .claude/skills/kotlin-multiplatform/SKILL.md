@@ -3,7 +3,7 @@ name: kotlin-multiplatform
 description: |
   Platform abstraction decision-making for Amethyst KMP project. Guides when to abstract vs keep platform-specific,
   source set placement (commonMain, jvmAndroid, platform-specific), expect/actual patterns. Covers primary targets
-  (Android, JVM/Desktop, iOS) with web/wasm future considerations. Integrates with gradle-expert for dependency issues.
+  (Android, JVM/Desktop, iOS — all mature) with web/wasm as possible future targets. Integrates with gradle-expert for dependency issues.
   Triggers on: abstraction decisions ("should I share this?"), source set placement questions, expect/actual creation,
   build.gradle.kts work, incorrect placement detection, KMP dependency suggestions.
 ---
@@ -242,17 +242,17 @@ expect fun currentTimeSeconds(): Long
 
 **Android (androidMain):**
 - Uses Android framework (Activity, Context, etc.)
-- secp256k1-kmp-jni-android for crypto
+- secp256k1-kmp-jni-android (`0.23.0` in `libs.versions.toml`) for crypto
 - AndroidX libraries
 
 **Desktop JVM (jvmMain):**
 - Uses Compose Desktop (Window, MenuBar, etc.)
-- secp256k1-kmp-jni-jvm for crypto
+- secp256k1-kmp-jni-jvm (same `0.23.0` line) for crypto
 - Pure JVM libraries
 
 **iOS (iosMain):**
-- Active development, framework configured
-- Architecture targets: macosArm64Main, iosArm64Main, iosSimulatorArm64Main
+- Mature target — actively built and tested
+- Architecture targets: iosArm64, iosSimulatorArm64, iosX64 (plus macosArm64 for host tooling)
 - Platform APIs via platform.posix, Security framework
 
 ### Web, wasm - Future Targets

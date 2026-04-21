@@ -514,6 +514,10 @@ Or see `references/nip-catalog.md` for complete catalog.
 - **references/nip-catalog.md** - All 57 NIPs with package locations and key files
 - **references/event-hierarchy.md** - Event class hierarchy, kind classifications, common types
 - **references/tag-patterns.md** - Tag structure, TagArrayBuilder DSL, common tag types, parsing patterns
+- **references/nip19-bech32.md** - `Nip19Parser`, `Bech32Util`, `TlvBuilder`, entity types (NPub, NSec, NEvent, NAddress, NProfile, NRelay, NEmbed)
+- **references/event-factory.md** - `EventFactory` dispatch pattern and how to register a new kind
+- **references/crypto-and-encryption.md** - Event signing/verification, secp256k1 abstraction, NIP-44 encryption, `SharedKeyCache`
+- **references/large-cache.md** - `LargeCache<K,V>` expect/actual + `ICacheOperations` functional API
 - **scripts/nip-lookup.sh** - Find NIP implementations by number or search term
 
 ## Quick Reference

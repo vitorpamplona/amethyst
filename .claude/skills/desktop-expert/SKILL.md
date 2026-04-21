@@ -69,7 +69,7 @@ fun main() = application {
 - `rememberWindowState()` manages size/position
 - `onCloseRequest` handles window close
 
-**See:** `desktopApp/src/jvmMain/kotlin/com/vitorpamplona/amethyst/desktop/Main.kt:87-138`
+**See:** `desktopApp/src/jvmMain/kotlin/com/vitorpamplona/amethyst/desktop/Main.kt` — `fun main()` at L172, `application {` at L186, top-level `Window` at L229, `MenuBar` at L234.
 
 ---
 
@@ -144,7 +144,7 @@ Window(onCloseRequest = ::exitApplication, title = "App") {
 
 ### Keyboard Shortcuts (OS-Aware)
 
-**Current issue:** Main.kt hardcodes `ctrl = true` (Main.kt:105, 111, 117, 122, 123).
+**Current state:** `Main.kt` already branches on `isMacOS` (declared at L120) for every menu shortcut — `if (isMacOS) { KeyShortcut(..., meta = true) } else { KeyShortcut(..., ctrl = true) }` (see L239, L249, L286, L313, L325, L335, L347, L358, L374, L384, L400, L416, L449). When adding a new shortcut, follow the same branching pattern rather than hardcoding `ctrl = true`.
 
 **OS-specific shortcuts:**
 
@@ -275,7 +275,7 @@ Row(Modifier.fillMaxSize()) {
 }
 ```
 
-**See:** Main.kt:191-264
+**See:** `desktopApp/src/jvmMain/kotlin/com/vitorpamplona/amethyst/desktop/ui/deck/SinglePaneLayout.kt` (NavigationRail at L97, items at L103+). `DeckLayout` alongside it handles multi-pane workspaces.
 
 **Why NavigationRail?**
 - Desktop has horizontal space (1200+ dp width)
@@ -504,9 +504,10 @@ desktopApp/
 ```
 
 **Key files:**
-- `Main.kt:87-138` - `application {}`, `Window`, `MenuBar`
-- `Main.kt:183-264` - NavigationRail pattern
-- `build.gradle.kts:45-73` - Desktop packaging config
+- `desktopApp/src/jvmMain/kotlin/com/vitorpamplona/amethyst/desktop/Main.kt` — `fun main()` L172, `application {` L186, `Window` L229, `MenuBar` L234 (OS-aware shortcuts begin at L239)
+- `desktopApp/src/jvmMain/kotlin/com/vitorpamplona/amethyst/desktop/ui/deck/SinglePaneLayout.kt` — NavigationRail at L97
+- `desktopApp/src/jvmMain/kotlin/com/vitorpamplona/amethyst/desktop/ui/deck/` — DeckLayout, WorkspaceManager, DeckState (multi-pane)
+- `desktopApp/build.gradle.kts` — desktop packaging config (DMG/MSI/DEB)
 
 ---
 
@@ -650,10 +651,11 @@ fun FeedScreen() {
 - `references/os-detection.md` - Platform detection patterns
 
 ### Codebase Examples
-- Main.kt:87-138 - Window, MenuBar entry point
-- Main.kt:183-264 - NavigationRail pattern
-- FeedScreen.kt:49-136 - Desktop screen layout
-- LoginScreen.kt:44-97 - Centered desktop login
+- `Main.kt` — Window + MenuBar entry point (`application` L186, `Window` L229, `MenuBar` L234)
+- `ui/deck/SinglePaneLayout.kt` — NavigationRail at L97
+- `ui/deck/DeckLayout.kt` / `WorkspaceManager.kt` — multi-pane workspace
+- `ui/feed/` — Desktop feed screens
+- `ui/login/` — Centered desktop login
 
 ---
 
@@ -685,13 +687,17 @@ When working on desktop features:
 
 ❌ **Hardcoding Ctrl everywhere**
 ```kotlin
-// Main.kt:105 - Current issue
+// Do NOT do this in a new shortcut:
 shortcut = KeyShortcut(Key.N, ctrl = true)  // Wrong on macOS
 ```
 
-✅ **OS-aware shortcuts**
+✅ **OS-aware shortcuts (the pattern `Main.kt` already uses)**
 ```kotlin
-shortcut = DesktopShortcuts.primary(Key.N)
+shortcut = if (isMacOS) {
+    KeyShortcut(Key.N, meta = true)    // Cmd+N on macOS
+} else {
+    KeyShortcut(Key.N, ctrl = true)    // Ctrl+N on Win/Linux
+}
 ```
 
 ---
@@ -736,7 +742,7 @@ When implementing desktop features:
 
 1. **Read** `references/desktop-compose-apis.md` for API catalog
 2. **Check** `references/keyboard-shortcuts.md` for standard shortcuts
-3. **Reference** Main.kt:87-264 for current patterns
+3. **Reference** `Main.kt` (entry point L172-L450+) and `ui/deck/SinglePaneLayout.kt` (NavigationRail) for current patterns
 4. **Test** on all 3 platforms (macOS, Windows, Linux) if possible
 5. **Delegate** build issues to gradle-expert
 6. **Share** UI components via compose-expert, not desktop-expert
