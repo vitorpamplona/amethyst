@@ -192,6 +192,7 @@ class AccountSettings(
     val defaultArticlesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.AllFollows),
     val defaultBadgesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Mine),
     val defaultBrowseEmojiSetsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
+    val defaultCommunitiesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.AllFollows),
     val nwcWallets: MutableStateFlow<List<NwcWalletEntryNorm>> = MutableStateFlow(emptyList()),
     val defaultNwcWalletId: MutableStateFlow<String?> = MutableStateFlow(null),
     var hideDeleteRequestDialog: Boolean = false,
@@ -463,6 +464,17 @@ class AccountSettings(
     fun changeDefaultPollsFollowList(name: TopFilter) {
         if (defaultPollsFollowList.value != name) {
             defaultPollsFollowList.tryEmit(name)
+            saveAccountSettings()
+        }
+    }
+
+    fun changeDefaultCommunitiesFollowList(name: FeedDefinition) {
+        changeDefaultCommunitiesFollowList(name.code)
+    }
+
+    fun changeDefaultCommunitiesFollowList(name: TopFilter) {
+        if (defaultCommunitiesFollowList.value != name) {
+            defaultCommunitiesFollowList.tryEmit(name)
             saveAccountSettings()
         }
     }

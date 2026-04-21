@@ -224,6 +224,8 @@ import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
 import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.definition.tags.ModeratorTag
+import com.vitorpamplona.quartz.nip72ModCommunities.definition.tags.RelayTag
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest.NIP90ContentDiscoveryRequestEvent
@@ -485,6 +487,9 @@ class Account(
 
     val liveBrowseEmojiSetsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultBrowseEmojiSetsFollowList)
     val liveBrowseEmojiSetsFollowListsPerRelay = OutboxLoaderState(liveBrowseEmojiSetsFollowLists, cache, scope).flow
+
+    val liveCommunitiesFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultCommunitiesFollowList)
+    val liveCommunitiesFollowListsPerRelay = OutboxLoaderState(liveCommunitiesFollowLists, cache, scope).flow
 
     override fun isWriteable(): Boolean = settings.isWriteable()
 
@@ -1164,6 +1169,34 @@ class Account(
 
         cache.justConsumeMyOwnEvent(signedEvent)
         client.publish(signedEvent, relays)
+    }
+
+    suspend fun sendCommunityDefinition(
+        name: String,
+        description: String,
+        moderators: List<ModeratorTag>,
+        image: String? = null,
+        rules: String? = null,
+        relays: List<RelayTag>? = null,
+        dTag: String,
+    ): CommunityDefinitionEvent? {
+        if (!isWriteable()) return null
+
+        val template =
+            CommunityDefinitionEvent.build(
+                name = name,
+                description = description,
+                moderators = moderators,
+                image = image,
+                rules = rules,
+                relays = relays,
+                dTag = dTag,
+            )
+        val signedEvent = signer.sign(template)
+
+        cache.justConsumeMyOwnEvent(signedEvent)
+        client.publish(signedEvent, computeRelayListToBroadcast(signedEvent))
+        return signedEvent
     }
 
     private fun loadCurrentAcceptedBadges(): List<AcceptedBadge> {

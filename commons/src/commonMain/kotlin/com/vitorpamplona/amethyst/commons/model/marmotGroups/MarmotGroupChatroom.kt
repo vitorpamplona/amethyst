@@ -27,9 +27,11 @@ import com.vitorpamplona.amethyst.commons.model.ListChange
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.NotesGatherer
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.update
 import java.lang.ref.WeakReference
 
 /**
@@ -52,12 +54,41 @@ class MarmotGroupChatroom(
     val unreadCount = MutableStateFlow(0)
 
     /**
+     * Tracks the most recent createdAt (seconds) of a kind:445 group event
+     * observed from each relay, keyed by the relay that delivered it. Used by
+     * the Group Info screen to flag which configured relays are actively
+     * carrying traffic for this MLS group.
+     */
+    val relayActivity = MutableStateFlow<Map<NormalizedRelayUrl, Long>>(emptyMap())
+
+    /**
      * True if the local user has ever sent an application message in this
      * group, OR explicitly created/owns it. Used by list UIs to split groups
      * into "Known" vs "New Requests" — invitees that have not yet replied
      * stay in "New Requests" until they participate.
      */
     var ownerSentMessage: Boolean = false
+
+    // Synthetic note used by list views to represent the group when no
+    // messages have been received yet. Lazily created and kept stable so
+    // equality-based feed diffing treats it as the same row across refreshes.
+    private var cachedPlaceholder: Note? = null
+
+    @Synchronized
+    fun placeholderNote(): Note {
+        val existing = cachedPlaceholder
+        if (existing != null) return existing
+        val created =
+            Note(placeholderIdHex(nostrGroupId)).apply {
+                addGatherer(this@MarmotGroupChatroom)
+            }
+        cachedPlaceholder = created
+        return created
+    }
+
+    companion object {
+        fun placeholderIdHex(nostrGroupId: HexKey): HexKey = "marmot-empty-$nostrGroupId"
+    }
 
     private var changesFlow: WeakReference<MutableSharedFlow<ListChange<Note>>> = WeakReference(null)
 
@@ -132,6 +163,16 @@ class MarmotGroupChatroom(
 
     fun markAsRead() {
         unreadCount.value = 0
+    }
+
+    fun recordRelayActivity(
+        relay: NormalizedRelayUrl,
+        createdAt: Long,
+    ) {
+        relayActivity.update { current ->
+            val existing = current[relay] ?: 0L
+            if (createdAt > existing) current + (relay to createdAt) else current
+        }
     }
 
     fun pruneMessagesToTheLatestOnly(): Set<Note> {

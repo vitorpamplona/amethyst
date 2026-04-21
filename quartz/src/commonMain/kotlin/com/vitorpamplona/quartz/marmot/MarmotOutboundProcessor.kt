@@ -121,20 +121,29 @@ class MarmotOutboundProcessor(
     /**
      * Build a GroupEvent carrying a Commit for publishing.
      *
-     * Used after MlsGroupManager.commit() or addMember()/removeMember().
-     * The commit bytes are already MLS-formatted.
+     * Used after MlsGroupManager.stageAddMember()/stageRemoveMember()/etc.
+     * The commit bytes are already MLS-formatted (PublicMessage envelope).
      *
      * @param nostrGroupId the Nostr group ID
-     * @param commitBytes the raw MLS commit bytes from CommitResult
+     * @param commitBytes the framed MLS commit bytes from [com.vitorpamplona.quartz.marmot.mls.group.StagedCommit.framedCommitBytes]
+     * @param exporterKey optional explicit outer-encryption key. Callers
+     *     publishing a Commit MUST pass the **pre-commit** exporter secret
+     *     (from [com.vitorpamplona.quartz.marmot.mls.group.StagedCommit.preCommitExporterSecret])
+     *     so that other existing members at epoch N can decrypt and process
+     *     the commit. If null, falls back to the current epoch's exporter
+     *     secret — which is only correct when the commit has *not* been
+     *     applied locally yet (i.e. this call is made before
+     *     [com.vitorpamplona.quartz.marmot.mls.group.MlsGroup.mergeStagedCommit]).
      * @return the signed GroupEvent ready for relay publishing
      */
     suspend fun buildCommitEvent(
         nostrGroupId: HexKey,
         commitBytes: ByteArray,
+        exporterKey: ByteArray? = null,
     ): OutboundGroupEvent {
         // Outer ChaCha20-Poly1305 encryption of the MLS commit
-        val exporterKey = groupManager.exporterSecret(nostrGroupId)
-        val encryptedContent = GroupEventEncryption.encrypt(commitBytes, exporterKey)
+        val outerKey = exporterKey ?: groupManager.exporterSecret(nostrGroupId)
+        val encryptedContent = GroupEventEncryption.encrypt(commitBytes, outerKey)
 
         // Build the GroupEvent template
         val template =

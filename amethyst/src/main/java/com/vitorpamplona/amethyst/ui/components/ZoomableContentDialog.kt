@@ -570,6 +570,7 @@ private fun RenderImageOrVideo(
                         automaticallyStartPlayback = true,
                         controllerVisible = controllerVisible,
                         hasBlurhash = content.blurhash != null,
+                        isFullscreen = true,
                         accountViewModel = accountViewModel,
                     )
                 }
@@ -630,6 +631,7 @@ private fun RenderImageOrVideo(
                             automaticallyStartPlayback = true,
                             controllerVisible = controllerVisible,
                             hasBlurhash = content.blurhash != null,
+                            isFullscreen = true,
                             accountViewModel = accountViewModel,
                         )
                     }

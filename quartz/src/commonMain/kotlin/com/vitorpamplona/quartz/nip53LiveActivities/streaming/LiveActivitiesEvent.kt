@@ -117,6 +117,12 @@ class LiveActivitiesEvent(
 
     fun pinned() = tags.mapNotNull(PinnedEventTag::parse)
 
+    /**
+     * zap.stream convention: a NIP-75 zap goal (kind 9041) is attached to a live stream
+     * via a flat tag `["goal", "<hex event id>"]` on the 30311 event.
+     */
+    fun goalEventId(): HexKey? = tags.firstOrNull { it.size > 1 && it[0] == GOAL_TAG && it[1].isNotEmpty() }?.get(1)
+
     fun checkStatus(eventStatus: StatusTag.STATUS?): StatusTag.STATUS? =
         if (eventStatus == StatusTag.STATUS.LIVE && createdAt < TimeUtils.eightHoursAgo()) {
             StatusTag.STATUS.ENDED
@@ -139,6 +145,7 @@ class LiveActivitiesEvent(
     companion object {
         const val KIND = 30311
         const val ALT = "Live activity event"
+        const val GOAL_TAG = "goal"
 
         suspend fun create(
             signer: NostrSigner,

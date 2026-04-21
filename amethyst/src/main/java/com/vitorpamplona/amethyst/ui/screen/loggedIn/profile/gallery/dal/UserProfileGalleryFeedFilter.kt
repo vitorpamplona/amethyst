@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.clip.LiveActivitiesClipEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip71Video.RegularVideoEvent
 import com.vitorpamplona.quartz.nip71Video.ReplaceableVideoEvent
@@ -75,17 +76,23 @@ class UserProfileGalleryFeedFilter(
         user: User,
     ): Boolean {
         val noteEvent = it.event
-        return (
-            (
-                it.event?.pubKey == user.pubkeyHex &&
-                    (
-                        noteEvent is PictureEvent ||
-                            noteEvent is RegularVideoEvent ||
-                            (noteEvent is ReplaceableVideoEvent && it is AddressableNote) ||
-                            (noteEvent is ProfileGalleryEntryEvent && noteEvent.hasUrl() && noteEvent.hasFromEvent())
-                    )
-            ) // && noteEvent.isOneOf(SUPPORTED_VIDEO_FEED_MIME_TYPES_SET))
-        ) &&
+        val authoredByUser =
+            it.event?.pubKey == user.pubkeyHex &&
+                (
+                    noteEvent is PictureEvent ||
+                        noteEvent is RegularVideoEvent ||
+                        (noteEvent is ReplaceableVideoEvent && it is AddressableNote) ||
+                        (noteEvent is ProfileGalleryEntryEvent && noteEvent.hasUrl() && noteEvent.hasFromEvent())
+                )
+
+        // Clips are authored by viewers, not the host — accept them when they reference
+        // a stream hosted by this user AND carry a playable URL.
+        val clipOfUsersStream =
+            noteEvent is LiveActivitiesClipEvent &&
+                noteEvent.host() == user.pubkeyHex &&
+                !noteEvent.videoUrl().isNullOrBlank()
+
+        return (authoredByUser || clipOfUsersStream) &&
             params.match(noteEvent, it.relays) &&
             account.isAcceptable(it)
     }

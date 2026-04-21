@@ -45,6 +45,22 @@ sealed class Route {
 
     @Serializable object Polls : Route()
 
+    @Serializable object Communities : Route()
+
+    @Serializable object NewCommunity : Route()
+
+    @Serializable data class EditCommunity(
+        val kind: Int,
+        val pubKeyHex: HexKey,
+        val dTag: String,
+    ) : Route() {
+        constructor(address: Address) : this(
+            kind = address.kind,
+            pubKeyHex = address.pubKeyHex,
+            dTag = address.dTag,
+        )
+    }
+
     @Serializable object Badges : Route()
 
     @Serializable object ProfileBadges : Route()

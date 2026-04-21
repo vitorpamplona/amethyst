@@ -31,6 +31,7 @@ data class UiSettings(
     val preferredLanguage: String? = null,
     val automaticallyShowImages: ConnectivityType = ConnectivityType.ALWAYS,
     val automaticallyStartPlayback: ConnectivityType = ConnectivityType.ALWAYS,
+    val automaticallyPlayVideos: BooleanType = BooleanType.ALWAYS,
     val automaticallyShowUrlPreview: ConnectivityType = ConnectivityType.ALWAYS,
     val automaticallyHideNavigationBars: BooleanType = BooleanType.ALWAYS,
     val automaticallyShowProfilePictures: ConnectivityType = ConnectivityType.ALWAYS,

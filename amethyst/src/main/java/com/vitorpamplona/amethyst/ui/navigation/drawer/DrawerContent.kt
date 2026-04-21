@@ -59,6 +59,7 @@ import androidx.compose.material.icons.outlined.CollectionsBookmark
 import androidx.compose.material.icons.outlined.Drafts
 import androidx.compose.material.icons.outlined.EmojiEmotions
 import androidx.compose.material.icons.outlined.GroupAdd
+import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.MilitaryTech
 import androidx.compose.material.icons.outlined.Photo
@@ -634,6 +635,14 @@ fun ListContent(
             tint = MaterialTheme.colorScheme.onBackground,
             nav = nav,
             route = Route.Badges,
+        )
+
+        NavigationRow(
+            title = R.string.communities,
+            icon = Icons.Outlined.Groups,
+            tint = MaterialTheme.colorScheme.onBackground,
+            nav = nav,
+            route = Route.Communities,
         )
 
         NavigationRow(

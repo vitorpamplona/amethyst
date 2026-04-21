@@ -18,24 +18,33 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.playback.composable.controls
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.list.datasource
 
-import androidx.media3.common.C
-import androidx.media3.common.Tracks
+import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
+import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountFeedContentStates
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import kotlinx.coroutines.CoroutineScope
 
-fun getVideoTrackGroup(tracks: Tracks): Tracks.Group? = tracks.groups.firstOrNull { it.type == C.TRACK_TYPE_VIDEO && it.length > 0 }
+class CommunitiesListQueryState(
+    val account: Account,
+    val feedStates: AccountFeedContentStates,
+    val scope: CoroutineScope,
+)
 
-// Returns the "Xp" value for the currently selected video track. Uses min(width, height) so
-// that a portrait video's renditions get the same "360p / 540p / 720p" labels as a landscape
-// source — the streaming convention is to label by the short side, not format.height which is
-// the long side for portrait content.
-fun getCurrentPlayingShortSide(tracks: Tracks): Int? {
-    val group = getVideoTrackGroup(tracks) ?: return null
-    for (i in 0 until group.length) {
-        if (group.isTrackSelected(i)) {
-            val format = group.getTrackFormat(i)
-            return minOf(format.width, format.height).takeIf { it > 0 }
-        }
-    }
-    return null
+@Stable
+class CommunitiesListFilterAssembler(
+    client: INostrClient,
+) : ComposeSubscriptionManager<CommunitiesListQueryState>() {
+    val group =
+        listOf(
+            CommunitiesListSubAssembler(client, ::allKeys),
+        )
+
+    override fun invalidateKeys() = invalidateFilters()
+
+    override fun invalidateFilters() = group.forEach { it.invalidateFilters() }
+
+    override fun destroy() = group.forEach { it.destroy() }
 }

@@ -21,9 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM
 
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -84,7 +82,7 @@ fun ChatroomScreen(
         accountViewModel = accountViewModel,
         allowBarHide = false,
     ) {
-        Column(Modifier.padding(it).consumeWindowInsets(it).statusBarsPadding()) {
+        Column(Modifier.padding(it)) {
             ChatroomView(
                 room = roomId,
                 draftMessage = draftMessage,

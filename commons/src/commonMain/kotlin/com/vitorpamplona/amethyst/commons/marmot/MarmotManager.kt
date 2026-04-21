@@ -115,6 +115,7 @@ class MarmotManager(
 
             is GroupEventResult.CommitPending,
             is GroupEventResult.Duplicate,
+            is GroupEventResult.UndecryptableOuterLayer,
             is GroupEventResult.Error,
             -> {}
         }
@@ -178,8 +179,24 @@ class MarmotManager(
             "KeyPackage credential identity does not match memberPubKey"
         }
 
+        // Per RFC 9420 §12.4 (and MDK), the outbound kind:445 MUST be
+        // outer-encrypted with the pre-commit (epoch-N) exporter secret so
+        // that other existing members still at epoch N can decrypt and
+        // process the commit. CommitResult.preCommitExporterSecret carries
+        // that key; the local group state has already advanced to N+1 by
+        // the time addMember returns, so we can't read it from the group
+        // any more.
         val commitResult = groupManager.addMember(nostrGroupId, keyPackageBytes)
-        val commitEvent = outboundProcessor.buildCommitEvent(nostrGroupId, commitResult.commitBytes)
+        val commitEvent =
+            outboundProcessor.buildCommitEvent(
+                nostrGroupId = nostrGroupId,
+                commitBytes = commitResult.framedCommitBytes,
+                exporterKey = commitResult.preCommitExporterSecret,
+            )
+        // The published kind:445 will echo back from the relay — without this
+        // dedup our own inbound pipeline would try to re-apply a commit whose
+        // epoch we've already merged.
+        inboundProcessor.markEventProcessed(commitEvent.signedEvent.id)
 
         val welcomeDelivery =
             welcomeSender.wrapWelcome(
@@ -266,7 +283,14 @@ class MarmotManager(
         targetLeafIndex: Int,
     ): OutboundGroupEvent {
         val commitResult = groupManager.removeMember(nostrGroupId, targetLeafIndex)
-        return outboundProcessor.buildCommitEvent(nostrGroupId, commitResult.commitBytes)
+        val commitEvent =
+            outboundProcessor.buildCommitEvent(
+                nostrGroupId = nostrGroupId,
+                commitBytes = commitResult.framedCommitBytes,
+                exporterKey = commitResult.preCommitExporterSecret,
+            )
+        inboundProcessor.markEventProcessed(commitEvent.signedEvent.id)
+        return commitEvent
     }
 
     /**
@@ -277,8 +301,16 @@ class MarmotManager(
         nostrGroupId: HexKey,
         metadata: MarmotGroupData,
     ): OutboundGroupEvent {
-        val commitResult = groupManager.updateGroupExtensions(nostrGroupId, listOf(metadata.toExtension()))
-        return outboundProcessor.buildCommitEvent(nostrGroupId, commitResult.commitBytes)
+        val commitResult =
+            groupManager.updateGroupExtensions(nostrGroupId, listOf(metadata.toExtension()))
+        val commitEvent =
+            outboundProcessor.buildCommitEvent(
+                nostrGroupId = nostrGroupId,
+                commitBytes = commitResult.framedCommitBytes,
+                exporterKey = commitResult.preCommitExporterSecret,
+            )
+        inboundProcessor.markEventProcessed(commitEvent.signedEvent.id)
+        return commitEvent
     }
 
     // --- KeyPackage Management ---

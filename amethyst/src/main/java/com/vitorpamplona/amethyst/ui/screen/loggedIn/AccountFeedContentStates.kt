@@ -31,6 +31,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.articles.dal.ArticlesFeedFi
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.dal.BadgesFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.dal.ChatroomListKnownFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.dal.ChatroomListNewFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.list.dal.CommunitiesFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip23LongForm.DiscoverLongFormFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip28Chats.DiscoverChatFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip51FollowSets.DiscoverFollowSetsFeedFilter
@@ -57,6 +58,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.shorts.dal.ShortsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.dal.VideoFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.webBookmarks.dal.WebBookmarkFeedFilter
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class AccountFeedContentStates(
     val account: Account,
@@ -86,6 +89,7 @@ class AccountFeedContentStates(
     val badgesFeed = FeedContentState(BadgesFeedFilter(account), scope, LocalCache)
 
     val browseEmojiSetsFeed = FeedContentState(BrowseEmojiSetsFeedFilter(account), scope, LocalCache)
+    val communitiesList = FeedContentState(CommunitiesFeedFilter(account), scope, LocalCache)
 
     val picturesFeed = FeedContentState(PictureFeedFilter(account), scope, LocalCache)
     val productsFeed = FeedContentState(ProductsFeedFilter(account), scope, LocalCache)
@@ -102,6 +106,19 @@ class AccountFeedContentStates(
     val drafts = FeedContentState(DraftEventsFeedFilter(account), scope, LocalCache)
 
     val webBookmarks = FeedContentState(WebBookmarkFeedFilter(account), scope, LocalCache)
+
+    init {
+        // Marmot group list changes (new group, group marked known, group
+        // metadata synced) don't flow through LocalCache.newEventBundles, so
+        // the additive update path can't see them. Force a full feed rebuild
+        // whenever the list changes so empty groups appear and placeholder
+        // rows get replaced by real messages.
+        scope.launch(Dispatchers.IO) {
+            account.marmotGroupList.groupListChanges.collect {
+                dmKnown.invalidateData()
+            }
+        }
+    }
 
     suspend fun init() {
         notificationSummary.initializeSuspend()
@@ -134,6 +151,7 @@ class AccountFeedContentStates(
         badgesFeed.updateFeedWith(newNotes)
 
         browseEmojiSetsFeed.updateFeedWith(newNotes)
+        communitiesList.updateFeedWith(newNotes)
 
         picturesFeed.updateFeedWith(newNotes)
         productsFeed.updateFeedWith(newNotes)
@@ -176,6 +194,7 @@ class AccountFeedContentStates(
         badgesFeed.deleteFromFeed(newNotes)
 
         browseEmojiSetsFeed.deleteFromFeed(newNotes)
+        communitiesList.deleteFromFeed(newNotes)
 
         picturesFeed.deleteFromFeed(newNotes)
         productsFeed.deleteFromFeed(newNotes)

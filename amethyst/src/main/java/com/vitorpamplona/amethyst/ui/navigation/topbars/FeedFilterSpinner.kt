@@ -104,6 +104,7 @@ import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import kotlinx.collections.immutable.ImmutableList
 
@@ -351,7 +352,10 @@ fun RenderOption(
         is CommunityName -> {
             val it by observeNote(option.note, accountViewModel)
 
-            Text(text = "/n/${((it.note as? AddressableNote)?.dTag() ?: "")}", fontSize = Font14SP, color = MaterialTheme.colorScheme.onSurface)
+            val addressable = it.note as? AddressableNote
+            val definition = addressable?.event as? CommunityDefinitionEvent
+            val label = definition?.name()?.ifBlank { null } ?: addressable?.dTag() ?: ""
+            Text(text = "/n/$label", fontSize = Font14SP, color = MaterialTheme.colorScheme.onSurface)
         }
 
         is RelayName -> {
