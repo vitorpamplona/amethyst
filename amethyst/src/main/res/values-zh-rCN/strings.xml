@@ -271,6 +271,7 @@
     因此聊天信息会随着时间的推移而消失。</string>
     <string name="public_chat">公共聊天</string>
     <string name="marmot_group">MLS 组</string>
+    <string name="marmot_group_no_messages_yet">尚无消息</string>
     <string name="public_chat_title">公开聊天元数据</string>
     <string name="public_chat_explainer">公开聊天对所有 Nostr 用户都是可见的，任何人都可以：
         参与这些聊天。这对特定话题建立的开放式社区来说很重要
@@ -390,6 +391,26 @@
     <string name="open_polls">开启</string>
     <string name="closed_polls">已关闭</string>
     <string name="badges">徽章</string>
+    <string name="communities">社区</string>
+    <string name="new_community">新建社区</string>
+    <string name="edit_community">编辑社区</string>
+    <string name="new_community_name">社区名</string>
+    <string name="new_community_description">描述</string>
+    <string name="new_community_rules">规则 (可选)</string>
+    <string name="new_community_pick_cover">添加封面图像</string>
+    <string name="new_community_pick_cover_hint">轻触选取一张照片 — 它将上传到您的媒体服务器。</string>
+    <string name="new_community_moderators_section">协管</string>
+    <string name="new_community_moderators_hint">协管可以批准帖子。您始终是协管。</string>
+    <string name="new_community_add_moderator">添加协管</string>
+    <string name="new_community_add_moderator_placeholder">姓名, npub, 或 NIP-05</string>
+    <string name="new_community_owner">所有者</string>
+    <string name="new_community_relays_section">中继</string>
+    <string name="new_community_relays_hint">选择托管请求、批准或社区作者元数据的中继。</string>
+    <string name="new_community_relay_marker_none">任何</string>
+    <string name="new_community_relay_marker_author">作者</string>
+    <string name="new_community_relay_marker_requests">请求</string>
+    <string name="new_community_relay_marker_approvals">批准</string>
+    <string name="new_community_empty">没有社区匹配此过滤器。</string>
     <string name="received_badges">已收到</string>
     <string name="my_badges">我的</string>
     <string name="awarded_badges">授予的</string>
@@ -452,6 +473,20 @@
     <string name="bookmark_list_links_btn_label">查看链接</string>
     <string name="bookmark_list_hashtags_btn_label">查看话题标签</string>
     <string name="bookmark_list_feed_empty_msg">您还没有任何书签列表。轻按下面的新建按钮制作一个。</string>
+    <string name="interest_sets_title">兴趣集</string>
+    <string name="interest_sets_empty">您还没有任何兴趣集。轻按下面的新建按钮制作一个。</string>
+    <string name="interest_set_create_btn_label">新的兴趣集</string>
+    <string name="interest_set_creation_screen_title">新的兴趣集</string>
+    <string name="interest_set_name_label">集合名称</string>
+    <string name="interest_set_name_placeholder">我的兴趣</string>
+    <string name="interest_set_hashtag_add_placeholder">添加话题标签</string>
+    <string name="interest_set_hashtag_private_toggle">私密</string>
+    <string name="interest_set_hashtag_count">%1$d 个话题标签</string>
+    <string name="interest_set_actions_dialog_title">兴趣集操作</string>
+    <string name="interest_set_rename">重命名</string>
+    <string name="interest_set_clone">克隆</string>
+    <string name="interest_set_add_hashtag">添加话题标签</string>
+    <string name="interest_set_toggle_visibility">切换公共/私密</string>
     <string name="private_posts_label">私密帖子</string>
     <string name="private_posts_count">私密帖子（%1$s）</string>
     <string name="public_posts_label">公开帖子</string>
@@ -954,6 +989,7 @@
     <string name="theme">主题</string>
     <string name="automatically_load_images_gifs">图像预览</string>
     <string name="automatically_play_videos">视频播放</string>
+    <string name="autoplay_videos">自动播放视频</string>
     <string name="automatically_show_url_preview">URL 预览</string>
     <string name="automatically_hide_nav_bars">沉浸式滚动</string>
     <string name="automatically_hide_nav_bars_description">滚动时隐藏导航栏</string>
@@ -1024,6 +1060,7 @@
     <string name="theme_description">暗色、亮色或系统主题</string>
     <string name="automatically_load_images_gifs_description">自动加载图像和 GIF</string>
     <string name="automatically_play_videos_description">自动播放视频和 GIF</string>
+    <string name="autoplay_videos_description">视频在屏幕上可见时自动播放视频</string>
     <string name="automatically_show_url_preview_description">显示 URL 预览</string>
     <string name="load_image_description">何时加载图像</string>
     <string name="copy_stack_to_clipboard">复制 Stack</string>
@@ -1525,6 +1562,7 @@
     <string name="select_list_to_filter">选择一个用于过滤订阅源的列表</string>
     <string name="feed_group_feeds">源</string>
     <string name="feed_group_hashtags">话题标签</string>
+    <string name="feed_group_interest_sets">兴趣集</string>
     <string name="feed_group_locations">位置</string>
     <string name="feed_group_communities">社区</string>
     <string name="feed_group_lists">列表</string>
