@@ -50,30 +50,17 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
 import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.automirrored.outlined.Article
-import androidx.compose.material.icons.automirrored.outlined.Chat
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material.icons.outlined.CollectionsBookmark
 import androidx.compose.material.icons.outlined.Drafts
-import androidx.compose.material.icons.outlined.EmojiEmotions
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.GroupAdd
-import androidx.compose.material.icons.outlined.Groups
-import androidx.compose.material.icons.outlined.Language
-import androidx.compose.material.icons.outlined.MilitaryTech
 import androidx.compose.material.icons.outlined.Photo
-import androidx.compose.material.icons.outlined.PlayCircle
-import androidx.compose.material.icons.outlined.Sensors
-import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.SettingsInputAntenna
 import androidx.compose.material.icons.outlined.SmartDisplay
-import androidx.compose.material.icons.outlined.Storefront
-import androidx.compose.material.icons.outlined.Tag
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -122,6 +109,13 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUse
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserStatuses
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.DrawerFeedsItems
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.DrawerNavigateItems
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.DrawerYouItems
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarCatalog
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarIcon
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItemDef
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -549,219 +543,9 @@ fun ListContent(
     nav: INav,
 ) {
     Column(modifier) {
-        CollapsibleSection(title = R.string.drawer_section_navigate) {
-            NavigationRow(
-                title = R.string.route_home,
-                icon = R.drawable.ic_home,
-                iconReference = 0,
-                tint = MaterialTheme.colorScheme.onBackground,
-                nav = nav,
-                route = Route.Home,
-            )
-
-            NavigationRow(
-                title = R.string.route_messages,
-                icon = R.drawable.ic_dm,
-                iconReference = 0,
-                tint = MaterialTheme.colorScheme.onBackground,
-                nav = nav,
-                route = Route.Message,
-            )
-
-            NavigationRow(
-                title = R.string.route_video,
-                icon = R.drawable.ic_video,
-                iconReference = 0,
-                tint = MaterialTheme.colorScheme.onBackground,
-                nav = nav,
-                route = Route.Video,
-            )
-
-            NavigationRow(
-                title = R.string.route_discover,
-                icon = R.drawable.ic_sensors,
-                iconReference = 0,
-                tint = MaterialTheme.colorScheme.onBackground,
-                nav = nav,
-                route = Route.Discover,
-            )
-
-            NavigationRow(
-                title = R.string.route_notifications,
-                icon = R.drawable.ic_notifications,
-                iconReference = 0,
-                tint = MaterialTheme.colorScheme.onBackground,
-                nav = nav,
-                computeRoute = { Route.Notification() },
-            )
-        }
-
-        CollapsibleSection(title = R.string.drawer_section_you) {
-            NavigationRow(
-                title = R.string.profile,
-                icon = Icons.Default.AccountCircle,
-                tint = MaterialTheme.colorScheme.primary,
-                nav = nav,
-                computeRoute = {
-                    Route.Profile(accountViewModel.userProfile().pubkeyHex)
-                },
-            )
-
-            NavigationRow(
-                title = R.string.my_lists,
-                icon = Icons.AutoMirrored.Filled.FormatListBulleted,
-                tint = MaterialTheme.colorScheme.onBackground,
-                nav = nav,
-                route = Route.Lists,
-            )
-
-            NavigationRow(
-                title = R.string.bookmarks,
-                icon = Icons.Outlined.CollectionsBookmark,
-                tint = MaterialTheme.colorScheme.onBackground,
-                nav = nav,
-                route = Route.BookmarkGroups,
-            )
-
-            NavigationRow(
-                title = R.string.web_bookmarks,
-                icon = Icons.Outlined.Language,
-                tint = MaterialTheme.colorScheme.onBackground,
-                nav = nav,
-                route = Route.WebBookmarks,
-            )
-
-            NavigationRow(
-                title = R.string.drafts,
-                icon = Icons.Outlined.Drafts,
-                tint = MaterialTheme.colorScheme.onBackground,
-                nav = nav,
-                route = Route.Drafts,
-            )
-
-            NavigationRow(
-                title = R.string.interest_sets_title,
-                icon = Icons.Outlined.Tag,
-                tint = MaterialTheme.colorScheme.onBackground,
-                nav = nav,
-                route = Route.InterestSets,
-            )
-
-            NavigationRow(
-                title = R.string.manage_emoji_packs,
-                icon = Icons.Outlined.EmojiEmotions,
-                tint = MaterialTheme.colorScheme.onBackground,
-                nav = nav,
-                route = Route.EmojiPacks,
-            )
-
-            NavigationRow(
-                title = R.string.wallet,
-                icon = Icons.Outlined.AccountBalanceWallet,
-                tint = MaterialTheme.colorScheme.onBackground,
-                nav = nav,
-                route = Route.Wallet,
-            )
-        }
-
-        CollapsibleSection(title = R.string.drawer_section_feeds) {
-            NavigationRow(
-                title = R.string.communities,
-                icon = Icons.Outlined.Groups,
-                tint = MaterialTheme.colorScheme.onBackground,
-                nav = nav,
-                route = Route.Communities,
-            )
-
-            NavigationRow(
-                title = R.string.discover_reads,
-                icon = Icons.AutoMirrored.Outlined.Article,
-                tint = MaterialTheme.colorScheme.onBackground,
-                nav = nav,
-                route = Route.Articles,
-            )
-
-            NavigationRow(
-                title = R.string.pictures,
-                icon = Icons.Outlined.Photo,
-                tint = MaterialTheme.colorScheme.onBackground,
-                nav = nav,
-                route = Route.Pictures,
-            )
-
-            NavigationRow(
-                title = R.string.shorts,
-                icon = Icons.Outlined.PlayCircle,
-                tint = MaterialTheme.colorScheme.onBackground,
-                nav = nav,
-                route = Route.Shorts,
-            )
-
-            NavigationRow(
-                title = R.string.public_chats,
-                icon = Icons.AutoMirrored.Outlined.Chat,
-                tint = MaterialTheme.colorScheme.onBackground,
-                nav = nav,
-                route = Route.PublicChats,
-            )
-
-            NavigationRow(
-                title = R.string.follow_packs,
-                icon = Icons.Outlined.CollectionsBookmark,
-                tint = MaterialTheme.colorScheme.onBackground,
-                nav = nav,
-                route = Route.FollowPacks,
-            )
-
-            NavigationRow(
-                title = R.string.live_streams,
-                icon = Icons.Outlined.Sensors,
-                tint = MaterialTheme.colorScheme.onBackground,
-                nav = nav,
-                route = Route.LiveStreams,
-            )
-
-            NavigationRow(
-                title = R.string.longs,
-                icon = Icons.Outlined.SmartDisplay,
-                tint = MaterialTheme.colorScheme.onBackground,
-                nav = nav,
-                route = Route.Longs,
-            )
-
-            NavigationRow(
-                title = R.string.polls,
-                icon = R.drawable.ic_poll,
-                iconReference = 1,
-                tint = MaterialTheme.colorScheme.onBackground,
-                nav = nav,
-                route = Route.Polls,
-            )
-
-            NavigationRow(
-                title = R.string.badges,
-                icon = Icons.Outlined.MilitaryTech,
-                tint = MaterialTheme.colorScheme.onBackground,
-                nav = nav,
-                route = Route.Badges,
-            )
-
-            NavigationRow(
-                title = R.string.discover_marketplace,
-                icon = Icons.Outlined.Storefront,
-                tint = MaterialTheme.colorScheme.onBackground,
-                nav = nav,
-                route = Route.Products,
-            )
-
-            NavigationRow(
-                title = R.string.emoji_sets,
-                icon = Icons.Outlined.EmojiEmotions,
-                tint = MaterialTheme.colorScheme.onBackground,
-                nav = nav,
-                route = Route.BrowseEmojiSets,
-            )
-        }
+        CatalogSection(R.string.drawer_section_navigate, DrawerNavigateItems, accountViewModel, nav)
+        CatalogSection(R.string.drawer_section_you, DrawerYouItems, accountViewModel, nav)
+        CatalogSection(R.string.drawer_section_feeds, DrawerFeedsItems, accountViewModel, nav)
 
         CollapsibleSection(title = R.string.drawer_section_create) {
             NavigationRow(
@@ -793,13 +577,9 @@ fun ListContent(
                 },
             )
 
-            NavigationRow(
-                title = R.string.settings,
-                icon = Icons.Outlined.Settings,
-                tint = MaterialTheme.colorScheme.onBackground,
-                nav = nav,
-                route = Route.AllSettings,
-            )
+            NavBarCatalog[NavBarItem.SETTINGS]?.let {
+                CatalogNavigationRow(it, MaterialTheme.colorScheme.onBackground, accountViewModel, nav)
+            }
         }
 
         Spacer(modifier = Modifier.weight(1f))
@@ -810,6 +590,61 @@ fun ListContent(
             tint = MaterialTheme.colorScheme.onBackground,
             onClick = openSheet,
         )
+    }
+}
+
+/**
+ * Renders a drawer section by iterating [ids] and looking each one up in [NavBarCatalog].
+ * Profile gets the primary-colored tint; every other item uses onBackground.
+ */
+@Composable
+fun CatalogSection(
+    titleRes: Int,
+    ids: List<NavBarItem>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val primary = MaterialTheme.colorScheme.primary
+    val onBackground = MaterialTheme.colorScheme.onBackground
+
+    CollapsibleSection(title = titleRes) {
+        ids.forEach { id ->
+            NavBarCatalog[id]?.let { def ->
+                val tint = if (def.id == NavBarItem.PROFILE) primary else onBackground
+                CatalogNavigationRow(def, tint, accountViewModel, nav)
+            }
+        }
+    }
+}
+
+@Composable
+fun CatalogNavigationRow(
+    def: NavBarItemDef,
+    tint: Color,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    when (val icon = def.icon) {
+        is NavBarIcon.Drawable -> {
+            NavigationRow(
+                title = def.labelRes,
+                icon = icon.resId,
+                iconReference = icon.reference,
+                tint = tint,
+                nav = nav,
+                computeRoute = { def.resolveRoute(accountViewModel) },
+            )
+        }
+
+        is NavBarIcon.Vector -> {
+            NavigationRow(
+                title = def.labelRes,
+                icon = icon.vector,
+                tint = tint,
+                nav = nav,
+                computeRoute = { def.resolveRoute(accountViewModel) },
+            )
+        }
     }
 }
 

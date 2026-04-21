@@ -73,6 +73,7 @@ enum class NavBarItem {
     FOLLOW_PACKS,
     LIVE_STREAMS,
     LONGS,
+    POLLS,
     BADGES,
     PRODUCTS,
     EMOJI_SETS,
@@ -246,6 +247,13 @@ val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
                 icon = NavBarIcon.Vector(Icons.Outlined.SmartDisplay),
                 resolveRoute = { Route.Longs },
             ),
+        NavBarItem.POLLS to
+            NavBarItemDef(
+                id = NavBarItem.POLLS,
+                labelRes = R.string.polls,
+                icon = NavBarIcon.Drawable(R.drawable.ic_poll, reference = 1),
+                resolveRoute = { Route.Polls },
+            ),
         NavBarItem.BADGES to
             NavBarItemDef(
                 id = NavBarItem.BADGES,
@@ -283,4 +291,44 @@ val DefaultBottomBarItems: List<NavBarItem> =
         NavBarItem.VIDEO,
         NavBarItem.DISCOVER,
         NavBarItem.NOTIFICATIONS,
+    )
+
+// Ordered membership lists for each drawer section. The drawer renders these by looking up
+// each id in NavBarCatalog, so adding a new screen only requires editing the catalog + the
+// matching section list below — not two separate files.
+val DrawerNavigateItems: List<NavBarItem> =
+    listOf(
+        NavBarItem.HOME,
+        NavBarItem.MESSAGES,
+        NavBarItem.VIDEO,
+        NavBarItem.DISCOVER,
+        NavBarItem.NOTIFICATIONS,
+    )
+
+val DrawerYouItems: List<NavBarItem> =
+    listOf(
+        NavBarItem.PROFILE,
+        NavBarItem.MY_LISTS,
+        NavBarItem.BOOKMARKS,
+        NavBarItem.WEB_BOOKMARKS,
+        NavBarItem.DRAFTS,
+        NavBarItem.INTEREST_SETS,
+        NavBarItem.EMOJI_PACKS,
+        NavBarItem.WALLET,
+    )
+
+val DrawerFeedsItems: List<NavBarItem> =
+    listOf(
+        NavBarItem.COMMUNITIES,
+        NavBarItem.ARTICLES,
+        NavBarItem.PICTURES,
+        NavBarItem.SHORTS,
+        NavBarItem.PUBLIC_CHATS,
+        NavBarItem.FOLLOW_PACKS,
+        NavBarItem.LIVE_STREAMS,
+        NavBarItem.LONGS,
+        NavBarItem.POLLS,
+        NavBarItem.BADGES,
+        NavBarItem.PRODUCTS,
+        NavBarItem.EMOJI_SETS,
     )
