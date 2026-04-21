@@ -39,14 +39,14 @@ fun FollowPacksTopBar(
     nav: INav,
 ) {
     UserDrawerSearchTopBar(accountViewModel, nav) {
-        val list by accountViewModel.account.settings.defaultDiscoveryFollowList
+        val list by accountViewModel.account.settings.defaultFollowPacksFollowList
             .collectAsStateWithLifecycle()
 
         FollowPacksTopNavFilterBar(
             followListsModel = accountViewModel.feedStates.feedListOptions,
             listName = list,
             accountViewModel = accountViewModel,
-            onChange = accountViewModel.account.settings::changeDefaultDiscoveryFollowList,
+            onChange = accountViewModel.account.settings::changeDefaultFollowPacksFollowList,
         )
     }
 }

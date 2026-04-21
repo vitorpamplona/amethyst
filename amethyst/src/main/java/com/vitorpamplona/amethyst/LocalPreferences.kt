@@ -107,6 +107,10 @@ private object PrefKeys {
     const val DEFAULT_LIVE_STREAMS_FOLLOW_LIST = "defaultLiveStreamsFollowList"
     const val DEFAULT_LONGS_FOLLOW_LIST = "defaultLongsFollowList"
     const val DEFAULT_ARTICLES_FOLLOW_LIST = "defaultArticlesFollowList"
+    const val DEFAULT_BADGES_FOLLOW_LIST = "defaultBadgesFollowList"
+    const val DEFAULT_BROWSE_EMOJI_SETS_FOLLOW_LIST = "defaultBrowseEmojiSetsFollowList"
+    const val DEFAULT_COMMUNITIES_FOLLOW_LIST = "defaultCommunitiesFollowList"
+    const val DEFAULT_FOLLOW_PACKS_FOLLOW_LIST = "defaultFollowPacksFollowList"
     const val ZAP_PAYMENT_REQUEST_SERVER = "zapPaymentServer" // legacy, kept for migration
     const val NWC_WALLETS = "nwcWallets"
     const val DEFAULT_NWC_WALLET_ID = "defaultNwcWalletId"
@@ -354,6 +358,10 @@ object LocalPreferences {
                     putString(PrefKeys.DEFAULT_LIVE_STREAMS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultLiveStreamsFollowList.value))
                     putString(PrefKeys.DEFAULT_LONGS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultLongsFollowList.value))
                     putString(PrefKeys.DEFAULT_ARTICLES_FOLLOW_LIST, JsonMapper.toJson(settings.defaultArticlesFollowList.value))
+                    putString(PrefKeys.DEFAULT_BADGES_FOLLOW_LIST, JsonMapper.toJson(settings.defaultBadgesFollowList.value))
+                    putString(PrefKeys.DEFAULT_BROWSE_EMOJI_SETS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultBrowseEmojiSetsFollowList.value))
+                    putString(PrefKeys.DEFAULT_COMMUNITIES_FOLLOW_LIST, JsonMapper.toJson(settings.defaultCommunitiesFollowList.value))
+                    putString(PrefKeys.DEFAULT_FOLLOW_PACKS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultFollowPacksFollowList.value))
 
                     val walletEntries = settings.nwcWallets.value.mapNotNull { it.denormalize() }
                     if (walletEntries.isNotEmpty()) {
@@ -619,6 +627,10 @@ object LocalPreferences {
                         defaultLiveStreamsFollowList = MutableStateFlow(followListPrefs.liveStreams),
                         defaultLongsFollowList = MutableStateFlow(followListPrefs.longs),
                         defaultArticlesFollowList = MutableStateFlow(followListPrefs.articles),
+                        defaultBadgesFollowList = MutableStateFlow(followListPrefs.badges),
+                        defaultBrowseEmojiSetsFollowList = MutableStateFlow(followListPrefs.browseEmojiSets),
+                        defaultCommunitiesFollowList = MutableStateFlow(followListPrefs.communities),
+                        defaultFollowPacksFollowList = MutableStateFlow(followListPrefs.followPacks),
                         nwcWallets = MutableStateFlow(nwcWalletsLoaded.await().first),
                         defaultNwcWalletId = MutableStateFlow(nwcWalletsLoaded.await().second),
                         hideDeleteRequestDialog = hideDeleteRequestDialog,
@@ -683,6 +695,10 @@ object LocalPreferences {
         val liveStreams: TopFilter,
         val longs: TopFilter,
         val articles: TopFilter,
+        val badges: TopFilter,
+        val browseEmojiSets: TopFilter,
+        val communities: TopFilter,
+        val followPacks: TopFilter,
     )
 
     private fun SharedPreferences.loadFollowListPrefs(): FollowListPrefs =
@@ -699,6 +715,10 @@ object LocalPreferences {
             liveStreams = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_LIVE_STREAMS_FOLLOW_LIST, null), TopFilter.Global),
             longs = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_LONGS_FOLLOW_LIST, null), TopFilter.Global),
             articles = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_ARTICLES_FOLLOW_LIST, null), TopFilter.AllFollows),
+            badges = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_BADGES_FOLLOW_LIST, null), TopFilter.Mine),
+            browseEmojiSets = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_BROWSE_EMOJI_SETS_FOLLOW_LIST, null), TopFilter.Global),
+            communities = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_COMMUNITIES_FOLLOW_LIST, null), TopFilter.AllFollows),
+            followPacks = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_FOLLOW_PACKS_FOLLOW_LIST, null), TopFilter.Global),
         )
 
     private inline fun <reified T : Any> parseOrNull(value: String?): T? {
