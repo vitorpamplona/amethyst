@@ -271,6 +271,9 @@ extract_pubkey() {
     # JSON: single object
     v=$(printf '%s' "$raw" | jq -r '.pubkey // .npub // .public_key // empty' 2>/dev/null || true)
     if [[ -n "$v" && "$v" != "null" ]]; then printf '%s' "$v"; return; fi
+    # JSON: {"result": [ {"pubkey": …}, … ]} — post-v0.2 `wn --json whoami` shape
+    v=$(printf '%s' "$raw" | jq -r '.result[0].pubkey // .result[0].npub // .result[0].public_key // empty' 2>/dev/null || true)
+    if [[ -n "$v" && "$v" != "null" ]]; then printf '%s' "$v"; return; fi
     # JSON: array of accounts (whoami may return a list)
     v=$(printf '%s' "$raw" | jq -r '.[0].pubkey // .[0].npub // .[0].public_key // empty' 2>/dev/null || true)
     if [[ -n "$v" && "$v" != "null" ]]; then printf '%s' "$v"; return; fi

@@ -231,9 +231,12 @@ ensure_identity() {
   raw=$("$cmd" --json whoami 2>/dev/null || true)
   npub=$(extract_pubkey "$raw")
   if [[ -z "${npub:-}" ]]; then
-    raw=$("$cmd" create-identity 2>&1 | tee -a "$LOG_FILE")
+    # create-identity sometimes exits non-zero (e.g. transient "failed to
+    # connect to any relays") even though the account was created. Probe
+    # --json whoami afterwards before giving up.
+    "$cmd" create-identity 2>&1 | tee -a "$LOG_FILE" || true
+    raw=$("$cmd" --json whoami 2>/dev/null || true)
     npub=$(extract_pubkey "$raw")
-    [[ -n "$npub" ]] || npub=$(extract_pubkey "$("$cmd" whoami 2>/dev/null || true)")
   fi
   [[ -n "$npub" ]] || { fail_msg "could not determine $who npub"; exit 1; }
 
