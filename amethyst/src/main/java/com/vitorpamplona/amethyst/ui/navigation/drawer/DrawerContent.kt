@@ -103,6 +103,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withLink
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -119,11 +120,13 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUse
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserStatuses
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
+import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
@@ -138,6 +141,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size24Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size26Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.TextStyleBottomNavBar
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.Width16Space
 import com.vitorpamplona.amethyst.ui.theme.bannerModifier
 import com.vitorpamplona.amethyst.ui.theme.drawerSpacing
@@ -1015,5 +1019,61 @@ fun BottomContent(
                 )
             }
         }
+    }
+}
+
+@Preview
+@Composable
+private fun CollapsibleSectionPreview() {
+    ThemeComparisonColumn {
+        Column {
+            CollapsibleSection(title = R.string.drawer_section_you) {
+                IconRow(
+                    title = R.string.profile,
+                    icon = Icons.Default.AccountCircle,
+                    tint = MaterialTheme.colorScheme.primary,
+                    onClick = {},
+                )
+                IconRow(
+                    title = R.string.bookmarks,
+                    icon = Icons.Outlined.CollectionsBookmark,
+                    tint = MaterialTheme.colorScheme.onBackground,
+                    onClick = {},
+                )
+                IconRow(
+                    title = R.string.drafts,
+                    icon = Icons.Outlined.Drafts,
+                    tint = MaterialTheme.colorScheme.onBackground,
+                    onClick = {},
+                )
+            }
+            CollapsibleSection(title = R.string.drawer_section_feeds) {
+                IconRow(
+                    title = R.string.pictures,
+                    icon = Icons.Outlined.Photo,
+                    tint = MaterialTheme.colorScheme.onBackground,
+                    onClick = {},
+                )
+                IconRow(
+                    title = R.string.longs,
+                    icon = Icons.Outlined.SmartDisplay,
+                    tint = MaterialTheme.colorScheme.onBackground,
+                    onClick = {},
+                )
+            }
+        }
+    }
+}
+
+@Preview(widthDp = 320, heightDp = 1400)
+@Composable
+private fun ListContentPreview() {
+    ThemeComparisonColumn {
+        ListContent(
+            modifier = Modifier.fillMaxWidth(),
+            openSheet = {},
+            accountViewModel = mockAccountViewModel(),
+            nav = EmptyNav(),
+        )
     }
 }
