@@ -104,6 +104,7 @@ private object PrefKeys {
     const val DEFAULT_PRODUCTS_FOLLOW_LIST = "defaultProductsFollowList"
     const val DEFAULT_SHORTS_FOLLOW_LIST = "defaultShortsFollowList"
     const val DEFAULT_PUBLIC_CHATS_FOLLOW_LIST = "defaultPublicChatsFollowList"
+    const val DEFAULT_LIVE_STREAMS_FOLLOW_LIST = "defaultLiveStreamsFollowList"
     const val DEFAULT_LONGS_FOLLOW_LIST = "defaultLongsFollowList"
     const val DEFAULT_ARTICLES_FOLLOW_LIST = "defaultArticlesFollowList"
     const val ZAP_PAYMENT_REQUEST_SERVER = "zapPaymentServer" // legacy, kept for migration
@@ -350,6 +351,7 @@ object LocalPreferences {
                     putString(PrefKeys.DEFAULT_PRODUCTS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultProductsFollowList.value))
                     putString(PrefKeys.DEFAULT_SHORTS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultShortsFollowList.value))
                     putString(PrefKeys.DEFAULT_PUBLIC_CHATS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultPublicChatsFollowList.value))
+                    putString(PrefKeys.DEFAULT_LIVE_STREAMS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultLiveStreamsFollowList.value))
                     putString(PrefKeys.DEFAULT_LONGS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultLongsFollowList.value))
                     putString(PrefKeys.DEFAULT_ARTICLES_FOLLOW_LIST, JsonMapper.toJson(settings.defaultArticlesFollowList.value))
 
@@ -508,18 +510,7 @@ object LocalPreferences {
                     val viewedPollResultNoteIdsStr = getString(PrefKeys.VIEWED_POLL_RESULT_NOTE_IDS, null)
                     val localRelayServers = getStringSet(PrefKeys.LOCAL_RELAY_SERVERS, null) ?: setOf()
 
-                    val defaultHomeFollowListStr = getString(PrefKeys.DEFAULT_HOME_FOLLOW_LIST, null)
-                    val defaultStoriesFollowListStr = getString(PrefKeys.DEFAULT_STORIES_FOLLOW_LIST, null)
-                    val defaultNotificationFollowListStr = getString(PrefKeys.DEFAULT_NOTIFICATION_FOLLOW_LIST, null)
-                    val defaultDiscoveryFollowListStr = getString(PrefKeys.DEFAULT_DISCOVERY_FOLLOW_LIST, null)
-
-                    val defaultPollsFollowListStr = getString(PrefKeys.DEFAULT_POLLS_FOLLOW_LIST, null)
-                    val defaultPicturesFollowListStr = getString(PrefKeys.DEFAULT_PICTURES_FOLLOW_LIST, null)
-                    val defaultProductsFollowListStr = getString(PrefKeys.DEFAULT_PRODUCTS_FOLLOW_LIST, null)
-                    val defaultShortsFollowListStr = getString(PrefKeys.DEFAULT_SHORTS_FOLLOW_LIST, null)
-                    val defaultPublicChatsFollowListStr = getString(PrefKeys.DEFAULT_PUBLIC_CHATS_FOLLOW_LIST, null)
-                    val defaultLongsFollowListStr = getString(PrefKeys.DEFAULT_LONGS_FOLLOW_LIST, null)
-                    val defaultArticlesFollowListStr = getString(PrefKeys.DEFAULT_ARTICLES_FOLLOW_LIST, null)
+                    val followListPrefs = loadFollowListPrefs()
 
                     val zapPaymentRequestServerStr = getString(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER, null)
                     val nwcWalletsStr = getString(PrefKeys.NWC_WALLETS, null)
@@ -549,18 +540,6 @@ object LocalPreferences {
                     val lastReadPerRouteStr = getString(PrefKeys.LAST_READ_PER_ROUTE, null)
 
                     Log.d("LocalPreferences") { "Load account from file $npub - before parsing events" }
-
-                    val defaultHomeFollowList = async { parseTopFilterOrDefault(defaultHomeFollowListStr, TopFilter.AllFollows) }
-                    val defaultStoriesFollowList = async { parseTopFilterOrDefault(defaultStoriesFollowListStr, TopFilter.Global) }
-                    val defaultNotificationFollowList = async { parseTopFilterOrDefault(defaultNotificationFollowListStr, TopFilter.Global) }
-                    val defaultDiscoveryFollowList = async { parseTopFilterOrDefault(defaultDiscoveryFollowListStr, TopFilter.Global) }
-
-                    val defaultPollsFollowList = async { parseTopFilterOrDefault(defaultPollsFollowListStr, TopFilter.Global) }
-                    val defaultPicturesFollowList = async { parseTopFilterOrDefault(defaultPicturesFollowListStr, TopFilter.Global) }
-                    val defaultProductsFollowList = async { parseTopFilterOrDefault(defaultProductsFollowListStr, TopFilter.AroundMe) }
-                    val defaultShortsFollowList = async { parseTopFilterOrDefault(defaultShortsFollowListStr, TopFilter.Global) }
-                    val defaultLongsFollowList = async { parseTopFilterOrDefault(defaultLongsFollowListStr, TopFilter.Global) }
-                    val defaultArticlesFollowList = async { parseTopFilterOrDefault(defaultArticlesFollowListStr, TopFilter.AllFollows) }
 
                     val nwcWalletsLoaded =
                         async {
@@ -628,17 +607,18 @@ object LocalPreferences {
                         localRelayServers = MutableStateFlow(localRelayServers),
                         defaultFileServer = defaultFileServer.await(),
                         stripLocationOnUpload = stripLocationOnUpload,
-                        defaultHomeFollowList = MutableStateFlow(defaultHomeFollowList.await()),
-                        defaultStoriesFollowList = MutableStateFlow(defaultStoriesFollowList.await()),
-                        defaultNotificationFollowList = MutableStateFlow(defaultNotificationFollowList.await()),
-                        defaultDiscoveryFollowList = MutableStateFlow(defaultDiscoveryFollowList.await()),
-                        defaultPollsFollowList = MutableStateFlow(defaultPollsFollowList.await()),
-                        defaultPicturesFollowList = MutableStateFlow(defaultPicturesFollowList.await()),
-                        defaultProductsFollowList = MutableStateFlow(defaultProductsFollowList.await()),
-                        defaultShortsFollowList = MutableStateFlow(defaultShortsFollowList.await()),
-                        defaultPublicChatsFollowList = MutableStateFlow(parseTopFilterOrDefault(defaultPublicChatsFollowListStr, TopFilter.Global)),
-                        defaultLongsFollowList = MutableStateFlow(defaultLongsFollowList.await()),
-                        defaultArticlesFollowList = MutableStateFlow(defaultArticlesFollowList.await()),
+                        defaultHomeFollowList = MutableStateFlow(followListPrefs.home),
+                        defaultStoriesFollowList = MutableStateFlow(followListPrefs.stories),
+                        defaultNotificationFollowList = MutableStateFlow(followListPrefs.notification),
+                        defaultDiscoveryFollowList = MutableStateFlow(followListPrefs.discovery),
+                        defaultPollsFollowList = MutableStateFlow(followListPrefs.polls),
+                        defaultPicturesFollowList = MutableStateFlow(followListPrefs.pictures),
+                        defaultProductsFollowList = MutableStateFlow(followListPrefs.products),
+                        defaultShortsFollowList = MutableStateFlow(followListPrefs.shorts),
+                        defaultPublicChatsFollowList = MutableStateFlow(followListPrefs.publicChats),
+                        defaultLiveStreamsFollowList = MutableStateFlow(followListPrefs.liveStreams),
+                        defaultLongsFollowList = MutableStateFlow(followListPrefs.longs),
+                        defaultArticlesFollowList = MutableStateFlow(followListPrefs.articles),
                         nwcWallets = MutableStateFlow(nwcWalletsLoaded.await().first),
                         defaultNwcWalletId = MutableStateFlow(nwcWalletsLoaded.await().second),
                         hideDeleteRequestDialog = hideDeleteRequestDialog,
@@ -689,6 +669,37 @@ object LocalPreferences {
             default
         }
     }
+
+    private data class FollowListPrefs(
+        val home: TopFilter,
+        val stories: TopFilter,
+        val notification: TopFilter,
+        val discovery: TopFilter,
+        val polls: TopFilter,
+        val pictures: TopFilter,
+        val products: TopFilter,
+        val shorts: TopFilter,
+        val publicChats: TopFilter,
+        val liveStreams: TopFilter,
+        val longs: TopFilter,
+        val articles: TopFilter,
+    )
+
+    private fun SharedPreferences.loadFollowListPrefs(): FollowListPrefs =
+        FollowListPrefs(
+            home = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_HOME_FOLLOW_LIST, null), TopFilter.AllFollows),
+            stories = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_STORIES_FOLLOW_LIST, null), TopFilter.Global),
+            notification = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_NOTIFICATION_FOLLOW_LIST, null), TopFilter.Global),
+            discovery = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_DISCOVERY_FOLLOW_LIST, null), TopFilter.Global),
+            polls = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_POLLS_FOLLOW_LIST, null), TopFilter.Global),
+            pictures = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_PICTURES_FOLLOW_LIST, null), TopFilter.Global),
+            products = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_PRODUCTS_FOLLOW_LIST, null), TopFilter.AroundMe),
+            shorts = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_SHORTS_FOLLOW_LIST, null), TopFilter.Global),
+            publicChats = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_PUBLIC_CHATS_FOLLOW_LIST, null), TopFilter.Global),
+            liveStreams = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_LIVE_STREAMS_FOLLOW_LIST, null), TopFilter.Global),
+            longs = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_LONGS_FOLLOW_LIST, null), TopFilter.Global),
+            articles = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_ARTICLES_FOLLOW_LIST, null), TopFilter.AllFollows),
+        )
 
     private inline fun <reified T : Any> parseOrNull(value: String?): T? {
         if (value.isNullOrEmpty() || value == "null") {

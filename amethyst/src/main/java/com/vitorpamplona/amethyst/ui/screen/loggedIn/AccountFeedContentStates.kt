@@ -41,9 +41,11 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip90DVMs.Discover
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip99Classifieds.DiscoverMarketplaceFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.drafts.dal.DraftEventsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.browse.dal.BrowseEmojiSetsFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.list.dal.FollowPacksFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.dal.HomeConversationsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.dal.HomeLiveFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.dal.HomeNewThreadFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.livestreams.dal.LiveStreamsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.longs.dal.LongsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CardFeedContentState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NotificationSummaryState
@@ -96,6 +98,8 @@ class AccountFeedContentStates(
     val productsFeed = FeedContentState(ProductsFeedFilter(account), scope, LocalCache)
     val shortsFeed = FeedContentState(ShortsFeedFilter(account), scope, LocalCache)
     val publicChatsFeed = FeedContentState(PublicChatsFeedFilter(account), scope, LocalCache)
+    val followPacksFeed = FeedContentState(FollowPacksFeedFilter(account), scope, LocalCache)
+    val liveStreamsFeed = FeedContentState(LiveStreamsFeedFilter(account), scope, LocalCache)
     val longsFeed = FeedContentState(LongsFeedFilter(account), scope, LocalCache)
     val articlesFeed = FeedContentState(ArticlesFeedFilter(account), scope, LocalCache)
 
@@ -159,6 +163,8 @@ class AccountFeedContentStates(
         productsFeed.updateFeedWith(newNotes)
         shortsFeed.updateFeedWith(newNotes)
         publicChatsFeed.updateFeedWith(newNotes)
+        followPacksFeed.updateFeedWith(newNotes)
+        liveStreamsFeed.updateFeedWith(newNotes)
         longsFeed.updateFeedWith(newNotes)
         articlesFeed.updateFeedWith(newNotes)
 
@@ -203,6 +209,8 @@ class AccountFeedContentStates(
         productsFeed.deleteFromFeed(newNotes)
         shortsFeed.deleteFromFeed(newNotes)
         publicChatsFeed.deleteFromFeed(newNotes)
+        followPacksFeed.deleteFromFeed(newNotes)
+        liveStreamsFeed.deleteFromFeed(newNotes)
         longsFeed.deleteFromFeed(newNotes)
         articlesFeed.deleteFromFeed(newNotes)
 

@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.note.types
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -61,11 +60,10 @@ import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeaderBackground
 import com.vitorpamplona.amethyst.ui.note.elements.TimeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.Font12SP
+import com.vitorpamplona.amethyst.ui.theme.Font10SP
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
-import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 
 private const val WORDS_PER_MINUTE = 225
@@ -107,16 +105,6 @@ fun LongFormHeader(
                     .fillMaxWidth()
                     .padding(horizontal = 14.dp, vertical = 12.dp),
         ) {
-            if (topics.isNotEmpty()) {
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(Size5dp),
-                    verticalArrangement = Arrangement.spacedBy(Size5dp),
-                    modifier = Modifier.padding(bottom = 8.dp),
-                ) {
-                    topics.forEach { TopicChip(it) }
-                }
-            }
-
             title?.let {
                 Text(
                     text = it,
@@ -142,6 +130,16 @@ fun LongFormHeader(
 
             Spacer(Modifier.padding(top = 12.dp))
             AuthorMetaRow(note, readingMinutes, accountViewModel)
+
+            if (topics.isNotEmpty()) {
+                Spacer(Modifier.padding(top = 8.dp))
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(Size5dp),
+                    verticalArrangement = Arrangement.spacedBy(Size5dp),
+                ) {
+                    topics.forEach { TopicChip(it) }
+                }
+            }
         }
     }
 }
@@ -182,17 +180,16 @@ private fun TopicChip(topic: String) {
     Text(
         text = "#$topic",
         style = MaterialTheme.typography.labelSmall,
-        fontSize = Font12SP,
-        fontWeight = FontWeight.Medium,
-        color = MaterialTheme.colorScheme.primary,
+        fontSize = Font10SP,
+        fontWeight = FontWeight.Normal,
+        color = MaterialTheme.colorScheme.grayText,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
         modifier =
             Modifier
                 .clip(CircleShape)
-                .border(1.dp, MaterialTheme.colorScheme.subtleBorder, CircleShape)
-                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f))
-                .padding(horizontal = 10.dp, vertical = 4.dp),
+                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f))
+                .padding(horizontal = 8.dp, vertical = 2.dp),
     )
 }
 
