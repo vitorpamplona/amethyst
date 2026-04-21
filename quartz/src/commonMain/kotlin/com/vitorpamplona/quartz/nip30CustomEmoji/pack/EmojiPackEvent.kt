@@ -23,8 +23,11 @@ package com.vitorpamplona.quartz.nip30CustomEmoji.pack
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
+import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
+import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
 import com.vitorpamplona.quartz.nip51Lists.tags.DescriptionTag
@@ -55,6 +58,16 @@ class EmojiPackEvent(
     fun description() = tags.firstNotNullOfOrNull(DescriptionTag::parse)
 
     fun image() = tags.firstNotNullOfOrNull(ImageTag::parse)
+
+    fun publicEmojis(): List<EmojiUrlTag> = tags.emojis()
+
+    suspend fun privateEmojis(signer: NostrSigner): List<EmojiUrlTag>? = privateTags(signer)?.emojis()
+
+    suspend fun allEmojis(signer: NostrSigner): List<EmojiUrlTag> {
+        val public = publicEmojis()
+        val private = privateEmojis(signer) ?: return public
+        return public + private
+    }
 
     companion object {
         const val KIND = 30030

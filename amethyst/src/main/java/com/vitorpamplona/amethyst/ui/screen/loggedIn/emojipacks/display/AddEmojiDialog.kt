@@ -56,13 +56,10 @@ import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
  * Dialog for adding a custom emoji to an owned emoji pack (NIP-30 kind 30030).
  *
  * The [onConfirm] callback receives the new [EmojiUrlTag] alongside an `isPrivate`
- * flag: when `true`, the caller is expected to store the entry in the event's
- * encrypted `.content` (NIP-51 private tags) rather than as a public tag.
- *
- * Private emojis are visible only to the pack owner, but they ARE surfaced in
- * both the reaction menu and the `:` autocomplete picker once the app decrypts
- * them. Decryption is asynchronous; autocomplete shows the public list first
- * and the private entries are appended once decryption finishes. See
+ * flag: when `true`, the caller stores the entry in the event's encrypted
+ * `.content` (NIP-51 private tags) rather than as a public tag. Private emojis
+ * are surfaced to the pack owner end-to-end (autocomplete + reaction menu) via
+ * asynchronous decryption — see
  * [com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState.mergePackWithPrivate].
  */
 @Composable

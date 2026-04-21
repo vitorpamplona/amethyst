@@ -2405,6 +2405,6 @@
     <string name="browse_emoji_sets">Browse Emoji Sets</string>
     <string name="emoji_private_toggle">Private</string>
     <string name="emoji_private_badge">Private emoji</string>
-    <string name="emoji_public_explainer">Public emojis appear in your reaction menu and in the \":\" autocomplete picker when this pack is in your emoji list.</string>
-    <string name="emoji_private_explainer">Private emojis are stored encrypted in your event content and are only visible to you here. They are NOT surfaced in the reaction menu or the \":\" autocomplete picker yet.</string>
+    <string name="emoji_public_explainer">Public emojis are visible to everyone and appear in your reaction menu and \":\" autocomplete picker when this pack is in your emoji list.</string>
+    <string name="emoji_private_explainer">Private emojis are stored encrypted on relays and visible only to you. They appear in your reaction menu and \":\" autocomplete just like public ones.</string>
 </resources>

@@ -39,7 +39,6 @@ import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.description
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.image
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.title
-import com.vitorpamplona.quartz.nip30CustomEmoji.taggedEmojis
 import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
 import com.vitorpamplona.quartz.nip51Lists.remove
 import com.vitorpamplona.quartz.nip51Lists.tags.DescriptionTag
@@ -91,18 +90,15 @@ class OwnedEmojiPacksState(
             .flowOn(Dispatchers.IO)
             .stateIn(scope, SharingStarted.Eagerly, emptyList())
 
-    suspend fun EmojiPackEvent.toOwnedEmojiPack(): OwnedEmojiPack {
-        val privateTags = privateTags(signer)
-        val privateEmojis = privateTags?.mapNotNull(EmojiUrlTag::parse) ?: emptyList()
-        return OwnedEmojiPack(
+    suspend fun EmojiPackEvent.toOwnedEmojiPack(): OwnedEmojiPack =
+        OwnedEmojiPack(
             identifier = dTag(),
             title = titleOrName() ?: dTag(),
             description = description(),
             image = image(),
-            publicEmojis = taggedEmojis(),
-            privateEmojis = privateEmojis,
+            publicEmojis = publicEmojis(),
+            privateEmojis = privateEmojis(signer) ?: emptyList(),
         )
-    }
 
     suspend fun List<EmojiPackEvent>.toOwnedEmojiPackFeed() = map { it.toOwnedEmojiPack() }.sortedBy { it.title }
 
