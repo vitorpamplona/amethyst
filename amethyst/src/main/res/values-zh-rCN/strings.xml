@@ -49,6 +49,10 @@
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">你正在使用公钥，公钥是只读的。使用私钥登录以便提升帖子</string>
     <string name="login_with_a_private_key_to_like_posts">你正在使用公钥，公钥是只读的。使用私钥登录以点赞帖子</string>
     <string name="no_zap_amount_setup_long_press_to_change">没有设置打闪金额。长按以更改</string>
+    <string name="chat_zap_amount_suffix">打闪了 %1$s 枚 sat</string>
+    <string name="chat_zap_anonymous">匿名</string>
+    <string name="chat_raid_is_raiding">正在突袭</string>
+    <string name="chat_clip_created_a_clip">创建了视频片段</string>
     <string name="login_with_a_private_key_to_be_able_to_send_zaps">你正在使用公钥，公钥是只读的。使用私钥登录以便发送打闪</string>
     <string name="login_with_a_private_key_to_be_able_to_follow">你正在使用公钥，公钥是只读的。使用私钥登录以便能够关注</string>
     <string name="login_with_a_private_key_to_be_able_to_unfollow">你正在使用公钥，公钥是只读的。使用私钥登录以便能够取消关注</string>
@@ -2132,4 +2136,5 @@
     <string name="ai_tone_more_direct">更直接</string>
     <string name="ai_tone_punchy">强有力</string>
     <string name="ai_tone_emojify">+ Emoji</string>
+    <!-- Emoji packs -->
 </resources>

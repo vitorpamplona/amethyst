@@ -2071,4 +2071,5 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="ai_tone_more_direct">Boj direktno</string>
     <string name="ai_tone_punchy">Udarno</string>
     <string name="ai_tone_emojify">+ Emoji</string>
+    <!-- Emoji packs -->
 </resources>
