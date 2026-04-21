@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types
+package com.vitorpamplona.amethyst.commons.compose.nip53LiveActivities
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -38,9 +38,7 @@ import androidx.compose.ui.unit.dp
  * Shared rounded, accent-tinted container used by the centered "system-style"
  * cards rendered inside the live stream chat feed (zaps, raids, clips).
  *
- * Keeps the three renderers visually consistent so they clearly stand apart
- * from regular chat bubbles. The content slot uses a BoxScope so callers can
- * pick their own internal layout (Row / Column / whatever).
+ * Kept platform-neutral so Desktop can consume it alongside Android.
  */
 @Composable
 fun StreamSystemCard(

@@ -1555,8 +1555,14 @@ object LocalCache : ILocalCache, ICacheProvider {
         wasVerified: Boolean,
     ): Boolean {
         val note = getOrCreateNote(event.id)
-        // Already processed this event.
-        if (note.event != null) return false
+
+        // Already processed this event — still ensure it's routed into any live-activity
+        // channel(s) it references. A zap that was first consumed by, e.g., the notifications
+        // subscription must still appear in the stream's chat when the user opens the stream.
+        if (note.event != null) {
+            attachZapToLiveActivityChannel(event, note, relay)
+            return false
+        }
 
         if (wasVerified || justVerify(event)) {
             val existingZapRequest = event.zapRequest?.id?.let { getNoteIfExists(it) }
