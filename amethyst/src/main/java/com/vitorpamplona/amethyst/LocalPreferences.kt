@@ -103,6 +103,7 @@ private object PrefKeys {
     const val DEFAULT_PICTURES_FOLLOW_LIST = "defaultPicturesFollowList"
     const val DEFAULT_PRODUCTS_FOLLOW_LIST = "defaultProductsFollowList"
     const val DEFAULT_SHORTS_FOLLOW_LIST = "defaultShortsFollowList"
+    const val DEFAULT_PUBLIC_CHATS_FOLLOW_LIST = "defaultPublicChatsFollowList"
     const val DEFAULT_LONGS_FOLLOW_LIST = "defaultLongsFollowList"
     const val DEFAULT_ARTICLES_FOLLOW_LIST = "defaultArticlesFollowList"
     const val ZAP_PAYMENT_REQUEST_SERVER = "zapPaymentServer" // legacy, kept for migration
@@ -348,6 +349,7 @@ object LocalPreferences {
                     putString(PrefKeys.DEFAULT_PICTURES_FOLLOW_LIST, JsonMapper.toJson(settings.defaultPicturesFollowList.value))
                     putString(PrefKeys.DEFAULT_PRODUCTS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultProductsFollowList.value))
                     putString(PrefKeys.DEFAULT_SHORTS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultShortsFollowList.value))
+                    putString(PrefKeys.DEFAULT_PUBLIC_CHATS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultPublicChatsFollowList.value))
                     putString(PrefKeys.DEFAULT_LONGS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultLongsFollowList.value))
                     putString(PrefKeys.DEFAULT_ARTICLES_FOLLOW_LIST, JsonMapper.toJson(settings.defaultArticlesFollowList.value))
 
@@ -515,6 +517,7 @@ object LocalPreferences {
                     val defaultPicturesFollowListStr = getString(PrefKeys.DEFAULT_PICTURES_FOLLOW_LIST, null)
                     val defaultProductsFollowListStr = getString(PrefKeys.DEFAULT_PRODUCTS_FOLLOW_LIST, null)
                     val defaultShortsFollowListStr = getString(PrefKeys.DEFAULT_SHORTS_FOLLOW_LIST, null)
+                    val defaultPublicChatsFollowListStr = getString(PrefKeys.DEFAULT_PUBLIC_CHATS_FOLLOW_LIST, null)
                     val defaultLongsFollowListStr = getString(PrefKeys.DEFAULT_LONGS_FOLLOW_LIST, null)
                     val defaultArticlesFollowListStr = getString(PrefKeys.DEFAULT_ARTICLES_FOLLOW_LIST, null)
 
@@ -633,6 +636,7 @@ object LocalPreferences {
                         defaultPicturesFollowList = MutableStateFlow(defaultPicturesFollowList.await()),
                         defaultProductsFollowList = MutableStateFlow(defaultProductsFollowList.await()),
                         defaultShortsFollowList = MutableStateFlow(defaultShortsFollowList.await()),
+                        defaultPublicChatsFollowList = MutableStateFlow(parseTopFilterOrDefault(defaultPublicChatsFollowListStr, TopFilter.Global)),
                         defaultLongsFollowList = MutableStateFlow(defaultLongsFollowList.await()),
                         defaultArticlesFollowList = MutableStateFlow(defaultArticlesFollowList.await()),
                         nwcWallets = MutableStateFlow(nwcWalletsLoaded.await().first),

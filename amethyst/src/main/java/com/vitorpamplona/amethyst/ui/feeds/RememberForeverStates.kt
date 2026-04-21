@@ -64,6 +64,7 @@ object ScrollStateKeys {
     const val PICTURES_SCREEN = "PicturesFeed"
     const val PRODUCTS_SCREEN = "ProductsFeed"
     const val SHORTS_SCREEN = "ShortsFeed"
+    const val PUBLIC_CHATS_SCREEN = "PublicChatsFeed"
     const val LONGS_SCREEN = "LongsFeed"
     const val ARTICLES_SCREEN = "ArticlesFeed"
 

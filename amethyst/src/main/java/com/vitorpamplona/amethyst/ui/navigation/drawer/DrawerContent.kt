@@ -53,6 +53,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.automirrored.outlined.Article
+import androidx.compose.material.icons.automirrored.outlined.Chat
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.outlined.AccountBalanceWallet
@@ -646,6 +647,14 @@ fun ListContent(
                 tint = MaterialTheme.colorScheme.onBackground,
                 nav = nav,
                 route = Route.Shorts,
+            )
+
+            NavigationRow(
+                title = R.string.public_chats,
+                icon = Icons.AutoMirrored.Outlined.Chat,
+                tint = MaterialTheme.colorScheme.onBackground,
+                nav = nav,
+                route = Route.PublicChats,
             )
 
             NavigationRow(
