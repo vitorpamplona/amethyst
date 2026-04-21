@@ -189,12 +189,6 @@ class CryptoBasicsInteropTest {
         for (v in vectors) {
             val ewl = v.encryptWithLabel
 
-            // Test HPKE round-trip: encrypt then decrypt with the same key pair.
-            // The IETF test vector decryption fails due to a platform-specific X25519 DH
-            // discrepancy (all Python/Java X25519 libs produce a different DH result than
-            // the Rust implementation that generated the test vector, despite identical
-            // public key derivation). Our HPKE key schedule is verified correct against
-            // the IETF RFC 9180 test vectors.
             val plaintext = ewl.plaintext.hexToByteArray()
             val ciphertext =
                 MlsCryptoProvider.encryptWithLabel(

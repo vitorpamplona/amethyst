@@ -134,7 +134,9 @@ object Hpke {
         kemContext: ByteArray,
     ): ByteArray {
         val suiteId = KEM_SUITE_ID
-        val prk = labeledExtract(suiteId, ByteArray(0), "shared_secret", dh)
+        // RFC 9180 §4.1: eae_prk = LabeledExtract("", "eae_prk", dh);
+        //                shared_secret = LabeledExpand(eae_prk, "shared_secret", kem_context, Nsecret).
+        val prk = labeledExtract(suiteId, ByteArray(0), "eae_prk", dh)
         return labeledExpand(suiteId, prk, "shared_secret", kemContext, N_SECRET)
     }
 
