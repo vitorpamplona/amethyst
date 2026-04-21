@@ -547,6 +547,53 @@ fun ListContent(
     nav: INav,
 ) {
     Column(modifier) {
+        CollapsibleSection(title = R.string.drawer_section_navigate) {
+            NavigationRow(
+                title = R.string.route_home,
+                icon = R.drawable.ic_home,
+                iconReference = 0,
+                tint = MaterialTheme.colorScheme.onBackground,
+                nav = nav,
+                route = Route.Home,
+            )
+
+            NavigationRow(
+                title = R.string.route_messages,
+                icon = R.drawable.ic_dm,
+                iconReference = 0,
+                tint = MaterialTheme.colorScheme.onBackground,
+                nav = nav,
+                route = Route.Message,
+            )
+
+            NavigationRow(
+                title = R.string.route_video,
+                icon = R.drawable.ic_video,
+                iconReference = 0,
+                tint = MaterialTheme.colorScheme.onBackground,
+                nav = nav,
+                route = Route.Video,
+            )
+
+            NavigationRow(
+                title = R.string.route_discover,
+                icon = R.drawable.ic_sensors,
+                iconReference = 0,
+                tint = MaterialTheme.colorScheme.onBackground,
+                nav = nav,
+                route = Route.Discover,
+            )
+
+            NavigationRow(
+                title = R.string.route_notifications,
+                icon = R.drawable.ic_notifications,
+                iconReference = 0,
+                tint = MaterialTheme.colorScheme.onBackground,
+                nav = nav,
+                computeRoute = { Route.Notification() },
+            )
+        }
+
         CollapsibleSection(title = R.string.drawer_section_you) {
             NavigationRow(
                 title = R.string.profile,
@@ -791,6 +838,27 @@ fun NavigationRow(
         onClick = {
             nav.closeDrawer()
             nav.nav(route)
+        },
+    )
+}
+
+@Composable
+fun NavigationRow(
+    title: Int,
+    icon: Int,
+    iconReference: Int,
+    tint: Color,
+    nav: INav,
+    computeRoute: () -> Route,
+) {
+    IconRow(
+        title,
+        icon,
+        iconReference,
+        tint,
+        onClick = {
+            nav.closeDrawer()
+            nav.nav(computeRoute)
         },
     )
 }

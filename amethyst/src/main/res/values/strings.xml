@@ -369,6 +369,7 @@
     <string name="private_conversation_notification">"&lt;Unable to decrypt private message&gt;\n\nYou were cited in a private/encrypted conversation between %1$s and %2$s."</string>
     <string name="account_switch_add_account_dialog_title">Add New Account</string>
     <string name="drawer_accounts">Accounts</string>
+    <string name="drawer_section_navigate">Navigate</string>
     <string name="drawer_section_you">You</string>
     <string name="drawer_section_feeds">Feeds</string>
     <string name="drawer_section_create">Create</string>
@@ -1551,6 +1552,10 @@
 
     <string name="change_reaction">Change Quick Reactions</string>
 
+    <string name="bottom_bar_settings">Bottom Navigation Bar</string>
+    <string name="bottom_bar_settings_description">Drag to reorder. Toggle to add or remove an item from the bottom bar. With zero items the bottom bar is hidden.</string>
+    <string name="bottom_bar_settings_available">Available</string>
+    <string name="bottom_bar_settings_reorder">Reorder</string>
     <string name="reactions_settings">Reaction Row</string>
     <string name="reactions_settings_description">Configure which reaction buttons are shown, their order, and whether to display counters.</string>
     <string name="reactions_settings_enabled">Enabled</string>

@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.model
 
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.DefaultBottomBarItems
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
@@ -40,6 +42,7 @@ class UiSettingsFlow(
     val featureSet: MutableStateFlow<FeatureSetType> = MutableStateFlow(FeatureSetType.SIMPLIFIED),
     val gallerySet: MutableStateFlow<ProfileGalleryType> = MutableStateFlow(ProfileGalleryType.CLASSIC),
     val automaticallyProposeAiImprovements: MutableStateFlow<BooleanType> = MutableStateFlow(BooleanType.ALWAYS),
+    val bottomBarItems: MutableStateFlow<List<NavBarItem>> = MutableStateFlow(DefaultBottomBarItems),
 ) {
     val listOfFlows: List<Flow<Any?>> =
         listOf<Flow<Any?>>(
@@ -56,9 +59,11 @@ class UiSettingsFlow(
             featureSet,
             gallerySet,
             automaticallyProposeAiImprovements,
+            bottomBarItems,
         )
 
     // emits at every change in any of the propertyes.
+    @Suppress("UNCHECKED_CAST")
     val propertyWatchFlow: Flow<UiSettings> =
         combine<Any?, UiSettings>(listOfFlows) { flows: Array<Any?> ->
             UiSettings(
@@ -75,6 +80,7 @@ class UiSettingsFlow(
                 flows[10] as FeatureSetType,
                 flows[11] as ProfileGalleryType,
                 flows[12] as BooleanType,
+                flows[13] as List<NavBarItem>,
             )
         }
 
@@ -93,6 +99,7 @@ class UiSettingsFlow(
             featureSet.value,
             gallerySet.value,
             automaticallyProposeAiImprovements.value,
+            bottomBarItems.value,
         )
 
     fun update(torSettings: UiSettings): Boolean {
@@ -150,6 +157,10 @@ class UiSettingsFlow(
             automaticallyProposeAiImprovements.tryEmit(torSettings.automaticallyProposeAiImprovements)
             any = true
         }
+        if (bottomBarItems.value != torSettings.bottomBarItems) {
+            bottomBarItems.tryEmit(torSettings.bottomBarItems)
+            any = true
+        }
 
         return any
     }
@@ -182,6 +193,7 @@ class UiSettingsFlow(
                 MutableStateFlow(uiSettings.featureSet),
                 MutableStateFlow(uiSettings.gallerySet),
                 MutableStateFlow(uiSettings.automaticallyProposeAiImprovements),
+                MutableStateFlow(uiSettings.bottomBarItems),
             )
     }
 }
