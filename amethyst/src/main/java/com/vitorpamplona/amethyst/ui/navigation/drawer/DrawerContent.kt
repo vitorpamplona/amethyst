@@ -649,6 +649,14 @@ fun ListContent(
             )
 
             NavigationRow(
+                title = R.string.follow_packs,
+                icon = Icons.Outlined.CollectionsBookmark,
+                tint = MaterialTheme.colorScheme.onBackground,
+                nav = nav,
+                route = Route.FollowPacks,
+            )
+
+            NavigationRow(
                 title = R.string.longs,
                 icon = Icons.Outlined.SmartDisplay,
                 tint = MaterialTheme.colorScheme.onBackground,
