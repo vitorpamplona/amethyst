@@ -94,12 +94,13 @@ kotlin {
     }
 
     // Enable LLVM optimizations for native test binaries (benchmark accuracy).
-    // Without -opt, K/N test binaries compile in debug mode (~20× slower).
+    // Without opt, K/N test binaries compile in debug mode (~20× slower).
+    // Use the binary-level API instead of -opt freeCompilerArg to avoid the
+    // "Unsupported combination of flags: -opt and -g" conflict in Kotlin/Native 2.1+.
     targets.withType<org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget>().configureEach {
-        compilations["test"].compileTaskProvider.configure {
-            compilerOptions {
-                freeCompilerArgs.add("-opt")
-            }
+        binaries.withType<org.jetbrains.kotlin.gradle.plugin.mpp.TestExecutable>().configureEach {
+            optimized = true
+            debuggable = false
         }
     }
 
