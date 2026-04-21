@@ -413,8 +413,15 @@ class MlsGroup private constructor(
 
         val proposalOrRefs = proposals.map { ProposalOrRef.Inline(it.proposal) }
 
-        // Check if we need an UpdatePath (required unless only SelfRemove)
-        val needsPath = proposals.any { it.proposal !is Proposal.SelfRemove }
+        // Check if we need an UpdatePath. RFC 9420 §12.4.1: the path value
+        // MUST be populated if the proposal list is empty (pure forward-
+        // secrecy / self-update commit) or if it contains any Update or
+        // Remove proposal. A commit whose only non-SelfRemove proposals are
+        // Adds MAY omit the path — we still include one for extra forward
+        // secrecy, which is spec-compliant.
+        val needsPath =
+            proposals.isEmpty() ||
+                proposals.any { it.proposal !is Proposal.SelfRemove }
 
         // Apply proposals to tree FIRST (RFC 9420 Section 12.4.2)
         // Order: Updates/Removes first, then Adds (so blank slots are freed before reuse)
@@ -468,16 +475,23 @@ class MlsGroup private constructor(
                         UpdatePathNode(pathKey.publicKey, encryptedSecrets)
                     }
 
+                // If a signing-key rotation is pending (from
+                // proposeSigningKeyRotation), the UpdatePath's leaf must be
+                // sealed with the NEW signing identity — otherwise the
+                // receiver's copy of our leaf keeps the pre-rotation
+                // signature_key and every post-commit FramedContentTBS
+                // signature we mint fails to verify.
+                val effectiveSigningKey = pendingSigningKey ?: signingPrivateKey
                 val newEncKp = X25519.generateKeyPair()
                 val newLeafNode =
                     buildLeafNode(
                         encryptionKey = newEncKp.publicKey,
-                        signatureKey = Ed25519.publicFromPrivate(signingPrivateKey),
+                        signatureKey = Ed25519.publicFromPrivate(effectiveSigningKey),
                         identity =
                             (tree.getLeaf(myLeafIndex)?.credential as? Credential.Basic)?.identity
                                 ?: ByteArray(0),
                         source = LeafNodeSource.COMMIT,
-                        signingKey = signingPrivateKey,
+                        signingKey = effectiveSigningKey,
                         groupId = groupId,
                         leafIndex = myLeafIndex,
                     )

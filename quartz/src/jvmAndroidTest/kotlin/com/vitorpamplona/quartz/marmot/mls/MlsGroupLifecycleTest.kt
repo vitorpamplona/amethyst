@@ -22,7 +22,6 @@ package com.vitorpamplona.quartz.marmot.mls
 
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroup
 import com.vitorpamplona.quartz.marmot.mls.messages.KeyPackageBundle
-import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
@@ -466,12 +465,6 @@ class MlsGroupLifecycleTest {
     // 12. Empty commit (no proposals, just UpdatePath for forward secrecy)
     // -----------------------------------------------------------------------
 
-    // BUG: empty-commit (no proposals, pure UpdatePath) diverges Alice's and
-    // Bob's exporter secrets after processCommit. Unrelated to the SecretTree
-    // non-full-tree fix — the other @Ignored "processCommit diverges" tests in
-    // this file and MlsGroupEdgeCaseTest now pass, but this one still fails.
-    // Tracked separately.
-    @Ignore
     @Test
     fun testEmptyCommit_AdvancesEpoch() {
         val alice = MlsGroup.create("alice".encodeToByteArray())

@@ -22,7 +22,6 @@ package com.vitorpamplona.quartz.marmot.mls
 
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroup
 import com.vitorpamplona.quartz.marmot.mls.messages.KeyPackageBundle
-import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
@@ -225,12 +224,6 @@ class MlsGroupEdgeCaseTest {
     // 6. Multiple epochs of encrypt/decrypt
     // -----------------------------------------------------------------------
 
-    // BUG: same empty-commit (no proposals, pure UpdatePath) divergence as
-    // MlsGroupLifecycleTest.testEmptyCommit_AdvancesEpoch. The
-    // SecretTree.getNodeSecret non-full-tree fix doesn't address this — after
-    // 5 empty commits Alice and Bob's ratchet secrets diverge and AEAD
-    // decryption fails with "Tag mismatch". Tracked separately.
-    @Ignore
     @Test
     fun testMultipleEpochTransitions_EncryptDecryptStillWorks() {
         val alice = MlsGroup.create("alice".encodeToByteArray())
