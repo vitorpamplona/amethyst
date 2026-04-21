@@ -404,6 +404,15 @@ private suspend fun processMarmotWelcomeFlow(
             }
         }
 
+        is WelcomeResult.AlreadyJoined -> {
+            // Benign replay of a gift-wrapped Welcome (kind:1059) we already
+            // processed in a prior session — the relay is just re-delivering
+            // it after app restart. Log at DEBUG, not WARN.
+            Log.d("MarmotDbg") {
+                "processMarmotWelcomeFlow: already joined group=${result.nostrGroupId.take(8)}… — treating Welcome as replay"
+            }
+        }
+
         is WelcomeResult.Error -> {
             Log.w("MarmotDbg") { "processMarmotWelcomeFlow: ERROR ${result.message}" }
         }
@@ -617,6 +626,16 @@ class GroupEventHandler(
 
                 is GroupEventResult.Duplicate -> {
                     Log.d("MarmotDbg") { "GroupEventHandler.add: Duplicate kind:445 for group=${result.groupId.take(8)}…" }
+                }
+
+                is GroupEventResult.UndecryptableOuterLayer -> {
+                    // Expected for commits + application messages from epochs
+                    // that predate our join — per MLS forward secrecy we
+                    // never held those keys. Not a bug, not a warning.
+                    Log.d("MarmotDbg") {
+                        "GroupEventHandler.add: undecryptable outer layer for group=${result.groupId.take(8)}… " +
+                            "(current + ${result.retainedEpochCount} retained epoch key(s) tried) — likely from before our join"
+                    }
                 }
 
                 is GroupEventResult.Error -> {
