@@ -102,7 +102,7 @@ fun WatchAccountForFollowPacksScreen(
     feedState: FeedContentState,
     accountViewModel: AccountViewModel,
 ) {
-    val listState by accountViewModel.account.liveDiscoveryFollowLists.collectAsStateWithLifecycle()
+    val listState by accountViewModel.account.liveFollowPacksFollowLists.collectAsStateWithLifecycle()
     val hiddenUsers =
         accountViewModel.account.hiddenUsers.flow
             .collectAsStateWithLifecycle()

@@ -21,10 +21,20 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.list.dal
 
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.TopFilter
+import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip51FollowSets.DiscoverFollowSetsFeedFilter
 
 class FollowPacksFeedFilter(
     account: Account,
 ) : DiscoverFollowSetsFeedFilter(account) {
     override fun feedKey(): String = "follow-packs-" + account.userProfile().pubkeyHex + "-" + followList().code
+
+    override fun followList(): TopFilter = account.settings.defaultFollowPacksFollowList.value
+
+    override fun buildFilterParams(account: Account): FilterByListParams =
+        FilterByListParams.create(
+            account.liveFollowPacksFollowLists.value,
+            account.hiddenUsers.flow.value,
+        )
 }

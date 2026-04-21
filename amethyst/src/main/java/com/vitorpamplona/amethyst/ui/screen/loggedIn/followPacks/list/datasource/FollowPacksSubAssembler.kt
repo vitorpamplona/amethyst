@@ -52,11 +52,11 @@ class FollowPacksSubAssembler(
 
     override fun list(key: FollowPacksQueryState) = key.listName()
 
-    fun FollowPacksQueryState.listNameFlow() = account.settings.defaultDiscoveryFollowList
+    fun FollowPacksQueryState.listNameFlow() = account.settings.defaultFollowPacksFollowList
 
     fun FollowPacksQueryState.listName() = listNameFlow().value
 
-    fun FollowPacksQueryState.followsPerRelayFlow() = account.liveDiscoveryFollowListsPerRelay
+    fun FollowPacksQueryState.followsPerRelayFlow() = account.liveFollowPacksFollowListsPerRelay
 
     fun FollowPacksQueryState.followsPerRelay() = followsPerRelayFlow().value
 
