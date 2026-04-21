@@ -103,6 +103,7 @@ private object PrefKeys {
     const val DEFAULT_PICTURES_FOLLOW_LIST = "defaultPicturesFollowList"
     const val DEFAULT_PRODUCTS_FOLLOW_LIST = "defaultProductsFollowList"
     const val DEFAULT_SHORTS_FOLLOW_LIST = "defaultShortsFollowList"
+    const val DEFAULT_PUBLIC_CHATS_FOLLOW_LIST = "defaultPublicChatsFollowList"
     const val DEFAULT_LIVE_STREAMS_FOLLOW_LIST = "defaultLiveStreamsFollowList"
     const val DEFAULT_LONGS_FOLLOW_LIST = "defaultLongsFollowList"
     const val DEFAULT_ARTICLES_FOLLOW_LIST = "defaultArticlesFollowList"
@@ -349,6 +350,7 @@ object LocalPreferences {
                     putString(PrefKeys.DEFAULT_PICTURES_FOLLOW_LIST, JsonMapper.toJson(settings.defaultPicturesFollowList.value))
                     putString(PrefKeys.DEFAULT_PRODUCTS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultProductsFollowList.value))
                     putString(PrefKeys.DEFAULT_SHORTS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultShortsFollowList.value))
+                    putString(PrefKeys.DEFAULT_PUBLIC_CHATS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultPublicChatsFollowList.value))
                     putString(PrefKeys.DEFAULT_LIVE_STREAMS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultLiveStreamsFollowList.value))
                     putString(PrefKeys.DEFAULT_LONGS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultLongsFollowList.value))
                     putString(PrefKeys.DEFAULT_ARTICLES_FOLLOW_LIST, JsonMapper.toJson(settings.defaultArticlesFollowList.value))
@@ -613,6 +615,7 @@ object LocalPreferences {
                         defaultPicturesFollowList = MutableStateFlow(followListPrefs.pictures),
                         defaultProductsFollowList = MutableStateFlow(followListPrefs.products),
                         defaultShortsFollowList = MutableStateFlow(followListPrefs.shorts),
+                        defaultPublicChatsFollowList = MutableStateFlow(followListPrefs.publicChats),
                         defaultLiveStreamsFollowList = MutableStateFlow(followListPrefs.liveStreams),
                         defaultLongsFollowList = MutableStateFlow(followListPrefs.longs),
                         defaultArticlesFollowList = MutableStateFlow(followListPrefs.articles),
@@ -676,6 +679,7 @@ object LocalPreferences {
         val pictures: TopFilter,
         val products: TopFilter,
         val shorts: TopFilter,
+        val publicChats: TopFilter,
         val liveStreams: TopFilter,
         val longs: TopFilter,
         val articles: TopFilter,
@@ -691,6 +695,7 @@ object LocalPreferences {
             pictures = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_PICTURES_FOLLOW_LIST, null), TopFilter.Global),
             products = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_PRODUCTS_FOLLOW_LIST, null), TopFilter.AroundMe),
             shorts = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_SHORTS_FOLLOW_LIST, null), TopFilter.Global),
+            publicChats = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_PUBLIC_CHATS_FOLLOW_LIST, null), TopFilter.Global),
             liveStreams = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_LIVE_STREAMS_FOLLOW_LIST, null), TopFilter.Global),
             longs = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_LONGS_FOLLOW_LIST, null), TopFilter.Global),
             articles = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_ARTICLES_FOLLOW_LIST, null), TopFilter.AllFollows),

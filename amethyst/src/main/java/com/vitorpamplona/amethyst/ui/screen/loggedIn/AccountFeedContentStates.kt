@@ -56,6 +56,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.dal.ClosedPollsFeedFi
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.dal.OpenPollsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.dal.PollsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.products.dal.ProductsFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.publicChats.dal.PublicChatsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.shorts.dal.ShortsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.dal.VideoFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.webBookmarks.dal.WebBookmarkFeedFilter
@@ -96,6 +97,7 @@ class AccountFeedContentStates(
     val picturesFeed = FeedContentState(PictureFeedFilter(account), scope, LocalCache)
     val productsFeed = FeedContentState(ProductsFeedFilter(account), scope, LocalCache)
     val shortsFeed = FeedContentState(ShortsFeedFilter(account), scope, LocalCache)
+    val publicChatsFeed = FeedContentState(PublicChatsFeedFilter(account), scope, LocalCache)
     val followPacksFeed = FeedContentState(FollowPacksFeedFilter(account), scope, LocalCache)
     val liveStreamsFeed = FeedContentState(LiveStreamsFeedFilter(account), scope, LocalCache)
     val longsFeed = FeedContentState(LongsFeedFilter(account), scope, LocalCache)
@@ -160,6 +162,7 @@ class AccountFeedContentStates(
         picturesFeed.updateFeedWith(newNotes)
         productsFeed.updateFeedWith(newNotes)
         shortsFeed.updateFeedWith(newNotes)
+        publicChatsFeed.updateFeedWith(newNotes)
         followPacksFeed.updateFeedWith(newNotes)
         liveStreamsFeed.updateFeedWith(newNotes)
         longsFeed.updateFeedWith(newNotes)
@@ -205,6 +208,7 @@ class AccountFeedContentStates(
         picturesFeed.deleteFromFeed(newNotes)
         productsFeed.deleteFromFeed(newNotes)
         shortsFeed.deleteFromFeed(newNotes)
+        publicChatsFeed.deleteFromFeed(newNotes)
         followPacksFeed.deleteFromFeed(newNotes)
         liveStreamsFeed.deleteFromFeed(newNotes)
         longsFeed.deleteFromFeed(newNotes)
