@@ -69,8 +69,9 @@ class MarmotMipBehaviorTest {
     fun create_installsRequiredCapabilitiesExtension() {
         val alice = MlsGroup.create(aliceId.hexToByteArray())
 
-        val reqCaps = alice.extensions.find { it.extensionType == 0x0002 }
-        assertNotNull(reqCaps, "create() must install required_capabilities extension (0x0002)")
+        // RFC 9420 §13.3: required_capabilities is extension type 0x0003.
+        val reqCaps = alice.extensions.find { it.extensionType == 0x0003 }
+        assertNotNull(reqCaps, "create() must install required_capabilities extension (0x0003)")
 
         val reader = TlsReader(reqCaps.extensionData)
         val extsBytes = reader.readOpaqueVarInt()
