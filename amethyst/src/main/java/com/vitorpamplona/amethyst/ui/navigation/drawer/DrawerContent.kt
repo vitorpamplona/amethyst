@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.navigation.drawer
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -58,6 +59,8 @@ import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material.icons.outlined.CollectionsBookmark
 import androidx.compose.material.icons.outlined.Drafts
 import androidx.compose.material.icons.outlined.EmojiEmotions
+import androidx.compose.material.icons.outlined.ExpandLess
+import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.GroupAdd
 import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.Language
@@ -124,6 +127,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.Font18SP
 import com.vitorpamplona.amethyst.ui.theme.IconRowTextModifier
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
@@ -538,179 +542,187 @@ fun ListContent(
     nav: INav,
 ) {
     Column(modifier) {
-        NavigationRow(
-            title = R.string.profile,
-            icon = Icons.Default.AccountCircle,
-            tint = MaterialTheme.colorScheme.primary,
-            nav = nav,
-            computeRoute = {
-                Route.Profile(accountViewModel.userProfile().pubkeyHex)
-            },
-        )
-
-        NavigationRow(
-            title = R.string.my_lists,
-            icon = Icons.AutoMirrored.Filled.FormatListBulleted,
-            tint = MaterialTheme.colorScheme.onBackground,
-            nav = nav,
-            route = Route.Lists,
-        )
-
-        NavigationRow(
-            title = R.string.bookmarks,
-            icon = Icons.Outlined.CollectionsBookmark,
-            tint = MaterialTheme.colorScheme.onBackground,
-            nav = nav,
-            route = Route.BookmarkGroups,
-        )
-
-        NavigationRow(
-            title = R.string.manage_emoji_packs,
-            icon = Icons.Outlined.EmojiEmotions,
-            tint = MaterialTheme.colorScheme.onBackground,
-            nav = nav,
-            route = Route.EmojiPacks,
-        )
-
-        NavigationRow(
-            title = R.string.interest_sets_title,
-            icon = Icons.Outlined.Tag,
-            tint = MaterialTheme.colorScheme.onBackground,
-            nav = nav,
-            route = Route.InterestSets,
-        )
-
-        NavigationRow(
-            title = R.string.web_bookmarks,
-            icon = Icons.Outlined.Language,
-            tint = MaterialTheme.colorScheme.onBackground,
-            nav = nav,
-            route = Route.WebBookmarks,
-        )
-
-        NavigationRow(
-            title = R.string.drafts,
-            icon = Icons.Outlined.Drafts,
-            tint = MaterialTheme.colorScheme.onBackground,
-            nav = nav,
-            route = Route.Drafts,
-        )
-
-        NavigationRow(
-            title = R.string.badges,
-            icon = Icons.Outlined.MilitaryTech,
-            tint = MaterialTheme.colorScheme.onBackground,
-            nav = nav,
-            route = Route.Badges,
-        )
-
-        NavigationRow(
-            title = R.string.communities,
-            icon = Icons.Outlined.Groups,
-            tint = MaterialTheme.colorScheme.onBackground,
-            nav = nav,
-            route = Route.Communities,
-        )
-
-        NavigationRow(
-            title = R.string.discover_marketplace,
-            icon = Icons.Outlined.Storefront,
-            tint = MaterialTheme.colorScheme.onBackground,
-            nav = nav,
-            route = Route.Products,
-        )
-
-        NavigationRow(
-            title = R.string.pictures,
-            icon = Icons.Outlined.Photo,
-            tint = MaterialTheme.colorScheme.onBackground,
-            nav = nav,
-            route = Route.Pictures,
-        )
-
-        NavigationRow(
-            title = R.string.polls,
-            icon = R.drawable.ic_poll,
-            iconReference = 1,
-            tint = MaterialTheme.colorScheme.onBackground,
-            nav = nav,
-            route = Route.Polls,
-        )
-
-        NavigationRow(
-            title = R.string.discover_reads,
-            icon = Icons.AutoMirrored.Outlined.Article,
-            tint = MaterialTheme.colorScheme.onBackground,
-            nav = nav,
-            route = Route.Articles,
-        )
-
-        NavigationRow(
-            title = R.string.shorts,
-            icon = Icons.Outlined.PlayCircle,
-            tint = MaterialTheme.colorScheme.onBackground,
-            nav = nav,
-            route = Route.Shorts,
-        )
-
-        NavigationRow(
-            title = R.string.longs,
-            icon = Icons.Outlined.SmartDisplay,
-            tint = MaterialTheme.colorScheme.onBackground,
-            nav = nav,
-            route = Route.Longs,
-        )
-
-        NavigationRow(
-            title = R.string.wallet,
-            icon = Icons.Outlined.AccountBalanceWallet,
-            tint = MaterialTheme.colorScheme.onBackground,
-            nav = nav,
-            route = Route.Wallet,
-        )
-
-        NavigationRow(
-            title = R.string.emoji_sets,
-            icon = Icons.Outlined.EmojiEmotions,
-            tint = MaterialTheme.colorScheme.onBackground,
-            nav = nav,
-            route = Route.BrowseEmojiSets,
-        )
-
-        NavigationRow(
-            title = R.string.share_hls_video,
-            icon = Icons.Outlined.SettingsInputAntenna,
-            tint = MaterialTheme.colorScheme.onBackground,
-            nav = nav,
-            route = Route.NewHlsVideo,
-        )
-
-        if (isDebug) {
+        CollapsibleSection(title = R.string.drawer_section_you) {
             NavigationRow(
-                title = R.string.route_chess,
-                icon = R.drawable.ic_chess,
-                iconReference = 1,
+                title = R.string.profile,
+                icon = Icons.Default.AccountCircle,
+                tint = MaterialTheme.colorScheme.primary,
+                nav = nav,
+                computeRoute = {
+                    Route.Profile(accountViewModel.userProfile().pubkeyHex)
+                },
+            )
+
+            NavigationRow(
+                title = R.string.my_lists,
+                icon = Icons.AutoMirrored.Filled.FormatListBulleted,
                 tint = MaterialTheme.colorScheme.onBackground,
                 nav = nav,
-                route = Route.Chess,
+                route = Route.Lists,
+            )
+
+            NavigationRow(
+                title = R.string.bookmarks,
+                icon = Icons.Outlined.CollectionsBookmark,
+                tint = MaterialTheme.colorScheme.onBackground,
+                nav = nav,
+                route = Route.BookmarkGroups,
+            )
+
+            NavigationRow(
+                title = R.string.web_bookmarks,
+                icon = Icons.Outlined.Language,
+                tint = MaterialTheme.colorScheme.onBackground,
+                nav = nav,
+                route = Route.WebBookmarks,
+            )
+
+            NavigationRow(
+                title = R.string.drafts,
+                icon = Icons.Outlined.Drafts,
+                tint = MaterialTheme.colorScheme.onBackground,
+                nav = nav,
+                route = Route.Drafts,
+            )
+
+            NavigationRow(
+                title = R.string.interest_sets_title,
+                icon = Icons.Outlined.Tag,
+                tint = MaterialTheme.colorScheme.onBackground,
+                nav = nav,
+                route = Route.InterestSets,
+            )
+
+            NavigationRow(
+                title = R.string.manage_emoji_packs,
+                icon = Icons.Outlined.EmojiEmotions,
+                tint = MaterialTheme.colorScheme.onBackground,
+                nav = nav,
+                route = Route.EmojiPacks,
+            )
+
+            NavigationRow(
+                title = R.string.wallet,
+                icon = Icons.Outlined.AccountBalanceWallet,
+                tint = MaterialTheme.colorScheme.onBackground,
+                nav = nav,
+                route = Route.Wallet,
             )
         }
 
-        IconRowRelays(
-            accountViewModel = accountViewModel,
-            onClick = {
-                nav.closeDrawer()
-                nav.nav(Route.EditRelays)
-            },
-        )
+        CollapsibleSection(title = R.string.drawer_section_feeds) {
+            NavigationRow(
+                title = R.string.communities,
+                icon = Icons.Outlined.Groups,
+                tint = MaterialTheme.colorScheme.onBackground,
+                nav = nav,
+                route = Route.Communities,
+            )
 
-        NavigationRow(
-            title = R.string.settings,
-            icon = Icons.Outlined.Settings,
-            tint = MaterialTheme.colorScheme.onBackground,
-            nav = nav,
-            route = Route.AllSettings,
-        )
+            NavigationRow(
+                title = R.string.discover_reads,
+                icon = Icons.AutoMirrored.Outlined.Article,
+                tint = MaterialTheme.colorScheme.onBackground,
+                nav = nav,
+                route = Route.Articles,
+            )
+
+            NavigationRow(
+                title = R.string.pictures,
+                icon = Icons.Outlined.Photo,
+                tint = MaterialTheme.colorScheme.onBackground,
+                nav = nav,
+                route = Route.Pictures,
+            )
+
+            NavigationRow(
+                title = R.string.shorts,
+                icon = Icons.Outlined.PlayCircle,
+                tint = MaterialTheme.colorScheme.onBackground,
+                nav = nav,
+                route = Route.Shorts,
+            )
+
+            NavigationRow(
+                title = R.string.longs,
+                icon = Icons.Outlined.SmartDisplay,
+                tint = MaterialTheme.colorScheme.onBackground,
+                nav = nav,
+                route = Route.Longs,
+            )
+
+            NavigationRow(
+                title = R.string.polls,
+                icon = R.drawable.ic_poll,
+                iconReference = 1,
+                tint = MaterialTheme.colorScheme.onBackground,
+                nav = nav,
+                route = Route.Polls,
+            )
+
+            NavigationRow(
+                title = R.string.badges,
+                icon = Icons.Outlined.MilitaryTech,
+                tint = MaterialTheme.colorScheme.onBackground,
+                nav = nav,
+                route = Route.Badges,
+            )
+
+            NavigationRow(
+                title = R.string.discover_marketplace,
+                icon = Icons.Outlined.Storefront,
+                tint = MaterialTheme.colorScheme.onBackground,
+                nav = nav,
+                route = Route.Products,
+            )
+
+            NavigationRow(
+                title = R.string.emoji_sets,
+                icon = Icons.Outlined.EmojiEmotions,
+                tint = MaterialTheme.colorScheme.onBackground,
+                nav = nav,
+                route = Route.BrowseEmojiSets,
+            )
+        }
+
+        CollapsibleSection(title = R.string.drawer_section_create) {
+            NavigationRow(
+                title = R.string.share_hls_video,
+                icon = Icons.Outlined.SettingsInputAntenna,
+                tint = MaterialTheme.colorScheme.onBackground,
+                nav = nav,
+                route = Route.NewHlsVideo,
+            )
+
+            if (isDebug) {
+                NavigationRow(
+                    title = R.string.route_chess,
+                    icon = R.drawable.ic_chess,
+                    iconReference = 1,
+                    tint = MaterialTheme.colorScheme.onBackground,
+                    nav = nav,
+                    route = Route.Chess,
+                )
+            }
+        }
+
+        CollapsibleSection(title = R.string.drawer_section_system) {
+            IconRowRelays(
+                accountViewModel = accountViewModel,
+                onClick = {
+                    nav.closeDrawer()
+                    nav.nav(Route.EditRelays)
+                },
+            )
+
+            NavigationRow(
+                title = R.string.settings,
+                icon = Icons.Outlined.Settings,
+                tint = MaterialTheme.colorScheme.onBackground,
+                nav = nav,
+                route = Route.AllSettings,
+            )
+        }
 
         Spacer(modifier = Modifier.weight(1f))
 
@@ -720,6 +732,51 @@ fun ListContent(
             tint = MaterialTheme.colorScheme.onBackground,
             onClick = openSheet,
         )
+    }
+}
+
+@Composable
+fun CollapsibleSection(
+    title: Int,
+    content: @Composable () -> Unit,
+) {
+    var expanded by remember { mutableStateOf(true) }
+    val sectionTitle = stringRes(title)
+    val toggleLabel =
+        stringRes(
+            if (expanded) R.string.drawer_collapse_section else R.string.drawer_expand_section,
+            sectionTitle,
+        )
+
+    Column(modifier = Modifier.animateContentSize()) {
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .clickable(
+                        onClick = { expanded = !expanded },
+                        onClickLabel = toggleLabel,
+                    ).padding(top = 12.dp, bottom = 4.dp, start = 25.dp, end = 15.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                modifier = Modifier.weight(1f),
+                text = sectionTitle.uppercase(),
+                fontSize = Font14SP,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Icon(
+                imageVector = if (expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
+                contentDescription = null,
+                modifier = Size22Modifier,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        if (expanded) {
+            content()
+        }
     }
 }
 
