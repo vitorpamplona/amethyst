@@ -6,9 +6,14 @@
 # --- preflight ---------------------------------------------------------------
 preflight() {
   banner "Preflight"
-  for cmd in jq git curl cargo; do
+  for cmd in jq git curl cargo protoc; do
     if ! command -v "$cmd" >/dev/null 2>&1; then
-      fail_msg "missing required tool: $cmd"; exit 1
+      fail_msg "missing required tool: $cmd"
+      # protoc is a build-time dep of nostr-rs-relay — give a hint.
+      if [[ "$cmd" == "protoc" ]]; then
+        info "hint: apt-get install protobuf-compiler   (or brew install protobuf on macOS)"
+      fi
+      exit 1
     fi
     info "$cmd: $(command -v "$cmd")"
   done
