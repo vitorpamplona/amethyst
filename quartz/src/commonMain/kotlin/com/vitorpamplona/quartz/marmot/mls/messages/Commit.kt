@@ -107,6 +107,18 @@ data class CommitResult(
      * Wire format: MlsMessage(version=mls10, wireFormat=mls_public_message, payload=PublicMessage(...)).
      */
     val framedCommitBytes: ByteArray = commitBytes,
+    /**
+     * `MLS-Exporter("marmot", "group-event", 32)` evaluated at the **pre-commit**
+     * epoch (N) — the key the group had when this commit was computed, before
+     * local state advanced to N+1. Publishers of the kind:445 MUST ChaCha20-wrap
+     * the commit with this key (RFC 9420 §12.4 and MDK parity). Using the
+     * post-commit (N+1) key makes the commit unreadable to existing members
+     * still at epoch N — the exact scenario that caused Eden to stall at
+     * epoch 1 and never decrypt any of David's subsequent messages.
+     *
+     * Empty by default for the test-only entry points that don't need it.
+     */
+    val preCommitExporterSecret: ByteArray = ByteArray(0),
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

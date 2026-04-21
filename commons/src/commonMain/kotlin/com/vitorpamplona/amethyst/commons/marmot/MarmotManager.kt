@@ -178,38 +178,33 @@ class MarmotManager(
             "KeyPackage credential identity does not match memberPubKey"
         }
 
-        // Stage-then-merge (MDK / RFC 9420 §12.4): build the kind:445 with the
-        // PRE-commit epoch's exporter secret so that other existing members
-        // can outer-decrypt and process it. Only advance our own epoch once
-        // the framed commit has been handed to the outbound path.
-        val staged = groupManager.stageAddMember(nostrGroupId, keyPackageBytes)
+        // Per RFC 9420 §12.4 (and MDK), the outbound kind:445 MUST be
+        // outer-encrypted with the pre-commit (epoch-N) exporter secret so
+        // that other existing members still at epoch N can decrypt and
+        // process the commit. CommitResult.preCommitExporterSecret carries
+        // that key; the local group state has already advanced to N+1 by
+        // the time addMember returns, so we can't read it from the group
+        // any more.
+        val commitResult = groupManager.addMember(nostrGroupId, keyPackageBytes)
         val commitEvent =
             outboundProcessor.buildCommitEvent(
                 nostrGroupId = nostrGroupId,
-                commitBytes = staged.framedCommitBytes,
-                exporterKey = staged.preCommitExporterSecret,
+                commitBytes = commitResult.framedCommitBytes,
+                exporterKey = commitResult.preCommitExporterSecret,
             )
         // The published kind:445 will echo back from the relay — without this
         // dedup our own inbound pipeline would try to re-apply a commit whose
-        // epoch we've already merged below.
+        // epoch we've already merged.
         inboundProcessor.markEventProcessed(commitEvent.signedEvent.id)
 
-        val welcomeBytes =
-            staged.welcomeBytes
-                ?: throw IllegalStateException(
-                    "stageAddMember did not produce a Welcome for $memberPubKey",
-                )
         val welcomeDelivery =
-            welcomeSender.wrapWelcomeBytes(
-                welcomeBytes = welcomeBytes,
+            welcomeSender.wrapWelcome(
+                commitResult = commitResult,
                 recipientPubKey = memberPubKey,
                 keyPackageEventId = keyPackageEventId,
                 relays = relays,
                 nostrGroupId = nostrGroupId,
             )
-
-        // Advance local epoch now that the commit + welcome have been built.
-        groupManager.mergeStagedCommit(nostrGroupId, staged)
 
         return Pair(commitEvent, welcomeDelivery)
     }
@@ -286,15 +281,14 @@ class MarmotManager(
         nostrGroupId: HexKey,
         targetLeafIndex: Int,
     ): OutboundGroupEvent {
-        val staged = groupManager.stageRemoveMember(nostrGroupId, targetLeafIndex)
+        val commitResult = groupManager.removeMember(nostrGroupId, targetLeafIndex)
         val commitEvent =
             outboundProcessor.buildCommitEvent(
                 nostrGroupId = nostrGroupId,
-                commitBytes = staged.framedCommitBytes,
-                exporterKey = staged.preCommitExporterSecret,
+                commitBytes = commitResult.framedCommitBytes,
+                exporterKey = commitResult.preCommitExporterSecret,
             )
         inboundProcessor.markEventProcessed(commitEvent.signedEvent.id)
-        groupManager.mergeStagedCommit(nostrGroupId, staged)
         return commitEvent
     }
 
@@ -306,16 +300,15 @@ class MarmotManager(
         nostrGroupId: HexKey,
         metadata: MarmotGroupData,
     ): OutboundGroupEvent {
-        val staged =
-            groupManager.stageUpdateGroupExtensions(nostrGroupId, listOf(metadata.toExtension()))
+        val commitResult =
+            groupManager.updateGroupExtensions(nostrGroupId, listOf(metadata.toExtension()))
         val commitEvent =
             outboundProcessor.buildCommitEvent(
                 nostrGroupId = nostrGroupId,
-                commitBytes = staged.framedCommitBytes,
-                exporterKey = staged.preCommitExporterSecret,
+                commitBytes = commitResult.framedCommitBytes,
+                exporterKey = commitResult.preCommitExporterSecret,
             )
         inboundProcessor.markEventProcessed(commitEvent.signedEvent.id)
-        groupManager.mergeStagedCommit(nostrGroupId, staged)
         return commitEvent
     }
 

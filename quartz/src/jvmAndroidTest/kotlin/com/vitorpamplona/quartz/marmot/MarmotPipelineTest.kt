@@ -429,14 +429,13 @@ class MarmotPipelineTest {
     }
 
     @Test
-    fun testStagedAddMemberUsesPreCommitExporter() {
-        // Regression: before the stage/merge split, MarmotManager.addMember
-        // was outer-encrypting the kind:445 commit with the POST-commit
-        // epoch key. Existing members still at epoch N couldn't decrypt it,
-        // and the newly-added member (joining via Welcome at epoch N+1)
-        // *could* decrypt it but then failed to apply ("Duplicate encryption
-        // key: leaf X"). The fix exposes the pre-commit exporter secret via
-        // StagedCommit so callers can encrypt correctly.
+    fun testAddMemberExposesPreCommitExporterSecret() {
+        // Regression: before the fix, MarmotManager.addMember outer-encrypted
+        // the kind:445 commit with the POST-commit (epoch N+1) exporter key,
+        // which meant existing members at epoch N couldn't decrypt it. The
+        // fix captures the pre-commit key inside MlsGroup.commit() and ships
+        // it back via CommitResult.preCommitExporterSecret so MarmotManager
+        // can pass it to the outbound builder.
         runBlocking {
             val manager = createGroupManager()
             manager.createGroup(groupId, "alice".encodeToByteArray())
@@ -448,22 +447,24 @@ class MarmotPipelineTest {
                 manager
                     .getGroup(groupId)!!
                     .createKeyPackage("bob".encodeToByteArray(), ByteArray(0))
-            val staged = manager.stageAddMember(groupId, bobBundle.keyPackage.toTlsBytes())
+            val result = manager.addMember(groupId, bobBundle.keyPackage.toTlsBytes())
 
-            // Stage must NOT have advanced the local epoch yet.
-            assertEquals(preEpoch, manager.getGroup(groupId)!!.epoch)
-            // preCommitExporterSecret must equal the pre-stage exporter key.
+            // Local state advanced to N+1.
+            assertEquals(preEpoch + 1, manager.getGroup(groupId)!!.epoch)
+            // But the returned pre-commit exporter secret matches what the
+            // group held BEFORE advancing — the key existing members still at
+            // epoch N are holding.
             kotlin.test.assertContentEquals(
                 preEpochExporter,
-                staged.preCommitExporterSecret,
+                result.preCommitExporterSecret,
             )
-            // The staged post-commit epoch is N+1.
-            assertEquals(preEpoch + 1, staged.postCommitEpoch)
-            assertNotNull(staged.welcomeBytes)
-
-            // Merge advances to N+1.
-            manager.mergeStagedCommit(groupId, staged)
-            assertEquals(preEpoch + 1, manager.getGroup(groupId)!!.epoch)
+            // The post-commit exporter (what groupManager.exporterSecret now
+            // returns) MUST differ — otherwise we haven't actually rotated.
+            kotlin.test.assertFalse(
+                manager.exporterSecret(groupId).contentEquals(preEpochExporter),
+                "post-commit exporter key must differ from the pre-commit one",
+            )
+            assertNotNull(result.welcomeBytes)
         }
     }
 
@@ -509,33 +510,35 @@ class MarmotPipelineTest {
 
             val outbound = MarmotOutboundProcessor(aliceMgr)
 
-            // --- Step 1: Alice adds Bob via stage/merge ---
-            val stagedBob = aliceMgr.stageAddMember(groupId, bobBundle.keyPackage.toTlsBytes())
+            // --- Step 1: Alice adds Bob. CommitResult carries the pre-commit
+            //     exporter secret so buildCommitEvent can outer-encrypt with
+            //     the epoch-N (pre-Bob) key that Bob-less Alice held. ---
+            val addBobResult = aliceMgr.addMember(groupId, bobBundle.keyPackage.toTlsBytes())
             val addBobCommitEvent =
                 outbound.buildCommitEvent(
                     nostrGroupId = groupId,
-                    commitBytes = stagedBob.framedCommitBytes,
-                    exporterKey = stagedBob.preCommitExporterSecret,
+                    commitBytes = addBobResult.framedCommitBytes,
+                    exporterKey = addBobResult.preCommitExporterSecret,
                 )
 
             // Bob joins via Welcome (emulated: we hand him the Welcome bytes).
-            bobMgr.processWelcome(stagedBob.welcomeBytes!!, bobBundle)
+            bobMgr.processWelcome(addBobResult.welcomeBytes!!, bobBundle)
 
-            aliceMgr.mergeStagedCommit(groupId, stagedBob)
             val epochAfterAddBob = aliceMgr.getGroup(groupId)!!.epoch
             assertEquals(epochAfterAddBob, bobMgr.getGroup(groupId)!!.epoch)
 
-            // --- Step 2: Alice adds Carol via stage/merge ---
-            val stagedCarol = aliceMgr.stageAddMember(groupId, carolBundle.keyPackage.toTlsBytes())
+            // --- Step 2: Alice adds Carol. addCarolResult.preCommitExporterSecret
+            //     is the epoch-N (2-member) key that Bob still holds. ---
+            val addCarolResult = aliceMgr.addMember(groupId, carolBundle.keyPackage.toTlsBytes())
             val addCarolCommitEvent =
                 outbound.buildCommitEvent(
                     nostrGroupId = groupId,
-                    commitBytes = stagedCarol.framedCommitBytes,
-                    exporterKey = stagedCarol.preCommitExporterSecret,
+                    commitBytes = addCarolResult.framedCommitBytes,
+                    exporterKey = addCarolResult.preCommitExporterSecret,
                 )
 
-            // Carol joins via Welcome at epoch 2.
-            carolMgr.processWelcome(stagedCarol.welcomeBytes!!, carolBundle)
+            // Carol joins via Welcome at the new epoch.
+            carolMgr.processWelcome(addCarolResult.welcomeBytes!!, carolBundle)
 
             // *** The key assertion ***: Bob (still at epoch 1) receives the
             // add-Carol kind:445 and must be able to:
@@ -545,10 +548,10 @@ class MarmotPipelineTest {
             val bobExporterAtE1 = bobMgr.exporterSecret(groupId)
             kotlin.test.assertContentEquals(
                 bobExporterAtE1,
-                stagedCarol.preCommitExporterSecret,
-                "Bob's epoch-1 exporter must match the pre-commit key used to " +
-                    "outer-encrypt the add-Carol commit; otherwise Bob cannot " +
-                    "decrypt and will be stuck on the old epoch.",
+                addCarolResult.preCommitExporterSecret,
+                "Bob's current exporter (pre-add-Carol) must match the " +
+                    "pre-commit key used to outer-encrypt the add-Carol commit; " +
+                    "otherwise Bob cannot decrypt and will be stuck on the old epoch.",
             )
 
             val decryptedMlsBytes =
@@ -575,7 +578,6 @@ class MarmotPipelineTest {
                 confirmationTag = publicMessage.confirmationTag!!,
             )
 
-            aliceMgr.mergeStagedCommit(groupId, stagedCarol)
             val epochAfterAddCarol = aliceMgr.getGroup(groupId)!!.epoch
             assertEquals(epochAfterAddBob + 1, epochAfterAddCarol)
             assertEquals(epochAfterAddCarol, bobMgr.getGroup(groupId)!!.epoch)
@@ -599,6 +601,24 @@ class MarmotPipelineTest {
             val carolMlsBytes = GroupEventEncryption.decrypt(appEvent.signedEvent.content, carolKey)
             val carolDecrypted = carolMgr.decrypt(groupId, carolMlsBytes)
             assertEquals(msg, carolDecrypted.content.decodeToString())
+
+            // --- Alice also receives her own echo (as the app does via the
+            // relay round-trip); this exercises the secretTree-based decrypt
+            // path with myLeafIndex != sender or when sentKeys misses.
+            val aliceMlsBytes = GroupEventEncryption.decrypt(appEvent.signedEvent.content, aliceKey)
+            val aliceDecrypted = aliceMgr.decrypt(groupId, aliceMlsBytes)
+            assertEquals(msg, aliceDecrypted.content.decodeToString())
+
+            // Send a second and third message to stress the secretTree ratchet
+            // and ensure getNodeSecret stays terminating across generations.
+            for (i in 1..3) {
+                val m = "msg-$i"
+                val ev = outbound.buildGroupEventFromBytes(groupId, m.encodeToByteArray())
+                val keyNow = aliceMgr.exporterSecret(groupId)
+                val bytes = GroupEventEncryption.decrypt(ev.signedEvent.content, keyNow)
+                val dec = bobMgr.decrypt(groupId, bytes)
+                assertEquals(m, dec.content.decodeToString())
+            }
         }
     }
 
