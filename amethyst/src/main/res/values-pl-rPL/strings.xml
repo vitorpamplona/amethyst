@@ -2081,4 +2081,5 @@
     <string name="ai_tone_more_direct">Bardziej bezpośredni</string>
     <string name="ai_tone_punchy">Mocny</string>
     <string name="ai_tone_emojify">+ Emoji</string>
+    <!-- Emoji packs -->
 </resources>

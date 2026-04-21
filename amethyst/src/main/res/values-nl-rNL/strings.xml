@@ -1912,4 +1912,5 @@
     <string name="relay_members_removed">%1$d leden verwijderd van relay</string>
     <string name="relay_join_request">Relay-lidmaatschapsverzoek</string>
     <string name="relay_leave_request">Relay-opzegverzoek</string>
+    <!-- Emoji packs -->
 </resources>
