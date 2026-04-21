@@ -35,6 +35,7 @@ import com.vitorpamplona.quartz.marmot.mls.framing.PublicMessage
 import com.vitorpamplona.quartz.marmot.mls.framing.Sender
 import com.vitorpamplona.quartz.marmot.mls.framing.SenderType
 import com.vitorpamplona.quartz.marmot.mls.framing.WireFormat
+import com.vitorpamplona.quartz.marmot.mls.framing.encodeSender
 import com.vitorpamplona.quartz.marmot.mls.messages.Commit
 import com.vitorpamplona.quartz.marmot.mls.messages.CommitResult
 import com.vitorpamplona.quartz.marmot.mls.messages.EncryptedGroupSecrets
@@ -412,8 +413,15 @@ class MlsGroup private constructor(
 
         val proposalOrRefs = proposals.map { ProposalOrRef.Inline(it.proposal) }
 
-        // Check if we need an UpdatePath (required unless only SelfRemove)
-        val needsPath = proposals.any { it.proposal !is Proposal.SelfRemove }
+        // Check if we need an UpdatePath. RFC 9420 §12.4.1: the path value
+        // MUST be populated if the proposal list is empty (pure forward-
+        // secrecy / self-update commit) or if it contains any Update or
+        // Remove proposal. A commit whose only non-SelfRemove proposals are
+        // Adds MAY omit the path — we still include one for extra forward
+        // secrecy, which is spec-compliant.
+        val needsPath =
+            proposals.isEmpty() ||
+                proposals.any { it.proposal !is Proposal.SelfRemove }
 
         // Apply proposals to tree FIRST (RFC 9420 Section 12.4.2)
         // Order: Updates/Removes first, then Adds (so blank slots are freed before reuse)
@@ -467,18 +475,58 @@ class MlsGroup private constructor(
                         UpdatePathNode(pathKey.publicKey, encryptedSecrets)
                     }
 
+                // Capture sibling tree hashes BEFORE applying the UpdatePath —
+                // parent_hash computation (RFC 9420 §7.9.2) uses the
+                // ORIGINAL sibling-subtree tree hashes.
+                val preUpdateSiblingHashes = capturePreUpdateSiblingHashes(myLeafIndex)
+
+                // Apply the UpdatePath to our own tree first so the parent
+                // nodes carry the new encryption keys. Their parent_hash
+                // fields are filled in next.
+                tree.applyUpdatePath(myLeafIndex, pathNodes)
+
+                // Compute parent_hash for every direct-path parent node and
+                // for the committer's leaf (RFC 9420 §7.9.2). Without this
+                // chain, spec-strict peers (ts-mls, OpenMLS) reject the
+                // Welcome with "Unable to verify parent hash".
+                val (parentNodeHashes, leafParentHash) =
+                    computeSenderParentHashes(myLeafIndex, preUpdateSiblingHashes)
+
+                // Patch each parent node with its computed parent_hash so
+                // subsequent treeHash / serialization uses the final values.
+                val directPath = BinaryTree.directPath(myLeafIndex, tree.leafCount)
+                for (nodeIdx in directPath) {
+                    val existing = tree.getNode(nodeIdx)
+                    if (existing is com.vitorpamplona.quartz.marmot.mls.tree.TreeNode.Parent) {
+                        tree.setParent(
+                            nodeIdx,
+                            existing.parentNode.copy(
+                                parentHash = parentNodeHashes[nodeIdx] ?: ByteArray(0),
+                            ),
+                        )
+                    }
+                }
+
+                // If a signing-key rotation is pending (from
+                // proposeSigningKeyRotation), the UpdatePath's leaf must be
+                // sealed with the NEW signing identity — otherwise the
+                // receiver's copy of our leaf keeps the pre-rotation
+                // signature_key and every post-commit FramedContentTBS
+                // signature we mint fails to verify.
+                val effectiveSigningKey = pendingSigningKey ?: signingPrivateKey
                 val newEncKp = X25519.generateKeyPair()
                 val newLeafNode =
                     buildLeafNode(
                         encryptionKey = newEncKp.publicKey,
-                        signatureKey = Ed25519.publicFromPrivate(signingPrivateKey),
+                        signatureKey = Ed25519.publicFromPrivate(effectiveSigningKey),
                         identity =
                             (tree.getLeaf(myLeafIndex)?.credential as? Credential.Basic)?.identity
                                 ?: ByteArray(0),
                         source = LeafNodeSource.COMMIT,
-                        signingKey = signingPrivateKey,
+                        signingKey = effectiveSigningKey,
                         groupId = groupId,
                         leafIndex = myLeafIndex,
+                        parentHash = leafParentHash,
                     )
 
                 encryptionPrivateKey = newEncKp.privateKey
@@ -490,11 +538,6 @@ class MlsGroup private constructor(
             }
 
         val commit = Commit(proposalOrRefs, updatePath)
-
-        // Apply UpdatePath to tree
-        if (updatePath != null) {
-            tree.applyUpdatePath(myLeafIndex, updatePath.nodes)
-        }
 
         // Advance epoch
         val commitSecret =
@@ -577,7 +620,17 @@ class MlsGroup private constructor(
     // --- Message Encryption ---
 
     /**
-     * Encrypt an application message as a PrivateMessage (RFC 9420 Section 6.3).
+     * Encrypt an application message as a PrivateMessage (RFC 9420 §6.3).
+     *
+     * The AEAD plaintext is the serialized [PrivateMessageContent] for
+     * application messages (§6.3.1):
+     *
+     *     opaque application_data<V>;
+     *     FramedContentAuthData auth;   // = opaque signature<V>
+     *     opaque padding[N];            // zero padding
+     *
+     * The signature is computed with `SignWithLabel(., "FramedContentTBS",
+     * FramedContentTBS)` using the member's signature private key.
      */
     fun encrypt(plaintext: ByteArray): ByteArray {
         // Trim sentKeys if it grows too large
@@ -599,9 +652,33 @@ class MlsGroup private constructor(
             guardedNonce[i] = (guardedNonce[i].toInt() xor reuseGuard[i].toInt()).toByte()
         }
 
+        // Sign FramedContentTBS for this application message (RFC 9420 §6.1).
+        val signature =
+            MlsCryptoProvider.signWithLabel(
+                signingPrivateKey,
+                "FramedContentTBS",
+                buildApplicationFramedContentTbs(
+                    groupId = groupId,
+                    epoch = epoch,
+                    senderLeafIndex = myLeafIndex,
+                    authenticatedData = ByteArray(0),
+                    applicationData = plaintext,
+                    groupContext = groupContext,
+                ),
+            )
+
+        // Build PrivateMessageContent plaintext (RFC 9420 §6.3.1).
+        // Padding length is zero; RFC allows any non-negative padding
+        // provided the padding bytes themselves are zero.
+        val pmcWriter = TlsWriter()
+        pmcWriter.putOpaqueVarInt(plaintext) // application_data<V>
+        pmcWriter.putOpaqueVarInt(signature) // FramedContentAuthData.signature<V>
+        // (application messages have no confirmation_tag field)
+        val pmcPlaintext = pmcWriter.toByteArray()
+
         // Build PrivateContentAAD (RFC 9420 §6.3.2)
         val contentAad = buildPrivateContentAAD(groupId, epoch, ContentType.APPLICATION, ByteArray(0))
-        val ciphertext = MlsCryptoProvider.aeadEncrypt(kng.key, guardedNonce, contentAad, plaintext)
+        val ciphertext = MlsCryptoProvider.aeadEncrypt(kng.key, guardedNonce, contentAad, pmcPlaintext)
 
         // Build sender data plaintext: leaf_index || generation || reuse_guard
         val senderDataWriter = TlsWriter()
@@ -610,8 +687,9 @@ class MlsGroup private constructor(
         senderDataWriter.putBytes(reuseGuard)
         val senderDataPlain = senderDataWriter.toByteArray()
 
-        // Derive sender data key/nonce using ciphertext sample (RFC 9420 §6.3.1)
-        val ciphertextSample = ciphertext.copyOfRange(0, minOf(ciphertext.size, MlsCryptoProvider.AEAD_KEY_LENGTH))
+        // Derive sender data key/nonce using ciphertext sample (RFC 9420 §6.3.2:
+        // "the first KDF.Nh bytes of the ciphertext").
+        val ciphertextSample = ciphertext.copyOfRange(0, minOf(ciphertext.size, MlsCryptoProvider.HASH_OUTPUT_LENGTH))
         val senderDataKey =
             MlsCryptoProvider.expandWithLabel(
                 epochSecrets.senderDataSecret,
@@ -627,7 +705,7 @@ class MlsGroup private constructor(
                 MlsCryptoProvider.AEAD_NONCE_LENGTH,
             )
 
-        // Build SenderDataAAD (RFC 9420 §6.3.1)
+        // Build SenderDataAAD (RFC 9420 §6.3.2)
         val senderDataAad = buildSenderDataAAD(groupId, epoch, ContentType.APPLICATION)
         val encryptedSenderData =
             MlsCryptoProvider.aeadEncrypt(senderDataKey, senderDataNonce, senderDataAad, senderDataPlain)
@@ -676,8 +754,11 @@ class MlsGroup private constructor(
         }
 
         // Derive sender data key/nonce using ciphertext sample (RFC 9420 §6.3.1)
+        // RFC 9420 §6.3.2: ciphertext_sample is the first KDF.Nh bytes
+        // (32 for HKDF-SHA256), not AEAD.Nk (16). Using AEAD.Nk here made
+        // sender-data decryption fail against every spec-compliant sender.
         val ciphertextSample =
-            privMsg.ciphertext.copyOfRange(0, minOf(privMsg.ciphertext.size, MlsCryptoProvider.AEAD_KEY_LENGTH))
+            privMsg.ciphertext.copyOfRange(0, minOf(privMsg.ciphertext.size, MlsCryptoProvider.HASH_OUTPUT_LENGTH))
         val senderDataKey =
             MlsCryptoProvider.expandWithLabel(
                 epochSecrets.senderDataSecret,
@@ -727,14 +808,85 @@ class MlsGroup private constructor(
 
         // Decrypt content with PrivateContentAAD (RFC 9420 §6.3.2)
         val contentAad = buildPrivateContentAAD(privMsg.groupId, privMsg.epoch, privMsg.contentType, privMsg.authenticatedData)
-        val plaintext = MlsCryptoProvider.aeadDecrypt(kng.key, guardedNonce, contentAad, privMsg.ciphertext)
+        val pmcPlaintext = MlsCryptoProvider.aeadDecrypt(kng.key, guardedNonce, contentAad, privMsg.ciphertext)
+
+        // Parse PrivateMessageContent (RFC 9420 §6.3.1) and verify the
+        // sender's FramedContentTBS signature before returning bytes.
+        require(privMsg.contentType == ContentType.APPLICATION) {
+            // Commit/Proposal-via-PrivateMessage decoding is not implemented.
+            "decrypt() only supports application-content PrivateMessages"
+        }
+        val pmcReader = TlsReader(pmcPlaintext)
+        val applicationData = pmcReader.readOpaqueVarInt()
+        val signature = pmcReader.readOpaqueVarInt()
+        // Remaining bytes are padding; all must be zero per §6.3.1.
+        while (pmcReader.hasRemaining) {
+            require(pmcReader.readBytes(1)[0] == 0.toByte()) {
+                "PrivateMessageContent padding must be zero"
+            }
+        }
+
+        val senderLeaf =
+            requireNotNull(tree.getLeaf(senderLeafIndex)) {
+                "Sender leaf is blank at index $senderLeafIndex"
+            }
+        require(
+            MlsCryptoProvider.verifyWithLabel(
+                senderLeaf.signatureKey,
+                "FramedContentTBS",
+                buildApplicationFramedContentTbs(
+                    groupId = privMsg.groupId,
+                    epoch = privMsg.epoch,
+                    senderLeafIndex = senderLeafIndex,
+                    authenticatedData = privMsg.authenticatedData,
+                    applicationData = applicationData,
+                    groupContext = groupContext,
+                ),
+                signature,
+            ),
+        ) { "FramedContentTBS signature verification failed" }
 
         return DecryptedMessage(
             senderLeafIndex = senderLeafIndex,
             contentType = privMsg.contentType,
-            content = plaintext,
+            content = applicationData,
             epoch = privMsg.epoch,
         )
+    }
+
+    /**
+     * Build FramedContentTBS for an application-content PrivateMessage
+     * (RFC 9420 §6.1). The signature over this is what lives in the
+     * PrivateMessageContent's FramedContentAuthData.
+     *
+     *     struct {
+     *         ProtocolVersion version = mls10;
+     *         WireFormat wire_format;     // = mls_private_message
+     *         FramedContent content;       // member sender, app body
+     *         GroupContext context;        // for member senders
+     *     } FramedContentTBS;
+     */
+    private fun buildApplicationFramedContentTbs(
+        groupId: ByteArray,
+        epoch: Long,
+        senderLeafIndex: Int,
+        authenticatedData: ByteArray,
+        applicationData: ByteArray,
+        groupContext: GroupContext,
+    ): ByteArray {
+        val w = TlsWriter()
+        w.putUint16(MlsMessage.MLS_VERSION_10)
+        w.putUint16(WireFormat.PRIVATE_MESSAGE.value)
+        // FramedContent
+        w.putOpaqueVarInt(groupId)
+        w.putUint64(epoch)
+        encodeSender(w, Sender(SenderType.MEMBER, senderLeafIndex))
+        w.putOpaqueVarInt(authenticatedData)
+        w.putUint8(ContentType.APPLICATION.value)
+        w.putOpaqueVarInt(applicationData) // application_data<V>
+        // GroupContext (member sender)
+        groupContext.encodeTls(w)
+        return w.toByteArray()
     }
 
     // --- Commit Processing ---
@@ -828,6 +980,24 @@ class MlsGroup private constructor(
             // Verify parent hash chain (RFC 9420 Section 7.9.2) using pre-update sibling hashes
             require(verifyParentHash(senderLeafIndex, updatePath, preUpdateSiblingHashes)) {
                 "Parent hash verification failed for UpdatePath"
+            }
+
+            // After verification, patch the computed parent_hash values into
+            // the direct-path parent nodes. The sender's tree has these
+            // values filled in; receivers must match for treeHash() to agree
+            // (and thus for the epoch key schedule to converge).
+            val (recvParentHashes, _) =
+                computeSenderParentHashes(senderLeafIndex, preUpdateSiblingHashes)
+            for (nodeIdx in BinaryTree.directPath(senderLeafIndex, tree.leafCount)) {
+                val existing = tree.getNode(nodeIdx)
+                if (existing is com.vitorpamplona.quartz.marmot.mls.tree.TreeNode.Parent) {
+                    tree.setParent(
+                        nodeIdx,
+                        existing.parentNode.copy(
+                            parentHash = recvParentHashes[nodeIdx] ?: ByteArray(0),
+                        ),
+                    )
+                }
             }
 
             // Decrypt path secret from our copath node
@@ -1052,9 +1222,102 @@ class MlsGroup private constructor(
     ): ByteArray = buildConfirmedTranscriptHashInput(commit, senderLeafIndex, groupId, epoch)
 
     /**
-     * Capture sibling tree hashes BEFORE the UpdatePath is applied.
-     * Returns a map of direct-path-index to sibling tree hash.
+     * Compute the RFC 9420 §7.9.2 parent_hash chain for a commit we are
+     * producing: returns the parent_hash value that should be stored in
+     * each parent node on our direct path, plus the parent_hash value
+     * that belongs in the committer's LeafNode (for its TBS signature).
+     *
+     * Must be called AFTER [RatchetTree.applyUpdatePath] (so parent
+     * nodes carry the new encryption keys) and with [preUpdateSiblingHashes]
+     * captured BEFORE applyUpdatePath (so the "original sibling tree hash"
+     * really is from the pre-update tree).
      */
+    private fun computeSenderParentHashes(
+        senderLeafIndex: Int,
+        preUpdateSiblingHashes: Map<Int, ByteArray>,
+    ): Pair<Map<Int, ByteArray>, ByteArray> = computeSenderParentHashes(tree, senderLeafIndex, preUpdateSiblingHashes)
+
+    private fun computeSenderParentHashes(
+        tree: com.vitorpamplona.quartz.marmot.mls.tree.RatchetTree,
+        senderLeafIndex: Int,
+        preUpdateSiblingHashes: Map<Int, ByteArray>,
+    ): Pair<Map<Int, ByteArray>, ByteArray> {
+        val directPath = BinaryTree.directPath(senderLeafIndex, tree.leafCount)
+        if (directPath.isEmpty()) return Pair(emptyMap(), ByteArray(0))
+
+        val hashes = mutableMapOf<Int, ByteArray>()
+        // Root's parent_hash is empty by convention (RFC 9420 §7.9.2).
+        hashes[directPath.last()] = ByteArray(0)
+
+        // Walk top-down (root has no parent → already set). For each node
+        // X below root, parent_hash(X) = Hash(encode(ParentHashInput{
+        //     encryption_key = parent(X).encryption_key,
+        //     parent_hash    = parent(X).parent_hash,
+        //     original_sibling_tree_hash = tree_hash(sibling(X))_preUpdate,
+        // })).
+        for (i in directPath.size - 2 downTo 0) {
+            val xIdx = directPath[i]
+            val parentIdx = directPath[i + 1]
+            val parentNode = tree.getNode(parentIdx)
+            if (parentNode !is com.vitorpamplona.quartz.marmot.mls.tree.TreeNode.Parent) {
+                hashes[xIdx] = ByteArray(0)
+                continue
+            }
+            val siblingTreeHash =
+                preUpdateSiblingHashes[i + 1]
+                    ?: error("missing pre-update sibling tree hash at level ${i + 1}")
+            hashes[xIdx] =
+                MlsCryptoProvider.hash(
+                    encodeParentHashInput(
+                        encryptionKey = parentNode.parentNode.encryptionKey,
+                        parentHash = hashes[parentIdx] ?: ByteArray(0),
+                        originalSiblingTreeHash = siblingTreeHash,
+                    ),
+                )
+        }
+
+        // The committer's leaf carries parent_hash(parent(leaf)) = parent_hash
+        // computed with the immediate parent's (directPath[0]) fields.
+        val immediateParentIdx = directPath.first()
+        val immediateParent = tree.getNode(immediateParentIdx)
+        val leafParentHash =
+            if (immediateParent is com.vitorpamplona.quartz.marmot.mls.tree.TreeNode.Parent) {
+                val siblingTreeHash =
+                    preUpdateSiblingHashes[0]
+                        ?: error("missing pre-update sibling tree hash at leaf level")
+                MlsCryptoProvider.hash(
+                    encodeParentHashInput(
+                        encryptionKey = immediateParent.parentNode.encryptionKey,
+                        parentHash = hashes[immediateParentIdx] ?: ByteArray(0),
+                        originalSiblingTreeHash = siblingTreeHash,
+                    ),
+                )
+            } else {
+                ByteArray(0)
+            }
+        return Pair(hashes, leafParentHash)
+    }
+
+    /**
+     * Serialize RFC 9420 §7.9.2 ParentHashInput:
+     *   struct {
+     *     HPKEPublicKey encryption_key;
+     *     opaque parent_hash<V>;
+     *     opaque original_sibling_tree_hash<V>;
+     *   } ParentHashInput;
+     */
+    private fun encodeParentHashInput(
+        encryptionKey: ByteArray,
+        parentHash: ByteArray,
+        originalSiblingTreeHash: ByteArray,
+    ): ByteArray {
+        val w = TlsWriter()
+        w.putOpaqueVarInt(encryptionKey)
+        w.putOpaqueVarInt(parentHash)
+        w.putOpaqueVarInt(originalSiblingTreeHash)
+        return w.toByteArray()
+    }
+
     private fun capturePreUpdateSiblingHashes(senderLeafIndex: Int): Map<Int, ByteArray> {
         val directPath = BinaryTree.directPath(senderLeafIndex, tree.leafCount)
         val nodeCount = BinaryTree.nodeCount(tree.leafCount)
@@ -1090,47 +1353,16 @@ class MlsGroup private constructor(
         val directPath = BinaryTree.directPath(senderLeafIndex, tree.leafCount)
         if (directPath.isEmpty()) return true
 
-        // RFC 9420 §7.9.2 requires COMMIT leaf nodes to carry a non-empty
-        // parent_hash chained up to the root. This implementation does NOT
-        // yet compute that chain on the sending side (applyUpdatePath sets
-        // parent_hash = ByteArray(0) for every parent node on the path).
-        // Until the chain is implemented, treat an empty leaf parent_hash
-        // as "self-produced commit, chain not computed" and skip the chain
-        // verification. A compliant peer that does compute parent_hash will
-        // still be validated against our computed chain below — so if they
-        // disagree with us, we'll reject them.
-        //
-        // TODO: compute parent_hash per RFC 9420 §7.9.2 in [commit] and then
-        //   tighten this verifier back to "MUST be non-empty".
-        val leafParentHash = updatePath.leafNode.parentHash
-        if (leafParentHash == null || leafParentHash.isEmpty()) return true
-
-        // Walk up the direct path, verifying each parent_hash link
-        var expectedParentHash = leafParentHash
-        for ((i, pathNodeIdx) in directPath.withIndex()) {
-            val pathNode = tree.getNode(pathNodeIdx) ?: continue
-
-            if (pathNode is com.vitorpamplona.quartz.marmot.mls.tree.TreeNode.Parent) {
-                // Use the pre-update sibling tree hash (captured before UpdatePath was applied)
-                val siblingHash = preUpdateSiblingHashes[i] ?: continue
-
-                // ParentHashInput
-                val phi = TlsWriter()
-                phi.putOpaqueVarInt(pathNode.parentNode.encryptionKey)
-                phi.putOpaqueVarInt(pathNode.parentNode.parentHash)
-                phi.putOpaqueVarInt(siblingHash)
-                val computedHash = MlsCryptoProvider.hash(phi.toByteArray())
-
-                if (!expectedParentHash.contentEquals(computedHash)) {
-                    return false // Parent hash chain broken
-                }
-
-                // The next level's expected parent_hash is this node's parent_hash
-                expectedParentHash = pathNode.parentNode.parentHash
-            }
-        }
-
-        return true
+        // RFC 9420 §7.9.2: compute what the sender's parent_hash chain
+        // SHOULD have been given the post-update tree state, then compare
+        // the leaf's stored parent_hash to the expected value. We can't
+        // rely on the stored parent_hash of the parent nodes on our own
+        // tree because applyUpdatePath writes them as placeholder empty
+        // bytes — the sender never transmits them on the wire.
+        val (_, expectedLeafParentHash) =
+            computeSenderParentHashes(senderLeafIndex, preUpdateSiblingHashes)
+        val leafParentHash = updatePath.leafNode.parentHash ?: ByteArray(0)
+        return leafParentHash.contentEquals(expectedLeafParentHash)
     }
 
     private fun verifyLeafNodeSignature(
@@ -1472,12 +1704,13 @@ class MlsGroup private constructor(
                     )
                 val gsBytes = groupSecrets.toTlsBytes()
 
-                // HPKE-encrypt to the member's init_key
+                // HPKE-encrypt to the member's init_key. Per RFC 9420
+                // §12.4.3.1, the HPKE context is the encrypted_group_info.
                 val hpkeCt =
                     MlsCryptoProvider.encryptWithLabel(
                         kp.initKey,
                         "Welcome",
-                        ByteArray(0),
+                        encryptedGroupInfo,
                         gsBytes,
                     )
 
@@ -1500,7 +1733,11 @@ class MlsGroup private constructor(
     companion object {
         private const val MAX_SENT_KEYS = 10_000
         private const val REUSE_GUARD_LENGTH = 4
-        private const val RATCHET_TREE_EXTENSION_TYPE = 0x0001
+
+        // RFC 9420 §13.3 IANA registry: 0x0002 is ratchet_tree.
+        // (0x0001 is application_id — using it here makes Welcomes
+        // unreadable to OpenMLS/MDK/whitenoise.)
+        private const val RATCHET_TREE_EXTENSION_TYPE = 0x0002
 
         /**
          * Wrap a raw [Commit] (as [commitBytes]) in an MlsMessage(PublicMessage(...))
@@ -1558,6 +1795,56 @@ class MlsGroup private constructor(
         }
 
         /**
+         * Companion-accessible clone of [computeSenderParentHashes].
+         * Used by [externalJoin] which builds its own tree locally
+         * (without constructing an [MlsGroup] first).
+         */
+        private fun computeExternalSenderParentHashes(
+            tree: com.vitorpamplona.quartz.marmot.mls.tree.RatchetTree,
+            senderLeafIndex: Int,
+            preUpdateSiblingHashes: Map<Int, ByteArray>,
+        ): Pair<Map<Int, ByteArray>, ByteArray> {
+            val directPath = BinaryTree.directPath(senderLeafIndex, tree.leafCount)
+            if (directPath.isEmpty()) return Pair(emptyMap(), ByteArray(0))
+
+            val hashes = mutableMapOf<Int, ByteArray>()
+            hashes[directPath.last()] = ByteArray(0)
+            for (i in directPath.size - 2 downTo 0) {
+                val xIdx = directPath[i]
+                val parentIdx = directPath[i + 1]
+                val parentNode = tree.getNode(parentIdx)
+                if (parentNode !is com.vitorpamplona.quartz.marmot.mls.tree.TreeNode.Parent) {
+                    hashes[xIdx] = ByteArray(0)
+                    continue
+                }
+                val siblingTreeHash =
+                    preUpdateSiblingHashes[i + 1]
+                        ?: error("missing pre-update sibling tree hash at level ${i + 1}")
+                val w = TlsWriter()
+                w.putOpaqueVarInt(parentNode.parentNode.encryptionKey)
+                w.putOpaqueVarInt(hashes[parentIdx] ?: ByteArray(0))
+                w.putOpaqueVarInt(siblingTreeHash)
+                hashes[xIdx] = MlsCryptoProvider.hash(w.toByteArray())
+            }
+            val immediateParentIdx = directPath.first()
+            val immediateParent = tree.getNode(immediateParentIdx)
+            val leafParentHash =
+                if (immediateParent is com.vitorpamplona.quartz.marmot.mls.tree.TreeNode.Parent) {
+                    val siblingTreeHash =
+                        preUpdateSiblingHashes[0]
+                            ?: error("missing pre-update sibling tree hash at leaf level")
+                    val w = TlsWriter()
+                    w.putOpaqueVarInt(immediateParent.parentNode.encryptionKey)
+                    w.putOpaqueVarInt(hashes[immediateParentIdx] ?: ByteArray(0))
+                    w.putOpaqueVarInt(siblingTreeHash)
+                    MlsCryptoProvider.hash(w.toByteArray())
+                } else {
+                    ByteArray(0)
+                }
+            return Pair(hashes, leafParentHash)
+        }
+
+        /**
          * Compute confirmation_tag = MAC(confirmation_key, confirmed_transcript_hash).
          * Static version usable from companion object factory methods.
          */
@@ -1570,8 +1857,16 @@ class MlsGroup private constructor(
             return mac.doFinal()
         }
 
-        private const val REQUIRED_CAPABILITIES_EXTENSION_TYPE = 0x0002
-        private const val EXTERNAL_PUB_EXTENSION_TYPE = 0x0003
+        // RFC 9420 §13.3 IANA registry: 0x0003 is required_capabilities.
+        // (0x0002 is ratchet_tree — putting it here makes GroupContext
+        // unreadable to OpenMLS/MDK, which type-validates extensions by
+        // context.)
+        private const val REQUIRED_CAPABILITIES_EXTENSION_TYPE = 0x0003
+
+        // RFC 9420 §13.3 IANA registry: 0x0004 is external_pub.
+        // (0x0003 is required_capabilities — using it here makes
+        // external-join GroupInfos unreadable to OpenMLS/MDK.)
+        private const val EXTERNAL_PUB_EXTENSION_TYPE = 0x0004
         private const val EXTERNAL_SENDERS_EXTENSION_TYPE = 0x0004
 
         /** MLS self_remove proposal type (MIP-00 / MIP-03). */
@@ -1715,12 +2010,13 @@ class MlsGroup private constructor(
                 welcome.secrets.find { it.newMember.contentEquals(myRef) }
                     ?: throw IllegalArgumentException("Welcome does not contain secrets for our KeyPackage")
 
-            // HPKE-decrypt group secrets
+            // HPKE-decrypt group secrets. Per RFC 9420 §12.4.3.1, the HPKE
+            // context is the encrypted_group_info field of the Welcome.
             val gsBytes =
                 MlsCryptoProvider.decryptWithLabel(
                     bundle.initPrivateKey,
                     "Welcome",
-                    ByteArray(0),
+                    welcome.encryptedGroupInfo,
                     mySecrets.encryptedGroupSecrets.kemOutput,
                     mySecrets.encryptedGroupSecrets.ciphertext,
                 )
@@ -1906,8 +2202,10 @@ class MlsGroup private constructor(
             // Build ExternalInit proposal
             val externalInitProposal = Proposal.ExternalInit(kemOutput)
 
-            // Add ourselves to the tree
-            val leafNode =
+            // Placeholder leaf so we can claim our slot and compute the
+            // direct path for sibling-hash capture. The final leaf (with
+            // parent_hash filled in + fresh signature) replaces this below.
+            val placeholderLeaf =
                 buildLeafNode(
                     encryptionKey = encKp.publicKey,
                     signatureKey = sigKp.publicKey,
@@ -1915,9 +2213,23 @@ class MlsGroup private constructor(
                     source = LeafNodeSource.COMMIT,
                     signingKey = sigKp.privateKey,
                     groupId = groupContext.groupId,
-                    leafIndex = tree.leafCount, // We'll be the next leaf
+                    leafIndex = tree.leafCount,
                 )
-            val myLeafIndex = tree.addLeaf(leafNode)
+            val myLeafIndex = tree.addLeaf(placeholderLeaf)
+
+            // Capture sibling tree hashes BEFORE applying the UpdatePath.
+            val preUpdateSiblingHashes =
+                run {
+                    val dp = BinaryTree.directPath(myLeafIndex, tree.leafCount)
+                    val nc = BinaryTree.nodeCount(tree.leafCount)
+                    val map = mutableMapOf<Int, ByteArray>()
+                    for ((i, _) in dp.withIndex()) {
+                        val childIdx =
+                            if (i == 0) BinaryTree.leafToNode(myLeafIndex) else dp[i - 1]
+                        map[i] = tree.treeHashNode(BinaryTree.sibling(childIdx, nc))
+                    }
+                    map
+                }
 
             // Build UpdatePath for our leaf
             val leafSecret = MlsCryptoProvider.randomBytes(MlsCryptoProvider.HASH_OUTPUT_LENGTH)
@@ -1949,8 +2261,39 @@ class MlsGroup private constructor(
                     UpdatePathNode(pathKey.publicKey, encryptedSecrets)
                 }
 
+            tree.applyUpdatePath(myLeafIndex, pathNodes)
+
+            // Compute parent_hash chain + the leaf's parent_hash (RFC 9420
+            // §7.9.2) on the post-update tree, then patch parent nodes and
+            // rebuild the committer leaf with the computed parent_hash.
+            val (extParentHashes, extLeafParentHash) =
+                computeExternalSenderParentHashes(tree, myLeafIndex, preUpdateSiblingHashes)
+            for (nodeIdx in BinaryTree.directPath(myLeafIndex, tree.leafCount)) {
+                val existing = tree.getNode(nodeIdx)
+                if (existing is com.vitorpamplona.quartz.marmot.mls.tree.TreeNode.Parent) {
+                    tree.setParent(
+                        nodeIdx,
+                        existing.parentNode.copy(
+                            parentHash = extParentHashes[nodeIdx] ?: ByteArray(0),
+                        ),
+                    )
+                }
+            }
+
+            val leafNode =
+                buildLeafNode(
+                    encryptionKey = encKp.publicKey,
+                    signatureKey = sigKp.publicKey,
+                    identity = identity,
+                    source = LeafNodeSource.COMMIT,
+                    signingKey = sigKp.privateKey,
+                    groupId = groupContext.groupId,
+                    leafIndex = myLeafIndex,
+                    parentHash = extLeafParentHash,
+                )
+            tree.setLeaf(myLeafIndex, leafNode)
+
             val updatePath = UpdatePath(leafNode, pathNodes)
-            tree.applyUpdatePath(myLeafIndex, updatePath.nodes)
 
             // Build Commit
             val commit =
@@ -2050,6 +2393,7 @@ class MlsGroup private constructor(
             signingKey: ByteArray,
             groupId: ByteArray? = null,
             leafIndex: Int? = null,
+            parentHash: ByteArray? = null,
         ): LeafNode {
             val unsigned =
                 LeafNode(
@@ -2066,6 +2410,7 @@ class MlsGroup private constructor(
                         } else {
                             null
                         },
+                    parentHash = parentHash,
                     extensions = emptyList(),
                     signature = ByteArray(0), // Placeholder
                 )
