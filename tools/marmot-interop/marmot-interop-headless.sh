@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
 #
-# marmot-interop-headless.sh — zero-prompt interop harness.
+# marmot-interop-headless.sh — zero-prompt, zero-internet interop harness.
 #
 # Drives Identity A via the `amy` CLI (./gradlew :cli:installDist) and
-# Identities B/C via whitenoise-rs `wn`/`wnd`. Matches the 13 test
-# scenarios in marmot-interop.sh but without any human prompts — all
-# checks run to completion and the exit code reflects pass/fail totals.
+# Identities B/C via whitenoise-rs `wn`/`wnd`. Spins up a local
+# nostr-rs-relay on ws://127.0.0.1:$RELAY_PORT so nothing ever leaves the
+# machine. Matches the 13 test scenarios in marmot-interop.sh but without
+# any human prompts — all checks run to completion and the exit code
+# reflects pass/fail totals.
 #
-# Usage: ./marmot-interop-headless.sh [--local-relays] [--no-build]
+# Usage: ./marmot-interop-headless.sh [--port N] [--no-build]
 #
 set -uo pipefail
 
@@ -30,8 +32,14 @@ WN_BIN="$WN_REPO/target/release/wn"
 WND_BIN="$WN_REPO/target/release/wnd"
 AMY_BIN="$REPO_ROOT/cli/build/install/amy/bin/amy"
 
-DEFAULT_RELAYS=( "wss://relay.damus.io" "wss://nos.lol" "wss://relay.primal.net" )
-USE_LOCAL_RELAYS=0
+# Local relay wiring — cloned + built during preflight, started on
+# $RELAY_PORT. The harness never touches the public internet for test
+# traffic; wn/wnd/amy all point at this one loopback endpoint.
+RELAY_REPO="${RELAY_REPO:-$STATE_DIR/nostr-rs-relay}"
+RELAY_BIN="$RELAY_REPO/target/release/nostr-rs-relay"
+RELAY_DATA="$STATE_DIR/relay"
+RELAY_PORT="${RELAY_PORT:-8080}"
+RELAY_URL="ws://127.0.0.1:$RELAY_PORT"
 NO_BUILD=0
 
 A_NPUB=""
@@ -43,10 +51,10 @@ C_HEX=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --local-relays) USE_LOCAL_RELAYS=1 ;;
-    --no-build)     NO_BUILD=1 ;;
+    --port)      RELAY_PORT="$2"; RELAY_URL="ws://127.0.0.1:$RELAY_PORT"; shift ;;
+    --no-build)  NO_BUILD=1 ;;
     -h|--help)
-      sed -n '3,12p' "${BASH_SOURCE[0]}" | sed 's/^# \?//'
+      sed -n '3,14p' "${BASH_SOURCE[0]}" | sed 's/^# \?//'
       exit 0 ;;
     *) printf 'unknown flag: %s\n' "$1" >&2; exit 2 ;;
   esac
@@ -72,10 +80,11 @@ source "$SCRIPT_DIR/headless/tests-manage.sh"
 # shellcheck source=headless/tests-extras.sh
 source "$SCRIPT_DIR/headless/tests-extras.sh"
 
-trap 'stop_daemons; print_summary' EXIT
+trap 'stop_daemons; stop_local_relay; print_summary' EXIT
 
 banner "Marmot headless interop harness ($RUN_TS)"
 preflight
+start_local_relay
 start_daemon B "$B_DIR" "$B_SOCKET"
 start_daemon C "$C_DIR" "$C_SOCKET"
 ensure_identity_a

@@ -40,6 +40,93 @@ preflight() {
   fi
   info "wn:  $WN_BIN"
   info "wnd: $WND_BIN"
+
+  # Clone/build nostr-rs-relay — the harness's single loopback relay.
+  if [[ ! -x "$RELAY_BIN" ]]; then
+    if [[ "$NO_BUILD" -eq 1 ]]; then
+      fail_msg "nostr-rs-relay not found at $RELAY_BIN and --no-build set"; exit 1
+    fi
+    if [[ ! -d "$RELAY_REPO/.git" ]]; then
+      step "cloning nostr-rs-relay into $RELAY_REPO"
+      git clone --depth 1 https://github.com/scsibug/nostr-rs-relay "$RELAY_REPO" \
+        2>&1 | tee -a "$LOG_FILE"
+    fi
+    step "building nostr-rs-relay (~3 min first run)"
+    ( cd "$RELAY_REPO" && cargo build --release --bin nostr-rs-relay ) \
+      2>&1 | tee -a "$LOG_FILE"
+  fi
+  info "relay bin: $RELAY_BIN"
+}
+
+# --- local relay -------------------------------------------------------------
+# Start nostr-rs-relay on $RELAY_PORT with a minimal config. Every test
+# runs against this one loopback endpoint — no external network traffic.
+start_local_relay() {
+  banner "Starting local nostr-rs-relay on $RELAY_URL"
+  mkdir -p "$RELAY_DATA" "$RELAY_DATA/logs"
+
+  # Render a minimal config file each run so port/limits come from the
+  # harness rather than whatever was left on disk from a previous session.
+  cat >"$RELAY_DATA/config.toml" <<EOF
+[info]
+relay_url = "$RELAY_URL"
+name = "amethyst-headless-harness"
+description = "Loopback relay for marmot-interop-headless.sh — do not use for anything real."
+
+[database]
+data_directory = "$RELAY_DATA"
+
+[network]
+address = "127.0.0.1"
+port = $RELAY_PORT
+
+[options]
+reject_future_seconds = 3600
+
+[limits]
+# Keep kind:444 / 445 / 1059 / 30443 wide open — the whole point is
+# exercising Marmot traffic the public relays reject.
+max_event_bytes = 524288
+max_ws_message_bytes = 1048576
+max_ws_frame_bytes = 1048576
+EOF
+
+  # Abort early if something else is already bound to the port — failing
+  # with a clear error beats a mysterious-looking daemon stall later.
+  if ss -ltn 2>/dev/null | awk '{print $4}' | grep -qE "[:.]$RELAY_PORT\$"; then
+    fail_msg "port $RELAY_PORT already in use — pass --port N or free it"
+    exit 1
+  fi
+
+  nohup "$RELAY_BIN" --db "$RELAY_DATA" --config "$RELAY_DATA/config.toml" \
+    >"$RELAY_DATA/logs/stdout.log" 2>"$RELAY_DATA/logs/stderr.log" &
+  echo "$!" > "$RELAY_DATA/pid"
+  step "relay pid $(cat "$RELAY_DATA/pid"); waiting for $RELAY_URL …"
+
+  local deadline=$(( $(date +%s) + 20 ))
+  while [[ $(date +%s) -lt $deadline ]]; do
+    if curl -sSf -m 1 "http://127.0.0.1:$RELAY_PORT/" >/dev/null 2>&1; then
+      info "relay up"
+      return 0
+    fi
+    sleep 0.5
+  done
+  fail_msg "relay never came up (see $RELAY_DATA/logs/stderr.log)"
+  tail -n 40 "$RELAY_DATA/logs/stderr.log" 2>/dev/null | sed 's/^/  /' >&2 || true
+  exit 1
+}
+
+stop_local_relay() {
+  local pid_file="$RELAY_DATA/pid"
+  [[ -f "$pid_file" ]] || return 0
+  local pid; pid=$(cat "$pid_file" 2>/dev/null || echo "")
+  if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
+    info "stopping relay pid $pid"
+    kill "$pid" 2>/dev/null || true
+    sleep 1
+    kill -9 "$pid" 2>/dev/null || true
+  fi
+  rm -f "$pid_file"
 }
 
 # --- daemons -----------------------------------------------------------------
@@ -114,28 +201,20 @@ ensure_identity() {
 }
 
 # --- relays ------------------------------------------------------------------
+# Point all three identities at the loopback relay. We never publish any
+# test traffic off-box — public relays reject kind:445 anyway and the
+# goal here is tight, deterministic iteration.
 configure_relays() {
-  banner "Configuring relays"
-  local relays=()
-  if [[ "$USE_LOCAL_RELAYS" -eq 1 ]]; then
-    relays=( "ws://localhost:8080" )
-  else
-    relays=( "${DEFAULT_RELAYS[@]}" )
-  fi
-
-  for r in "${relays[@]}"; do
-    step "adding $r to A/B/C"
-    amy_a relay add "$r" --type all >/dev/null
-    for t in nip65 inbox key_package; do
-      wn_b relays add --type "$t" "$r" 2>/dev/null || true
-      wn_c relays add --type "$t" "$r" 2>/dev/null || true
-    done
+  banner "Configuring relays → $RELAY_URL"
+  amy_a relay add "$RELAY_URL" --type all >/dev/null
+  for t in nip65 inbox key_package; do
+    wn_b relays add --type "$t" "$RELAY_URL" 2>/dev/null || true
+    wn_c relays add --type "$t" "$RELAY_URL" 2>/dev/null || true
   done
 
   # A advertises its NIP-65 + DM inbox lists so B/C can discover where to
-  # deliver gift wraps. Without this, cross-client welcomes only work
-  # through relay-set overlap — fine for this harness but still worth
-  # publishing so we catch regressions in the advertise path.
+  # deliver gift wraps. With a single shared relay the lookup is trivial
+  # but we still publish so we catch regressions in the advertise path.
   step "publishing A's NIP-65 + kind:10050 lists"
   amy_a relay publish-lists >>"$LOG_FILE" 2>&1 || warn "amy relay publish-lists failed"
 
