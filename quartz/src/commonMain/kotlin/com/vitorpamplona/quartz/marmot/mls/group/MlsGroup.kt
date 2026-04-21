@@ -610,8 +610,9 @@ class MlsGroup private constructor(
         senderDataWriter.putBytes(reuseGuard)
         val senderDataPlain = senderDataWriter.toByteArray()
 
-        // Derive sender data key/nonce using ciphertext sample (RFC 9420 §6.3.1)
-        val ciphertextSample = ciphertext.copyOfRange(0, minOf(ciphertext.size, MlsCryptoProvider.AEAD_KEY_LENGTH))
+        // Derive sender data key/nonce using ciphertext sample (RFC 9420 §6.3.2:
+        // "the first KDF.Nh bytes of the ciphertext").
+        val ciphertextSample = ciphertext.copyOfRange(0, minOf(ciphertext.size, MlsCryptoProvider.HASH_OUTPUT_LENGTH))
         val senderDataKey =
             MlsCryptoProvider.expandWithLabel(
                 epochSecrets.senderDataSecret,
@@ -627,7 +628,7 @@ class MlsGroup private constructor(
                 MlsCryptoProvider.AEAD_NONCE_LENGTH,
             )
 
-        // Build SenderDataAAD (RFC 9420 §6.3.1)
+        // Build SenderDataAAD (RFC 9420 §6.3.2)
         val senderDataAad = buildSenderDataAAD(groupId, epoch, ContentType.APPLICATION)
         val encryptedSenderData =
             MlsCryptoProvider.aeadEncrypt(senderDataKey, senderDataNonce, senderDataAad, senderDataPlain)
@@ -676,8 +677,11 @@ class MlsGroup private constructor(
         }
 
         // Derive sender data key/nonce using ciphertext sample (RFC 9420 §6.3.1)
+        // RFC 9420 §6.3.2: ciphertext_sample is the first KDF.Nh bytes
+        // (32 for HKDF-SHA256), not AEAD.Nk (16). Using AEAD.Nk here made
+        // sender-data decryption fail against every spec-compliant sender.
         val ciphertextSample =
-            privMsg.ciphertext.copyOfRange(0, minOf(privMsg.ciphertext.size, MlsCryptoProvider.AEAD_KEY_LENGTH))
+            privMsg.ciphertext.copyOfRange(0, minOf(privMsg.ciphertext.size, MlsCryptoProvider.HASH_OUTPUT_LENGTH))
         val senderDataKey =
             MlsCryptoProvider.expandWithLabel(
                 epochSecrets.senderDataSecret,
@@ -1501,7 +1505,11 @@ class MlsGroup private constructor(
     companion object {
         private const val MAX_SENT_KEYS = 10_000
         private const val REUSE_GUARD_LENGTH = 4
-        private const val RATCHET_TREE_EXTENSION_TYPE = 0x0001
+
+        // RFC 9420 §13.3 IANA registry: 0x0002 is ratchet_tree.
+        // (0x0001 is application_id — using it here makes Welcomes
+        // unreadable to OpenMLS/MDK/whitenoise.)
+        private const val RATCHET_TREE_EXTENSION_TYPE = 0x0002
 
         /**
          * Wrap a raw [Commit] (as [commitBytes]) in an MlsMessage(PublicMessage(...))
@@ -1572,7 +1580,11 @@ class MlsGroup private constructor(
         }
 
         private const val REQUIRED_CAPABILITIES_EXTENSION_TYPE = 0x0002
-        private const val EXTERNAL_PUB_EXTENSION_TYPE = 0x0003
+
+        // RFC 9420 §13.3 IANA registry: 0x0004 is external_pub.
+        // (0x0003 is required_capabilities — using it here makes
+        // external-join GroupInfos unreadable to OpenMLS/MDK.)
+        private const val EXTERNAL_PUB_EXTENSION_TYPE = 0x0004
         private const val EXTERNAL_SENDERS_EXTENSION_TYPE = 0x0004
 
         /** MLS self_remove proposal type (MIP-00 / MIP-03). */
