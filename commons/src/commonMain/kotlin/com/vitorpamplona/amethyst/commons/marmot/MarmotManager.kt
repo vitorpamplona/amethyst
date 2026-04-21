@@ -155,6 +155,56 @@ class MarmotManager(
     ): OutboundGroupEvent = outboundProcessor.buildGroupEvent(nostrGroupId, innerEvent)
 
     /**
+     * Build a kind:9 chat-message GroupEvent from plain text. The inner event is
+     * signed with this manager's signer and optionally persisted to the local
+     * decrypted-message log so `loadStoredMessages` reflects our own outbound
+     * immediately (without waiting for relay loopback).
+     *
+     * Platform callers that already maintain their own "own event" cache (i.e.
+     * Amethyst's `LocalCache.justConsumeMyOwnEvent`) should pass `persistOwn = false`.
+     * Headless callers (CLI) should leave it at the default.
+     *
+     * @return the signed kind:445 outer event together with the inner kind:9
+     *   event id, so the caller can reference it for replies/reactions.
+     */
+    suspend fun buildTextMessage(
+        nostrGroupId: HexKey,
+        text: String,
+        persistOwn: Boolean = true,
+    ): TextMessageBundle {
+        val template =
+            com.vitorpamplona.quartz.nip01Core.signers
+                .eventTemplate<Event>(kind = 9, description = text)
+        val innerEvent = signer.sign<Event>(template)
+        val outbound = buildGroupMessage(nostrGroupId, innerEvent)
+        if (persistOwn) persistDecryptedMessage(nostrGroupId, innerEvent.toJson())
+        return TextMessageBundle(outbound = outbound, innerEvent = innerEvent)
+    }
+
+    /**
+     * Add a member to a group by consuming their published [KeyPackageEvent].
+     *
+     * Convenience over [addMember] that handles base64 decoding and lifts the
+     * event id into the WelcomeDelivery. Prefer this overload — both the UI's
+     * `Account.addMarmotGroupMember` and the CLI's `group add` command call it.
+     */
+    @OptIn(kotlin.io.encoding.ExperimentalEncodingApi::class)
+    suspend fun addMember(
+        nostrGroupId: HexKey,
+        keyPackageEvent: KeyPackageEvent,
+        relays: List<NormalizedRelayUrl>,
+    ): Pair<OutboundGroupEvent, WelcomeDelivery?> =
+        addMember(
+            nostrGroupId = nostrGroupId,
+            memberPubKey = keyPackageEvent.pubKey,
+            keyPackageBytes =
+                kotlin.io.encoding.Base64
+                    .decode(keyPackageEvent.keyPackageBase64()),
+            keyPackageEventId = keyPackageEvent.id,
+            relays = relays,
+        )
+
+    /**
      * Add a member to a group.
      * Returns the commit GroupEvent to publish, and the WelcomeDelivery for the new member.
      */
@@ -431,6 +481,19 @@ class MarmotManager(
     fun groupEpoch(nostrGroupId: HexKey): Long? = groupManager.getGroup(nostrGroupId)?.epoch
 
     /**
+     * Resolve the MLS leaf index for a member by Nostr pubkey, or null if that
+     * pubkey isn't currently in the group.
+     *
+     * `removeMember` needs a leaf index; every caller (UI remove-member dialog
+     * and CLI `group remove`) previously did its own pubkey→leaf lookup through
+     * [memberPubkeys]. Centralised here so the scan lives in one place.
+     */
+    fun leafIndexOf(
+        nostrGroupId: HexKey,
+        pubKey: HexKey,
+    ): Int? = memberPubkeys(nostrGroupId).firstOrNull { it.pubkey == pubKey }?.leafIndex
+
+    /**
      * Get the MIP-04 media exporter secret for a group.
      * MLS-Exporter("marmot", "encrypted-media", 32)
      */
@@ -476,4 +539,14 @@ class MarmotManager(
 data class GroupMemberInfo(
     val leafIndex: Int,
     val pubkey: HexKey,
+)
+
+/**
+ * Result of [MarmotManager.buildTextMessage]: the signed outer kind:445 event
+ * to publish on group relays, plus the inner kind:9 event (for callers that
+ * need the inner id to reference it in replies or reactions).
+ */
+data class TextMessageBundle(
+    val outbound: OutboundGroupEvent,
+    val innerEvent: Event,
 )

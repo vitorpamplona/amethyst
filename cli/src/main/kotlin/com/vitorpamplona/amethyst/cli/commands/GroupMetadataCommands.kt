@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.cli.commands
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Json
-import com.vitorpamplona.amethyst.cli.util.Npubs
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
@@ -37,7 +36,7 @@ object GroupMetadataCommands {
         rest: Array<String>,
     ): Int {
         if (rest.size < 2) return Json.error("bad_args", "group rename <gid> <name>")
-        return edit(dataDir, rest[0]) { it.copy(name = rest[1]) }
+        return edit(dataDir, rest[0]) { _, cur -> cur.copy(name = rest[1]) }
     }
 
     suspend fun promote(
@@ -45,8 +44,8 @@ object GroupMetadataCommands {
         rest: Array<String>,
     ): Int {
         if (rest.size < 2) return Json.error("bad_args", "group promote <gid> <npub>")
-        val newAdmin = Npubs.resolveToHex(rest[1])
-        return edit(dataDir, rest[0]) { cur ->
+        return edit(dataDir, rest[0]) { ctx, cur ->
+            val newAdmin = ctx.requireUserHex(rest[1])
             val admins = cur.adminPubkeys.toMutableList()
             if (newAdmin !in admins) admins.add(newAdmin)
             cur.copy(adminPubkeys = admins)
@@ -58,8 +57,8 @@ object GroupMetadataCommands {
         rest: Array<String>,
     ): Int {
         if (rest.size < 2) return Json.error("bad_args", "group demote <gid> <npub>")
-        val target = Npubs.resolveToHex(rest[1])
-        return edit(dataDir, rest[0]) { cur ->
+        return edit(dataDir, rest[0]) { ctx, cur ->
+            val target = ctx.requireUserHex(rest[1])
             val admins = cur.adminPubkeys.filter { it != target }
             cur.copy(adminPubkeys = admins)
         }
@@ -68,23 +67,22 @@ object GroupMetadataCommands {
     private suspend fun edit(
         dataDir: DataDir,
         gid: HexKey,
-        mutate: (MarmotGroupData) -> MarmotGroupData,
+        mutate: suspend (Context, MarmotGroupData) -> MarmotGroupData,
     ): Int {
         val ctx = Context.open(dataDir)
         try {
             ctx.prepare()
             ctx.syncIncoming()
             if (!ctx.marmot.isMember(gid)) return Json.error("not_member", gid)
+            val outboxUrls = ctx.outboxRelays().map { it.url }
             val cur =
                 ctx.marmot.groupMetadata(gid)
-                    ?: MarmotGroupData(
+                    ?: MarmotGroupData.bootstrap(
                         nostrGroupId = gid,
-                        name = "",
-                        description = "",
-                        adminPubkeys = listOf(ctx.identity.pubKeyHex),
-                        relays = ctx.outboxRelays().map { it.url },
+                        creatorPubKey = ctx.identity.pubKeyHex,
+                        outboxRelays = outboxUrls,
                     )
-            val updated = mutate(cur)
+            val updated = mutate(ctx, cur).withMergedRelays(outboxUrls)
 
             val commit = ctx.marmot.updateGroupMetadata(gid, updated)
             val targets = ctx.marmotGroupRelays(gid).ifEmpty { ctx.outboxRelays() }

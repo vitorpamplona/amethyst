@@ -44,7 +44,6 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip02FollowList.tags.ContactTag
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Client
-import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Id
 import com.vitorpamplona.quartz.nip06KeyDerivation.Nip06
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
@@ -223,21 +222,20 @@ class AccountSessionManager(
                     loginSync(newKey, transientAccount, loginWithExternalSigner, packageName, onError)
                 }
             } else if (EMAIL_PATTERN.matcher(key).matches()) {
-                val nip05 = Nip05Id.parse(key)
-                if (nip05 == null) {
-                    onError("Could not parse nip05 address: $nip05")
-                } else {
-                    try {
-                        val pubkeyInfo = nip05ClientBuilder().get(nip05)
-                        if (pubkeyInfo == null) {
-                            onError("User not found in the nip05 server: $nip05")
-                        } else {
-                            loginSync(Hex.decode(pubkeyInfo.pubkey).toNpub(), transientAccount, loginWithExternalSigner, packageName, onError)
-                        }
-                    } catch (e: Exception) {
-                        if (e is CancellationException) throw e
-                        onError("Could not load nip05 address from the server: $nip05. ${e.message}")
+                // Delegate to the shared quartz resolver so NIP-05 handling stays in
+                // lockstep with the CLI and anywhere else we accept user identifiers.
+                try {
+                    val hex =
+                        com.vitorpamplona.quartz.nip05DnsIdentifiers
+                            .resolveUserHexOrNull(key, nip05ClientBuilder())
+                    if (hex == null) {
+                        onError("User not found in the nip05 server: $key")
+                    } else {
+                        loginSync(Hex.decode(hex).toNpub(), transientAccount, loginWithExternalSigner, packageName, onError)
                     }
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                    onError("Could not load nip05 address from the server: $key. ${e.message}")
                 }
             } else {
                 loginSync(key, transientAccount, loginWithExternalSigner, packageName, onError)

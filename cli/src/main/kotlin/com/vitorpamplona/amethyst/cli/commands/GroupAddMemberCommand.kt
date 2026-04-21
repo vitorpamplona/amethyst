@@ -23,11 +23,6 @@ package com.vitorpamplona.amethyst.cli.commands
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Json
-import com.vitorpamplona.amethyst.cli.util.Npubs
-import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchFirst
-import kotlin.io.encoding.Base64
-import kotlin.io.encoding.ExperimentalEncodingApi
 
 /**
  * `group add <group_id> <npub> [<npub> ...]` — fetch each invitee's
@@ -37,40 +32,42 @@ import kotlin.io.encoding.ExperimentalEncodingApi
  * gift wrap.
  */
 object GroupAddMemberCommand {
-    @OptIn(ExperimentalEncodingApi::class)
     suspend fun run(
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
         if (rest.size < 2) return Json.error("bad_args", "group add <group_id> <npub> [<npub> ...]")
         val gid = rest[0]
-        val invitees = rest.drop(1).map { Npubs.resolveToHex(it) }
         val ctx = Context.open(dataDir)
         try {
             ctx.prepare()
             ctx.syncIncoming()
             if (!ctx.marmot.isMember(gid)) return Json.error("not_member", gid)
 
+            // Accept any identifier the UI would: npub1…, nprofile1…, 64-hex,
+            // NIP-05 (name@domain). Resolution fires NIP-05 HTTP fetches in parallel
+            // where applicable; bech32/hex stays fully offline.
+            val invitees = rest.drop(1).map { ctx.requireUserHex(it) }
+
             val groupRelays = ctx.marmotGroupRelays(gid).ifEmpty { ctx.outboxRelays() }
             val report = mutableListOf<Map<String, Any?>>()
 
             for (pub in invitees) {
-                val filter = ctx.marmot.subscriptionManager.keyPackageFilter(pub)
-                val relays = ctx.anyRelays()
-                val filters = relays.associateWith { listOf(filter) }
-                val kpEvent = ctx.client.fetchFirst(filters = filters, timeoutMs = 10_000)
-                if (kpEvent == null || kpEvent !is KeyPackageEvent) {
+                val relays =
+                    com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageFetcher
+                        .fetchRelaysFor(emptySet(), emptySet(), ctx.anyRelays())
+                val kpEvent =
+                    com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageFetcher
+                        .fetchKeyPackage(ctx.client, pub, relays, timeoutMs = 10_000)
+                if (kpEvent == null) {
                     report.add(mapOf("pubkey" to pub, "status" to "no_key_package"))
                     continue
                 }
-                val kpBytes = Base64.decode(kpEvent.keyPackageBase64())
 
                 val (commitEvent, welcomeDelivery) =
                     ctx.marmot.addMember(
                         nostrGroupId = gid,
-                        memberPubKey = pub,
-                        keyPackageBytes = kpBytes,
-                        keyPackageEventId = kpEvent.id,
+                        keyPackageEvent = kpEvent,
                         relays = groupRelays.toList(),
                     )
 

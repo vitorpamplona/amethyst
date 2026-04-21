@@ -26,7 +26,6 @@ import com.vitorpamplona.amethyst.cli.AwaitTimeout
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Json
-import com.vitorpamplona.amethyst.cli.util.Npubs
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchFirst
 import kotlinx.coroutines.delay
@@ -59,12 +58,12 @@ object AwaitCommands {
         rest: Array<String>,
     ): Int {
         if (rest.isEmpty()) return Json.error("bad_args", "await key-package <npub>")
-        val target = Npubs.resolveToHex(rest[0])
         val args = Args(rest.drop(1).toTypedArray())
         val timeoutSecs = args.longFlag("timeout", 30)
         val ctx = Context.open(dataDir)
         try {
             ctx.prepare()
+            val target = ctx.requireUserHex(rest[0])
             val filter = ctx.marmot.subscriptionManager.keyPackageFilter(target)
             val deadline = System.currentTimeMillis() + timeoutSecs * 1000
             while (System.currentTimeMillis() < deadline) {
@@ -129,7 +128,7 @@ object AwaitCommands {
     ): Int =
         pollCondition(dataDir, rest, "await member <gid> <npub>", targetIdx = 1) { ctx, rawArgs ->
             val gid = rawArgs[0]
-            val target = Npubs.resolveToHex(rawArgs[1])
+            val target = ctx.requireUserHex(rawArgs[1])
             if (!ctx.marmot.isMember(gid)) {
                 null
             } else if (ctx.marmot.memberPubkeys(gid).any { it.pubkey == target }) {
@@ -145,7 +144,7 @@ object AwaitCommands {
     ): Int =
         pollCondition(dataDir, rest, "await admin <gid> <npub>", targetIdx = 1) { ctx, rawArgs ->
             val gid = rawArgs[0]
-            val target = Npubs.resolveToHex(rawArgs[1])
+            val target = ctx.requireUserHex(rawArgs[1])
             if (!ctx.marmot.isMember(gid)) {
                 null
             } else if (ctx.marmot

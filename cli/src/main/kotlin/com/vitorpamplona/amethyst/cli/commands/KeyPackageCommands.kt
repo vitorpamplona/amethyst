@@ -23,9 +23,6 @@ package com.vitorpamplona.amethyst.cli.commands
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Json
-import com.vitorpamplona.amethyst.cli.util.Npubs
-import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchFirst
 
 object KeyPackageCommands {
     suspend fun dispatch(
@@ -68,16 +65,20 @@ object KeyPackageCommands {
         rest: Array<String>,
     ): Int {
         if (rest.isEmpty()) return Json.error("bad_args", "key-package check <npub>")
-        val targetHex = Npubs.resolveToHex(rest[0])
         val ctx = Context.open(dataDir)
         try {
             ctx.prepare()
-            val filter = ctx.marmot.subscriptionManager.keyPackageFilter(targetHex)
-            val relays = ctx.anyRelays()
+            val targetHex = ctx.requireUserHex(rest[0])
+            // CLI doesn't (yet) cache target's kind:10051/10002 — just ask every
+            // configured relay. Amethyst, which does cache those, passes them in.
+            val relays =
+                com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageFetcher
+                    .fetchRelaysFor(emptySet(), emptySet(), ctx.anyRelays())
             if (relays.isEmpty()) return Json.error("no_relays", "configure relays first")
-            val filtersByRelay = relays.associateWith { listOf(filter) }
-            val event = ctx.client.fetchFirst(filters = filtersByRelay, timeoutMs = 10_000)
-            if (event == null || event !is KeyPackageEvent) {
+            val event =
+                com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageFetcher
+                    .fetchKeyPackage(ctx.client, targetHex, relays, timeoutMs = 10_000)
+            if (event == null) {
                 return Json.error("not_found", "no KeyPackage for $targetHex on ${relays.size} relay(s)")
             }
             Json.writeLine(

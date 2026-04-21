@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.cli.commands
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Json
-import com.vitorpamplona.amethyst.cli.util.Npubs
 
 object GroupMembershipCommands {
     suspend fun remove(
@@ -32,26 +31,25 @@ object GroupMembershipCommands {
     ): Int {
         if (rest.size < 2) return Json.error("bad_args", "group remove <gid> <npub>")
         val gid = rest[0]
-        val target = Npubs.resolveToHex(rest[1])
         val ctx = Context.open(dataDir)
         try {
             ctx.prepare()
+            val target = ctx.requireUserHex(rest[1])
             ctx.syncIncoming()
             if (!ctx.marmot.isMember(gid)) return Json.error("not_member", gid)
 
-            val member =
-                ctx.marmot.memberPubkeys(gid).firstOrNull { it.pubkey == target }
+            val leafIndex =
+                ctx.marmot.leafIndexOf(gid, target)
                     ?: return Json.error("not_in_group", target)
 
-            val outbound =
-                ctx.marmot.removeMember(nostrGroupId = gid, targetLeafIndex = member.leafIndex)
+            val outbound = ctx.marmot.removeMember(nostrGroupId = gid, targetLeafIndex = leafIndex)
             val targets = ctx.marmotGroupRelays(gid).ifEmpty { ctx.outboxRelays() }
             val ack = ctx.publish(outbound.signedEvent, targets)
             Json.writeLine(
                 mapOf(
                     "group_id" to gid,
                     "removed" to target,
-                    "leaf_index" to member.leafIndex,
+                    "leaf_index" to leafIndex,
                     "epoch" to ctx.marmot.groupEpoch(gid),
                     "commit_event_id" to outbound.signedEvent.id,
                     "published_to" to ack.filterValues { it }.keys.map { it.url },

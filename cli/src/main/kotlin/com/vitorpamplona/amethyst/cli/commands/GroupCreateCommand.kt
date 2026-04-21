@@ -42,16 +42,14 @@ object GroupCreateCommand {
 
             ctx.marmot.createGroup(gid)
 
-            // Stamp initial metadata: name + our outbox relays + self as admin.
-            // Mirrors CreateGroupScreen.proceedWithCreate() on the Amethyst side.
+            // Stamp initial metadata via the shared factory so UI + CLI stay byte-identical.
             val outboxUrls = ctx.outboxRelays().map { it.url }
             val metadata =
-                MarmotGroupData(
+                MarmotGroupData.bootstrap(
                     nostrGroupId = gid,
+                    creatorPubKey = ctx.identity.pubKeyHex,
+                    outboxRelays = outboxUrls,
                     name = name,
-                    description = "",
-                    adminPubkeys = listOf(ctx.identity.pubKeyHex),
-                    relays = outboxUrls,
                 )
             val commit = ctx.marmot.updateGroupMetadata(gid, metadata)
 

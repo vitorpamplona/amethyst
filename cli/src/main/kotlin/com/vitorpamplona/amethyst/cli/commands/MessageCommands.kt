@@ -25,7 +25,6 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Json
-import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 
 object MessageCommands {
     suspend fun dispatch(
@@ -54,24 +53,16 @@ object MessageCommands {
             ctx.syncIncoming()
             if (!ctx.marmot.isMember(gid)) return Json.error("not_member", gid)
 
-            val template =
-                eventTemplate<com.vitorpamplona.quartz.nip01Core.core.Event>(kind = 9, description = text)
-            val innerEvent = ctx.signer.sign<com.vitorpamplona.quartz.nip01Core.core.Event>(template)
-            val outbound = ctx.marmot.buildGroupMessage(gid, innerEvent)
-
-            // Persist our own outbound inner event so `message list` includes it
-            // alongside remote messages.
-            ctx.marmot.persistDecryptedMessage(gid, innerEvent.toJson())
-
+            val bundle = ctx.marmot.buildTextMessage(gid, text)
             val targets = ctx.marmotGroupRelays(gid).ifEmpty { ctx.outboxRelays() }
-            val ack = ctx.publish(outbound.signedEvent, targets)
+            val ack = ctx.publish(bundle.outbound.signedEvent, targets)
 
             Json.writeLine(
                 mapOf(
                     "group_id" to gid,
-                    "inner_event_id" to innerEvent.id,
-                    "outer_event_id" to outbound.signedEvent.id,
-                    "kind" to innerEvent.kind,
+                    "inner_event_id" to bundle.innerEvent.id,
+                    "outer_event_id" to bundle.outbound.signedEvent.id,
+                    "kind" to bundle.innerEvent.kind,
                     "published_to" to ack.filterValues { it }.keys.map { it.url },
                 ),
             )

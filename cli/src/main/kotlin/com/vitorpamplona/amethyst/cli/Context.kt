@@ -24,8 +24,8 @@ import com.vitorpamplona.amethyst.cli.stores.FileKeyPackageBundleStore
 import com.vitorpamplona.amethyst.cli.stores.FileMarmotMessageStore
 import com.vitorpamplona.amethyst.cli.stores.FileMlsGroupStateStore
 import com.vitorpamplona.amethyst.commons.marmot.MarmotManager
+import com.vitorpamplona.amethyst.commons.marmot.ingest
 import com.vitorpamplona.quartz.marmot.MarmotFilters
-import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -72,6 +72,18 @@ class Context(
             websocketBuilder = BasicOkHttpWebSocket.Builder { okhttp },
         )
 
+    /**
+     * NIP-05 resolver for turning `alice@damus.io`-style identifiers into pubkeys.
+     * Uses the same OkHttp instance as the WebSocket client so we share connection
+     * pools and TLS sessions.
+     */
+    val nip05Client: com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Client =
+        com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Client(
+            fetcher =
+                com.vitorpamplona.quartz.nip05DnsIdentifiers
+                    .OkHttpNip05Fetcher { _ -> okhttp },
+        )
+
     private val mlsStore = FileMlsGroupStateStore(dataDir.groupsDir)
     private val keyPackageStore = FileKeyPackageBundleStore(dataDir.keyPackageBundleFile)
     private val messageStore = FileMarmotMessageStore(dataDir.groupsDir)
@@ -92,6 +104,18 @@ class Context(
         client.connect()
         prepared = true
     }
+
+    /**
+     * Resolve `npub…` / `nprofile…` / 64-hex / `name@domain.tld` to a pubkey hex.
+     * Delegates to the shared [resolveUserHexOrNull] in quartz so the UI and CLI
+     * accept the exact same identifier formats. Throws on unrecognised input —
+     * command handlers catch [IllegalArgumentException] at the top level and
+     * translate to `{"error": "bad_args"}`.
+     */
+    suspend fun requireUserHex(input: String): com.vitorpamplona.quartz.nip01Core.core.HexKey =
+        com.vitorpamplona.quartz.nip05DnsIdentifiers
+            .resolveUserHexOrNull(input, nip05Client)
+            ?: throw IllegalArgumentException("Could not resolve user: '$input' (accepts npub, nprofile, 64-hex, or name@domain.tld)")
 
     fun outboxRelays(): Set<NormalizedRelayUrl> = relays.normalized("nip65")
 
@@ -237,39 +261,18 @@ class Context(
         val maxGroupSeen = perGroupFilters.keys.associateWith { state.groupSince[it] ?: 0L }.toMutableMap()
 
         for ((relay, event) in events) {
+            // All the MLS/NIP-59 decryption + persistence lives in MarmotIngest —
+            // we only care about bookkeeping (since-cursors, logging) here.
+            val result = marmot.ingest(event)
+            System.err.println("[cli] ingest ${event.kind}/${event.id.take(8)} via $relay → ${result::class.simpleName}")
+
             when (event.kind) {
                 GiftWrapEvent.KIND -> {
-                    // kind:1059 — try to unwrap. If it's a Welcome, let the
-                    // inbound processor apply it; anything else is ignored.
-                    val gw = event as? GiftWrapEvent ?: continue
-                    try {
-                        val inner = gw.unwrapOrNull(signer) ?: continue
-                        if (inner.kind == WelcomeEvent.KIND && inner is WelcomeEvent) {
-                            val hint = inner.nostrGroupId()
-                            val res = marmot.processWelcome(inner, hint)
-                            System.err.println("[cli] Welcome via $relay → $res")
-                        }
-                    } catch (e: Exception) {
-                        System.err.println("[cli] failed to unwrap giftwrap ${event.id.take(8)}: ${e.message}")
-                    }
                     if (event.createdAt > maxGwSeen) maxGwSeen = event.createdAt
                 }
 
                 GroupEvent.KIND -> {
-                    val ge = event as? GroupEvent ?: continue
-                    val gid = ge.groupId() ?: continue
-                    try {
-                        val res = marmot.processGroupEvent(ge)
-                        // Mirror DecryptAndIndexProcessor on Amethyst: application
-                        // messages get persisted at decrypt-time, because MLS ratchet
-                        // advancement makes the ciphertext un-re-decryptable later.
-                        if (res is com.vitorpamplona.quartz.marmot.GroupEventResult.ApplicationMessage) {
-                            marmot.persistDecryptedMessage(res.groupId, res.innerEventJson)
-                        }
-                        System.err.println("[cli] GroupEvent ${event.id.take(8)} → ${res::class.simpleName}")
-                    } catch (e: Exception) {
-                        System.err.println("[cli] processGroupEvent failed: ${e.message}")
-                    }
+                    val gid = (event as? GroupEvent)?.groupId() ?: continue
                     val prev = maxGroupSeen[gid] ?: 0L
                     if (event.createdAt > prev) maxGroupSeen[gid] = event.createdAt
                 }
