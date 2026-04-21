@@ -154,6 +154,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.vanish.RequestToVani
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.vanish.VanishEventsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.search.SearchScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.AllSettingsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.BottomBarSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.CallSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.NIP47SetupScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.NamecoinSettingsScreen
@@ -303,6 +304,7 @@ fun BuildNavigation(
         composableFromEnd<Route.Settings> { SettingsScreen(accountViewModel, nav) }
         composableFromEnd<Route.UserSettings> { UserSettingsScreen(accountViewModel, nav) }
         composableFromEnd<Route.ReactionsSettings> { ReactionsSettingsScreen(accountViewModel, nav) }
+        composableFromEnd<Route.BottomBarSettings> { BottomBarSettingsScreen(accountViewModel, nav) }
         composableFromEnd<Route.CallSettings> { CallSettingsScreen(accountViewModel, nav) }
         composableFromEnd<Route.ImportFollowsSelectUser> { ImportFollowListSelectUserScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.ImportFollowsPickFollows> {

@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.model
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.DefaultBottomBarItems
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
 import kotlinx.serialization.Serializable
 
 @Stable
@@ -40,6 +42,7 @@ data class UiSettings(
     val featureSet: FeatureSetType = FeatureSetType.SIMPLIFIED,
     val gallerySet: ProfileGalleryType = ProfileGalleryType.CLASSIC,
     val automaticallyProposeAiImprovements: BooleanType = BooleanType.ALWAYS,
+    val bottomBarItems: List<NavBarItem> = DefaultBottomBarItems,
 )
 
 enum class ThemeType(

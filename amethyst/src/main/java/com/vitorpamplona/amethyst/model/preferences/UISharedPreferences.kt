@@ -38,6 +38,8 @@ import com.vitorpamplona.amethyst.model.ProfileGalleryType
 import com.vitorpamplona.amethyst.model.ThemeType
 import com.vitorpamplona.amethyst.model.UiSettings
 import com.vitorpamplona.amethyst.model.UiSettingsFlow
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.DefaultBottomBarItems
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -104,6 +106,7 @@ class UiSharedPreferences(
         val UI_FEATURE_SET = stringPreferencesKey("ui.feature_set")
         val UI_GALLERY_SET = stringPreferencesKey("ui.gallery_set")
         val UI_PROPOSE_AI_IMPROVEMENTS = stringPreferencesKey("ui.propose_ai_improvements")
+        val UI_BOTTOM_BAR_ITEMS = stringPreferencesKey("ui.bottom_bar_items")
 
         suspend fun uiPreferences(context: Context): UiSettings? =
             try {
@@ -124,6 +127,7 @@ class UiSharedPreferences(
                     featureSet = preferences[UI_FEATURE_SET]?.let { FeatureSetType.valueOf(it) } ?: FeatureSetType.SIMPLIFIED,
                     gallerySet = preferences[UI_GALLERY_SET]?.let { ProfileGalleryType.valueOf(it) } ?: ProfileGalleryType.CLASSIC,
                     automaticallyProposeAiImprovements = preferences[UI_PROPOSE_AI_IMPROVEMENTS]?.let { BooleanType.valueOf(it) } ?: BooleanType.ALWAYS,
+                    bottomBarItems = preferences[UI_BOTTOM_BAR_ITEMS]?.let { decodeBottomBarItems(it) } ?: DefaultBottomBarItems,
                 )
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
@@ -161,12 +165,26 @@ class UiSharedPreferences(
                     preferences[UI_FEATURE_SET] = sharedSettings.featureSet.name
                     preferences[UI_GALLERY_SET] = sharedSettings.gallerySet.name
                     preferences[UI_PROPOSE_AI_IMPROVEMENTS] = sharedSettings.automaticallyProposeAiImprovements.name
+                    preferences[UI_BOTTOM_BAR_ITEMS] = sharedSettings.bottomBarItems.joinToString(",") { it.name }
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 // Log any errors that occur while reading the DataStore.
                 Log.e("SharedPreferences") { "Error saving DataStore preferences: ${e.message}" }
             }
+        }
+
+        private fun decodeBottomBarItems(raw: String): List<NavBarItem> {
+            if (raw.isEmpty()) return emptyList()
+            return raw
+                .split(",")
+                .mapNotNull { name ->
+                    try {
+                        NavBarItem.valueOf(name)
+                    } catch (_: IllegalArgumentException) {
+                        null
+                    }
+                }
         }
     }
 }

@@ -32,6 +32,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.CloudUpload
+import androidx.compose.material.icons.outlined.Dashboard
 import androidx.compose.material.icons.outlined.DeleteForever
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.GroupAdd
@@ -208,6 +209,13 @@ fun AllSettingsScreen(
                 icon = Icons.Outlined.ThumbUp,
                 tint = tint,
                 onClick = { nav.nav(Route.ReactionsSettings) },
+            )
+            HorizontalDivider()
+            SettingsNavigationRow(
+                title = R.string.bottom_bar_settings,
+                icon = Icons.Outlined.Dashboard,
+                tint = tint,
+                onClick = { nav.nav(Route.BottomBarSettings) },
             )
             HorizontalDivider(thickness = 4.dp)
             SettingsSectionHeader(R.string.danger_zone)
