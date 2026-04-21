@@ -53,6 +53,7 @@ fun ShowVideoStreaming(
                             artworkUri = event.image(),
                             authorName = baseChannel.creatorName(),
                             uri = baseChannel.toNAddr(),
+                            isLiveStream = true,
                         )
                     }
 

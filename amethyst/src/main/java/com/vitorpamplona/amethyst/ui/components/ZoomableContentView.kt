@@ -203,6 +203,7 @@ fun ZoomableContentView(
                         onDialog = { dialogOpen = true },
                         accountViewModel = accountViewModel,
                         thumbhash = content.thumbhash,
+                        isLiveStream = content.isLiveStream,
                     )
                 }
             }

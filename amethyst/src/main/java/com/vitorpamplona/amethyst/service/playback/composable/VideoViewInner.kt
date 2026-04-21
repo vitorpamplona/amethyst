@@ -49,6 +49,7 @@ fun VideoViewInner(
     authorName: String? = null,
     nostrUriCallback: String? = null,
     automaticallyStartPlayback: Boolean,
+    isLiveStream: Boolean = false,
     controllerVisible: MutableState<Boolean> = mutableStateOf(false),
     onZoom: (() -> Unit)? = null,
     hasBlurhash: Boolean = false,
@@ -69,6 +70,7 @@ fun VideoViewInner(
         proxyPort = accountViewModel.httpClientBuilder.proxyPortForVideo(videoUri),
         keepPlaying = true,
         waveformData = waveform,
+        isLiveStream = isLiveStream,
     ) { mediaItem ->
         GetVideoController(
             mediaItem = mediaItem,

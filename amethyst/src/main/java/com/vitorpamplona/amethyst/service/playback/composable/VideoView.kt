@@ -69,6 +69,7 @@ fun VideoView(
     accountViewModel: AccountViewModel,
     alwaysShowVideo: Boolean = false,
     thumbhash: String? = null,
+    isLiveStream: Boolean = false,
 ) {
     val borderModifier =
         if (roundedCorner) {
@@ -79,7 +80,7 @@ fun VideoView(
             Modifier
         }
 
-    VideoView(videoUri, mimeType, title, thumb, borderModifier, contentScale, waveform, artworkUri, authorName, dimensions, blurhash, nostrUriCallback, onDialog, alwaysShowVideo, accountViewModel = accountViewModel, thumbhash = thumbhash)
+    VideoView(videoUri, mimeType, title, thumb, borderModifier, contentScale, waveform, artworkUri, authorName, dimensions, blurhash, nostrUriCallback, onDialog, alwaysShowVideo, accountViewModel = accountViewModel, thumbhash = thumbhash, isLiveStream = isLiveStream)
 }
 
 @Composable
@@ -99,6 +100,7 @@ fun VideoView(
     onDialog: (() -> Unit)? = null,
     alwaysShowVideo: Boolean = false,
     showControls: Boolean = true,
+    isLiveStream: Boolean = false,
     accountViewModel: AccountViewModel,
     thumbhash: String? = null,
 ) {
@@ -138,6 +140,7 @@ fun VideoView(
                     authorName = authorName,
                     nostrUriCallback = nostrUriCallback,
                     automaticallyStartPlayback = autoplay,
+                    isLiveStream = isLiveStream,
                     onZoom = onDialog,
                     hasBlurhash = false,
                     accountViewModel = accountViewModel,
@@ -186,6 +189,7 @@ fun VideoView(
                     authorName = authorName,
                     nostrUriCallback = nostrUriCallback,
                     automaticallyStartPlayback = autoplay,
+                    isLiveStream = isLiveStream,
                     onZoom = onDialog,
                     hasBlurhash = true,
                     accountViewModel = accountViewModel,

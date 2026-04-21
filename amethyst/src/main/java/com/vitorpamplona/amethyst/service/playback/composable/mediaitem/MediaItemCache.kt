@@ -30,6 +30,11 @@ import kotlinx.coroutines.withContext
 import kotlin.coroutines.cancellation.CancellationException
 
 class MediaItemCache : GenericBaseCache<MediaItemData, LoadedMediaItem>(20) {
+    companion object {
+        const val EXTRA_CALLBACK_URI = "callbackUri"
+        const val EXTRA_IS_LIVE_STREAM = "isLiveStream"
+    }
+
     override suspend fun compute(key: MediaItemData): LoadedMediaItem =
         withContext(Dispatchers.IO) {
             LoadedMediaItem(
@@ -45,7 +50,8 @@ class MediaItemCache : GenericBaseCache<MediaItemData, LoadedMediaItem>(20) {
                             .setTitle(key.title?.ifBlank { null } ?: key.videoUri)
                             .setExtras(
                                 Bundle().apply {
-                                    putString("callbackUri", key.callbackUri)
+                                    putString(EXTRA_CALLBACK_URI, key.callbackUri)
+                                    putBoolean(EXTRA_IS_LIVE_STREAM, key.isLiveStream)
                                 },
                             ).setArtworkUri(
                                 try {

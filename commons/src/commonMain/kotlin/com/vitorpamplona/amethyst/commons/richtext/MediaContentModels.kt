@@ -97,6 +97,7 @@ open class MediaUrlVideo(
     val contentWarning: String? = null,
     mimeType: String? = null,
     thumbhash: String? = null,
+    val isLiveStream: Boolean = false,
 ) : MediaUrlContent(url, description, hash, dim, blurhash, uri, mimeType, thumbhash)
 
 @Immutable

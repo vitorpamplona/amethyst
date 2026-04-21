@@ -40,6 +40,7 @@ fun GetMediaItem(
     proxyPort: Int? = null,
     keepPlaying: Boolean = false,
     waveformData: WaveformData? = null,
+    isLiveStream: Boolean = false,
     inner: @Composable (LoadedMediaItem) -> Unit,
 ) {
     val data =
@@ -55,6 +56,7 @@ fun GetMediaItem(
                 proxyPort = proxyPort,
                 keepPlaying = keepPlaying,
                 waveformData = waveformData,
+                isLiveStream = isLiveStream,
             )
         }
 

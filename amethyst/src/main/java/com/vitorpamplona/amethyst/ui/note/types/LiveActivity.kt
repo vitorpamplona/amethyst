@@ -199,6 +199,7 @@ fun RenderLiveActivityEventInner(
                             contentScale = ContentScale.FillWidth,
                             accountViewModel = accountViewModel,
                             nostrUriCallback = "nostr:${baseNote.toNEvent()}",
+                            isLiveStream = true,
                         )
                     }
                 } else {

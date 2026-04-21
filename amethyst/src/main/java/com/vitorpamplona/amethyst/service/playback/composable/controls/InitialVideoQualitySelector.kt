@@ -28,6 +28,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.media3.common.Player
 import androidx.media3.common.Tracks
+import com.vitorpamplona.quartz.utils.Log
 
 /**
  * Which HLS rendition to pick automatically the first time tracks become available for a media
@@ -96,13 +97,26 @@ private fun applyInitialQuality(
     // No point forcing a choice when there's only one rendition, and no future update will
     // change that for this media id, so mark it as settled.
     if (videoGroup.length <= 1) {
+        Log.d("VideoQuality") {
+            val f = videoGroup.getTrackFormat(0)
+            "policy=$policy mediaId=$mediaId SINGLE rendition ${f.width}x${f.height} (no choice)"
+        }
         appliedForMediaId.value = mediaId
         return
     }
 
+    val renditions =
+        (0 until videoGroup.length).joinToString(", ") {
+            val f = videoGroup.getTrackFormat(it)
+            "${f.width}x${f.height}"
+        }
+
     when (policy) {
         VideoQualityPolicy.AUTO -> {
             if (hasVideoOverride(player)) clearVideoOverride(player)
+            Log.d("VideoQuality") {
+                "policy=AUTO mediaId=$mediaId cleared override (from ${videoGroup.length} renditions: [$renditions])"
+            }
             appliedForMediaId.value = mediaId
         }
 
@@ -111,6 +125,10 @@ private fun applyInitialQuality(
             // retry on the next onTracksChanged when real video dimensions arrive.
             val lowestIndex = findLowestResolutionTrackIndex(videoGroup) ?: return
             selectVideoTrack(player, videoGroup, lowestIndex)
+            Log.d("VideoQuality") {
+                val f = videoGroup.getTrackFormat(lowestIndex)
+                "policy=LOWEST mediaId=$mediaId selected=${f.width}x${f.height} (from ${videoGroup.length} renditions: [$renditions])"
+            }
             appliedForMediaId.value = mediaId
         }
     }
