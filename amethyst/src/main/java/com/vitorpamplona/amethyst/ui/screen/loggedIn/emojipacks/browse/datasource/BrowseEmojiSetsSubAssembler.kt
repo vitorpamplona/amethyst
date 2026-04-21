@@ -78,7 +78,7 @@ class BrowseEmojiSetsSubAssembler(
                         invalidateFilters()
                     }
                 },
-                key.account.scope.launch(Dispatchers.IO) {
+                key.scope.launch(Dispatchers.IO) {
                     key.feedStates.browseEmojiSetsFeed.lastNoteCreatedAtWhenFullyLoaded.sample(5000).collectLatest {
                         invalidateFilters()
                     }

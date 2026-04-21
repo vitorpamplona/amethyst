@@ -43,6 +43,8 @@ import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
 import com.vitorpamplona.quartz.nip51Lists.remove
 import com.vitorpamplona.quartz.nip51Lists.tags.DescriptionTag
 import com.vitorpamplona.quartz.nip51Lists.tags.ImageTag
+import com.vitorpamplona.quartz.nip51Lists.tags.NameTag
+import com.vitorpamplona.quartz.nip51Lists.tags.TitleTag
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -179,8 +181,8 @@ class OwnedEmojiPacksState(
 
         val template =
             packEvent.update<EmojiPackEvent> {
-                remove(com.vitorpamplona.quartz.nip51Lists.tags.NameTag.TAG_NAME)
-                remove(com.vitorpamplona.quartz.nip51Lists.tags.TitleTag.TAG_NAME)
+                remove(NameTag.TAG_NAME)
+                remove(TitleTag.TAG_NAME)
                 remove(DescriptionTag.TAG_NAME)
                 remove(ImageTag.TAG_NAME)
                 title(newTitle)

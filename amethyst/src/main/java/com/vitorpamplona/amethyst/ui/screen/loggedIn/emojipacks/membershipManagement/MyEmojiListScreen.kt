@@ -200,12 +200,17 @@ private fun SelectedEmojiPackCard(
         remember(packEvent) {
             packEvent?.taggedEmojis()?.map { it.url }.orEmpty()
         }
+    val author =
+        remember(packNote) {
+            if (accountViewModel.isLoggedUser(packNote.author)) null else packNote.author?.toBestDisplayName()
+        }
 
     Box(modifier = modifier.fillMaxWidth()) {
         EmojiPackCard(
             title = title,
             emojiUrls = emojiUrls,
             coverImage = image,
+            author = author,
             onClick = onOpen,
         )
         // Remove button is on top-start so it doesn't clash with the cover badge (top-end).

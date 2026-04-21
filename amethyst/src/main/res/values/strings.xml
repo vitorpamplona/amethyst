@@ -2398,6 +2398,7 @@
     <string name="add_emoji_fab">Add emoji</string>
     <string name="emoji_add_dialog_title">Add custom emoji</string>
     <string name="emoji_remove_dialog_title">Remove :%1$s:?</string>
+    <string name="emoji_long_press_hint">Long-press an emoji to remove it</string>
     <string name="emoji_pack_is_in_list">\"%1$s\" is in your emoji list</string>
     <string name="emoji_pack_is_not_in_list">\"%1$s\" is not in your emoji list</string>
     <string name="emoji_pack_actions_dialog_title">Emoji pack actions</string>

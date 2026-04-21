@@ -184,11 +184,13 @@ private fun BrowsedEmojiPackCard(
             event.taggedEmojis().map { it.url }
         }
     val coverImage = remember(event) { event.image() }
+    val author = remember(note) { note.author?.toBestDisplayName() }
 
     EmojiPackCard(
         title = title,
         emojiUrls = emojiUrls,
         coverImage = coverImage,
+        author = author,
         onClick = onClick,
         modifier = modifier,
     )

@@ -37,6 +37,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -158,6 +159,14 @@ private fun EmojiPackScreenView(
                     ).consumeWindowInsets(padding),
         ) {
             pack?.let { currentPack ->
+                if (currentPack.publicEmojis.isNotEmpty() || currentPack.privateEmojis.isNotEmpty()) {
+                    Text(
+                        text = stringRes(R.string.emoji_long_press_hint),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    )
+                }
                 EmojiGrid(
                     pack = currentPack,
                     onLongPress = { emoji, isPrivate -> pendingDelete = EmojiDeleteTarget(emoji, isPrivate) },
@@ -187,7 +196,7 @@ private fun EmojiPackScreenView(
         ) {
             M3ActionSection {
                 M3ActionRow(
-                    icon = Icons.Outlined.Add,
+                    icon = Icons.Outlined.Delete,
                     text = stringRes(R.string.quick_action_delete),
                     isDestructive = true,
                 ) {
@@ -259,7 +268,7 @@ private fun EmojiCell(
             model = emoji.url,
             contentDescription = if (isPrivate) "${emoji.code} ($privateLabel)" else emoji.code,
             modifier = Size35Modifier,
-            contentScale = ContentScale.Crop,
+            contentScale = ContentScale.Fit,
         )
         if (isPrivate) {
             Box(

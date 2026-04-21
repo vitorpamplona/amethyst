@@ -58,6 +58,7 @@ fun EmojiPackCard(
     title: String,
     emojiUrls: List<String>,
     coverImage: String? = null,
+    author: String? = null,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -81,6 +82,16 @@ fun EmojiPackCard(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
+                if (!author.isNullOrBlank()) {
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = stringRes(R.string.my_emoji_list_by_author, author),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
                 Spacer(Modifier.height(2.dp))
                 Text(
                     text = stringRes(R.string.emoji_pack_count, emojiCount),

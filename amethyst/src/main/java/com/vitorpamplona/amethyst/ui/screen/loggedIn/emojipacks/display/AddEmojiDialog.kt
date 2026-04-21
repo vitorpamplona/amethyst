@@ -22,18 +22,20 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.display
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
@@ -41,6 +43,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -52,16 +55,6 @@ import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 
-/**
- * Dialog for adding a custom emoji to an owned emoji pack (NIP-30 kind 30030).
- *
- * The [onConfirm] callback receives the new [EmojiUrlTag] alongside an `isPrivate`
- * flag: when `true`, the caller stores the entry in the event's encrypted
- * `.content` (NIP-51 private tags) rather than as a public tag. Private emojis
- * are surfaced to the pack owner end-to-end (autocomplete + reaction menu) via
- * asynchronous decryption — see
- * [com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState.mergePackWithPrivate].
- */
 @Composable
 fun AddEmojiDialog(
     viewModel: EmojiPackViewModel,
@@ -141,17 +134,25 @@ fun AddEmojiDialog(
                     label = { Text(stringRes(R.string.emoji_pack_address_label)) },
                 )
                 Spacer(DoubleVertSpacer)
-                FilterChip(
-                    selected = isPrivate,
-                    onClick = { isPrivate = !isPrivate },
-                    label = { Text(stringRes(R.string.emoji_private_toggle)) },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = if (isPrivate) Icons.Default.Lock else Icons.Default.LockOpen,
-                            contentDescription = null,
-                        )
-                    },
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        imageVector = if (isPrivate) Icons.Default.Lock else Icons.Default.LockOpen,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    Text(
+                        text = stringRes(R.string.emoji_private_toggle),
+                        modifier = Modifier.weight(1f),
+                    )
+                    Switch(
+                        checked = isPrivate,
+                        onCheckedChange = { isPrivate = it },
+                    )
+                }
                 Spacer(DoubleVertSpacer)
                 Text(
                     text =
@@ -171,7 +172,10 @@ fun AddEmojiDialog(
             Button(
                 enabled = canConfirm,
                 onClick = {
-                    val parsedAddress = packAddressText.trim().takeIf { it.isNotEmpty() }?.let { Address.parse(it) }
+                    val parsedAddress =
+                        packAddressText.trim().takeIf { it.isNotEmpty() }?.let {
+                            runCatching { Address.parse(it) }.getOrNull()
+                        }
                     onConfirm(
                         EmojiUrlTag(code = shortcode, url = url.trim(), emojiSet = parsedAddress),
                         isPrivate,

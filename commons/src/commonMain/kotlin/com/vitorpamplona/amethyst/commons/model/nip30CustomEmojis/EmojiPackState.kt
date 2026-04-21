@@ -126,9 +126,9 @@ class EmojiPackState(
 
     suspend fun addEmojiPack(emojiPack: Note): EmojiPackSelectionEvent {
         val emojiPackEvent = emojiPack.event
-        if (emojiPackEvent !is EmojiPackEvent) throw IllegalArgumentException("Cannot add an emoji pack to this kind of event.")
+        if (emojiPackEvent !is EmojiPackEvent) throw IllegalArgumentException("Note is not an EmojiPackEvent; cannot add to emoji list.")
 
-        val eventHint = emojiPack.toEventHint<EmojiPackEvent>() ?: throw IllegalArgumentException("Cannot add an emoji pack to this kind of event.")
+        val eventHint = emojiPack.toEventHint<EmojiPackEvent>() ?: throw IllegalArgumentException("Cannot build event hint for this emoji pack.")
 
         val usersEmojiList = getEmojiPackSelection()
         return if (usersEmojiList == null) {
@@ -141,7 +141,7 @@ class EmojiPackState(
     }
 
     suspend fun removeEmojiPack(emojiPack: Note): EmojiPackSelectionEvent? {
-        val usersEmojiList = getEmojiPackSelection() ?: throw IllegalArgumentException("Cannot remove an emoji pack to this kind of event.")
+        val usersEmojiList = getEmojiPackSelection() ?: throw IllegalArgumentException("No emoji pack selection exists to remove from.")
 
         val emojiPackEvent = emojiPack.event
         if (emojiPackEvent !is EmojiPackEvent) return null

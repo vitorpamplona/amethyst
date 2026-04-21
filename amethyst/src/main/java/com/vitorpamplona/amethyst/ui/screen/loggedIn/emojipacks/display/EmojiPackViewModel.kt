@@ -77,14 +77,6 @@ class EmojiPackViewModel(
         account.deleteOwnedEmojiPack(packIdentifier)
     }
 
-    /**
-     * Uploads an image selected from the gallery to the account's default file
-     * server (NIP-96 or Blossom) and calls [onUploaded] with the resulting URL.
-     *
-     * Mirrors the uploader pattern used by
-     * `BookmarkGroupMetadataViewModel.uploadForPicture` — see that file for the
-     * canonical implementation.
-     */
     fun uploadEmojiImage(
         uri: SelectedMedia,
         context: Context,
