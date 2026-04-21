@@ -67,6 +67,7 @@ import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.MilitaryTech
 import androidx.compose.material.icons.outlined.Photo
 import androidx.compose.material.icons.outlined.PlayCircle
+import androidx.compose.material.icons.outlined.Sensors
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.SettingsInputAntenna
 import androidx.compose.material.icons.outlined.SmartDisplay
@@ -654,6 +655,14 @@ fun ListContent(
                 tint = MaterialTheme.colorScheme.onBackground,
                 nav = nav,
                 route = Route.FollowPacks,
+            )
+
+            NavigationRow(
+                title = R.string.live_streams,
+                icon = Icons.Outlined.Sensors,
+                tint = MaterialTheme.colorScheme.onBackground,
+                nav = nav,
+                route = Route.LiveStreams,
             )
 
             NavigationRow(
