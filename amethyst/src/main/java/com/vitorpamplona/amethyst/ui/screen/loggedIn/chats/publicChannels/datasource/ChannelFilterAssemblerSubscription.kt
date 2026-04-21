@@ -21,8 +21,12 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.datasource
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.model.Channel
+import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.KeyDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
@@ -40,4 +44,18 @@ fun ChannelFilterAssemblerSubscription(
         }
 
     KeyDataSourceSubscription(state, dataSource)
+
+    // Live streams need the 30311 event to populate `channel.info` before we can read its
+    // `goal` tag and add the goal+zap subscriptions. Re-invalidate when metadata changes so
+    // the goal filter fires as soon as the stream event arrives.
+    if (channel is LiveActivitiesChannel) {
+        val metadataState by channel
+            .flow()
+            .metadata.stateFlow
+            .collectAsStateWithLifecycle()
+        val goalId = channel.info?.goalEventId()
+        LaunchedEffect(goalId, metadataState) {
+            dataSource.invalidateFilters()
+        }
+    }
 }

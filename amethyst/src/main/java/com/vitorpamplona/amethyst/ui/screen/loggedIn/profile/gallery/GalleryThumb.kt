@@ -62,6 +62,7 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size50Modifier
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.clip.LiveActivitiesClipEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip71Video.VideoEvent
 
@@ -130,6 +131,21 @@ fun GalleryThumbnail(
                     thumbhash = imeta.thumbhash,
                 )
             }
+        } else if (noteEvent is LiveActivitiesClipEvent) {
+            noteEvent.videoUrl()?.let { url ->
+                listOf(
+                    MediaUrlVideo(
+                        url = url,
+                        description = noteEvent.title() ?: noteEvent.content,
+                        hash = null,
+                        blurhash = null,
+                        dim = null,
+                        uri = null,
+                        mimeType = null,
+                        thumbhash = null,
+                    ),
+                )
+            } ?: emptyList()
         } else {
             emptyList()
         }

@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip53LiveActivities.clip.LiveActivitiesClipEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
 import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
@@ -51,16 +52,30 @@ fun filterUserProfileMedia(
             ?: user.allUsedRelaysOrNull()
             ?: LocalCache.relayHints.hintsForKey(user.pubkeyHex)
 
-    return relays.map { relay ->
-        RelayBasedFilter(
-            relay = relay,
-            filter =
-                Filter(
-                    kinds = UserProfileMediaKinds,
-                    authors = listOf(user.pubkeyHex),
-                    limit = 200,
-                    since = since?.get(relay)?.time,
-                ),
+    return relays.flatMap { relay ->
+        listOf(
+            RelayBasedFilter(
+                relay = relay,
+                filter =
+                    Filter(
+                        kinds = UserProfileMediaKinds,
+                        authors = listOf(user.pubkeyHex),
+                        limit = 200,
+                        since = since?.get(relay)?.time,
+                    ),
+            ),
+            // Clips are authored by viewers but carry a `p` tag identifying the stream host.
+            // Fetch clips OF this profile's streams so they surface in their gallery.
+            RelayBasedFilter(
+                relay = relay,
+                filter =
+                    Filter(
+                        kinds = listOf(LiveActivitiesClipEvent.KIND),
+                        tags = mapOf("p" to listOf(user.pubkeyHex)),
+                        limit = 100,
+                        since = since?.get(relay)?.time,
+                    ),
+            ),
         )
     }
 }

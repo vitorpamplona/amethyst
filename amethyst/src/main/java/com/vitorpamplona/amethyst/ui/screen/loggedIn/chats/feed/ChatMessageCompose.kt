@@ -61,6 +61,9 @@ import com.vitorpamplona.amethyst.ui.note.elements.DisplayPoW
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.ChatBubbleLayout
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderChangeChannelMetadataNote
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderChatClip
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderChatRaid
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderChatZap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderCreateChannelNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderDraftEvent
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderEncryptedFile
@@ -84,6 +87,9 @@ import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEven
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.clip.LiveActivitiesClipEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.raid.LiveActivitiesRaidEvent
+import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.splits.hasZapSplitSetup
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
 
@@ -109,20 +115,29 @@ fun ChatroomMessageCompose(
             accountViewModel = accountViewModel,
             nav = nav,
         ) { canPreview ->
-            NormalChatNote(
-                baseNote,
-                routeForLastRead,
-                innerQuote,
-                canPreview,
-                parentBackgroundColor,
-                accountViewModel,
-                nav,
-                onWantsToReply,
-                onWantsToEditDraft,
-                onScrollToNote,
-                shouldHighlight,
-                onHighlightFinished,
-            )
+            val event = baseNote.event
+            if (event is LnZapEvent) {
+                RenderChatZap(baseNote, accountViewModel, nav)
+            } else if (event is LiveActivitiesRaidEvent) {
+                RenderChatRaid(baseNote, accountViewModel, nav)
+            } else if (event is LiveActivitiesClipEvent) {
+                RenderChatClip(baseNote, accountViewModel, nav)
+            } else {
+                NormalChatNote(
+                    baseNote,
+                    routeForLastRead,
+                    innerQuote,
+                    canPreview,
+                    parentBackgroundColor,
+                    accountViewModel,
+                    nav,
+                    onWantsToReply,
+                    onWantsToEditDraft,
+                    onScrollToNote,
+                    shouldHighlight,
+                    onHighlightFinished,
+                )
+            }
         }
     }
 }

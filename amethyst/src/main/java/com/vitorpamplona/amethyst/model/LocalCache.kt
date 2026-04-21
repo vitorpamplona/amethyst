@@ -169,9 +169,11 @@ import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarEvent
 import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.clip.LiveActivitiesClipEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresenceEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.raid.LiveActivitiesRaidEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
@@ -1495,6 +1497,44 @@ object LocalCache : ILocalCache, ICacheProvider {
         return new
     }
 
+    fun consume(
+        event: LiveActivitiesRaidEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ): Boolean {
+        val fromAddress = event.fromAddress()
+        val toAddress = event.toAddress()
+        if (fromAddress == null && toAddress == null) return false
+
+        val new = consumeRegularEvent(event, relay, wasVerified)
+
+        if (new) {
+            val note = getOrCreateNote(event.id)
+            fromAddress?.let { getOrCreateLiveChannel(it).addNote(note, relay) }
+            toAddress?.let { getOrCreateLiveChannel(it).addNote(note, relay) }
+        }
+
+        return new
+    }
+
+    fun consume(
+        event: LiveActivitiesClipEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ): Boolean {
+        val activityAddress = event.activityAddress() ?: return false
+
+        val new = consumeRegularEvent(event, relay, wasVerified)
+
+        if (new) {
+            val channel = getOrCreateLiveChannel(activityAddress)
+            val note = getOrCreateNote(event.id)
+            channel.addNote(note, relay)
+        }
+
+        return new
+    }
+
     @Suppress("UNUSED_PARAMETER")
     fun consume(
         event: ChannelHideMessageEvent,
@@ -1515,8 +1555,14 @@ object LocalCache : ILocalCache, ICacheProvider {
         wasVerified: Boolean,
     ): Boolean {
         val note = getOrCreateNote(event.id)
-        // Already processed this event.
-        if (note.event != null) return false
+
+        // Already processed this event — still ensure it's routed into any live-activity
+        // channel(s) it references. A zap that was first consumed by, e.g., the notifications
+        // subscription must still appear in the stream's chat when the user opens the stream.
+        if (note.event != null) {
+            attachZapToLiveActivityChannel(event, note, relay)
+            return false
+        }
 
         if (wasVerified || justVerify(event)) {
             val existingZapRequest = event.zapRequest?.id?.let { getNoteIfExists(it) }
@@ -1541,12 +1587,35 @@ object LocalCache : ILocalCache, ICacheProvider {
 
             repliesTo.forEach { it.addZap(zapRequest, note) }
 
+            attachZapToLiveActivityChannel(event, note, relay)
+
             refreshNewNoteObservers(note)
 
             return true
         }
 
         return false
+    }
+
+    private fun attachZapToLiveActivityChannel(
+        event: LnZapEvent,
+        note: Note,
+        relay: NormalizedRelayUrl?,
+    ) {
+        // Match zap.stream: only show zaps whose receiver is the live activity host.
+        val hosts = event.zappedAuthor().toHashSet()
+        if (hosts.isEmpty()) return
+
+        // Route into every live-activity address this zap references (zap.stream uses one, but
+        // a receipt could legitimately reference multiple simulcasted streams).
+        event.tags
+            .asSequence()
+            .mapNotNull(ATag::parseAddress)
+            .filter { it.kind == LiveActivitiesEvent.KIND && it.pubKeyHex in hosts }
+            .distinct()
+            .forEach { address ->
+                getOrCreateLiveChannel(address).addNote(note, relay)
+            }
     }
 
     fun consume(
@@ -2647,6 +2716,8 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is LabeledBookmarkListEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is LiveActivitiesEvent -> consume(event, relay, wasVerified)
                 is LiveActivitiesChatMessageEvent -> consume(event, relay, wasVerified)
+                is LiveActivitiesRaidEvent -> consume(event, relay, wasVerified)
+                is LiveActivitiesClipEvent -> consume(event, relay, wasVerified)
                 is MeetingSpaceEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is MeetingRoomEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is MeetingRoomPresenceEvent -> consumeBaseReplaceable(event, relay, wasVerified)
