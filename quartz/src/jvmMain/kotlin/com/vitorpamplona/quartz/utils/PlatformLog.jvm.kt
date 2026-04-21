@@ -34,10 +34,14 @@ actual object PlatformLog {
         message: String,
         throwable: Throwable?,
     ) {
+        // Diagnostics go to stderr so callers that pipe stdout (the CLI uses
+        // stdout for its JSON contract, desktop apps may too) aren't corrupted
+        // by log interleaving. Consumers that prefer stdout can just redirect
+        // 2>&1 at the shell level.
         if (throwable != null) {
-            println("${time()} $level: [$tag] $message. Throwable: ${throwable.message}")
+            System.err.println("${time()} $level: [$tag] $message. Throwable: ${throwable.message}")
         } else {
-            println("${time()} $level: [$tag] $message")
+            System.err.println("${time()} $level: [$tag] $message")
         }
     }
 
