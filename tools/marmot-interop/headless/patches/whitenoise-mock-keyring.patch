@@ -1,0 +1,18 @@
+--- a/src/bin/wnd.rs
++++ b/src/bin/wnd.rs
+@@ -22,6 +22,15 @@
+     let args = Args::parse();
+     let config = Config::resolve(args.data_dir.as_ref(), args.logs_dir.as_ref());
+
++    // marmot-interop-headless patch: allow sandboxes/CI without a real
++    // kernel keyring to fall back to the integration-tests mock keyring
++    // by setting $WHITENOISE_MOCK_KEYRING=1. Requires the daemon to be
++    // built with --features cli,integration-tests. No effect otherwise.
++    #[cfg(feature = "integration-tests")]
++    if std::env::var("WHITENOISE_MOCK_KEYRING").is_ok() {
++        Whitenoise::initialize_mock_keyring_store();
++    }
++
+     let wn_config = WhitenoiseConfig::new(&config.data_dir, &config.logs_dir, KEYRING_SERVICE_ID);
+     Whitenoise::initialize_whitenoise(wn_config).await?;
+

@@ -6,13 +6,13 @@
 # --- preflight ---------------------------------------------------------------
 preflight() {
   banner "Preflight"
-  for cmd in jq git curl cargo protoc; do
+  for cmd in jq git curl cargo protoc patch; do
     if ! command -v "$cmd" >/dev/null 2>&1; then
       fail_msg "missing required tool: $cmd"
-      # protoc is a build-time dep of nostr-rs-relay — give a hint.
-      if [[ "$cmd" == "protoc" ]]; then
-        info "hint: apt-get install protobuf-compiler   (or brew install protobuf on macOS)"
-      fi
+      case "$cmd" in
+        protoc) info "hint: apt-get install protobuf-compiler   (or brew install protobuf on macOS)" ;;
+        patch)  info "hint: apt-get install patch" ;;
+      esac
       exit 1
     fi
     info "$cmd: $(command -v "$cmd")"
@@ -39,26 +39,37 @@ preflight() {
       2>&1 | tee -a "$LOG_FILE"
   fi
 
-  # Patch wnd's hardcoded discovery relays so $WHITENOISE_DISCOVERY_RELAYS
-  # wins — without this the daemon exits immediately in sandboxes / offline
-  # environments where public relays are unreachable.
-  local patch_file="$SCRIPT_DIR/headless/patches/whitenoise-discovery-env.patch"
-  local patch_marker="$WN_REPO/.headless-discovery-patched"
-  if [[ ! -f "$patch_marker" ]]; then
-    step "patching whitenoise-rs: honour WHITENOISE_DISCOVERY_RELAYS"
-    ( cd "$WN_REPO" && patch -p1 --forward --reject-file=- <"$patch_file" ) \
-      2>&1 | tee -a "$LOG_FILE"
-    touch "$patch_marker"
-    # Invalidate the previous build so the patched source is picked up.
-    rm -f "$WN_BIN" "$WND_BIN"
-  fi
+  # Two harness-only patches to wnd so it runs fully offline / in
+  # sandboxes that block outbound + kernel keyring:
+  #   1. discovery-env: honour $WHITENOISE_DISCOVERY_RELAYS so we can
+  #      point wnd at our loopback relay instead of the baked-in public
+  #      set. Without it wnd exits with NoRelayConnections.
+  #   2. mock-keyring: honour $WHITENOISE_MOCK_KEYRING so wnd uses the
+  #      integration-tests mock keyring store when the kernel keyutils
+  #      syscalls are blocked (common in containers / CI).
+  local -a patches=(
+    "whitenoise-discovery-env.patch"
+    "whitenoise-mock-keyring.patch"
+  )
+  for name in "${patches[@]}"; do
+    local marker="$WN_REPO/.headless-patched-${name%.patch}"
+    if [[ ! -f "$marker" ]]; then
+      step "patching whitenoise-rs: $name"
+      ( cd "$WN_REPO" && patch -p1 --forward --reject-file=- \
+          <"$SCRIPT_DIR/headless/patches/$name" ) 2>&1 | tee -a "$LOG_FILE"
+      touch "$marker"
+      # Invalidate the previous build so the patched source is picked up.
+      rm -f "$WN_BIN" "$WND_BIN"
+    fi
+  done
 
   if [[ ! -x "$WN_BIN" || ! -x "$WND_BIN" ]]; then
     if [[ "$NO_BUILD" -eq 1 ]]; then
       fail_msg "wn/wnd not found and --no-build set"; exit 1
     fi
-    step "building wn + wnd (~5 min first run; incremental thereafter)"
-    ( cd "$WN_REPO" && cargo build --release --features cli --bin wn --bin wnd ) \
+    step "building wn + wnd with integration-tests feature (~5 min first run)"
+    ( cd "$WN_REPO" && \
+        cargo build --release --features cli,integration-tests --bin wn --bin wnd ) \
       2>&1 | tee -a "$LOG_FILE"
   fi
   info "wn:  $WN_BIN"
@@ -161,10 +172,16 @@ start_daemon() {
   fi
   rm -f "$socket"
   mkdir -p "$data_dir/logs" "$data_dir/release"
-  # Point wnd's discovery plane at our loopback relay. Needs the env-var
-  # patch applied in preflight to take effect; without it wnd falls back
-  # to the baked-in public set and exits with NoRelayConnections.
+  # Env vars consumed by the two harness-only wnd patches applied in
+  # preflight:
+  #   WHITENOISE_DISCOVERY_RELAYS — forces the discovery plane at our
+  #     loopback relay (kills the "can't reach nos.lol" exit path).
+  #   WHITENOISE_MOCK_KEYRING     — swaps in the integration-tests mock
+  #     secret store so wnd doesn't fall over when the kernel blocks
+  #     keyutils syscalls.
+  # Both are harmless on a real host with connectivity + a real keyring.
   WHITENOISE_DISCOVERY_RELAYS="$RELAY_URL" \
+    WHITENOISE_MOCK_KEYRING=1 \
     nohup "$WND_BIN" --data-dir "$data_dir" --logs-dir "$data_dir/logs" \
       >"$data_dir/logs/stdout.log" 2>"$data_dir/logs/stderr.log" &
   echo "$!" > "$data_dir/pid"
