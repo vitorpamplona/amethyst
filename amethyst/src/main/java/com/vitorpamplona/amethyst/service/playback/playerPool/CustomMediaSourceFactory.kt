@@ -30,6 +30,7 @@ import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.MediaItemCache
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCache
 import com.vitorpamplona.amethyst.service.playback.diskCache.isLiveStreaming
+import com.vitorpamplona.quartz.utils.Log
 
 /**
  * True live streams (kind 30311) must not be cached. On-demand HLS
@@ -66,10 +67,15 @@ class CustomMediaSourceFactory(
     override fun getSupportedTypes(): IntArray = nonCachingFactory.supportedTypes
 
     override fun createMediaSource(mediaItem: MediaItem): MediaSource {
-        if (isLiveStream(mediaItem)) {
-            return nonCachingFactory.createMediaSource(mediaItem)
+        val live = isLiveStream(mediaItem)
+        Log.d("CustomMediaSourceFactory") {
+            "createMediaSource(${if (live) "BYPASS" else "CACHE"}): ${mediaItem.mediaId}"
         }
-        return cachingFactory.createMediaSource(mediaItem)
+        return if (live) {
+            nonCachingFactory.createMediaSource(mediaItem)
+        } else {
+            cachingFactory.createMediaSource(mediaItem)
+        }
     }
 
     private fun isLiveStream(mediaItem: MediaItem): Boolean {

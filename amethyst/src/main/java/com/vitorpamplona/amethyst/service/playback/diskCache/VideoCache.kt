@@ -28,6 +28,7 @@ import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.cache.CacheDataSource
 import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
 import androidx.media3.datasource.cache.SimpleCache
+import com.vitorpamplona.quartz.utils.Log
 import java.io.File
 
 @SuppressLint("UnsafeOptInUsageError")
@@ -35,8 +36,10 @@ class VideoCache {
     companion object {
         // Target fraction of currently-available disk space.
         private const val CACHE_SIZE_PERCENT = 0.20
+
         // Hard cap so we never consume more than this even on large devices.
         private const val CACHE_SIZE_MAX_BYTES = 4L * 1024 * 1024 * 1024 // 4 GB
+
         // Floor so the cache is still useful on low-storage devices.
         private const val CACHE_SIZE_MIN_BYTES = 256L * 1024 * 1024 // 256 MB
     }
@@ -76,12 +79,16 @@ class VideoCache {
      */
     private fun calculateCacheSize(cachePath: File): Long {
         cachePath.mkdirs()
-        val availableBytes =
-            runCatching {
-                StatFs(cachePath.absolutePath).availableBytes
-            }.getOrDefault(0L)
+        val statFs = runCatching { StatFs(cachePath.absolutePath) }.getOrNull()
+        val availableBytes = statFs?.availableBytes ?: 0L
         val target = (availableBytes * CACHE_SIZE_PERCENT).toLong()
-        return target.coerceIn(CACHE_SIZE_MIN_BYTES, CACHE_SIZE_MAX_BYTES)
+        val cacheSize = target.coerceIn(CACHE_SIZE_MIN_BYTES, CACHE_SIZE_MAX_BYTES)
+        Log.d("VideoCache") {
+            "VideoCache size: ${cacheSize / (1024 * 1024)} MB " +
+                "(available: ${availableBytes / (1024 * 1024)} MB / " +
+                "total: ${(statFs?.totalBytes ?: 0L) / (1024 * 1024)} MB)"
+        }
+        return cacheSize
     }
 
     // This method should be called when proxy setting changes.
