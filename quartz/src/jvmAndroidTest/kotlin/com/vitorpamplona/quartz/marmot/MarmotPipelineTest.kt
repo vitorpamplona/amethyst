@@ -429,6 +429,195 @@ class MarmotPipelineTest {
     }
 
     @Test
+    fun testCreatorDoesNotDoubleApplyOwnCommitAfterRestart() {
+        // Root cause: after David restarts, his own add-member kind:445 that
+        // got echoed back from the relay is no longer marked as "already
+        // processed" (the dedup set lives in memory and isn't persisted).
+        // The inbound path then outer-decrypts it via a retained epoch key
+        // and feeds the commit into group.processCommit — which is NOT
+        // atomic, so it partially advances David's local state before failing
+        // with "Confirmation tag verification failed" (the tag was computed
+        // at the original epoch; David is already two epochs past).
+        //
+        // After this partial apply, David's epoch / tree / exporter_secret
+        // drift forward by one epoch while Eden and Fred stay put. Any
+        // subsequent message David sends uses a key nobody else has, and
+        // they log "Outer decryption failed with current and N retained
+        // epoch key(s)".
+        runBlocking {
+            val davidStore = TestGroupStateStore()
+            val davidMgr = MlsGroupManager(davidStore)
+            val edenMgr = MlsGroupManager(TestGroupStateStore())
+            val fredMgr = MlsGroupManager(TestGroupStateStore())
+            val davidId = ByteArray(32) { 0xD1.toByte() }
+            val edenId = ByteArray(32) { 0xE2.toByte() }
+            val fredId = ByteArray(32) { 0xF3.toByte() }
+
+            davidMgr.createGroup(groupId, davidId)
+            davidMgr.updateGroupExtensions(
+                groupId,
+                listOf(
+                    com.vitorpamplona.quartz.marmot.mip01Groups
+                        .MarmotGroupData(
+                            nostrGroupId = groupId,
+                            adminPubkeys = listOf(davidId.toHexKey()),
+                        ).toExtension(),
+                ),
+            )
+            val davidGroup = davidMgr.getGroup(groupId)!!
+            val edenBundle = davidGroup.createKeyPackage(edenId, ByteArray(0))
+            val fredBundle = davidGroup.createKeyPackage(fredId, ByteArray(0))
+
+            val addEden = davidMgr.addMember(groupId, edenBundle.keyPackage.toTlsBytes())
+            edenMgr.processWelcome(addEden.welcomeBytes!!, edenBundle)
+            val addFred = davidMgr.addMember(groupId, fredBundle.keyPackage.toTlsBytes())
+            fredMgr.processWelcome(addFred.welcomeBytes!!, fredBundle)
+            edenMgr.processCommit(
+                groupId,
+                addFred.commitBytes,
+                davidMgr.getGroup(groupId)!!.leafIndex,
+                ByteArray(0),
+            )
+
+            val preRestartEpoch = davidMgr.getGroup(groupId)!!.epoch
+            val preRestartExporter = davidMgr.exporterSecret(groupId)
+
+            // Simulate David's app restart.
+            val davidMgr2 = MlsGroupManager(davidStore)
+            davidMgr2.restoreAll()
+
+            // Now replay David's own echoed add-Eden commit that's still on
+            // the relay. After restart, the inbound dedup set is empty so
+            // the inbound pipeline does the full outer-decrypt via retained
+            // keys + processCommit on an already-applied commit.
+            val inbound =
+                com.vitorpamplona.quartz.marmot
+                    .MarmotInboundProcessor(
+                        groupManager = davidMgr2,
+                        keyPackageRotationManager =
+                            com.vitorpamplona.quartz.marmot.mip00KeyPackages
+                                .KeyPackageRotationManager(),
+                    )
+            val outbound = MarmotOutboundProcessor(davidMgr2)
+
+            // Re-encrypt the add-Eden framed commit with the pre-commit key
+            // so it looks exactly like what the relay would re-deliver.
+            val echoed =
+                outbound.buildCommitEvent(
+                    nostrGroupId = groupId,
+                    commitBytes = addEden.framedCommitBytes,
+                    exporterKey = addEden.preCommitExporterSecret,
+                )
+            val result = inbound.processGroupEvent(echoed.signedEvent)
+            assertIs<GroupEventResult.Duplicate>(
+                result,
+                "echoed already-applied commit must be treated as a no-op Duplicate",
+            )
+
+            val postEchoEpoch = davidMgr2.getGroup(groupId)!!.epoch
+            val postEchoExporter = davidMgr2.exporterSecret(groupId)
+
+            assertEquals(
+                preRestartEpoch,
+                postEchoEpoch,
+                "processing our own already-applied commit echo must NOT advance the local epoch",
+            )
+            kotlin.test.assertContentEquals(
+                preRestartExporter,
+                postEchoExporter,
+                "processing our own already-applied commit echo must NOT change the exporter secret",
+            )
+        }
+    }
+
+    @Test
+    fun testCreatorCanSendMessageAfterRestart() {
+        // Reproduces production symptom: David creates a group, adds Eden and
+        // Fred, sends messages — all fine. After David restarts the app
+        // (simulated here by save-state + fresh MlsGroupManager + restoreAll),
+        // his outbound kind:445 outer ChaCha20 layer suddenly uses a
+        // different key than Eden/Fred, and they fail with
+        // "Outer decryption failed with current and N retained epoch key(s)".
+        runBlocking {
+            val davidStore = TestGroupStateStore()
+            val davidMgr = MlsGroupManager(davidStore)
+            val edenMgr = MlsGroupManager(TestGroupStateStore())
+            val fredMgr = MlsGroupManager(TestGroupStateStore())
+
+            val davidId = ByteArray(32) { 0xD1.toByte() }
+            val edenId = ByteArray(32) { 0xE2.toByte() }
+            val fredId = ByteArray(32) { 0xF3.toByte() }
+
+            davidMgr.createGroup(groupId, davidId)
+            davidMgr.updateGroupExtensions(
+                nostrGroupId = groupId,
+                extensions =
+                    listOf(
+                        com.vitorpamplona.quartz.marmot.mip01Groups
+                            .MarmotGroupData(
+                                nostrGroupId = groupId,
+                                adminPubkeys = listOf(davidId.toHexKey()),
+                            ).toExtension(),
+                    ),
+            )
+            val davidGroup = davidMgr.getGroup(groupId)!!
+            val edenBundle = davidGroup.createKeyPackage(edenId, ByteArray(0))
+            val fredBundle = davidGroup.createKeyPackage(fredId, ByteArray(0))
+
+            // David adds Eden.
+            val addEden = davidMgr.addMember(groupId, edenBundle.keyPackage.toTlsBytes())
+            edenMgr.processWelcome(addEden.welcomeBytes!!, edenBundle)
+
+            // David adds Fred; Eden processes Alice's add-Fred commit.
+            val addFred = davidMgr.addMember(groupId, fredBundle.keyPackage.toTlsBytes())
+            fredMgr.processWelcome(addFred.welcomeBytes!!, fredBundle)
+            edenMgr.processCommit(
+                nostrGroupId = groupId,
+                commitBytes = addFred.commitBytes,
+                senderLeafIndex = davidMgr.getGroup(groupId)!!.leafIndex,
+                confirmationTag = ByteArray(0),
+            )
+
+            // Pre-restart sanity: all three share the same outer exporter key.
+            val preRestartDavidKey = davidMgr.exporterSecret(groupId)
+            kotlin.test.assertContentEquals(
+                preRestartDavidKey,
+                edenMgr.exporterSecret(groupId),
+                "Eden's exporter key should match David's before restart",
+            )
+            kotlin.test.assertContentEquals(
+                preRestartDavidKey,
+                fredMgr.exporterSecret(groupId),
+                "Fred's exporter key should match David's before restart",
+            )
+
+            // Simulate David's app restart: drop his in-memory manager and
+            // rebuild it from the persisted store.
+            val davidMgr2 = MlsGroupManager(davidStore)
+            davidMgr2.restoreAll()
+
+            val postRestartDavidKey = davidMgr2.exporterSecret(groupId)
+            kotlin.test.assertContentEquals(
+                preRestartDavidKey,
+                postRestartDavidKey,
+                "David's exporter key must survive a save+restore round-trip; " +
+                    "otherwise Eden/Fred can't decrypt his next outer layer.",
+            )
+
+            // David sends a message post-restart; Eden and Fred must decrypt.
+            val outbound = MarmotOutboundProcessor(davidMgr2)
+            val msg = "hi after restart"
+            val postRestartEvent =
+                outbound.buildGroupEventFromBytes(groupId, msg.encodeToByteArray())
+
+            val edenKey = edenMgr.exporterSecret(groupId)
+            val mlsBytesEden = GroupEventEncryption.decrypt(postRestartEvent.signedEvent.content, edenKey)
+            val edenDecrypted = edenMgr.decrypt(groupId, mlsBytesEden)
+            assertEquals(msg, edenDecrypted.content.decodeToString())
+        }
+    }
+
+    @Test
     fun testFredEncryptsAfterJoiningThreeMemberGroup() {
         // Reproduces the production StackOverflowError: the last-joined member
         // (Fred at leafIndex=2 in a 3-member group) attempts to encrypt his

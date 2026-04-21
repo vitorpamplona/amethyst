@@ -467,17 +467,44 @@ class MarmotInboundProcessor(
                 WireFormat.PUBLIC_MESSAGE -> {
                     val pubMsg = PublicMessage.decodeTls(TlsReader(mlsMessage.payload))
                     val tag = pubMsg.confirmationTag
-                    if (tag == null) {
-                        GroupEventResult.Error(groupId, "PublicMessage commit missing confirmation_tag")
-                    } else {
-                        groupManager.processCommit(
-                            nostrGroupId = groupId,
-                            commitBytes = pubMsg.content,
-                            senderLeafIndex = pubMsg.sender.leafIndex,
-                            confirmationTag = tag,
-                        )
-                        val group = groupManager.getGroup(groupId)
-                        GroupEventResult.CommitProcessed(groupId, group?.epoch ?: 0)
+                    val currentEpoch = groupManager.getGroup(groupId)?.epoch
+                    when {
+                        tag == null -> {
+                            GroupEventResult.Error(groupId, "PublicMessage commit missing confirmation_tag")
+                        }
+
+                        // Reject commits that are not for our current epoch.
+                        // Happens most commonly when our own already-applied
+                        // commit is echoed back from the relay after an app
+                        // restart (the in-memory dedup set is cleared), and
+                        // the outer layer decrypts via a retained epoch key.
+                        // Calling `processCommit` on a past-epoch commit
+                        // partially mutates tree / groupContext / epochSecrets
+                        // before throwing on the confirmation-tag check,
+                        // leaving the local state diverged from every other
+                        // member's — they then can't decrypt anything we
+                        // send next.
+                        currentEpoch != null && pubMsg.epoch < currentEpoch -> {
+                            GroupEventResult.Duplicate(groupId)
+                        }
+
+                        currentEpoch != null && pubMsg.epoch > currentEpoch -> {
+                            GroupEventResult.Error(
+                                groupId,
+                                "Commit epoch ${pubMsg.epoch} is ahead of local epoch $currentEpoch; ignoring",
+                            )
+                        }
+
+                        else -> {
+                            groupManager.processCommit(
+                                nostrGroupId = groupId,
+                                commitBytes = pubMsg.content,
+                                senderLeafIndex = pubMsg.sender.leafIndex,
+                                confirmationTag = tag,
+                            )
+                            val group = groupManager.getGroup(groupId)
+                            GroupEventResult.CommitProcessed(groupId, group?.epoch ?: 0)
+                        }
                     }
                 }
 
