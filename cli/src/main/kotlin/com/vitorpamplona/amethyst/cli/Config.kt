@@ -45,6 +45,7 @@ data class Identity(
     val nsec: String?,
     val npub: String,
 ) {
+    @get:com.fasterxml.jackson.annotation.JsonIgnore
     val hasPrivateKey: Boolean get() = privKeyHex != null
 
     fun keyPair(): KeyPair =
