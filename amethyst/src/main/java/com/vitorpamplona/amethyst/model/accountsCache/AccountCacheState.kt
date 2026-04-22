@@ -100,13 +100,14 @@ class AccountCacheState(
 
         val signerWithClientTag = NostrSignerWithClientTag(signer, CLIENT_TAG_NAME)
 
+        val accountDir = File(rootFilesDir(), "accounts/${signer.pubKey}").apply { mkdirs() }
+
         val mlsStore =
             try {
-                val dir = rootFilesDir()
                 Log.d("AccountCacheState") {
-                    "Initializing AndroidMlsGroupStateStore for ${signer.pubKey.take(8)}… at ${dir.absolutePath}"
+                    "Initializing AndroidMlsGroupStateStore for ${signer.pubKey.take(8)}… at ${accountDir.absolutePath}"
                 }
-                AndroidMlsGroupStateStore(dir)
+                AndroidMlsGroupStateStore(accountDir)
             } catch (e: Exception) {
                 Log.e(
                     "AccountCacheState",
@@ -121,7 +122,7 @@ class AccountCacheState(
 
         val marmotMessageStore =
             try {
-                AndroidMarmotMessageStore(rootFilesDir())
+                AndroidMarmotMessageStore(accountDir)
             } catch (e: Exception) {
                 Log.e(
                     "AccountCacheState",
@@ -133,7 +134,7 @@ class AccountCacheState(
 
         val marmotKeyPackageStore =
             try {
-                AndroidKeyPackageBundleStore(rootFilesDir())
+                AndroidKeyPackageBundleStore(accountDir)
             } catch (e: Exception) {
                 Log.e(
                     "AccountCacheState",
