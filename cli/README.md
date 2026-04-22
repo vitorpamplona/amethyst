@@ -5,11 +5,11 @@ same Nostr protocol as the Android and Desktop apps, shares the same
 `quartz` and `commons` code, and aims to eventually expose every feature
 the GUI offers as a command you can script.
 
-Amy exists to serve three audiences:
+Amy exists for three audiences at once:
 
-1. **Humans** who want to use Amethyst from a terminal or remote shell.
-2. **Agents / LLMs** that need a deterministic, JSON-typed interface to
-   drive a Nostr account.
+1. **Humans** using Amethyst from a terminal or remote shell.
+2. **Agents / LLMs** driving a Nostr account through a deterministic,
+   JSON-typed interface — no interactive prompts, no screen scraping.
 3. **Interop test harnesses** that put Amethyst side-by-side with the
    other ~100 Nostr clients publishing and consuming the same events.
    Any flow that is tested in the Amethyst app should be reproducible
@@ -17,43 +17,45 @@ Amy exists to serve three audiences:
 
 > Today Amy covers identity, relay config, account bootstrap, and
 > Marmot / MLS group chat (MIP-00 / NIP-445). Everything else from the
-> Android app is on the roadmap — see [DEVELOPMENT.md](./DEVELOPMENT.md).
+> Android app is on the roadmap — see [ROADMAP.md](./ROADMAP.md).
+>
+> To extend Amy, see [DEVELOPMENT.md](./DEVELOPMENT.md).
 
 ---
 
-## Design contract
+## Output contract
 
-- **Non-interactive.** One invocation, one job, exits cleanly. No REPL,
-  no daemon, no hidden prompts. If a subcommand would need to block
-  waiting for something on the network, it is an explicit `await` verb
-  with a `--timeout`.
-- **stdout is JSON. One line. One object.** Always. Pipe it into `jq`,
-  parse it from Python, feed it to an agent — the shape is stable.
-- **stderr is for humans.** Progress logs, warnings, `[cli] ingest …`
-  traces all go to stderr and are safe to discard.
+What every caller — user, script, agent, CI — can rely on:
+
+- **stdout is JSON. One line. One object.** Stable snake_case keys.
+  Pipe it into `jq`, parse it from Python, hand it to an agent.
+- **stderr is for humans.** Progress, warnings, per-relay ACK traces.
+  Safe to discard.
 - **Exit codes are the real signal.**
   - `0` — success
   - `1` — runtime error (JSON `{"error":"…","detail":"…"}` on stderr)
   - `2` — bad arguments
   - `124` — `await` timed out
-- **Data-dir is the whole world.** All persisted state (identity,
-  relays, MLS epochs, message archives, run cursors) lives under
-  `--data-dir PATH`. Delete it to reset; copy it to move; `AMETHYST_CLI_DATA`
-  env var overrides the default `./amethyst-cli-data`.
+- **No interactive prompts, ever.** Passwords, names, keys — all flags.
+- **Data-dir is the whole world.** All state (identity, relays, MLS
+  epochs, message archives, run cursors) lives under `--data-dir PATH`.
+  Delete to reset; copy to move; `AMETHYST_CLI_DATA` env var overrides
+  the default `./amethyst-cli-data`.
 
-Those rules are not incidental — they make `amy` cleanly consumable
-from CI, from agents, and from other Nostr clients running the same
-test matrix.
+The rationale behind each of these lives in
+[DEVELOPMENT.md](./DEVELOPMENT.md). Breaking any of them is a breaking
+change to Amy's public API.
 
 ---
 
 ## Install
 
-Until Amy ships as a signed native binary (see the "Distribution" section
-in [DEVELOPMENT.md](./DEVELOPMENT.md)), run it from source:
+Until Amy ships as a signed native binary (see
+[cli/plans/2026-04-21-cli-distribution.md](./plans/2026-04-21-cli-distribution.md)),
+run it from source:
 
 ```bash
-# One-shot run — positional args go after `--args`, quoted as a single string
+# One-shot run — positional args go after `--args`, quoted as one string
 ./gradlew :cli:run --quiet --args="whoami"
 
 # Or build a runnable distribution and use the generated launch script
@@ -62,8 +64,7 @@ in [DEVELOPMENT.md](./DEVELOPMENT.md)), run it from source:
 ```
 
 The `installDist` tree under `cli/build/install/amy/` is self-contained
-(just a JVM launcher + jars) and is what downstream packaging
-(Homebrew formula, `.deb`, `.msi`, etc.) will wrap.
+(JVM launcher + jars) and is what downstream packaging will wrap.
 
 **Requirements:** JDK 21.
 
@@ -74,11 +75,10 @@ The `installDist` tree under `cli/build/install/amy/` is self-contained
 ```bash
 # 1. Create a data-dir with a full Amethyst-style account.
 #    Generates a keypair, seeds default NIP-65 / inbox / key-package
-#    relays, and publishes the nine bootstrap events (profile, contacts,
-#    relay lists, etc).
+#    relays, and publishes the nine bootstrap events.
 amy --data-dir ./alice create --name "Alice"
 
-# 2. Publish a fresh MLS KeyPackage so other users can invite you.
+# 2. Publish a fresh MLS KeyPackage so others can invite you.
 amy --data-dir ./alice marmot key-package publish
 
 # 3. Create a group, invite someone, send a message.
@@ -91,16 +91,18 @@ amy --data-dir ./bob marmot await group --name "Test Group" --timeout 60
 amy --data-dir ./bob marmot message list <GID>
 ```
 
-Every line above prints a single JSON object on success. Compose them
-with `jq` to extract IDs:
+Compose with `jq` to chain commands:
 
 ```bash
 GID=$(amy --data-dir ./alice marmot group create --name "Test" | jq -r .group_id)
 ```
 
+For an interop-test script template, see
+[DEVELOPMENT.md § Testing](./DEVELOPMENT.md#testing).
+
 ---
 
-## Full command reference
+## Command reference
 
 Run `amy --help` for the canonical list. As of today:
 
@@ -116,7 +118,7 @@ Run `amy --help` for the canonical list. As of today:
 | `marmot key-package publish` | Publish a fresh MLS KeyPackage (kind:30443). |
 | `marmot key-package check NPUB` | Fetch someone else's KeyPackage from their advertised relays. |
 | `marmot group create [--name NAME]` | New empty group with you as sole admin. |
-| `marmot group list` | All groups you're currently a member of. |
+| `marmot group list` | All groups you're a member of. |
 | `marmot group show GID` | Full group state (members, admins, epoch, metadata). |
 | `marmot group members GID` | Members only. |
 | `marmot group admins GID` | Admins only. |
@@ -137,8 +139,8 @@ Run `amy --help` for the canonical list. As of today:
 | `marmot await epoch GID --min N` | Block until GID's MLS epoch is ≥ N. |
 
 All `await` verbs accept `--timeout SECS` (default 30). Timeout exits 124
-so scripts can tell the difference between "condition never happened"
-and "the command itself crashed".
+so scripts can distinguish "condition never happened" from "the command
+itself crashed".
 
 ### Global flags
 
@@ -162,54 +164,7 @@ and "the command itself crashed".
 ```
 
 All files are plain JSON or framed binary — human-inspectable, easy to
-diff across two accounts in a test run.
-
----
-
-## Use from agents
-
-Amy is intentionally easy for an LLM to drive:
-
-1. Every stdout is one JSON object — `jq`-ready, schema-stable.
-2. Errors are JSON too, so "did it work?" is a machine question.
-3. No interactive prompts — even password input takes `--password`.
-4. `await` verbs mean an agent can say "send this, then wait for the
-   other account to see it" without implementing its own polling.
-
-Recommended agent loop:
-
-```text
-plan → amy <cmd> --data-dir A → parse JSON → amy <cmd> --data-dir B …
-```
-
-When Amy prints `{"error":"bad_args",…}` or exits 2, the agent should
-re-read `--help` rather than retry blindly.
-
----
-
-## Use from interop tests
-
-The test goal that drives Amy's roadmap: every canonical Amethyst
-user-flow should be expressible as a short shell script that can also
-be aimed at any other Nostr client with a similar harness.
-
-Template:
-
-```bash
-set -euo pipefail
-TMP=$(mktemp -d)
-A=$TMP/alice; B=$TMP/bob
-
-amy --data-dir "$A" create --name Alice
-amy --data-dir "$B" create --name Bob
-
-# ... the scenario under test ...
-
-amy --data-dir "$B" marmot await message "$GID" --match "hello" --timeout 60
-```
-
-If an Amethyst scenario cannot be scripted through `amy` yet, that is a
-gap to close — see the roadmap in [DEVELOPMENT.md](./DEVELOPMENT.md).
+diff across two data-dirs in a test run.
 
 ---
 
@@ -225,4 +180,4 @@ gap to close — see the roadmap in [DEVELOPMENT.md](./DEVELOPMENT.md).
   operation has a timeout — use `--timeout` for `await`, or wrap the
   whole command in `timeout(1)` if you're scripting.
 - **Nothing seems to publish** — inspect stderr; each publish prints
-  per-relay `OK` / `REJECT` via the `[cli] ingest …` traces.
+  per-relay `OK` / `REJECT` via the `[cli] …` traces.

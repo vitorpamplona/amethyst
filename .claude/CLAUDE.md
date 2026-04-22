@@ -3,12 +3,13 @@
 ## Project Overview
 
 Amethyst is a Nostr Client for Android that was made for Android-only and has been slowly switching
-over to a Kotlin Multiplatform project. This project has 4 main modules: `quartz`, `commons`,
-`amethyst` and `desktopApp`. Quartz should contain implementations of Nostr specifications and
-utilities to help implement them. Commons stores shared code between Amethyst Android (`amethyst`)
-and Amethyst Desktop (`desktopApp`). The Desktop App is designed to be mouse first and so uses a
-completely different screen and navigation architecture while sharing the back end components with
-the android counterpart.
+over to a Kotlin Multiplatform project. This project has 5 main modules: `quartz`, `commons`,
+`amethyst`, `desktopApp`, and `cli`. Quartz should contain implementations of Nostr specifications
+and utilities to help implement them. Commons stores shared code between Amethyst Android
+(`amethyst`) and Amethyst Desktop (`desktopApp`). The Desktop App is designed to be mouse first and
+so uses a completely different screen and navigation architecture while sharing the back end
+components with the android counterpart. `cli` ships `amy`, a non-interactive JVM command-line
+client that drives the same `quartz` + `commons` code — used by humans, agents, and interop tests.
 
 ## Architecture
 
@@ -27,6 +28,7 @@ amethyst/
 │       └── jvmMain/       # Desktop-specific UI utilities
 ├── desktopApp/     # Desktop JVM application (layouts, navigation)
 ├── amethyst/       # Android app (layouts, navigation)
+├── cli/            # Amy — non-interactive CLI (JVM only, no Compose)
 └── ammolite/       # Support module (unused)
 ```
 
@@ -34,6 +36,11 @@ amethyst/
 - `quartz/` = Nostr business logic, protocol, data (no UI)
 - `commons/` = Shared UI components, icons, composables, flows and ViewModels
 - `amethyst/` & `desktopApp/` = Platform-native layouts and navigation
+- `cli/` = Thin assembly layer over `quartz/` + `commons/` (no new logic allowed)
+
+**Plans per module:** design docs for new subsystems live in the owning
+module's `plans/YYYY-MM-DD-<slug>.md` (e.g. `cli/plans/`, `commons/plans/`).
+The global `docs/plans/` folder is frozen — don't add new plans there.
 
 ## Tech Stack
 
@@ -66,6 +73,7 @@ Specialized skills provide domain expertise with bundled resources and patterns:
 | `feed-patterns` | Feeds & DAL | `FeedFilter`, `AdditiveComplexFeedFilter`, `FeedViewModel` family |
 | `auth-signers` | `NostrSigner` implementations | Local, NIP-46 bunker, NIP-55 Android external signer |
 | `quartz-integration` | Quartz as an external library | Gradle setup, `NostrClient`, `KeyPair`, for external projects |
+| `amy-expert` | Amy CLI (`cli/` module) | Adding `amy <verb>` commands, JSON output contract, extracting logic from `amethyst/` into `commons/` so CLI can call it |
 | `find-missing-translations` | Utility | Extract untranslated Android strings |
 | `find-non-lambda-logs` | Utility | Audit Log calls for lambda overloads |
 
