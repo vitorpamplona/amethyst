@@ -445,13 +445,24 @@ class MlsGroup private constructor(
         val leafSecret = MlsCryptoProvider.randomBytes(MlsCryptoProvider.HASH_OUTPUT_LENGTH)
         val pathSecrets = tree.derivePathSecrets(myLeafIndex, leafSecret)
 
-        // Build UpdatePath with HPKE-encrypted path secrets for each copath node
+        // Build UpdatePath with HPKE-encrypted path secrets for each copath node.
+        // RFC 9420 §12.4.1: newly-added leaves (from Add proposals in THIS commit)
+        // MUST be excluded from the copath resolution — they join via the Welcome
+        // at epoch N+1 and don't need the path secret. Keeping them in the list
+        // shifts every other resolution index by one, so strict receivers
+        // (openmls/mdk) pick the wrong ciphertext and fail with
+        // UpdatePathError(UnableToDecrypt).
+        val newLeafIndices = addedMembers.map { it.first }.toSet()
         val updatePath =
             if (needsPath && pathSecrets.isNotEmpty()) {
                 val copath = BinaryTree.copath(myLeafIndex, tree.leafCount)
                 val pathNodes =
                     pathSecrets.zip(copath).map { (pathKey, copathNode) ->
-                        val resolution = tree.resolution(copathNode)
+                        val resolution =
+                            tree.resolution(copathNode).filterNot { resNode ->
+                                BinaryTree.isLeaf(resNode) &&
+                                    BinaryTree.nodeToLeaf(resNode) in newLeafIndices
+                            }
                         val encryptedSecrets =
                             resolution.mapNotNull { resNode ->
                                 val node = tree.getNode(resNode) ?: return@mapNotNull null
