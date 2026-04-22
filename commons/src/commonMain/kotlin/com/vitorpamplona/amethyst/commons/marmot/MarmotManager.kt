@@ -566,9 +566,14 @@ class MarmotManager(
             chatroom.adminPubkeys.value = metadata.adminPubkeys
             chatroom.relays.value = metadata.relays
         }
+        val previousCount = chatroom.members.value.size
         val members = memberPubkeys(nostrGroupId)
         chatroom.members.value = members
         chatroom.memberCount.value = members.size
+        Log.d("MarmotDbg") {
+            "syncMetadataTo: group=${nostrGroupId.take(8)}… members $previousCount→${members.size} " +
+                "(leafs=${members.map { it.leafIndex }})"
+        }
     }
 }
 

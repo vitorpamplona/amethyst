@@ -2313,12 +2313,30 @@ class Account(
         targetLeafIndex: Int,
         groupRelays: Set<NormalizedRelayUrl>,
     ) {
-        val manager = marmotManager ?: return
-        if (!isWriteable()) return
+        Log.d("MarmotDbg") {
+            "removeMarmotGroupMember: group=${nostrGroupId.take(8)}… targetLeafIndex=$targetLeafIndex " +
+                "groupRelays=${groupRelays.size}"
+        }
+        val manager =
+            marmotManager ?: run {
+                Log.w("MarmotDbg") { "removeMarmotGroupMember: marmotManager is NULL — no-op" }
+                return
+            }
+        if (!isWriteable()) {
+            Log.w("MarmotDbg") { "removeMarmotGroupMember: account is not writeable — no-op" }
+            return
+        }
 
         val outbound = manager.removeMember(nostrGroupId, targetLeafIndex)
+        Log.d("MarmotDbg") {
+            "removeMarmotGroupMember: built commit kind=${outbound.signedEvent.kind} id=${outbound.signedEvent.id.take(8)}…"
+        }
         val chatroom = marmotGroupList.getOrCreateGroup(nostrGroupId)
         manager.syncMetadataTo(nostrGroupId, chatroom)
+        Log.d("MarmotDbg") {
+            "removeMarmotGroupMember: publishing commit id=${outbound.signedEvent.id.take(8)}… " +
+                "to ${groupRelays.size} relay(s): ${groupRelays.map { it.url }}"
+        }
         client.publish(outbound.signedEvent, groupRelays)
     }
 
