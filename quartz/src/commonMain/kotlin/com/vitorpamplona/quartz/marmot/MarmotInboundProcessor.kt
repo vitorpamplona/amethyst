@@ -577,15 +577,29 @@ class MarmotInboundProcessor(
                         }
 
                         else -> {
-                            groupManager.processCommit(
-                                nostrGroupId = groupId,
-                                commitBytes = pubMsg.content,
-                                senderLeafIndex = pubMsg.sender.leafIndex,
-                                confirmationTag = tag,
-                                signature = pubMsg.signature,
-                            )
+                            // RFC 9420 §6.2 — reject PublicMessage commits
+                            // whose membership_tag doesn't match what the
+                            // current epoch's membership_key would produce.
+                            // Without this an outsider with the outer
+                            // exporter secret could inject arbitrary commit
+                            // bytes and advance the group past them.
                             val group = groupManager.getGroup(groupId)
-                            GroupEventResult.CommitProcessed(groupId, group?.epoch ?: 0)
+                            if (group != null && !group.verifyPublicMessageCommitMembershipTag(pubMsg)) {
+                                GroupEventResult.Error(
+                                    groupId,
+                                    "Invalid membership_tag on PublicMessage commit",
+                                )
+                            } else {
+                                groupManager.processCommit(
+                                    nostrGroupId = groupId,
+                                    commitBytes = pubMsg.content,
+                                    senderLeafIndex = pubMsg.sender.leafIndex,
+                                    confirmationTag = tag,
+                                    signature = pubMsg.signature,
+                                )
+                                val post = groupManager.getGroup(groupId)
+                                GroupEventResult.CommitProcessed(groupId, post?.epoch ?: 0)
+                            }
                         }
                     }
                 }

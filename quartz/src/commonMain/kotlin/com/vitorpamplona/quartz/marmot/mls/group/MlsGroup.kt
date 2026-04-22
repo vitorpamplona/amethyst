@@ -1043,6 +1043,47 @@ class MlsGroup private constructor(
         signature: ByteArray = ByteArray(0),
         wireFormat: WireFormat = WireFormat.PUBLIC_MESSAGE,
     ) {
+        // Snapshot all mutable state BEFORE applying any proposals or
+        // UpdatePath mutations. If any step throws (bad signature, parent
+        // hash mismatch, decrypt failure, confirmation-tag divergence), we
+        // restore the snapshot so callers observe the group in the same
+        // state as if processCommit had never run. Without this rollback
+        // a partial mutation leaves the tree one epoch ahead of
+        // `groupContext.epoch` and every subsequent decrypt fails with
+        // `Message epoch X doesn't match current epoch Y`.
+        val treeSnapshot = tree.snapshot()
+        val ctxSnapshot = groupContext
+        val secretsSnapshot = epochSecrets
+        val initSnapshot = initSecret
+        val secretTreeSnapshot = secretTree
+        val interimSnapshot = interimTranscriptHash
+        val pendingSnapshot = pendingProposals.toList()
+        val sentKeysSnapshot = sentKeys.toMap()
+
+        try {
+            processCommitInner(commitBytes, senderLeafIndex, confirmationTag, signature, wireFormat)
+        } catch (t: Throwable) {
+            tree.restoreFrom(treeSnapshot)
+            groupContext = ctxSnapshot
+            epochSecrets = secretsSnapshot
+            initSecret = initSnapshot
+            secretTree = secretTreeSnapshot
+            interimTranscriptHash = interimSnapshot
+            pendingProposals.clear()
+            pendingProposals.addAll(pendingSnapshot)
+            sentKeys.clear()
+            sentKeys.putAll(sentKeysSnapshot)
+            throw t
+        }
+    }
+
+    private fun processCommitInner(
+        commitBytes: ByteArray,
+        senderLeafIndex: Int,
+        confirmationTag: ByteArray,
+        signature: ByteArray,
+        wireFormat: WireFormat,
+    ) {
         val commit = Commit.decodeTls(TlsReader(commitBytes))
 
         // External commits (containing ExternalInit) have a sender that is not
@@ -1062,6 +1103,33 @@ class MlsGroup private constructor(
             }
             require(tree.getLeaf(senderLeafIndex) != null) {
                 "Sender leaf is blank at index $senderLeafIndex"
+            }
+        }
+
+        // Verify the FramedContentTBS signature (RFC 9420 §6.1) against
+        // the sender's pre-commit leaf signature_key. Any non-external
+        // commit MUST carry a non-empty signature from the sender's leaf
+        // — without this check anyone with the outer exporter key (in a
+        // compromised relay scenario) could forge commits.
+        if (!isExternalCommit) {
+            require(signature.isNotEmpty()) {
+                "FramedContentTBS signature missing on commit from leaf $senderLeafIndex"
+            }
+            val senderLeaf =
+                requireNotNull(tree.getLeaf(senderLeafIndex)) {
+                    "Sender leaf is blank at index $senderLeafIndex"
+                }
+            val tbs =
+                buildCommitFramedContentTbs(
+                    groupId = groupContext.groupId,
+                    epoch = groupContext.epoch,
+                    senderLeafIndex = senderLeafIndex,
+                    commitBytes = commitBytes,
+                    groupContextBytes = groupContext.toTlsBytes(),
+                    wireFormat = wireFormat,
+                )
+            require(MlsCryptoProvider.verifyWithLabel(senderLeaf.signatureKey, "FramedContentTBS", tbs, signature)) {
+                "Invalid FramedContentTBS signature on commit from leaf $senderLeafIndex"
             }
         }
 
@@ -1120,6 +1188,17 @@ class MlsGroup private constructor(
             // Verify LeafNode signature (RFC 9420 Section 7.3)
             require(verifyLeafNodeSignature(updatePath.leafNode, groupId, senderLeafIndex)) {
                 "Invalid LeafNode signature in UpdatePath"
+            }
+            // RFC 9420 §8.4: LeafNode lifetime bounds must be current.
+            // An expired leaf is a revoked key — accepting it here would
+            // let a peer replay old UpdatePath material past the window
+            // the signer authorized.
+            val lifetime = updatePath.leafNode.lifetime
+            if (lifetime != null) {
+                val now = TimeUtils.now()
+                require(now >= lifetime.notBefore && now <= lifetime.notAfter) {
+                    "LeafNode lifetime expired or not yet valid in UpdatePath"
+                }
             }
 
             // For external commits the sender's leaf is not yet in the tree.
@@ -1253,17 +1332,17 @@ class MlsGroup private constructor(
         initSecret = epochSecrets.initSecret
         secretTree = SecretTree(epochSecrets.encryptionSecret, tree.leafCount)
 
-        // Verify confirmation tag (RFC 9420 Section 6.1). In real message
-        // flows the tag is carried on the wrapping PublicMessage and must be
-        // verified. Callers that process a raw commit payload and have
-        // verified the tag externally (or for test harnesses that work with
-        // `Commit.toTlsBytes()` directly) pass `ByteArray(0)`; in that mode
-        // we skip the comparison. Any non-empty tag is still checked.
+        // Verify confirmation tag (RFC 9420 Section 6.1). Every commit on
+        // the wire MUST carry a confirmation_tag that matches what the
+        // receiver derives from the post-commit confirmation_key — this
+        // is the last line of defense against a committer with the
+        // correct signing key but a forged tree state.
         val expectedTag = computeConfirmationTag(epochSecrets.confirmationKey, newConfirmedTranscriptHash)
-        if (confirmationTag.isNotEmpty()) {
-            require(constantTimeEquals(confirmationTag, expectedTag)) {
-                "Confirmation tag verification failed"
-            }
+        require(confirmationTag.isNotEmpty()) {
+            "Confirmation tag missing on commit from leaf $senderLeafIndex"
+        }
+        require(constantTimeEquals(confirmationTag, expectedTag)) {
+            "Confirmation tag verification failed"
         }
 
         // Update interim_transcript_hash for next epoch (reuse verified expectedTag)
@@ -1576,6 +1655,33 @@ class MlsGroup private constructor(
         mac.update(authenticatedContentBytes)
         val expectedTag = mac.doFinal()
         return constantTimeEquals(expectedTag, membershipTag)
+    }
+
+    /**
+     * Verify RFC 9420 §6.2 membership_tag on an inbound PublicMessage Commit.
+     * The tag binds the whole `(TBS || FramedContentAuthData)` payload to
+     * the sender's epoch — if it's missing or wrong, the sender either
+     * isn't a member or the message was tampered with. Returns false for
+     * either case; callers should reject the commit before advancing state.
+     */
+    fun verifyPublicMessageCommitMembershipTag(pubMsg: PublicMessage): Boolean {
+        val membershipTag = pubMsg.membershipTag ?: return false
+        if (membershipTag.isEmpty()) return false
+        val confirmationTag = pubMsg.confirmationTag ?: return false
+        val tbs =
+            buildCommitFramedContentTbs(
+                groupId = pubMsg.groupId,
+                epoch = pubMsg.epoch,
+                senderLeafIndex = pubMsg.sender.leafIndex,
+                commitBytes = pubMsg.content,
+                groupContextBytes = groupContext.toTlsBytes(),
+                wireFormat = WireFormat.PUBLIC_MESSAGE,
+            )
+        val tbmWriter = TlsWriter()
+        tbmWriter.putBytes(tbs)
+        tbmWriter.putOpaqueVarInt(pubMsg.signature)
+        tbmWriter.putOpaqueVarInt(confirmationTag)
+        return verifyMembershipTag(tbmWriter.toByteArray(), membershipTag)
     }
 
     /**
@@ -1918,10 +2024,16 @@ class MlsGroup private constructor(
         private const val RATCHET_TREE_EXTENSION_TYPE = 0x0002
 
         /**
-         * Build the FramedContentTBS bytes for a member-sender commit over
-         * PublicMessage wire format (RFC 9420 §6.1). The signature over this
-         * value is the `FramedContentAuthData.signature` that rides both in
-         * the on-the-wire PublicMessage AND in the ConfirmedTranscriptHashInput.
+         * Build the FramedContentTBS bytes for a member-sender commit
+         * (RFC 9420 §6.1). The signature over this value is the
+         * `FramedContentAuthData.signature` that rides both in the
+         * on-the-wire PublicMessage/PrivateMessage AND in the
+         * ConfirmedTranscriptHashInput.
+         *
+         * The wire_format argument MUST match the envelope actually used;
+         * mixing PUBLIC_MESSAGE here with a PRIVATE_MESSAGE envelope (or
+         * vice versa) produces a signature that receivers can't verify
+         * because they recompute the TBS with the real wire_format byte.
          */
         internal fun buildCommitFramedContentTbs(
             groupId: ByteArray,
@@ -1929,10 +2041,11 @@ class MlsGroup private constructor(
             senderLeafIndex: Int,
             commitBytes: ByteArray,
             groupContextBytes: ByteArray,
+            wireFormat: WireFormat = WireFormat.PUBLIC_MESSAGE,
         ): ByteArray {
             val writer = TlsWriter()
             writer.putUint16(MlsMessage.MLS_VERSION_10)
-            writer.putUint16(WireFormat.PUBLIC_MESSAGE.value)
+            writer.putUint16(wireFormat.value)
             writer.putOpaqueVarInt(groupId)
             writer.putUint64(epoch)
             encodeSender(writer, Sender(SenderType.MEMBER, senderLeafIndex))
@@ -2674,12 +2787,6 @@ class MlsGroup private constructor(
         return commit()
     }
 
-    /**
-     * Remove self from the group.
-     *
-     * Per MIP-01/MIP-03, admins must self-demote first; this helper rejects
-     * calls from a member currently listed in `admin_pubkeys`.
-     */
     /**
      * Build a standalone SelfRemove proposal framed as a PublicMessage MLS
      * message (RFC 9420 §6.2 + draft-ietf-mls-extensions).

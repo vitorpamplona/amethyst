@@ -186,6 +186,27 @@ class RatchetTree(
     }
 
     /**
+     * Snapshot the mutable tree state so callers can roll back after a
+     * failed commit application. `TreeNode`, `LeafNode`, and `ParentNode`
+     * are all immutable data classes — copying the `nodes` list is enough
+     * to isolate future edits.
+     */
+    fun snapshot(): Snapshot = Snapshot(nodes.toList(), _leafCount)
+
+    /** Restore the mutable tree state produced by an earlier [snapshot]. */
+    fun restoreFrom(snapshot: Snapshot) {
+        nodes.clear()
+        nodes.addAll(snapshot.nodes)
+        _leafCount = snapshot.leafCount
+    }
+
+    /** Opaque capture of the ratchet tree's mutable state. */
+    class Snapshot internal constructor(
+        internal val nodes: List<TreeNode?>,
+        internal val leafCount: Int,
+    )
+
+    /**
      * Compute the tree hash for this ratchet tree (RFC 9420 Section 7.9).
      * Used in GroupContext to bind the group state to the tree.
      */
