@@ -32,8 +32,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -43,7 +45,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.GroupAdd
 import androidx.compose.material.icons.filled.PersonRemove
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -51,11 +52,13 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -77,9 +80,12 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.RenderRelayIcon
 import com.vitorpamplona.amethyst.ui.note.UserPicture
+import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
+import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
-import com.vitorpamplona.amethyst.ui.theme.LargeRelayIconModifier
+import com.vitorpamplona.amethyst.ui.theme.MediumRelayIconModifier
+import com.vitorpamplona.amethyst.ui.theme.SuggestionListDefaultHeightChat
 import com.vitorpamplona.amethyst.ui.theme.allGoodColor
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.ripple24dp
@@ -108,9 +114,23 @@ fun MarmotGroupInfoScreen(
     val members by chatroom.members.collectAsStateWithLifecycle()
     var showLeaveDialog by remember { mutableStateOf(false) }
     var isLeaving by remember { mutableStateOf(false) }
+    var memberToRemove by remember { mutableStateOf<GroupMemberInfo?>(null) }
+    var addSearchInput by remember { mutableStateOf("") }
+    var addStatus by remember { mutableStateOf<String?>(null) }
+    var isAddError by remember { mutableStateOf(false) }
+    var isAdding by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val myPubkey = accountViewModel.account.signer.pubKey
     val context = LocalContext.current
+
+    val userSuggestions =
+        remember {
+            UserSuggestionState(accountViewModel.account, accountViewModel.nip05ClientBuilder())
+        }
+
+    DisposableEffect(Unit) {
+        onDispose { userSuggestions.reset() }
+    }
 
     Scaffold(
         topBar = {
@@ -131,10 +151,14 @@ fun MarmotGroupInfoScreen(
                             contentDescription = "Edit Group Info",
                         )
                     }
-                    IconButton(onClick = { nav.nav(Route.MarmotGroupAddMember(nostrGroupId)) }) {
+                    IconButton(
+                        onClick = { showLeaveDialog = true },
+                        enabled = !isLeaving,
+                    ) {
                         Icon(
-                            imageVector = Icons.Default.GroupAdd,
-                            contentDescription = "Add Member",
+                            imageVector = Icons.AutoMirrored.Filled.ExitToApp,
+                            contentDescription = "Leave Group",
+                            tint = MaterialTheme.colorScheme.error,
                         )
                     }
                 },
@@ -155,43 +179,87 @@ fun MarmotGroupInfoScreen(
                             .fillMaxWidth()
                             .padding(16.dp),
                 ) {
-                    Text(
-                        text = displayName ?: "Group ${nostrGroupId.take(8)}...",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                    )
-                    if (!groupDescription.isNullOrEmpty()) {
-                        Text(
-                            text = groupDescription!!,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(top = 4.dp),
-                        )
-                    }
-                    Text(
-                        text = "${members.size} members",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 4.dp),
-                    )
-                    if (groupRelays.isNotEmpty()) {
-                        GroupRelayList(
-                            relayUrls = groupRelays,
-                            relayActivity = relayActivity,
-                            accountViewModel = accountViewModel,
-                            nav = nav,
-                        )
-                    }
-                    val epoch = accountViewModel.account.marmotManager?.groupEpoch(nostrGroupId)
-                    if (epoch != null) {
-                        Text(
-                            text = "Epoch: $epoch",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(top = 2.dp),
-                        )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = displayName ?: "Group ${nostrGroupId.take(8)}...",
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Bold,
+                            )
+                            if (!groupDescription.isNullOrEmpty()) {
+                                Text(
+                                    text = groupDescription!!,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(top = 4.dp),
+                                )
+                            }
+                            Text(
+                                text = "${members.size} members",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(top = 4.dp),
+                            )
+                        }
+                        if (groupRelays.isNotEmpty()) {
+                            GroupRelayStrip(
+                                relayUrls = groupRelays,
+                                relayActivity = relayActivity,
+                                accountViewModel = accountViewModel,
+                                nav = nav,
+                            )
+                        }
                     }
                 }
+                HorizontalDivider()
+            }
+
+            // Inline add-member search
+            item {
+                AddMemberInline(
+                    nostrGroupId = nostrGroupId,
+                    searchInput = addSearchInput,
+                    onSearchInputChange = { value ->
+                        addSearchInput = value
+                        if (!isAddError) addStatus = null
+                        if (value.length > 2) {
+                            userSuggestions.processCurrentWord(value)
+                        } else {
+                            userSuggestions.reset()
+                        }
+                    },
+                    userSuggestions = userSuggestions,
+                    statusMessage = addStatus,
+                    isError = isAddError,
+                    isAdding = isAdding,
+                    accountViewModel = accountViewModel,
+                    onAdd = { user ->
+                        isAdding = true
+                        isAddError = false
+                        addStatus = "Adding ${user.toBestDisplayName()}..."
+                        val targetPubkey = user.pubkeyHex
+                        val targetName = user.toBestDisplayName()
+                        scope.launch(Dispatchers.IO) {
+                            try {
+                                val result = accountViewModel.addMarmotGroupMember(nostrGroupId, targetPubkey)
+                                if (result.startsWith("Success")) {
+                                    addStatus = null
+                                    isAddError = false
+                                    addSearchInput = ""
+                                    userSuggestions.reset()
+                                } else {
+                                    addStatus = "Failed to add $targetName: ${result.removePrefix("Error: ")}"
+                                    isAddError = true
+                                }
+                            } catch (e: Exception) {
+                                addStatus = "Failed to add $targetName: ${e.message ?: "unknown error"}"
+                                isAddError = true
+                            } finally {
+                                isAdding = false
+                            }
+                        }
+                    },
+                )
                 HorizontalDivider()
             }
 
@@ -205,60 +273,20 @@ fun MarmotGroupInfoScreen(
                 )
             }
 
-            // Member list
+            // Member list with inline remove button
             items(members, key = { it.leafIndex }) { member ->
+                val isMe = member.pubkey == myPubkey
+                val isAdmin = member.pubkey in adminPubkeys
                 MemberRow(
                     member = member,
-                    isMe = member.pubkey == myPubkey,
-                    isAdmin = member.pubkey in adminPubkeys,
+                    isMe = isMe,
+                    isAdmin = isAdmin,
+                    canRemove = !isMe,
                     accountViewModel = accountViewModel,
                     nav = nav,
+                    onRemoveClick = { memberToRemove = member },
                 )
                 HorizontalDivider()
-            }
-
-            // Group actions section
-            item {
-                HorizontalDivider(modifier = Modifier.padding(top = 8.dp))
-                Row(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .clickable { nav.nav(Route.MarmotGroupRemoveMember(nostrGroupId)) }
-                            .padding(horizontal = 16.dp, vertical = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.PersonRemove,
-                        contentDescription = "Remove Member",
-                    )
-                    Text(
-                        text = "Remove Member",
-                        style = MaterialTheme.typography.bodyLarge,
-                    )
-                }
-                HorizontalDivider()
-                Row(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .clickable { showLeaveDialog = true }
-                            .padding(horizontal = 16.dp, vertical = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ExitToApp,
-                        contentDescription = "Leave Group",
-                        tint = MaterialTheme.colorScheme.error,
-                    )
-                    Text(
-                        text = "Leave Group",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                }
             }
         }
     }
@@ -273,7 +301,7 @@ fun MarmotGroupInfoScreen(
                     try {
                         accountViewModel.leaveMarmotGroup(nostrGroupId)
                         accountViewModel.account.marmotGroupList.removeGroup(nostrGroupId)
-                        nav.nav(Route.MarmotGroupList)
+                        nav.nav(Route.Message)
                     } catch (e: Exception) {
                         isLeaving = false
                         launch(Dispatchers.Main) {
@@ -290,6 +318,96 @@ fun MarmotGroupInfoScreen(
             onDismiss = { showLeaveDialog = false },
         )
     }
+
+    memberToRemove?.let { member ->
+        ConfirmRemoveMemberDialog(
+            memberPubkey = member.pubkey,
+            accountViewModel = accountViewModel,
+            onConfirm = {
+                memberToRemove = null
+                scope.launch(Dispatchers.IO) {
+                    try {
+                        accountViewModel.removeMarmotGroupMember(nostrGroupId, member.leafIndex)
+                        launch(Dispatchers.Main) {
+                            Toast
+                                .makeText(context, "Member removed", Toast.LENGTH_SHORT)
+                                .show()
+                        }
+                    } catch (e: Exception) {
+                        launch(Dispatchers.Main) {
+                            Toast
+                                .makeText(
+                                    context,
+                                    "Failed to remove member: ${e.message}",
+                                    Toast.LENGTH_LONG,
+                                ).show()
+                        }
+                    }
+                }
+            },
+            onDismiss = { memberToRemove = null },
+        )
+    }
+}
+
+@Composable
+private fun AddMemberInline(
+    nostrGroupId: HexKey,
+    searchInput: String,
+    onSearchInputChange: (String) -> Unit,
+    userSuggestions: UserSuggestionState,
+    statusMessage: String?,
+    isError: Boolean,
+    isAdding: Boolean,
+    accountViewModel: AccountViewModel,
+    onAdd: (com.vitorpamplona.amethyst.model.User) -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        OutlinedTextField(
+            value = searchInput,
+            onValueChange = onSearchInputChange,
+            label = { Text("Add member") },
+            placeholder = { Text("Name, npub, or NIP-05") },
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+            singleLine = true,
+            enabled = !isAdding,
+        )
+
+        if (statusMessage != null) {
+            Text(
+                text = statusMessage,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                style = MaterialTheme.typography.bodySmall,
+                color =
+                    if (isError) {
+                        MaterialTheme.colorScheme.error
+                    } else {
+                        MaterialTheme.colorScheme.primary
+                    },
+            )
+        }
+
+        if (!isAdding && searchInput.length > 2) {
+            Spacer(modifier = Modifier.height(4.dp))
+            ShowUserSuggestionList(
+                userSuggestions = userSuggestions,
+                onSelect = { user -> onAdd(user) },
+                accountViewModel = accountViewModel,
+                modifier = SuggestionListDefaultHeightChat,
+                onEmpty = {
+                    Text(
+                        "They must have published a KeyPackage (kind:30443) to be added.",
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                },
+            )
+        }
+    }
 }
 
 @Composable
@@ -297,15 +415,17 @@ fun MemberRow(
     member: GroupMemberInfo,
     isMe: Boolean,
     isAdmin: Boolean,
+    canRemove: Boolean,
     accountViewModel: AccountViewModel,
     nav: INav,
+    onRemoveClick: () -> Unit,
 ) {
     Row(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .clickable { nav.nav(Route.Profile(member.pubkey)) }
-                .padding(horizontal = 16.dp, vertical = 10.dp),
+                .padding(start = 16.dp, end = 8.dp, top = 10.dp, bottom = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -329,6 +449,15 @@ fun MemberRow(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     fontWeight = if (isMe || isAdmin) FontWeight.Bold else FontWeight.Normal,
+                )
+            }
+        }
+        if (canRemove) {
+            IconButton(onClick = onRemoveClick) {
+                Icon(
+                    imageVector = Icons.Default.PersonRemove,
+                    contentDescription = "Remove Member",
+                    tint = MaterialTheme.colorScheme.error,
                 )
             }
         }
@@ -360,12 +489,41 @@ fun LeaveGroupDialog(
     )
 }
 
+@Composable
+private fun ConfirmRemoveMemberDialog(
+    memberPubkey: HexKey,
+    accountViewModel: AccountViewModel,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Remove Member") },
+        text = {
+            LoadUser(baseUserHex = memberPubkey, accountViewModel = accountViewModel) { user ->
+                val name = user?.toBestDisplayName() ?: "${memberPubkey.take(16)}..."
+                Text("Are you sure you want to remove \"$name\" from this group?")
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text("Remove", color = MaterialTheme.colorScheme.error)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        },
+    )
+}
+
 /** Window (in seconds) within which a relay is considered actively carrying this group's traffic. */
 private const val RELAY_ACTIVITY_WINDOW_SECS = 7L * 24 * 60 * 60
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun GroupRelayList(
+fun GroupRelayStrip(
     relayUrls: List<String>,
     relayActivity: Map<NormalizedRelayUrl, Long>,
     accountViewModel: AccountViewModel,
@@ -378,29 +536,22 @@ fun GroupRelayList(
 
     if (normalized.isEmpty()) return
 
-    Column(modifier = Modifier.padding(top = 8.dp)) {
-        Text(
-            text = "Relays",
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        FlowRow(
-            modifier = Modifier.padding(top = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            val nowSeconds = System.currentTimeMillis() / 1000L
-            normalized.forEach { (raw, relay) ->
-                val lastSeen = relayActivity[relay]
-                val isActive = lastSeen != null && (nowSeconds - lastSeen) <= RELAY_ACTIVITY_WINDOW_SECS
-                GroupRelayTile(
-                    relay = relay,
-                    fallbackUrl = raw,
-                    isActive = isActive,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                )
-            }
+    FlowRow(
+        modifier = Modifier.padding(start = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        val nowSeconds = System.currentTimeMillis() / 1000L
+        normalized.forEach { (raw, relay) ->
+            val lastSeen = relayActivity[relay]
+            val isActive = lastSeen != null && (nowSeconds - lastSeen) <= RELAY_ACTIVITY_WINDOW_SECS
+            GroupRelayTile(
+                relay = relay,
+                fallbackUrl = raw,
+                isActive = isActive,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
         }
     }
 }
@@ -421,7 +572,7 @@ fun GroupRelayTile(
     val clickableModifier =
         remember(relay) {
             Modifier
-                .size(55.dp)
+                .size(35.dp)
                 .combinedClickable(
                     indication = ripple24dp,
                     interactionSource = MutableInteractionSource(),
@@ -444,7 +595,7 @@ fun GroupRelayTile(
             loadProfilePicture = accountViewModel.settings.showProfilePictures(),
             pingInMs = 0,
             loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
-            iconModifier = LargeRelayIconModifier,
+            iconModifier = MediumRelayIconModifier,
         )
 
         val dotColor =
@@ -458,15 +609,15 @@ fun GroupRelayTile(
             modifier =
                 Modifier
                     .align(Alignment.BottomEnd)
-                    .size(12.dp)
+                    .size(8.dp)
                     .clip(CircleShape)
                     .background(MaterialTheme.colorScheme.surface)
-                    .padding(2.dp),
+                    .padding(1.dp),
         ) {
             Box(
                 modifier =
                     Modifier
-                        .size(8.dp)
+                        .size(6.dp)
                         .clip(CircleShape)
                         .background(dotColor),
             )
