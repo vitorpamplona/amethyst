@@ -63,13 +63,11 @@ import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarCatalog
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarIcon
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItemDef
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
-import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -370,24 +368,11 @@ private fun NavBarIconBox(def: NavBarItemDef) {
     ) {
         val description = stringRes(def.labelRes)
         val tint = MaterialTheme.colorScheme.onBackground
-        when (val icon = def.icon) {
-            is NavBarIcon.Drawable -> {
-                Icon(
-                    painter = painterRes(icon.resId, icon.reference),
-                    contentDescription = description,
-                    modifier = Modifier.size(24.dp),
-                    tint = tint,
-                )
-            }
-
-            is NavBarIcon.Vector -> {
-                Icon(
-                    imageVector = icon.vector,
-                    contentDescription = description,
-                    modifier = Modifier.size(24.dp),
-                    tint = tint,
-                )
-            }
-        }
+        Icon(
+            imageVector = def.icon,
+            contentDescription = description,
+            modifier = Modifier.size(24.dp),
+            tint = tint,
+        )
     }
 }

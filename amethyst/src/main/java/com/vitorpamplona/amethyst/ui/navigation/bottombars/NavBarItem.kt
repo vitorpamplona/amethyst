@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.navigation.bottombars
 
-import androidx.annotation.DrawableRes
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
 import androidx.compose.material.icons.automirrored.outlined.Article
@@ -31,18 +30,24 @@ import androidx.compose.material.icons.outlined.CollectionsBookmark
 import androidx.compose.material.icons.outlined.Drafts
 import androidx.compose.material.icons.outlined.EmojiEmotions
 import androidx.compose.material.icons.outlined.Groups
+import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Language
+import androidx.compose.material.icons.outlined.Mail
 import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material.icons.outlined.MilitaryTech
+import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Photo
 import androidx.compose.material.icons.outlined.PlayCircle
+import androidx.compose.material.icons.outlined.Poll
 import androidx.compose.material.icons.outlined.Sensors
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.SmartDisplay
 import androidx.compose.material.icons.outlined.Storefront
+import androidx.compose.material.icons.outlined.Subscriptions
 import androidx.compose.material.icons.outlined.Tag
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.serialization.Serializable
@@ -82,21 +87,10 @@ enum class NavBarItem {
     SETTINGS,
 }
 
-sealed class NavBarIcon {
-    data class Drawable(
-        @DrawableRes val resId: Int,
-        val reference: Int = 0,
-    ) : NavBarIcon()
-
-    data class Vector(
-        val vector: ImageVector,
-    ) : NavBarIcon()
-}
-
 data class NavBarItemDef(
     val id: NavBarItem,
     val labelRes: Int,
-    val icon: NavBarIcon,
+    val icon: ImageVector,
     val resolveRoute: (AccountViewModel) -> Route,
 )
 
@@ -106,189 +100,189 @@ val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
             NavBarItemDef(
                 id = NavBarItem.HOME,
                 labelRes = R.string.route_home,
-                icon = NavBarIcon.Drawable(R.drawable.ic_home),
+                icon = Icons.Outlined.Home,
                 resolveRoute = { Route.Home },
             ),
         NavBarItem.MESSAGES to
             NavBarItemDef(
                 id = NavBarItem.MESSAGES,
                 labelRes = R.string.route_messages,
-                icon = NavBarIcon.Drawable(R.drawable.ic_dm),
+                icon = Icons.Outlined.Mail,
                 resolveRoute = { Route.Message },
             ),
         NavBarItem.VIDEO to
             NavBarItemDef(
                 id = NavBarItem.VIDEO,
                 labelRes = R.string.route_video,
-                icon = NavBarIcon.Drawable(R.drawable.ic_video),
+                icon = Icons.Outlined.Subscriptions,
                 resolveRoute = { Route.Video },
             ),
         NavBarItem.DISCOVER to
             NavBarItemDef(
                 id = NavBarItem.DISCOVER,
                 labelRes = R.string.route_discover,
-                icon = NavBarIcon.Drawable(R.drawable.ic_sensors),
+                icon = Icons.Outlined.Sensors,
                 resolveRoute = { Route.Discover },
             ),
         NavBarItem.NOTIFICATIONS to
             NavBarItemDef(
                 id = NavBarItem.NOTIFICATIONS,
                 labelRes = R.string.route_notifications,
-                icon = NavBarIcon.Drawable(R.drawable.ic_notifications),
+                icon = Icons.Outlined.Notifications,
                 resolveRoute = { Route.Notification() },
             ),
         NavBarItem.PROFILE to
             NavBarItemDef(
                 id = NavBarItem.PROFILE,
                 labelRes = R.string.profile,
-                icon = NavBarIcon.Vector(Icons.Default.AccountCircle),
+                icon = Icons.Default.AccountCircle,
                 resolveRoute = { Route.Profile(it.userProfile().pubkeyHex) },
             ),
         NavBarItem.MY_LISTS to
             NavBarItemDef(
                 id = NavBarItem.MY_LISTS,
                 labelRes = R.string.my_lists,
-                icon = NavBarIcon.Vector(Icons.AutoMirrored.Filled.FormatListBulleted),
+                icon = Icons.AutoMirrored.Filled.FormatListBulleted,
                 resolveRoute = { Route.Lists },
             ),
         NavBarItem.BOOKMARKS to
             NavBarItemDef(
                 id = NavBarItem.BOOKMARKS,
                 labelRes = R.string.bookmarks,
-                icon = NavBarIcon.Vector(Icons.Outlined.CollectionsBookmark),
+                icon = Icons.Outlined.CollectionsBookmark,
                 resolveRoute = { Route.BookmarkGroups },
             ),
         NavBarItem.WEB_BOOKMARKS to
             NavBarItemDef(
                 id = NavBarItem.WEB_BOOKMARKS,
                 labelRes = R.string.web_bookmarks,
-                icon = NavBarIcon.Vector(Icons.Outlined.Language),
+                icon = Icons.Outlined.Language,
                 resolveRoute = { Route.WebBookmarks },
             ),
         NavBarItem.DRAFTS to
             NavBarItemDef(
                 id = NavBarItem.DRAFTS,
                 labelRes = R.string.drafts,
-                icon = NavBarIcon.Vector(Icons.Outlined.Drafts),
+                icon = Icons.Outlined.Drafts,
                 resolveRoute = { Route.Drafts },
             ),
         NavBarItem.INTEREST_SETS to
             NavBarItemDef(
                 id = NavBarItem.INTEREST_SETS,
                 labelRes = R.string.interest_sets_title,
-                icon = NavBarIcon.Vector(Icons.Outlined.Tag),
+                icon = Icons.Outlined.Tag,
                 resolveRoute = { Route.InterestSets },
             ),
         NavBarItem.EMOJI_PACKS to
             NavBarItemDef(
                 id = NavBarItem.EMOJI_PACKS,
                 labelRes = R.string.manage_emoji_packs,
-                icon = NavBarIcon.Vector(Icons.Outlined.EmojiEmotions),
+                icon = Icons.Outlined.EmojiEmotions,
                 resolveRoute = { Route.EmojiPacks },
             ),
         NavBarItem.WALLET to
             NavBarItemDef(
                 id = NavBarItem.WALLET,
                 labelRes = R.string.wallet,
-                icon = NavBarIcon.Vector(Icons.Outlined.AccountBalanceWallet),
+                icon = Icons.Outlined.AccountBalanceWallet,
                 resolveRoute = { Route.Wallet },
             ),
         NavBarItem.COMMUNITIES to
             NavBarItemDef(
                 id = NavBarItem.COMMUNITIES,
                 labelRes = R.string.communities,
-                icon = NavBarIcon.Vector(Icons.Outlined.Groups),
+                icon = Icons.Outlined.Groups,
                 resolveRoute = { Route.Communities },
             ),
         NavBarItem.ARTICLES to
             NavBarItemDef(
                 id = NavBarItem.ARTICLES,
                 labelRes = R.string.discover_reads,
-                icon = NavBarIcon.Vector(Icons.AutoMirrored.Outlined.Article),
+                icon = Icons.AutoMirrored.Outlined.Article,
                 resolveRoute = { Route.Articles },
             ),
         NavBarItem.PICTURES to
             NavBarItemDef(
                 id = NavBarItem.PICTURES,
                 labelRes = R.string.pictures,
-                icon = NavBarIcon.Vector(Icons.Outlined.Photo),
+                icon = Icons.Outlined.Photo,
                 resolveRoute = { Route.Pictures },
             ),
         NavBarItem.SHORTS to
             NavBarItemDef(
                 id = NavBarItem.SHORTS,
                 labelRes = R.string.shorts,
-                icon = NavBarIcon.Vector(Icons.Outlined.PlayCircle),
+                icon = Icons.Outlined.PlayCircle,
                 resolveRoute = { Route.Shorts },
             ),
         NavBarItem.PUBLIC_CHATS to
             NavBarItemDef(
                 id = NavBarItem.PUBLIC_CHATS,
                 labelRes = R.string.public_chats,
-                icon = NavBarIcon.Vector(Icons.AutoMirrored.Outlined.Chat),
+                icon = Icons.AutoMirrored.Outlined.Chat,
                 resolveRoute = { Route.PublicChats },
             ),
         NavBarItem.FOLLOW_PACKS to
             NavBarItemDef(
                 id = NavBarItem.FOLLOW_PACKS,
                 labelRes = R.string.follow_packs,
-                icon = NavBarIcon.Vector(Icons.Outlined.CollectionsBookmark),
+                icon = Icons.Outlined.CollectionsBookmark,
                 resolveRoute = { Route.FollowPacks },
             ),
         NavBarItem.LIVE_STREAMS to
             NavBarItemDef(
                 id = NavBarItem.LIVE_STREAMS,
                 labelRes = R.string.live_streams,
-                icon = NavBarIcon.Vector(Icons.Outlined.Sensors),
+                icon = Icons.Outlined.Sensors,
                 resolveRoute = { Route.LiveStreams },
             ),
         NavBarItem.AUDIO_ROOMS to
             NavBarItemDef(
                 id = NavBarItem.AUDIO_ROOMS,
                 labelRes = R.string.audio_rooms,
-                icon = NavBarIcon.Vector(Icons.Outlined.Mic),
+                icon = Icons.Outlined.Mic,
                 resolveRoute = { Route.AudioRooms },
             ),
         NavBarItem.LONGS to
             NavBarItemDef(
                 id = NavBarItem.LONGS,
                 labelRes = R.string.longs,
-                icon = NavBarIcon.Vector(Icons.Outlined.SmartDisplay),
+                icon = Icons.Outlined.SmartDisplay,
                 resolveRoute = { Route.Longs },
             ),
         NavBarItem.POLLS to
             NavBarItemDef(
                 id = NavBarItem.POLLS,
                 labelRes = R.string.polls,
-                icon = NavBarIcon.Drawable(R.drawable.ic_poll, reference = 1),
+                icon = Icons.Outlined.Poll,
                 resolveRoute = { Route.Polls },
             ),
         NavBarItem.BADGES to
             NavBarItemDef(
                 id = NavBarItem.BADGES,
                 labelRes = R.string.badges,
-                icon = NavBarIcon.Vector(Icons.Outlined.MilitaryTech),
+                icon = Icons.Outlined.MilitaryTech,
                 resolveRoute = { Route.Badges },
             ),
         NavBarItem.PRODUCTS to
             NavBarItemDef(
                 id = NavBarItem.PRODUCTS,
                 labelRes = R.string.discover_marketplace,
-                icon = NavBarIcon.Vector(Icons.Outlined.Storefront),
+                icon = Icons.Outlined.Storefront,
                 resolveRoute = { Route.Products },
             ),
         NavBarItem.EMOJI_SETS to
             NavBarItemDef(
                 id = NavBarItem.EMOJI_SETS,
                 labelRes = R.string.emoji_sets,
-                icon = NavBarIcon.Vector(Icons.Outlined.EmojiEmotions),
+                icon = Icons.Outlined.EmojiEmotions,
                 resolveRoute = { Route.BrowseEmojiSets },
             ),
         NavBarItem.SETTINGS to
             NavBarItemDef(
                 id = NavBarItem.SETTINGS,
                 labelRes = R.string.settings,
-                icon = NavBarIcon.Vector(Icons.Outlined.Settings),
+                icon = Icons.Outlined.Settings,
                 resolveRoute = { Route.AllSettings },
             ),
     )
@@ -327,7 +321,7 @@ val DrawerYouItems: List<NavBarItem> =
     )
 
 val DrawerFeedsItems: List<NavBarItem> =
-    listOf(
+    listOfNotNull(
         NavBarItem.COMMUNITIES,
         NavBarItem.ARTICLES,
         NavBarItem.PICTURES,
@@ -335,7 +329,7 @@ val DrawerFeedsItems: List<NavBarItem> =
         NavBarItem.PUBLIC_CHATS,
         NavBarItem.FOLLOW_PACKS,
         NavBarItem.LIVE_STREAMS,
-        NavBarItem.AUDIO_ROOMS,
+        if (isDebug) NavBarItem.AUDIO_ROOMS else null,
         NavBarItem.LONGS,
         NavBarItem.POLLS,
         NavBarItem.BADGES,

@@ -113,7 +113,6 @@ import com.vitorpamplona.amethyst.ui.navigation.bottombars.DrawerFeedsItems
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.DrawerNavigateItems
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.DrawerYouItems
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarCatalog
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarIcon
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItemDef
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
@@ -543,14 +542,9 @@ fun ListContent(
     nav: INav,
 ) {
     Column(modifier) {
-        CatalogSection(R.string.drawer_section_navigate, DrawerNavigateItems, accountViewModel, nav)
         CatalogSection(R.string.drawer_section_you, DrawerYouItems, accountViewModel, nav)
-        // Audio rooms are debug-only while the WebTransport audio backend is
-        // unimplemented (see docs/plans/2026-04-22-pure-kotlin-quic-webtransport-plan.md).
-        // The Nostr-side of the feature (presence, hand-raise, chat) works, but
-        // without audio playback the entry is confusing to release-build users.
-        val feedsItems = if (isDebug) DrawerFeedsItems else DrawerFeedsItems.filter { it != NavBarItem.AUDIO_ROOMS }
-        CatalogSection(R.string.drawer_section_feeds, feedsItems, accountViewModel, nav)
+        CatalogSection(R.string.drawer_section_navigate, DrawerNavigateItems, accountViewModel, nav)
+        CatalogSection(R.string.drawer_section_feeds, DrawerFeedsItems, accountViewModel, nav)
 
         CollapsibleSection(title = R.string.drawer_section_create) {
             NavigationRow(
@@ -629,28 +623,13 @@ fun CatalogNavigationRow(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    when (val icon = def.icon) {
-        is NavBarIcon.Drawable -> {
-            NavigationRow(
-                title = def.labelRes,
-                icon = icon.resId,
-                iconReference = icon.reference,
-                tint = tint,
-                nav = nav,
-                computeRoute = { def.resolveRoute(accountViewModel) },
-            )
-        }
-
-        is NavBarIcon.Vector -> {
-            NavigationRow(
-                title = def.labelRes,
-                icon = icon.vector,
-                tint = tint,
-                nav = nav,
-                computeRoute = { def.resolveRoute(accountViewModel) },
-            )
-        }
-    }
+    NavigationRow(
+        title = def.labelRes,
+        icon = def.icon,
+        tint = tint,
+        nav = nav,
+        computeRoute = { def.resolveRoute(accountViewModel) },
+    )
 }
 
 @Composable

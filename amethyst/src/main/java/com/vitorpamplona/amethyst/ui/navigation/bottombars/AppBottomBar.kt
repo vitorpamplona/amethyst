@@ -42,11 +42,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
-import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
@@ -143,28 +141,13 @@ private fun NotifiableIcon(
     accountViewModel: AccountViewModel,
 ) {
     Box(Modifier.size(Size23dp)) {
-        val tint = if (selected) MaterialTheme.colorScheme.primary else Color.Unspecified
         val iconSizeModifier = Modifier.size(Size20dp)
         val description = stringRes(def.labelRes)
-        when (val icon = def.icon) {
-            is NavBarIcon.Drawable -> {
-                Icon(
-                    painter = painterRes(resourceId = icon.resId, icon.reference),
-                    contentDescription = description,
-                    modifier = iconSizeModifier,
-                    tint = tint,
-                )
-            }
-
-            is NavBarIcon.Vector -> {
-                Icon(
-                    imageVector = icon.vector,
-                    contentDescription = description,
-                    modifier = iconSizeModifier,
-                    tint = tint,
-                )
-            }
-        }
+        Icon(
+            imageVector = def.icon,
+            contentDescription = description,
+            modifier = iconSizeModifier,
+        )
 
         AddNotifIconIfNeeded(destination, accountViewModel, Modifier.align(Alignment.TopEnd))
     }
