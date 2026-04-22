@@ -22,7 +22,7 @@ package com.vitorpamplona.nestsclient.transport
 
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.consumeAsFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -34,8 +34,10 @@ import kotlinx.coroutines.sync.withLock
  * only (no packet loss, no congestion); the real Kwik-backed transport will
  * exercise those codepaths separately.
  *
- * [incomingDatagrams] and [FakeBidiStream.incoming] use [consumeAsFlow]
- * semantics and therefore may only be collected once per channel.
+ * [incomingDatagrams] and [FakeBidiStream.incoming] use [receiveAsFlow]
+ * semantics: a `take(1)` / `first()` followed by a long-running `collect`
+ * works on the same underlying channel, and cancelling a consumer does not
+ * close the channel for future readers.
  */
 class FakeWebTransport private constructor(
     private val outboundDatagrams: Channel<ByteArray>,
@@ -60,7 +62,7 @@ class FakeWebTransport private constructor(
         return local
     }
 
-    override fun incomingUniStreams(): Flow<WebTransportReadStream> = inboundUniStreams.consumeAsFlow()
+    override fun incomingUniStreams(): Flow<WebTransportReadStream> = inboundUniStreams.receiveAsFlow()
 
     override suspend fun sendDatagram(payload: ByteArray): Boolean {
         if (!open) return false
@@ -68,7 +70,7 @@ class FakeWebTransport private constructor(
         return true
     }
 
-    override fun incomingDatagrams(): Flow<ByteArray> = inboundDatagrams.consumeAsFlow()
+    override fun incomingDatagrams(): Flow<ByteArray> = inboundDatagrams.receiveAsFlow()
 
     override suspend fun close(
         code: Int,
@@ -89,7 +91,7 @@ class FakeWebTransport private constructor(
      * Flow of peer-opened bidi streams (i.e. the local endpoint of a stream the
      * other side created via [openBidiStream]).
      */
-    fun peerOpenedBidiStreams(): Flow<FakeBidiStream> = inboundBidiStreams.consumeAsFlow()
+    fun peerOpenedBidiStreams(): Flow<FakeBidiStream> = inboundBidiStreams.receiveAsFlow()
 
     companion object {
         /**
@@ -130,7 +132,7 @@ class FakeBidiStream internal constructor(
     private val write: Channel<ByteArray>,
     private val read: Channel<ByteArray>,
 ) : WebTransportBidiStream {
-    override fun incoming(): Flow<ByteArray> = read.consumeAsFlow()
+    override fun incoming(): Flow<ByteArray> = read.receiveAsFlow()
 
     override suspend fun write(chunk: ByteArray) {
         write.send(chunk)
@@ -144,5 +146,5 @@ class FakeBidiStream internal constructor(
 class FakeReadStream internal constructor(
     private val read: Channel<ByteArray>,
 ) : WebTransportReadStream {
-    override fun incoming(): Flow<ByteArray> = read.consumeAsFlow()
+    override fun incoming(): Flow<ByteArray> = read.receiveAsFlow()
 }
