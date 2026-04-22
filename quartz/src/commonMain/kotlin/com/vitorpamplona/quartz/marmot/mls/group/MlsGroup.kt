@@ -967,9 +967,11 @@ class MlsGroup private constructor(
                     }
                 }
                 // Apply the commit inline — after this returns, the caller
-                // only needs to know the epoch advanced. The signature rides
-                // into the transcript-hash computation inside processCommit.
-                processCommit(commitBytes, senderLeafIndex, confirmationTag, signature)
+                // only needs to know the epoch advanced. The signature + wire
+                // format ride into the transcript-hash computation inside
+                // processCommit (RFC 9420 §8.2 requires the real wire format
+                // for ConfirmedTranscriptHashInput).
+                processCommit(commitBytes, senderLeafIndex, confirmationTag, signature, WireFormat.PRIVATE_MESSAGE)
 
                 return DecryptedMessage(
                     senderLeafIndex = senderLeafIndex,
@@ -1039,6 +1041,7 @@ class MlsGroup private constructor(
         senderLeafIndex: Int,
         confirmationTag: ByteArray,
         signature: ByteArray = ByteArray(0),
+        wireFormat: WireFormat = WireFormat.PUBLIC_MESSAGE,
     ) {
         val commit = Commit.decodeTls(TlsReader(commitBytes))
 
@@ -1215,7 +1218,7 @@ class MlsGroup private constructor(
 
         // Update transcript hashes (RFC 9420 Section 8.2)
         // ConfirmedTranscriptHashInput = wire_format || FramedContent || signature
-        val confirmedTranscriptHashInput = buildConfirmedTranscriptHashInput(commit, senderLeafIndex, signature)
+        val confirmedTranscriptHashInput = buildConfirmedTranscriptHashInput(commit, senderLeafIndex, signature, wireFormat)
         val confirmedInput = TlsWriter()
         confirmedInput.putBytes(interimTranscriptHash)
         confirmedInput.putBytes(confirmedTranscriptHashInput)
@@ -1393,7 +1396,8 @@ class MlsGroup private constructor(
         commit: Commit,
         senderLeafIndex: Int,
         signature: ByteArray = ByteArray(0),
-    ): ByteArray = buildConfirmedTranscriptHashInput(commit, senderLeafIndex, groupId, epoch, signature)
+        wireFormat: WireFormat = WireFormat.PUBLIC_MESSAGE,
+    ): ByteArray = buildConfirmedTranscriptHashInput(commit, senderLeafIndex, groupId, epoch, signature, wireFormat)
 
     /**
      * Compute the RFC 9420 §7.9.2 parent_hash chain for a commit we are
@@ -1992,9 +1996,17 @@ class MlsGroup private constructor(
             groupId: ByteArray,
             epoch: Long,
             signature: ByteArray = ByteArray(0),
+            wireFormat: WireFormat = WireFormat.PUBLIC_MESSAGE,
         ): ByteArray {
+            // RFC 9420 §8.2: ConfirmedTranscriptHashInput carries the wire_format
+            // of the actual AuthenticatedContent — openmls passes
+            // `mls_content.wire_format()` through. When B sends a commit as a
+            // PrivateMessage (mdk default = AlwaysCiphertext outgoing), amy
+            // MUST recompute the transcript hash with wire_format=2, or the
+            // resulting confirmed_transcript_hash — and thus the
+            // confirmation_tag derived from it — silently diverges from B's.
             val writer = TlsWriter()
-            writer.putUint16(WireFormat.PUBLIC_MESSAGE.value)
+            writer.putUint16(wireFormat.value)
             writer.putOpaqueVarInt(groupId)
             writer.putUint64(epoch)
             writer.putUint8(1) // SenderType.MEMBER

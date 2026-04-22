@@ -289,6 +289,7 @@ class MlsGroupManager(
         senderLeafIndex: Int,
         confirmationTag: ByteArray,
         signature: ByteArray = ByteArray(0),
+        wireFormat: com.vitorpamplona.quartz.marmot.mls.framing.WireFormat = com.vitorpamplona.quartz.marmot.mls.framing.WireFormat.PUBLIC_MESSAGE,
     ) = mutex.withLock {
         val group = requireGroup(nostrGroupId)
 
@@ -299,7 +300,7 @@ class MlsGroupManager(
         // the current epoch key, wasting the finite retention slots.
         val retainedBefore = group.retainedSecrets()
 
-        group.processCommit(commitBytes, senderLeafIndex, confirmationTag, signature)
+        group.processCommit(commitBytes, senderLeafIndex, confirmationTag, signature, wireFormat)
 
         pushRetainedEpoch(nostrGroupId, retainedBefore)
         persistGroup(nostrGroupId)
