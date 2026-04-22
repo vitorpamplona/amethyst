@@ -363,7 +363,15 @@ configure_relays() {
   fi
 
   step "sanity-check kinds 10050/1059/445: B creates group + invites C + exchanges a message"
-  local sanity_gid sanity_c_gid sanity_create
+  local sanity_gid sanity_c_gid sanity_create c_ignore
+  # Snapshot C's pending invites before we publish, so wait_for_invite
+  # doesn't fire on a stale welcome left over from a previous run (wnd
+  # persists pending invites across restarts — we saw this cause the
+  # kind:445 sanity probe to send to B's new group while C was still
+  # sitting on an unaccepted welcome from a previous group that B
+  # wasn't a member of anymore).
+  c_ignore=$(snapshot_invites C)
+  [[ -n "$c_ignore" ]] && info "C already has stale invites, ignoring: $c_ignore"
   sanity_create=$(wn_b --json groups create "sanity-check" "$C_NPUB" 2>>"$LOG_FILE" || true)
   sanity_gid=$(printf '%s' "$sanity_create" | jq_group_id)
   printf 'sanity groups create raw: %s\n' "$sanity_create" >>"$LOG_FILE"
@@ -371,8 +379,11 @@ configure_relays() {
     warn "sanity group create failed — see $LOG_FILE (stale account state? rerun with 'rm -rf state/')"
   else
     info "sanity group id: $sanity_gid"
-    if sanity_c_gid=$(wait_for_invite C 30); then
+    if sanity_c_gid=$(wait_for_invite C 30 "$c_ignore"); then
       info "kind:10050+1059 ok — C received welcome (gid: $sanity_c_gid)"
+      if [[ "$sanity_c_gid" != "$sanity_gid" ]]; then
+        warn "gid mismatch — C saw $sanity_c_gid, B created $sanity_gid (likely a stale welcome slipped past the filter)"
+      fi
       wn_c groups accept "$sanity_c_gid" >/dev/null 2>&1 || true
       wn_b messages send "$sanity_gid" "sanity-ping" >/dev/null 2>&1 || true
       if wait_for_message C "$sanity_c_gid" "sanity-ping" 30; then
@@ -451,6 +462,12 @@ test_02_amethyst_creates_group() {
   # Amethyst sends it.
   dump_daemon_diagnostics B "pre-invite baseline"
 
+  # Snapshot B's already-pending invites so we can tell the new welcome
+  # apart from a leftover from a previous run.
+  local b_ignore
+  b_ignore=$(snapshot_invites B)
+  [[ -n "$b_ignore" ]] && info "B already has stale invites, ignoring: $b_ignore"
+
   prompt_human "In Amethyst:
   1. Tap '+' -> Create Group
   2. Name: Interop-02
@@ -464,7 +481,7 @@ that's the bug."
 
   step "polling B's daemon for invite (60s, heartbeat every ~10s)"
   local gid
-  if ! gid=$(wait_for_invite B 60); then
+  if ! gid=$(wait_for_invite B 60 "$b_ignore"); then
     fail_msg "no invite arrived at B"
     dump_daemon_diagnostics B "post-timeout (test_02)"
     prompt_amethyst_logcat "test_02 timeout"
@@ -603,13 +620,17 @@ test_04_three_member_group() {
 
   dump_daemon_diagnostics C "pre-invite baseline (test_04)"
 
+  local c_ignore
+  c_ignore=$(snapshot_invites C)
+  [[ -n "$c_ignore" ]] && info "C already has stale invites, ignoring: $c_ignore"
+
   prompt_human "In Amethyst, open the group from Test 02 (or 'Interop-04-bootstrap').
   Group Info -> Add Member -> paste: $C_NPUB
   Confirm the invite is sent."
 
   step "polling C for invite (60s, heartbeat every ~10s)"
   local c_gid
-  if ! c_gid=$(wait_for_invite C 60); then
+  if ! c_gid=$(wait_for_invite C 60 "$c_ignore"); then
     fail_msg "C never received invite"
     dump_daemon_diagnostics C "post-timeout (test_04)"
     prompt_amethyst_logcat "test_04 timeout"
@@ -642,7 +663,8 @@ test_05_wn_adds_amethyst_existing() {
   banner "Test 05 — wn adds Amethyst to existing B+C group"
 
   step "B creates group with only C, then adds A"
-  local out gid
+  local out gid c_ignore
+  c_ignore=$(snapshot_invites C)
   out=$(wn_b --json groups create "Interop-05" "$C_NPUB" 2>>"$LOG_FILE")
   printf 'wn groups create raw output: %s\n' "$out" >>"$LOG_FILE"
   gid=$(printf '%s' "$out" | jq_group_id)
@@ -652,8 +674,9 @@ test_05_wn_adds_amethyst_existing() {
     return
   fi
   save_state GROUP_05 "$gid"
-  if wait_for_invite C 30 >/dev/null; then
-    wn_c groups accept "$gid" >/dev/null 2>&1 || true
+  local c_new_gid
+  if c_new_gid=$(wait_for_invite C 30 "$c_ignore"); then
+    wn_c groups accept "$c_new_gid" >/dev/null 2>&1 || true
   fi
 
   step "B adds A to the group"
@@ -770,9 +793,11 @@ test_08_admin_promote_demote() {
   step "B (creator+admin) adds C so we have 3 members"
   wn_c keys publish >/dev/null 2>&1 || true
   sleep 3
+  local c_ignore_08 c_new_gid_08
+  c_ignore_08=$(snapshot_invites C)
   wn_b groups add-members "$gid" "$C_NPUB" >/dev/null 2>&1 || warn "add-members C returned nonzero"
-  if wait_for_invite C 30 >/dev/null; then
-    wn_c groups accept "$gid" >/dev/null 2>&1 || true
+  if c_new_gid_08=$(wait_for_invite C 30 "$c_ignore_08"); then
+    wn_c groups accept "$c_new_gid_08" >/dev/null 2>&1 || true
   fi
 
   step "B promotes A to admin"
@@ -946,9 +971,11 @@ test_12_offline_catchup() {
   done
 
   step "B adds C, then sends 3 more messages"
+  local c_ignore_12 c_new_gid_12
+  c_ignore_12=$(snapshot_invites C)
   wn_b groups add-members "$gid" "$C_NPUB" >/dev/null 2>&1 || true
-  if wait_for_invite C 30 >/dev/null; then
-    wn_c groups accept "$gid" >/dev/null 2>&1 || true
+  if c_new_gid_12=$(wait_for_invite C 30 "$c_ignore_12"); then
+    wn_c groups accept "$c_new_gid_12" >/dev/null 2>&1 || true
   fi
   for i in 6 7 8; do
     wn_b messages send "$gid" "offline-msg-$i" >/dev/null 2>&1 || true

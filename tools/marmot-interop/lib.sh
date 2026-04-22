@@ -177,17 +177,45 @@ jq_group_id() {
 
 # ------- polling helpers -----------------------------------------------------
 
-# wait_for_invite <B|C> <timeout-seconds>
-# Echoes the first new group_id that appears in `wn groups invites --json`.
+# Snapshot currently-pending invites on <B|C> as a comma-separated list of
+# gids. Use this BEFORE triggering a publish that should produce a new
+# welcome, then pass the result to `wait_for_invite` as the ignore list so
+# a stale welcome left over from a previous harness run (wnd persists
+# pending invites across restarts) doesn't register as the arrival we
+# just triggered.
+snapshot_invites() {
+    local who="$1" wnfn
+    if [[ "$who" == "B" ]]; then wnfn=wn_b
+    else                         wnfn=wn_c; fi
+    local raw
+    raw=$("$wnfn" --json groups invites 2>/dev/null || true)
+    # jq_group_id reads one invite at a time, so iterate the array in shell
+    # rather than trying to handle all shapes in a single jq expression.
+    local gids=()
+    while IFS= read -r one; do
+        [[ -z "$one" || "$one" == "null" ]] && continue
+        local g
+        g=$(printf '%s' "$one" | jq_group_id)
+        [[ -n "$g" ]] && gids+=("$g")
+    done < <(printf '%s' "$raw" | jq -c '(.result // .) | .[]?' 2>/dev/null)
+    local IFS=','; printf '%s' "${gids[*]}"
+}
+
+# wait_for_invite <B|C> <timeout-seconds> [ignore-csv]
+# Echoes the first pending group_id that isn't listed in <ignore-csv>
+# (comma-separated hex gids). Use the ignore list to skip welcomes left
+# pending by previous harness runs — otherwise `wait_for_invite` can
+# fire on a stale invite and the caller ends up driving a group the
+# publisher isn't a member of, which then looks like a kind:445 drop.
 # Returns 1 on timeout.
 #
 # Also prints a heartbeat every ~10s with:
 #   - elapsed/remaining time
-#   - current count of pending welcomes (should be 0 until it isn't)
+#   - current count of pending welcomes (total, pre-filter)
 #   - last relevant line of wnd stderr (grep for welcome/giftwrap/subscribe/error)
 # so a stalled poll gives the operator something to forward.
 wait_for_invite() {
-    local who="$1" timeout="${2:-60}" deadline gid start last_hb
+    local who="$1" timeout="${2:-60}" ignore_csv="${3:-}" deadline gid start last_hb
     local wnfn data_dir
     if [[ "$who" == "B" ]]; then wnfn=wn_b; data_dir="$B_DIR"
     else                         wnfn=wn_c; data_dir="$C_DIR"; fi
@@ -198,27 +226,32 @@ wait_for_invite() {
         # Post-v0.2 `wn --json groups invites` returns `{"result": [...]}`
         # (older builds returned the bare array). Peel the wrapper when
         # present so a pending invite is actually detected.
-        gid=$("$wnfn" --json groups invites 2>/dev/null \
-                | jq -c '(.result // .) | .[0] // empty' 2>/dev/null | jq_group_id || true)
-        if [[ -n "${gid:-}" ]]; then
-            printf '%s\n' "$gid"
-            return 0
-        fi
+        local raw
+        raw=$("$wnfn" --json groups invites 2>/dev/null || true)
+        # Walk every pending invite (not just .[0]) so we skip past stales.
+        while IFS= read -r one; do
+            [[ -z "$one" || "$one" == "null" ]] && continue
+            gid=$(printf '%s' "$one" | jq_group_id)
+            [[ -z "$gid" ]] && continue
+            if [[ ",$ignore_csv," != *",$gid,"* ]]; then
+                printf '%s\n' "$gid"
+                return 0
+            fi
+        done < <(printf '%s' "$raw" | jq -c '(.result // .) | .[]?' 2>/dev/null)
 
         # Heartbeat every ~10s.
         local now=$(date +%s)
         if (( now - last_hb >= 10 )); then
             local elapsed=$(( now - start )) remaining=$(( deadline - now ))
             local pending
-            pending=$("$wnfn" --json groups invites 2>/dev/null \
-                        | jq '(.result // .) | length' 2>/dev/null || echo "?")
+            pending=$(printf '%s' "$raw" | jq '(.result // .) | length' 2>/dev/null || echo "?")
             local recent=""
             if [[ -f "$data_dir/logs/stderr.log" ]]; then
                 recent=$(tail -n 200 "$data_dir/logs/stderr.log" 2>/dev/null \
                     | grep -iE 'welcome|giftwrap|gift_wrap|mls|subscribe|1059|444|error|warn' \
                     | tail -n 1 || true)
             fi
-            info "$who wait_for_invite +${elapsed}s (remaining ${remaining}s)  pending=$pending  tail: ${recent:-<no relevant wnd log yet>}"
+            info "$who wait_for_invite +${elapsed}s (remaining ${remaining}s)  pending=$pending  ignoring=${ignore_csv:-<none>}  tail: ${recent:-<no relevant wnd log yet>}"
             last_hb=$now
         fi
 
