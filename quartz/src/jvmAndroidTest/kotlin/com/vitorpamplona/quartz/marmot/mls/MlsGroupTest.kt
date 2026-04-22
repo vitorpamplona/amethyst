@@ -254,17 +254,18 @@ class MlsGroupTest {
         val groupInfoBytes = alice.groupInfo().toTlsBytes()
 
         // Zara joins via external commit (without a Welcome)
-        val (zara, commitBytes) =
+        val externalJoin =
             MlsGroup.externalJoin(
                 groupInfoBytes,
                 "zara".encodeToByteArray(),
             )
+        val zara = externalJoin.group
 
         // Zara is now in the group at epoch 1
         assertEquals(1L, zara.epoch)
 
         // Alice processes Zara's external commit
-        alice.processCommit(commitBytes, zara.leafIndex, ByteArray(0))
+        alice.processFramedCommit(externalJoin.framedCommitBytes)
         assertEquals(1L, alice.epoch)
         assertEquals(2, alice.memberCount)
     }

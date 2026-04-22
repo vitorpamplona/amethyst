@@ -24,6 +24,7 @@ import com.vitorpamplona.quartz.marmot.mls.codec.TlsReader
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsWriter
 import com.vitorpamplona.quartz.marmot.mls.crypto.MlsCryptoProvider
 import com.vitorpamplona.quartz.marmot.mls.messages.CommitResult
+import com.vitorpamplona.quartz.marmot.mls.messages.ExternalJoinResult
 import com.vitorpamplona.quartz.marmot.mls.messages.KeyPackageBundle
 import com.vitorpamplona.quartz.marmot.mls.schedule.KeySchedule
 import com.vitorpamplona.quartz.marmot.mls.schedule.SecretTree
@@ -246,12 +247,12 @@ class MlsGroupManager(
         groupInfoBytes: ByteArray,
         identity: ByteArray,
         signingKey: ByteArray? = null,
-    ): Pair<MlsGroup, ByteArray> =
+    ): ExternalJoinResult =
         mutex.withLock {
-            val (group, commitBytes) = MlsGroup.externalJoin(groupInfoBytes, identity, signingKey)
-            groups[nostrGroupId] = group
+            val result = MlsGroup.externalJoin(groupInfoBytes, identity, signingKey)
+            groups[nostrGroupId] = result.group
             persistGroup(nostrGroupId)
-            Pair(group, commitBytes)
+            result
         }
 
     // --- Epoch Transitions ---
