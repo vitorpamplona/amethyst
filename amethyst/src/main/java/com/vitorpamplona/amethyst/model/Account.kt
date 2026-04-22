@@ -3036,7 +3036,11 @@ class Account(
                                 val innerEvent =
                                     com.vitorpamplona.quartz.nip01Core.core.Event
                                         .fromJson(json)
-                                val isNew = cache.justConsume(innerEvent, null, false)
+                                // MIP-03 inner events are unsigned rumors
+                                // (empty sig); pass wasVerified=true so
+                                // LocalCache skips the Nostr secp256k1 check
+                                // that would silently reject them.
+                                val isNew = cache.justConsume(innerEvent, null, true)
                                 val innerNote = cache.getOrCreateNote(innerEvent.id)
                                 if (isNew) {
                                     innerNote.event = innerEvent

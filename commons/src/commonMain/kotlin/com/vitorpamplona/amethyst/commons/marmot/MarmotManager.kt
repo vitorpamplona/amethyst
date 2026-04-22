@@ -155,17 +155,25 @@ class MarmotManager(
     ): OutboundGroupEvent = outboundProcessor.buildGroupEvent(nostrGroupId, innerEvent)
 
     /**
-     * Build a kind:9 chat-message GroupEvent from plain text. The inner event is
-     * signed with this manager's signer and optionally persisted to the local
-     * decrypted-message log so `loadStoredMessages` reflects our own outbound
-     * immediately (without waiting for relay loopback).
+     * Build a kind:9 chat-message GroupEvent from plain text. The inner
+     * event is built as an UNSIGNED rumor per MIP-03 ("Inner events MUST
+     * remain unsigned — this ensures leaked events cannot be published to
+     * public relays"): the MLS sender authenticates via the LeafNode
+     * credential + the `pubkey` ↔ sender-identity equality check, so
+     * the inner Nostr signature is redundant, and leaving it in would
+     * let a leaked plaintext be replayed as a valid public kind:9.
      *
-     * Platform callers that already maintain their own "own event" cache (i.e.
-     * Amethyst's `LocalCache.justConsumeMyOwnEvent`) should pass `persistOwn = false`.
-     * Headless callers (CLI) should leave it at the default.
+     * Optionally persisted to the local decrypted-message log so
+     * `loadStoredMessages` reflects our own outbound immediately
+     * (without waiting for relay loopback).
+     *
+     * Platform callers that already maintain their own "own event" cache
+     * (i.e. Amethyst's `LocalCache.justConsumeMyOwnEvent`) should pass
+     * `persistOwn = false`. Headless callers (CLI) should leave it at
+     * the default.
      *
      * @return the signed kind:445 outer event together with the inner kind:9
-     *   event id, so the caller can reference it for replies/reactions.
+     *   rumor id, so the caller can reference it for replies/reactions.
      */
     suspend fun buildTextMessage(
         nostrGroupId: HexKey,
@@ -175,7 +183,9 @@ class MarmotManager(
         val template =
             com.vitorpamplona.quartz.nip01Core.signers
                 .eventTemplate<Event>(kind = 9, description = text)
-        val innerEvent = signer.sign<Event>(template)
+        val innerEvent =
+            com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
+                .assembleRumor<Event>(signer.pubKey, template)
         val outbound = buildGroupMessage(nostrGroupId, innerEvent)
         if (persistOwn) persistDecryptedMessage(nostrGroupId, innerEvent.toJson())
         return TextMessageBundle(outbound = outbound, innerEvent = innerEvent)
