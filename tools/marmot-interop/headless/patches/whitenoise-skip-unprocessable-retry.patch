@@ -6,15 +6,14 @@
                  // Handle retry logic for actual processing errors
 -                if retry_info.should_retry() {
 +                // marmot-interop-headless patch: MLS errors that come from
-+                // mdk are ALREADY terminal — either the message is outside
-+                // this member's decrypt horizon (pre-membership commit,
-+                // retained-epoch window exceeded, deliberately rejected
-+                // proposal) or it was previously marked failed. Retrying
-+                // them 10 times with exponential backoff (total ~17 min)
-+                // just blocks later decryptable commits behind a queue of
-+                // doomed retries, so every later join / rename / leave
-+                // propagation races the test timeout. Treat them all as
-+                // one-shot: log once, move on.
++                // mdk are ALREADY terminal — mdk doesn't retry internally, so
++                // any Err it returns (Unprocessable, PreviouslyFailed, decrypt
++                // failure, group-not-found, etc.) is provably permanent.
++                // Retrying those 10 times with exponential backoff (total
++                // ~17 min) just blocks later decryptable commits behind a
++                // queue of doomed retries, so every later join / rename /
++                // leave propagation races the test timeout. Treat them all
++                // as one-shot: log once, move on.
 +                let is_terminal = matches!(
 +                    e,
 +                    WhitenoiseError::MlsMessageUnprocessable(_)
