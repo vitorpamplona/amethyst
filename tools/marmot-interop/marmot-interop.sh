@@ -420,8 +420,18 @@ instruct_amethyst_setup() {
   1. Settings -> Relays:  add the following as READ+WRITE
 $list
   2. Settings -> Key Package Relays:  add the SAME URLs
-  3. Trigger key-package publish (toggle KP relay on/off if needed)
-  4. Confirm your Amethyst account is logged in with npub: $A_NPUB"
+  3. Settings -> DM Inbox Relays (NIP-17/kind:10050):  add the SAME URLs.
+     CRITICAL for Test 03+: when wn invites Amethyst it fetches A's
+     kind:10050 and publishes the welcome gift wrap there. Amethyst's
+     built-in DM inbox defaults (auth.nostr1.com, relay.0xchat.com)
+     are not reachable from the wn daemon in this harness, so unless
+     the five harness relays are in the 10050 list the gift wrap lands
+     on relays Amethyst-the-reader isn't subscribed to.
+  4. Trigger key-package publish (toggle KP relay on/off if needed).
+  5. Re-publish the NIP-65 + DM-inbox lists if Amethyst hasn't already
+     (relay toggles usually republish automatically; verify by looking
+     for kind:10002 / 10050 in any relay inspector).
+  6. Confirm your Amethyst account is logged in with npub: $A_NPUB"
 }
 
 # ==== tests ==================================================================
