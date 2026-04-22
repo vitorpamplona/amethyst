@@ -67,6 +67,7 @@ fun ShowUserSuggestionList(
     accountViewModel: AccountViewModel,
     modifier: Modifier = Modifier,
     onEmpty: @Composable () -> Unit = {},
+    trailingContent: (@Composable (User) -> Unit)? = null,
 ) {
     UserSearchDataSourceSubscription(userSuggestions, accountViewModel)
 
@@ -87,7 +88,7 @@ fun ShowUserSuggestionList(
         }
     }
 
-    WatchResponses(userSuggestions, listState, onSelect, accountViewModel, modifier, onEmpty)
+    WatchResponses(userSuggestions, listState, onSelect, accountViewModel, modifier, onEmpty, trailingContent)
 }
 
 @Composable
@@ -110,6 +111,7 @@ fun WatchResponses(
     accountViewModel: AccountViewModel,
     modifier: Modifier = Modifier,
     onEmpty: @Composable () -> Unit = {},
+    trailingContent: (@Composable (User) -> Unit)? = null,
 ) {
     val suggestions by userSuggestions.results.collectAsStateWithLifecycle(emptyList())
 
@@ -120,7 +122,7 @@ fun WatchResponses(
             state = listState,
         ) {
             itemsIndexed(suggestions, key = { _, item -> item.pubkeyHex }) { _, item ->
-                UserLine(item, accountViewModel) { onSelect(item) }
+                UserLine(item, accountViewModel, trailingContent) { onSelect(item) }
                 HorizontalDivider(
                     thickness = DividerThickness,
                 )
@@ -135,6 +137,7 @@ fun WatchResponses(
 fun UserLine(
     baseUser: User,
     accountViewModel: AccountViewModel,
+    trailingContent: (@Composable (User) -> Unit)? = null,
     onClick: () -> Unit,
 ) {
     SlimListItem(
@@ -153,6 +156,7 @@ fun UserLine(
                 WatchAndDisplayNip05Row(baseUser, accountViewModel)
             }
         },
+        trailingContent = trailingContent?.let { { it(baseUser) } },
     )
 }
 
