@@ -307,6 +307,32 @@ class MlsGroupManager(
         persistGroup(nostrGroupId)
     }
 
+    /**
+     * Process a fully-framed `MlsMessage(PublicMessage(Commit))` — the wire shape
+     * returned in [CommitResult.framedCommitBytes]. Delegates to
+     * [MlsGroup.processFramedCommit] which extracts the sender leaf index,
+     * confirmation_tag, and FramedContentTBS signature from the envelope, then
+     * calls [MlsGroup.processCommit] with all fields properly populated.
+     *
+     * Intended for callers that hold the framed bytes directly (tests driving
+     * peer managers, CLI interop harnesses). Production inbound goes through
+     * `MarmotInboundProcessor`, which unwraps the outer ChaCha20 layer first
+     * and then calls [processCommit] with the already-decoded PublicMessage
+     * fields.
+     */
+    suspend fun processFramedCommit(
+        nostrGroupId: HexKey,
+        framedCommitBytes: ByteArray,
+    ) = mutex.withLock {
+        val group = requireGroup(nostrGroupId)
+        val retainedBefore = group.retainedSecrets()
+
+        group.processFramedCommit(framedCommitBytes)
+
+        pushRetainedEpoch(nostrGroupId, retainedBefore)
+        persistGroup(nostrGroupId)
+    }
+
     // --- Message Encryption/Decryption ---
 
     /**

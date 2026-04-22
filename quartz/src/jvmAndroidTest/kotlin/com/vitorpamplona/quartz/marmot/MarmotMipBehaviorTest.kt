@@ -202,8 +202,12 @@ class MarmotMipBehaviorTest {
             val manager = createGroupManager()
             manager.createGroup(groupId, aliceId.hexToByteArray())
 
+            // disappearing_message_secs is a v3+ field. CURRENT_VERSION is held at 2 for
+            // MDK interop, so the encoder only emits the field for version ≥ 3 — pin
+            // version=3 here so the outbound processor actually sees the setting.
             val configured =
                 MarmotGroupData(
+                    version = 3,
                     nostrGroupId = groupId,
                     adminPubkeys = listOf(aliceId),
                     disappearingMessageSecs = 3600UL,
