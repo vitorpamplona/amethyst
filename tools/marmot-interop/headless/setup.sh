@@ -230,6 +230,18 @@ start_daemon() {
     info "$name daemon already running"; return 0
   fi
   rm -f "$socket"
+  # The mock keyring (WHITENOISE_MOCK_KEYRING=1) is in-memory only and
+  # resets to empty on every wnd restart, but the SQLite databases that
+  # wnd writes under $data_dir persist across runs and reference keys that
+  # no longer exist — wnd then bails with KeyringEntryMissingForExistingDatabase
+  # before it can even open a socket. Wipe the keyring-dependent state on
+  # each start so the daemon always comes up cold and consistent. Logs
+  # and the pid file are preserved for post-mortem.
+  if [[ -d "$data_dir" ]]; then
+    find "$data_dir" -mindepth 1 -maxdepth 1 \
+      ! -name 'logs' ! -name 'pid' \
+      -exec rm -rf {} + 2>/dev/null || true
+  fi
   mkdir -p "$data_dir/logs" "$data_dir/release"
   # Env vars consumed by the two harness-only wnd patches applied in
   # preflight:
@@ -243,15 +255,39 @@ start_daemon() {
     WHITENOISE_MOCK_KEYRING=1 \
     nohup "$WND_BIN" --data-dir "$data_dir" --logs-dir "$data_dir/logs" \
       >"$data_dir/logs/stdout.log" 2>"$data_dir/logs/stderr.log" &
-  echo "$!" > "$data_dir/pid"
+  local pid=$!
+  echo "$pid" > "$data_dir/pid"
+  info "$name pid $pid; waiting for socket at $socket …"
   local deadline=$(( $(date +%s) + 30 ))
   while [[ $(date +%s) -lt $deadline ]]; do
     if [[ -S "$socket" ]] && "$WN_BIN" --socket "$socket" whoami >/dev/null 2>&1; then
       info "$name ready"; return 0
     fi
+    # Exit early if wnd already crashed — no point waiting the full 30s.
+    if ! kill -0 "$pid" 2>/dev/null; then
+      break
+    fi
     sleep 1
   done
-  fail_msg "$name daemon failed to start (see $data_dir/logs/stderr.log)"
+  # Dump the actual failure so the operator doesn't have to chase a path.
+  if kill -0 "$pid" 2>/dev/null; then
+    fail_msg "$name daemon still running (pid $pid) but socket $socket never appeared within 30s"
+    kill "$pid" 2>/dev/null || true
+  else
+    fail_msg "$name daemon (pid $pid) exited before creating socket $socket"
+  fi
+  if [[ -s "$data_dir/logs/stderr.log" ]]; then
+    printf '  --- last 40 lines of %s ---\n' "$data_dir/logs/stderr.log" >&2
+    tail -n 40 "$data_dir/logs/stderr.log" | sed 's/^/  /' >&2
+    printf '  --- end stderr ---\n' >&2
+  else
+    info "stderr log is empty at $data_dir/logs/stderr.log"
+  fi
+  if [[ -s "$data_dir/logs/stdout.log" ]]; then
+    printf '  --- last 20 lines of %s ---\n' "$data_dir/logs/stdout.log" >&2
+    tail -n 20 "$data_dir/logs/stdout.log" | sed 's/^/  /' >&2
+    printf '  --- end stdout ---\n' >&2
+  fi
   exit 1
 }
 
