@@ -340,6 +340,11 @@
     <string name="private_conversation_notification">"&lt;无法解密私密消息&gt;\n\n；你被 %1$s 和 %2$s 之间的私人/加密会话引用。"</string>
     <string name="account_switch_add_account_dialog_title">添加新账户</string>
     <string name="drawer_accounts">账户</string>
+    <string name="drawer_section_navigate">导航</string>
+    <string name="drawer_section_you">你</string>
+    <string name="drawer_section_feeds">源</string>
+    <string name="drawer_section_create">创建</string>
+    <string name="drawer_section_system">系统</string>
     <string name="account_switch_select_account">选择账户</string>
     <string name="account_switch_add_account_btn">添加新账户</string>
     <string name="account_switch_active_account">活跃账户</string>
@@ -450,6 +455,9 @@
     <string name="profile_badges_empty">您还没有收到任何徽章。</string>
     <string name="pictures">图片</string>
     <string name="shorts">短视频</string>
+    <string name="public_chats">公共聊天</string>
+    <string name="follow_packs">关注包</string>
+    <string name="live_streams">直播</string>
     <string name="longs">视频</string>
     <string name="articles">文章</string>
     <string name="private_bookmarks">私人书签</string>
@@ -1346,6 +1354,10 @@
     <string name="like_description">点赞</string>
     <string name="zap_description">打闪</string>
     <string name="change_reaction">修改快速回应</string>
+    <string name="bottom_bar_settings">底部导航栏</string>
+    <string name="bottom_bar_settings_description">拖动可重新排序。切换可从底部栏中添加或删除一个项目。无项目则底部栏隐藏。</string>
+    <string name="bottom_bar_settings_available">可用</string>
+    <string name="bottom_bar_settings_reorder">调整顺序</string>
     <string name="reactions_settings">回应设置</string>
     <string name="reactions_settings_description">配置显示的回应按钮、按钮顺序及是否显示回应计数。</string>
     <string name="reactions_settings_enabled">已启用</string>
@@ -2166,6 +2178,7 @@
     <string name="emoji_pack_is_not_in_list">\"%1$s\" 不在您的表情列表中</string>
     <string name="emoji_pack_actions_dialog_title">表情包操作</string>
     <string name="manage_emoji_packs">我的表情包</string>
+    <string name="emoji_sets">表情</string>
     <string name="browse_emoji_sets">浏览表情集</string>
     <string name="emoji_private_toggle">私密</string>
     <string name="emoji_private_badge">私密表情</string>

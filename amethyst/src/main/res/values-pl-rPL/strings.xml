@@ -99,8 +99,8 @@
     <string name="thank_you_so_much">Dziękuję bardzo!</string>
     <string name="amount_in_sats">Kwota w satoszach</string>
     <string name="send_sats">Wyślij</string>
-    <string name="secret_emoji_maker">Kreator tajnych emoji</string>
-    <string name="secret_emoji_maker_explainer">Dodaj emoji z ukrytą wiadomością do wpisu</string>
+    <string name="secret_emoji_maker">Kreator tajnych emotikonów</string>
+    <string name="secret_emoji_maker_explainer">Dodaj emotikon z ukrytą wiadomością do wpisu</string>
     <string name="secret_note_to_receiver">Tajna notatka dla odbiorcy</string>
     <string name="secret_note_to_receiver_placeholder">Treść tajnej notatki</string>
     <string name="secret_visible_text">Widoczny prefiks</string>
@@ -458,6 +458,7 @@
     <string name="pinned_notes_explainer">Twoje przypięte notatki</string>
     <string name="pin_to_profile">Przypnij do profilu</string>
     <string name="unpin_from_profile">Odepnij z profilu</string>
+    <string name="deleted_items_banner_title">%1$d usuniętych z tej listy przez ich autora.</string>
     <string name="deleted_items_banner_remove">Usuń z listy</string>
     <string name="deleted_items_banner_dismiss">Odrzuć</string>
     <string name="bookmark_lists">Listy zakładek</string>
@@ -472,8 +473,20 @@
     <string name="bookmark_list_links_btn_label">Zobacz linki</string>
     <string name="bookmark_list_hashtags_btn_label">Zobacz Hashtagi</string>
     <string name="bookmark_list_feed_empty_msg">Nie masz jeszcze żadnych list zakładek. Naciśnij nowy przycisk poniżej, aby utworzyć listę.</string>
+    <string name="interest_sets_title">Zestawy hasztagów</string>
+    <string name="interest_sets_empty">Nie masz jeszcze żadnych grup zainteresowań. Kliknij przycisk „Nowa Grupa” poniżej, aby utworzyć nową.</string>
+    <string name="interest_set_create_btn_label">Nowa Grupa</string>
+    <string name="interest_set_creation_screen_title">Nowa Grupa Zainteresowań</string>
+    <string name="interest_set_name_label">Nazwa zestawu</string>
+    <string name="interest_set_name_placeholder">Moje zainteresowania</string>
+    <string name="interest_set_hashtag_add_placeholder">Dodaj hasztag</string>
+    <string name="interest_set_hashtag_private_toggle">Prywatna</string>
+    <string name="interest_set_hashtag_count">%1$d hasztagi</string>
+    <string name="interest_set_actions_dialog_title">Opcje Grupy Zainteresowań</string>
     <string name="interest_set_rename">Zmień nazwę</string>
     <string name="interest_set_clone">Sklonuj</string>
+    <string name="interest_set_add_hashtag">Dodaj hasztag</string>
+    <string name="interest_set_toggle_visibility">Przełącz publiczna/prywatna</string>
     <string name="private_posts_label">Prywatne posty</string>
     <string name="private_posts_count">Prywatnych postów: (%1$s)</string>
     <string name="public_posts_label">Publiczne posty</string>
@@ -618,6 +631,7 @@
     <string name="follow_list_aroundme">W pobliżu</string>
     <string name="follow_list_global">Wszystkie</string>
     <string name="follow_list_chess">Szachy</string>
+    <string name="follow_list_mine">Moje</string>
     <string name="follow_list_mute_list">Zablokowane</string>
     <string name="follow_sets">Listy obserwowanych</string>
     <string name="follow_sets_explainer">Są to listy obserwowanych przeznaczone do prywatnego użytku. Możesz obserwować użytkowników dyskretnie lub otwarcie</string>
@@ -975,6 +989,7 @@
     <string name="theme">Motyw</string>
     <string name="automatically_load_images_gifs">Podgląd obrazu</string>
     <string name="automatically_play_videos">Odtwarzanie filmów</string>
+    <string name="autoplay_videos">Autoodtwarzanie filmów</string>
     <string name="automatically_show_url_preview">Podgląd URL</string>
     <string name="automatically_hide_nav_bars">Aktywne Przewijanie</string>
     <string name="automatically_hide_nav_bars_description">Ukrywa pasek przewijania</string>
@@ -1045,6 +1060,7 @@
     <string name="theme_description">Motyw ciemny, jasny lub automatyczny</string>
     <string name="automatically_load_images_gifs_description">Automatycznie załaduj obrazki i Gify</string>
     <string name="automatically_play_videos_description">Automatycznie odtwarzaj filmy i pliki GIF</string>
+    <string name="autoplay_videos_description">Automatycznie odtwarzaj filmy, gdy są widoczne na ekranie</string>
     <string name="automatically_show_url_preview_description">Pokaż podgląd linków</string>
     <string name="load_image_description">Kiedy załadować obrazki</string>
     <string name="copy_stack_to_clipboard">Skopiuj</string>
@@ -1335,7 +1351,7 @@
     <string name="reactions_settings_boost">Udostępnij</string>
     <string name="reactions_settings_boost_description">Udostępnij lub zacytuj ten wpis</string>
     <string name="reactions_settings_like">Lubię</string>
-    <string name="reactions_settings_like_description">Zareaguj na ten wpis, używając emoji</string>
+    <string name="reactions_settings_like_description">Zareaguj na ten wpis, używając emotikon</string>
     <string name="reactions_settings_zap">Zap</string>
     <string name="reactions_settings_zap_description">Wyślij płatność Lightning do autora</string>
     <string name="reactions_settings_share">Prześlij dalej</string>
@@ -1545,6 +1561,7 @@
     <string name="select_list_to_filter">Wybierz listę profili, aby filtrować aktualności</string>
     <string name="feed_group_feeds">Kanały</string>
     <string name="feed_group_hashtags">Hashtagi</string>
+    <string name="feed_group_interest_sets">Grupy zainteresowań</string>
     <string name="feed_group_locations">Lokalizacje</string>
     <string name="feed_group_communities">Społeczności</string>
     <string name="feed_group_lists">Listy</string>
@@ -1553,6 +1570,11 @@
     <string name="feed_group_relays">Transmitery</string>
     <string name="add_dvm_to_favorites">Dodaj algorytm kanału do ulubionych</string>
     <string name="remove_dvm_from_favorites">Usuń z ulubionych</string>
+    <string name="favorite_dvms_title">Algorytmy ulubionych kanałów</string>
+    <string name="favorite_dvms_explainer">Algorytmy kanałów, które tutaj oznaczyłeś gwiazdką, pojawiają się jako ikony filtrów na stronie głównej. Otwórz sekcję Odkryj, aby dodać kolejne.</string>
+    <string name="favorite_dvms_empty">Brak algorytmów ulubionych kanałów. Otwórz sekcję „Odkrywaj”, wybierz jeden z nich i oznacz go gwiazdką, aby dodać go tutaj.</string>
+    <string name="dvm_home_status_requesting">Poproś %1$s o wyświetlenie treści…</string>
+    <string name="dvm_home_status_requesting_all">Poproś algorytmy o wyświetlenie ulubionych treści…</string>
     <string name="dvm_home_status_processing">Przetwarzanie statusu kanału…</string>
     <string name="dvm_home_status_payment_required">Ten algorytm kanału jest płatny</string>
     <string name="dvm_home_status_error">Algorytm kanału zwrócił błąd</string>
@@ -1712,7 +1734,7 @@
     <string name="kind_follow_list">Lista obserwowanych</string>
     <string name="kind_deletions">Usunięcia</string>
     <string name="kind_drafts">Wersje robocze</string>
-    <string name="kind_emoji_packs">Pakiety emoji</string>
+    <string name="kind_emoji_packs">Pakiety emotikonów</string>
     <string name="kind_emoji_pack_list">Lista Pakietów Emoji</string>
     <string name="kind_ephemeral_chat">Czat efemeryczny</string>
     <string name="kind_ephemeral_chatrooms">Efemeryczne pokoje czatowe</string>
@@ -1893,7 +1915,7 @@
     <string name="event_sync_status_completed">Zakończone</string>
     <!-- M3 Action Dialog titles -->
     <string name="mark_as_read_dialog_title">Oznacz jako Przeczytane</string>
-    <string name="note_actions_dialog_title">Akcje wpisu</string>
+    <string name="note_actions_dialog_title">Opcje wpisu</string>
     <string name="profile_actions_dialog_title">Akcje profilu</string>
     <string name="media_actions_dialog_title">Akcje multimediów</string>
     <string name="playback_actions_dialog_title">Odtwarzanie</string>
@@ -2109,4 +2131,39 @@
     <string name="ai_tone_punchy">Mocny</string>
     <string name="ai_tone_emojify">+ Emoji</string>
     <!-- Emoji packs -->
+    <string name="emoji_packs_title">Pakiety emotikonów</string>
+    <string name="emoji_pack_management_title">Dodaj do listy emotikonów</string>
+    <string name="add_to_emoji_list">Dodaj do mojej listy emotikonów</string>
+    <string name="remove_from_emoji_list">Usuń z mojej listy emotikonów</string>
+    <string name="new_emoji_pack">Nowy pakiet emotikonów</string>
+    <string name="edit_emoji_pack">Edytuj pakiet emotikonów</string>
+    <string name="emoji_shortcode_label">Krótki kod (np. :smile:)</string>
+    <string name="emoji_shortcode_invalid">Tylko litery, cyfry, myślniki i podkreślenia</string>
+    <string name="emoji_url_label">Adres URL obrazu</string>
+    <string name="emoji_pack_address_label">Adres pakietu (opcjonalnie)</string>
+    <string name="emoji_pack_name_label">Nazwa pakietu</string>
+    <string name="emoji_pack_description_label">Opis (opcjonalnie)</string>
+    <string name="emoji_pack_image_label">Adres URL miniaturki (opcjonalnie)</string>
+    <string name="emoji_pack_upload_image_cta">Wgraj okładkę</string>
+    <string name="emoji_pack_upload_image_hint">Wybierz kwadratowe zdjęcie, które będzie reprezentować ten zestaw emotikonów.</string>
+    <string name="no_emoji_packs">Nie masz jeszcze żadnych pakietów emotikonów</string>
+    <string name="emoji_pack_count">%1$d emotikon</string>
+    <string name="my_emoji_list_title">Moja lista emotikonów</string>
+    <string name="my_emoji_list_explainer">Pakiety emotikonów dodane do Twojej listy (NIP-51 typ 10030)</string>
+    <string name="my_emoji_list_empty">Nie dodałeś jeszcze żadnych pakietów emotikonów do swojej listy</string>
+    <string name="my_emoji_list_by_author">przez %1$s</string>
+    <string name="add_emoji_fab">Dodaj emotikonę</string>
+    <string name="emoji_add_dialog_title">Dodaj własne emotikony</string>
+    <string name="emoji_remove_dialog_title">Usunąć: %1$s:?</string>
+    <string name="emoji_long_press_hint">Naciśnij i przytrzymaj emotikonę, aby usunąć</string>
+    <string name="emoji_pack_is_in_list">\"%1$s\" jest na liście emotikon</string>
+    <string name="emoji_pack_is_not_in_list">\"%1$s\" nie jest na liście emotikon</string>
+    <string name="emoji_pack_actions_dialog_title">Opcje pakietu emotikon</string>
+    <string name="manage_emoji_packs">Moje pakiety emotikonów</string>
+    <string name="emoji_sets">Emotikony</string>
+    <string name="browse_emoji_sets">Przeglądaj zestawy emotikonów</string>
+    <string name="emoji_private_toggle">Prywatna</string>
+    <string name="emoji_private_badge">Prywatna emotikona</string>
+    <string name="emoji_public_explainer">Publiczne emotikony są widoczne dla wszystkich i pojawiają się w menu odezw oraz w oknie podpowiedzi \":\", jeśli ten pakiet znajduje się na liście emotikonów.</string>
+    <string name="emoji_private_explainer">Prywatne emotikony są przechowywane zaszyfrowane na transmiterach i widoczne tylko dla Ciebie. Znajdują się w menu odzewów oraz w autouzupełnianiu po wpisaniu znaku „:” – tak samo jak emotikony publiczne.</string>
 </resources>
