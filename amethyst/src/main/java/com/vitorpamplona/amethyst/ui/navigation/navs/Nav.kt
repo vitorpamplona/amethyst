@@ -25,6 +25,7 @@ import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
 import androidx.compose.runtime.Stable
 import androidx.navigation.NavHostController
+import com.vitorpamplona.amethyst.ui.navigation.SKIP_SLIDE_ANIMATION_KEY
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.getRouteWithArguments
 import kotlinx.coroutines.CoroutineScope
@@ -38,11 +39,6 @@ class Nav(
 ) : INav {
     override val drawerState = DrawerState(DrawerValue.Closed)
 
-    // Read by composableFromEnd transition lambdas; true means the next
-    // navigation is a bottom-bar tab swap and should skip the slide animation.
-    @Volatile
-    var skipSlideAnimation: Boolean = false
-
     override fun closeDrawer() {
         navigationScope.launch { drawerState.close() }
     }
@@ -54,7 +50,6 @@ class Nav(
     override fun nav(route: Route) {
         navigationScope.launch {
             if (getRouteWithArguments(route::class, controller) != route) {
-                skipSlideAnimation = false
                 controller.navigate(route)
             }
         }
@@ -64,7 +59,6 @@ class Nav(
         navigationScope.launch {
             val route = computeRoute()
             if (route != null && getRouteWithArguments(route::class, controller) != route) {
-                skipSlideAnimation = false
                 controller.navigate(route)
             }
         }
@@ -72,7 +66,6 @@ class Nav(
 
     override fun newStack(route: Route) {
         navigationScope.launch {
-            skipSlideAnimation = false
             controller.navigate(route) {
                 popUpTo(route) {
                     inclusive = true
@@ -84,13 +77,15 @@ class Nav(
 
     override fun navBottomBar(route: Route) {
         navigationScope.launch {
-            skipSlideAnimation = true
             controller.navigate(route) {
                 popUpTo(route) {
                     inclusive = true
                 }
                 launchSingleTop = true
             }
+            // Stamp the entry so composableFromEnd's transition lambdas can
+            // skip the slide animation when this entry enters or exits.
+            controller.getBackStackEntry(route).savedStateHandle[SKIP_SLIDE_ANIMATION_KEY] = true
         }
     }
 
@@ -106,7 +101,6 @@ class Nav(
         klass: KClass<T>,
     ) {
         navigationScope.launch {
-            skipSlideAnimation = false
             controller.navigate(route) {
                 popUpTo(klass) { inclusive = true }
             }

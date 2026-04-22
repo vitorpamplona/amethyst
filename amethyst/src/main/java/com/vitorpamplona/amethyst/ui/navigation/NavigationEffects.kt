@@ -33,26 +33,26 @@ import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
-import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 
-inline fun <reified T : Any> NavGraphBuilder.composableFromEnd(
-    nav: Nav,
-    noinline content: @Composable AnimatedContentScope.(NavBackStackEntry) -> Unit,
-) {
+// Per-entry hint stored on NavBackStackEntry.savedStateHandle by
+// Nav.navBottomBar. When present, composableFromEnd skips the horizontal
+// slide so bottom-bar taps fall back to the NavHost-level fade.
+const val SKIP_SLIDE_ANIMATION_KEY = "skipSlideAnimation"
+
+fun NavBackStackEntry.skipsSlideAnimation(): Boolean = savedStateHandle.get<Boolean>(SKIP_SLIDE_ANIMATION_KEY) == true
+
+inline fun <reified T : Any> NavGraphBuilder.composableFromEnd(noinline content: @Composable AnimatedContentScope.(NavBackStackEntry) -> Unit) {
     composable<T>(
-        enterTransition = { if (nav.skipSlideAnimation) null else slideInHorizontallyFromEnd },
-        exitTransition = { if (nav.skipSlideAnimation) null else scaleOut },
-        popEnterTransition = { if (nav.skipSlideAnimation) null else scaleIn },
-        popExitTransition = { if (nav.skipSlideAnimation) null else slideOutHorizontallyToEnd },
+        enterTransition = { if (targetState.skipsSlideAnimation()) null else slideInHorizontallyFromEnd },
+        exitTransition = { if (targetState.skipsSlideAnimation()) null else scaleOut },
+        popEnterTransition = { if (initialState.skipsSlideAnimation()) null else scaleIn },
+        popExitTransition = { if (initialState.skipsSlideAnimation()) null else slideOutHorizontallyToEnd },
         content = content,
     )
 }
 
-inline fun <reified T : Any> NavGraphBuilder.composableFromEndArgs(
-    nav: Nav,
-    noinline content: @Composable AnimatedContentScope.(T) -> Unit,
-) {
-    composableFromEnd<T>(nav) {
+inline fun <reified T : Any> NavGraphBuilder.composableFromEndArgs(noinline content: @Composable AnimatedContentScope.(T) -> Unit) {
+    composableFromEnd<T> {
         content(it.toRoute<T>())
     }
 }
