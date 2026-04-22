@@ -574,10 +574,17 @@ class MlsGroup private constructor(
         val commit = Commit(proposalOrRefs, updatePath)
         val commitBytes = commit.toTlsBytes()
 
-        // Advance epoch
+        // Advance epoch.
+        // RFC 9420 §9.2: commit_secret is the path_secret for the "virtual" node
+        // one step past the root — i.e. `DeriveSecret(path_secret_at_root, "path")`,
+        // NOT the path_secret at the root itself. Openmls/mdk derives exactly this
+        // value; quartz was using the root's own path_secret, which is the
+        // encryption-key seed rather than the key-schedule contribution. That
+        // one-step gap silently diverged the two sides' epoch_secret and made
+        // every cross-impl commit fail `ConfirmationTagMismatch`.
         val commitSecret =
             if (pathSecrets.isNotEmpty()) {
-                pathSecrets.last().pathSecret
+                MlsCryptoProvider.deriveSecret(pathSecrets.last().pathSecret, "path")
             } else {
                 ByteArray(MlsCryptoProvider.HASH_OUTPUT_LENGTH)
             }
@@ -1131,15 +1138,18 @@ class MlsGroup private constructor(
                             ct.ciphertext,
                         )
 
-                    // Derive remaining path secrets from common ancestor up to root.
-                    // pathSecret is the secret AT commonAncestorIdx, so we derive
-                    // (directPath.size - commonAncestorIdx - 1) more steps to reach root.
-                    val remainingSteps = directPath.size - commonAncestorIdx - 1
+                    // Derive remaining path secrets from common ancestor up to root,
+                    // then one more step to reach the `commit_secret` (RFC 9420 §9.2:
+                    // commit_secret = DeriveSecret(root_path_secret, "path")). Openmls
+                    // advances one step past the root; quartz was stopping at the root
+                    // and diverging — that's what caused `ConfirmationTagMismatch` on
+                    // every cross-impl commit.
+                    val stepsToRoot = directPath.size - commonAncestorIdx - 1
                     var currentSecret = pathSecret
-                    repeat(remainingSteps) {
+                    repeat(stepsToRoot) {
                         currentSecret = MlsCryptoProvider.deriveSecret(currentSecret, "path")
                     }
-                    commitSecret = currentSecret
+                    commitSecret = MlsCryptoProvider.deriveSecret(currentSecret, "path")
                 }
             }
         }
@@ -2452,10 +2462,11 @@ class MlsGroup private constructor(
                 )
             val commitBytes = commit.toTlsBytes()
 
-            // Derive epoch secrets using external init_secret
+            // Derive epoch secrets using external init_secret.
+            // commit_secret = DeriveSecret(root_path_secret, "path") (RFC 9420 §9.2).
             val commitSecret =
                 if (pathSecrets.isNotEmpty()) {
-                    pathSecrets.last().pathSecret
+                    MlsCryptoProvider.deriveSecret(pathSecrets.last().pathSecret, "path")
                 } else {
                     ByteArray(MlsCryptoProvider.HASH_OUTPUT_LENGTH)
                 }
