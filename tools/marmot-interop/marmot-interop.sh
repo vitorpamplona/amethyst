@@ -281,6 +281,36 @@ configure_relays() {
     add_relay wn_c "$r"
   done
 
+  # Push a kind:0 profile for each wn identity BEFORE the kind:30443 /
+  # 10050 / 1059 probes. Several public relays (damus.io in particular)
+  # silently drop non-profile kinds from accounts they've never seen
+  # before, so a fresh wn identity created inside the harness never gets
+  # its gift wraps or inbox lists stored. Publishing kind:0 first
+  # registers the account in the relay's "known users" set, which lets
+  # every later publish go through.
+  publish_profile() {
+    local who="$1" wnfn
+    if [[ "$who" == "B" ]]; then wnfn=wn_b; else wnfn=wn_c; fi
+    local name="marmot-interop $who"
+    local about="Scripted wn identity for Amethyst<->whitenoise-rs interop harness"
+    local out
+    if out=$("$wnfn" profile update --name "$name" --about "$about" 2>&1); then
+      info "$who kind:0 published (name=\"$name\")"
+      printf '%s profile update: %s\n' "$who" "$out" >>"$LOG_FILE"
+    else
+      warn "$who profile update failed: $out"
+      printf '%s profile update: %s\n' "$who" "$out" >>"$LOG_FILE"
+    fi
+  }
+  step "publishing kind:0 profiles so relays treat B and C as 'known' accounts"
+  publish_profile B
+  publish_profile C
+  # Give the relay a beat to persist + ack the kind:0 before the next
+  # publish (some relays gate subsequent writes on the profile being
+  # indexed, and without this pause the first `keys publish` that
+  # follows sometimes races ahead of the kind:0 commit).
+  sleep 2
+
   step "B relay list after configure"
   local relay_list
   relay_list=$(wn_b --json relays list 2>/dev/null || true)
