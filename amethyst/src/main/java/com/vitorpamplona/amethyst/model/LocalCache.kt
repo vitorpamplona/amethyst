@@ -914,6 +914,20 @@ object LocalCache : ILocalCache, ICacheProvider {
                 event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
             }
 
+            is ChatEvent -> {
+                // Amethyst's own kind:9 replies carry the parent as a NIP-18
+                // `q` tag (see ChatEvent.replyingTo), but the broader Marmot
+                // ecosystem — WhiteNoise in particular — threads kind:9 chats
+                // with a plain NIP-10 `e` tag. Accept both so inbound replies
+                // from either client show their quote bubble in the feed.
+                val eTagTargets =
+                    event.tags
+                        .filter { it.size > 1 && it[0] == "e" }
+                        .map { it[1] }
+                val qTagTargets = event.quotedEvents().map { it.eventId }
+                (eTagTargets + qTagTargets).mapNotNull { checkGetOrCreateNote(it) }
+            }
+
             else -> {
                 emptyList()
             }
