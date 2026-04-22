@@ -301,7 +301,7 @@ fun MarmotGroupInfoScreen(
                     try {
                         accountViewModel.leaveMarmotGroup(nostrGroupId)
                         accountViewModel.account.marmotGroupList.removeGroup(nostrGroupId)
-                        nav.nav(Route.MarmotGroupList)
+                        nav.nav(Route.Message)
                     } catch (e: Exception) {
                         isLeaving = false
                         launch(Dispatchers.Main) {
