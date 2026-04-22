@@ -198,7 +198,12 @@ snapshot_invites() {
         g=$(printf '%s' "$one" | jq_group_id)
         [[ -n "$g" ]] && gids+=("$g")
     done < <(printf '%s' "$raw" | jq -c '(.result // .) | .[]?' 2>/dev/null)
-    local IFS=','; printf '%s' "${gids[*]}"
+    # bash 3.2 (stock macOS) treats "${gids[*]}" on an empty array as an
+    # unbound reference under `set -u`, so guard the expansion.
+    if (( ${#gids[@]} > 0 )); then
+        local IFS=','
+        printf '%s' "${gids[*]}"
+    fi
 }
 
 # wait_for_invite <B|C> <timeout-seconds> [ignore-csv]
