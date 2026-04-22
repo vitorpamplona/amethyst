@@ -19,12 +19,25 @@ preflight() {
   done
 
   # Build `amy` via gradle if missing.
+  #
+  # jitpack.io and dl.google.com both return transient 503s on a non-trivial
+  # fraction of cold-cache fetches, and Gradle disables the entire repository
+  # for the rest of the build the moment a single 503 lands — so one bad
+  # roll aborts the whole harness. Retry a few times; each attempt resumes
+  # from Gradle's cache so only the still-missing artifacts get re-fetched.
   if [[ ! -x "$AMY_BIN" ]]; then
     if [[ "$NO_BUILD" -eq 1 ]]; then
       fail_msg "amy not found at $AMY_BIN and --no-build set"; exit 1
     fi
-    step "building :cli:installDist"
-    ( cd "$REPO_ROOT" && ./gradlew :cli:installDist ) 2>&1 | tee -a "$LOG_FILE"
+    local attempt max_attempts=4
+    for attempt in $(seq 1 $max_attempts); do
+      step "building :cli:installDist (attempt $attempt/$max_attempts)"
+      if ( cd "$REPO_ROOT" && ./gradlew :cli:installDist ) 2>&1 | tee -a "$LOG_FILE" \
+          && [[ -x "$AMY_BIN" ]]; then
+        break
+      fi
+      [[ "$attempt" -lt "$max_attempts" ]] && warn "gradle build failed (likely transient jitpack/Google 503) — retrying"
+    done
   fi
   [[ -x "$AMY_BIN" ]] || { fail_msg "amy still missing after build"; exit 1; }
   info "amy: $AMY_BIN"
