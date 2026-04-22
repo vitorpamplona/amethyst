@@ -776,7 +776,11 @@ test_09_reply_react_unreact() {
   fi
 
   step "B replies to the anchor"
-  wn_b messages send "$gid" "replying via wn" --reply_to "$msg_id" >/dev/null 2>&1 || true
+  # clap v4 converts snake_case fields to kebab-case flags by default, so the
+  # `reply_to: Option<String>` field on `wn messages send` exposes as
+  # `--reply-to`. Passing `--reply_to` is silently rejected (the script's
+  # `|| true` hides the error) and the reply is never actually published.
+  wn_b messages send "$gid" "replying via wn" --reply-to "$msg_id" >/dev/null 2>&1 || true
   sleep 3
   if confirm "Does Amethyst show 'replying via wn' as a threaded reply to the anchor?"; then
     record_result "09 reply/react" pass
