@@ -50,19 +50,23 @@ class AlwaysOnNotificationServiceManager(
     }
 
     private var watchJob: Job? = null
+    private var wasEnabled = false
 
     /**
      * Starts watching the given account's always-on setting.
      * When the setting changes, all layers are started or stopped accordingly.
+     * On initial load with false, nothing happens (no-op for users who never enabled it).
      */
     fun watchAccount(account: Account) {
         watchJob?.cancel()
+        wasEnabled = false
         watchJob =
             scope.launch {
                 account.settings.alwaysOnNotificationService.collectLatest { enabled ->
                     if (enabled) {
+                        wasEnabled = true
                         enableAllLayers()
-                    } else {
+                    } else if (wasEnabled) {
                         disableAllLayers()
                     }
                 }

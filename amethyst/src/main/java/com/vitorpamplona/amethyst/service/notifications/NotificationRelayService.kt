@@ -95,11 +95,7 @@ class NotificationRelayService : Service() {
         }
 
         fun stop(context: Context) {
-            val intent =
-                Intent(context, NotificationRelayService::class.java).apply {
-                    action = ACTION_STOP
-                }
-            context.startService(intent)
+            context.stopService(Intent(context, NotificationRelayService::class.java))
         }
 
         fun isEnabled(context: Context): Boolean =
