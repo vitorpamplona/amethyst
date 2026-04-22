@@ -80,7 +80,22 @@ source "$SCRIPT_DIR/headless/tests-manage.sh"
 # shellcheck source=headless/tests-extras.sh
 source "$SCRIPT_DIR/headless/tests-extras.sh"
 
-trap 'stop_daemons; stop_local_relay; print_summary' EXIT
+# Make sure Ctrl+C / SIGTERM / SIGHUP all run the full cleanup path —
+# otherwise wnd is nohup'd and keeps running after the script dies,
+# and the next run's `ss` check then complains the port is in use.
+# Trap INT/TERM/HUP forces `exit`, which triggers the EXIT handler once.
+cleanup() {
+  local rc=$?
+  trap - EXIT INT TERM HUP
+  stop_daemons
+  stop_local_relay
+  print_summary
+  exit "$rc"
+}
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+trap 'exit 129' HUP
 
 banner "Marmot headless interop harness ($RUN_TS)"
 preflight
