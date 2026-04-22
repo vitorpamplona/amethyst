@@ -2680,12 +2680,23 @@ class MlsGroup private constructor(
      * Per MIP-01/MIP-03, admins must self-demote first; this helper rejects
      * calls from a member currently listed in `admin_pubkeys`.
      */
-    fun selfRemove(): ByteArray {
+    /**
+     * Build a SelfRemove commit (not a standalone proposal). MIP-03 allows
+     * non-admins to commit a SelfRemove-only commit, and only a commit
+     * actually rewrites the tree on the receiver side — a standalone
+     * SelfRemove proposal just gets staged by mdk/openmls and never
+     * removes the member unless another admin commits.
+     *
+     * Caller is responsible for publishing the `framedCommitBytes` as the
+     * kind:445 outer layer, outer-encrypted with
+     * [CommitResult.preCommitExporterSecret].
+     */
+    fun selfRemoveCommit(): CommitResult {
         check(!isLocalAdmin()) {
             "Admin must self-demote via GroupContextExtensions before SelfRemove (MIP-01)"
         }
-        val proposal = Proposal.SelfRemove()
-        return proposal.toTlsBytes()
+        proposeSelfRemove()
+        return commit()
     }
 }
 
