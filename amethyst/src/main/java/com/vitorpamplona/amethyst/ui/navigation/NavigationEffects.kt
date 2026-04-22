@@ -34,12 +34,19 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 
+// Per-entry hint stored on NavBackStackEntry.savedStateHandle by
+// Nav.navBottomBar. When present, composableFromEnd skips the horizontal
+// slide so bottom-bar taps fall back to the NavHost-level fade.
+const val SKIP_SLIDE_ANIMATION_KEY = "skipSlideAnimation"
+
+fun NavBackStackEntry.skipsSlideAnimation(): Boolean = savedStateHandle.get<Boolean>(SKIP_SLIDE_ANIMATION_KEY) == true
+
 inline fun <reified T : Any> NavGraphBuilder.composableFromEnd(noinline content: @Composable AnimatedContentScope.(NavBackStackEntry) -> Unit) {
     composable<T>(
-        enterTransition = { slideInHorizontallyFromEnd },
-        exitTransition = { scaleOut },
-        popEnterTransition = { scaleIn },
-        popExitTransition = { slideOutHorizontallyToEnd },
+        enterTransition = { if (targetState.skipsSlideAnimation()) null else slideInHorizontallyFromEnd },
+        exitTransition = { if (targetState.skipsSlideAnimation()) null else scaleOut },
+        popEnterTransition = { if (initialState.skipsSlideAnimation()) null else scaleIn },
+        popExitTransition = { if (initialState.skipsSlideAnimation()) null else slideOutHorizontallyToEnd },
         content = content,
     )
 }

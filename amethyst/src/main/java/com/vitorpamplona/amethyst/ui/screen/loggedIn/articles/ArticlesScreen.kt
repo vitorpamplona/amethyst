@@ -69,7 +69,7 @@ fun ArticlesScreen(
                 if (route == Route.Articles) {
                     articlesFeedContentState.sendToTop()
                 } else {
-                    nav.newStack(route)
+                    nav.navBottomBar(route)
                 }
             }
         },

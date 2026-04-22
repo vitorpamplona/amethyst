@@ -86,7 +86,7 @@ fun MessagesSinglePane(
                 if (route == Route.Message) {
                     tabs[pagerState.currentPage].feedContentState.sendToTop()
                 } else {
-                    nav.newStack(route)
+                    nav.navBottomBar(route)
                 }
             }
         },

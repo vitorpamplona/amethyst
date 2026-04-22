@@ -151,7 +151,7 @@ private fun PollsPages(
                 if (route == Route.Polls) {
                     tabs[pagerState.currentPage].feedState.sendToTop()
                 } else {
-                    nav.newStack(route)
+                    nav.navBottomBar(route)
                 }
             }
         },

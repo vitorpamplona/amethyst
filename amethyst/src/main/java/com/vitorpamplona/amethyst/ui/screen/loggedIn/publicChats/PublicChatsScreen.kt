@@ -69,7 +69,7 @@ fun PublicChatsScreen(
                 if (route == Route.PublicChats) {
                     publicChatsFeedContentState.sendToTop()
                 } else {
-                    nav.newStack(route)
+                    nav.navBottomBar(route)
                 }
             }
         },

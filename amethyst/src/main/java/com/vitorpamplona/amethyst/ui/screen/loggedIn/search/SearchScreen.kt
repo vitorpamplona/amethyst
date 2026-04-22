@@ -118,7 +118,7 @@ fun SearchScreen(
         },
         bottomBar = {
             AppBottomBar(Route.Search, accountViewModel) { route ->
-                nav.newStack(route)
+                nav.navBottomBar(route)
             }
         },
         accountViewModel = accountViewModel,

@@ -69,7 +69,7 @@ fun AudioRoomsScreen(
                 if (route == Route.AudioRooms) {
                     audioRoomsFeedContentState.sendToTop()
                 } else {
-                    nav.newStack(route)
+                    nav.navBottomBar(route)
                 }
             }
         },

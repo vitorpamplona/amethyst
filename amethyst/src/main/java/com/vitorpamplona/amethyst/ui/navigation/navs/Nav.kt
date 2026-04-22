@@ -25,6 +25,7 @@ import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
 import androidx.compose.runtime.Stable
 import androidx.navigation.NavHostController
+import com.vitorpamplona.amethyst.ui.navigation.SKIP_SLIDE_ANIMATION_KEY
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.getRouteWithArguments
 import kotlinx.coroutines.CoroutineScope
@@ -71,6 +72,20 @@ class Nav(
                 }
                 launchSingleTop = true
             }
+        }
+    }
+
+    override fun navBottomBar(route: Route) {
+        navigationScope.launch {
+            controller.navigate(route) {
+                popUpTo(route) {
+                    inclusive = true
+                }
+                launchSingleTop = true
+            }
+            // Stamp the entry so composableFromEnd's transition lambdas can
+            // skip the slide animation when this entry enters or exits.
+            controller.getBackStackEntry(route).savedStateHandle[SKIP_SLIDE_ANIMATION_KEY] = true
         }
     }
 

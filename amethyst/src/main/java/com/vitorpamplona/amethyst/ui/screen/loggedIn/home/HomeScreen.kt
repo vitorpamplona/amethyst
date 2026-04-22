@@ -203,7 +203,7 @@ private fun HomePages(
                 if (route == Route.Home) {
                     tabs[pagerState.currentPage].feedState.sendToTop()
                 } else {
-                    nav.newStack(route)
+                    nav.navBottomBar(route)
                 }
             }
         },

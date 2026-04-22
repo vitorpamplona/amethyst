@@ -69,7 +69,7 @@ fun LongsScreen(
                 if (route == Route.Longs) {
                     longsFeedContentState.sendToTop()
                 } else {
-                    nav.newStack(route)
+                    nav.navBottomBar(route)
                 }
             }
         },

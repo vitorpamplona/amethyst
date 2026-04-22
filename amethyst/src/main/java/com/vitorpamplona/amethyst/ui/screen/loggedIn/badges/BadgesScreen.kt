@@ -69,7 +69,7 @@ fun BadgesScreen(
                 if (route == Route.Badges) {
                     feedContentState.sendToTop()
                 } else {
-                    nav.newStack(route)
+                    nav.navBottomBar(route)
                 }
             }
         },
