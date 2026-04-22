@@ -68,7 +68,7 @@ fun ProductsScreen(
                 if (route == Route.Products) {
                     productsFeedContentState.sendToTop()
                 } else {
-                    nav.newStack(route)
+                    nav.navBottomBar(route)
                 }
             }
         },

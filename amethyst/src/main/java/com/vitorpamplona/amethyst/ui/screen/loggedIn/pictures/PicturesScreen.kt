@@ -69,7 +69,7 @@ fun PicturesScreen(
                 if (route == Route.Pictures) {
                     picturesFeedContentState.sendToTop()
                 } else {
-                    nav.newStack(route)
+                    nav.navBottomBar(route)
                 }
             }
         },

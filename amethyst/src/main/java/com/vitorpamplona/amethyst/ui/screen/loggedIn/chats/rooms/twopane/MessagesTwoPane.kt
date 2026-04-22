@@ -84,7 +84,7 @@ fun MessagesTwoPane(
                     knownFeedContentState.sendToTop()
                     newFeedContentState.sendToTop()
                 } else {
-                    nav.newStack(route)
+                    nav.navBottomBar(route)
                 }
             }
         },

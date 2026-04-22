@@ -247,7 +247,7 @@ private fun DiscoverPages(
                         feedTabs[currentPage].feedState.sendToTop()
                     }
                 } else {
-                    nav.newStack(route)
+                    nav.navBottomBar(route)
                 }
             }
         },

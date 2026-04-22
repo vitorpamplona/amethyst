@@ -41,6 +41,8 @@ interface INav {
 
     fun newStack(route: Route)
 
+    fun navBottomBar(route: Route)
+
     fun popBack()
 
     fun <T : Route> popUpTo(

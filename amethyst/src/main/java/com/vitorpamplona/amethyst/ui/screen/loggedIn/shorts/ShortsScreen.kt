@@ -69,7 +69,7 @@ fun ShortsScreen(
                 if (route == Route.Shorts) {
                     shortsFeedContentState.sendToTop()
                 } else {
-                    nav.newStack(route)
+                    nav.navBottomBar(route)
                 }
             }
         },

@@ -86,7 +86,7 @@ fun VideoScreen(
                 if (route == Route.Video) {
                     videoFeedContentState.sendToTop()
                 } else {
-                    nav.newStack(route)
+                    nav.navBottomBar(route)
                 }
             }
         },

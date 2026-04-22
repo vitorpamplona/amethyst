@@ -83,7 +83,7 @@ fun NotificationScreen(
                 if (route is Route.Notification) {
                     notifFeedContentState.invalidateDataAndSendToTop(true)
                 } else {
-                    nav.newStack(route)
+                    nav.navBottomBar(route)
                 }
             }
         },

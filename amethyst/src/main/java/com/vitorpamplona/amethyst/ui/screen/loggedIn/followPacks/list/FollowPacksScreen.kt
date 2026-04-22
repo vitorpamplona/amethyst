@@ -69,7 +69,7 @@ fun FollowPacksScreen(
                 if (route == Route.FollowPacks) {
                     followPacksFeedContentState.sendToTop()
                 } else {
-                    nav.newStack(route)
+                    nav.navBottomBar(route)
                 }
             }
         },

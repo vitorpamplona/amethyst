@@ -69,7 +69,7 @@ fun LiveStreamsScreen(
                 if (route == Route.LiveStreams) {
                     liveStreamsFeedContentState.sendToTop()
                 } else {
-                    nav.newStack(route)
+                    nav.navBottomBar(route)
                 }
             }
         },

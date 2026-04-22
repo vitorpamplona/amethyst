@@ -33,19 +33,26 @@ import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
+import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 
-inline fun <reified T : Any> NavGraphBuilder.composableFromEnd(noinline content: @Composable AnimatedContentScope.(NavBackStackEntry) -> Unit) {
+inline fun <reified T : Any> NavGraphBuilder.composableFromEnd(
+    nav: Nav,
+    noinline content: @Composable AnimatedContentScope.(NavBackStackEntry) -> Unit,
+) {
     composable<T>(
-        enterTransition = { slideInHorizontallyFromEnd },
-        exitTransition = { scaleOut },
-        popEnterTransition = { scaleIn },
-        popExitTransition = { slideOutHorizontallyToEnd },
+        enterTransition = { if (nav.skipSlideAnimation) null else slideInHorizontallyFromEnd },
+        exitTransition = { if (nav.skipSlideAnimation) null else scaleOut },
+        popEnterTransition = { if (nav.skipSlideAnimation) null else scaleIn },
+        popExitTransition = { if (nav.skipSlideAnimation) null else slideOutHorizontallyToEnd },
         content = content,
     )
 }
 
-inline fun <reified T : Any> NavGraphBuilder.composableFromEndArgs(noinline content: @Composable AnimatedContentScope.(T) -> Unit) {
-    composableFromEnd<T> {
+inline fun <reified T : Any> NavGraphBuilder.composableFromEndArgs(
+    nav: Nav,
+    noinline content: @Composable AnimatedContentScope.(T) -> Unit,
+) {
+    composableFromEnd<T>(nav) {
         content(it.toRoute<T>())
     }
 }
