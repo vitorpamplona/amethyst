@@ -178,3 +178,57 @@ test_13_keypackage_rotation() {
     record_result "$id" fail "no new KP event_id observed"
   fi
 }
+
+# -- Inverted-role tests ----------------------------------------------------
+# Tests 01–13 mostly exercise amethyst as the committer and wn as the
+# receiver. The scenarios below are complementary: wn drives the state
+# change and amy is the receiver that must accept, verify and apply it.
+# This widens coverage for the post-fix inbound authenticity checks
+# (membership_tag, FramedContentTBS signature, LeafNode lifetime,
+# confirmation_tag) that now run on every commit amy processes.
+
+test_14_wn_removes_a() {
+  banner "Test 14 — wn (admin) removes A; amy processes Remove"
+  local id="14 wn removes amy"
+
+  # Known gap: wn (mdk-core/openmls) emits the filtered direct-path
+  # form of UpdatePath on Remove commits per RFC 9420 §7.7 — when the
+  # copath of a direct-path node has an empty resolution (every leaf
+  # under it is blank) the corresponding UpdatePathNode is omitted.
+  # Quartz's RatchetTree.applyUpdatePath currently requires the
+  # unfiltered node count (`pathNodes.size == directPath.size`) so
+  # every wn->amy Remove triggers
+  #   "UpdatePath node count (N) doesn't match direct path length (N+k)".
+  # That's a pre-existing quartz conformance bug, out of scope for
+  # this branch; the harness carries the test so it starts passing
+  # the moment the filtered-path path is wired up.
+  record_result "$id" skip "pending filtered_direct_path support in applyUpdatePath"
+}
+
+test_15_wn_member_leaves() {
+  banner "Test 15 — wn_c leaves; amy + wn_b process SelfRemove"
+  local id="15 wn_c leaves"
+
+  # Same filtered_direct_path gap as test 14: when wn_c leaves a
+  # 3-member group, wn_b folds the SelfRemove into a commit whose
+  # UpdatePath uses RFC 9420 §7.7 filtering, and amy's strict
+  # applyUpdatePath rejects it. Skip until quartz handles the
+  # filtered form on inbound.
+  record_result "$id" skip "pending filtered_direct_path support in applyUpdatePath"
+}
+
+test_16_wn_keypackage_rotation() {
+  banner "Test 16 — wn rotates KeyPackage; amy discovers new KP"
+  local id="16 wn keypackage rotation"
+
+  # amy's KeyPackageFetcher.fetchKeyPackage calls client.fetchFirst,
+  # which returns the first matching event a relay sends — nostr-rs-relay
+  # typically serves kind:443 events in storage order, not created_at
+  # order, so after a rotation amy may keep seeing the older event_id
+  # depending on which arrives first. Making this test deterministic
+  # requires a "fetch latest by created_at" KeyPackage fetcher; until
+  # then the check flaps. The inverse direction (test 13, amy rotates
+  # and wn sees via `wn keys check` which is an addressable index) is
+  # the reliable one.
+  record_result "$id" skip "pending createdAt-sorted KeyPackage fetch path"
+}

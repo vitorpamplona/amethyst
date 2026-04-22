@@ -97,6 +97,18 @@ import com.vitorpamplona.quartz.utils.mac.MacInstance
  * val key = group.exporterSecret("marmot", "group-event", 32)
  * ```
  */
+private fun constantTimeEquals(
+    a: ByteArray,
+    b: ByteArray,
+): Boolean {
+    if (a.size != b.size) return false
+    var result = 0
+    for (i in a.indices) {
+        result = result or (a[i].toInt() xor b[i].toInt())
+    }
+    return result == 0
+}
+
 class MlsGroup private constructor(
     private var groupContext: GroupContext,
     private val tree: RatchetTree,
@@ -1732,22 +1744,6 @@ class MlsGroup private constructor(
     }
 
     /**
-     * Constant-time byte array comparison to prevent timing side-channels.
-     * Returns true only if both arrays have the same length and contents.
-     */
-    private fun constantTimeEquals(
-        a: ByteArray,
-        b: ByteArray,
-    ): Boolean {
-        if (a.size != b.size) return false
-        var result = 0
-        for (i in a.indices) {
-            result = result or (a[i].toInt() xor b[i].toInt())
-        }
-        return result == 0
-    }
-
-    /**
      * Apply an Add proposal and return the assigned leaf index.
      */
     private fun applyProposalAdd(proposal: Proposal.Add): Int {
@@ -2429,6 +2425,15 @@ class MlsGroup private constructor(
                 "Invalid GroupInfo signature"
             }
 
+            // RFC 9420 §12.4.3.1: the ratchet_tree extension the joiner
+            // reconstructs MUST hash to the tree_hash committed in the
+            // signed GroupContext. Otherwise a compromised signer could
+            // feed the joiner a tree different from the one encoded in
+            // the signed context, silently diverging their key schedule.
+            require(tree.treeHash().contentEquals(groupContext.treeHash)) {
+                "GroupInfo tree_hash does not match ratchet_tree extension"
+            }
+
             // Derive epoch secrets directly from memberSecret (RFC 9420 Section 8.3)
             // For Welcome, epoch_secret = ExpandWithLabel(member_secret, "epoch", GroupContext, Nh)
             val epochSecret =
@@ -2467,6 +2472,19 @@ class MlsGroup private constructor(
             val confirmMac = MacInstance("HmacSHA256", epochSecrets.confirmationKey)
             confirmMac.update(groupContext.confirmedTranscriptHash)
             val confirmationTag = confirmMac.doFinal()
+
+            // RFC 9420 §12.4.3.1: the confirmation_tag the joiner would
+            // derive from the joiner_secret-sourced confirmation_key MUST
+            // match the confirmation_tag embedded in the signed GroupInfo.
+            // Without this check a tampered GroupInfo could supply a
+            // mismatched confirmed_transcript_hash that still passes the
+            // signature-over-(context, extensions, tag, signer) as long
+            // as the attacker controls the signer — the confirmation_tag
+            // binds the epoch secrets to the transcript.
+            require(constantTimeEquals(groupInfo.confirmationTag, confirmationTag)) {
+                "GroupInfo confirmation_tag does not match joiner-derived confirmation_key"
+            }
+
             val interimInput = TlsWriter()
             interimInput.putBytes(groupContext.confirmedTranscriptHash)
             interimInput.putOpaqueVarInt(confirmationTag)
@@ -2518,6 +2536,14 @@ class MlsGroup private constructor(
             }
             require(groupInfo.verifySignature(signerLeaf.signatureKey)) {
                 "Invalid GroupInfo signature in externalJoin"
+            }
+
+            // RFC 9420 §12.4.3.1: enforce that the reconstructed
+            // ratchet_tree hashes to the signed tree_hash. Without this,
+            // a malicious signer could serve an externalJoin consumer
+            // a tree that diverges from the signed context.
+            require(tree.treeHash().contentEquals(groupContext.treeHash)) {
+                "externalJoin tree_hash does not match ratchet_tree extension"
             }
 
             // Extract external_pub from extensions
