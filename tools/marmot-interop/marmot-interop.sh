@@ -473,11 +473,41 @@ that's the bug."
   fi
 
   step "B sends reply"
-  wn_b messages send "$gid" "hello from wn" >/dev/null 2>&1 || warn "send returned nonzero"
+  local send_out
+  if ! send_out=$(wn_b messages send "$gid" "hello from wn" 2>&1); then
+    warn "wn messages send returned nonzero: $send_out"
+  fi
+  printf 'wn messages send (test_02 reply) raw: %s\n' "$send_out" >>"$LOG_FILE"
+  # Give the relay a couple seconds to fan the commit/message back out to
+  # Amethyst's subscription before we ask the operator to eyeball the UI.
+  sleep 4
+
+  # Dump the B side up front — if B's own store doesn't contain the reply
+  # or the MLS extension relays don't match what Amethyst subscribes to,
+  # the operator can confirm "fail" with a specific reason instead of a
+  # blind eyeball check.
+  dump_outbound_diagnostics B "$gid" "hello from wn" "test_02 B->A reply"
 
   if confirm "Does Amethyst now show 'hello from wn' in the same group?"; then
     record_result "02 Amethyst->B create+invite" pass
   else
+    # The B-side dump above told us whether the send reached B's own DB and
+    # which relays wn tagged on the kind:445. Now pull the Amethyst side so
+    # the failure report has both halves of the pipe: which relays the
+    # kind:445 subscription actually targets, whether the event arrived,
+    # and (if it did) whether GroupEventHandler dropped it.
+    prompt_human "Capture Amethyst's side of the B->A kind:445 path. On the adb host:
+
+    adb logcat -d -v time | grep -E \
+        'MarmotDbg|GroupEventHandler|MarmotGroupEventsEoseManager|kind:445' \\
+        | tail -n 200 > /tmp/amethyst-marmot.log
+
+Then paste /tmp/amethyst-marmot.log here. Key lines to look for:
+  - 'MarmotGroupEventsEoseManager.updateFilter: group=${gid:0:8}…' + the relay
+    list — must match the 'group relays (MLS extension)' in the B-side dump.
+  - 'GroupEventHandler.add: kind:445 id=… groupId=${gid:0:8}…' (event arrived).
+  - 'GroupEventHandler.add: not a member of group=${gid:0:8}…' (dropped).
+  - 'GroupEventHandler.add: processGroupEvent returned ApplicationMessage…' (decrypted)."
     record_result "02 Amethyst->B create+invite" fail "Amethyst did not display reply"
   fi
 }

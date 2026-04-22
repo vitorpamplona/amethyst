@@ -471,6 +471,70 @@ Then paste /tmp/amethyst-marmot.log contents here so the failure report has
 both the Amethyst-side publish log and the wn-side subscription log ($note)."
 }
 
+# Dump everything we know about an outbound kind:445 from a wn daemon, so
+# when the operator reports "Amethyst didn't see it" we can tell them which
+# side of the wire to investigate:
+#
+#   - `messages list` output (did the daemon persist the message locally,
+#     i.e. is this a relay-reach issue, a membership issue, or a pure
+#     Amethyst-receive issue?)
+#   - `groups show` metadata (which MLS-extension relays is wn using for
+#     this group — these are the SAME relays Amethyst subscribes to, so if
+#     the lists don't match that's the bug)
+#   - live relay connection status
+#
+# Output is tee'd to stderr (live) and $LOG_FILE (forward).
+dump_outbound_diagnostics() {
+    local who="$1" gid="$2" needle="${3:-}" tag="${4:-post-send}"
+    local wnfn
+    if [[ "$who" == "B" ]]; then wnfn=wn_b
+    else                         wnfn=wn_c; fi
+
+    printf '\n%s%s---- [%s] %s outbound diagnostics (group %.8s…) ----%s\n' \
+        "$C_BOLD" "$C_CYAN" "$tag" "$who" "$gid" "$C_RESET" >&2
+    printf '\n==== [%s] %s outbound diagnostics (group %s) ====\n' "$tag" "$who" "$gid" >>"$LOG_FILE"
+
+    step "$who local view of latest messages in group"
+    local list_raw
+    list_raw=$("$wnfn" --json messages list "$gid" --limit 5 2>/dev/null || true)
+    printf '  %s\n' "${list_raw:-<no output>}" >>"$LOG_FILE"
+    printf '%s' "$list_raw" \
+        | jq -r '(.result // .) | .[]? | "  \(.id // .event_id // "?") \((.content // .text // "") | tostring | .[0:80])"' 2>/dev/null \
+        | tee -a "$LOG_FILE" >&2 || true
+    if [[ -n "$needle" ]]; then
+        if printf '%s' "$list_raw" | jq -e --arg n "$needle" \
+             '(.result // .) | .[]? | select((.content // .text // "") | contains($n))' \
+             >/dev/null 2>&1; then
+            info "$who local store contains \"$needle\" — send reached wn's own DB (kind:445 went out)"
+        else
+            warn "$who local store does NOT contain \"$needle\" — `messages send` never persisted; check stderr.log"
+        fi
+    fi
+
+    step "$who MLS group metadata (relays here are what Amethyst subscribes on)"
+    local meta_raw
+    meta_raw=$("$wnfn" --json groups show "$gid" 2>/dev/null || true)
+    printf '  %s\n' "${meta_raw:-<no output>}" >>"$LOG_FILE"
+    local meta_relays
+    meta_relays=$(printf '%s' "$meta_raw" \
+        | jq -r '(.result // .) | (.relays // .group.relays // [])[]? | (. | tostring)' 2>/dev/null \
+        | paste -sd',' -)
+    info "  group relays (MLS extension): ${meta_relays:-<none — Amethyst will fall back to homeRelays>}"
+    local meta_name meta_epoch
+    meta_name=$(printf '%s' "$meta_raw" | jq -r '(.result // .) | (.name // .group.name // "?")' 2>/dev/null)
+    meta_epoch=$(printf '%s' "$meta_raw" | jq -r '(.result // .) | (.epoch // .group.epoch // "?")' 2>/dev/null)
+    info "  group name: $meta_name   epoch: $meta_epoch"
+
+    step "$who relay connection status right now"
+    "$wnfn" --json relays list 2>/dev/null \
+        | jq -r '(.result // .)[]? | "  \(.url // .relay.url // "?") [\(.type // "?")] [\(.status // .connection_status // "?")]"' 2>/dev/null \
+        | tee -a "$LOG_FILE" >&2 || true
+
+    printf '%s%s---- end outbound diagnostics ----%s\n\n' \
+        "$C_BOLD" "$C_CYAN" "$C_RESET" >&2
+    printf '==== end [%s] %s outbound diagnostics ====\n\n' "$tag" "$who" >>"$LOG_FILE"
+}
+
 # ------- group cleanup -------------------------------------------------------
 cleanup_group() {
     local gid="$1" who="${2:-B}"
