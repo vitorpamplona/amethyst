@@ -36,6 +36,10 @@ import androidx.compose.ui.unit.Velocity
  *  - onPostScroll reads `consumed.y + available.y` (the total scroll attempt that entered
  *    the nested-scroll chain) and updates the bar offsets. Using the sum means the bars
  *    also respond to overscroll attempts at the list edges.
+ *  - Pure overscroll (`consumed.y == 0`) from the fully-visible state is ignored. This
+ *    prevents short, non-scrollable lists from hiding the bars purely on an overscroll
+ *    gesture — which would leave blank padding at the top and bottom. Once the bars have
+ *    started moving (list is clearly scrollable), edge overscroll keeps affecting them.
  *  - onPostFling snaps a mid-way bar to the nearest edge, using the fling's remaining
  *    velocity as the spring's initial velocity so the settle feels continuous. No velocity
  *    is returned upward to avoid phantom scrolls on parent containers.
@@ -53,6 +57,14 @@ class DisappearingBarNestedScroll(
         if (!canScroll()) return Offset.Zero
         val totalY = consumed.y + available.y
         if (totalY == 0f) return Offset.Zero
+
+        // If the list did not consume any scroll and the bars are fully visible, treat
+        // this as a non-scrollable list and keep the bars in place. Without this, a tiny
+        // feed would hide its chrome purely from overscroll gestures, leaving two empty
+        // bands at the top and bottom where the bars used to be.
+        val isPureOverscroll = consumed.y == 0f
+        val barsFullyVisible = state.topHeightOffset == 0f && state.bottomHeightOffset == 0f
+        if (isPureOverscroll && barsFullyVisible) return Offset.Zero
 
         val deltaY = if (reverseLayout) -totalY else totalY
         applyDelta(deltaY)

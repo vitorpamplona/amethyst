@@ -2791,15 +2791,68 @@ class Account(
 
     suspend fun saveDMRelayList(dmRelays: List<NormalizedRelayUrl>) = sendLiterallyEverywhere(dmRelayList.saveRelayList(dmRelays))
 
-    suspend fun saveKeyPackageRelayList(keyPackageRelays: List<NormalizedRelayUrl>) = sendLiterallyEverywhere(keyPackageRelayList.saveRelayList(keyPackageRelays))
+    suspend fun saveKeyPackageRelayList(keyPackageRelays: List<NormalizedRelayUrl>) {
+        val oldRelays = keyPackageRelayList.flow.value
+        val newRelays = keyPackageRelays.toSet()
+        sendLiterallyEverywhere(keyPackageRelayList.saveRelayList(keyPackageRelays))
+        if (oldRelays != newRelays) {
+            republishEventsTo(myKeyPackageEvents(), newRelays)
+        }
+    }
 
-    suspend fun savePrivateOutboxRelayList(relays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(privateStorageRelayList.saveRelayList(relays))
+    suspend fun savePrivateOutboxRelayList(relays: List<NormalizedRelayUrl>) {
+        val oldRelays = privateStorageRelayList.flow.value
+        val newRelays = relays.toSet()
+        sendMyPublicAndPrivateOutbox(privateStorageRelayList.saveRelayList(relays))
+        if (oldRelays != newRelays) {
+            republishEventsTo(accountSettingsEvents(), newRelays)
+        }
+    }
 
-    suspend fun saveSearchRelayList(searchRelays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(searchRelayList.saveRelayList(searchRelays))
+    suspend fun saveSearchRelayList(searchRelays: List<NormalizedRelayUrl>) {
+        val oldRelays = searchRelayList.flowNoDefaults.value
+        val newRelays = searchRelays.toSet()
+        sendMyPublicAndPrivateOutbox(searchRelayList.saveRelayList(searchRelays))
+        if (oldRelays != newRelays) {
+            republishEventsTo(
+                listOfNotNull(userMetadata.getUserMetadataEvent()),
+                newRelays,
+            )
+        }
+    }
 
-    suspend fun saveIndexerRelayList(trustedRelays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(indexerRelayList.saveRelayList(trustedRelays))
+    suspend fun saveIndexerRelayList(trustedRelays: List<NormalizedRelayUrl>) {
+        val oldRelays = indexerRelayList.flowNoDefaults.value
+        val newRelays = trustedRelays.toSet()
+        sendMyPublicAndPrivateOutbox(indexerRelayList.saveRelayList(trustedRelays))
+        if (oldRelays != newRelays) {
+            republishEventsTo(
+                listOfNotNull(
+                    userMetadata.getUserMetadataEvent(),
+                    kind3FollowList.getFollowListEvent(),
+                ),
+                newRelays,
+            )
+        }
+    }
 
-    suspend fun saveBroadcastRelayList(trustedRelays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(broadcastRelayList.saveRelayList(trustedRelays))
+    suspend fun saveBroadcastRelayList(trustedRelays: List<NormalizedRelayUrl>) {
+        val oldRelays = broadcastRelayList.flow.value
+        val newRelays = trustedRelays.toSet()
+        sendMyPublicAndPrivateOutbox(broadcastRelayList.saveRelayList(trustedRelays))
+        if (oldRelays != newRelays) {
+            republishEventsTo(accountSettingsEvents(), newRelays)
+        }
+    }
+
+    suspend fun saveLocalRelayList(relays: List<NormalizedRelayUrl>) {
+        val oldRelays = localRelayList.flow.value
+        val newRelays = relays.toSet()
+        localRelayList.saveRelayList(relays) {}
+        if (oldRelays != newRelays) {
+            republishEventsTo(accountSettingsEvents(), newRelays)
+        }
+    }
 
     suspend fun saveProxyRelayList(trustedRelays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(proxyRelayList.saveRelayList(trustedRelays))
 
@@ -2812,6 +2865,53 @@ class Account(
     suspend fun unfollowRelayFeed(url: NormalizedRelayUrl) = sendMyPublicAndPrivateOutbox(relayFeedsList.removeRelay(url))
 
     suspend fun saveBlockedRelayList(blockedRelays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(blockedRelayList.saveRelayList(blockedRelays))
+
+    /**
+     * Returns all known signed replaceable events that configure this account
+     * (profile, contact list, relay lists, mute list, bookmarks, etc.). Events
+     * that have never been created or downloaded are omitted.
+     */
+    fun accountSettingsEvents(): List<Event> =
+        listOfNotNull(
+            userMetadata.getUserMetadataEvent(),
+            userMetadata.getExternalIdentitiesEvent(),
+            kind3FollowList.getFollowListEvent(),
+            nip65RelayList.getNIP65RelayList(),
+            dmRelayList.getDMRelayList(),
+            keyPackageRelayList.getKeyPackageRelayList(),
+            privateStorageRelayList.getPrivateOutboxRelayList(),
+            searchRelayList.getSearchRelayList(),
+            trustedRelayList.getTrustedRelayList(),
+            proxyRelayList.getProxyRelayList(),
+            broadcastRelayList.getBroadcastRelayList(),
+            indexerRelayList.getIndexerRelayList(),
+            relayFeedsList.getRelayFeedsList(),
+            blockedRelayList.getBlockedRelayList(),
+            muteList.getMuteList(),
+            bookmarkState.getBookmarkList(),
+            pinState.getPinList(),
+            blossomServers.getBlossomServersList(),
+            paymentTargetsState.getPaymentTargetsEvent(),
+            trustProviderList.getTrustProviderList(),
+            cache.getAddressableNoteIfExists(appSpecific.getAppSpecificDataAddress())?.event,
+        )
+
+    /**
+     * Returns all currently-known signed KeyPackage events authored by this account.
+     */
+    fun myKeyPackageEvents(): List<Event> =
+        cache.addressables
+            .filter(KeyPackageEvent.KIND, signer.pubKey)
+            .mapNotNull { it.event }
+
+    /** Publishes the given events to each of the given relays. No-op if either list is empty. */
+    fun republishEventsTo(
+        events: List<Event>,
+        relays: Set<NormalizedRelayUrl>,
+    ) {
+        if (relays.isEmpty() || events.isEmpty()) return
+        events.forEach { client.publish(it, relays) }
+    }
 
     suspend fun requestToVanish(
         relays: List<NormalizedRelayUrl>,
@@ -2838,7 +2938,24 @@ class Account(
         client.publish(signedEvent, followPlusAllMineWithIndex.flow.value + client.availableRelaysFlow().value)
     }
 
-    suspend fun sendNip65RelayList(relays: List<AdvertisedRelayInfo>) = sendLiterallyEverywhere(nip65RelayList.saveRelayList(relays))
+    suspend fun sendNip65RelayList(relays: List<AdvertisedRelayInfo>) {
+        val oldOutbox = nip65RelayList.outboxFlowNoDefaults.value
+        val oldInbox = nip65RelayList.inboxFlowNoDefaults.value
+        val newOutbox =
+            relays
+                .filter { it.type.isWrite() }
+                .map { it.relayUrl }
+                .toSet()
+        val newInbox =
+            relays
+                .filter { it.type.isRead() }
+                .map { it.relayUrl }
+                .toSet()
+        sendLiterallyEverywhere(nip65RelayList.saveRelayList(relays))
+        if (oldOutbox != newOutbox || oldInbox != newInbox) {
+            republishEventsTo(accountSettingsEvents(), newOutbox)
+        }
+    }
 
     suspend fun sendBlossomServersList(servers: List<String>) = sendMyPublicAndPrivateOutbox(blossomServers.saveBlossomServersList(servers))
 
