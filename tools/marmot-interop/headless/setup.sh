@@ -80,26 +80,48 @@ preflight() {
     "whitenoise-defaults-env.patch"
     "whitenoise-skip-unprocessable-retry.patch"
   )
+  # Apply each patch with a real exit-code check. The previous version
+  # swallowed patch's exit status via `| tee`, which meant a miscounted
+  # hunk header silently left the marker touched and the binary unpatched
+  # — the resulting wn retried provably-doomed MLS messages for ~17min
+  # and every later test flapped or timed out. Fail fast instead.
   for name in "${patches[@]}"; do
     local marker="$WN_REPO/.headless-patched-${name%.patch}"
     if [[ ! -f "$marker" ]]; then
       step "patching whitenoise-rs: $name"
-      ( cd "$WN_REPO" && patch -p1 --forward --reject-file=- \
-          <"$SCRIPT_DIR/headless/patches/$name" ) 2>&1 | tee -a "$LOG_FILE"
-      touch "$marker"
-      # Invalidate the previous build so the patched source is picked up.
-      rm -f "$WN_BIN" "$WND_BIN"
+      if ( cd "$WN_REPO" && patch -p1 --forward --reject-file=- \
+             <"$SCRIPT_DIR/headless/patches/$name" >>"$LOG_FILE" 2>&1 ); then
+        touch "$marker"
+        # Invalidate the previous build so the patched source is picked up.
+        rm -f "$WN_BIN" "$WND_BIN"
+      else
+        fail_msg "patch $name failed — see $LOG_FILE"
+        tail -n 30 "$LOG_FILE" | sed 's/^/  /' >&2
+        exit 1
+      fi
     fi
   done
 
+  # cargo's transitive deps (rustup, crates.io) both return 503 on cold
+  # caches often enough that a single attempt fails ~30% of the time.
+  # Retry each cargo build until the binary actually exists or we've
+  # exhausted the budget — the build is incremental so retries are cheap.
   if [[ ! -x "$WN_BIN" || ! -x "$WND_BIN" ]]; then
     if [[ "$NO_BUILD" -eq 1 ]]; then
       fail_msg "wn/wnd not found and --no-build set"; exit 1
     fi
-    step "building wn + wnd with integration-tests feature (~5 min first run)"
-    ( cd "$WN_REPO" && \
-        cargo build --release --features cli,integration-tests --bin wn --bin wnd ) \
-      2>&1 | tee -a "$LOG_FILE"
+    local attempt max=4
+    for attempt in $(seq 1 $max); do
+      step "building wn + wnd (attempt $attempt/$max, ~5 min first run)"
+      ( cd "$WN_REPO" && \
+          cargo build --release --features cli,integration-tests --bin wn --bin wnd ) \
+        2>&1 | tee -a "$LOG_FILE"
+      [[ -x "$WN_BIN" && -x "$WND_BIN" ]] && break
+      [[ "$attempt" -lt "$max" ]] && warn "wn/wnd build failed (likely transient 503 from rustup or crates.io) — retrying"
+    done
+    [[ -x "$WN_BIN" && -x "$WND_BIN" ]] || {
+      fail_msg "wn/wnd still missing after $max build attempts"; exit 1
+    }
   fi
   info "wn:  $WN_BIN"
   info "wnd: $WND_BIN"
@@ -114,9 +136,17 @@ preflight() {
       git clone --depth 1 https://github.com/scsibug/nostr-rs-relay "$RELAY_REPO" \
         2>&1 | tee -a "$LOG_FILE"
     fi
-    step "building nostr-rs-relay (~3 min first run)"
-    ( cd "$RELAY_REPO" && cargo build --release --bin nostr-rs-relay ) \
-      2>&1 | tee -a "$LOG_FILE"
+    local attempt max=4
+    for attempt in $(seq 1 $max); do
+      step "building nostr-rs-relay (attempt $attempt/$max, ~3 min first run)"
+      ( cd "$RELAY_REPO" && cargo build --release --bin nostr-rs-relay ) \
+        2>&1 | tee -a "$LOG_FILE"
+      [[ -x "$RELAY_BIN" ]] && break
+      [[ "$attempt" -lt "$max" ]] && warn "nostr-rs-relay build failed (likely transient 503 from crates.io) — retrying"
+    done
+    [[ -x "$RELAY_BIN" ]] || {
+      fail_msg "nostr-rs-relay still missing after $max build attempts"; exit 1
+    }
   fi
   info "relay bin: $RELAY_BIN"
 }
