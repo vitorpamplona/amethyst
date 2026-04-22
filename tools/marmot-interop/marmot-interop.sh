@@ -847,33 +847,61 @@ test_06_member_removal() {
     skip_msg "Test 06 requires Test 05 state"; record_result "06 member removal" skip "no GROUP_05"; return
   fi
 
-  prompt_human "In Amethyst, open group 'Interop-05' -> Group Info -> Members.
-  Tap C ($C_NPUB) -> Remove.
-  Confirm the removal."
+  # Interop-05 was created by B (wn), so B is the sole admin. Per
+  # MIP-03 `enforceAuthorizedProposalSet`, non-admin members may only
+  # commit a self-Update or a SelfRemove-only proposal set — a Remove
+  # proposal from A (a plain member here) is rejected before publish
+  # with "non-admin members may only commit …". The previous revision
+  # of this test asked the operator to remove C from Amethyst's UI,
+  # which is correct per spec to REJECT — so the test itself was
+  # misaligned with the admin model. Drive the removal from B (the
+  # admin) instead, and observe its effect on A + C.
+  step "B (admin) removes C from Interop-05"
+  local remove_out
+  if ! remove_out=$(wn_b groups remove-members "$gid" "$C_NPUB" 2>&1); then
+    fail_msg "wn_b groups remove-members failed: $remove_out"
+    printf 'wn_b groups remove-members: %s\n' "$remove_out" >>"$LOG_FILE"
+    record_result "06 member removal" fail "wn remove returned nonzero"
+    return
+  fi
+  printf 'wn_b groups remove-members: %s\n' "$remove_out" >>"$LOG_FILE"
 
-  step "verifying C is removed (60s poll)"
-  local deadline=$(( $(date +%s) + 60 )) removed=0
+  step "verifying C is removed from B's + C's view (60s poll)"
+  local deadline=$(( $(date +%s) + 60 )) removed_b=0 removed_c=0
   while [[ $(date +%s) -lt $deadline ]]; do
+    if ! wn_b --json groups members "$gid" 2>/dev/null \
+         | jq -e --arg p "$C_HEX" '(.result // .) | .[]? | select((.pubkey // .public_key) == $p)' >/dev/null 2>&1; then
+      removed_b=1
+    fi
     if ! wn_c --json groups members "$gid" 2>/dev/null \
          | jq -e --arg p "$C_HEX" '(.result // .) | .[]? | select((.pubkey // .public_key) == $p)' >/dev/null 2>&1; then
-      removed=1; break
+      removed_c=1
     fi
+    [[ "$removed_b" -eq 1 ]] && break
     sleep 3
   done
+  if [[ "$removed_b" -ne 1 ]]; then
+    warn "B still shows C as a member after remove — commit may not have applied"
+  fi
+  info "post-remove: B sees C gone=$removed_b, C sees self gone=$removed_c"
 
-  if [[ "$removed" -ne 1 ]]; then
-    warn "C still appears to be a member; proceeding anyway"
+  prompt_human "In Amethyst, open 'Interop-05' -> Group Info and confirm C is no longer listed."
+  if ! confirm "Does Amethyst's member list now show only you and B (not C)?"; then
+    record_result "06 member removal" fail "Amethyst still shows C as a member"
+    return
   fi
 
   prompt_human "In Amethyst, send: 'after removing C'"
   if wait_for_message B "$gid" "after removing C" 30; then
-    info "B still receives messages (expected)"
+    info "B still receives messages (expected — B + A are the remaining members)"
   else
     fail_msg "B stopped receiving messages (unexpected)"
     record_result "06 member removal" fail "B lost access"; return
   fi
 
-  # C should NOT be able to decrypt the new message
+  # C should NOT be able to decrypt the new message — forward secrecy
+  # at the post-remove epoch means C's retained keys cannot open any
+  # kind:445 sealed under the new epoch's exporter.
   sleep 5
   if wait_for_message C "$gid" "after removing C" 10; then
     fail_msg "C still decrypted a post-removal message — forward secrecy broken"
