@@ -56,6 +56,10 @@ class AccountSyncedSettings(
             MutableStateFlow(internalSettings.security.maxHashtagLimit),
             MutableStateFlow(internalSettings.security.sendKind0EventsToLocalRelay),
         )
+    val videoPlayer =
+        AccountVideoPlayerPreferences(
+            MutableStateFlow(internalSettings.videoPlayer.buttonItems.toImmutableList()),
+        )
 
     fun toInternal(): AccountSyncedSettingsInternal =
         AccountSyncedSettingsInternal(
@@ -79,6 +83,7 @@ class AccountSyncedSettings(
                     security.maxHashtagLimit.value,
                     security.sendKind0EventsToLocalRelay.value,
                 ),
+            videoPlayer = AccountVideoPlayerPreferencesInternal(videoPlayer.buttonItems.value),
         )
 
     fun updateFrom(syncedSettingsInternal: AccountSyncedSettingsInternal) {
@@ -132,6 +137,11 @@ class AccountSyncedSettings(
         if (security.sendKind0EventsToLocalRelay.value != syncedSettingsInternal.security.sendKind0EventsToLocalRelay) {
             security.sendKind0EventsToLocalRelay.tryEmit(syncedSettingsInternal.security.sendKind0EventsToLocalRelay)
         }
+
+        val newVideoPlayerButtonItems = syncedSettingsInternal.videoPlayer.buttonItems.toImmutableList()
+        if (!equalImmutableLists(videoPlayer.buttonItems.value, newVideoPlayerButtonItems)) {
+            videoPlayer.buttonItems.tryEmit(newVideoPlayerButtonItems)
+        }
     }
 
     fun dontTranslateFromFilteredBySpokenLanguages(): Set<String> = languages.dontTranslateFrom.value - getLanguagesSpokenByUser()
@@ -141,6 +151,11 @@ class AccountSyncedSettings(
 class AccountReactionPreferences(
     var reactionChoices: MutableStateFlow<ImmutableList<String>>,
     var reactionRowItems: MutableStateFlow<ImmutableList<ReactionRowItem>>,
+)
+
+@Stable
+class AccountVideoPlayerPreferences(
+    var buttonItems: MutableStateFlow<ImmutableList<VideoPlayerButtonItem>>,
 )
 
 @Stable

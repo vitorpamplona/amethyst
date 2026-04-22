@@ -118,40 +118,53 @@ fun VideoQualityButton(
     }
 
     if (openDialog) {
-        // Scope videoSize tracking to the open popup: HLS ABR fires onVideoSizeChanged on every
-        // rung switch, and we don't want to pay recomposition cost on cards whose menu isn't open.
-        var videoSize by remember(player) { mutableStateOf(player.videoSize) }
-        DisposableEffect(player) {
-            val listener =
-                object : Player.Listener {
-                    override fun onVideoSizeChanged(newSize: VideoSize) {
-                        videoSize = newSize
-                    }
-                }
-            player.addListener(listener)
-            onDispose { player.removeListener(listener) }
-        }
-        val currentShortSide = minOf(videoSize.width, videoSize.height).takeIf { it > 0 }
+        VideoQualityPopup(
+            player = player,
+            videoGroup = videoGroup,
+            onDismiss = { openDialog = false },
+        )
+    }
+}
 
-        Popup(
-            alignment = Alignment.BottomCenter,
-            onDismissRequest = { openDialog = false },
-            properties = PopupProperties(focusable = true),
-        ) {
-            VideoQualityChoices(
-                videoGroup = videoGroup,
-                currentShortSide = currentShortSide,
-                isAuto = !hasVideoOverride(player),
-                onSelectAuto = {
-                    if (hasVideoOverride(player)) clearVideoOverride(player)
-                    openDialog = false
-                },
-                onSelectTrack = { trackIndex ->
-                    selectVideoTrack(player, videoGroup, trackIndex)
-                    openDialog = false
-                },
-            )
-        }
+@Composable
+fun VideoQualityPopup(
+    player: Player,
+    videoGroup: Tracks.Group,
+    onDismiss: () -> Unit,
+) {
+    // Scope videoSize tracking to the open popup: HLS ABR fires onVideoSizeChanged on every
+    // rung switch, and we don't want to pay recomposition cost on cards whose menu isn't open.
+    var videoSize by remember(player) { mutableStateOf(player.videoSize) }
+    DisposableEffect(player) {
+        val listener =
+            object : Player.Listener {
+                override fun onVideoSizeChanged(newSize: VideoSize) {
+                    videoSize = newSize
+                }
+            }
+        player.addListener(listener)
+        onDispose { player.removeListener(listener) }
+    }
+    val currentShortSide = minOf(videoSize.width, videoSize.height).takeIf { it > 0 }
+
+    Popup(
+        alignment = Alignment.BottomCenter,
+        onDismissRequest = onDismiss,
+        properties = PopupProperties(focusable = true),
+    ) {
+        VideoQualityChoices(
+            videoGroup = videoGroup,
+            currentShortSide = currentShortSide,
+            isAuto = !hasVideoOverride(player),
+            onSelectAuto = {
+                if (hasVideoOverride(player)) clearVideoOverride(player)
+                onDismiss()
+            },
+            onSelectTrack = { trackIndex ->
+                selectVideoTrack(player, videoGroup, trackIndex)
+                onDismiss()
+            },
+        )
     }
 }
 

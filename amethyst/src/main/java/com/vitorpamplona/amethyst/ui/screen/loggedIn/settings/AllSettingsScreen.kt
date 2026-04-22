@@ -46,6 +46,7 @@ import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Sync
 import androidx.compose.material.icons.outlined.ThumbUp
 import androidx.compose.material.icons.outlined.Translate
+import androidx.compose.material.icons.outlined.VideoSettings
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -216,6 +217,13 @@ fun AllSettingsScreen(
                 icon = Icons.Outlined.Dashboard,
                 tint = tint,
                 onClick = { nav.nav(Route.BottomBarSettings) },
+            )
+            HorizontalDivider()
+            SettingsNavigationRow(
+                title = R.string.video_player_settings,
+                icon = Icons.Outlined.VideoSettings,
+                tint = tint,
+                onClick = { nav.nav(Route.VideoPlayerSettings) },
             )
             HorizontalDivider(thickness = 4.dp)
             SettingsSectionHeader(R.string.danger_zone)

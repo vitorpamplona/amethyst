@@ -554,6 +554,12 @@ class Account(
         }
     }
 
+    suspend fun changeVideoPlayerButtonItems(items: List<VideoPlayerButtonItem>) {
+        if (settings.changeVideoPlayerButtonItems(items)) {
+            sendNewAppSpecificData()
+        }
+    }
+
     suspend fun updateZapAmounts(
         amountSet: List<Long>,
         selectedZapType: LnZapEvent.ZapType,

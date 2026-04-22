@@ -28,10 +28,14 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.VolumeOff
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PictureInPicture
 import androidx.compose.material.icons.filled.SaveAlt
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.ZoomOutMap
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -44,6 +48,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.tooling.preview.Preview
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.VideoPlayerAction
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.ui.components.M3ActionSection
@@ -63,9 +68,11 @@ fun OverflowMenuButtonPreview() {
     ThemeComparisonColumn {
         Box(Modifier.background(BitcoinOrange)) {
             OverflowMenuButton(
-                showShare = true,
-                showSave = true,
-                showPip = true,
+                actions = listOf(VideoPlayerAction.Share, VideoPlayerAction.Download, VideoPlayerAction.PictureInPicture),
+                startingMuteState = false,
+                onFullscreenClick = {},
+                onMuteClick = {},
+                onQualityClick = {},
                 onShareClick = {},
                 onSaveClick = {},
                 onPipClick = {},
@@ -77,13 +84,15 @@ fun OverflowMenuButtonPreview() {
 @Composable
 fun AnimatedOverflowMenuButton(
     controllerVisible: State<Boolean>,
-    modifier: Modifier = Modifier,
-    showShare: Boolean = true,
-    showSave: Boolean = true,
-    showPip: Boolean = false,
+    actions: List<VideoPlayerAction>,
+    startingMuteState: Boolean,
+    onFullscreenClick: (() -> Unit)?,
+    onMuteClick: () -> Unit,
+    onQualityClick: () -> Unit,
     onShareClick: () -> Unit,
     onSaveClick: () -> Unit,
     onPipClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     AnimatedVisibility(
         visible = controllerVisible.value,
@@ -92,9 +101,11 @@ fun AnimatedOverflowMenuButton(
         exit = FadeOut,
     ) {
         OverflowMenuButton(
-            showShare = showShare,
-            showSave = showSave,
-            showPip = showPip,
+            actions = actions,
+            startingMuteState = startingMuteState,
+            onFullscreenClick = onFullscreenClick,
+            onMuteClick = onMuteClick,
+            onQualityClick = onQualityClick,
             onShareClick = onShareClick,
             onSaveClick = onSaveClick,
             onPipClick = onPipClick,
@@ -104,9 +115,11 @@ fun AnimatedOverflowMenuButton(
 
 @Composable
 fun OverflowMenuButton(
-    showShare: Boolean,
-    showSave: Boolean,
-    showPip: Boolean,
+    actions: List<VideoPlayerAction>,
+    startingMuteState: Boolean,
+    onFullscreenClick: (() -> Unit)?,
+    onMuteClick: () -> Unit,
+    onQualityClick: () -> Unit,
     onShareClick: () -> Unit,
     onSaveClick: () -> Unit,
     onPipClick: () -> Unit,
@@ -141,31 +154,69 @@ fun OverflowMenuButton(
             onDismiss = { menuExpanded.value = false },
         ) {
             M3ActionSection {
-                if (showShare) {
-                    M3ActionRow(
-                        icon = Icons.Default.Share,
-                        text = stringRes(R.string.share_or_save),
-                    ) {
-                        menuExpanded.value = false
-                        onShareClick()
-                    }
-                }
-                if (showSave) {
-                    M3ActionRow(
-                        icon = Icons.Default.SaveAlt,
-                        text = stringRes(R.string.download_to_phone),
-                    ) {
-                        menuExpanded.value = false
-                        onSaveClick()
-                    }
-                }
-                if (showPip) {
-                    M3ActionRow(
-                        icon = Icons.Default.PictureInPicture,
-                        text = stringRes(R.string.picture_in_picture),
-                    ) {
-                        menuExpanded.value = false
-                        onPipClick()
+                actions.forEach { action ->
+                    when (action) {
+                        VideoPlayerAction.Fullscreen -> {
+                            onFullscreenClick?.let { zoom ->
+                                M3ActionRow(
+                                    icon = Icons.Default.ZoomOutMap,
+                                    text = stringRes(R.string.video_player_settings_action_fullscreen),
+                                ) {
+                                    menuExpanded.value = false
+                                    zoom()
+                                }
+                            }
+                        }
+
+                        VideoPlayerAction.Mute -> {
+                            M3ActionRow(
+                                icon = if (startingMuteState) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp,
+                                text = if (startingMuteState) stringRes(R.string.muted_button) else stringRes(R.string.mute_button),
+                            ) {
+                                menuExpanded.value = false
+                                onMuteClick()
+                            }
+                        }
+
+                        VideoPlayerAction.Quality -> {
+                            M3ActionRow(
+                                icon = Icons.Default.Settings,
+                                text = stringRes(R.string.call_settings_video_quality),
+                            ) {
+                                menuExpanded.value = false
+                                onQualityClick()
+                            }
+                        }
+
+                        VideoPlayerAction.Share -> {
+                            M3ActionRow(
+                                icon = Icons.Default.Share,
+                                text = stringRes(R.string.share_or_save),
+                            ) {
+                                menuExpanded.value = false
+                                onShareClick()
+                            }
+                        }
+
+                        VideoPlayerAction.Download -> {
+                            M3ActionRow(
+                                icon = Icons.Default.SaveAlt,
+                                text = stringRes(R.string.download_to_phone),
+                            ) {
+                                menuExpanded.value = false
+                                onSaveClick()
+                            }
+                        }
+
+                        VideoPlayerAction.PictureInPicture -> {
+                            M3ActionRow(
+                                icon = Icons.Default.PictureInPicture,
+                                text = stringRes(R.string.picture_in_picture),
+                            ) {
+                                menuExpanded.value = false
+                                onPipClick()
+                            }
+                        }
                     }
                 }
             }

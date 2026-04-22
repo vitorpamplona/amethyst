@@ -66,6 +66,38 @@ val DefaultReactionRowItems =
         ReactionRowItem(ReactionRowAction.Pay, showCounter = false),
     )
 
+@Serializable
+enum class VideoPlayerAction {
+    Fullscreen,
+    Mute,
+    Quality,
+    Share,
+    Download,
+    PictureInPicture,
+}
+
+@Serializable
+enum class VideoButtonLocation {
+    TopBar,
+    OverflowMenu,
+}
+
+@Serializable
+data class VideoPlayerButtonItem(
+    val action: VideoPlayerAction,
+    val location: VideoButtonLocation = VideoButtonLocation.OverflowMenu,
+)
+
+val DefaultVideoPlayerButtonItems =
+    listOf(
+        VideoPlayerButtonItem(VideoPlayerAction.Fullscreen, VideoButtonLocation.TopBar),
+        VideoPlayerButtonItem(VideoPlayerAction.Mute, VideoButtonLocation.TopBar),
+        VideoPlayerButtonItem(VideoPlayerAction.Quality, VideoButtonLocation.TopBar),
+        VideoPlayerButtonItem(VideoPlayerAction.Share, VideoButtonLocation.OverflowMenu),
+        VideoPlayerButtonItem(VideoPlayerAction.Download, VideoButtonLocation.OverflowMenu),
+        VideoPlayerButtonItem(VideoPlayerAction.PictureInPicture, VideoButtonLocation.OverflowMenu),
+    )
+
 fun getLanguagesSpokenByUser(): Set<String> {
     val languageList = ConfigurationCompat.getLocales(Resources.getSystem().getConfiguration())
     val codedList = mutableSetOf<String>()
@@ -81,6 +113,12 @@ class AccountSyncedSettingsInternal(
     val zaps: AccountZapPreferencesInternal = AccountZapPreferencesInternal(),
     val languages: AccountLanguagePreferencesInternal = AccountLanguagePreferencesInternal(),
     val security: AccountSecurityPreferencesInternal = AccountSecurityPreferencesInternal(),
+    val videoPlayer: AccountVideoPlayerPreferencesInternal = AccountVideoPlayerPreferencesInternal(),
+)
+
+@Serializable
+class AccountVideoPlayerPreferencesInternal(
+    var buttonItems: List<VideoPlayerButtonItem> = DefaultVideoPlayerButtonItems,
 )
 
 @Serializable

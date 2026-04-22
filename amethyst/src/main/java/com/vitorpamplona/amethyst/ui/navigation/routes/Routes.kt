@@ -213,6 +213,8 @@ sealed class Route {
 
     @Serializable object BottomBarSettings : Route()
 
+    @Serializable object VideoPlayerSettings : Route()
+
     @Serializable object CallSettings : Route()
 
     @Serializable object Lists : Route()

@@ -1595,6 +1595,24 @@
     <string name="reactions_settings_pay">Pay</string>
     <string name="reactions_settings_pay_description">Send a payment to the author via their payment targets</string>
 
+    <string name="video_player_settings">Video Player Buttons</string>
+    <string name="video_player_settings_description">Choose which buttons appear on the video player and which live in the overflow menu. Drag to reorder.</string>
+    <string name="video_player_settings_reorder">Reorder</string>
+    <string name="video_player_settings_location_top_bar">Top Bar</string>
+    <string name="video_player_settings_location_overflow">Overflow Menu</string>
+    <string name="video_player_settings_action_fullscreen">Fullscreen</string>
+    <string name="video_player_settings_action_fullscreen_description">Open the video in a fullscreen zoom view</string>
+    <string name="video_player_settings_action_mute">Mute</string>
+    <string name="video_player_settings_action_mute_description">Toggle audio on or off</string>
+    <string name="video_player_settings_action_quality">Video Quality</string>
+    <string name="video_player_settings_action_quality_description">Pick a resolution for HLS videos (hidden on non-HLS videos)</string>
+    <string name="video_player_settings_action_share">Share or Save</string>
+    <string name="video_player_settings_action_share_description">Share the video link externally</string>
+    <string name="video_player_settings_action_download">Save to Phone</string>
+    <string name="video_player_settings_action_download_description">Download the video to your device (hidden on live streams)</string>
+    <string name="video_player_settings_action_pip">Picture-in-Picture</string>
+    <string name="video_player_settings_action_pip_description">Play the video in a floating window (hidden if unsupported)</string>
+
     <string name="profile_image_of_user">Profile Picture of %1$s</string>
     <string name="relay_info">Relay %1$s</string>
     <string name="expand_relay_list">Expand relay list</string>
