@@ -31,6 +31,6 @@ class LocalRelayListViewModel : BasicRelaySetupInfoModel() {
             .toList()
 
     override suspend fun saveRelayList(urlList: List<NormalizedRelayUrl>) {
-        account.localRelayList.saveRelayList(urlList) {}
+        account.saveLocalRelayList(urlList)
     }
 }
