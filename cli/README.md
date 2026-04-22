@@ -114,9 +114,9 @@ Run `amy --help` for the canonical list. As of today:
 | `whoami` | Print the identity stored in `--data-dir`. |
 | `relay add URL [--type T]` | `T = nip65 \| inbox \| key_package \| all`. |
 | `relay list` | Dump configured relays by bucket. |
-| `relay publish-lists` | Publish kind:10002 (NIP-65) + kind:10050 (DM inbox). |
-| `marmot key-package publish` | Publish a fresh MLS KeyPackage (kind:30443). |
-| `marmot key-package check NPUB` | Fetch someone else's KeyPackage from their advertised relays. |
+| `relay publish-lists` | Publish kind:10002 (NIP-65) + kind:10050 (DM inbox) + kind:10051 (KeyPackage relay list). |
+| `marmot key-package publish` | Publish a fresh MLS KeyPackage (kind:30443) to the configured `key_package` bucket (fallback: NIP-65 outbox). |
+| `marmot key-package check NPUB` | Look up NPUB's kind:10051 / kind:10002 on bootstrap relays, then fetch their KeyPackage from those relays. |
 | `marmot group create [--name NAME]` | New empty group with you as sole admin. |
 | `marmot group list` | All groups you're a member of. |
 | `marmot group show GID` | Full group state (members, admins, epoch, metadata). |
@@ -130,7 +130,7 @@ Run `amy --help` for the canonical list. As of today:
 | `marmot group leave GID` | Self-remove. |
 | `marmot message send GID TEXT` | Publish a kind:9 inner event into the group. |
 | `marmot message list GID [--limit N]` | Decrypted inner events, oldest first. |
-| `marmot await key-package NPUB` | Block until a KeyPackage is seen on relays. |
+| `marmot await key-package NPUB` | Block until a KeyPackage is seen on NPUB's advertised relays (kind:10051 / kind:10002). |
 | `marmot await group --name NAME` | Block until we're added to a group with that name. |
 | `marmot await member GID NPUB` | Block until NPUB is in GID's member set. |
 | `marmot await admin GID NPUB` | Block until NPUB is an admin of GID. |
@@ -147,6 +147,33 @@ itself crashed".
 - `--data-dir PATH` — defaults to `./amethyst-cli-data` or
   `$AMETHYST_CLI_DATA`. Always an absolute path after resolution.
 - `--help` / `-h` — usage summary.
+
+---
+
+## Relay routing
+
+Amy follows the Marmot protocol's per-event routing rules so two users
+with completely disjoint relay configurations can still marmot each
+other. No event ever ships blindly to "our configured relays" — Amy
+looks up the right relay set per event per recipient.
+
+| Event | Publish to | Fetch from |
+|---|---|---|
+| kind:30443 (our own KeyPackage) | `key_package` bucket → NIP-65 outbox → any configured | — |
+| kind:30443 (someone else's KeyPackage) | — | Their kind:10051 → their kind:10002 write → our bootstrap pool |
+| kind:10051 / 10050 / 10002 (our own lists) | All configured relays (broadcast) | — |
+| kind:10051 / 10050 / 10002 (someone else's) | — | Our bootstrap pool = configured relays ∪ Amethyst defaults |
+| kind:1059 Welcome gift wrap (kind:444 inside) | Recipient's kind:10050 → their kind:10002 read → `DefaultDMRelayList` → our outbox | — |
+| kind:1059 gift wraps addressed to us | — | Our kind:10050 |
+| kind:445 Group Event (Commit / Proposal / chat) | Group's MIP-01 `relays` field | Same |
+
+**Bootstrap pool**: when Amy needs to discover a user it's never talked
+to, it queries `configured relays ∪ Amethyst's default NIP-65 set ∪
+Amethyst's default DM-inbox set`. These defaults come from
+`commons.defaults.AmethystDefaults` and match what the Android/Desktop
+UI publishes to on first run, so any fresh Amethyst account is
+reachable via the bootstrap pool even before Amy has seen any of their
+events.
 
 ---
 

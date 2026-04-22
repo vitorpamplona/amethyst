@@ -47,6 +47,7 @@ class MarmotGroupList(
         nostrGroupId: HexKey,
         msg: Note,
     ) {
+        if (!isDisplayableFeedMessage(msg)) return
         val chatroom = getOrCreateGroup(nostrGroupId)
         val isSelfAuthored = msg.author?.pubkeyHex == ownerPubKey
         // Use the quiet path for our own messages so the relay round-trip
@@ -74,6 +75,7 @@ class MarmotGroupList(
         nostrGroupId: HexKey,
         msg: Note,
     ) {
+        if (!isDisplayableFeedMessage(msg)) return
         val chatroom = getOrCreateGroup(nostrGroupId)
         if (chatroom.restoreMessageSync(msg)) {
             noteToGroupIndex.getOrCreate(msg.idHex) { nostrGroupId }
@@ -134,5 +136,28 @@ class MarmotGroupList(
         val result = mutableListOf<HexKey>()
         rooms.forEach { key, _ -> result.add(key) }
         return result
+    }
+
+    /**
+     * True if this inner event should appear as its own bubble in the group
+     * chat feed. Side-channel kinds (reactions, deletions) must still be
+     * consumed into LocalCache — they drive the reaction row on the target
+     * note and, for kind:5, revoke a prior reaction — but they must NOT show
+     * up as standalone messages.
+     *
+     * Needed because WhiteNoise emits plain kind:7 reactions (emoji content +
+     * `e` tag) and kind:5 unreacts inside kind:445, and the Marmot pipeline
+     * blindly routed every inner event into the chatroom. The reaction then
+     * rendered as a chat bubble containing just the emoji, with a quoted
+     * citation of the target message — which reads exactly like a reply.
+     */
+    private fun isDisplayableFeedMessage(msg: Note): Boolean {
+        val kind = msg.event?.kind ?: return true
+        return kind != MARMOT_INNER_KIND_REACTION && kind != MARMOT_INNER_KIND_DELETION
+    }
+
+    companion object {
+        private const val MARMOT_INNER_KIND_DELETION = 5
+        private const val MARMOT_INNER_KIND_REACTION = 7
     }
 }

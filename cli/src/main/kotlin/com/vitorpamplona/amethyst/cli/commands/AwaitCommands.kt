@@ -26,7 +26,9 @@ import com.vitorpamplona.amethyst.cli.AwaitTimeout
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Json
+import com.vitorpamplona.quartz.marmot.RecipientRelayFetcher
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageFetcher
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchFirst
 import kotlinx.coroutines.delay
 
@@ -65,19 +67,39 @@ object AwaitCommands {
             ctx.prepare()
             val target = ctx.requireUserHex(rest[0])
             val filter = ctx.marmot.subscriptionManager.keyPackageFilter(target)
+            // MIP-00: target's KeyPackages live on the relays advertised in
+            // their kind:10051 (fallback: kind:10002 write). Resolve the
+            // right relay set once up front against bootstrap seeds; the
+            // polling loop then hits those relays on every tick. If the
+            // target hasn't published either list yet, fall back to the
+            // bootstrap pool so the loop still has something to query.
+            val seed = ctx.bootstrapRelays()
+            val lists = RecipientRelayFetcher.fetchRelayLists(ctx.client, target, seed)
+            val relays =
+                KeyPackageFetcher.fetchRelaysFor(
+                    targetKeyPackageRelays = lists.keyPackage,
+                    targetOutbox = lists.nip65Write(),
+                    myOutbox = seed,
+                )
+            if (relays.isEmpty()) {
+                throw AwaitTimeout("no relays to query for $target (configure relays or bootstrap defaults first)")
+            }
             val deadline = System.currentTimeMillis() + timeoutSecs * 1000
             while (System.currentTimeMillis() < deadline) {
-                val relays = ctx.anyRelays()
-                if (relays.isNotEmpty()) {
-                    val event =
-                        ctx.client.fetchFirst(
-                            filters = relays.associateWith { listOf(filter) },
-                            timeoutMs = 3_000,
-                        )
-                    if (event is KeyPackageEvent) {
-                        Json.writeLine(mapOf("event_id" to event.id, "author" to event.pubKey))
-                        return 0
-                    }
+                val event =
+                    ctx.client.fetchFirst(
+                        filters = relays.associateWith { listOf(filter) },
+                        timeoutMs = 3_000,
+                    )
+                if (event is KeyPackageEvent) {
+                    Json.writeLine(
+                        mapOf(
+                            "event_id" to event.id,
+                            "author" to event.pubKey,
+                            "found_on" to relays.map { it.url },
+                        ),
+                    )
+                    return 0
                 }
                 delay(2_000)
             }
