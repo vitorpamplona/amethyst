@@ -916,15 +916,16 @@ fun MainContent(
         remember(relayManager) {
             DmSendTracker(relayManager.client)
         }
-    val iAccount =
-        remember(account, localCache, relayManager, dmSendTracker) {
-            DesktopIAccount(account, localCache, relayManager, dmSendTracker, scope)
-        }
-
-    // Centralized relay state for all categories (DM, search, blocked)
+    // Centralized relay state for all categories (DM, search, blocked, NIP-65 persistence)
+    // Created before iAccount so NIP-65 backup can be loaded
     val accountRelays =
         remember(account, relayManager, scope) {
             DesktopAccountRelays(account.pubKeyHex, relayManager, scope)
+        }
+
+    val iAccount =
+        remember(account, localCache, relayManager, dmSendTracker, accountRelays) {
+            DesktopIAccount(account, localCache, relayManager, dmSendTracker, scope, accountRelays)
         }
 
     // Aggregated relay categories (feed, notifications, search, DM)
@@ -978,9 +979,14 @@ fun MainContent(
                                 relay: NormalizedRelayUrl,
                                 forFilters: List<Filter>?,
                             ) {
-                                // Route through localCache for NIP-65 sync
-                                localCache.consume(event, relay)
-                                // Route to accountRelays for kinds without cache-backed state
+                                // NIP-65 (kind 10002) must go through justConsumeMyOwnEvent
+                                // because localCache.consume() doesn't handle addressable events
+                                if (event is AdvertisedRelayListEvent) {
+                                    scope.launch(Dispatchers.IO) {
+                                        localCache.justConsumeMyOwnEvent(event)
+                                    }
+                                }
+                                // Route to accountRelays for persistence + state updates
                                 accountRelays.consumeIfRelevant(event)
                             }
                         },
@@ -1092,6 +1098,7 @@ fun MainContent(
 
     CompositionLocalProvider(
         LocalRelayCategories provides relayCategories,
+        com.vitorpamplona.amethyst.desktop.ui.relay.LocalAccountRelays provides accountRelays,
     ) {
         Box(Modifier.fillMaxSize()) {
             Column(Modifier.fillMaxSize()) {

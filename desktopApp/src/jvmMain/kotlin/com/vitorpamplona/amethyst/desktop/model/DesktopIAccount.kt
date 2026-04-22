@@ -70,6 +70,7 @@ class DesktopIAccount(
     private val relayManager: RelayConnectionManager,
     val dmSendTracker: DmSendTracker,
     private val scope: CoroutineScope,
+    private val accountRelays: DesktopAccountRelays? = null,
 ) : IAccount {
     override val signer: NostrSigner = NostrSignerWithClientTag(accountState.signer, CLIENT_TAG_NAME)
 
@@ -98,9 +99,12 @@ class DesktopIAccount(
             localCache,
             scope,
             object : Nip65RelayListRepository {
-                override val backupNIP65RelayList: AdvertisedRelayListEvent? = null
+                override val backupNIP65RelayList: AdvertisedRelayListEvent? =
+                    accountRelays?.loadPersistedNip65Event()
 
-                override fun updateNIP65RelayList(event: AdvertisedRelayListEvent) { /* no persistence yet */ }
+                override fun updateNIP65RelayList(event: AdvertisedRelayListEvent) {
+                    accountRelays?.consumePublishedEvent(event)
+                }
 
                 override val defaultOutboxRelays = relayManager.connectedRelays.value
                 override val defaultInboxRelays = relayManager.connectedRelays.value

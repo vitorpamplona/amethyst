@@ -217,6 +217,7 @@ internal fun RootContent(
                 relayManager = relayManager,
                 localCache = localCache,
                 account = account,
+                iAccount = iAccount,
                 nwcConnection = nwcConnection,
                 subscriptionsCoordinator = subscriptionsCoordinator,
                 initialFeedMode = FeedMode.FOLLOWING,
@@ -248,6 +249,7 @@ internal fun RootContent(
                 localCache = localCache,
                 relayManager = relayManager,
                 subscriptionsCoordinator = subscriptionsCoordinator,
+                account = account,
                 onNavigateToProfile = onNavigateToProfile,
                 onNavigateToThread = onNavigateToThread,
             )
@@ -284,6 +286,7 @@ internal fun RootContent(
                 relayManager = relayManager,
                 localCache = localCache,
                 account = account,
+                iAccount = iAccount,
                 nwcConnection = nwcConnection,
                 subscriptionsCoordinator = subscriptionsCoordinator,
                 initialFeedMode = FeedMode.GLOBAL,
@@ -334,19 +337,12 @@ internal fun RootContent(
         }
 
         DeckColumnType.Relays -> {
-            val accountRelays =
-                remember(iAccount, relayManager, scope) {
-                    com.vitorpamplona.amethyst.desktop.model.DesktopAccountRelays(
-                        iAccount.pubKey,
-                        relayManager,
-                        scope,
-                    )
-                }
+            val accountRelays = com.vitorpamplona.amethyst.desktop.ui.relay.LocalAccountRelays.current
             RelayDashboardScreen(
                 relayManager = relayManager,
                 nip11Fetcher = nip11Fetcher,
                 nip65State = iAccount.nip65RelayList,
-                accountRelays = accountRelays,
+                accountRelays = accountRelays ?: return,
                 signer = iAccount.signer,
                 onPublish = { event -> relayManager.broadcastToAll(event) },
             )
@@ -427,6 +423,7 @@ internal fun RootContent(
                 localCache = localCache,
                 relayManager = relayManager,
                 subscriptionsCoordinator = subscriptionsCoordinator,
+                account = account,
                 initialQuery = "#${columnType.tag}",
                 onNavigateToProfile = onNavigateToProfile,
                 onNavigateToThread = onNavigateToThread,

@@ -53,6 +53,7 @@ import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import kotlinx.coroutines.launch
 
 @Composable
 fun RelayConfigTab(
@@ -99,7 +100,16 @@ fun RelayConfigTab(
             Nip65RelayEditor(
                 nip65State = nip65State,
                 signer = signer,
-                onPublish = onPublish,
+                onPublish = { event ->
+                    onPublish(event)
+                    // Consume locally so nip65State updates immediately
+                    @OptIn(kotlinx.coroutines.DelicateCoroutinesApi::class)
+                    kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                        nip65State.cache.justConsumeMyOwnEvent(event)
+                    }
+                    // Also persist relay event for restart survival
+                    accountRelays.consumePublishedEvent(event)
+                },
             )
         }
 
@@ -128,7 +138,11 @@ fun RelayConfigTab(
             SearchRelayEditor(
                 localRelays = searchRelayState,
                 signer = signer,
-                onPublish = onPublish,
+                onPublish = { event ->
+                    onPublish(event)
+                    accountRelays.consumePublishedEvent(event)
+                    accountRelays.setSearchRelays(searchRelayState.toSet())
+                },
             )
         }
 
@@ -142,7 +156,12 @@ fun RelayConfigTab(
             BlockedRelayEditor(
                 localRelays = blockedRelayState,
                 signer = signer,
-                onPublish = onPublish,
+                onPublish = { event ->
+                    onPublish(event)
+                    // Don't call consumePublishedEvent — blocked relays use private tags,
+                    // publicRelays() returns empty and would overwrite the correct value
+                    accountRelays.setBlockedRelays(blockedRelayState.toSet())
+                },
             )
         }
     }

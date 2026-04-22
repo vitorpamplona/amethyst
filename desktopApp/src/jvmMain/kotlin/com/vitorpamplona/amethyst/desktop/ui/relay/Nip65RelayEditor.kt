@@ -90,9 +90,17 @@ fun Nip65RelayEditor(
         }
 
     LaunchedEffect(currentNip65Relays) {
-        localRelays.clear()
-        localRelays.addAll(currentNip65Relays)
+        if (currentNip65Relays.isNotEmpty()) {
+            localRelays.clear()
+            localRelays.addAll(currentNip65Relays)
+        }
         loaded = true
+    }
+
+    // Delay showing empty state to allow async cache load
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay(500)
+        if (!loaded) loaded = true
     }
 
     Column(modifier = modifier.fillMaxWidth()) {
@@ -272,9 +280,10 @@ private fun tryAddNip65Relay(
     url: String,
     existing: MutableList<AdvertisedRelayInfo>,
 ): String? {
-    val error = validateRelayUrl(url)
+    val input = normalizeRelayInput(url)
+    val error = validateRelayUrl(input)
     if (error != null) return error
-    val normalized = RelayUrlNormalizer.normalizeOrNull(url.trim())!!
+    val normalized = RelayUrlNormalizer.normalizeOrNull(input)!!
     if (existing.any { it.relayUrl.url == normalized.url }) {
         return "Relay already added"
     }

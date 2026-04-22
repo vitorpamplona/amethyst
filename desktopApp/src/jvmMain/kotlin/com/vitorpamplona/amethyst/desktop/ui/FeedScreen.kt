@@ -38,13 +38,16 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -82,6 +85,7 @@ import com.vitorpamplona.amethyst.desktop.subscriptions.rememberSubscription
 import com.vitorpamplona.amethyst.desktop.ui.media.LightboxOverlay
 import com.vitorpamplona.amethyst.desktop.ui.note.NoteCard
 import com.vitorpamplona.amethyst.desktop.ui.relay.LocalRelayCategories
+import com.vitorpamplona.amethyst.desktop.ui.relay.Nip65RelayEditor
 import com.vitorpamplona.amethyst.desktop.viewmodels.DesktopFeedViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
@@ -89,6 +93,10 @@ import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 
 data class LightboxState(
     val urls: List<String>,
@@ -262,6 +270,7 @@ fun FeedScreen(
     relayManager: DesktopRelayConnectionManager,
     localCache: DesktopLocalCache,
     account: AccountState.LoggedIn? = null,
+    iAccount: com.vitorpamplona.amethyst.desktop.model.DesktopIAccount? = null,
     nwcConnection: com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect.Nip47URINorm? = null,
     subscriptionsCoordinator: DesktopRelaySubscriptionsCoordinator? = null,
     initialFeedMode: FeedMode? = null,
@@ -284,6 +293,7 @@ fun FeedScreen(
 
     var replyToEvent by remember { mutableStateOf<Event?>(null) }
     var lightboxState by remember { mutableStateOf<LightboxState?>(null) }
+    var showRelayPicker by remember { mutableStateOf(false) }
     var feedMode by remember { mutableStateOf(initialFeedMode ?: DesktopPreferences.feedMode) }
 
     // Subscribe to contact list (kind 3) — populates localCache.followedUsers
@@ -488,7 +498,7 @@ fun FeedScreen(
             FeedHeader(
                 feedMode = feedMode,
                 account = account,
-                connectedRelays = connectedRelays,
+                feedRelays = feedRelays,
                 followedUsersCount = followedUsers.size,
                 onFeedModeChange = { mode ->
                     feedMode = mode
@@ -497,6 +507,7 @@ fun FeedScreen(
                 onRefresh = { relayManager.connect() },
                 onCompose = onCompose,
                 onNavigateToRelays = onNavigateToRelays,
+                onOpenRelayPicker = { showRelayPicker = true },
             )
 
             Spacer(Modifier.height(8.dp))
@@ -579,6 +590,33 @@ fun FeedScreen(
             )
         }
 
+        // Feed relay picker dialog
+        if (showRelayPicker && account != null && iAccount != null) {
+            AlertDialog(
+                onDismissRequest = { showRelayPicker = false },
+                title = { Text("Feed Relays (NIP-65)") },
+                text = {
+                    Nip65RelayEditor(
+                        nip65State = iAccount.nip65RelayList,
+                        signer = account.signer,
+                        onPublish = { event ->
+                            relayManager.broadcastToAll(event)
+                            // Update local NIP-65 state immediately via addressable note cache
+                            @OptIn(kotlinx.coroutines.DelicateCoroutinesApi::class)
+                            GlobalScope.launch(Dispatchers.IO) {
+                                localCache.justConsumeMyOwnEvent(event)
+                            }
+                        },
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = { showRelayPicker = false }) {
+                        Text("Close")
+                    }
+                },
+            )
+        }
+
         // Lightbox overlay
         lightboxState?.let { state ->
             LightboxOverlay(
@@ -600,12 +638,13 @@ fun FeedScreen(
 private fun FeedHeader(
     feedMode: FeedMode,
     account: AccountState.LoggedIn?,
-    connectedRelays: Set<Any>,
+    feedRelays: Set<com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl>,
     followedUsersCount: Int,
     onFeedModeChange: (FeedMode) -> Unit,
     onRefresh: () -> Unit,
     onCompose: () -> Unit,
     onNavigateToRelays: () -> Unit = {},
+    onOpenRelayPicker: () -> Unit = {},
 ) {
     FlowRow(
         modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
@@ -642,7 +681,7 @@ private fun FeedHeader(
             Spacer(Modifier.height(4.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    "${connectedRelays.size} relays connected",
+                    "${feedRelays.size} relays",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.primary,
                     modifier =
@@ -656,6 +695,20 @@ private fun FeedHeader(
                     )
                 }
                 Spacer(Modifier.width(8.dp))
+                if (account != null && !account.isReadOnly) {
+                    IconButton(
+                        onClick = onOpenRelayPicker,
+                        modifier = Modifier.size(24.dp),
+                    ) {
+                        Icon(
+                            Icons.Default.Dns,
+                            contentDescription = "Edit Feed Relays",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                    Spacer(Modifier.width(4.dp))
+                }
                 IconButton(
                     onClick = onRefresh,
                     modifier = Modifier.size(24.dp),

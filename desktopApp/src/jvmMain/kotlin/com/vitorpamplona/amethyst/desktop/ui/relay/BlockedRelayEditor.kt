@@ -80,13 +80,6 @@ fun BlockedRelayEditor(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(bottom = 4.dp),
         )
-        Text(
-            "Existing blocked relay list is not loaded yet — saving will publish a new list.",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
-            modifier = Modifier.padding(bottom = 8.dp),
-        )
-
         // Add relay input
         Row(
             verticalAlignment = Alignment.CenterVertically,

@@ -159,12 +159,13 @@ private fun tryAddRelay(
     existing: List<NormalizedRelayUrl>,
     onAdd: (String) -> NormalizedRelayUrl?,
 ): String? {
-    val error = validateRelayUrl(url)
+    val input = normalizeRelayInput(url)
+    val error = validateRelayUrl(input)
     if (error != null) return error
-    val normalized = RelayUrlNormalizer.normalizeOrNull(url.trim()) ?: return "Invalid relay URL"
+    val normalized = RelayUrlNormalizer.normalizeOrNull(input) ?: return "Invalid relay URL"
     if (existing.any { it.url == normalized.url }) {
         return "Relay already added"
     }
-    onAdd(url.trim())
+    onAdd(input)
     return null
 }

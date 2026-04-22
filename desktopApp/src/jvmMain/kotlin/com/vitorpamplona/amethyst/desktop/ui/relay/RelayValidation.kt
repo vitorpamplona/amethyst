@@ -24,21 +24,34 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 
 /**
- * Validates and adds a relay URL to a mutable list.
- * Returns an error message string if validation fails, null on success.
+ * Normalizes a relay URL input — auto-prefixes wss:// if no scheme given.
+ * Returns the normalized URL string ready for validation.
+ */
+internal fun normalizeRelayInput(url: String): String {
+    val trimmed = url.trim()
+    return when {
+        trimmed.startsWith("wss://") || trimmed.startsWith("ws://") -> trimmed
+        trimmed.contains(".onion") -> "ws://$trimmed"
+        trimmed.contains(".") -> "wss://$trimmed"
+        else -> trimmed
+    }
+}
+
+/**
+ * Validates a relay URL. Returns error message or null on success.
+ * Auto-prefixes wss:// if no scheme given (e.g., "nos.lol" → "wss://nos.lol").
  */
 internal fun validateRelayUrl(url: String): String? {
-    val trimmed = url.trim()
-    if (trimmed.isBlank()) return "Enter a relay URL"
-    if (!trimmed.startsWith("wss://") && !trimmed.startsWith("ws://")) {
-        return "URL must start with wss:// or ws://"
+    val input = normalizeRelayInput(url)
+    if (input.isBlank()) return "Enter a relay URL"
+    if (!input.startsWith("wss://") && !input.startsWith("ws://")) {
+        return "Invalid relay URL"
     }
-    if (trimmed.startsWith("ws://") && !trimmed.contains(".onion")) {
+    if (input.startsWith("ws://") && !input.contains(".onion")) {
         return "Use wss:// — unencrypted ws:// exposes traffic to observers"
     }
-    // Must have a domain with at least one dot (foo is not a valid relay)
     val host =
-        trimmed
+        input
             .removePrefix("wss://")
             .removePrefix("ws://")
             .split("/")
@@ -46,7 +59,7 @@ internal fun validateRelayUrl(url: String): String? {
     if (!host.contains(".")) {
         return "Invalid domain — must contain at least one dot (e.g., relay.example.com)"
     }
-    if (RelayUrlNormalizer.normalizeOrNull(trimmed) == null) {
+    if (RelayUrlNormalizer.normalizeOrNull(input) == null) {
         return "Invalid relay URL"
     }
     return null
@@ -56,9 +69,10 @@ internal fun tryAddSimpleRelay(
     url: String,
     existing: MutableList<NormalizedRelayUrl>,
 ): String? {
-    val error = validateRelayUrl(url)
+    val input = normalizeRelayInput(url)
+    val error = validateRelayUrl(input)
     if (error != null) return error
-    val normalized = RelayUrlNormalizer.normalizeOrNull(url.trim())!!
+    val normalized = RelayUrlNormalizer.normalizeOrNull(input)!!
     if (existing.any { it.url == normalized.url }) {
         return "Relay already added"
     }

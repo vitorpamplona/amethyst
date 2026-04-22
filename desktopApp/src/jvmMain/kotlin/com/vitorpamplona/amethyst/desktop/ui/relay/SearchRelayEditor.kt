@@ -36,6 +36,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -80,13 +81,6 @@ fun SearchRelayEditor(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(bottom = 4.dp),
         )
-        Text(
-            "Existing search relay list is not loaded yet — saving will publish a new list.",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
-            modifier = Modifier.padding(bottom = 8.dp),
-        )
-
         // Add relay input
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -192,6 +186,17 @@ fun SearchRelayEditor(
                 },
             ) {
                 Text("Save")
+            }
+
+            OutlinedButton(
+                onClick = {
+                    localRelays.clear()
+                    com.vitorpamplona.amethyst.desktop.model.DesktopRelayCategories.DEFAULT_SEARCH_RELAYS.let {
+                        localRelays.addAll(it)
+                    }
+                },
+            ) {
+                Text("Reset to defaults")
             }
 
             savedMessage?.let {
