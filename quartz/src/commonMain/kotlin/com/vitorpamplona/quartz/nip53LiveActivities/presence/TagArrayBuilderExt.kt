@@ -26,9 +26,12 @@ import com.vitorpamplona.quartz.nip01Core.tags.aTag.toATag
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.MeetingSpaceTag
 import com.vitorpamplona.quartz.nip53LiveActivities.presence.tags.HandRaisedTag
+import com.vitorpamplona.quartz.nip53LiveActivities.presence.tags.MutedTag
 
 fun TagArrayBuilder<MeetingRoomPresenceEvent>.roomMeeting(rep: MeetingSpaceTag) = addUnique(rep.toTagArray())
 
 fun TagArrayBuilder<MeetingRoomPresenceEvent>.roomMeeting(rep: EventHintBundle<MeetingRoomEvent>) = addUnique(rep.toATag().toATagArray())
 
 fun TagArrayBuilder<MeetingRoomPresenceEvent>.handRaised(raised: Boolean) = addUnique(HandRaisedTag.assemble(raised))
+
+fun TagArrayBuilder<MeetingRoomPresenceEvent>.muted(muted: Boolean) = addUnique(MutedTag.assemble(muted))

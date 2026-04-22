@@ -31,8 +31,10 @@ import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.MeetingSpaceTag
 import com.vitorpamplona.quartz.nip53LiveActivities.presence.tags.HandRaisedTag
+import com.vitorpamplona.quartz.nip53LiveActivities.presence.tags.MutedTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -52,6 +54,8 @@ class MeetingRoomPresenceEvent(
     fun interactiveRoom() = tags.firstNotNullOfOrNull(MeetingSpaceTag::parse)
 
     fun handRaised() = tags.firstNotNullOfOrNull(HandRaisedTag::parse)
+
+    fun muted() = tags.firstNotNullOfOrNull(MutedTag::parse)
 
     companion object Companion {
         const val KIND = 10312
@@ -76,6 +80,28 @@ class MeetingRoomPresenceEvent(
             handRaised?.let {
                 handRaised(it)
             }
+            initializer()
+        }
+
+        /**
+         * Convenience builder when the parent is a kind 30312 [MeetingSpaceEvent]
+         * (Clubhouse-style audio room). Mirrors the [MeetingRoomEvent] overload so
+         * a participant can publish presence + hand-raise + mute against an audio
+         * room without adapting to the meeting-room (kind 30313) variant.
+         */
+        fun build(
+            root: MeetingSpaceEvent,
+            handRaised: Boolean? = null,
+            muted: Boolean? = null,
+            createdAt: Long = TimeUtils.now(),
+            initializer: TagArrayBuilder<MeetingRoomPresenceEvent>.() -> Unit = {},
+        ) = eventTemplate(KIND, "", createdAt) {
+            alt(root.room() ?: ALT)
+
+            roomMeeting(MeetingSpaceTag(root.address(), root.relays().firstOrNull()))
+
+            handRaised?.let { handRaised(it) }
+            muted?.let { muted(it) }
             initializer()
         }
     }

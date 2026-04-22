@@ -67,6 +67,7 @@ object ScrollStateKeys {
     const val PUBLIC_CHATS_SCREEN = "PublicChatsFeed"
     const val FOLLOW_PACKS_SCREEN = "FollowPacksFeed"
     const val LIVE_STREAMS_SCREEN = "LiveStreamsFeed"
+    const val AUDIO_ROOMS_SCREEN = "AudioRoomsFeed"
     const val LONGS_SCREEN = "LongsFeed"
     const val ARTICLES_SCREEN = "ArticlesFeed"
 

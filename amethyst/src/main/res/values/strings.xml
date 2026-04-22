@@ -488,6 +488,11 @@
     <string name="public_chats">Public Chats</string>
     <string name="follow_packs">Follow Packs</string>
     <string name="live_streams">Live Streams</string>
+    <string name="audio_rooms">Audio Rooms</string>
+    <string name="audio_room_stage">Stage</string>
+    <string name="audio_room_audience">Audience</string>
+    <string name="audio_room_raise_hand">Raise hand</string>
+    <string name="audio_room_lower_hand">Lower hand</string>
     <string name="longs">Videos</string>
     <string name="articles">Articles</string>
     <string name="private_bookmarks">Private Bookmarks</string>
