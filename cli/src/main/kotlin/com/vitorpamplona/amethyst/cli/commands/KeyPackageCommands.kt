@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.cli.commands
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Json
+import com.vitorpamplona.quartz.marmot.RecipientRelayFetcher
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageFetcher
 
 object KeyPackageCommands {
     suspend fun dispatch(
@@ -69,15 +71,26 @@ object KeyPackageCommands {
         try {
             ctx.prepare()
             val targetHex = ctx.requireUserHex(rest[0])
-            // CLI doesn't (yet) cache target's kind:10051/10002 — just ask every
-            // configured relay. Amethyst, which does cache those, passes them in.
+            // Per MIP-00: a user's KeyPackages live on the relays advertised
+            // in their kind:10051 event (fallback: kind:10002 write marker).
+            // Look those up first from bootstrap seeds so `check` works even
+            // when the target and inviter share no relays.
+            val seed = ctx.bootstrapRelays()
+            if (seed.isEmpty()) return Json.error("no_relays", "configure relays first")
+            val recipient = RecipientRelayFetcher.fetchRelayLists(ctx.client, targetHex, seed)
             val relays =
-                com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageFetcher
-                    .fetchRelaysFor(emptySet(), emptySet(), ctx.anyRelays())
-            if (relays.isEmpty()) return Json.error("no_relays", "configure relays first")
+                KeyPackageFetcher.fetchRelaysFor(
+                    targetKeyPackageRelays = recipient.keyPackage,
+                    targetOutbox = recipient.nip65Write(),
+                    myOutbox = seed,
+                )
             val event =
-                com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageFetcher
-                    .fetchKeyPackage(ctx.client, targetHex, relays, timeoutMs = 10_000)
+                KeyPackageFetcher.fetchKeyPackage(
+                    client = ctx.client,
+                    targetPubKey = targetHex,
+                    relays = relays,
+                    timeoutMs = 10_000,
+                )
             if (event == null) {
                 return Json.error("not_found", "no KeyPackage for $targetHex on ${relays.size} relay(s)")
             }
@@ -88,6 +101,7 @@ object KeyPackageCommands {
                     "kind" to event.kind,
                     "created_at" to event.createdAt,
                     "has_content" to event.content.isNotBlank(),
+                    "found_on" to relays.map { it.url },
                 ),
             )
             return 0

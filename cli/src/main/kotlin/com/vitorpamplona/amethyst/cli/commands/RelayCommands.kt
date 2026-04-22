@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Json
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayInfo
@@ -86,23 +87,37 @@ object RelayCommands {
             ctx.prepare()
             val nip65Relays = ctx.relays.normalized("nip65").toList()
             val inboxRelays = ctx.relays.normalized("inbox").toList()
+            // MIP-00: other clients discover our KeyPackages by querying the
+            // relays advertised in our kind:10051 event. If no key_package
+            // bucket is configured, fall back to the NIP-65 set so we always
+            // publish a non-empty list — an empty 10051 would make us
+            // undiscoverable by other Marmot clients.
+            val keyPackageRelays =
+                ctx.relays
+                    .normalized("key_package")
+                    .ifEmpty { ctx.outboxRelays() }
+                    .toList()
 
             val nip65Infos = nip65Relays.map { AdvertisedRelayInfo(it, AdvertisedRelayType.BOTH) }
             val nip65Event = AdvertisedRelayListEvent.create(nip65Infos, ctx.signer)
             val inboxEvent = ChatMessageRelayListEvent.create(inboxRelays, ctx.signer)
+            val keyPackageListEvent = KeyPackageRelayListEvent.create(keyPackageRelays, ctx.signer)
 
             val targets = ctx.anyRelays()
             val nip65Result = ctx.publish(nip65Event, targets)
             val inboxResult = ctx.publish(inboxEvent, targets)
+            val keyPackageListResult = ctx.publish(keyPackageListEvent, targets)
 
             Json.writeLine(
                 mapOf(
                     "nip65_event_id" to nip65Event.id,
                     "inbox_event_id" to inboxEvent.id,
+                    "key_package_list_event_id" to keyPackageListEvent.id,
                     "accepted_by" to
                         mapOf(
                             "nip65" to nip65Result.filterValues { it }.keys.map { it.url },
                             "inbox" to inboxResult.filterValues { it }.keys.map { it.url },
+                            "key_package_list" to keyPackageListResult.filterValues { it }.keys.map { it.url },
                         ),
                 ),
             )
