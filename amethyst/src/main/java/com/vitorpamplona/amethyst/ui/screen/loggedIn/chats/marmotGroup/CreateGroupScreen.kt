@@ -80,7 +80,7 @@ fun CreateGroupScreen(
                     name = groupName.trim(),
                     description = "",
                 )
-                nav.nav(Route.MarmotGroupChat(nostrGroupId))
+                nav.popUpTo(Route.MarmotGroupChat(nostrGroupId), Route.CreateMarmotGroup::class)
             } catch (e: Exception) {
                 isCreating = false
                 launch(Dispatchers.Main) {
