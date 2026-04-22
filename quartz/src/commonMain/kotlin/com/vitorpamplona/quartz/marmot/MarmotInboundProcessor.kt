@@ -409,7 +409,6 @@ class MarmotInboundProcessor(
     ): GroupEventResult {
         // Peek at content type from the PrivateMessage header
         val privMsg = PrivateMessage.decodeTls(TlsReader(mlsMessage.payload))
-        System.err.println("[MarmotDbg] processPrivateMessage ${groupEvent.id.take(8)} contentType=${privMsg.contentType} peekEpoch=${privMsg.epoch} curEpoch=${groupManager.getGroup(groupId)?.epoch}")
 
         return when (privMsg.contentType) {
             ContentType.APPLICATION -> {
@@ -509,7 +508,6 @@ class MarmotInboundProcessor(
                         retainedEpochCount = groupManager.retainedExporterSecrets(groupId).size,
                     )
             val mlsMessage = MlsMessage.decodeTls(TlsReader(mlsBytes))
-            System.err.println("[MarmotDbg] applyCommit ${commitEvent.id.take(8)} wireFormat=${mlsMessage.wireFormat} groupId=${groupId.take(8)} currentEpoch=${groupManager.getGroup(groupId)?.epoch}")
 
             when (mlsMessage.wireFormat) {
                 WireFormat.PRIVATE_MESSAGE -> {
@@ -520,15 +518,12 @@ class MarmotInboundProcessor(
                     // when it finally arrives.
                     val privPeek = PrivateMessage.decodeTls(TlsReader(mlsMessage.payload))
                     val currentEpoch = groupManager.getGroup(groupId)?.epoch
-                    System.err.println("[MarmotDbg] applyCommit ${commitEvent.id.take(8)} PRIVATE content=${privPeek.contentType} peekEpoch=${privPeek.epoch} curEpoch=$currentEpoch")
                     when {
                         currentEpoch != null && privPeek.epoch < currentEpoch -> {
-                            System.err.println("[MarmotDbg]   → past-epoch Duplicate")
                             GroupEventResult.Duplicate(groupId)
                         }
 
                         currentEpoch != null && privPeek.epoch > currentEpoch -> {
-                            System.err.println("[MarmotDbg]   → future-epoch Error")
                             GroupEventResult.Error(
                                 groupId,
                                 "PrivateMessage epoch ${privPeek.epoch} is ahead of local epoch $currentEpoch; ignoring",
@@ -536,11 +531,9 @@ class MarmotInboundProcessor(
                         }
 
                         else -> {
-                            System.err.println("[MarmotDbg]   → decrypt+process")
                             val decrypted = groupManager.decrypt(groupId, mlsMessage.toTlsBytes())
                             if (decrypted.contentType == ContentType.COMMIT) {
                                 val group = groupManager.getGroup(groupId)
-                                System.err.println("[MarmotDbg]   → CommitProcessed epoch=${group?.epoch}")
                                 GroupEventResult.CommitProcessed(groupId, group?.epoch ?: 0)
                             } else {
                                 GroupEventResult.Error(
