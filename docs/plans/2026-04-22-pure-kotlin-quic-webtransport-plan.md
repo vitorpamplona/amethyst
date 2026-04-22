@@ -78,32 +78,94 @@ the TLS 1.3 client state machine ourselves using those primitives.
 
 ## Architecture
 
-```
-nestsClient/src/jvmAndroid/kotlin/com/vitorpamplona/nestsclient/
-└── transport/
-    ├── quic/                   ← new: pure-Kotlin QUIC client
-    │   ├── crypto/             ← BC adapter (TLS over CRYPTO frames)
-    │   ├── packet/             ← long/short-header encode/decode + protection
-    │   ├── frame/              ← STREAM, ACK, CRYPTO, MAX_*, CONNECTION_CLOSE …
-    │   ├── stream/             ← per-stream send/recv buffers, flow control
-    │   ├── recovery/           ← loss detection, PTO, NewReno
-    │   ├── connection/         ← QuicConnection state machine
-    │   └── transport/          ← UDP socket + datagram pump
-    ├── http3/                  ← new: HTTP/3 client
-    │   ├── frame/              ← DATA, HEADERS, SETTINGS, GOAWAY, MAX_PUSH_ID
-    │   ├── qpack/              ← static + dynamic tables, Huffman
-    │   └── Http3Connection.kt  ← request/response state machine
-    └── webtransport/           ← new: WT layer
-        ├── ExtendedConnect.kt  ← :protocol = webtransport
-        ├── WtStreamType.kt     ← 0x41 (bidi) / 0x54 (uni) prefix bytes
-        ├── WtCapsule.kt        ← WT_SESSION_CLOSE = 0x2843, etc.
-        └── KotlinWebTransportFactory.kt  ← implements existing WebTransportFactory
+**Module placement:** a new top-level Gradle module `:quic` sibling to
+`:quartz`, `:commons`, `:nestsClient`. It's a KMP module (commonMain + an
+`androidMain` + `jvmMain` pair via a shared `jvmAndroid` source set, mirroring
+Quartz's pattern) so it's reusable for future non-Nests consumers
+(Nostr-over-QUIC relays, desktop audio, iOS later). `:quic` takes
+`api(project(":quartz"))` so the crypto primitives are available without
+re-exporting. `:nestsClient` drops its `transport/` subpackage and declares
+`implementation(project(":quic"))` instead.
+
+**settings.gradle delta:**
+
+```groovy
+include ':quartz'
+include ':commons'
+include ':ammolite'
+include ':quic'            // NEW — pure-Kotlin QUIC + HTTP/3 + WebTransport
+include ':nestsClient'     // gains `implementation project(':quic')`
+include ':desktopApp'
+include ':cli'
 ```
 
-Naming note: the existing `KwikWebTransportFactory.kt` stub becomes
-`KotlinWebTransportFactory.kt` once real. The current ViewModel wiring
-(`AudioRoomConnectionViewModel`) imports the class directly, so the rename is
-one change with no protocol impact.
+**Package layout under `:quic`:**
+
+```
+quic/
+├── build.gradle.kts           ← KMP module, api(project(":quartz"))
+└── src/
+    ├── commonMain/kotlin/com/vitorpamplona/quic/
+    │   ├── Varint.kt             ← migrated from nestsClient/moq/Varint.kt
+    │   ├── crypto/               ← HkdfExpandLabel + thin helpers
+    │   ├── tls/                  ← TLS 1.3 client state machine
+    │   ├── packet/               ← long/short-header codec + protection
+    │   ├── frame/                ← CRYPTO, STREAM, ACK, MAX_*, CONNECTION_CLOSE…
+    │   ├── stream/               ← per-stream buffers + flow control
+    │   ├── recovery/             ← loss detection + PTO + NewReno
+    │   ├── connection/           ← QuicConnection state machine
+    │   ├── http3/                ← RFC 9114 client
+    │   ├── qpack/                ← RFC 9204 encoder/decoder
+    │   └── webtransport/
+    │       ├── ExtendedConnect.kt
+    │       ├── WtStreamType.kt   ← 0x41 (bidi) / 0x54 (uni)
+    │       ├── WtCapsule.kt      ← WT_SESSION_CLOSE = 0x2843
+    │       └── QuicWebTransportFactory.kt  ← implements nestsClient's WebTransportFactory
+    ├── jvmAndroid/kotlin/com/vitorpamplona/quic/
+    │   └── transport/
+    │       └── UdpSocket.kt      ← DatagramChannel + suspend wrapper
+    ├── commonTest/
+    └── jvmTest/                   ← RFC 8448 / RFC 9001 vector tests
+```
+
+**Migrations when `:quic` lands:**
+
+- `nestsClient/src/commonMain/kotlin/com/vitorpamplona/nestsclient/moq/Varint.kt`
+  moves to `:quic` at `com.vitorpamplona.quic.Varint`. The existing MoQ codec
+  (Phase 3c) imports the new path. Mechanical change — one commit.
+- The `nestsClient/transport/` package (`WebTransportSession` +
+  `FakeWebTransport` + `KwikWebTransportFactory` stub) stays in `:nestsClient`
+  because that's the seam `:nestsClient`'s audio pipeline talks to. The real
+  implementation `QuicWebTransportFactory` lives in `:quic` and implements
+  `nestsClient.transport.WebTransportFactory` — `:nestsClient` swaps its
+  constructor call from `KwikWebTransportFactory()` to
+  `QuicWebTransportFactory()`, nothing else changes upstream.
+
+**Why a dedicated module (Option A):**
+
+- **Single responsibility.** `:quic` is a transport library; `:nestsClient`
+  is an audio-room client. They have nothing conceptually in common beyond
+  nests happens to run over WebTransport.
+- **Reusability.** Future Nostr-over-QUIC relay work, any Kotlin project that
+  wants MoQ, desktop / iOS targets all pull `:quic` directly. Potentially
+  extractable to an open-source library later — pure-Kotlin QUIC barely
+  exists in the JVM ecosystem, so this would be genuinely valuable beyond
+  Amethyst.
+- **Security boundary.** QUIC + TLS is the code you want smallest, isolated,
+  and auditable without reading audio-room code around it. A dedicated module
+  enforces the boundary.
+- **Test isolation.** `:quic` tests run on `commonTest` / `jvmTest` — fast
+  feedback. They never touch `:nestsClient`'s fakes.
+- **Build graph.** `:quic` has no Android-framework dependencies (no
+  `MediaCodec`, no `AudioTrack`), so it compiles clean as a pure KMP lib and
+  targets iOS / desktop trivially when those arrive.
+- **Charter.** Quartz is labeled "Nostr protocol only, no UI" in the project's
+  CLAUDE.md. QUIC isn't Nostr; it doesn't fit Quartz's charter.
+
+Naming note: the existing `KwikWebTransportFactory.kt` stub in `:nestsClient`
+is renamed to reference the real implementation `QuicWebTransportFactory` in
+`:quic`. `AudioRoomConnectionViewModel` updates its constructor call in one
+line, no protocol impact.
 
 ## Phase breakdown (one developer, full-time estimates)
 
@@ -111,11 +173,17 @@ Each phase ends with green commonTest tests that exercise its layer in isolation
 plus an integration test against the next layer up.
 
 ### Phase A — Foundations (1 week)
-- UDP socket abstraction (`DatagramChannel`, suspend wrapper, single-receive loop).
+- Create new `:quic` module (KMP, `api(project(":quartz"))`), register in
+  `settings.gradle`, port `Varint.kt` from `:nestsClient` and update MoQ
+  imports, add `:nestsClient` → `implementation(project(":quic"))` wire.
+- UDP socket abstraction (`DatagramChannel`, suspend wrapper, single-receive
+  loop) in `jvmAndroid`.
 - Connection ID generation (cryptographically random, 8-byte source IDs).
 - Packet number space tracking (Initial, Handshake, Application).
 - Largest-acked / next-pn tracking per space.
-- **Tests:** varint already done; add CID + packet-number-space unit tests.
+- **Tests:** varint tests migrate with the file; add CID + packet-number-space
+  unit tests. Full MoQ + nestsClient test suite stays green after the
+  Varint migration.
 
 ### Phase B — TLS 1.3 client state machine (3 weeks)
 
