@@ -277,7 +277,12 @@ class Context(
             // All the MLS/NIP-59 decryption + persistence lives in MarmotIngest —
             // we only care about bookkeeping (since-cursors, logging) here.
             val result = marmot.ingest(event)
-            System.err.println("[cli] ingest ${event.kind}/${event.id.take(8)} via $relay → ${result::class.simpleName}")
+            val detail =
+                when (result) {
+                    is com.vitorpamplona.amethyst.commons.marmot.MarmotIngestResult.Failure -> " ${result.message}"
+                    else -> ""
+                }
+            System.err.println("[cli] ingest ${event.kind}/${event.id.take(8)} via $relay → ${result::class.simpleName}$detail")
 
             when (event.kind) {
                 GiftWrapEvent.KIND -> {
