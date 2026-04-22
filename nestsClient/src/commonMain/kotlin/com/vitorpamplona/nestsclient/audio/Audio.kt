@@ -61,6 +61,42 @@ interface OpusDecoder {
 }
 
 /**
+ * Encoder for one PCM frame at a time.
+ *
+ * Mirror of [OpusDecoder] for the publish direction. Like the decoder, Opus
+ * encoder state is per-stream — one instance per outgoing track.
+ */
+interface OpusEncoder {
+    /**
+     * Encode one PCM frame (typically [AudioFormat.FRAME_SIZE_SAMPLES] samples
+     * of signed 16-bit mono at [AudioFormat.SAMPLE_RATE_HZ]) into one Opus
+     * packet. Returns an empty array if the encoder is still warming up
+     * (some pipelines need a few frames before producing output).
+     */
+    fun encode(pcm: ShortArray): ByteArray
+
+    fun release()
+}
+
+/**
+ * Source for PCM audio capture. Implementations open the device's microphone
+ * and produce one frame at a time via [readFrame].
+ */
+interface AudioCapture {
+    /** Allocate the microphone resource and begin capturing. */
+    fun start()
+
+    /**
+     * Read one PCM frame ([AudioFormat.FRAME_SIZE_SAMPLES] samples). Suspends
+     * until enough samples are available. Returns null when [stop] is called.
+     */
+    suspend fun readFrame(): ShortArray?
+
+    /** Stop capture and release the microphone. After this, [readFrame] returns null. */
+    fun stop()
+}
+
+/**
  * Sink for PCM audio playback. Implementations buffer internally — [enqueue]
  * may suspend if the device's playback buffer is full.
  */

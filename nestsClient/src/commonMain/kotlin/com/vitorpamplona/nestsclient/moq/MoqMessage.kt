@@ -44,7 +44,12 @@ enum class MoqMessageType(
     Subscribe(0x03),
     SubscribeOk(0x04),
     SubscribeError(0x05),
+    Announce(0x06),
+    AnnounceOk(0x07),
+    AnnounceError(0x08),
+    Unannounce(0x09),
     Unsubscribe(0x0A),
+    SubscribeDone(0x0B),
     ClientSetup(0x40),
     ServerSetup(0x41),
     ;
@@ -253,4 +258,54 @@ data class Unsubscribe(
     val subscribeId: Long,
 ) : MoqMessage() {
     override val type: MoqMessageType = MoqMessageType.Unsubscribe
+}
+
+/**
+ * SUBSCRIBE_DONE (0x0B): publisher tells the subscriber that no more objects
+ * are coming for this subscription, optionally indicating the last group/object
+ * boundary. Sent on subscription expiry, publisher-side track closure, or
+ * after an UNSUBSCRIBE was acknowledged.
+ */
+data class SubscribeDone(
+    val subscribeId: Long,
+    val statusCode: Long,
+    val streamCount: Long,
+    val reasonPhrase: String,
+) : MoqMessage() {
+    override val type: MoqMessageType = MoqMessageType.SubscribeDone
+}
+
+/**
+ * ANNOUNCE (0x06): publisher offers a track namespace. nests publishers send
+ * one ANNOUNCE per audio-room they host so subscribers know which namespace
+ * to subscribe under.
+ */
+data class Announce(
+    val namespace: TrackNamespace,
+    val parameters: List<SetupParameter> = emptyList(),
+) : MoqMessage() {
+    override val type: MoqMessageType = MoqMessageType.Announce
+}
+
+/** ANNOUNCE_OK (0x07): subscriber acknowledges an ANNOUNCE. */
+data class AnnounceOk(
+    val namespace: TrackNamespace,
+) : MoqMessage() {
+    override val type: MoqMessageType = MoqMessageType.AnnounceOk
+}
+
+/** ANNOUNCE_ERROR (0x08): subscriber rejects an ANNOUNCE. */
+data class AnnounceError(
+    val namespace: TrackNamespace,
+    val errorCode: Long,
+    val reasonPhrase: String,
+) : MoqMessage() {
+    override val type: MoqMessageType = MoqMessageType.AnnounceError
+}
+
+/** UNANNOUNCE (0x09): publisher withdraws a previously-announced namespace. */
+data class Unannounce(
+    val namespace: TrackNamespace,
+) : MoqMessage() {
+    override val type: MoqMessageType = MoqMessageType.Unannounce
 }

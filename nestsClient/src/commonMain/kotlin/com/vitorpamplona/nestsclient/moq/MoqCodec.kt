@@ -73,6 +73,11 @@ object MoqCodec {
                 MoqMessageType.SubscribeOk -> decodeSubscribeOk(reader)
                 MoqMessageType.SubscribeError -> decodeSubscribeError(reader)
                 MoqMessageType.Unsubscribe -> decodeUnsubscribe(reader)
+                MoqMessageType.SubscribeDone -> decodeSubscribeDone(reader)
+                MoqMessageType.Announce -> decodeAnnounce(reader)
+                MoqMessageType.AnnounceOk -> decodeAnnounceOk(reader)
+                MoqMessageType.AnnounceError -> decodeAnnounceError(reader)
+                MoqMessageType.Unannounce -> decodeUnannounce(reader)
             }
         if (reader.hasMore()) {
             throw MoqCodecException(
@@ -90,6 +95,11 @@ object MoqCodec {
             is SubscribeOk -> encodeSubscribeOk(message)
             is SubscribeError -> encodeSubscribeError(message)
             is Unsubscribe -> encodeUnsubscribe(message)
+            is SubscribeDone -> encodeSubscribeDone(message)
+            is Announce -> encodeAnnounce(message)
+            is AnnounceOk -> encodeAnnounceOk(message)
+            is AnnounceError -> encodeAnnounceError(message)
+            is Unannounce -> encodeUnannounce(message)
         }
 
     private fun encodeClientSetup(message: ClientSetup): ByteArray {
@@ -267,6 +277,63 @@ object MoqCodec {
     }
 
     private fun decodeUnsubscribe(r: MoqReader): Unsubscribe = Unsubscribe(r.readVarint())
+
+    private fun encodeSubscribeDone(m: SubscribeDone): ByteArray {
+        val w = MoqWriter()
+        w.writeVarint(m.subscribeId)
+        w.writeVarint(m.statusCode)
+        w.writeVarint(m.streamCount)
+        w.writeLengthPrefixedString(m.reasonPhrase)
+        return w.toByteArray()
+    }
+
+    private fun decodeSubscribeDone(r: MoqReader): SubscribeDone =
+        SubscribeDone(
+            subscribeId = r.readVarint(),
+            statusCode = r.readVarint(),
+            streamCount = r.readVarint(),
+            reasonPhrase = r.readLengthPrefixedString(),
+        )
+
+    private fun encodeAnnounce(m: Announce): ByteArray {
+        val w = MoqWriter()
+        encodeNamespace(w, m.namespace)
+        encodeParameters(w, m.parameters)
+        return w.toByteArray()
+    }
+
+    private fun decodeAnnounce(r: MoqReader): Announce = Announce(namespace = decodeNamespace(r), parameters = decodeParameters(r))
+
+    private fun encodeAnnounceOk(m: AnnounceOk): ByteArray {
+        val w = MoqWriter()
+        encodeNamespace(w, m.namespace)
+        return w.toByteArray()
+    }
+
+    private fun decodeAnnounceOk(r: MoqReader): AnnounceOk = AnnounceOk(decodeNamespace(r))
+
+    private fun encodeAnnounceError(m: AnnounceError): ByteArray {
+        val w = MoqWriter()
+        encodeNamespace(w, m.namespace)
+        w.writeVarint(m.errorCode)
+        w.writeLengthPrefixedString(m.reasonPhrase)
+        return w.toByteArray()
+    }
+
+    private fun decodeAnnounceError(r: MoqReader): AnnounceError =
+        AnnounceError(
+            namespace = decodeNamespace(r),
+            errorCode = r.readVarint(),
+            reasonPhrase = r.readLengthPrefixedString(),
+        )
+
+    private fun encodeUnannounce(m: Unannounce): ByteArray {
+        val w = MoqWriter()
+        encodeNamespace(w, m.namespace)
+        return w.toByteArray()
+    }
+
+    private fun decodeUnannounce(r: MoqReader): Unannounce = Unannounce(decodeNamespace(r))
 
     data class DecodeResult(
         val message: MoqMessage,
