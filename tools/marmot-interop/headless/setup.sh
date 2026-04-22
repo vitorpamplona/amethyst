@@ -39,7 +39,7 @@ preflight() {
       2>&1 | tee -a "$LOG_FILE"
   fi
 
-  # Three harness-only patches to wnd so it runs fully offline / in
+  # Four harness-only patches to wnd so it runs fully offline / in
   # sandboxes that block outbound + kernel keyring:
   #   1. discovery-env: honour $WHITENOISE_DISCOVERY_RELAYS so we can
   #      point wnd at our loopback relay instead of the baked-in public
@@ -54,10 +54,18 @@ preflight() {
   #      primal.net / nos.lol, and every later activate / publish burns
   #      connection budget on unreachable sockets — enough to break the
   #      account-inbox subscription plane and drop kind:1059 delivery.
+  #   4. skip-unprocessable-retry: when mdk-core returns
+  #      `MlsMessageUnprocessable` (pre-membership commit, too-old epoch)
+  #      the message is provably undecryptable — retrying it ten times
+  #      with exponential backoff (total ~17 min) just blocks later
+  #      decryptable commits behind a queue of doomed retries, which in
+  #      the harness manifests as "A already left" / "name unchanged"
+  #      timeouts. The patch treats that error as terminal.
   local -a patches=(
     "whitenoise-discovery-env.patch"
     "whitenoise-mock-keyring.patch"
     "whitenoise-defaults-env.patch"
+    "whitenoise-skip-unprocessable-retry.patch"
   )
   for name in "${patches[@]}"; do
     local marker="$WN_REPO/.headless-patched-${name%.patch}"

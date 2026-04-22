@@ -1,0 +1,27 @@
+--- a/src/whitenoise/event_processor/account_event_processor.rs
++++ b/src/whitenoise/event_processor/account_event_processor.rs
+@@ -178,7 +178,23 @@
+             }
+             Err(e) => {
+                 // Handle retry logic for actual processing errors
+-                if retry_info.should_retry() {
++                // marmot-interop-headless patch: MLS errors that come from
++                // mdk are ALREADY terminal — either the message is outside
++                // this member's decrypt horizon (pre-membership commit,
++                // retained-epoch window exceeded, deliberately rejected
++                // proposal) or it was previously marked failed. Retrying
++                // them 10 times with exponential backoff (total ~17 min)
++                // just blocks later decryptable commits behind a queue of
++                // doomed retries, so every later join / rename / leave
++                // propagation races the test timeout. Treat them all as
++                // one-shot: log once, move on.
++                let is_terminal = matches!(
++                    e,
++                    WhitenoiseError::MlsMessageUnprocessable(_)
++                        | WhitenoiseError::MlsMessagePreviouslyFailed
++                        | WhitenoiseError::MdkCoreError(_),
++                );
++                if !is_terminal && retry_info.should_retry() {
+                     self.schedule_retry(event, source, retry_info, e);
+                 } else {
+                     tracing::error!(
