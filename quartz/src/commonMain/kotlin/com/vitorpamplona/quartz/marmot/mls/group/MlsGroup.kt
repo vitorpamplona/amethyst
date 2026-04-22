@@ -560,6 +560,17 @@ class MlsGroup private constructor(
         val committerLeafIndex = myLeafIndex
         val newEpoch = oldEpoch + 1
 
+        // Capture pre-commit values needed to sign and membership-MAC the
+        // outbound PublicMessage (RFC 9420 §6.1 / §6.2). The signature and
+        // membership_tag are computed under the epoch in which the commit
+        // is sent — the one we're about to leave. Receivers (openmls/mdk)
+        // strict-verify both, so we must use the leaf signing key that's
+        // still in the pre-commit tree and the membership_key derived from
+        // the pre-commit epoch secrets.
+        val preCommitContextBytes = groupContext.toTlsBytes()
+        val preCommitMembershipKey = epochSecrets.membershipKey
+        val preCommitSigningKey = signingPrivateKey
+
         groupContext =
             groupContext.copy(
                 epoch = newEpoch,
@@ -607,6 +618,9 @@ class MlsGroup private constructor(
                 senderLeafIndex = committerLeafIndex,
                 commitBytes = commitBytes,
                 confirmationTag = confirmationTag,
+                signingPrivateKey = preCommitSigningKey,
+                membershipKey = preCommitMembershipKey,
+                groupContextBytes = preCommitContextBytes,
             )
         return CommitResult(
             commitBytes = commitBytes,
@@ -1755,7 +1769,44 @@ class MlsGroup private constructor(
             senderLeafIndex: Int,
             commitBytes: ByteArray,
             confirmationTag: ByteArray,
+            signingPrivateKey: ByteArray,
+            membershipKey: ByteArray,
+            groupContextBytes: ByteArray,
         ): ByteArray {
+            // RFC 9420 §6.1 FramedContentTBS for a member-sender commit over
+            // PublicMessage wire format. Receivers recompute this exact byte
+            // string to verify the signature and membership_tag — the layout
+            // must match openmls / mdk-core byte-for-byte.
+            val tbsWriter = TlsWriter()
+            tbsWriter.putUint16(MlsMessage.MLS_VERSION_10)
+            tbsWriter.putUint16(WireFormat.PUBLIC_MESSAGE.value)
+            tbsWriter.putOpaqueVarInt(groupId)
+            tbsWriter.putUint64(epoch)
+            encodeSender(tbsWriter, Sender(SenderType.MEMBER, senderLeafIndex))
+            tbsWriter.putOpaqueVarInt(ByteArray(0)) // authenticated_data
+            tbsWriter.putUint8(ContentType.COMMIT.value)
+            tbsWriter.putBytes(commitBytes) // Commit struct — no outer length prefix
+            tbsWriter.putBytes(groupContextBytes) // member sender appends context raw
+            val tbs = tbsWriter.toByteArray()
+
+            // SignWithLabel over TBS — produces the FramedContentAuthData.signature.
+            val signature = MlsCryptoProvider.signWithLabel(signingPrivateKey, "FramedContentTBS", tbs)
+
+            // AuthenticatedContentTBM = TBS || FramedContentAuthData
+            //   FramedContentAuthData = signature<V> || (commit: confirmation_tag<V>)
+            val tbmWriter = TlsWriter()
+            tbmWriter.putBytes(tbs)
+            tbmWriter.putOpaqueVarInt(signature)
+            tbmWriter.putOpaqueVarInt(confirmationTag)
+            val tbm = tbmWriter.toByteArray()
+
+            // membership_tag = MAC(membership_key, TBM) — HMAC-SHA256 for
+            // ciphersuite 0x0001. Length = 32; openmls's equal_ct logs
+            // "Incompatible values" when an empty tag is compared to this.
+            val macInstance = MacInstance("HmacSHA256", membershipKey)
+            macInstance.update(tbm)
+            val membershipTag = macInstance.doFinal()
+
             val publicMessage =
                 PublicMessage(
                     groupId = groupId,
@@ -1764,9 +1815,9 @@ class MlsGroup private constructor(
                     authenticatedData = ByteArray(0),
                     contentType = ContentType.COMMIT,
                     content = commitBytes,
-                    signature = ByteArray(0),
+                    signature = signature,
                     confirmationTag = confirmationTag,
-                    membershipTag = ByteArray(0),
+                    membershipTag = membershipTag,
                 )
             return MlsMessage.fromPublicMessage(publicMessage).toTlsBytes()
         }
