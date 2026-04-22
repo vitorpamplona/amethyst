@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.feeds.ChannelFeedContentState
 import com.vitorpamplona.amethyst.ui.screen.TopNavFilterState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.articles.dal.ArticlesFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.audiorooms.dal.AudioRoomsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.dal.BadgesFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.dal.ChatroomListKnownFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.dal.ChatroomListNewFeedFilter
@@ -100,6 +101,7 @@ class AccountFeedContentStates(
     val publicChatsFeed = FeedContentState(PublicChatsFeedFilter(account), scope, LocalCache)
     val followPacksFeed = FeedContentState(FollowPacksFeedFilter(account), scope, LocalCache)
     val liveStreamsFeed = FeedContentState(LiveStreamsFeedFilter(account), scope, LocalCache)
+    val audioRoomsFeed = FeedContentState(AudioRoomsFeedFilter(account), scope, LocalCache)
     val longsFeed = FeedContentState(LongsFeedFilter(account), scope, LocalCache)
     val articlesFeed = FeedContentState(ArticlesFeedFilter(account), scope, LocalCache)
 
@@ -165,6 +167,7 @@ class AccountFeedContentStates(
         publicChatsFeed.updateFeedWith(newNotes)
         followPacksFeed.updateFeedWith(newNotes)
         liveStreamsFeed.updateFeedWith(newNotes)
+        audioRoomsFeed.updateFeedWith(newNotes)
         longsFeed.updateFeedWith(newNotes)
         articlesFeed.updateFeedWith(newNotes)
 
@@ -211,6 +214,7 @@ class AccountFeedContentStates(
         publicChatsFeed.deleteFromFeed(newNotes)
         followPacksFeed.deleteFromFeed(newNotes)
         liveStreamsFeed.deleteFromFeed(newNotes)
+        audioRoomsFeed.deleteFromFeed(newNotes)
         longsFeed.deleteFromFeed(newNotes)
         articlesFeed.deleteFromFeed(newNotes)
 

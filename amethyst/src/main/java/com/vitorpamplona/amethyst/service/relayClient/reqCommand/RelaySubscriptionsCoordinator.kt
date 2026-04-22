@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentF
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderFilterAssembler
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.SearchFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.articles.datasource.ArticlesFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.audiorooms.datasource.AudioRoomsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.datasource.BadgesFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.profile.datasource.ProfileBadgesFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.datasource.ChatroomFilterAssembler
@@ -105,6 +106,7 @@ class RelaySubscriptionsCoordinator(
     val shorts = ShortsFilterAssembler(client)
     val publicChats = PublicChatsFilterAssembler(client)
     val liveStreams = LiveStreamsFilterAssembler(client)
+    val audioRooms = AudioRoomsFilterAssembler(client)
     val longs = LongsFilterAssembler(client)
     val articles = ArticlesFilterAssembler(client)
     val badges = BadgesFilterAssembler(client)
@@ -129,6 +131,7 @@ class RelaySubscriptionsCoordinator(
             publicChats,
             followPacksList,
             liveStreams,
+            audioRooms,
             longs,
             articles,
             badges,

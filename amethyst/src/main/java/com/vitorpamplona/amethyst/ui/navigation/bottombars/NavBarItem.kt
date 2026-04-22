@@ -32,6 +32,7 @@ import androidx.compose.material.icons.outlined.Drafts
 import androidx.compose.material.icons.outlined.EmojiEmotions
 import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.Language
+import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material.icons.outlined.MilitaryTech
 import androidx.compose.material.icons.outlined.Photo
 import androidx.compose.material.icons.outlined.PlayCircle
@@ -72,6 +73,7 @@ enum class NavBarItem {
     PUBLIC_CHATS,
     FOLLOW_PACKS,
     LIVE_STREAMS,
+    AUDIO_ROOMS,
     LONGS,
     POLLS,
     BADGES,
@@ -240,6 +242,13 @@ val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
                 icon = NavBarIcon.Vector(Icons.Outlined.Sensors),
                 resolveRoute = { Route.LiveStreams },
             ),
+        NavBarItem.AUDIO_ROOMS to
+            NavBarItemDef(
+                id = NavBarItem.AUDIO_ROOMS,
+                labelRes = R.string.audio_rooms,
+                icon = NavBarIcon.Vector(Icons.Outlined.Mic),
+                resolveRoute = { Route.AudioRooms },
+            ),
         NavBarItem.LONGS to
             NavBarItemDef(
                 id = NavBarItem.LONGS,
@@ -326,6 +335,7 @@ val DrawerFeedsItems: List<NavBarItem> =
         NavBarItem.PUBLIC_CHATS,
         NavBarItem.FOLLOW_PACKS,
         NavBarItem.LIVE_STREAMS,
+        NavBarItem.AUDIO_ROOMS,
         NavBarItem.LONGS,
         NavBarItem.POLLS,
         NavBarItem.BADGES,

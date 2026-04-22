@@ -64,6 +64,7 @@ import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountSwitcherAndLeftDrawerLayout
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.articles.ArticlesScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.audiorooms.AudioRoomsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.BadgesScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.award.AwardBadgeScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.profile.ProfileBadgesScreen
@@ -246,6 +247,7 @@ fun BuildNavigation(
         composableFromEnd<Route.PublicChats> { PublicChatsScreen(accountViewModel, nav) }
         composableFromEnd<Route.FollowPacks> { FollowPacksScreen(accountViewModel, nav) }
         composableFromEnd<Route.LiveStreams> { LiveStreamsScreen(accountViewModel, nav) }
+        composableFromEnd<Route.AudioRooms> { AudioRoomsScreen(accountViewModel, nav) }
         composableFromEnd<Route.Longs> { LongsScreen(accountViewModel, nav) }
         composableFromEnd<Route.Articles> { ArticlesScreen(accountViewModel, nav) }
         composableFromEnd<Route.NewHlsVideo> { NewHlsVideoScreen(accountViewModel, nav) }

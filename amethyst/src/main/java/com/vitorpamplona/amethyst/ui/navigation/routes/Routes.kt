@@ -89,6 +89,8 @@ sealed class Route {
 
     @Serializable object LiveStreams : Route()
 
+    @Serializable object AudioRooms : Route()
+
     @Serializable object Longs : Route()
 
     @Serializable object Articles : Route()
