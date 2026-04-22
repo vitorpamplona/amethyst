@@ -333,19 +333,27 @@ class MlsGroupManager(
         mutex.withLock {
             val group = requireGroup(nostrGroupId)
 
-            // Try current epoch
-            val current = group.decryptOrNull(messageBytes)
-            if (current != null) return@withLock current
+            // Try current epoch. If we hit an exception here we MUST surface
+            // it — commits that throw mid-processCommit leave the in-memory
+            // group half-mutated, and a retry via `group.decrypt(...)` will
+            // just report a stale "epoch mismatch" from the partial advance,
+            // hiding the real bug. Capture the original throwable, try
+            // retained epochs as a fallback, and re-raise the captured one
+            // if nothing decrypts.
+            val currentFailure: Throwable? =
+                try {
+                    return@withLock group.decrypt(messageBytes)
+                } catch (t: Throwable) {
+                    t
+                }
 
-            // Try retained epochs
             val retained = retainedEpochs[nostrGroupId] ?: emptyList()
             for (epochSecrets in retained) {
                 val result = tryDecryptWithRetainedEpoch(messageBytes, epochSecrets)
                 if (result != null) return@withLock result
             }
 
-            // No epoch could decrypt — rethrow from current epoch for diagnostics
-            group.decrypt(messageBytes)
+            throw currentFailure ?: IllegalStateException("Decrypt failed without captured cause")
         }
 
     /**
