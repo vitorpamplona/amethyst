@@ -925,7 +925,20 @@ test_14_push_notifications() {
 # ==== main ===================================================================
 
 main() {
-  trap 'stop_daemons; print_summary' EXIT
+  # Make sure Ctrl+C / SIGTERM / SIGHUP all run the full cleanup path —
+  # otherwise wnd is nohup'd and keeps running after the script dies.
+  # Trap INT/TERM/HUP forces `exit`, which triggers the EXIT handler once.
+  cleanup() {
+    local rc=$?
+    trap - EXIT INT TERM HUP
+    stop_daemons
+    print_summary
+    exit "$rc"
+  }
+  trap cleanup EXIT
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
+  trap 'exit 129' HUP
   banner "Amethyst <-> whitenoise-rs interop harness ($RUN_TS)"
 
   preflight
