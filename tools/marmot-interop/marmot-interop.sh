@@ -915,37 +915,58 @@ test_06_member_removal() {
 test_07_metadata_rename() {
   banner "Test 07 — Group metadata rename round-trip (MIP-01)"
 
-  local gid
-  gid=$(load_state GROUP_02 || true)
-  if [[ -z "${gid:-}" ]]; then
-    skip_msg "no GROUP_02"; record_result "07 metadata rename" skip "no group state"; return
-  fi
-
-  prompt_human "In Amethyst, open group 'Interop-02' -> Group Info -> Edit.
+  # Forward direction: A (admin of Interop-02) renames → B observes.
+  local gid_a
+  gid_a=$(load_state GROUP_02 || true)
+  if [[ -z "${gid_a:-}" ]]; then
+    skip_msg "no GROUP_02"; record_result "07a metadata rename A->B" skip "no group state"
+  else
+    prompt_human "In Amethyst, open group 'Interop-02' -> Group Info -> Edit.
   Rename to: Interop-02-renamed
   Save."
 
-  step "polling B for name change (60s)"
-  local deadline=$(( $(date +%s) + 60 )) name=""
-  while [[ $(date +%s) -lt $deadline ]]; do
-    name=$(wn_b --json groups show "$gid" 2>/dev/null | jq -r '(.result // .) | .name // empty')
-    [[ "$name" == "Interop-02-renamed" ]] && break
-    sleep 3
-  done
-  if [[ "$name" == "Interop-02-renamed" ]]; then
-    pass_msg "B sees renamed group"
-  else
-    fail_msg "B still sees name: $name"
-    record_result "07 metadata rename" fail "rename did not propagate to B"; return
+    step "polling B for name change (60s)"
+    local deadline_a=$(( $(date +%s) + 60 )) name_a=""
+    while [[ $(date +%s) -lt $deadline_a ]]; do
+      name_a=$(wn_b --json groups show "$gid_a" 2>/dev/null | jq -r '(.result // .) | .name // empty')
+      [[ "$name_a" == "Interop-02-renamed" ]] && break
+      sleep 3
+    done
+    if [[ "$name_a" == "Interop-02-renamed" ]]; then
+      pass_msg "B sees renamed Interop-02"
+      record_result "07a metadata rename A->B" pass
+    else
+      fail_msg "B still sees name: $name_a"
+      record_result "07a metadata rename A->B" fail "rename did not propagate to B"
+    fi
   fi
 
-  step "B renames back"
-  wn_b groups rename "$gid" "Interop-02-reverse" >/dev/null 2>&1 || true
+  # Reverse direction: B (admin of Interop-03) renames → A observes.
+  #
+  # The previous revision issued the reverse rename on Interop-02 via
+  # `wn_b groups rename` — but B is a plain member of Interop-02, so
+  # MIP-03's `enforceAuthorizedProposalSet` rejects the GCE commit on
+  # the wn side and the rename never reaches any relay. Use the group
+  # B actually owns (Interop-03) for the reverse leg instead.
+  local gid_b
+  gid_b=$(load_state GROUP_03 || true)
+  if [[ -z "${gid_b:-}" ]]; then
+    skip_msg "no GROUP_03 — skipping reverse rename"
+    record_result "07b metadata rename B->A" skip "no GROUP_03"
+    return
+  fi
 
-  if confirm "Does Amethyst now show the group name as 'Interop-02-reverse'?"; then
-    record_result "07 metadata rename" pass
+  step "B (admin) renames Interop-03 -> Interop-03-renamed"
+  local rename_out
+  if ! rename_out=$(wn_b groups rename "$gid_b" "Interop-03-renamed" 2>&1); then
+    warn "wn_b groups rename returned nonzero: $rename_out"
+    printf 'wn_b groups rename: %s\n' "$rename_out" >>"$LOG_FILE"
+  fi
+
+  if confirm "Does Amethyst now show the group previously named 'Interop-03' as 'Interop-03-renamed'?"; then
+    record_result "07b metadata rename B->A" pass
   else
-    record_result "07 metadata rename" fail "Amethyst did not pick up rename"
+    record_result "07b metadata rename B->A" fail "Amethyst did not pick up rename"
   fi
 }
 
