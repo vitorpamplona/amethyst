@@ -173,7 +173,7 @@ class MarmotMipBehaviorTest {
 
             val alice = manager.getGroup(groupId)!!
             assertFailsWith<IllegalStateException> { alice.proposeSelfRemove() }
-            assertFailsWith<IllegalStateException> { alice.selfRemove() }
+            assertFailsWith<IllegalStateException> { alice.buildSelfRemoveProposalMessage() }
         }
 
     @Test
@@ -187,8 +187,8 @@ class MarmotMipBehaviorTest {
             manager.updateGroupExtensions(groupId, listOf(strangerAdmin.toExtension()))
 
             val alice = manager.getGroup(groupId)!!
-            // selfRemove (standalone proposal helper) should succeed for a non-admin.
-            val bytes = alice.selfRemove()
+            // Standalone SelfRemove proposal helper should succeed for a non-admin.
+            val (bytes, _) = alice.buildSelfRemoveProposalMessage()
             assertTrue(bytes.isNotEmpty())
         }
 

@@ -174,10 +174,11 @@ class MlsGroupManager(
         nostrGroupId: HexKey,
         identity: ByteArray,
         signingKey: ByteArray? = null,
+        initialExtensions: List<com.vitorpamplona.quartz.marmot.mls.tree.Extension> = emptyList(),
     ): MlsGroup =
         mutex.withLock {
             Log.d(TAG) { "createGroup($nostrGroupId): creating new MLS group" }
-            val group = MlsGroup.create(identity, signingKey)
+            val group = MlsGroup.create(identity, signingKey, initialExtensions)
             groups[nostrGroupId] = group
             persistGroup(nostrGroupId)
             Log.d(TAG) { "createGroup($nostrGroupId): done, in-memory group count=${groups.size}" }
@@ -287,6 +288,8 @@ class MlsGroupManager(
         commitBytes: ByteArray,
         senderLeafIndex: Int,
         confirmationTag: ByteArray,
+        signature: ByteArray = ByteArray(0),
+        wireFormat: com.vitorpamplona.quartz.marmot.mls.framing.WireFormat = com.vitorpamplona.quartz.marmot.mls.framing.WireFormat.PUBLIC_MESSAGE,
     ) = mutex.withLock {
         val group = requireGroup(nostrGroupId)
 
@@ -297,7 +300,7 @@ class MlsGroupManager(
         // the current epoch key, wasting the finite retention slots.
         val retainedBefore = group.retainedSecrets()
 
-        group.processCommit(commitBytes, senderLeafIndex, confirmationTag)
+        group.processCommit(commitBytes, senderLeafIndex, confirmationTag, signature, wireFormat)
 
         pushRetainedEpoch(nostrGroupId, retainedBefore)
         persistGroup(nostrGroupId)
@@ -331,19 +334,40 @@ class MlsGroupManager(
         mutex.withLock {
             val group = requireGroup(nostrGroupId)
 
-            // Try current epoch
-            val current = group.decryptOrNull(messageBytes)
-            if (current != null) return@withLock current
+            // Try current epoch. If we hit an exception here we MUST surface
+            // it — commits that throw mid-processCommit leave the in-memory
+            // group half-mutated, and a retry via `group.decrypt(...)` will
+            // just report a stale "epoch mismatch" from the partial advance,
+            // hiding the real bug. Capture the original throwable, try
+            // retained epochs as a fallback, and re-raise the captured one
+            // if nothing decrypts.
+            val retainedBefore = group.retainedSecrets()
+            val preEpoch = group.epoch
+            val currentFailure: Throwable? =
+                try {
+                    val result = group.decrypt(messageBytes)
+                    // PrivateMessage commits apply inline through
+                    // `MlsGroup.decrypt` → `processCommit`; the epoch advances
+                    // in memory but the CLI reopens a fresh Context on every
+                    // command, so we MUST persist here or reloaded state
+                    // silently reverts to the pre-commit extensions (including
+                    // admin list).
+                    if (result.contentType == com.vitorpamplona.quartz.marmot.mls.framing.ContentType.COMMIT && group.epoch != preEpoch) {
+                        pushRetainedEpoch(nostrGroupId, retainedBefore)
+                        persistGroup(nostrGroupId)
+                    }
+                    return@withLock result
+                } catch (t: Throwable) {
+                    t
+                }
 
-            // Try retained epochs
             val retained = retainedEpochs[nostrGroupId] ?: emptyList()
             for (epochSecrets in retained) {
                 val result = tryDecryptWithRetainedEpoch(messageBytes, epochSecrets)
                 if (result != null) return@withLock result
             }
 
-            // No epoch could decrypt — rethrow from current epoch for diagnostics
-            group.decrypt(messageBytes)
+            throw currentFailure ?: IllegalStateException("Decrypt failed without captured cause")
         }
 
     /**
@@ -441,16 +465,17 @@ class MlsGroupManager(
         }
 
     /**
-     * Leave a group (self-remove).
-     * Returns the SelfRemove proposal bytes to publish, then removes
-     * local state.
+     * Leave a group by publishing a standalone PublicMessage SelfRemove
+     * proposal (draft-ietf-mls-extensions). Admin receivers auto-commit
+     * the pending proposal; the caller publishes the framed bytes as the
+     * kind:445 content, outer-encrypted with the returned exporter key.
      */
-    suspend fun leaveGroup(nostrGroupId: HexKey): ByteArray =
+    suspend fun leaveGroup(nostrGroupId: HexKey): Pair<ByteArray, ByteArray> =
         mutex.withLock {
             val group = requireGroup(nostrGroupId)
-            val proposalBytes = group.selfRemove()
+            val result = group.buildSelfRemoveProposalMessage()
             removeGroupStateUnlocked(nostrGroupId)
-            proposalBytes
+            result
         }
 
     /**

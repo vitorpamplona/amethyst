@@ -105,3 +105,6 @@ test_10_concurrent_commits
 test_11_leave_group
 test_12_offline_catchup
 test_13_keypackage_rotation
+test_14_wn_removes_a
+test_15_wn_member_leaves
+test_16_wn_keypackage_rotation

@@ -37,10 +37,10 @@ object GroupAddMemberCommand {
         rest: Array<String>,
     ): Int {
         if (rest.size < 2) return Json.error("bad_args", "group add <group_id> <npub> [<npub> ...]")
-        val gid = rest[0]
         val ctx = Context.open(dataDir)
         try {
             ctx.prepare()
+            val gid = ctx.resolveGroupId(rest[0])
             ctx.syncIncoming()
             if (!ctx.marmot.isMember(gid)) return Json.error("not_member", gid)
 

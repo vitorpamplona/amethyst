@@ -45,11 +45,11 @@ object MessageCommands {
         rest: Array<String>,
     ): Int {
         if (rest.size < 2) return Json.error("bad_args", "message send <gid> <text>")
-        val gid = rest[0]
         val text = rest[1]
         val ctx = Context.open(dataDir)
         try {
             ctx.prepare()
+            val gid = ctx.resolveGroupId(rest[0])
             ctx.syncIncoming()
             if (!ctx.marmot.isMember(gid)) return Json.error("not_member", gid)
 
@@ -77,12 +77,12 @@ object MessageCommands {
         rest: Array<String>,
     ): Int {
         if (rest.isEmpty()) return Json.error("bad_args", "message list <gid>")
-        val gid = rest[0]
         val args = Args(rest.drop(1).toTypedArray())
         val limit = args.intFlag("limit", Int.MAX_VALUE)
         val ctx = Context.open(dataDir)
         try {
             ctx.prepare()
+            val gid = ctx.resolveGroupId(rest[0])
             ctx.syncIncoming()
             if (!ctx.marmot.isMember(gid)) return Json.error("not_member", gid)
 

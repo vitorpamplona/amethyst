@@ -150,6 +150,10 @@ expect_contains() {
 #   - plain hex string (from `groups list`)
 #   - {"value":{"vec":[...]}} serde struct (from `groups create`)
 #   - flat byte array [n, ...] (from some responses)
+# Plus the three wrapper shapes wn actually uses:
+#   - {"result": {"mls_group_id": ...}}                    (groups create)
+#   - {"group": {"mls_group_id": ...}, "membership": ...}  (groups invites[0])
+#   - {"mls_group_id": ...}                                (bare)
 # Input: JSON string via stdin; optional 2nd arg = field name (default: mls_group_id)
 jq_group_id() {
     local field="${1:-mls_group_id}"
@@ -159,7 +163,8 @@ jq_group_id() {
             [($n / 16 | floor), ($n % 16)] |
             map(if . < 10 then (48 + .) else (87 + .) end) |
             implode;
-        (.result // .) |
+        (.group // .result // .) |
+        (.group // .) |
         .[$f] |
         if type == "string" then .
         elif (type == "object" and (.value.vec != null)) then
@@ -190,8 +195,11 @@ wait_for_invite() {
     deadline=$(( start + timeout ))
     last_hb=$start
     while [[ $(date +%s) -lt $deadline ]]; do
+        # Post-v0.2 `wn --json groups invites` returns `{"result": [...]}`
+        # (older builds returned the bare array). Peel the wrapper when
+        # present so a pending invite is actually detected.
         gid=$("$wnfn" --json groups invites 2>/dev/null \
-                | jq -c '.[0] // empty' 2>/dev/null | jq_group_id || true)
+                | jq -c '(.result // .) | .[0] // empty' 2>/dev/null | jq_group_id || true)
         if [[ -n "${gid:-}" ]]; then
             printf '%s\n' "$gid"
             return 0
@@ -203,7 +211,7 @@ wait_for_invite() {
             local elapsed=$(( now - start )) remaining=$(( deadline - now ))
             local pending
             pending=$("$wnfn" --json groups invites 2>/dev/null \
-                        | jq 'length' 2>/dev/null || echo "?")
+                        | jq '(.result // .) | length' 2>/dev/null || echo "?")
             local recent=""
             if [[ -f "$data_dir/logs/stderr.log" ]]; then
                 recent=$(tail -n 200 "$data_dir/logs/stderr.log" 2>/dev/null \
@@ -233,7 +241,7 @@ wait_for_message() {
         fi
         if [[ -n "${payload:-}" ]] && \
            printf '%s' "$payload" | jq -e --arg n "$needle" \
-                '.[]? | select((.content // .text // "") | contains($n))' \
+                '(.result // .) | .[]? | select((.content // .text // "") | contains($n))' \
                 >/dev/null 2>&1; then
             return 0
         fi
@@ -254,7 +262,7 @@ wait_for_member() {
             payload=$(wn_c_json groups members "$gid" 2>/dev/null || true)
         fi
         if printf '%s' "${payload:-}" | jq -e --arg p "$pubkey" \
-               '.[]? | select((.pubkey // .public_key // "") == $p)' \
+               '(.result // .) | .[]? | select((.pubkey // .public_key // "") == $p)' \
                >/dev/null 2>&1; then
             return 0
         fi

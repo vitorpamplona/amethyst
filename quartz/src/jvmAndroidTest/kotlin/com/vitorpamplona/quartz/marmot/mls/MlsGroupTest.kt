@@ -272,7 +272,7 @@ class MlsGroupTest {
     @Test
     fun testSelfRemove() {
         val group = MlsGroup.create("alice".encodeToByteArray())
-        val selfRemoveBytes = group.selfRemove()
+        val (selfRemoveBytes, _) = group.buildSelfRemoveProposalMessage()
         assertTrue(selfRemoveBytes.isNotEmpty())
     }
 

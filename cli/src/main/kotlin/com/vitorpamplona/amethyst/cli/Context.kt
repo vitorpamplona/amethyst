@@ -219,14 +219,26 @@ class Context(
      *  - kind:445 group events per active group → feed into inbound processor
      *
      * Incrementally advances the `since` cursors in [state] so the next run
-     * only asks relays for newer events.
+     * only asks relays for newer events. Two wrinkles:
+     *
+     *  1. NIP-59 gift wraps are published with a random-past `created_at`
+     *     (see [com.vitorpamplona.quartz.utils.TimeUtils.randomWithTwoDays])
+     *     so a newly-published wrap can trivially have `created_at` earlier
+     *     than the last cursor we saw. To avoid silently dropping such wraps
+     *     we always subtract a 2-day lookback window from the gift-wrap
+     *     `since`, and dedup is handled inside [MarmotInboundProcessor].
+     *  2. We only advance the on-disk cursor when events actually arrive.
+     *     Snapping an empty sync up to "now" on the first invocation would
+     *     make every later `since` query skip any past-dated wrap or 445.
      */
     suspend fun syncIncoming(timeoutMs: Long = 8_000) {
         val inbox = inboxRelays().ifEmpty { anyRelays() }
         val gwSince = state.giftWrapSince
+        val gwFilterSince =
+            gwSince?.let { (it - GIFT_WRAP_LOOKBACK_SECS).coerceAtLeast(0L) }
         val gwFilter =
-            if (gwSince != null) {
-                MarmotFilters.giftWrapsForUserSince(identity.pubKeyHex, gwSince)
+            if (gwFilterSince != null) {
+                MarmotFilters.giftWrapsForUserSince(identity.pubKeyHex, gwFilterSince)
             } else {
                 MarmotFilters.giftWrapsForUser(identity.pubKeyHex)
             }
@@ -255,34 +267,89 @@ class Context(
         if (filterMap.isEmpty()) return
 
         val events = drain(filterMap, timeoutMs)
-        val now = System.currentTimeMillis() / 1000
 
         var maxGwSeen = gwSince ?: 0L
         val maxGroupSeen = perGroupFilters.keys.associateWith { state.groupSince[it] ?: 0L }.toMutableMap()
+        var sawGiftWrap = false
+        val sawGroupEvent = mutableSetOf<HexKey>()
 
         for ((relay, event) in events) {
             // All the MLS/NIP-59 decryption + persistence lives in MarmotIngest —
             // we only care about bookkeeping (since-cursors, logging) here.
             val result = marmot.ingest(event)
-            System.err.println("[cli] ingest ${event.kind}/${event.id.take(8)} via $relay → ${result::class.simpleName}")
+            val detail =
+                when (result) {
+                    is com.vitorpamplona.amethyst.commons.marmot.MarmotIngestResult.Failure -> " ${result.message}"
+                    else -> ""
+                }
+            System.err.println("[cli] ingest ${event.kind}/${event.id.take(8)} via $relay → ${result::class.simpleName}$detail")
 
             when (event.kind) {
                 GiftWrapEvent.KIND -> {
+                    sawGiftWrap = true
                     if (event.createdAt > maxGwSeen) maxGwSeen = event.createdAt
                 }
 
                 GroupEvent.KIND -> {
                     val gid = (event as? GroupEvent)?.groupId() ?: continue
+                    sawGroupEvent.add(gid)
                     val prev = maxGroupSeen[gid] ?: 0L
                     if (event.createdAt > prev) maxGroupSeen[gid] = event.createdAt
                 }
             }
         }
 
-        state.giftWrapSince = if (maxGwSeen > 0) maxGwSeen else now
-        for ((gid, seen) in maxGroupSeen) {
-            state.groupSince[gid] = if (seen > 0) seen else now
+        if (sawGiftWrap && maxGwSeen > 0) {
+            state.giftWrapSince = maxGwSeen
         }
+        for (gid in sawGroupEvent) {
+            val seen = maxGroupSeen[gid] ?: continue
+            if (seen > 0) state.groupSince[gid] = seen
+        }
+
+        // If any welcome we processed consumed a KeyPackage, MIP-00 requires
+        // us to immediately publish a replacement (a KP can only be used for
+        // ONE welcome; leaving the old one on relays lets a second sender
+        // invite us with a bundle we no longer have private keys for). The
+        // Amethyst UI handles this via its own rotation scheduler; the CLI
+        // has no scheduler, so we rotate inline right after sync.
+        if (marmot.needsKeyPackageRotation()) {
+            try {
+                val kpRelays = keyPackageRelays().ifEmpty { outboxRelays() }.ifEmpty { anyRelays() }
+                if (kpRelays.isNotEmpty()) {
+                    val rotated = marmot.rotateConsumedKeyPackages(kpRelays.toList())
+                    for (event in rotated) {
+                        publish(event, kpRelays)
+                        System.err.println("[cli] rotated KeyPackage → ${event.id.take(8)} on ${kpRelays.size} relay(s)")
+                    }
+                }
+            } catch (e: Exception) {
+                System.err.println("[cli] key-package rotation failed: ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * Resolve a group identifier given on the CLI to the nostr_group_id that
+     * amy's [MarmotManager] indexes on.
+     *
+     * amy internally keys everything off MIP-01's `nostr_group_id`. whitenoise
+     * (and every other mdk consumer) keys off the MLS `GroupContext.groupId` —
+     * a separate 32-byte random value stamped at group creation. Cross-client
+     * scripts therefore wind up juggling both ids, and it's very easy to pass
+     * the wrong one to amy. Rather than make every caller translate, we accept
+     * either format and resolve here:
+     *  1. If the input is an active nostr_group_id, use it unchanged.
+     *  2. Otherwise scan active groups for one whose MLS groupId matches.
+     *  3. Otherwise return the input unchanged (so the caller still gets a
+     *     sensible `not_member` response rather than a silent mismatch).
+     */
+    fun resolveGroupId(input: HexKey): HexKey {
+        if (marmot.isMember(input)) return input
+        val normalized = input.lowercase()
+        return marmot.activeGroupIds().firstOrNull { nostrId ->
+            marmot.mlsGroupIdHex(nostrId)?.lowercase() == normalized
+        } ?: input
     }
 
     fun marmotGroupRelays(nostrGroupId: HexKey): Set<NormalizedRelayUrl> {
@@ -303,6 +370,13 @@ class Context(
     }
 
     companion object {
+        /**
+         * Lookback applied to the gift-wrap `since` filter to compensate for
+         * NIP-59's randomised-past `created_at`. 2 days matches
+         * [com.vitorpamplona.quartz.utils.TimeUtils.randomWithTwoDays].
+         */
+        private const val GIFT_WRAP_LOOKBACK_SECS: Long = 2L * 24 * 60 * 60
+
         /** Build a Context but require an identity to already exist — most commands can't run without one. */
         fun open(dataDir: DataDir): Context {
             val identity =

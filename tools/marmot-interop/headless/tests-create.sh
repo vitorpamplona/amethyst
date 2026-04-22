@@ -33,12 +33,19 @@ test_02_a_creates_group() {
   banner "Test 02 — A creates group, invites B"
   local id="02 A->B create+invite"
 
-  local gid
-  gid=$(amy_field '.group_id' marmot group create --name "Interop-02") || {
+  # amy keys groups by the MIP-01 nostr_group_id (`group_id`), wn (via
+  # mdk-core) keys by the MLS GroupContext groupId (`mls_group_id`). Both
+  # are 32 random bytes and they are NOT the same. We need both: amy calls
+  # use `gid`, wn calls use `mls_gid`.
+  local out gid mls_gid
+  out=$(amy_json marmot group create --name "Interop-02") || {
     record_result "$id" fail "create returned no group_id"; return
   }
+  gid=$(printf '%s' "$out" | jq -r '.group_id')
+  mls_gid=$(printf '%s' "$out" | jq -r '.mls_group_id')
   save_state GROUP_02 "$gid"
-  info "created group $gid"
+  save_state GROUP_02_MLS "$mls_gid"
+  info "created group nostr=$gid mls=$mls_gid"
 
   amy_json marmot group add "$gid" "$B_NPUB" >/dev/null || {
     record_result "$id" fail "amy group add failed"; return
@@ -52,16 +59,17 @@ test_02_a_creates_group() {
   wn_b groups accept "$b_gid" >/dev/null 2>&1 || true
   info "B joined $b_gid"
 
-  # A -> B message
+  # A -> B message. amy takes the nostr id; wait_for_message calls
+  # `wn messages list` which needs the MLS id.
   amy_json marmot message send "$gid" "hello from amethyst" >/dev/null || {
     record_result "$id" fail "amy send failed"; return
   }
-  if ! wait_for_message B "$gid" "hello from amethyst" 30; then
+  if ! wait_for_message B "$mls_gid" "hello from amethyst" 90; then
     record_result "$id" fail "B didn't receive A's message"; return
   fi
 
   # B -> A message
-  wn_b messages send "$gid" "hello from wn" >/dev/null 2>&1 || warn "wn send returned nonzero"
+  wn_b messages send "$mls_gid" "hello from wn" >/dev/null 2>&1 || warn "wn send returned nonzero"
   if ! amy_json marmot await message "$gid" --match "hello from wn" --timeout 30 >/dev/null; then
     record_result "$id" fail "A didn't receive B's reply"; return
   fi
@@ -72,33 +80,41 @@ test_03_b_creates_group() {
   banner "Test 03 — B creates group, invites A"
   local id="03 B->A create+invite"
 
-  local out gid
+  # `wn groups create` returns the MLS group id (what wn's messages API
+  # expects). amy indexes by the MIP-01 nostr_group_id, which we only learn
+  # once A has processed the welcome and we can ask `amy await group` for
+  # it. Keep them distinct so each CLI gets the id it understands.
+  local out mls_gid
   out=$(wn_b --json groups create "Interop-03" "$A_NPUB" 2>>"$LOG_FILE") || {
     record_result "$id" fail "wn groups create failed"; return
   }
-  gid=$(printf '%s' "$out" | jq_group_id)
-  if [[ -z "$gid" ]]; then
+  mls_gid=$(printf '%s' "$out" | jq_group_id)
+  if [[ -z "$mls_gid" ]]; then
     record_result "$id" fail "could not parse group_id"; return
   fi
-  save_state GROUP_03 "$gid"
-  info "group_id: $gid"
+  save_state GROUP_03_MLS "$mls_gid"
+  info "mls_group_id: $mls_gid"
 
-  # A: poll until it joins.
-  if ! amy_json marmot await group --name "Interop-03" --timeout 30 >/dev/null; then
+  # A: poll until it joins, and capture its nostr_group_id.
+  local a_out a_gid
+  a_out=$(amy_json marmot await group --name "Interop-03" --timeout 30) || {
     record_result "$id" fail "A never joined B's group"; return
-  fi
+  }
+  a_gid=$(printf '%s' "$a_out" | jq -r '.group_id')
+  save_state GROUP_03 "$a_gid"
+  info "A joined as nostr_group_id=$a_gid"
 
   # B -> A message
-  wn_b messages send "$gid" "ping from wn" >/dev/null 2>&1 || true
-  if ! amy_json marmot await message "$gid" --match "ping from wn" --timeout 30 >/dev/null; then
+  wn_b messages send "$mls_gid" "ping from wn" >/dev/null 2>&1 || true
+  if ! amy_json marmot await message "$a_gid" --match "ping from wn" --timeout 30 >/dev/null; then
     record_result "$id" fail "A didn't see B's ping"; return
   fi
 
   # A -> B reply
-  amy_json marmot message send "$gid" "pong from amethyst" >/dev/null || {
+  amy_json marmot message send "$a_gid" "pong from amethyst" >/dev/null || {
     record_result "$id" fail "amy send pong failed"; return
   }
-  if wait_for_message B "$gid" "pong from amethyst" 30; then
+  if wait_for_message B "$mls_gid" "pong from amethyst" 90; then
     record_result "$id" pass
   else
     record_result "$id" fail "B didn't see A's pong"
@@ -112,7 +128,9 @@ test_04_three_member_group() {
   wn_c keys publish >/dev/null 2>&1 || true
   sleep 3
 
-  local gid; gid=$(load_state GROUP_02 || true)
+  local gid mls_gid
+  gid=$(load_state GROUP_02 || true)
+  mls_gid=$(load_state GROUP_02_MLS || true)
   if [[ -z "${gid:-}" ]]; then
     record_result "$id" skip "no GROUP_02"; return
   fi
@@ -131,8 +149,14 @@ test_04_three_member_group() {
   amy_json marmot message send "$gid" "hello three-member world" >/dev/null || {
     record_result "$id" fail "amy send failed"; return
   }
-  if wait_for_message B "$gid" "hello three-member world" 30 \
-     && wait_for_message C "$c_gid" "hello three-member world" 30; then
+  # wn's event_processor retries undecryptable pre-membership commits with
+  # exponential backoff (2+4+8+16=~30s), and kind:445 processing is serial
+  # per-account; a fresh joiner routinely needs ~60s to burn through that
+  # retry queue before the add-C commit is applied and "hello three-member
+  # world" decrypts. The 30s we used for the inline A<->B send/recv
+  # wouldn't clear that.
+  if wait_for_message B "$mls_gid" "hello three-member world" 90 \
+     && wait_for_message C "$c_gid" "hello three-member world" 90; then
     record_result "$id" pass
   else
     record_result "$id" fail "B or C missed A's post-add message"
@@ -166,8 +190,8 @@ test_05_b_adds_a_existing() {
   amy_json marmot message send "$gid" "joined from amethyst" >/dev/null || {
     record_result "$id" fail "amy send failed"; return
   }
-  if wait_for_message B "$gid" "joined from amethyst" 30 \
-     && wait_for_message C "$gid" "joined from amethyst" 30; then
+  if wait_for_message B "$gid" "joined from amethyst" 90 \
+     && wait_for_message C "$gid" "joined from amethyst" 90; then
     record_result "$id" pass
   else
     record_result "$id" fail "B or C didn't see A's message"
