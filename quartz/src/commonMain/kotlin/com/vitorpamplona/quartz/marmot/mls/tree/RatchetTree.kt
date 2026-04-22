@@ -156,15 +156,32 @@ class RatchetTree(
 
     /**
      * Remove a member by blanking their leaf and all parent nodes on the direct path.
+     *
+     * RFC 9420 §7.8: trailing blank leaves MUST be trimmed so every participant
+     * agrees on `leaf_count` (and therefore on `direct_path` lengths). Openmls
+     * does this after every leaf blank; without the trim, a committer that had
+     * the removed leaf at the far right end of the tree sends an UpdatePath one
+     * entry longer than the receiver's tree layout accepts, and the receiver
+     * errors out with `UpdatePathError(PathLengthMismatch)`.
      */
     fun removeLeaf(leafIndex: Int) {
         setLeaf(leafIndex, null)
-        // Blank the direct path
         val directPath = BinaryTree.directPath(leafIndex, _leafCount)
         for (nodeIdx in directPath) {
             if (nodeIdx < nodes.size) {
                 nodes[nodeIdx] = null
             }
+        }
+        // Shrink leafCount past any trailing blanks. Parent nodes that become
+        // orphaned by the shrink are dropped from the `nodes` list so
+        // treeHash() / resolution() / direct_path() agree with openmls on the
+        // new tree shape.
+        while (_leafCount > 0 && getLeaf(_leafCount - 1) == null) {
+            _leafCount--
+        }
+        val effectiveNodeCount = if (_leafCount > 0) BinaryTree.nodeCount(_leafCount) else 0
+        while (nodes.size > effectiveNodeCount) {
+            nodes.removeAt(nodes.size - 1)
         }
     }
 
