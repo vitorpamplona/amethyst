@@ -128,3 +128,27 @@ data class CommitResult(
 
     override fun hashCode(): Int = commitBytes.contentHashCode()
 }
+
+/**
+ * Result of [com.vitorpamplona.quartz.marmot.mls.group.MlsGroup.externalJoin].
+ *
+ * [commitBytes] is the raw TLS-encoded [Commit] struct. For on-the-wire
+ * distribution to existing group members, callers MUST publish [framedCommitBytes]
+ * — a `MlsMessage(PublicMessage(FramedContent(commit)))` envelope with sender
+ * `new_member_commit` (RFC 9420 §12.4.3) — so that receivers can parse the
+ * confirmation_tag and process the commit via
+ * [com.vitorpamplona.quartz.marmot.mls.group.MlsGroup.processFramedCommit].
+ */
+data class ExternalJoinResult(
+    val group: com.vitorpamplona.quartz.marmot.mls.group.MlsGroup,
+    val commitBytes: ByteArray,
+    val framedCommitBytes: ByteArray,
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is ExternalJoinResult) return false
+        return commitBytes.contentEquals(other.commitBytes)
+    }
+
+    override fun hashCode(): Int = commitBytes.contentHashCode()
+}

@@ -39,6 +39,7 @@ import com.vitorpamplona.quartz.marmot.mls.framing.encodeSender
 import com.vitorpamplona.quartz.marmot.mls.messages.Commit
 import com.vitorpamplona.quartz.marmot.mls.messages.CommitResult
 import com.vitorpamplona.quartz.marmot.mls.messages.EncryptedGroupSecrets
+import com.vitorpamplona.quartz.marmot.mls.messages.ExternalJoinResult
 import com.vitorpamplona.quartz.marmot.mls.messages.GroupContext
 import com.vitorpamplona.quartz.marmot.mls.messages.GroupInfo
 import com.vitorpamplona.quartz.marmot.mls.messages.GroupSecrets
@@ -1035,6 +1036,62 @@ class MlsGroup private constructor(
     }
 
     // --- Commit Processing ---
+
+    /**
+     * Process a fully-framed `MlsMessage(PublicMessage(Commit))` produced by
+     * [CommitResult.framedCommitBytes]. Unpacks the wire envelope, verifies the
+     * RFC 9420 §6.2 membership_tag, and delegates to [processCommit] with the
+     * correct signature, confirmation_tag, and sender leaf index. This is the
+     * symmetric peer-side entry point for commits returned by [commit] /
+     * [addMember] / [removeMember] — tests and any caller that holds the
+     * framed bytes should prefer this over the low-level [processCommit].
+     *
+     * Mirrors the production unwrap done by `MarmotInboundProcessor` for
+     * inbound kind:445 PublicMessage commits.
+     */
+    fun processFramedCommit(framedCommitBytes: ByteArray) {
+        val mlsMessage = MlsMessage.decodeTls(TlsReader(framedCommitBytes))
+        require(mlsMessage.wireFormat == WireFormat.PUBLIC_MESSAGE) {
+            "processFramedCommit expects a PublicMessage envelope, got ${mlsMessage.wireFormat}"
+        }
+        val pubMsg = PublicMessage.decodeTls(TlsReader(mlsMessage.payload))
+        require(pubMsg.contentType == ContentType.COMMIT) {
+            "Framed commit must contain ContentType.COMMIT, got ${pubMsg.contentType}"
+        }
+        val tag =
+            requireNotNull(pubMsg.confirmationTag) {
+                "PublicMessage commit missing confirmation_tag"
+            }
+        // External commits don't carry a membership_tag (sender isn't yet a
+        // member). For member-sender commits, RFC 9420 §6.2 requires the tag.
+        if (pubMsg.sender.senderType == SenderType.MEMBER) {
+            require(verifyPublicMessageCommitMembershipTag(pubMsg)) {
+                "Invalid membership_tag on PublicMessage commit"
+            }
+        }
+        // RFC 9420 §6: `new_member_commit` senders carry no leaf_index field
+        // on the wire — the joiner's slot is determined by the receiver
+        // using the same algorithm the joiner used in [RatchetTree.addLeaf]:
+        // first blank leaf, else append past the current leaf_count.
+        val senderLeafIndex =
+            when (pubMsg.sender.senderType) {
+                SenderType.NEW_MEMBER_COMMIT -> {
+                    (0 until tree.leafCount).firstOrNull { tree.getLeaf(it) == null }
+                        ?: tree.leafCount
+                }
+
+                else -> {
+                    pubMsg.sender.leafIndex
+                }
+            }
+        processCommit(
+            commitBytes = pubMsg.content,
+            senderLeafIndex = senderLeafIndex,
+            confirmationTag = tag,
+            signature = pubMsg.signature,
+            wireFormat = WireFormat.PUBLIC_MESSAGE,
+        )
+    }
 
     /**
      * Process a received Commit message, advancing the epoch.
@@ -2513,13 +2570,15 @@ class MlsGroup private constructor(
          * @param groupInfoBytes TLS-serialized GroupInfo
          * @param identity the joiner's identity
          * @param signingKey optional Ed25519 signing key (generated if null)
-         * @return the new MlsGroup and the commit bytes to send to the group
+         * @return the new MlsGroup along with the raw inner commit bytes and a
+         *   wire-ready PublicMessage envelope. Existing group members consume
+         *   the framed bytes via [MlsGroup.processFramedCommit].
          */
         fun externalJoin(
             groupInfoBytes: ByteArray,
             identity: ByteArray,
             signingKey: ByteArray? = null,
-        ): Pair<MlsGroup, ByteArray> {
+        ): ExternalJoinResult {
             val groupInfo = GroupInfo.decodeTls(TlsReader(groupInfoBytes))
             val groupContext = groupInfo.groupContext
 
@@ -2600,37 +2659,23 @@ class MlsGroup private constructor(
                     map
                 }
 
-            // Build UpdatePath for our leaf
+            // Build UpdatePath for our leaf using the same staging pattern
+            // as regular commit() (RFC 9420 §7.6): stage public keys → apply →
+            // patch parent_hash → rebuild leaf → compute post-mutation context
+            // → HPKE-encrypt with that context. Encrypting against the
+            // PRE-mutation groupContext (the bug we're fixing here) makes
+            // existing members fail to open the path-secret AEAD because
+            // their decryption context bumps the epoch and folds in the new
+            // tree_hash.
             val leafSecret = MlsCryptoProvider.randomBytes(MlsCryptoProvider.HASH_OUTPUT_LENGTH)
             val pathSecrets = tree.derivePathSecrets(myLeafIndex, leafSecret)
             val copath = BinaryTree.copath(myLeafIndex, tree.leafCount)
-            val pathNodes =
-                pathSecrets.zip(copath).map { (pathKey, copathNode) ->
-                    val resolution = tree.resolution(copathNode)
-                    val encryptedSecrets =
-                        resolution.mapNotNull { resNode ->
-                            val node = tree.getNode(resNode) ?: return@mapNotNull null
-                            val recipientPub =
-                                when (node) {
-                                    is com.vitorpamplona.quartz.marmot.mls.tree.TreeNode.Leaf -> {
-                                        node.leafNode.encryptionKey
-                                    }
 
-                                    is com.vitorpamplona.quartz.marmot.mls.tree.TreeNode.Parent -> {
-                                        node.parentNode.encryptionKey
-                                    }
-                                }
-                            MlsCryptoProvider.encryptWithLabel(
-                                recipientPub,
-                                "UpdatePathNode",
-                                groupContext.toTlsBytes(),
-                                pathKey.pathSecret,
-                            )
-                        }
-                    UpdatePathNode(pathKey.publicKey, encryptedSecrets)
-                }
-
-            tree.applyUpdatePath(myLeafIndex, pathNodes)
+            // Stage path-keys WITHOUT encrypted secrets so subsequent
+            // parent_hash / tree_hash computations reflect the new keys.
+            val stagedPathNodes =
+                pathSecrets.map { pathKey -> UpdatePathNode(pathKey.publicKey, emptyList()) }
+            tree.applyUpdatePath(myLeafIndex, stagedPathNodes)
 
             // Compute parent_hash chain + the leaf's parent_hash (RFC 9420
             // §7.9.2) on the post-update tree, then patch parent nodes and
@@ -2661,6 +2706,42 @@ class MlsGroup private constructor(
                     parentHash = extLeafParentHash,
                 )
             tree.setLeaf(myLeafIndex, leafNode)
+
+            // Post-mutation path-encryption context: bump epoch, swap in the
+            // post-update tree_hash. Matches what existing members compute
+            // in processCommitInner when they HPKE-Open the path secret.
+            val pathEncContextBytes =
+                groupContext
+                    .copy(
+                        epoch = groupContext.epoch + 1,
+                        treeHash = tree.treeHash(),
+                    ).toTlsBytes()
+
+            val pathNodes =
+                stagedPathNodes.zip(copath).zip(pathSecrets) { (staged, copathNode), pathKey ->
+                    val resolution = tree.resolution(copathNode)
+                    val encryptedSecrets =
+                        resolution.mapNotNull { resNode ->
+                            val node = tree.getNode(resNode) ?: return@mapNotNull null
+                            val recipientPub =
+                                when (node) {
+                                    is com.vitorpamplona.quartz.marmot.mls.tree.TreeNode.Leaf -> {
+                                        node.leafNode.encryptionKey
+                                    }
+
+                                    is com.vitorpamplona.quartz.marmot.mls.tree.TreeNode.Parent -> {
+                                        node.parentNode.encryptionKey
+                                    }
+                                }
+                            MlsCryptoProvider.encryptWithLabel(
+                                recipientPub,
+                                "UpdatePathNode",
+                                pathEncContextBytes,
+                                pathKey.pathSecret,
+                            )
+                        }
+                    UpdatePathNode(staged.encryptionKey, encryptedSecrets)
+                }
 
             val updatePath = UpdatePath(leafNode, pathNodes)
 
@@ -2723,7 +2804,32 @@ class MlsGroup private constructor(
                     interimTranscriptHash = interimTranscriptHash,
                 )
 
-            return Pair(group, commitBytes)
+            // Wrap the commit in a PublicMessage envelope so existing members
+            // can extract sender / signature / confirmation_tag via
+            // MlsGroup.processFramedCommit (the symmetric receive path).
+            // External commits (RFC 9420 §12.4.3) carry sender =
+            // new_member_commit and no membership_tag — the joiner is
+            // claiming a slot that doesn't yet exist in the group's
+            // membership_key MAC space.
+            val publicMessage =
+                PublicMessage(
+                    groupId = groupContext.groupId,
+                    epoch = groupContext.epoch,
+                    sender = Sender(SenderType.NEW_MEMBER_COMMIT, 0),
+                    authenticatedData = ByteArray(0),
+                    contentType = ContentType.COMMIT,
+                    content = commitBytes,
+                    signature = ByteArray(0),
+                    confirmationTag = confirmationTag,
+                    membershipTag = null,
+                )
+            val framedCommitBytes = MlsMessage.fromPublicMessage(publicMessage).toTlsBytes()
+
+            return ExternalJoinResult(
+                group = group,
+                commitBytes = commitBytes,
+                framedCommitBytes = framedCommitBytes,
+            )
         }
 
         /**
