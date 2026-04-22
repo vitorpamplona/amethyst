@@ -48,6 +48,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Groups
@@ -114,6 +115,7 @@ enum class ScreenCategory(
     DISCOVERY("Discovery", Icons.Default.Explore),
     IDENTITY("Identity", Icons.Default.Person),
     PLAY("Play", Icons.Default.SportsEsports),
+    NETWORK("Network", Icons.Default.Dns),
 }
 
 // -- Extensions on DeckColumnType --
@@ -142,6 +144,8 @@ fun DeckColumnType.category(): ScreenCategory =
         -> ScreenCategory.IDENTITY
 
         DeckColumnType.Chess -> ScreenCategory.PLAY
+
+        DeckColumnType.Relays -> ScreenCategory.NETWORK
 
         // Deep-link types — not in LAUNCHABLE_SCREENS but need a category for exhaustiveness
         is DeckColumnType.Profile,
@@ -181,6 +185,7 @@ val LAUNCHABLE_SCREENS: List<DeckColumnType> =
         DeckColumnType.Bookmarks,
         DeckColumnType.MyProfile,
         DeckColumnType.Settings,
+        DeckColumnType.Relays,
         DeckColumnType.Chess,
     )
 

@@ -100,6 +100,7 @@ import com.vitorpamplona.amethyst.desktop.subscriptions.createMetadataSubscripti
 import com.vitorpamplona.amethyst.desktop.subscriptions.createSearchPeopleSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.generateSubId
 import com.vitorpamplona.amethyst.desktop.subscriptions.rememberSubscription
+import com.vitorpamplona.amethyst.desktop.ui.relay.LocalRelayCategories
 import com.vitorpamplona.amethyst.desktop.ui.search.AdvancedSearchPanel
 import com.vitorpamplona.amethyst.desktop.ui.search.SearchResultsList
 import com.vitorpamplona.amethyst.desktop.ui.search.SearchSyncBanner
@@ -131,6 +132,8 @@ fun SearchScreen(
     val connectedRelays by relayManager.connectedRelays.collectAsState()
     val relayStatuses by relayManager.relayStatuses.collectAsState()
     val allRelayUrls = remember(relayStatuses) { relayStatuses.keys }
+    val relayCategories = LocalRelayCategories.current
+    val searchRelays by relayCategories.searchRelays.collectAsState()
     val displayText by state.displayText.collectAsState()
     // Track TextFieldValue locally to preserve cursor position
     var textFieldValue by remember { mutableStateOf(TextFieldValue(displayText)) }
@@ -171,9 +174,9 @@ fun SearchScreen(
         }
     }
 
-    // NIP-50 people search subscription (use allRelayUrls — subscribe will connect)
-    rememberSubscription(connectedRelays, debouncedQuery, relayManager = relayManager) {
-        if (allRelayUrls.isEmpty() || debouncedQuery.isEmpty) {
+    // NIP-50 people search subscription (use searchRelays from relay categories)
+    rememberSubscription(searchRelays, debouncedQuery, relayManager = relayManager) {
+        if (searchRelays.isEmpty() || debouncedQuery.isEmpty) {
             return@rememberSubscription null
         }
         if (bech32Results.isNotEmpty()) return@rememberSubscription null
@@ -183,7 +186,7 @@ fun SearchScreen(
         }
 
         createSearchPeopleSubscription(
-            relays = allRelayUrls,
+            relays = searchRelays,
             searchQuery =
                 debouncedQuery.text.ifBlank {
                     QuerySerializer.serialize(debouncedQuery)
@@ -212,9 +215,9 @@ fun SearchScreen(
         )
     }
 
-    // NIP-50 advanced note search subscription (use allRelayUrls)
-    rememberSubscription(connectedRelays, debouncedQuery, relayManager = relayManager) {
-        if (allRelayUrls.isEmpty() || debouncedQuery.isEmpty) {
+    // NIP-50 advanced note search subscription (use searchRelays from relay categories)
+    rememberSubscription(searchRelays, debouncedQuery, relayManager = relayManager) {
+        if (searchRelays.isEmpty() || debouncedQuery.isEmpty) {
             return@rememberSubscription null
         }
         if (bech32Results.isNotEmpty()) return@rememberSubscription null
@@ -225,7 +228,7 @@ fun SearchScreen(
         SubscriptionConfig(
             subId = generateSubId("adv-search"),
             filters = filters,
-            relays = allRelayUrls,
+            relays = searchRelays,
             onEvent = { event, _, relay, _ ->
                 if (event.kind == MetadataEvent.KIND) return@SubscriptionConfig
                 if (state.trackRelayEvent(relay.url, event.id)) {

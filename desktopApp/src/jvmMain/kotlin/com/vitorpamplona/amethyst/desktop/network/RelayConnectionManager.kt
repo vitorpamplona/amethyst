@@ -25,15 +25,27 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EventMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import java.util.concurrent.ConcurrentHashMap
+
+data class RelayMetrics(
+    val eventCount: Long = 0,
+    val lastEventAt: Long? = null,
+)
 
 /**
  * Manages Nostr relay connections, subscriptions, and status tracking.
@@ -55,8 +67,28 @@ open class RelayConnectionManager(
     val connectedRelays: StateFlow<Set<NormalizedRelayUrl>> = _client.connectedRelaysFlow()
     val availableRelays: StateFlow<Set<NormalizedRelayUrl>> = _client.availableRelaysFlow()
 
+    // Relays explicitly removed by user — suppress status updates from pool callbacks
+    private val removedRelays = ConcurrentHashMap.newKeySet<NormalizedRelayUrl>()
+
+    // Hot metrics — written on every event, no StateFlow emission
+    private val rawMetricsMap = ConcurrentHashMap<NormalizedRelayUrl, RelayMetrics>()
+
+    // Throttled snapshot — 1Hz emission for UI
+    private val _relayMetrics = MutableStateFlow<Map<NormalizedRelayUrl, RelayMetrics>>(emptyMap())
+    val relayMetrics: StateFlow<Map<NormalizedRelayUrl, RelayMetrics>> = _relayMetrics.asStateFlow()
+
     init {
         _client.addConnectionListener(this)
+    }
+
+    /** Start 1Hz metrics snapshot. Call once after connect(). */
+    fun startMetricsSnapshot(scope: CoroutineScope) {
+        scope.launch {
+            while (isActive) {
+                delay(1_000)
+                _relayMetrics.value = HashMap(rawMetricsMap)
+            }
+        }
     }
 
     fun connect() {
@@ -69,12 +101,14 @@ open class RelayConnectionManager(
 
     fun addRelay(url: String): NormalizedRelayUrl? {
         val normalized = RelayUrlNormalizer.Companion.normalizeOrNull(url) ?: return null
+        removedRelays.remove(normalized)
         updateRelayStatus(normalized) { it.copy(connected = false, error = null) }
         return normalized
     }
 
     fun removeRelay(url: NormalizedRelayUrl) {
-        _relayStatuses.value = _relayStatuses.value - url
+        removedRelays.add(url)
+        _relayStatuses.update { it - url }
     }
 
     fun addDefaultRelays() {
@@ -167,13 +201,13 @@ open class RelayConnectionManager(
 
     private fun updateRelayStatus(
         url: NormalizedRelayUrl,
-        update: (RelayStatus) -> RelayStatus,
+        transform: (RelayStatus) -> RelayStatus,
     ) {
-        _relayStatuses.value =
-            _relayStatuses.value.toMutableMap().apply {
-                val current = this[url] ?: RelayStatus(url, connected = false)
-                this[url] = update(current)
-            }
+        if (url in removedRelays) return
+        _relayStatuses.update { current ->
+            val existing = current[url] ?: RelayStatus(url, connected = false)
+            current + (url to transform(existing))
+        }
     }
 
     override fun onConnecting(relay: IRelayClient) {
@@ -212,7 +246,14 @@ open class RelayConnectionManager(
         msgStr: String,
         msg: Message,
     ) {
-        // Events are handled by subscription listeners
+        // Only count EVENT messages, not EOSE/OK/NOTICE/AUTH
+        if (msg !is EventMessage) return
+        rawMetricsMap.compute(relay.url) { _, m ->
+            RelayMetrics(
+                eventCount = (m?.eventCount ?: 0) + 1,
+                lastEventAt = System.currentTimeMillis(),
+            )
+        }
     }
 
     override fun onSent(

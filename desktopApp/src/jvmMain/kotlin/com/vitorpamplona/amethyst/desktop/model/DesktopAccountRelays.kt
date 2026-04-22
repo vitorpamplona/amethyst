@@ -25,10 +25,13 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
+import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * Manages relay state for a desktop account.
@@ -55,6 +58,19 @@ class DesktopAccountRelays(
     private val _dmRelayList = MutableStateFlow<Set<NormalizedRelayUrl>>(emptySet())
     val dmRelayList: StateFlow<Set<NormalizedRelayUrl>> = _dmRelayList.asStateFlow()
 
+    /** User-configured search relays from kind 10007 events */
+    private val _searchRelayList = MutableStateFlow<Set<NormalizedRelayUrl>>(emptySet())
+    val searchRelayList: StateFlow<Set<NormalizedRelayUrl>> = _searchRelayList.asStateFlow()
+
+    /** User-configured blocked relays from kind 10006 events */
+    private val _blockedRelayList = MutableStateFlow<Set<NormalizedRelayUrl>>(emptySet())
+    val blockedRelayList: StateFlow<Set<NormalizedRelayUrl>> = _blockedRelayList.asStateFlow()
+
+    // Track created_at to prevent stale overwrites (thread-safe)
+    private val lastDmCreatedAt = AtomicLong(0L)
+    private val lastSearchCreatedAt = AtomicLong(0L)
+    private val lastBlockedCreatedAt = AtomicLong(0L)
+
     /** Aggregated DM relay state (DM relays + fallback to connected relays) */
     val dmRelays =
         DesktopDmRelayState(
@@ -63,32 +79,65 @@ class DesktopAccountRelays(
             scope = scope,
         )
 
-    /**
-     * Processes a ChatMessageRelayListEvent (kind 10050) to update DM relays.
-     * Call this when receiving kind 10050 events from relay subscriptions.
-     */
-    fun consumeDmRelayList(event: ChatMessageRelayListEvent) {
+    /** Routes kind 10050 to DM relay state. Use consumeIfRelevant() for external callers. */
+    private fun consumeDmRelayList(event: ChatMessageRelayListEvent) {
         if (event.pubKey != userPubKeyHex) return
-        val relays = event.relays().toSet()
-        _dmRelayList.value = relays
+        _dmRelayList.value = event.relays().toSet()
     }
 
     /**
-     * Processes any event that might be a DM relay list.
-     * Returns true if the event was consumed as a DM relay list.
+     * Routes relay config events (kinds 10050, 10007, 10006) to the appropriate handler.
+     * Returns true if the event was consumed.
+     * Uses created_at checking to prevent stale overwrites.
      */
-    fun consumeIfDmRelayList(event: Event): Boolean {
-        if (event.kind == ChatMessageRelayListEvent.KIND && event is ChatMessageRelayListEvent) {
-            consumeDmRelayList(event)
-            return true
+    fun consumeIfRelevant(event: Event): Boolean {
+        if (event.pubKey != userPubKeyHex) return false
+        return when (event.kind) {
+            ChatMessageRelayListEvent.KIND -> {
+                if (event is ChatMessageRelayListEvent && event.createdAt > lastDmCreatedAt.get()) {
+                    lastDmCreatedAt.set(event.createdAt)
+                    _dmRelayList.value = event.relays().toSet()
+                }
+                true
+            }
+
+            SearchRelayListEvent.KIND -> {
+                if (event is SearchRelayListEvent && event.createdAt > lastSearchCreatedAt.get()) {
+                    lastSearchCreatedAt.set(event.createdAt)
+                    _searchRelayList.value = event.publicRelays().toSet()
+                }
+                true
+            }
+
+            BlockedRelayListEvent.KIND -> {
+                if (event is BlockedRelayListEvent && event.createdAt > lastBlockedCreatedAt.get()) {
+                    lastBlockedCreatedAt.set(event.createdAt)
+                    _blockedRelayList.value = event.publicRelays().toSet()
+                }
+                true
+            }
+
+            else -> {
+                false
+            }
         }
-        return false
     }
 
     /**
      * Manually sets DM relays (e.g., from saved preferences).
      */
     fun setDmRelays(relays: Set<NormalizedRelayUrl>) {
+        lastDmCreatedAt.set(Long.MAX_VALUE)
         _dmRelayList.value = relays
+    }
+
+    fun setSearchRelays(relays: Set<NormalizedRelayUrl>) {
+        lastSearchCreatedAt.set(Long.MAX_VALUE)
+        _searchRelayList.value = relays
+    }
+
+    fun setBlockedRelays(relays: Set<NormalizedRelayUrl>) {
+        lastBlockedCreatedAt.set(Long.MAX_VALUE)
+        _blockedRelayList.value = relays
     }
 }

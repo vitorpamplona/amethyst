@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.desktop.ui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -80,6 +81,7 @@ import com.vitorpamplona.amethyst.desktop.subscriptions.generateSubId
 import com.vitorpamplona.amethyst.desktop.subscriptions.rememberSubscription
 import com.vitorpamplona.amethyst.desktop.ui.media.LightboxOverlay
 import com.vitorpamplona.amethyst.desktop.ui.note.NoteCard
+import com.vitorpamplona.amethyst.desktop.ui.relay.LocalRelayCategories
 import com.vitorpamplona.amethyst.desktop.viewmodels.DesktopFeedViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
@@ -267,6 +269,7 @@ fun FeedScreen(
     onNavigateToProfile: (String) -> Unit = {},
     onNavigateToThread: (String) -> Unit = {},
     onZapFeedback: (ZapFeedback) -> Unit = {},
+    onNavigateToRelays: () -> Unit = {},
 ) {
     val relayStatuses by relayManager.relayStatuses.collectAsState()
     val connectedRelays by relayManager.connectedRelays.collectAsState()
@@ -274,6 +277,10 @@ fun FeedScreen(
 
     // Available relay URLs — subscribe triggers connection on-demand
     val allRelayUrls = remember(relayStatuses) { relayStatuses.keys }
+
+    // Feed relays from relay categories (NIP-65 outbox, minus blocked, with fallback)
+    val relayCategories = LocalRelayCategories.current
+    val feedRelays by relayCategories.feedRelays.collectAsState()
 
     var replyToEvent by remember { mutableStateOf<Event?>(null) }
     var lightboxState by remember { mutableStateOf<LightboxState?>(null) }
@@ -295,13 +302,13 @@ fun FeedScreen(
     }
 
     // Subscribe to feed events (kind 1) — populates cache via coordinator
-    rememberSubscription(allRelayUrls, feedMode, followedUsers, relayManager = relayManager) {
-        if (allRelayUrls.isEmpty()) return@rememberSubscription null
+    rememberSubscription(feedRelays, feedMode, followedUsers, relayManager = relayManager) {
+        if (feedRelays.isEmpty()) return@rememberSubscription null
 
         when (feedMode) {
             FeedMode.GLOBAL -> {
                 createGlobalFeedSubscription(
-                    relays = allRelayUrls,
+                    relays = feedRelays,
                     onEvent = { event, _, relay, _ ->
                         subscriptionsCoordinator?.consumeEvent(event, relay)
                     },
@@ -312,7 +319,7 @@ fun FeedScreen(
                 val follows = followedUsers.toList()
                 if (follows.isNotEmpty()) {
                     createFollowingFeedSubscription(
-                        relays = allRelayUrls,
+                        relays = feedRelays,
                         followedUsers = follows,
                         onEvent = { event, _, relay, _ ->
                             subscriptionsCoordinator?.consumeEvent(event, relay)
@@ -489,6 +496,7 @@ fun FeedScreen(
                 },
                 onRefresh = { relayManager.connect() },
                 onCompose = onCompose,
+                onNavigateToRelays = onNavigateToRelays,
             )
 
             Spacer(Modifier.height(8.dp))
@@ -597,6 +605,7 @@ private fun FeedHeader(
     onFeedModeChange: (FeedMode) -> Unit,
     onRefresh: () -> Unit,
     onCompose: () -> Unit,
+    onNavigateToRelays: () -> Unit = {},
 ) {
     FlowRow(
         modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
@@ -635,7 +644,9 @@ private fun FeedHeader(
                 Text(
                     "${connectedRelays.size} relays connected",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier =
+                        Modifier.clickable { onNavigateToRelays() },
                 )
                 if (feedMode == FeedMode.FOLLOWING) {
                     Text(

@@ -33,6 +33,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.Home
@@ -132,6 +133,7 @@ fun DeckColumnType.icon(): ImageVector =
         DeckColumnType.MyProfile -> Icons.Default.Person
         DeckColumnType.Chess -> Icons.Default.Extension
         DeckColumnType.Settings -> Icons.Default.Settings
+        DeckColumnType.Relays -> Icons.Default.Dns
         is DeckColumnType.Article -> Icons.AutoMirrored.Filled.Article
         is DeckColumnType.Editor -> Icons.AutoMirrored.Filled.Article
         DeckColumnType.Drafts -> Icons.AutoMirrored.Filled.Article

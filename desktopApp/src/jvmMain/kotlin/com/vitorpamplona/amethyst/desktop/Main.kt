@@ -74,10 +74,12 @@ import androidx.compose.ui.window.rememberWindowState
 import com.vitorpamplona.amethyst.desktop.account.AccountManager
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
-import com.vitorpamplona.amethyst.desktop.model.DesktopDmRelayState
+import com.vitorpamplona.amethyst.desktop.model.DesktopAccountRelays
 import com.vitorpamplona.amethyst.desktop.model.DesktopIAccount
+import com.vitorpamplona.amethyst.desktop.model.DesktopRelayCategories
 import com.vitorpamplona.amethyst.desktop.network.DefaultRelays
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
+import com.vitorpamplona.amethyst.desktop.network.Nip11Fetcher
 import com.vitorpamplona.amethyst.desktop.service.highlights.DesktopHighlightStore
 import com.vitorpamplona.amethyst.desktop.service.images.DesktopImageLoaderSetup
 import com.vitorpamplona.amethyst.desktop.service.media.VlcjPlayerPool
@@ -103,10 +105,18 @@ import com.vitorpamplona.amethyst.desktop.ui.media.LocalAwtWindow
 import com.vitorpamplona.amethyst.desktop.ui.media.LocalIsImmersiveFullscreen
 import com.vitorpamplona.amethyst.desktop.ui.media.LocalWindowState
 import com.vitorpamplona.amethyst.desktop.ui.profile.ProfileInfoCard
+import com.vitorpamplona.amethyst.desktop.ui.relay.LocalRelayCategories
 import com.vitorpamplona.amethyst.desktop.ui.relay.RelayStatusCard
 import com.vitorpamplona.amethyst.desktop.ui.settings.MediaServerSettings
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
+import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
+import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.LogLevel
 import kotlinx.coroutines.CoroutineScope
@@ -116,6 +126,8 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.time.Duration.Companion.seconds
 
 private val isMacOS = System.getProperty("os.name").lowercase().contains("mac")
 
@@ -225,6 +237,8 @@ fun main() {
                 },
             )
         }
+        // Callback set by App() for single pane navigation from MenuBar
+        var navigateToScreen by remember { mutableStateOf<((DeckColumnType) -> Unit)?>(null) }
 
         Window(
             onCloseRequest = ::exitApplication,
@@ -351,6 +365,26 @@ fun main() {
                             },
                         onClick = { showAppDrawer = !showAppDrawer },
                     )
+                    Item(
+                        "Relay Dashboard",
+                        shortcut =
+                            if (isMacOS) {
+                                KeyShortcut(Key.R, meta = true, shift = true)
+                            } else {
+                                KeyShortcut(Key.R, ctrl = true, shift = true)
+                            },
+                        onClick = {
+                            if (layoutMode == LayoutMode.DECK) {
+                                if (deckState.hasColumnOfType(DeckColumnType.Relays)) {
+                                    deckState.focusExistingColumn(DeckColumnType.Relays)
+                                } else {
+                                    deckState.addColumn(DeckColumnType.Relays)
+                                }
+                            } else {
+                                navigateToScreen?.invoke(DeckColumnType.Relays)
+                            }
+                        },
+                    )
                     Separator()
                     Item(
                         if (layoutMode == LayoutMode.DECK) "\u2713 Deck Layout" else "Deck Layout",
@@ -467,6 +501,7 @@ fun main() {
                             Item("Global Feed", onClick = { deckState.addColumn(DeckColumnType.GlobalFeed) })
                             Item("Profile", onClick = { deckState.addColumn(DeckColumnType.MyProfile) })
                             Item("Chess", onClick = { deckState.addColumn(DeckColumnType.Chess) })
+                            Item("Relays", onClick = { deckState.addColumn(DeckColumnType.Relays) })
                         }
                     }
                 }
@@ -511,6 +546,7 @@ fun main() {
                         torTypeFlow = torTypeFlow,
                         externalPortFlow = externalPortFlow,
                         initialTorSettings = torSettings,
+                        onNavigateToScreen = { navigateToScreen = it },
                     )
                 }
             }
@@ -538,9 +574,15 @@ fun App(
     torTypeFlow: kotlinx.coroutines.flow.MutableStateFlow<com.vitorpamplona.amethyst.commons.tor.TorType>,
     externalPortFlow: kotlinx.coroutines.flow.MutableStateFlow<Int>,
     initialTorSettings: com.vitorpamplona.amethyst.commons.tor.TorSettings,
+    onNavigateToScreen: ((DeckColumnType) -> Unit) -> Unit = {},
 ) {
     val singlePaneState = remember { SinglePaneState() }
     val pinnedNavBarState = remember { PinnedNavBarState(workspaceManager).also { it.loadFromWorkspace() } }
+
+    // Register single pane navigation callback for MenuBar shortcuts
+    LaunchedEffect(singlePaneState) {
+        onNavigateToScreen { screen -> singlePaneState.navigate(screen) }
+    }
 
     // Always reload from prefs — after key() rebuild, prefs have the latest saved settings
     var torSettings by remember {
@@ -631,6 +673,12 @@ fun App(
     }
 
     val relayManager = remember(httpClient) { DesktopRelayConnectionManager(httpClient) }
+    val nip11Fetcher = remember { Nip11Fetcher() }
+
+    // Start 1Hz metrics snapshot for relay dashboard
+    LaunchedEffect(relayManager) {
+        relayManager.startMetricsSnapshot(this)
+    }
 
     // Subscriptions coordinator — uses default relay URLs for metadata indexing.
     // Feed subscriptions (inside MainContent) drive actual relay pool connections.
@@ -755,6 +803,7 @@ fun App(
                             account = account,
                             nwcConnection = nwcConnection,
                             subscriptionsCoordinator = subscriptionsCoordinator,
+                            nip11Fetcher = nip11Fetcher,
                             appScope = scope,
                             torStatus = currentTorStatus,
                             onShowComposeDialog = onShowComposeDialog,
@@ -850,6 +899,7 @@ fun MainContent(
     account: AccountState.LoggedIn,
     nwcConnection: Nip47WalletConnect.Nip47URINorm?,
     subscriptionsCoordinator: DesktopRelaySubscriptionsCoordinator,
+    nip11Fetcher: Nip11Fetcher,
     appScope: CoroutineScope,
     torStatus: com.vitorpamplona.amethyst.commons.tor.TorServiceStatus,
     onShowComposeDialog: () -> Unit,
@@ -871,6 +921,23 @@ fun MainContent(
             DesktopIAccount(account, localCache, relayManager, dmSendTracker, scope)
         }
 
+    // Centralized relay state for all categories (DM, search, blocked)
+    val accountRelays =
+        remember(account, relayManager, scope) {
+            DesktopAccountRelays(account.pubKeyHex, relayManager, scope)
+        }
+
+    // Aggregated relay categories (feed, notifications, search, DM)
+    val relayCategories =
+        remember(iAccount.nip65RelayList, accountRelays, relayManager) {
+            DesktopRelayCategories(
+                nip65State = iAccount.nip65RelayList,
+                accountRelays = accountRelays,
+                connectedRelays = relayManager.connectedRelays,
+                scope = scope,
+            )
+        }
+
     val highlightStore = remember { DesktopHighlightStore(appScope) }
     val draftStore =
         remember {
@@ -878,19 +945,58 @@ fun MainContent(
                 .DesktopDraftStore(appScope)
         }
 
+    // Bootstrap subscription: fetch relay config events (kinds 10002, 10050, 10007, 10006)
+    // Uses DisposableEffect to clean up subscription on account change
+    DisposableEffect(accountRelays) {
+        val bootstrapSubId = "bootstrap-relay-config"
+        scope.launch {
+            val connected =
+                withTimeoutOrNull(30.seconds) {
+                    relayManager.connectedRelays.first { it.isNotEmpty() }
+                }
+            if (connected != null) {
+                val filter =
+                    Filter(
+                        kinds =
+                            listOf(
+                                AdvertisedRelayListEvent.KIND,
+                                ChatMessageRelayListEvent.KIND,
+                                SearchRelayListEvent.KIND,
+                                BlockedRelayListEvent.KIND,
+                            ),
+                        authors = listOf(account.pubKeyHex),
+                        limit = 4,
+                    )
+                relayManager.subscribe(
+                    subId = bootstrapSubId,
+                    filters = listOf(filter),
+                    listener =
+                        object : SubscriptionListener {
+                            override fun onEvent(
+                                event: com.vitorpamplona.quartz.nip01Core.core.Event,
+                                isLive: Boolean,
+                                relay: NormalizedRelayUrl,
+                                forFilters: List<Filter>?,
+                            ) {
+                                // Route through localCache for NIP-65 sync
+                                localCache.consume(event, relay)
+                                // Route to accountRelays for kinds without cache-backed state
+                                accountRelays.consumeIfRelevant(event)
+                            }
+                        },
+                )
+            }
+        }
+        onDispose { relayManager.unsubscribe(bootstrapSubId) }
+    }
+
     // Subscribe to incoming DMs and process into chatroomList
     LaunchedEffect(account) {
         relayManager.connectedRelays.first { it.isNotEmpty() }
 
-        val dmRelayState =
-            DesktopDmRelayState(
-                dmRelayList = kotlinx.coroutines.flow.MutableStateFlow(emptySet()),
-                connectedRelays = relayManager.connectedRelays,
-                scope = scope,
-            )
         subscriptionsCoordinator.subscribeToDms(
             userPubKeyHex = account.pubKeyHex,
-            dmRelayState = dmRelayState,
+            dmRelayState = accountRelays.dmRelays,
             onDmEvent = { event, relay ->
                 // Store raw event in cache
                 val note = localCache.getOrCreateNote(event.id)
@@ -984,91 +1090,104 @@ fun MainContent(
 
     val isImmersive by com.vitorpamplona.amethyst.desktop.ui.media.LocalIsImmersiveFullscreen.current
 
-    Box(Modifier.fillMaxSize()) {
-        Column(Modifier.fillMaxSize()) {
-            Row(Modifier.fillMaxSize().weight(1f)) {
-                when (layoutMode) {
-                    LayoutMode.SINGLE_PANE -> {
-                        val lastRelayEvent by subscriptionsCoordinator.lastEventAt.collectAsState()
-                        SinglePaneLayout(
-                            relayManager = relayManager,
-                            localCache = localCache,
-                            accountManager = accountManager,
-                            account = account,
-                            iAccount = iAccount,
-                            nwcConnection = nwcConnection,
-                            subscriptionsCoordinator = subscriptionsCoordinator,
-                            highlightStore = highlightStore,
-                            draftStore = draftStore,
-                            appScope = appScope,
-                            singlePaneState = singlePaneState,
-                            pinnedNavBarState = pinnedNavBarState,
-                            onOpenAppDrawer = onShowAppDrawer,
-                            onShowComposeDialog = onShowComposeDialog,
-                            onShowReplyDialog = onShowReplyDialog,
-                            onZapFeedback = onZapFeedback,
-                            signerConnectionState = signerConnectionState,
-                            lastPingTimeSec = lastPingTimeSec,
-                            lastRelayEventAt = lastRelayEvent,
-                            modifier = Modifier.weight(1f),
-                        )
-                    }
-
-                    LayoutMode.DECK -> {
-                        if (!isImmersive) {
-                            DeckSidebar(
-                                onAddColumn = onShowAppDrawer,
-                                onOpenSettings = {
-                                    if (deckState.hasColumnOfType(DeckColumnType.Settings)) {
-                                        deckState.focusExistingColumn(DeckColumnType.Settings)
-                                    } else {
-                                        deckState.addColumn(DeckColumnType.Settings)
-                                    }
-                                },
+    CompositionLocalProvider(
+        LocalRelayCategories provides relayCategories,
+    ) {
+        Box(Modifier.fillMaxSize()) {
+            Column(Modifier.fillMaxSize()) {
+                Row(Modifier.fillMaxSize().weight(1f)) {
+                    when (layoutMode) {
+                        LayoutMode.SINGLE_PANE -> {
+                            val lastRelayEvent by subscriptionsCoordinator.lastEventAt.collectAsState()
+                            SinglePaneLayout(
+                                relayManager = relayManager,
+                                localCache = localCache,
+                                accountManager = accountManager,
+                                account = account,
+                                iAccount = iAccount,
+                                nwcConnection = nwcConnection,
+                                subscriptionsCoordinator = subscriptionsCoordinator,
+                                highlightStore = highlightStore,
+                                draftStore = draftStore,
+                                nip11Fetcher = nip11Fetcher,
+                                appScope = appScope,
+                                singlePaneState = singlePaneState,
+                                pinnedNavBarState = pinnedNavBarState,
+                                onOpenAppDrawer = onShowAppDrawer,
+                                onShowComposeDialog = onShowComposeDialog,
+                                onShowReplyDialog = onShowReplyDialog,
+                                onZapFeedback = onZapFeedback,
                                 signerConnectionState = signerConnectionState,
                                 lastPingTimeSec = lastPingTimeSec,
-                                torStatus = torStatus,
+                                lastRelayEventAt = lastRelayEvent,
+                                modifier = Modifier.weight(1f),
                             )
-
-                            VerticalDivider()
                         }
 
-                        DeckLayout(
-                            deckState = deckState,
-                            relayManager = relayManager,
-                            localCache = localCache,
-                            accountManager = accountManager,
-                            account = account,
-                            iAccount = iAccount,
-                            nwcConnection = nwcConnection,
-                            subscriptionsCoordinator = subscriptionsCoordinator,
-                            highlightStore = highlightStore,
-                            draftStore = draftStore,
-                            appScope = appScope,
-                            onShowComposeDialog = onShowComposeDialog,
-                            onShowReplyDialog = onShowReplyDialog,
-                            onZapFeedback = onZapFeedback,
-                            modifier = Modifier.weight(1f),
-                        )
+                        LayoutMode.DECK -> {
+                            if (!isImmersive) {
+                                DeckSidebar(
+                                    onAddColumn = onShowAppDrawer,
+                                    onOpenSettings = {
+                                        if (deckState.hasColumnOfType(DeckColumnType.Settings)) {
+                                            deckState.focusExistingColumn(DeckColumnType.Settings)
+                                        } else {
+                                            deckState.addColumn(DeckColumnType.Settings)
+                                        }
+                                    },
+                                    signerConnectionState = signerConnectionState,
+                                    lastPingTimeSec = lastPingTimeSec,
+                                    torStatus = torStatus,
+                                )
+
+                                VerticalDivider()
+                            }
+
+                            DeckLayout(
+                                deckState = deckState,
+                                relayManager = relayManager,
+                                localCache = localCache,
+                                accountManager = accountManager,
+                                account = account,
+                                iAccount = iAccount,
+                                nwcConnection = nwcConnection,
+                                subscriptionsCoordinator = subscriptionsCoordinator,
+                                highlightStore = highlightStore,
+                                draftStore = draftStore,
+                                nip11Fetcher = nip11Fetcher,
+                                appScope = appScope,
+                                onShowComposeDialog = onShowComposeDialog,
+                                onShowReplyDialog = onShowReplyDialog,
+                                onZapFeedback = onZapFeedback,
+                                onNavigateToRelays = {
+                                    if (deckState.hasColumnOfType(DeckColumnType.Relays)) {
+                                        deckState.focusExistingColumn(DeckColumnType.Relays)
+                                    } else {
+                                        deckState.addColumn(DeckColumnType.Relays)
+                                    }
+                                },
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
                     }
-                }
-            } // end Row
+                } // end Row
 
-            // Persistent media control bar
+                // Persistent media control bar
+                com.vitorpamplona.amethyst.desktop.ui.media
+                    .NowPlayingBar()
+            } // end Column
+
+            // Global fullscreen video overlay
             com.vitorpamplona.amethyst.desktop.ui.media
-                .NowPlayingBar()
-        } // end Column
+                .GlobalFullscreenOverlay()
 
-        // Global fullscreen video overlay
-        com.vitorpamplona.amethyst.desktop.ui.media
-            .GlobalFullscreenOverlay()
-
-        // Snackbar for zap feedback
-        SnackbarHost(
-            hostState = snackbarHostState,
-            modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp),
-        )
-    }
+            // Snackbar for zap feedback
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp),
+            )
+        }
+    } // end CompositionLocalProvider
 }
 
 @Composable
