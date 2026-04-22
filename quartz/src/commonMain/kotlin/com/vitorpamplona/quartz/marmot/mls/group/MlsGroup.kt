@@ -411,6 +411,15 @@ class MlsGroup private constructor(
         val preCommitExporterSecret =
             exporterSecret("marmot", "group-event".encodeToByteArray(), 32)
 
+        // Snapshot the pre-proposal extensions. GroupContextExtensions proposals
+        // mutate `groupContext.extensions` the moment they're applied, but
+        // openmls signs the commit's FramedContentTBS over the UNMUTATED
+        // context (the one in `public_group` before `diff` applies proposals).
+        // Without this snapshot, a GCE commit on the quartz side uses the new
+        // extensions for TBS + membership_tag, and openmls rejects it with
+        // `ValidationError(InvalidMembershipTag)`.
+        val preCommitExtensions = groupContext.extensions
+
         val proposalOrRefs = proposals.map { ProposalOrRef.Inline(it.proposal) }
 
         // Check if we need an UpdatePath. RFC 9420 §12.4.1: the path value
@@ -601,8 +610,10 @@ class MlsGroup private constructor(
         // is sent — the one we're about to leave. Receivers (openmls/mdk)
         // strict-verify both, so we must use the leaf signing key that's
         // still in the pre-commit tree and the membership_key derived from
-        // the pre-commit epoch secrets.
-        val preCommitContextBytes = groupContext.toTlsBytes()
+        // the pre-commit epoch secrets. Extensions need explicit rewind to
+        // pre-proposal state for GroupContextExtensions commits.
+        val preCommitContextBytes =
+            groupContext.copy(extensions = preCommitExtensions).toTlsBytes()
         val preCommitMembershipKey = epochSecrets.membershipKey
         val preCommitSigningKey = signingPrivateKey
 
