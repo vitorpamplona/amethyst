@@ -103,13 +103,10 @@ preflight() {
 }
 
 # --- daemons -----------------------------------------------------------------
-start_daemon() {
+# One attempt at bringing wnd up. Returns 0 on ready, 1 on crash/timeout.
+# Caller inspects $data_dir/logs/stderr.log to decide whether to retry.
+_start_daemon_attempt() {
   local name="$1" data_dir="$2" socket="$3"
-  step "starting $name daemon"
-  if [[ -S "$socket" ]] && "$WN_BIN" --socket "$socket" whoami >/dev/null 2>&1; then
-    info "$name daemon already running"
-    return 0
-  fi
   rm -f "$socket"
   mkdir -p "$data_dir/logs" "$data_dir/release"
   # wnd puts its socket at {data_dir}/release/wnd.sock (release build) — we
@@ -125,9 +122,56 @@ start_daemon() {
       info "$name ready"
       return 0
     fi
+    # Exit early if wnd already crashed — no point waiting the full 30s.
+    if ! kill -0 "$pid" 2>/dev/null; then
+      return 1
+    fi
     sleep 1
   done
-  fail_msg "$name daemon failed to start (see $data_dir/logs/stderr.log)"
+  # Hung rather than crashed — kill it so the retry path has a clean slot.
+  if kill -0 "$pid" 2>/dev/null; then
+    kill "$pid" 2>/dev/null || true
+    sleep 1
+    kill -9 "$pid" 2>/dev/null || true
+  fi
+  return 1
+}
+
+start_daemon() {
+  local name="$1" data_dir="$2" socket="$3"
+  step "starting $name daemon"
+  if [[ -S "$socket" ]] && "$WN_BIN" --socket "$socket" whoami >/dev/null 2>&1; then
+    info "$name daemon already running"
+    return 0
+  fi
+  if _start_daemon_attempt "$name" "$data_dir" "$socket"; then
+    return 0
+  fi
+  # Recover from a stale MLS SQLite DB whose keyring entry has gone
+  # missing (e.g. the keychain entry was pruned, the data dir was
+  # restored without the keyring, or a previous run used the mock
+  # keyring). wnd can't open the DB in that state, but the identity is
+  # disposable — wipe the data dir and let ensure_identity recreate it.
+  if [[ -s "$data_dir/logs/stderr.log" ]] && \
+     grep -q 'KeyringEntryMissingForExistingDatabase' "$data_dir/logs/stderr.log"; then
+    warn "$name: stale MLS DB detected (keyring entry missing) — wiping $data_dir and retrying"
+    find "$data_dir" -mindepth 1 -maxdepth 1 ! -name 'logs' \
+      -exec rm -rf {} + 2>/dev/null || true
+    if _start_daemon_attempt "$name" "$data_dir" "$socket"; then
+      return 0
+    fi
+  fi
+  fail_msg "$name daemon failed to start"
+  if [[ -s "$data_dir/logs/stderr.log" ]]; then
+    printf '  --- last 40 lines of %s ---\n' "$data_dir/logs/stderr.log" >&2
+    tail -n 40 "$data_dir/logs/stderr.log" | sed 's/^/  /' >&2
+    printf '  --- end stderr ---\n' >&2
+  fi
+  if [[ -s "$data_dir/logs/stdout.log" ]]; then
+    printf '  --- last 20 lines of %s ---\n' "$data_dir/logs/stdout.log" >&2
+    tail -n 20 "$data_dir/logs/stdout.log" | sed 's/^/  /' >&2
+    printf '  --- end stdout ---\n' >&2
+  fi
   exit 1
 }
 
@@ -925,7 +969,20 @@ test_14_push_notifications() {
 # ==== main ===================================================================
 
 main() {
-  trap 'stop_daemons; print_summary' EXIT
+  # Make sure Ctrl+C / SIGTERM / SIGHUP all run the full cleanup path —
+  # otherwise wnd is nohup'd and keeps running after the script dies.
+  # Trap INT/TERM/HUP forces `exit`, which triggers the EXIT handler once.
+  cleanup() {
+    local rc=$?
+    trap - EXIT INT TERM HUP
+    stop_daemons
+    print_summary
+    exit "$rc"
+  }
+  trap cleanup EXIT
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
+  trap 'exit 129' HUP
   banner "Amethyst <-> whitenoise-rs interop harness ($RUN_TS)"
 
   preflight
