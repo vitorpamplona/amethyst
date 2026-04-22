@@ -472,12 +472,10 @@ class MarmotPipelineTest {
             edenMgr.processWelcome(addEden.welcomeBytes!!, edenBundle)
             val addFred = davidMgr.addMember(groupId, fredBundle.keyPackage.toTlsBytes())
             fredMgr.processWelcome(addFred.welcomeBytes!!, fredBundle)
-            edenMgr.processCommit(
-                groupId,
-                addFred.commitBytes,
-                davidMgr.getGroup(groupId)!!.leafIndex,
-                ByteArray(0),
-            )
+            // Feed the framed PublicMessage envelope so MlsGroup.processCommit
+            // can verify the RFC 9420 §6.1 FramedContentTBS signature (now
+            // mandatory on non-external commits).
+            edenMgr.processFramedCommit(groupId, addFred.framedCommitBytes)
 
             val preRestartEpoch = davidMgr.getGroup(groupId)!!.epoch
             val preRestartExporter = davidMgr.exporterSecret(groupId)
@@ -571,12 +569,10 @@ class MarmotPipelineTest {
             // David adds Fred; Eden processes Alice's add-Fred commit.
             val addFred = davidMgr.addMember(groupId, fredBundle.keyPackage.toTlsBytes())
             fredMgr.processWelcome(addFred.welcomeBytes!!, fredBundle)
-            edenMgr.processCommit(
-                nostrGroupId = groupId,
-                commitBytes = addFred.commitBytes,
-                senderLeafIndex = davidMgr.getGroup(groupId)!!.leafIndex,
-                confirmationTag = ByteArray(0),
-            )
+            // Feed the framed PublicMessage envelope so MlsGroup.processCommit
+            // can verify the RFC 9420 §6.1 FramedContentTBS signature (now
+            // mandatory on non-external commits).
+            edenMgr.processFramedCommit(groupId, addFred.framedCommitBytes)
 
             // Pre-restart sanity: all three share the same outer exporter key.
             val preRestartDavidKey = davidMgr.exporterSecret(groupId)
@@ -655,13 +651,10 @@ class MarmotPipelineTest {
             // Bob (existing member at the pre-add-Fred epoch) receives and
             // applies Alice's add-Fred commit to reach the same epoch as
             // Alice + Fred. Without this, Bob can't decrypt Fred's subsequent
-            // application messages.
-            bobMgr.processCommit(
-                nostrGroupId = groupId,
-                commitBytes = addFred.commitBytes,
-                senderLeafIndex = aliceMgr.getGroup(groupId)!!.leafIndex,
-                confirmationTag = ByteArray(0),
-            )
+            // application messages. Feed the framed PublicMessage envelope so
+            // MlsGroup.processCommit can verify the mandatory RFC 9420 §6.1
+            // FramedContentTBS signature.
+            bobMgr.processFramedCommit(groupId, addFred.framedCommitBytes)
 
             // Sanity: Fred is at leafIndex=2, leafCount=3.
             assertEquals(2, fredMgr.getGroup(groupId)!!.leafIndex)
@@ -809,24 +802,10 @@ class MarmotPipelineTest {
                     addCarolCommitEvent.signedEvent.content,
                     bobExporterAtE1,
                 )
-            val mlsMessage =
-                com.vitorpamplona.quartz.marmot.mls.framing.MlsMessage
-                    .decodeTls(
-                        com.vitorpamplona.quartz.marmot.mls.codec
-                            .TlsReader(decryptedMlsBytes),
-                    )
-            val publicMessage =
-                com.vitorpamplona.quartz.marmot.mls.framing.PublicMessage
-                    .decodeTls(
-                        com.vitorpamplona.quartz.marmot.mls.codec
-                            .TlsReader(mlsMessage.payload),
-                    )
-            bobMgr.processCommit(
-                nostrGroupId = groupId,
-                commitBytes = publicMessage.content,
-                senderLeafIndex = publicMessage.sender.leafIndex,
-                confirmationTag = publicMessage.confirmationTag!!,
-            )
+            // Feed the already-decoded MlsMessage(PublicMessage(Commit)) envelope
+            // through processFramedCommit so MlsGroup can verify the RFC 9420 §6.1
+            // FramedContentTBS signature from the sender's PublicMessage.
+            bobMgr.processFramedCommit(groupId, decryptedMlsBytes)
 
             val epochAfterAddCarol = aliceMgr.getGroup(groupId)!!.epoch
             assertEquals(epochAfterAddBob + 1, epochAfterAddCarol)

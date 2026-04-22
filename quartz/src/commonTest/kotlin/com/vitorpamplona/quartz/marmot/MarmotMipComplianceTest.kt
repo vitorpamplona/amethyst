@@ -60,8 +60,17 @@ class MarmotMipComplianceTest {
     // ---------------------------------------------------------------------- MIP-01
 
     @Test
-    fun marmotGroupData_defaultVersionIsThree() {
-        assertEquals(3, MarmotGroupData.CURRENT_VERSION)
+    fun marmotGroupData_currentVersionIsHeldAtTwoForMdkInterop() {
+        // MIP-01 spec targets v3, but mdk-core (whitenoise-rs' MLS engine)
+        // rejects v3 NostrGroupData payloads with `ExtensionFormatError`
+        // ("Trailing bytes in NostrGroupDataExtension"), violating the spec's
+        // forward-compat rule. Until mdk-core ships the fix, Amethyst holds
+        // CURRENT_VERSION at 2 for cross-client interop; v3 stays parseable
+        // (see disappearing_message_secs round-trip test below). Bump this
+        // assertion back to 3 in lockstep with the MarmotGroupData constant
+        // once mdk publishes the parser fix.
+        assertEquals(2, MarmotGroupData.CURRENT_VERSION)
+        assertTrue(3 in MarmotGroupData.SUPPORTED_VERSIONS, "v3 MUST remain parseable for forward compat")
     }
 
     @Test
@@ -89,8 +98,13 @@ class MarmotMipComplianceTest {
 
     @Test
     fun marmotGroupData_roundTripWithDisappearingSecs() {
+        // disappearing_message_secs is a v3+ field. CURRENT_VERSION is held
+        // at 2 for MDK interop (see marmotGroupData_currentVersionIsHeldAtTwoForMdkInterop),
+        // so this test pins v3 explicitly to exercise the v3 encoder/decoder
+        // path end-to-end.
         val original =
             MarmotGroupData(
+                version = 3,
                 nostrGroupId = groupId32,
                 adminPubkeys = listOf(adminPubkey),
                 relays = listOf("wss://relay.example/"),
