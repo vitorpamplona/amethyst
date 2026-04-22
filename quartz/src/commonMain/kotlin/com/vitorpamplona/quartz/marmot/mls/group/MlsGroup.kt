@@ -445,7 +445,6 @@ class MlsGroup private constructor(
         val leafSecret = MlsCryptoProvider.randomBytes(MlsCryptoProvider.HASH_OUTPUT_LENGTH)
         val pathSecrets = tree.derivePathSecrets(myLeafIndex, leafSecret)
 
-        // Build UpdatePath with HPKE-encrypted path secrets for each copath node.
         // RFC 9420 §12.4.1: newly-added leaves (from Add proposals in THIS commit)
         // MUST be excluded from the copath resolution — they join via the Welcome
         // at epoch N+1 and don't need the path secret. Keeping them in the list
@@ -453,58 +452,41 @@ class MlsGroup private constructor(
         // (openmls/mdk) pick the wrong ciphertext and fail with
         // UpdatePathError(UnableToDecrypt).
         val newLeafIndices = addedMembers.map { it.first }.toSet()
-        val updatePath =
+
+        // Build the UpdatePath in three stages so the HPKE info used for path-
+        // secret encryption matches what openmls/mdk compute:
+        //   1. derive path-secret keypairs and stage the committer's new leaf
+        //   2. apply the path locally, patch parent_hashes, swap in the leaf
+        //   3. compute the post-mutation tree_hash + bump epoch so
+        //      `serialized_group_context` has the new tree_hash, the new epoch,
+        //      and the old confirmed_transcript_hash — then HPKE-encrypt each
+        //      copath resolution under that intermediate context
+        // Without this ordering the committer uses the PRE-commit context and
+        // every strict-validating member derives a different AEAD key, turning
+        // the decryption into `UpdatePathError(UnableToDecrypt)`.
+        val updatePath: UpdatePath? =
             if (needsPath && pathSecrets.isNotEmpty()) {
                 val copath = BinaryTree.copath(myLeafIndex, tree.leafCount)
-                val pathNodes =
-                    pathSecrets.zip(copath).map { (pathKey, copathNode) ->
-                        val resolution =
-                            tree.resolution(copathNode).filterNot { resNode ->
-                                BinaryTree.isLeaf(resNode) &&
-                                    BinaryTree.nodeToLeaf(resNode) in newLeafIndices
-                            }
-                        val encryptedSecrets =
-                            resolution.mapNotNull { resNode ->
-                                val node = tree.getNode(resNode) ?: return@mapNotNull null
-                                val recipientPub =
-                                    when (node) {
-                                        is com.vitorpamplona.quartz.marmot.mls.tree.TreeNode.Leaf -> {
-                                            node.leafNode.encryptionKey
-                                        }
-
-                                        is com.vitorpamplona.quartz.marmot.mls.tree.TreeNode.Parent -> {
-                                            node.parentNode.encryptionKey
-                                        }
-                                    }
-                                MlsCryptoProvider.encryptWithLabel(
-                                    recipientPub,
-                                    "UpdatePathNode",
-                                    groupContext.toTlsBytes(),
-                                    pathKey.pathSecret,
-                                )
-                            }
-                        UpdatePathNode(pathKey.publicKey, encryptedSecrets)
-                    }
 
                 // Capture sibling tree hashes BEFORE applying the UpdatePath —
                 // parent_hash computation (RFC 9420 §7.9.2) uses the
                 // ORIGINAL sibling-subtree tree hashes.
                 val preUpdateSiblingHashes = capturePreUpdateSiblingHashes(myLeafIndex)
 
-                // Apply the UpdatePath to our own tree first so the parent
-                // nodes carry the new encryption keys. Their parent_hash
-                // fields are filled in next.
-                tree.applyUpdatePath(myLeafIndex, pathNodes)
+                // Stage path-keys into the tree so subsequent parent_hash /
+                // tree_hash computations reflect the new keys. We'll fill in
+                // the HPKE-encrypted secrets once we know the post-commit
+                // context bytes.
+                val stagedPathNodes =
+                    pathSecrets.zip(copath).map { (pathKey, _) ->
+                        UpdatePathNode(pathKey.publicKey, emptyList())
+                    }
+                tree.applyUpdatePath(myLeafIndex, stagedPathNodes)
 
                 // Compute parent_hash for every direct-path parent node and
-                // for the committer's leaf (RFC 9420 §7.9.2). Without this
-                // chain, spec-strict peers (ts-mls, OpenMLS) reject the
-                // Welcome with "Unable to verify parent hash".
+                // for the committer's leaf (RFC 9420 §7.9.2).
                 val (parentNodeHashes, leafParentHash) =
                     computeSenderParentHashes(myLeafIndex, preUpdateSiblingHashes)
-
-                // Patch each parent node with its computed parent_hash so
-                // subsequent treeHash / serialization uses the final values.
                 val directPath = BinaryTree.directPath(myLeafIndex, tree.leafCount)
                 for (nodeIdx in directPath) {
                     val existing = tree.getNode(nodeIdx)
@@ -539,9 +521,50 @@ class MlsGroup private constructor(
                         leafIndex = myLeafIndex,
                         parentHash = leafParentHash,
                     )
-
                 encryptionPrivateKey = newEncKp.privateKey
                 tree.setLeaf(myLeafIndex, newLeafNode)
+
+                // Path-encryption context (RFC 9420 §7.6 / openmls `compute_path`):
+                // serialize the GroupContext AFTER applying the tree mutations
+                // and bumping the epoch, but BEFORE the confirmed_transcript_hash
+                // gets folded in. We don't commit this copy to the field yet —
+                // the transcript-hash update below needs the current value.
+                val pathEncContextBytes =
+                    groupContext
+                        .copy(
+                            epoch = groupContext.epoch + 1,
+                            treeHash = tree.treeHash(),
+                        ).toTlsBytes()
+
+                val pathNodes =
+                    stagedPathNodes.zip(copath).zip(pathSecrets) { (staged, copathNode), pathKey ->
+                        val resolution =
+                            tree.resolution(copathNode).filterNot { resNode ->
+                                BinaryTree.isLeaf(resNode) &&
+                                    BinaryTree.nodeToLeaf(resNode) in newLeafIndices
+                            }
+                        val encryptedSecrets =
+                            resolution.mapNotNull { resNode ->
+                                val node = tree.getNode(resNode) ?: return@mapNotNull null
+                                val recipientPub =
+                                    when (node) {
+                                        is com.vitorpamplona.quartz.marmot.mls.tree.TreeNode.Leaf -> {
+                                            node.leafNode.encryptionKey
+                                        }
+
+                                        is com.vitorpamplona.quartz.marmot.mls.tree.TreeNode.Parent -> {
+                                            node.parentNode.encryptionKey
+                                        }
+                                    }
+                                MlsCryptoProvider.encryptWithLabel(
+                                    recipientPub,
+                                    "UpdatePathNode",
+                                    pathEncContextBytes,
+                                    pathKey.pathSecret,
+                                )
+                            }
+                        UpdatePathNode(staged.encryptionKey, encryptedSecrets)
+                    }
 
                 UpdatePath(newLeafNode, pathNodes)
             } else {
@@ -950,13 +973,22 @@ class MlsGroup private constructor(
             }
         }
 
-        // Apply proposals (resolve references from pending pool)
-        // Collect all resolved proposals for key schedule computation
+        // Apply proposals (resolve references from pending pool).
+        // Matches the committer's order: apply non-Add proposals first, then Adds,
+        // so leaves freed by Remove are available for Add reuse (RFC 9420 §12.4.2).
+        // Also track the post-Add leaf indices so the UpdatePath resolution filter
+        // can exclude them (mirrors the encryption-side exclusion).
         val resolvedProposals = mutableListOf<Proposal>()
+        val inlineAdds = mutableListOf<Proposal.Add>()
+        val referenceAddSenders = mutableListOf<Pair<Proposal.Add, Int>>()
         for (proposalOrRef in commit.proposals) {
             when (proposalOrRef) {
                 is ProposalOrRef.Inline -> {
-                    applyProposal(proposalOrRef.proposal, senderLeafIndex)
+                    if (proposalOrRef.proposal is Proposal.Add) {
+                        inlineAdds.add(proposalOrRef.proposal)
+                    } else {
+                        applyProposal(proposalOrRef.proposal, senderLeafIndex)
+                    }
                     resolvedProposals.add(proposalOrRef.proposal)
                 }
 
@@ -972,10 +1004,21 @@ class MlsGroup private constructor(
                     requireNotNull(resolved) {
                         "Commit references unknown proposal (ref not found in pending proposals)"
                     }
-                    applyProposal(resolved.proposal, resolved.senderLeafIndex)
+                    if (resolved.proposal is Proposal.Add) {
+                        referenceAddSenders.add(resolved.proposal to resolved.senderLeafIndex)
+                    } else {
+                        applyProposal(resolved.proposal, resolved.senderLeafIndex)
+                    }
                     resolvedProposals.add(resolved.proposal)
                 }
             }
+        }
+        val newLeavesInCommit = mutableSetOf<Int>()
+        for (add in inlineAdds) {
+            newLeavesInCommit.add(applyProposalAdd(add))
+        }
+        for ((add, _) in referenceAddSenders) {
+            newLeavesInCommit.add(applyProposalAdd(add))
         }
 
         // Process UpdatePath
@@ -1029,12 +1072,26 @@ class MlsGroup private constructor(
             val directPath = BinaryTree.directPath(senderLeafIndex, tree.leafCount)
             val myPath = BinaryTree.directPath(myLeafIndex, tree.leafCount)
 
+            // Path-decryption context (RFC 9420 §7.6): matches what the
+            // committer used to encrypt — post-tree-mutation tree_hash and
+            // bumped epoch, but pre-commit confirmed_transcript_hash.
+            val pathDecContextBytes =
+                groupContext
+                    .copy(
+                        epoch = groupContext.epoch + 1,
+                        treeHash = tree.treeHash(),
+                    ).toTlsBytes()
+
             // Find the common ancestor
             val commonAncestorIdx = directPath.indexOfFirst { it in myPath }
             if (commonAncestorIdx >= 0 && commonAncestorIdx < updatePath.nodes.size) {
                 val pathNode = updatePath.nodes[commonAncestorIdx]
                 val copathNodeIdx = BinaryTree.copath(senderLeafIndex, tree.leafCount)[commonAncestorIdx]
-                val resolution = tree.resolution(copathNodeIdx)
+                val resolution =
+                    tree.resolution(copathNodeIdx).filterNot { resNode ->
+                        BinaryTree.isLeaf(resNode) &&
+                            BinaryTree.nodeToLeaf(resNode) in newLeavesInCommit
+                    }
 
                 // Find which encrypted secret corresponds to our position
                 val myNodeIdx = BinaryTree.leafToNode(myLeafIndex)
@@ -1046,7 +1103,7 @@ class MlsGroup private constructor(
                         MlsCryptoProvider.decryptWithLabel(
                             encryptionPrivateKey,
                             "UpdatePathNode",
-                            groupContext.toTlsBytes(),
+                            pathDecContextBytes,
                             ct.kemOutput,
                             ct.ciphertext,
                         )
