@@ -511,16 +511,37 @@ class MarmotInboundProcessor(
 
             when (mlsMessage.wireFormat) {
                 WireFormat.PRIVATE_MESSAGE -> {
-                    // For private commits, MLS decrypt handles epoch advancement
-                    val decrypted = groupManager.decrypt(groupId, mlsMessage.toTlsBytes())
-                    if (decrypted.contentType == ContentType.COMMIT) {
-                        val group = groupManager.getGroup(groupId)
-                        GroupEventResult.CommitProcessed(groupId, group?.epoch ?: 0)
-                    } else {
-                        GroupEventResult.Error(
-                            groupId,
-                            "Expected COMMIT but got ${decrypted.contentType}",
-                        )
+                    // Sniff the PrivateMessage epoch without consuming any
+                    // ratchet state. Past-epoch echoes and future-epoch
+                    // arrivals must not advance the secret tree — otherwise
+                    // the real handshake / application message gets rejected
+                    // when it finally arrives.
+                    val privPeek = PrivateMessage.decodeTls(TlsReader(mlsMessage.payload))
+                    val currentEpoch = groupManager.getGroup(groupId)?.epoch
+                    when {
+                        currentEpoch != null && privPeek.epoch < currentEpoch -> {
+                            GroupEventResult.Duplicate(groupId)
+                        }
+
+                        currentEpoch != null && privPeek.epoch > currentEpoch -> {
+                            GroupEventResult.Error(
+                                groupId,
+                                "PrivateMessage epoch ${privPeek.epoch} is ahead of local epoch $currentEpoch; ignoring",
+                            )
+                        }
+
+                        else -> {
+                            val decrypted = groupManager.decrypt(groupId, mlsMessage.toTlsBytes())
+                            if (decrypted.contentType == ContentType.COMMIT) {
+                                val group = groupManager.getGroup(groupId)
+                                GroupEventResult.CommitProcessed(groupId, group?.epoch ?: 0)
+                            } else {
+                                GroupEventResult.Error(
+                                    groupId,
+                                    "Expected COMMIT but got ${decrypted.contentType}",
+                                )
+                            }
+                        }
                     }
                 }
 
