@@ -123,3 +123,4 @@ test_13_keypackage_rotation
 test_14_wn_removes_a
 test_15_wn_member_leaves
 test_16_wn_keypackage_rotation
+test_17_readd_after_remove

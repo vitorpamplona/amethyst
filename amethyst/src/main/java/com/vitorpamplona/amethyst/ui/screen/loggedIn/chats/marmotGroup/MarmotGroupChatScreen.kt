@@ -86,7 +86,7 @@ fun MarmotGroupChatScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { nav.nav(Route.MarmotGroupAddMember(nostrGroupId)) }) {
+                    IconButton(onClick = { nav.nav(Route.MarmotGroupInfo(nostrGroupId)) }) {
                         Icon(
                             imageVector = Icons.Default.GroupAdd,
                             contentDescription = "Add Member",
