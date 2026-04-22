@@ -311,16 +311,27 @@ discover_a_relays() {
 
   step "wn_b's cached view of A's relay lists (SELECT from user_relays)"
   local rows
+  # wn's SQLite schema stores `users.pubkey` — we don't have a public
+  # CLI to confirm the column type, and in practice it's been observed
+  # stored as both BLOB (raw 32 bytes) and TEXT (lowercase hex) across
+  # versions. Try both forms so the probe doesn't falsely report "NO
+  # cached relay entries" when the cache is actually populated (symptom:
+  # this diagnostic warned loudly even though Tests 02/03/04/05 were
+  # delivering welcomes successfully — the welcomes were flowing, the
+  # probe was just querying the wrong column encoding).
   rows=$(sqlite3 -readonly "$db" \
     "SELECT ur.relay_type, r.url FROM user_relays ur
        JOIN users u ON u.id = ur.user_id
        JOIN relays r ON r.id = ur.relay_id
-      WHERE LOWER(HEX(u.pubkey)) = LOWER('$A_HEX')
+      WHERE u.pubkey = X'$A_HEX'
+         OR LOWER(CAST(u.pubkey AS TEXT)) = LOWER('$A_HEX')
       ORDER BY ur.relay_type, r.url;" 2>>"$LOG_FILE" || true)
   if [[ -z "$rows" ]]; then
     warn "wn has NO cached relay entries for A ($A_HEX)."
-    warn "  → Amethyst hasn't published kind:10002/10050/10051 to any relay wn_b can reach."
-    warn "  → Welcomes and gift wraps will not reach Amethyst. Tests 03+ will fail."
+    warn "  → Either Amethyst hasn't published kind:10002/10050/10051 to any relay wn_b"
+    warn "    can reach, OR wn's SQLite schema changed pubkey column encoding again."
+    warn "  → If later tests deliver welcomes successfully, the schema is the culprit;"
+    warn "    grep the daemon's migration files for the users.pubkey column type."
     return
   fi
 
