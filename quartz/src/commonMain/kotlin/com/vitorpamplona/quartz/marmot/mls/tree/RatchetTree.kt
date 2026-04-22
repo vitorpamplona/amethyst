@@ -24,7 +24,6 @@ import com.vitorpamplona.quartz.marmot.mls.codec.TlsReader
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsSerializable
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsWriter
 import com.vitorpamplona.quartz.marmot.mls.crypto.MlsCryptoProvider
-import com.vitorpamplona.quartz.marmot.mls.crypto.X25519
 
 /**
  * MLS Ratchet Tree (RFC 9420 Section 7).
@@ -278,15 +277,20 @@ class RatchetTree(
 
         var currentSecret = leafSecret
         for (nodeIdx in directPath) {
-            // RFC 9420 Section 7.4: path_secret[0] = leafSecret,
-            // node_secret[n] = DeriveSecret(path_secret[n], "node")
+            // RFC 9420 §7.4: path_secret[0] = leafSecret,
+            //                node_secret[n] = DeriveSecret(path_secret[n], "node"),
+            //                node's HPKE keypair = DeriveKeyPair(node_secret).
+            // DeriveKeyPair is HPKE's (RFC 9180 §7.1.3), NOT an MLS ExpandWithLabel —
+            // it uses the "HPKE-v1" + KEM suite_id labels, and produces a keypair
+            // that openmls/mdk can reproduce from the same path_secret. If we derive
+            // with a different formula, receivers compute different public keys and
+            // reject the UpdatePath with `UpdatePathError(PathMismatch)`.
             val nodeSecret = MlsCryptoProvider.deriveSecret(currentSecret, "node")
+            val kp =
+                com.vitorpamplona.quartz.marmot.mls.crypto.Hpke
+                    .deriveKeyPair(nodeSecret)
 
-            // Derive HPKE key pair from node_secret
-            val privateKey = MlsCryptoProvider.expandWithLabel(nodeSecret, "hpke", ByteArray(0), 32)
-            val publicKey = X25519.publicFromPrivate(privateKey)
-
-            results.add(PathSecretAndKey(currentSecret, privateKey, publicKey))
+            results.add(PathSecretAndKey(currentSecret, kp.privateKey, kp.publicKey))
 
             // path_secret[n+1] = DeriveSecret(path_secret[n], "path")
             currentSecret = MlsCryptoProvider.deriveSecret(currentSecret, "path")

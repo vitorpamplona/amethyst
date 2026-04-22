@@ -572,6 +572,7 @@ class MlsGroup private constructor(
             }
 
         val commit = Commit(proposalOrRefs, updatePath)
+        val commitBytes = commit.toTlsBytes()
 
         // Advance epoch
         val commitSecret =
@@ -580,13 +581,6 @@ class MlsGroup private constructor(
             } else {
                 ByteArray(MlsCryptoProvider.HASH_OUTPUT_LENGTH)
             }
-
-        // Update transcript hashes (RFC 9420 Section 8.2)
-        val confirmedTranscriptHashInput = buildConfirmedTranscriptHashInput(commit, myLeafIndex)
-        val confirmedInput = TlsWriter()
-        confirmedInput.putBytes(interimTranscriptHash)
-        confirmedInput.putBytes(confirmedTranscriptHashInput)
-        val newConfirmedTranscriptHash = MlsCryptoProvider.hash(confirmedInput.toByteArray())
 
         val newTreeHash = tree.treeHash()
         val oldEpoch = groupContext.epoch
@@ -604,6 +598,30 @@ class MlsGroup private constructor(
         val preCommitContextBytes = groupContext.toTlsBytes()
         val preCommitMembershipKey = epochSecrets.membershipKey
         val preCommitSigningKey = signingPrivateKey
+
+        // Sign FramedContentTBS BEFORE folding the commit into the transcript
+        // hash. RFC 9420 §8.2: ConfirmedTranscriptHashInput contains the real
+        // signature — using `ByteArray(0)` here produces a confirmed_transcript_hash
+        // that the receiver cannot reproduce, so strict peers reject the commit
+        // with `ConfirmationTagMismatch`.
+        val commitTbsBytes =
+            buildCommitFramedContentTbs(
+                groupId = preCommitGroupId,
+                epoch = oldEpoch,
+                senderLeafIndex = committerLeafIndex,
+                commitBytes = commitBytes,
+                groupContextBytes = preCommitContextBytes,
+            )
+        val commitSignature =
+            MlsCryptoProvider.signWithLabel(preCommitSigningKey, "FramedContentTBS", commitTbsBytes)
+
+        // Update transcript hashes (RFC 9420 §8.2) with the real signature.
+        val confirmedTranscriptHashInput =
+            buildConfirmedTranscriptHashInput(commit, myLeafIndex, commitSignature)
+        val confirmedInput = TlsWriter()
+        confirmedInput.putBytes(interimTranscriptHash)
+        confirmedInput.putBytes(confirmedTranscriptHashInput)
+        val newConfirmedTranscriptHash = MlsCryptoProvider.hash(confirmedInput.toByteArray())
 
         groupContext =
             groupContext.copy(
@@ -644,7 +662,6 @@ class MlsGroup private constructor(
         pendingProposals.clear()
         sentKeys.clear()
 
-        val commitBytes = commit.toTlsBytes()
         val framedCommitBytes =
             framePublicMessageCommit(
                 groupId = preCommitGroupId,
@@ -652,9 +669,9 @@ class MlsGroup private constructor(
                 senderLeafIndex = committerLeafIndex,
                 commitBytes = commitBytes,
                 confirmationTag = confirmationTag,
-                signingPrivateKey = preCommitSigningKey,
+                signature = commitSignature,
                 membershipKey = preCommitMembershipKey,
-                groupContextBytes = preCommitContextBytes,
+                tbsBytes = commitTbsBytes,
             )
         return CommitResult(
             commitBytes = commitBytes,
@@ -945,11 +962,17 @@ class MlsGroup private constructor(
      * @param commitBytes TLS-serialized Commit
      * @param senderLeafIndex the sender's leaf index in the ratchet tree
      * @param confirmationTag optional confirmation tag from the PublicMessage for verification
+     * @param signature FramedContentAuthData.signature from the PublicMessage wrapper;
+     *   required to reproduce the ConfirmedTranscriptHashInput (RFC 9420 §8.2) exactly.
+     *   Callers that don't have access to the PublicMessage envelope (test fixtures)
+     *   may pass `ByteArray(0)` — that path only interoperates with senders that
+     *   also pass an empty signature.
      */
     fun processCommit(
         commitBytes: ByteArray,
         senderLeafIndex: Int,
         confirmationTag: ByteArray,
+        signature: ByteArray = ByteArray(0),
     ) {
         val commit = Commit.decodeTls(TlsReader(commitBytes))
 
@@ -1123,8 +1146,7 @@ class MlsGroup private constructor(
 
         // Update transcript hashes (RFC 9420 Section 8.2)
         // ConfirmedTranscriptHashInput = wire_format || FramedContent || signature
-        // Simplified: use commit TLS bytes as the transcript input
-        val confirmedTranscriptHashInput = buildConfirmedTranscriptHashInput(commit, senderLeafIndex)
+        val confirmedTranscriptHashInput = buildConfirmedTranscriptHashInput(commit, senderLeafIndex, signature)
         val confirmedInput = TlsWriter()
         confirmedInput.putBytes(interimTranscriptHash)
         confirmedInput.putBytes(confirmedTranscriptHashInput)
@@ -1301,7 +1323,8 @@ class MlsGroup private constructor(
     private fun buildConfirmedTranscriptHashInput(
         commit: Commit,
         senderLeafIndex: Int,
-    ): ByteArray = buildConfirmedTranscriptHashInput(commit, senderLeafIndex, groupId, epoch)
+        signature: ByteArray = ByteArray(0),
+    ): ByteArray = buildConfirmedTranscriptHashInput(commit, senderLeafIndex, groupId, epoch, signature)
 
     /**
      * Compute the RFC 9420 §7.9.2 parent_hash chain for a commit we are
@@ -1822,48 +1845,48 @@ class MlsGroup private constructor(
         private const val RATCHET_TREE_EXTENSION_TYPE = 0x0002
 
         /**
-         * Wrap a raw [Commit] (as [commitBytes]) in an MlsMessage(PublicMessage(...))
-         * envelope so it can be published on the wire (RFC 9420 §6 / §6.2).
-         *
-         * The receiver uses the sender's leaf index and the confirmation_tag from
-         * the [PublicMessage] header to drive [MlsGroup.processCommit]. The
-         * `signature` and `membership_tag` opaque fields are intentionally empty —
-         * the current implementation does not verify them on inbound commits,
-         * but the TLS structure must still be present so decoding succeeds.
+         * Build the FramedContentTBS bytes for a member-sender commit over
+         * PublicMessage wire format (RFC 9420 §6.1). The signature over this
+         * value is the `FramedContentAuthData.signature` that rides both in
+         * the on-the-wire PublicMessage AND in the ConfirmedTranscriptHashInput.
          */
+        internal fun buildCommitFramedContentTbs(
+            groupId: ByteArray,
+            epoch: Long,
+            senderLeafIndex: Int,
+            commitBytes: ByteArray,
+            groupContextBytes: ByteArray,
+        ): ByteArray {
+            val writer = TlsWriter()
+            writer.putUint16(MlsMessage.MLS_VERSION_10)
+            writer.putUint16(WireFormat.PUBLIC_MESSAGE.value)
+            writer.putOpaqueVarInt(groupId)
+            writer.putUint64(epoch)
+            encodeSender(writer, Sender(SenderType.MEMBER, senderLeafIndex))
+            writer.putOpaqueVarInt(ByteArray(0)) // authenticated_data
+            writer.putUint8(ContentType.COMMIT.value)
+            writer.putBytes(commitBytes) // Commit struct — no outer length prefix
+            writer.putBytes(groupContextBytes) // member sender appends context raw
+            return writer.toByteArray()
+        }
+
         internal fun framePublicMessageCommit(
             groupId: ByteArray,
             epoch: Long,
             senderLeafIndex: Int,
             commitBytes: ByteArray,
             confirmationTag: ByteArray,
-            signingPrivateKey: ByteArray,
+            signature: ByteArray,
             membershipKey: ByteArray,
-            groupContextBytes: ByteArray,
+            tbsBytes: ByteArray,
         ): ByteArray {
-            // RFC 9420 §6.1 FramedContentTBS for a member-sender commit over
-            // PublicMessage wire format. Receivers recompute this exact byte
-            // string to verify the signature and membership_tag — the layout
-            // must match openmls / mdk-core byte-for-byte.
-            val tbsWriter = TlsWriter()
-            tbsWriter.putUint16(MlsMessage.MLS_VERSION_10)
-            tbsWriter.putUint16(WireFormat.PUBLIC_MESSAGE.value)
-            tbsWriter.putOpaqueVarInt(groupId)
-            tbsWriter.putUint64(epoch)
-            encodeSender(tbsWriter, Sender(SenderType.MEMBER, senderLeafIndex))
-            tbsWriter.putOpaqueVarInt(ByteArray(0)) // authenticated_data
-            tbsWriter.putUint8(ContentType.COMMIT.value)
-            tbsWriter.putBytes(commitBytes) // Commit struct — no outer length prefix
-            tbsWriter.putBytes(groupContextBytes) // member sender appends context raw
-            val tbs = tbsWriter.toByteArray()
-
-            // SignWithLabel over TBS — produces the FramedContentAuthData.signature.
-            val signature = MlsCryptoProvider.signWithLabel(signingPrivateKey, "FramedContentTBS", tbs)
-
-            // AuthenticatedContentTBM = TBS || FramedContentAuthData
-            //   FramedContentAuthData = signature<V> || (commit: confirmation_tag<V>)
+            // AuthenticatedContentTBM = TBS || FramedContentAuthData, where
+            // FramedContentAuthData = signature<V> || (for commits) confirmation_tag<V>.
+            // Caller already signed the TBS so we reuse the exact bytes they
+            // produced — any drift here would desync the membership_tag from
+            // the signature.
             val tbmWriter = TlsWriter()
-            tbmWriter.putBytes(tbs)
+            tbmWriter.putBytes(tbsBytes)
             tbmWriter.putOpaqueVarInt(signature)
             tbmWriter.putOpaqueVarInt(confirmationTag)
             val tbm = tbmWriter.toByteArray()
@@ -1899,6 +1922,7 @@ class MlsGroup private constructor(
             senderLeafIndex: Int,
             groupId: ByteArray,
             epoch: Long,
+            signature: ByteArray = ByteArray(0),
         ): ByteArray {
             val writer = TlsWriter()
             writer.putUint16(WireFormat.PUBLIC_MESSAGE.value)
@@ -1909,7 +1933,7 @@ class MlsGroup private constructor(
             writer.putOpaqueVarInt(ByteArray(0)) // authenticated_data
             writer.putUint8(ContentType.COMMIT.value)
             commit.encodeTls(writer)
-            writer.putOpaqueVarInt(ByteArray(0)) // signature placeholder
+            writer.putOpaqueVarInt(signature) // FramedContentAuthData.signature
             return writer.toByteArray()
         }
 

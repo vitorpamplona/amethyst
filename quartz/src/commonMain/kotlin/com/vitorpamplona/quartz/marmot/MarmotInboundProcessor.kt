@@ -561,6 +561,7 @@ class MarmotInboundProcessor(
                                 commitBytes = pubMsg.content,
                                 senderLeafIndex = pubMsg.sender.leafIndex,
                                 confirmationTag = tag,
+                                signature = pubMsg.signature,
                             )
                             val group = groupManager.getGroup(groupId)
                             GroupEventResult.CommitProcessed(groupId, group?.epoch ?: 0)
