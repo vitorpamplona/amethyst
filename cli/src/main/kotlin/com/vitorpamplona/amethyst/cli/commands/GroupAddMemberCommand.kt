@@ -23,8 +23,10 @@ package com.vitorpamplona.amethyst.cli.commands
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Json
+import com.vitorpamplona.amethyst.commons.defaults.DefaultDMRelayList
 import com.vitorpamplona.quartz.marmot.RecipientRelayFetcher
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageFetcher
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 /**
  * `group add <group_id> <npub> [<npub> ...]` — fetch each invitee's
@@ -108,7 +110,7 @@ object GroupAddMemberCommand {
                 // Order matters: commit first (so invitee doesn't join at a future epoch),
                 // then welcome.
                 val commitAck = ctx.publish(commitEvent.signedEvent, groupRelays)
-                val welcomeTargets: Set<com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl> =
+                val welcomeTargets: Set<NormalizedRelayUrl> =
                     if (welcomeDelivery != null) {
                         // Welcome gift wrap (kind:1059 wrapping kind:444) must
                         // land on a relay the invitee actually polls for their
@@ -124,7 +126,7 @@ object GroupAddMemberCommand {
                         buildSet {
                             addAll(recipient.dmInboxOrFallback())
                             if (isEmpty()) {
-                                addAll(com.vitorpamplona.amethyst.commons.defaults.DefaultDMRelayList)
+                                addAll(DefaultDMRelayList)
                             }
                             addAll(ctx.outboxRelays())
                         }

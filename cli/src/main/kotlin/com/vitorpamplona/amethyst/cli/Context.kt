@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.cli
 import com.vitorpamplona.amethyst.cli.stores.FileKeyPackageBundleStore
 import com.vitorpamplona.amethyst.cli.stores.FileMarmotMessageStore
 import com.vitorpamplona.amethyst.cli.stores.FileMlsGroupStateStore
+import com.vitorpamplona.amethyst.commons.defaults.DefaultDMRelayList
+import com.vitorpamplona.amethyst.commons.defaults.DefaultNIP65RelaySet
 import com.vitorpamplona.amethyst.commons.marmot.MarmotManager
 import com.vitorpamplona.amethyst.commons.marmot.ingest
 import com.vitorpamplona.quartz.marmot.MarmotFilters
@@ -139,8 +141,8 @@ class Context(
     fun bootstrapRelays(): Set<NormalizedRelayUrl> =
         buildSet {
             addAll(anyRelays())
-            addAll(com.vitorpamplona.amethyst.commons.defaults.DefaultNIP65RelaySet)
-            addAll(com.vitorpamplona.amethyst.commons.defaults.DefaultDMRelayList)
+            addAll(DefaultNIP65RelaySet)
+            addAll(DefaultDMRelayList)
         }
 
     /**
