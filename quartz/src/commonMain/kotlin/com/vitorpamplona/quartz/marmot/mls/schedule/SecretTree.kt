@@ -50,16 +50,20 @@ class SecretTree(
     /** Per-sender ratchet state: (handshake generation, handshake secret, app generation, app secret) */
     private val senderState = mutableMapOf<Int, SenderRatchetState>()
 
-    /** Consumed (sender, generation) pairs for replay detection (RFC 9420 Section 9.1) */
+    /** Consumed (sender, generation) pairs for replay detection on the APPLICATION ratchet. */
     private val consumedGenerations = mutableMapOf<Int, MutableSet<Int>>()
 
+    /** Same replay tracker, but for the HANDSHAKE ratchet (commits / proposals). */
+    private val consumedHandshakeGenerations = mutableMapOf<Int, MutableSet<Int>>()
+
     /**
-     * Cache of key/nonce pairs for skipped generations.
+     * Cache of key/nonce pairs for skipped APPLICATION generations.
      * Key: (leafIndex, generation) -> derived KeyNonceGeneration.
-     * When fast-forwarding a ratchet, intermediate generations are saved here
-     * so that out-of-order messages arriving later can still be decrypted.
      */
     private val skippedKeys = mutableMapOf<Pair<Int, Int>, KeyNonceGeneration>()
+
+    /** Same cache for the HANDSHAKE ratchet. */
+    private val handshakeSkippedKeys = mutableMapOf<Pair<Int, Int>, KeyNonceGeneration>()
 
     private companion object {
         /** Maximum number of skipped key entries to retain (prevents unbounded memory growth). */
@@ -181,6 +185,70 @@ class SecretTree(
             state.copy(
                 applicationSecret = nextSecret,
                 applicationGeneration = generation + 1,
+            )
+
+        return result
+    }
+
+    /**
+     * Handshake-ratchet counterpart to [applicationKeyNonceForGeneration].
+     *
+     * PrivateMessage commits / proposals (RFC 9420 §6.3.2) are encrypted
+     * with a separate handshake ratchet per sender leaf — NOT the
+     * application ratchet. openmls / mdk use this path by default
+     * (`MIXED_CIPHERTEXT_WIRE_FORMAT_POLICY`), so quartz must also
+     * ratchet-forward the handshake chain when decrypting an inbound
+     * PrivateMessage commit.
+     */
+    fun handshakeKeyNonceForGeneration(
+        leafIndex: Int,
+        generation: Int,
+    ): KeyNonceGeneration {
+        val cachedKey = handshakeSkippedKeys.remove(Pair(leafIndex, generation))
+        if (cachedKey != null) {
+            val senderConsumed = consumedHandshakeGenerations.getOrPut(leafIndex) { mutableSetOf() }
+            require(generation !in senderConsumed) {
+                "Replay detected: handshake generation $generation from sender $leafIndex already consumed"
+            }
+            senderConsumed.add(generation)
+            return cachedKey
+        }
+
+        val state = getOrInitSender(leafIndex)
+
+        require(generation >= state.handshakeGeneration) {
+            "Handshake generation $generation already consumed (current: ${state.handshakeGeneration})"
+        }
+
+        val senderConsumed = consumedHandshakeGenerations.getOrPut(leafIndex) { mutableSetOf() }
+        require(generation !in senderConsumed) {
+            "Replay detected: handshake generation $generation from sender $leafIndex already consumed"
+        }
+        senderConsumed.add(generation)
+
+        if (senderConsumed.size > MAX_CONSUMED_GENERATIONS_PER_SENDER) {
+            val minGeneration = state.handshakeGeneration
+            senderConsumed.removeAll { it < minGeneration }
+        }
+
+        var secret = state.handshakeSecret
+        var gen = state.handshakeGeneration
+        while (gen < generation) {
+            val intermediateKng = deriveKeyNonce(secret, gen)
+            val cacheKey = Pair(leafIndex, gen)
+            if (handshakeSkippedKeys.size < MAX_SKIPPED_KEYS) {
+                handshakeSkippedKeys[cacheKey] = intermediateKng
+            }
+            secret = MlsCryptoProvider.expandWithLabel(secret, "secret", generationContext(gen), MlsCryptoProvider.HASH_OUTPUT_LENGTH)
+            gen++
+        }
+
+        val result = deriveKeyNonce(secret, generation)
+        val nextSecret = MlsCryptoProvider.expandWithLabel(secret, "secret", generationContext(generation), MlsCryptoProvider.HASH_OUTPUT_LENGTH)
+        senderState[leafIndex] =
+            state.copy(
+                handshakeSecret = nextSecret,
+                handshakeGeneration = generation + 1,
             )
 
         return result

@@ -1,0 +1,11 @@
+--- a/../../../.cargo/git/checkouts/mdk-7d5a3a2420b194f5/8a8d06c/crates/mdk-core/src/groups.rs
++++ b/../../../.cargo/git/checkouts/mdk-7d5a3a2420b194f5/8a8d06c/crates/mdk-core/src/groups.rs
+@@ -1215,7 +1215,7 @@
+         );
+         let group_config = MlsGroupCreateConfig::builder()
+             .ciphersuite(self.ciphersuite)
+-            .wire_format_policy(MIXED_CIPHERTEXT_WIRE_FORMAT_POLICY)
++            .wire_format_policy(MIXED_PLAINTEXT_WIRE_FORMAT_POLICY)
+             .use_ratchet_tree_extension(true)
+             .capabilities(capabilities)
+             .with_group_context_extensions(extensions)

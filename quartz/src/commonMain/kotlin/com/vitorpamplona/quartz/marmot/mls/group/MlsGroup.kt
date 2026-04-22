@@ -874,13 +874,25 @@ class MlsGroup private constructor(
             "Sender leaf is blank at index $senderLeafIndex (not a group member)"
         }
 
-        // Get the key/nonce for this sender+generation
-        // If we sent this message ourselves, use the cached key to avoid ratchet conflict
+        // Get the key/nonce for this sender+generation from the correct ratchet.
+        // PrivateMessage Application content uses the application ratchet (RFC 9420
+        // §6.3.2); PrivateMessage Commit / Proposal handshakes use a separate
+        // per-sender handshake ratchet. openmls / mdk default to AlwaysCiphertext
+        // outgoing, so every B→A commit quartz receives lands here with
+        // content_type == COMMIT.
         val kng =
             if (senderLeafIndex == myLeafIndex && sentKeys.containsKey(generation)) {
                 sentKeys.remove(generation)!!
             } else {
-                secretTree.applicationKeyNonceForGeneration(senderLeafIndex, generation)
+                when (privMsg.contentType) {
+                    ContentType.APPLICATION -> {
+                        secretTree.applicationKeyNonceForGeneration(senderLeafIndex, generation)
+                    }
+
+                    ContentType.COMMIT, ContentType.PROPOSAL -> {
+                        secretTree.handshakeKeyNonceForGeneration(senderLeafIndex, generation)
+                    }
+                }
             }
 
         // Apply reuse_guard XOR to nonce (RFC 9420 §6.3.1)
@@ -893,48 +905,84 @@ class MlsGroup private constructor(
         val contentAad = buildPrivateContentAAD(privMsg.groupId, privMsg.epoch, privMsg.contentType, privMsg.authenticatedData)
         val pmcPlaintext = MlsCryptoProvider.aeadDecrypt(kng.key, guardedNonce, contentAad, privMsg.ciphertext)
 
-        // Parse PrivateMessageContent (RFC 9420 §6.3.1) and verify the
-        // sender's FramedContentTBS signature before returning bytes.
-        require(privMsg.contentType == ContentType.APPLICATION) {
-            // Commit/Proposal-via-PrivateMessage decoding is not implemented.
-            "decrypt() only supports application-content PrivateMessages"
-        }
+        // Parse PrivateMessageContent (RFC 9420 §6.3.1). The layout depends on
+        // content_type — application payloads carry `opaque application_data<V>`
+        // whereas commit / proposal payloads carry the struct directly (no
+        // outer length prefix).
         val pmcReader = TlsReader(pmcPlaintext)
-        val applicationData = pmcReader.readOpaqueVarInt()
-        val signature = pmcReader.readOpaqueVarInt()
-        // Remaining bytes are padding; all must be zero per §6.3.1.
-        while (pmcReader.hasRemaining) {
-            require(pmcReader.readBytes(1)[0] == 0.toByte()) {
-                "PrivateMessageContent padding must be zero"
+        when (privMsg.contentType) {
+            ContentType.APPLICATION -> {
+                val applicationData = pmcReader.readOpaqueVarInt()
+                val signature = pmcReader.readOpaqueVarInt()
+                while (pmcReader.hasRemaining) {
+                    require(pmcReader.readBytes(1)[0] == 0.toByte()) {
+                        "PrivateMessageContent padding must be zero"
+                    }
+                }
+
+                val senderLeaf =
+                    requireNotNull(tree.getLeaf(senderLeafIndex)) {
+                        "Sender leaf is blank at index $senderLeafIndex"
+                    }
+                require(
+                    MlsCryptoProvider.verifyWithLabel(
+                        senderLeaf.signatureKey,
+                        "FramedContentTBS",
+                        buildApplicationFramedContentTbs(
+                            groupId = privMsg.groupId,
+                            epoch = privMsg.epoch,
+                            senderLeafIndex = senderLeafIndex,
+                            authenticatedData = privMsg.authenticatedData,
+                            applicationData = applicationData,
+                            groupContext = groupContext,
+                        ),
+                        signature,
+                    ),
+                ) { "FramedContentTBS signature verification failed" }
+
+                return DecryptedMessage(
+                    senderLeafIndex = senderLeafIndex,
+                    contentType = privMsg.contentType,
+                    content = applicationData,
+                    epoch = privMsg.epoch,
+                )
+            }
+
+            ContentType.COMMIT -> {
+                // PrivateMessageContent for a Commit: the Commit struct
+                // (no length prefix) followed by signature<V> and
+                // confirmation_tag<V>, then zero padding. The caller drives
+                // processCommit with (commitBytes, signature, confirmationTag)
+                // — all available here once we re-serialize the parsed Commit
+                // back to bytes (openmls does the same round-trip).
+                val commit = Commit.decodeTls(pmcReader)
+                val commitWriter = TlsWriter()
+                commit.encodeTls(commitWriter)
+                val commitBytes = commitWriter.toByteArray()
+                val signature = pmcReader.readOpaqueVarInt()
+                val confirmationTag = pmcReader.readOpaqueVarInt()
+                while (pmcReader.hasRemaining) {
+                    require(pmcReader.readBytes(1)[0] == 0.toByte()) {
+                        "PrivateMessageContent padding must be zero"
+                    }
+                }
+                // Apply the commit inline — after this returns, the caller
+                // only needs to know the epoch advanced. The signature rides
+                // into the transcript-hash computation inside processCommit.
+                processCommit(commitBytes, senderLeafIndex, confirmationTag, signature)
+
+                return DecryptedMessage(
+                    senderLeafIndex = senderLeafIndex,
+                    contentType = privMsg.contentType,
+                    content = commitBytes,
+                    epoch = privMsg.epoch,
+                )
+            }
+
+            ContentType.PROPOSAL -> {
+                throw IllegalStateException("Standalone PrivateMessage proposals not yet supported")
             }
         }
-
-        val senderLeaf =
-            requireNotNull(tree.getLeaf(senderLeafIndex)) {
-                "Sender leaf is blank at index $senderLeafIndex"
-            }
-        require(
-            MlsCryptoProvider.verifyWithLabel(
-                senderLeaf.signatureKey,
-                "FramedContentTBS",
-                buildApplicationFramedContentTbs(
-                    groupId = privMsg.groupId,
-                    epoch = privMsg.epoch,
-                    senderLeafIndex = senderLeafIndex,
-                    authenticatedData = privMsg.authenticatedData,
-                    applicationData = applicationData,
-                    groupContext = groupContext,
-                ),
-                signature,
-            ),
-        ) { "FramedContentTBS signature verification failed" }
-
-        return DecryptedMessage(
-            senderLeafIndex = senderLeafIndex,
-            contentType = privMsg.contentType,
-            content = applicationData,
-            epoch = privMsg.epoch,
-        )
     }
 
     /**
