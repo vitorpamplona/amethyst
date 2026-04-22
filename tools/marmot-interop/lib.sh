@@ -293,13 +293,56 @@ extract_pubkey() {
     if [[ -n "$v" ]]; then printf '%s' "$v"; return; fi
 }
 
-# Best-effort npub -> hex conversion via `wn users show`. If the lookup fails
-# (e.g. --json not supported or user not resolvable), returns the input
-# unchanged — downstream comparisons tolerate either form.
+# Pure-awk bech32 decoder for npub1... → 32-byte lowercase hex. Needed because
+# `wn users show` only resolves identities the local daemon already knows
+# about, so A's npub (the Amethyst account) can't be converted via wn — and a
+# failed conversion leaks the raw npub into hex-equality checks like the
+# member-list assertion in Test 02, which then fails with
+# "member list missing npub1…".
+bech32_decode_npub() {
+    local npub="$1"
+    [[ "$npub" == npub1* ]] || return 1
+    local body="${npub#npub1}"
+    # Need at least 6 chars of checksum + some data.
+    (( ${#body} > 6 )) || return 1
+    local hex
+    hex=$(awk -v data="$body" 'BEGIN {
+        charset = "qpzry9x8gf2tvdw0s3jn54khce6mua7l"
+        for (i = 0; i < 32; i++) map[substr(charset, i + 1, 1)] = i
+        data = substr(data, 1, length(data) - 6)
+        acc = 0; bits = 0; out = ""
+        for (i = 1; i <= length(data); i++) {
+            c = substr(data, i, 1)
+            if (!(c in map)) exit 1
+            acc = acc * 32 + map[c]
+            bits += 5
+            while (bits >= 8) {
+                bits -= 8
+                pow = 1
+                for (j = 0; j < bits; j++) pow *= 2
+                byte = int(acc / pow)
+                acc -= byte * pow
+                out = out sprintf("%02x", byte)
+            }
+        }
+        print out
+    }' 2>/dev/null) || return 1
+    # 32-byte x-only pubkey = 64 hex chars.
+    [[ ${#hex} -eq 64 ]] || return 1
+    printf '%s' "$hex"
+}
+
+# npub -> hex conversion. Tries `wn users show` first (handy when it works,
+# since it also validates the npub against the daemon's view), then falls
+# back to a local bech32 decode so unknown npubs still convert. Returns the
+# input unchanged only if both paths fail, which should never happen for a
+# well-formed npub.
 npub_to_hex() {
     local npub="$1" raw hex
     raw=$(wn_b --json users show "$npub" 2>/dev/null || true)
-    hex=$(printf '%s' "$raw" | jq -r '.pubkey // .public_key // .hex // empty' 2>/dev/null || true)
+    hex=$(printf '%s' "$raw" \
+        | jq -r '(.result // .) | (.pubkey // .public_key // .hex // .[0]?.pubkey // .[0]?.public_key // empty)' \
+        2>/dev/null || true)
     if [[ -z "$hex" || "$hex" == "null" ]]; then
         # fallback to yaml-ish output
         raw=$(wn_b users show "$npub" 2>/dev/null || true)
@@ -307,9 +350,13 @@ npub_to_hex() {
     fi
     if [[ -n "$hex" && "$hex" != "null" ]]; then
         printf '%s' "$hex"
-    else
-        printf '%s' "$npub"
+        return
     fi
+    if hex=$(bech32_decode_npub "$npub"); then
+        printf '%s' "$hex"
+        return
+    fi
+    printf '%s' "$npub"
 }
 
 # ------- state file ----------------------------------------------------------
