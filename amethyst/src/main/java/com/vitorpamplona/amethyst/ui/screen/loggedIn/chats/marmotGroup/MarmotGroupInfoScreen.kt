@@ -32,10 +32,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -45,6 +44,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.PersonRemove
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -165,129 +165,128 @@ fun MarmotGroupInfoScreen(
             )
         },
     ) { padding ->
-        LazyColumn(
+        Column(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .padding(padding),
+                    .padding(padding)
+                    .imePadding(),
         ) {
-            // Group header section
-            item {
-                Column(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Column(modifier = Modifier.weight(1f)) {
+            // Group header section (fixed at top)
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = displayName ?: "Group ${nostrGroupId.take(8)}...",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        if (!groupDescription.isNullOrEmpty()) {
                             Text(
-                                text = displayName ?: "Group ${nostrGroupId.take(8)}...",
-                                style = MaterialTheme.typography.headlineSmall,
-                                fontWeight = FontWeight.Bold,
-                            )
-                            if (!groupDescription.isNullOrEmpty()) {
-                                Text(
-                                    text = groupDescription!!,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(top = 4.dp),
-                                )
-                            }
-                            Text(
-                                text = "${members.size} members",
+                                text = groupDescription!!,
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(top = 4.dp),
                             )
                         }
-                        if (groupRelays.isNotEmpty()) {
-                            GroupRelayStrip(
-                                relayUrls = groupRelays,
-                                relayActivity = relayActivity,
-                                accountViewModel = accountViewModel,
-                                nav = nav,
-                            )
-                        }
+                        Text(
+                            text = "${members.size} members",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 4.dp),
+                        )
+                    }
+                    if (groupRelays.isNotEmpty()) {
+                        GroupRelayStrip(
+                            relayUrls = groupRelays,
+                            relayActivity = relayActivity,
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                        )
                     }
                 }
-                HorizontalDivider()
+            }
+            HorizontalDivider()
+
+            // Members list (scrollable, takes remaining vertical space)
+            LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                item {
+                    Text(
+                        text = "Members",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                    )
+                }
+
+                items(members, key = { it.leafIndex }) { member ->
+                    val isMe = member.pubkey == myPubkey
+                    val isAdmin = member.pubkey in adminPubkeys
+                    MemberRow(
+                        member = member,
+                        isMe = isMe,
+                        isAdmin = isAdmin,
+                        canRemove = !isMe,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                        onRemoveClick = { memberToRemove = member },
+                    )
+                    HorizontalDivider()
+                }
             }
 
-            // Inline add-member search
-            item {
-                AddMemberInline(
-                    nostrGroupId = nostrGroupId,
-                    searchInput = addSearchInput,
-                    onSearchInputChange = { value ->
-                        addSearchInput = value
-                        if (!isAddError) addStatus = null
-                        if (value.length > 2) {
-                            userSuggestions.processCurrentWord(value)
-                        } else {
-                            userSuggestions.reset()
-                        }
-                    },
-                    userSuggestions = userSuggestions,
-                    statusMessage = addStatus,
-                    isError = isAddError,
-                    isAdding = isAdding,
-                    accountViewModel = accountViewModel,
-                    onAdd = { user ->
-                        isAdding = true
-                        isAddError = false
-                        addStatus = "Adding ${user.toBestDisplayName()}..."
-                        val targetPubkey = user.pubkeyHex
-                        val targetName = user.toBestDisplayName()
-                        scope.launch(Dispatchers.IO) {
-                            try {
-                                val result = accountViewModel.addMarmotGroupMember(nostrGroupId, targetPubkey)
-                                if (result.startsWith("Success")) {
-                                    addStatus = null
-                                    isAddError = false
-                                    addSearchInput = ""
-                                    userSuggestions.reset()
-                                } else {
-                                    addStatus = "Failed to add $targetName: ${result.removePrefix("Error: ")}"
-                                    isAddError = true
-                                }
-                            } catch (e: Exception) {
-                                addStatus = "Failed to add $targetName: ${e.message ?: "unknown error"}"
+            HorizontalDivider()
+
+            // Suggestions + add-member input (fixed at bottom)
+            AddMemberInline(
+                nostrGroupId = nostrGroupId,
+                searchInput = addSearchInput,
+                onSearchInputChange = { value ->
+                    addSearchInput = value
+                    if (!isAddError) addStatus = null
+                    if (value.length > 2) {
+                        userSuggestions.processCurrentWord(value)
+                    } else {
+                        userSuggestions.reset()
+                    }
+                },
+                userSuggestions = userSuggestions,
+                statusMessage = addStatus,
+                isError = isAddError,
+                isAdding = isAdding,
+                accountViewModel = accountViewModel,
+                onAdd = { user ->
+                    isAdding = true
+                    isAddError = false
+                    addStatus = "Adding ${user.toBestDisplayName()}..."
+                    val targetPubkey = user.pubkeyHex
+                    val targetName = user.toBestDisplayName()
+                    scope.launch(Dispatchers.IO) {
+                        try {
+                            val result = accountViewModel.addMarmotGroupMember(nostrGroupId, targetPubkey)
+                            if (result.startsWith("Success")) {
+                                addStatus = null
+                                isAddError = false
+                                addSearchInput = ""
+                                userSuggestions.reset()
+                            } else {
+                                addStatus = "Failed to add $targetName: ${result.removePrefix("Error: ")}"
                                 isAddError = true
-                            } finally {
-                                isAdding = false
                             }
+                        } catch (e: Exception) {
+                            addStatus = "Failed to add $targetName: ${e.message ?: "unknown error"}"
+                            isAddError = true
+                        } finally {
+                            isAdding = false
                         }
-                    },
-                )
-                HorizontalDivider()
-            }
-
-            // Members section header
-            item {
-                Text(
-                    text = "Members",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                )
-            }
-
-            // Member list with inline remove button
-            items(members, key = { it.leafIndex }) { member ->
-                val isMe = member.pubkey == myPubkey
-                val isAdmin = member.pubkey in adminPubkeys
-                MemberRow(
-                    member = member,
-                    isMe = isMe,
-                    isAdmin = isAdmin,
-                    canRemove = !isMe,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                    onRemoveClick = { memberToRemove = member },
-                )
-                HorizontalDivider()
-            }
+                    }
+                },
+            )
         }
     }
 
@@ -363,18 +362,32 @@ private fun AddMemberInline(
     onAdd: (com.vitorpamplona.amethyst.model.User) -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
-        OutlinedTextField(
-            value = searchInput,
-            onValueChange = onSearchInputChange,
-            label = { Text("Add member") },
-            placeholder = { Text("Name, npub, or NIP-05") },
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-            singleLine = true,
-            enabled = !isAdding,
-        )
+        if (!isAdding && searchInput.length > 2) {
+            ShowUserSuggestionList(
+                userSuggestions = userSuggestions,
+                onSelect = { user -> onAdd(user) },
+                accountViewModel = accountViewModel,
+                modifier = SuggestionListDefaultHeightChat,
+                onEmpty = {
+                    Text(
+                        "They must have published a KeyPackage (kind:30443) to be added.",
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                },
+                trailingContent = { user ->
+                    IconButton(onClick = { onAdd(user) }) {
+                        Icon(
+                            imageVector = Icons.Default.PersonAdd,
+                            contentDescription = "Add to group",
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                },
+            )
+            HorizontalDivider()
+        }
 
         if (statusMessage != null) {
             Text(
@@ -390,23 +403,18 @@ private fun AddMemberInline(
             )
         }
 
-        if (!isAdding && searchInput.length > 2) {
-            Spacer(modifier = Modifier.height(4.dp))
-            ShowUserSuggestionList(
-                userSuggestions = userSuggestions,
-                onSelect = { user -> onAdd(user) },
-                accountViewModel = accountViewModel,
-                modifier = SuggestionListDefaultHeightChat,
-                onEmpty = {
-                    Text(
-                        "They must have published a KeyPackage (kind:30443) to be added.",
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                },
-            )
-        }
+        OutlinedTextField(
+            value = searchInput,
+            onValueChange = onSearchInputChange,
+            label = { Text("Add member") },
+            placeholder = { Text("Name, npub, or NIP-05") },
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+            singleLine = true,
+            enabled = !isAdding,
+        )
     }
 }
 
