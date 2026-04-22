@@ -2681,22 +2681,75 @@ class MlsGroup private constructor(
      * calls from a member currently listed in `admin_pubkeys`.
      */
     /**
-     * Build a SelfRemove commit (not a standalone proposal). MIP-03 allows
-     * non-admins to commit a SelfRemove-only commit, and only a commit
-     * actually rewrites the tree on the receiver side — a standalone
-     * SelfRemove proposal just gets staged by mdk/openmls and never
-     * removes the member unless another admin commits.
+     * Build a standalone SelfRemove proposal framed as a PublicMessage MLS
+     * message (RFC 9420 §6.2 + draft-ietf-mls-extensions).
      *
-     * Caller is responsible for publishing the `framedCommitBytes` as the
-     * kind:445 outer layer, outer-encrypted with
-     * [CommitResult.preCommitExporterSecret].
+     * openmls/mdk explicitly treat SelfRemove as a STANDALONE proposal
+     * message, not a commit body: a non-admin committer can't self-remove
+     * (openmls returns `RequiredPathNotFound`/`AttemptedSelfRemoval`) so
+     * quartz must publish it as a plain PROPOSAL instead. Admin receivers
+     * (wn's mdk auto-commit path) pick up the staged proposal and fold it
+     * into their next commit, which is what actually removes the sender.
+     *
+     * The bytes returned are the full `MlsMessage(PublicMessage(proposal))`
+     * ready for outer ChaCha20 wrapping as kind:445 content. The second
+     * return value is the epoch this message must be outer-encrypted under.
      */
-    fun selfRemoveCommit(): CommitResult {
+    fun buildSelfRemoveProposalMessage(): Pair<ByteArray, ByteArray> {
         check(!isLocalAdmin()) {
             "Admin must self-demote via GroupContextExtensions before SelfRemove (MIP-01)"
         }
-        proposeSelfRemove()
-        return commit()
+
+        val preCommitExporterSecret =
+            exporterSecret("marmot", "group-event".encodeToByteArray(), 32)
+
+        val proposal = Proposal.SelfRemove()
+        val proposalBytes = proposal.toTlsBytes()
+        val ctx = groupContext
+        val ctxBytes = ctx.toTlsBytes()
+        val preCommitMembershipKey = epochSecrets.membershipKey
+        val preCommitSigningKey = signingPrivateKey
+
+        // FramedContentTBS for a member-sender PROPOSAL over PublicMessage:
+        // version || wire_format || FramedContent || serialized_context
+        val tbsWriter = TlsWriter()
+        tbsWriter.putUint16(MlsMessage.MLS_VERSION_10)
+        tbsWriter.putUint16(WireFormat.PUBLIC_MESSAGE.value)
+        tbsWriter.putOpaqueVarInt(ctx.groupId)
+        tbsWriter.putUint64(ctx.epoch)
+        encodeSender(tbsWriter, Sender(SenderType.MEMBER, myLeafIndex))
+        tbsWriter.putOpaqueVarInt(ByteArray(0)) // authenticated_data
+        tbsWriter.putUint8(ContentType.PROPOSAL.value)
+        tbsWriter.putBytes(proposalBytes) // proposal struct, no outer length prefix
+        tbsWriter.putBytes(ctxBytes) // member sender appends context
+        val tbs = tbsWriter.toByteArray()
+
+        val signature = MlsCryptoProvider.signWithLabel(preCommitSigningKey, "FramedContentTBS", tbs)
+
+        // TBM = TBS || FramedContentAuthData. For PROPOSAL there's no
+        // confirmation_tag, just the signature.
+        val tbmWriter = TlsWriter()
+        tbmWriter.putBytes(tbs)
+        tbmWriter.putOpaqueVarInt(signature)
+        val tbm = tbmWriter.toByteArray()
+
+        val macInstance = MacInstance("HmacSHA256", preCommitMembershipKey)
+        macInstance.update(tbm)
+        val membershipTag = macInstance.doFinal()
+
+        val publicMessage =
+            PublicMessage(
+                groupId = ctx.groupId,
+                epoch = ctx.epoch,
+                sender = Sender(SenderType.MEMBER, myLeafIndex),
+                authenticatedData = ByteArray(0),
+                contentType = ContentType.PROPOSAL,
+                content = proposalBytes,
+                signature = signature,
+                confirmationTag = null,
+                membershipTag = membershipTag,
+            )
+        return MlsMessage.fromPublicMessage(publicMessage).toTlsBytes() to preCommitExporterSecret
     }
 }
 

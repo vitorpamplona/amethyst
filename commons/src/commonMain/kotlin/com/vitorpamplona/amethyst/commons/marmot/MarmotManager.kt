@@ -290,16 +290,16 @@ class MarmotManager(
      * Returns proposal bytes to publish (as a GroupEvent).
      */
     suspend fun leaveGroup(nostrGroupId: HexKey): OutboundGroupEvent {
-        // leaveGroup() builds a SelfRemove-only commit (MIP-03 non-admin
-        // exception) and removes local state. It must run BEFORE we tear
-        // down the subscriptions so the pre-commit exporter key is still
-        // reachable for outer encryption.
-        val commitResult = groupManager.leaveGroup(nostrGroupId)
+        // leaveGroup() returns the framed standalone SelfRemove proposal
+        // (PublicMessage{Proposal}) plus the pre-commit exporter key for
+        // outer encryption. Runs BEFORE we tear down the subscriptions so
+        // the pre-commit exporter is still derivable.
+        val (framedBytes, exporterKey) = groupManager.leaveGroup(nostrGroupId)
         val outboundEvent =
             outboundProcessor.buildCommitEvent(
                 nostrGroupId = nostrGroupId,
-                commitBytes = commitResult.framedCommitBytes,
-                exporterKey = commitResult.preCommitExporterSecret,
+                commitBytes = framedBytes,
+                exporterKey = exporterKey,
             )
 
         subscriptionManager.unsubscribeGroup(nostrGroupId)

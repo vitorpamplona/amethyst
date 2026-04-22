@@ -465,20 +465,15 @@ class MlsGroupManager(
         }
 
     /**
-     * Leave a group via a SelfRemove-only commit (MIP-03 non-admin exception).
-     * Returns the framed commit bytes + pre-commit exporter secret so the
-     * caller can outer-encrypt the kind:445 under the epoch the commit is
-     * leaving, then removes local state.
+     * Leave a group by publishing a standalone PublicMessage SelfRemove
+     * proposal (draft-ietf-mls-extensions). Admin receivers auto-commit
+     * the pending proposal; the caller publishes the framed bytes as the
+     * kind:445 content, outer-encrypted with the returned exporter key.
      */
-    suspend fun leaveGroup(nostrGroupId: HexKey): CommitResult =
+    suspend fun leaveGroup(nostrGroupId: HexKey): Pair<ByteArray, ByteArray> =
         mutex.withLock {
             val group = requireGroup(nostrGroupId)
-            val retainedBefore = group.retainedSecrets()
-            val result = group.selfRemoveCommit()
-            // Record the retained epoch so any relay echo of the commit or
-            // earlier-epoch traffic can still be decrypted by the caller
-            // while it handles cleanup.
-            pushRetainedEpoch(nostrGroupId, retainedBefore)
+            val result = group.buildSelfRemoveProposalMessage()
             removeGroupStateUnlocked(nostrGroupId)
             result
         }
