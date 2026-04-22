@@ -23,12 +23,16 @@ package com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.any
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.ImageTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.SummaryTag
 import com.vitorpamplona.quartz.nip31Alts.AltTag
+import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.EndpointUrlTag
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.RelayListTag
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.RoomNameTag
@@ -36,6 +40,8 @@ import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.ServiceUr
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.StatusTag
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ParticipantTag
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 @Immutable
 class MeetingSpaceEvent(
@@ -92,6 +98,25 @@ class MeetingSpaceEvent(
         ): MeetingSpaceEvent {
             val tags = arrayOf(AltTag.assemble(ALT))
             return signer.sign(createdAt, KIND, tags, "")
+        }
+
+        @OptIn(ExperimentalUuidApi::class)
+        fun build(
+            room: String,
+            status: StatusTag.STATUS,
+            service: String,
+            host: ParticipantTag,
+            dTag: String = Uuid.random().toString(),
+            createdAt: Long = TimeUtils.now(),
+            initializer: TagArrayBuilder<MeetingSpaceEvent>.() -> Unit = {},
+        ) = eventTemplate(KIND, "", createdAt) {
+            dTag(dTag)
+            room(room)
+            status(status)
+            service(service)
+            participant(host.pubKey, host.relayHint, host.role, host.proof)
+            alt(ALT)
+            initializer()
         }
     }
 }
