@@ -136,6 +136,7 @@ private object PrefKeys {
     const val HIDE_DELETE_REQUEST_DIALOG = "hide_delete_request_dialog"
     const val HIDE_BLOCK_ALERT_DIALOG = "hide_block_alert_dialog"
     const val HIDE_NIP_17_WARNING_DIALOG = "hide_nip24_warning_dialog" // delete later
+    const val ALWAYS_ON_NOTIFICATION_SERVICE = "always_on_notification_service"
     const val TOR_SETTINGS = "tor_settings"
     const val USE_PROXY = "use_proxy"
     const val PROXY_PORT = "proxy_port"
@@ -409,6 +410,7 @@ object LocalPreferences {
                     putBoolean(PrefKeys.HIDE_NIP_17_WARNING_DIALOG, settings.hideNIP17WarningDialog)
                     putBoolean(PrefKeys.HIDE_BLOCK_ALERT_DIALOG, settings.hideBlockAlertDialog)
                     putBoolean(PrefKeys.CALLS_ENABLED, settings.callsEnabled.value)
+                    putBoolean(PrefKeys.ALWAYS_ON_NOTIFICATION_SERVICE, settings.alwaysOnNotificationService.value)
 
                     // migrating from previous design
                     remove(PrefKeys.USE_PROXY)
@@ -513,6 +515,7 @@ object LocalPreferences {
                     val hideBlockAlertDialog = getBoolean(PrefKeys.HIDE_BLOCK_ALERT_DIALOG, false)
                     val hideNIP17WarningDialog = getBoolean(PrefKeys.HIDE_NIP_17_WARNING_DIALOG, false)
                     val callsEnabled = getBoolean(PrefKeys.CALLS_ENABLED, true)
+                    val alwaysOnNotificationService = getBoolean(PrefKeys.ALWAYS_ON_NOTIFICATION_SERVICE, false)
                     val hasDonatedInVersion = getStringSet(PrefKeys.HAS_DONATED_IN_VERSION, null) ?: setOf()
                     val dismissedPollNoteIds = getStringSet(PrefKeys.DISMISSED_POLL_NOTE_IDS, null) ?: setOf()
                     val viewedPollResultNoteIdsStr = getString(PrefKeys.VIEWED_POLL_RESULT_NOTE_IDS, null)
@@ -636,6 +639,7 @@ object LocalPreferences {
                         hideDeleteRequestDialog = hideDeleteRequestDialog,
                         hideBlockAlertDialog = hideBlockAlertDialog,
                         hideNIP17WarningDialog = hideNIP17WarningDialog,
+                        alwaysOnNotificationService = MutableStateFlow(alwaysOnNotificationService),
                         backupUserMetadata = latestUserMetadata.await(),
                         backupContactList = latestContactList.await(),
                         backupNIP65RelayList = latestNip65RelayList.await(),

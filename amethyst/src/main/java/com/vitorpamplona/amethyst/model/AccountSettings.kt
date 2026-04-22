@@ -170,6 +170,7 @@ class AccountSettings(
     var hideDeleteRequestDialog: Boolean = false,
     var hideBlockAlertDialog: Boolean = false,
     var hideNIP17WarningDialog: Boolean = false,
+    val alwaysOnNotificationService: MutableStateFlow<Boolean> = MutableStateFlow(false),
     var backupUserMetadata: MetadataEvent? = null,
     var backupContactList: ContactListEvent? = null,
     var backupDMRelayList: ChatMessageRelayListEvent? = null,
@@ -214,6 +215,17 @@ class AccountSettings(
     }
 
     fun isWriteable(): Boolean = keyPair.privKey != null || externalSignerPackageName != null
+
+    // ---
+    // Always-on Notification Service
+    // ---
+
+    fun toggleAlwaysOnNotificationService(): Boolean {
+        val newValue = !alwaysOnNotificationService.value
+        alwaysOnNotificationService.tryEmit(newValue)
+        saveAccountSettings()
+        return newValue
+    }
 
     // ---
     // Zaps and Reactions

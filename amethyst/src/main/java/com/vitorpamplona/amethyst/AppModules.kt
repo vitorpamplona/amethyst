@@ -49,6 +49,7 @@ import com.vitorpamplona.amethyst.service.images.ImageCacheFactory
 import com.vitorpamplona.amethyst.service.images.ImageLoaderSetup
 import com.vitorpamplona.amethyst.service.images.ThumbnailDiskCache
 import com.vitorpamplona.amethyst.service.location.LocationState
+import com.vitorpamplona.amethyst.service.notifications.AlwaysOnNotificationServiceManager
 import com.vitorpamplona.amethyst.service.notifications.PokeyReceiver
 import com.vitorpamplona.amethyst.service.okhttp.DualHttpClientManager
 import com.vitorpamplona.amethyst.service.okhttp.DualHttpClientManagerForRelays
@@ -71,6 +72,7 @@ import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.BlossomServerRes
 import com.vitorpamplona.amethyst.service.uploads.nip95.Nip95CacheFactory
 import com.vitorpamplona.amethyst.ui.resourceCacheInit
 import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
+import com.vitorpamplona.amethyst.ui.screen.AccountState
 import com.vitorpamplona.amethyst.ui.screen.UiSettingsState
 import com.vitorpamplona.amethyst.ui.tor.TorManager
 import com.vitorpamplona.quartz.nip01Core.core.Address
@@ -98,6 +100,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.transform
@@ -391,6 +394,9 @@ class AppModules(
         )
     }
 
+    // Manages always-on notification service lifecycle
+    val alwaysOnNotificationServiceManager = AlwaysOnNotificationServiceManager(appContext, applicationIOScope)
+
     // Organizes cache clearing
     val trimmingService by
         lazy {
@@ -488,6 +494,17 @@ class AppModules(
         // registers to receive events
         pokeyReceiver.register(appContext)
 
+        // Watch for account login and start/stop always-on notification service
+        applicationIOScope.launch {
+            sessionManager.accountContent.collectLatest { state ->
+                if (state is AccountState.LoggedIn) {
+                    alwaysOnNotificationServiceManager.watchAccount(state.account)
+                } else {
+                    alwaysOnNotificationServiceManager.stop()
+                }
+            }
+        }
+
         // initializes diskcache on an IO thread.
         applicationIOScope.launch {
             // Prepares video cache later
@@ -500,6 +517,7 @@ class AppModules(
         pokeyReceiver.unregister(appContext)
         BackgroundMedia.removeBackgroundControllerAndReleaseIt()
         PlaybackServiceClient.shutdown()
+        alwaysOnNotificationServiceManager.stop()
         applicationIOScope.cancel("Application onTerminate $appContext")
         accountsCache.clear()
     }

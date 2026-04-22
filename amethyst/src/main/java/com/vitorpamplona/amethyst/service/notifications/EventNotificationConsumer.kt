@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.service.notifications
 import android.app.NotificationManager
 import android.content.Context
 import android.graphics.drawable.BitmapDrawable
+import android.os.PowerManager
 import androidx.compose.runtime.getValue
 import androidx.core.content.ContextCompat
 import coil3.ImageLoader
@@ -88,28 +89,55 @@ private const val SCROLL_TO_QUERY_PARAM = "&scrollTo="
 class EventNotificationConsumer(
     private val applicationContext: Context,
 ) {
-    suspend fun consume(event: GiftWrapEvent) {
-        Log.d(TAG, "New Notification Arrived")
+    companion object {
+        private const val WAKELOCK_TIMEOUT_MS = 10 * 60 * 1000L // 10 minutes
+    }
 
-        // PushNotification Wraps don't include a receiver.
-        // Test with all logged in accounts
-        var matchAccount = false
-        LocalPreferences.allSavedAccounts().forEach {
-            if (!matchAccount && (it.hasPrivKey || it.loggedInWithExternalSigner)) {
-                LocalPreferences.loadAccountConfigFromEncryptedStorage(it.npub)?.let { acc ->
-                    Log.d(TAG) { "New Notification Testing if for ${it.npub}" }
-                    try {
-                        val account = Amethyst.instance.accountsCache.loadAccount(acc)
-                        consumeIfMatchesAccount(event, account)
-                        matchAccount = true
-                    } catch (e: Exception) {
-                        if (e is CancellationException) throw e
-                        Log.d(TAG) { "Message was not for user ${it.npub}: ${e.message}" }
+    /**
+     * Acquires a partial WakeLock during notification processing to ensure
+     * the CPU stays awake long enough to decrypt, process, and dispatch
+     * the notification, even in Doze mode.
+     */
+    private inline fun <T> withWakeLock(block: () -> T): T {
+        val powerManager = applicationContext.getSystemService(Context.POWER_SERVICE) as PowerManager
+        val wakeLock =
+            powerManager.newWakeLock(
+                PowerManager.PARTIAL_WAKE_LOCK,
+                "amethyst:notification_processing",
+            )
+        wakeLock.acquire(WAKELOCK_TIMEOUT_MS)
+        try {
+            return block()
+        } finally {
+            if (wakeLock.isHeld) {
+                wakeLock.release()
+            }
+        }
+    }
+
+    suspend fun consume(event: GiftWrapEvent) =
+        withWakeLock {
+            Log.d(TAG, "New Notification Arrived")
+
+            // PushNotification Wraps don't include a receiver.
+            // Test with all logged in accounts
+            var matchAccount = false
+            LocalPreferences.allSavedAccounts().forEach {
+                if (!matchAccount && (it.hasPrivKey || it.loggedInWithExternalSigner)) {
+                    LocalPreferences.loadAccountConfigFromEncryptedStorage(it.npub)?.let { acc ->
+                        Log.d(TAG) { "New Notification Testing if for ${it.npub}" }
+                        try {
+                            val account = Amethyst.instance.accountsCache.loadAccount(acc)
+                            consumeIfMatchesAccount(event, account)
+                            matchAccount = true
+                        } catch (e: Exception) {
+                            if (e is CancellationException) throw e
+                            Log.d(TAG) { "Message was not for user ${it.npub}: ${e.message}" }
+                        }
                     }
                 }
             }
         }
-    }
 
     private suspend fun consumeIfMatchesAccount(
         pushWrappedEvent: GiftWrapEvent,
@@ -221,30 +249,31 @@ class EventNotificationConsumer(
         }
     }
 
-    suspend fun findAccountAndConsume(event: Event) {
-        Log.d(TAG, "New Notification Arrived")
-        val users = event.taggedUserIds().map { LocalCache.getOrCreateUser(it) }
-        val npubs = users.map { it.pubkeyNpub() }.toSet()
+    suspend fun findAccountAndConsume(event: Event) =
+        withWakeLock {
+            Log.d(TAG, "New Notification Arrived")
+            val users = event.taggedUserIds().map { LocalCache.getOrCreateUser(it) }
+            val npubs = users.map { it.pubkeyNpub() }.toSet()
 
-        // PushNotification Wraps don't include a receiver.
-        // Test with all logged in accounts
-        var matchAccount = false
-        LocalPreferences.allSavedAccounts().forEach {
-            if (!matchAccount && (it.hasPrivKey || it.loggedInWithExternalSigner) && it.npub in npubs) {
-                LocalPreferences.loadAccountConfigFromEncryptedStorage(it.npub)?.let { accountSettings ->
-                    Log.d(TAG) { "New Notification Testing if for ${it.npub}" }
-                    try {
-                        val account = Amethyst.instance.accountsCache.loadAccount(accountSettings)
-                        consumeNotificationEvent(event, account)
-                        matchAccount = true
-                    } catch (e: Exception) {
-                        if (e is CancellationException) throw e
-                        Log.d(TAG) { "Message was not for user ${it.npub}: ${e.message}" }
+            // PushNotification Wraps don't include a receiver.
+            // Test with all logged in accounts
+            var matchAccount = false
+            LocalPreferences.allSavedAccounts().forEach {
+                if (!matchAccount && (it.hasPrivKey || it.loggedInWithExternalSigner) && it.npub in npubs) {
+                    LocalPreferences.loadAccountConfigFromEncryptedStorage(it.npub)?.let { accountSettings ->
+                        Log.d(TAG) { "New Notification Testing if for ${it.npub}" }
+                        try {
+                            val account = Amethyst.instance.accountsCache.loadAccount(accountSettings)
+                            consumeNotificationEvent(event, account)
+                            matchAccount = true
+                        } catch (e: Exception) {
+                            if (e is CancellationException) throw e
+                            Log.d(TAG) { "Message was not for user ${it.npub}: ${e.message}" }
+                        }
                     }
                 }
             }
         }
-    }
 
     private suspend fun unwrapAndConsume(
         event: Event,
