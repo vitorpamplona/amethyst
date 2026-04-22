@@ -126,6 +126,24 @@ class Context(
     fun anyRelays(): Set<NormalizedRelayUrl> = relays.normalized("all")
 
     /**
+     * Seed relays for "look up someone we know nothing about" queries —
+     * fetching another user's kind:10002 / 10050 / 10051 / 30443 before we
+     * can deliver something to them.
+     *
+     * Strategy: union our own configured relays with Amethyst's hard-coded
+     * defaults (DefaultNIP65RelaySet + DefaultDMRelayList). The defaults are
+     * what every fresh Amethyst account publishes to first, so they're the
+     * most reliable place to find a stranger's replaceable events even when
+     * we and they have completely disjoint relay configurations.
+     */
+    fun bootstrapRelays(): Set<NormalizedRelayUrl> =
+        buildSet {
+            addAll(anyRelays())
+            addAll(com.vitorpamplona.amethyst.commons.defaults.DefaultNIP65RelaySet)
+            addAll(com.vitorpamplona.amethyst.commons.defaults.DefaultDMRelayList)
+        }
+
+    /**
      * Publish an event to the given relays and wait for OK confirmations.
      *
      * Returns the set of relays that ACK'd `true`. Does not throw on rejection —
