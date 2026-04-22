@@ -27,6 +27,7 @@ import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 /**
  * End-to-end lifecycle tests for MlsGroup covering the full protocol flow:
@@ -296,6 +297,61 @@ class MlsGroupLifecycleTest {
             keyBeforeRemove.contentEquals(keyAfterRemove),
             "Exporter secret must change after member removal for forward secrecy",
         )
+    }
+
+    /**
+     * Regression: removing a member and re-adding them must produce a fully-
+     * functional group instance on the rejoiner's side. In the originally
+     * reported bug, the re-added user came back with no usable own_leaf —
+     * the UI showed the group but the user could neither decrypt new
+     * messages nor send any. This exercises the full loop with a fresh
+     * KeyPackage on re-add and asserts both directions still work.
+     */
+    @Test
+    fun testReaddAfterRemove_RejoinerCanEncryptAndDecrypt() {
+        val alice = MlsGroup.create("alice".encodeToByteArray())
+
+        // First add: Bob joins.
+        val firstBundle = createStandaloneKeyPackage("bob")
+        val firstAdd = alice.addMember(firstBundle.keyPackage.toTlsBytes())
+        val bob1 = MlsGroup.processWelcome(firstAdd.welcomeBytes!!, firstBundle)
+
+        // Baseline round-trip works before the remove.
+        val hello = "hello before remove".encodeToByteArray()
+        assertContentEquals(hello, bob1.decrypt(alice.encrypt(hello)).content)
+        val pong = "pong before remove".encodeToByteArray()
+        assertContentEquals(pong, alice.decrypt(bob1.encrypt(pong)).content)
+
+        // Alice removes Bob. bob1 is now stale (left-behind, no commit to apply).
+        alice.removeMember(bob1.leafIndex)
+        assertEquals(1, alice.memberCount)
+
+        // Re-add: Bob publishes a fresh KeyPackage, Alice adds it, Bob processes
+        // the new Welcome from scratch. This is the exact flow driven by the
+        // info screen's inline "Add member" after an earlier removal.
+        val secondBundle = createStandaloneKeyPackage("bob")
+        val secondAdd = alice.addMember(secondBundle.keyPackage.toTlsBytes())
+        val bob2 = MlsGroup.processWelcome(secondAdd.welcomeBytes!!, secondBundle)
+
+        assertEquals(alice.epoch, bob2.epoch, "Rejoiner must be at Alice's epoch")
+        assertEquals(2, alice.memberCount)
+        assertEquals(2, bob2.memberCount)
+
+        // Own-leaf sanity: the rejoiner must actually hold a leaf in the tree.
+        assertTrue(bob2.leafIndex >= 0, "Rejoiner must have a valid leafIndex after re-add")
+
+        // The bug surfaces here — if bob2 has no usable leaf / keying material,
+        // one of these two round-trips fails.
+        val afterHello = "hello after re-add".encodeToByteArray()
+        val decrypted = bob2.decrypt(alice.encrypt(afterHello))
+        assertContentEquals(afterHello, decrypted.content, "Rejoiner could not decrypt")
+        assertEquals(0, decrypted.senderLeafIndex, "Sender should still be Alice at leaf 0")
+
+        val afterPong = "pong after re-add".encodeToByteArray()
+        val bobEncrypted = bob2.encrypt(afterPong)
+        val aliceSees = alice.decrypt(bobEncrypted)
+        assertContentEquals(afterPong, aliceSees.content, "Rejoiner could not send (no usable leaf)")
+        assertEquals(bob2.leafIndex, aliceSees.senderLeafIndex)
     }
 
     // -----------------------------------------------------------------------

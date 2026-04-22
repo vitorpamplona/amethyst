@@ -370,14 +370,6 @@ sealed class Route {
 
     @Serializable object CreateMarmotGroup : Route()
 
-    @Serializable data class MarmotGroupAddMember(
-        val nostrGroupId: String,
-    ) : Route()
-
-    @Serializable data class MarmotGroupRemoveMember(
-        val nostrGroupId: String,
-    ) : Route()
-
     @Serializable data class MarmotGroupEditInfo(
         val nostrGroupId: String,
     ) : Route()
