@@ -243,7 +243,19 @@ configure_relays() {
   info "B relays: $(printf '%s' "$relay_list" | jq -r '.result[]? | "\(.url) [\(.status)]"' 2>/dev/null | tr '\n' '  ')"
   printf 'B relay list: %s\n' "$relay_list" >>"$LOG_FILE"
 
-  step "sanity-check: B publishes KP, C fetches it"
+  # Sanity check is split across three relay-level surfaces so a failure
+  # points at the exact kind the relay set can't handle, instead of 10
+  # later tests all timing out with the same "no invite" symptom:
+  #
+  #   kind:30443 (KeyPackage)        — both sides publish + discover
+  #   kind:10050 (Inbox advertise)   — C must be reachable as a giftwrap target
+  #   kind:1059  (Gift wrap)         — B->C welcome delivery
+  #   kind:445   (MLS commit/msg)    — real group message round-trip
+  #
+  # All failures are warnings (not hard fails) so a known-broken relay set
+  # still lets the harness continue into the 13 tests — they will fail
+  # anyway but at least the operator will have the diagnostic hint here.
+  step "sanity-check kind:30443: B+C publish + symmetric discover"
   local publish_out
   if publish_out=$(wn_b keys publish 2>&1); then
     info "wn_b keys publish: ok"
@@ -251,17 +263,57 @@ configure_relays() {
     warn "wn_b keys publish failed: $publish_out"
     printf 'wn_b keys publish: %s\n' "$publish_out" >>"$LOG_FILE"
   fi
+  if publish_out=$(wn_c keys publish 2>&1); then
+    info "wn_c keys publish: ok"
+  else
+    warn "wn_c keys publish failed: $publish_out"
+    printf 'wn_c keys publish: %s\n' "$publish_out" >>"$LOG_FILE"
+  fi
   sleep 4
   local sanity_raw sanity_id
   sanity_raw=$(wn_c --json keys check "$B_NPUB" 2>>"$LOG_FILE" || true)
   sanity_id=$(printf '%s' "$sanity_raw" | jq -r '.result.event_id // .event_id // empty' 2>/dev/null || true)
   if [[ -n "$sanity_id" && "$sanity_id" != "null" ]]; then
-    info "sanity OK — relay round-trip works (event_id: $sanity_id)"
+    info "kind:30443 C->B ok (event_id: $sanity_id)"
   else
-    warn "sanity-check failed — public relays may be rejecting kind 30443."
-    warn "Consider rerunning with --local-relays (requires 'just docker-up' in whitenoise-rs)."
-    info "raw keys check response: $sanity_raw"
-    printf 'sanity keys check raw: %s\n' "$sanity_raw" >>"$LOG_FILE"
+    warn "kind:30443 C->B failed — relays may be rejecting KeyPackages"
+    printf 'sanity keys check B raw: %s\n' "$sanity_raw" >>"$LOG_FILE"
+  fi
+  sanity_raw=$(wn_b --json keys check "$C_NPUB" 2>>"$LOG_FILE" || true)
+  sanity_id=$(printf '%s' "$sanity_raw" | jq -r '.result.event_id // .event_id // empty' 2>/dev/null || true)
+  if [[ -n "$sanity_id" && "$sanity_id" != "null" ]]; then
+    info "kind:30443 B->C ok (event_id: $sanity_id)"
+  else
+    warn "kind:30443 B->C failed — relays may be rejecting KeyPackages"
+    printf 'sanity keys check C raw: %s\n' "$sanity_raw" >>"$LOG_FILE"
+  fi
+
+  step "sanity-check kinds 10050/1059/445: B creates group + invites C + exchanges a message"
+  local sanity_gid sanity_c_gid sanity_create
+  sanity_create=$(wn_b --json groups create "sanity-check" "$C_NPUB" 2>>"$LOG_FILE" || true)
+  sanity_gid=$(printf '%s' "$sanity_create" | jq_group_id)
+  printf 'sanity groups create raw: %s\n' "$sanity_create" >>"$LOG_FILE"
+  if [[ -z "$sanity_gid" ]]; then
+    warn "sanity group create failed — see $LOG_FILE (stale account state? rerun with 'rm -rf state/')"
+  else
+    info "sanity group id: $sanity_gid"
+    if sanity_c_gid=$(wait_for_invite C 30); then
+      info "kind:10050+1059 ok — C received welcome (gid: $sanity_c_gid)"
+      wn_c groups accept "$sanity_c_gid" >/dev/null 2>&1 || true
+      wn_b messages send "$sanity_gid" "sanity-ping" >/dev/null 2>&1 || true
+      if wait_for_message C "$sanity_c_gid" "sanity-ping" 30; then
+        info "kind:445 ok — C decrypted sanity-ping"
+      else
+        warn "kind:445 failed — C never decrypted sanity-ping (relays may be dropping group messages)"
+        warn "Consider rerunning with --local-relays."
+      fi
+      # best-effort cleanup so re-runs don't accumulate dead sanity groups
+      wn_c groups leave "$sanity_c_gid" >/dev/null 2>&1 || true
+      wn_b groups leave "$sanity_gid" >/dev/null 2>&1 || true
+    else
+      warn "kind:10050/1059 failed — C never received welcome; relays likely dropping gift wraps or inbox lists"
+      warn "Consider rerunning with --local-relays (requires 'just docker-up' in whitenoise-rs)."
+    fi
   fi
 }
 
@@ -357,7 +409,7 @@ that's the bug."
 
   step "verifying member list on B"
   local members
-  members=$(wn_b --json groups members "$gid" 2>/dev/null | jq -r '.[].pubkey // .[].public_key' 2>/dev/null | sort | tr '\n' ' ')
+  members=$(wn_b --json groups members "$gid" 2>/dev/null | jq -r '(.result // .) | .[].pubkey // .[].public_key' 2>/dev/null | sort | tr '\n' ' ')
   if ! expect_contains "$members" "$A_HEX" "member list" \
      || ! expect_contains "$members" "$B_HEX" "member list"; then
       record_result "02 Amethyst->B create+invite" fail "member list mismatch"
@@ -465,7 +517,7 @@ test_04_three_member_group() {
 
   step "verifying all three members on all three clients"
   local members_b
-  members_b=$(wn_b --json groups members "$gid" 2>/dev/null | jq -r '.[].pubkey // .[].public_key' | tr '\n' ' ')
+  members_b=$(wn_b --json groups members "$gid" 2>/dev/null | jq -r '(.result // .) | .[].pubkey // .[].public_key' | tr '\n' ' ')
   expect_contains "$members_b" "$A_HEX" "B's member list" || :
   expect_contains "$members_b" "$B_HEX" "B's member list" || :
   expect_contains "$members_b" "$C_HEX" "B's member list" || :
@@ -536,7 +588,7 @@ test_06_member_removal() {
   local deadline=$(( $(date +%s) + 60 )) removed=0
   while [[ $(date +%s) -lt $deadline ]]; do
     if ! wn_c --json groups members "$gid" 2>/dev/null \
-         | jq -e --arg p "$C_HEX" '.[]? | select((.pubkey // .public_key) == $p)' >/dev/null 2>&1; then
+         | jq -e --arg p "$C_HEX" '(.result // .) | .[]? | select((.pubkey // .public_key) == $p)' >/dev/null 2>&1; then
       removed=1; break
     fi
     sleep 3
@@ -581,7 +633,7 @@ test_07_metadata_rename() {
   step "polling B for name change (60s)"
   local deadline=$(( $(date +%s) + 60 )) name=""
   while [[ $(date +%s) -lt $deadline ]]; do
-    name=$(wn_b --json groups show "$gid" 2>/dev/null | jq -r '.name // empty')
+    name=$(wn_b --json groups show "$gid" 2>/dev/null | jq -r '(.result // .) | .name // empty')
     [[ "$name" == "Interop-02-renamed" ]] && break
     sleep 3
   done
@@ -627,7 +679,7 @@ test_08_admin_promote_demote() {
 
   step "verifying admin list contains both B and A"
   local admins
-  admins=$(wn_b --json groups admins "$gid" 2>/dev/null | jq -r '.[].pubkey // .[].public_key // .[]' | tr '\n' ' ')
+  admins=$(wn_b --json groups admins "$gid" 2>/dev/null | jq -r '(.result // .) | .[].pubkey // .[].public_key // .[]' | tr '\n' ' ')
   if expect_contains "$admins" "$A_HEX" "admin list" && expect_contains "$admins" "$B_HEX" "admin list"; then
     pass_msg "admin promote worked"
   else
@@ -637,7 +689,7 @@ test_08_admin_promote_demote() {
   step "B demotes A"
   wn_b groups demote "$gid" "$A_NPUB" >/dev/null 2>&1 || warn "demote returned nonzero"
   sleep 5
-  admins=$(wn_b --json groups admins "$gid" 2>/dev/null | jq -r '.[].pubkey // .[].public_key // .[]' | tr '\n' ' ')
+  admins=$(wn_b --json groups admins "$gid" 2>/dev/null | jq -r '(.result // .) | .[].pubkey // .[].public_key // .[]' | tr '\n' ' ')
   if [[ "$admins" != *"$A_HEX"* ]]; then
     pass_msg "demote removed A"
     record_result "08 admin promote/demote" pass
@@ -660,7 +712,7 @@ test_09_reply_react_unreact() {
   sleep 3
   local msg_id
   msg_id=$(wn_b --json messages list "$gid" --limit 10 2>/dev/null \
-            | jq -r '[.[]? | select((.content // .text // "") == "anchor for reactions")][0].id // .[0].event_id // empty' 2>/dev/null || true)
+            | jq -r '(.result // .) | [.[]? | select((.content // .text // "") == "anchor for reactions")][0].id // .[0].event_id // empty' 2>/dev/null || true)
   if [[ -z "$msg_id" || "$msg_id" == "null" ]]; then
     fail_msg "could not find anchor message id"
     record_result "09 reply/react" fail "anchor id missing"; return
@@ -747,7 +799,7 @@ test_11_leave_group() {
   local deadline=$(( $(date +%s) + 60 )) gone=0
   while [[ $(date +%s) -lt $deadline ]]; do
     if ! wn_b --json groups members "$gid" 2>/dev/null \
-         | jq -e --arg p "$A_HEX" '.[]? | select((.pubkey // .public_key) == $p)' >/dev/null 2>&1; then
+         | jq -e --arg p "$A_HEX" '(.result // .) | .[]? | select((.pubkey // .public_key) == $p)' >/dev/null 2>&1; then
       gone=1; break
     fi
     sleep 3

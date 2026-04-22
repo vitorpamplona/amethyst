@@ -1,6 +1,6 @@
 --- a/src/whitenoise/event_processor/account_event_processor.rs
 +++ b/src/whitenoise/event_processor/account_event_processor.rs
-@@ -178,7 +178,23 @@
+@@ -178,7 +178,22 @@
              }
              Err(e) => {
                  // Handle retry logic for actual processing errors
