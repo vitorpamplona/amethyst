@@ -1084,7 +1084,10 @@ test_10_concurrent_commits() {
 
   step "verifying B's view is consistent (name + epoch)"
   local b_view
-  b_view=$(wn_b --json groups show "$gid" 2>/dev/null | jq '{name, epoch}' 2>/dev/null || echo "{}")
+  # Post-v0.2 wn wraps `groups show` output in {"result": {...}}; peel
+  # that wrapper before extracting the fields so the info log isn't
+  # "name: null, epoch: null" on every run.
+  b_view=$(wn_b --json groups show "$gid" 2>/dev/null | jq '(.result // .) | {name, epoch}' 2>/dev/null || echo "{}")
   info "B state: $b_view"
 
   prompt_human "Read the group name now shown in Amethyst."
