@@ -18,20 +18,28 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip53LiveActivities.presence
+package com.vitorpamplona.quartz.nip53LiveActivities.presence.tags
 
-import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
-import com.vitorpamplona.quartz.nip01Core.tags.aTag.toATag
-import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.MeetingSpaceTag
-import com.vitorpamplona.quartz.nip53LiveActivities.presence.tags.HandRaisedTag
-import com.vitorpamplona.quartz.nip53LiveActivities.presence.tags.MutedTag
+import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.utils.ensure
 
-fun TagArrayBuilder<MeetingRoomPresenceEvent>.roomMeeting(rep: MeetingSpaceTag) = addUnique(rep.toTagArray())
+/**
+ * Mute flag for kind 10312 presence events used by Clubhouse-style audio
+ * rooms (e.g. nostrnests/nests). Carried alongside the optional `hand` tag so
+ * other clients can render the speaker as muted without waiting for the audio
+ * transport to drop frames.
+ */
+class MutedTag {
+    companion object Companion {
+        const val TAG_NAME = "muted"
 
-fun TagArrayBuilder<MeetingRoomPresenceEvent>.roomMeeting(rep: EventHintBundle<MeetingRoomEvent>) = addUnique(rep.toATag().toATagArray())
+        fun parse(tag: Array<String>): Boolean? {
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
+            return tag[1] == "1"
+        }
 
-fun TagArrayBuilder<MeetingRoomPresenceEvent>.handRaised(raised: Boolean) = addUnique(HandRaisedTag.assemble(raised))
-
-fun TagArrayBuilder<MeetingRoomPresenceEvent>.muted(muted: Boolean) = addUnique(MutedTag.assemble(muted))
+        fun assemble(muted: Boolean) = arrayOf(TAG_NAME, if (muted) "1" else "0")
+    }
+}
