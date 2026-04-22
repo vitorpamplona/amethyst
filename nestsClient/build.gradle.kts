@@ -63,6 +63,9 @@ kotlin {
 
         androidMain {
             dependsOn(jvmAndroid)
+            // Kwik QUIC + Flupke HTTP/3 dependencies are NOT yet declared.
+            // See KwikWebTransportFactory.kt for the integration plan and
+            // validated Maven coordinates / minimum versions before adding.
         }
 
         jvmTest {
