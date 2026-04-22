@@ -29,18 +29,12 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.MicOff
 import androidx.compose.material.icons.filled.PanTool
 import androidx.compose.material.icons.outlined.PanTool
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -55,8 +49,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
@@ -65,8 +57,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size40dp
-import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
-import com.vitorpamplona.nestsclient.NestsListenerState
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresenceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ParticipantTag
@@ -80,10 +70,20 @@ import kotlinx.coroutines.launch
  * Clubhouse-style audio-room "stage" rendered in place of the video player when
  * the underlying activity is a NIP-53 kind 30312 [MeetingSpaceEvent].
  *
- * Phase 2 scope: shows host + speaker + audience avatars and lets the local user
- * publish their kind 10312 presence (with hand-raise + mute flags) on relays.
- * The mic toggle is a Nostr-only signal at this point — actual audio capture
- * arrives in Phase 3 with the MoQ/WebTransport transport.
+ * Current (shipping) scope — pure Nostr, no audio transport:
+ *   - Displays host / speaker / audience avatars parsed from the 30312 `p` tags.
+ *   - Publishes kind 10312 presence on enter and every 30 s while composed.
+ *   - Hand-raise toggle flips the `["hand","1"|"0"]` tag on that presence event
+ *     so a host on any NIP-53 client (browser, other Android, etc.) can see the
+ *     request and promote the user to speaker.
+ *
+ * Audio playback / capture + the "Audio connected" chip + the mute button live
+ * behind the WebTransport + QUIC work tracked in
+ * `docs/plans/2026-04-22-pure-kotlin-quic-webtransport-plan.md`. They're not
+ * exposed in the UI until that transport actually runs — a chip that always
+ * reads "Failed: NotImplemented" and a mute button with no mic to mute would
+ * mislead users. Re-enabling them is a small UI patch once
+ * `QuicWebTransportFactory.connect()` produces a real session.
  */
 @Composable
 fun AudioRoomStage(
@@ -114,38 +114,26 @@ private fun AudioRoomStageContent(
         }
 
     var handRaised by rememberSaveable(event.address().toValue()) { mutableStateOf(false) }
-    var muted by rememberSaveable(event.address().toValue()) { mutableStateOf(true) }
     val scope = rememberCoroutineScope()
     val account = accountViewModel.account
 
     // Publish initial presence on enter and refresh every PRESENCE_REFRESH_MS while composed.
-    LaunchedEffect(event.address().toValue(), handRaised, muted) {
-        publishPresence(account, event, handRaised, muted)
+    LaunchedEffect(event.address().toValue(), handRaised) {
+        publishPresence(account, event, handRaised)
         while (isActive) {
             delay(PRESENCE_REFRESH_MS)
-            publishPresence(account, event, handRaised, muted)
+            publishPresence(account, event, handRaised)
         }
     }
 
-    // Best-effort "leave" — re-publish a CLOSED presence so peers see us drop sooner
-    // than the 30 s heartbeat would otherwise allow.
+    // Best-effort "leave" — re-publish a lowered-hand presence so peers see us
+    // drop sooner than the 30 s heartbeat would otherwise allow.
     DisposableEffect(event.address().toValue()) {
         onDispose {
             scope.launch(Dispatchers.IO) {
-                runCatching { publishPresence(account, event, handRaised = false, muted = true) }
+                runCatching { publishPresence(account, event, handRaised = false) }
             }
         }
-    }
-
-    // Audio listener owner. Auto-connects on enter, tears down on dispose.
-    val connectionVm: AudioRoomConnectionViewModel =
-        viewModel(key = "AudioRoom-${event.address().toValue()}")
-    val connectionState by connectionVm.state.collectAsStateWithLifecycle()
-    LaunchedEffect(event.address().toValue()) {
-        connectionVm.connect(event, accountViewModel.account.signer)
-    }
-    DisposableEffect(event.address().toValue()) {
-        onDispose { connectionVm.disconnect() }
     }
 
     Card(
@@ -167,11 +155,6 @@ private fun AudioRoomStageContent(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-
-            ConnectionChip(
-                state = connectionState,
-                onRetry = { connectionVm.connect(event, accountViewModel.account.signer) },
-            )
 
             if (hosts.isNotEmpty() || speakers.isNotEmpty()) {
                 StagePeopleRow(
@@ -205,85 +188,9 @@ private fun AudioRoomStageContent(
                             ),
                     )
                 }
-                StdHorzSpacer
-                FilledIconButton(
-                    onClick = { muted = !muted },
-                    colors =
-                        if (muted) {
-                            IconButtonDefaults.filledIconButtonColors()
-                        } else {
-                            IconButtonDefaults.filledIconButtonColors(
-                                containerColor = MaterialTheme.colorScheme.error,
-                                contentColor = MaterialTheme.colorScheme.onError,
-                            )
-                        },
-                ) {
-                    Icon(
-                        imageVector = if (muted) Icons.Filled.MicOff else Icons.Filled.Mic,
-                        contentDescription =
-                            stringRes(
-                                if (muted) R.string.audio_room_unmute else R.string.audio_room_mute,
-                            ),
-                    )
-                }
             }
         }
     }
-}
-
-@Composable
-private fun ConnectionChip(
-    state: NestsListenerState,
-    onRetry: () -> Unit,
-) {
-    val (label, color, clickable) =
-        when (state) {
-            is NestsListenerState.Idle -> {
-                Triple(
-                    stringRes(R.string.audio_room_conn_idle),
-                    MaterialTheme.colorScheme.surface,
-                    true,
-                )
-            }
-
-            is NestsListenerState.Connecting -> {
-                Triple(
-                    stringRes(R.string.audio_room_conn_connecting, state.step.name),
-                    MaterialTheme.colorScheme.surface,
-                    false,
-                )
-            }
-
-            is NestsListenerState.Connected -> {
-                Triple(
-                    stringRes(R.string.audio_room_conn_connected),
-                    MaterialTheme.colorScheme.primaryContainer,
-                    false,
-                )
-            }
-
-            is NestsListenerState.Failed -> {
-                Triple(
-                    stringRes(R.string.audio_room_conn_failed, state.reason),
-                    MaterialTheme.colorScheme.errorContainer,
-                    true,
-                )
-            }
-
-            is NestsListenerState.Closed -> {
-                Triple(
-                    stringRes(R.string.audio_room_conn_closed),
-                    MaterialTheme.colorScheme.surface,
-                    true,
-                )
-            }
-        }
-    AssistChip(
-        modifier = Modifier.padding(top = 8.dp),
-        onClick = { if (clickable) onRetry() },
-        label = { Text(label, style = MaterialTheme.typography.labelSmall) },
-        colors = AssistChipDefaults.assistChipColors(containerColor = color),
-    )
 }
 
 @Composable
@@ -320,14 +227,16 @@ private suspend fun publishPresence(
     account: com.vitorpamplona.amethyst.model.Account,
     event: MeetingSpaceEvent,
     handRaised: Boolean,
-    muted: Boolean,
 ) {
     runCatching {
         account.signAndComputeBroadcast(
             MeetingRoomPresenceEvent.build(
                 root = event,
                 handRaised = handRaised,
-                muted = muted,
+                // muted tag intentionally omitted while audio transport is not
+                // shipping — we're not producing a mic stream so any muted
+                // value would be misleading.
+                muted = null,
             ),
         )
     }
