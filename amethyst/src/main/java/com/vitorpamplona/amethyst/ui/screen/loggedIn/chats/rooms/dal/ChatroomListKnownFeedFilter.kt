@@ -79,7 +79,11 @@ class ChatroomListKnownFeedFilter(
 
         val marmotGroups =
             account.marmotGroupList.rooms.mapNotNull { _, chatroom ->
-                chatroom.newestMessage ?: chatroom.placeholderNote()
+                if (chatroom.isKnown(followingKeySet)) {
+                    chatroom.newestMessage ?: chatroom.placeholderNote()
+                } else {
+                    null
+                }
             }
 
         return (privateMessages + publicChannels + ephemeralChats + marmotGroups).sortedWith(DefaultFeedOrder)

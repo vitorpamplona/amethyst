@@ -124,6 +124,7 @@ class AccountFeedContentStates(
         scope.launch(Dispatchers.IO) {
             account.marmotGroupList.groupListChanges.collect {
                 dmKnown.invalidateData()
+                dmNew.invalidateData()
             }
         }
     }
