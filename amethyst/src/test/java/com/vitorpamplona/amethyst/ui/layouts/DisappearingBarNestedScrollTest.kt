@@ -107,6 +107,37 @@ class DisappearingBarNestedScrollTest {
     }
 
     @Test
+    fun `pure overscroll from fully-visible state leaves the bars alone`() {
+        // A short list that cannot scroll: the LazyColumn consumes nothing and the whole
+        // drag comes through as `available`. We should not hide the bars from this, or we
+        // end up with two empty bands where the chrome used to be.
+        val state = state()
+        val connection = nsc(state)
+
+        connection.onPostScroll(Offset(0f, 0f), Offset(0f, -80f), NestedScrollSource.UserInput)
+
+        assertEquals(0f, state.topHeightOffset)
+        assertEquals(0f, state.bottomHeightOffset)
+    }
+
+    @Test
+    fun `pure overscroll still moves bars once they are already partially hidden`() {
+        // Scrollable list that reached an edge: the list stops consuming but the user keeps
+        // flinging. Because the bars are already mid-hide we know the list was scrolling,
+        // so overscroll keeps feeding the bar motion — matching the "bars ride along"
+        // philosophy.
+        val state = state(topLimit = 100f, bottomLimit = 50f)
+        state.topHeightOffset = -20f
+        state.bottomHeightOffset = -20f
+        val connection = nsc(state)
+
+        connection.onPostScroll(Offset(0f, 0f), Offset(0f, -40f), NestedScrollSource.UserInput)
+
+        assertEquals(-60f, state.topHeightOffset)
+        assertEquals(-50f, state.bottomHeightOffset)
+    }
+
+    @Test
     fun `canScroll returning false freezes the bars`() {
         val state = state()
         val connection = nsc(state, canScroll = false)
