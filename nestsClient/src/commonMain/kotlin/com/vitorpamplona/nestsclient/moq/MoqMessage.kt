@@ -41,6 +41,10 @@ sealed class MoqMessage {
 enum class MoqMessageType(
     val code: Long,
 ) {
+    Subscribe(0x03),
+    SubscribeOk(0x04),
+    SubscribeError(0x05),
+    Unsubscribe(0x0A),
     ClientSetup(0x40),
     ServerSetup(0x41),
     ;
@@ -105,4 +109,148 @@ data class ServerSetup(
     val parameters: List<SetupParameter> = emptyList(),
 ) : MoqMessage() {
     override val type: MoqMessageType = MoqMessageType.ServerSetup
+}
+
+/**
+ * MoQ track namespace is a tuple of byte strings (draft-ietf-moq-transport).
+ * Clients talking to nests typically use a 1- or 2-element namespace; we
+ * expose the tuple as a `List<ByteArray>` and provide a [text] helper for
+ * the common case where every element is UTF-8.
+ */
+data class TrackNamespace(
+    val tuple: List<ByteArray>,
+) {
+    fun text(): List<String> = tuple.map { it.decodeToString() }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is TrackNamespace) return false
+        if (tuple.size != other.tuple.size) return false
+        for (i in tuple.indices) if (!tuple[i].contentEquals(other.tuple[i])) return false
+        return true
+    }
+
+    override fun hashCode(): Int = tuple.fold(0) { acc, bytes -> 31 * acc + bytes.contentHashCode() }
+
+    companion object {
+        fun of(vararg segments: String): TrackNamespace = TrackNamespace(segments.map { it.encodeToByteArray() })
+    }
+}
+
+/**
+ * Subscribe filter types (draft-ietf-moq-transport). Values align with the
+ * draft's enum; we model it as an enum so the public API reads clearly.
+ */
+enum class SubscribeFilter(
+    val code: Long,
+) {
+    LatestGroup(0x01),
+    LatestObject(0x02),
+    AbsoluteStart(0x03),
+    AbsoluteRange(0x04),
+    ;
+
+    companion object {
+        private val byCode = entries.associateBy { it.code }
+
+        fun fromCode(code: Long): SubscribeFilter? = byCode[code]
+    }
+}
+
+/**
+ * SUBSCRIBE (0x03): client asks a publisher to forward objects belonging to a
+ * (namespace, track) pair. Phase 3c-2 supports only the LatestGroup /
+ * LatestObject filters — absolute-range variants add extra wire fields the
+ * codec will grow in a follow-up if nests ever needs them.
+ */
+data class Subscribe(
+    val subscribeId: Long,
+    val trackAlias: Long,
+    val namespace: TrackNamespace,
+    val trackName: ByteArray,
+    val subscriberPriority: Int = 0x80,
+    val groupOrder: Int = 0x00,
+    val filter: SubscribeFilter = SubscribeFilter.LatestGroup,
+    val parameters: List<SetupParameter> = emptyList(),
+) : MoqMessage() {
+    override val type: MoqMessageType = MoqMessageType.Subscribe
+
+    init {
+        require(filter == SubscribeFilter.LatestGroup || filter == SubscribeFilter.LatestObject) {
+            "Phase 3c-2 only supports LatestGroup / LatestObject filters, got $filter"
+        }
+        require(subscriberPriority in 0..255) { "subscriber_priority must fit in a byte" }
+        require(groupOrder in 0..255) { "group_order must fit in a byte" }
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is Subscribe) return false
+        return subscribeId == other.subscribeId &&
+            trackAlias == other.trackAlias &&
+            namespace == other.namespace &&
+            trackName.contentEquals(other.trackName) &&
+            subscriberPriority == other.subscriberPriority &&
+            groupOrder == other.groupOrder &&
+            filter == other.filter &&
+            parameters == other.parameters
+    }
+
+    override fun hashCode(): Int {
+        var result = subscribeId.hashCode()
+        result = 31 * result + trackAlias.hashCode()
+        result = 31 * result + namespace.hashCode()
+        result = 31 * result + trackName.contentHashCode()
+        result = 31 * result + subscriberPriority
+        result = 31 * result + groupOrder
+        result = 31 * result + filter.hashCode()
+        result = 31 * result + parameters.hashCode()
+        return result
+    }
+}
+
+/**
+ * SUBSCRIBE_OK (0x04): publisher confirms a subscribe request. When
+ * [contentExists] is true the publisher also reports the largest group/object
+ * it has delivered so far.
+ */
+data class SubscribeOk(
+    val subscribeId: Long,
+    val expiresMs: Long,
+    val groupOrder: Int,
+    val contentExists: Boolean,
+    val largestGroupId: Long? = null,
+    val largestObjectId: Long? = null,
+    val parameters: List<SetupParameter> = emptyList(),
+) : MoqMessage() {
+    override val type: MoqMessageType = MoqMessageType.SubscribeOk
+
+    init {
+        require(groupOrder in 0..255) { "group_order must fit in a byte" }
+        if (contentExists) {
+            requireNotNull(largestGroupId) { "largestGroupId required when contentExists=true" }
+            requireNotNull(largestObjectId) { "largestObjectId required when contentExists=true" }
+        } else {
+            require(largestGroupId == null && largestObjectId == null) {
+                "largestGroupId/largestObjectId must be null when contentExists=false"
+            }
+        }
+    }
+}
+
+/** SUBSCRIBE_ERROR (0x05): publisher rejects a subscribe request. */
+data class SubscribeError(
+    val subscribeId: Long,
+    val errorCode: Long,
+    val reasonPhrase: String,
+    val trackAlias: Long,
+) : MoqMessage() {
+    override val type: MoqMessageType = MoqMessageType.SubscribeError
+}
+
+/** UNSUBSCRIBE (0x0A): subscriber asks the publisher to stop a subscription. */
+data class Unsubscribe(
+    val subscribeId: Long,
+) : MoqMessage() {
+    override val type: MoqMessageType = MoqMessageType.Unsubscribe
 }
