@@ -47,7 +47,16 @@ class ChatroomListNewFeedFilter(
                 }
             }
 
-        return privateMessages.sortedWith(DefaultFeedOrder)
+        val marmotGroups =
+            account.marmotGroupList.rooms.mapNotNull { _, chatroom ->
+                if (!chatroom.isKnown(followingKeySet)) {
+                    chatroom.newestMessage ?: chatroom.placeholderNote()
+                } else {
+                    null
+                }
+            }
+
+        return (privateMessages + marmotGroups).sortedWith(DefaultFeedOrder)
     }
 
     override fun updateListWith(

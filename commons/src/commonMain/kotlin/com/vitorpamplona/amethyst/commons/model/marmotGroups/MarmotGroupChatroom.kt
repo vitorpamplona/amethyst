@@ -69,6 +69,21 @@ class MarmotGroupChatroom(
      */
     var ownerSentMessage: Boolean = false
 
+    /**
+     * Classifies this group for the Known/New Requests split.
+     *
+     * Rules:
+     * - If the local user has already participated ([ownerSentMessage]), Known.
+     * - If the group has no known members and no messages yet, New Requests
+     *   (we don't know who invited us, so it's untrusted by default).
+     * - Otherwise, Known iff at least one admin is in the follow set.
+     */
+    fun isKnown(followingKeySet: Set<HexKey>): Boolean {
+        if (ownerSentMessage) return true
+        if (memberCount.value == 0 && messages.isEmpty()) return false
+        return adminPubkeys.value.any { it in followingKeySet }
+    }
+
     // Synthetic note used by list views to represent the group when no
     // messages have been received yet. Lazily created and kept stable so
     // equality-based feed diffing treats it as the same row across refreshes.

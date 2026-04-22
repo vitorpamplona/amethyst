@@ -93,8 +93,12 @@ fun MarmotGroupListScreen(
     // (Account.ensureMarmotKeyPackagePublished), so this screen no longer
     // needs to do anything to make sure invitees can find a KeyPackage.
 
-    val knownGroups = remember(groupList) { groupList.filter { it.second.ownerSentMessage } }
-    val newRequestGroups = remember(groupList) { groupList.filter { !it.second.ownerSentMessage } }
+    val followState by accountViewModel.account.kind3FollowList.flow
+        .collectAsStateWithLifecycle()
+    val followingKeySet = followState.authors
+
+    val knownGroups = remember(groupList, followingKeySet) { groupList.filter { it.second.isKnown(followingKeySet) } }
+    val newRequestGroups = remember(groupList, followingKeySet) { groupList.filter { !it.second.isKnown(followingKeySet) } }
     val visibleGroups = if (selectedTab == 0) knownGroups else newRequestGroups
 
     Scaffold(
