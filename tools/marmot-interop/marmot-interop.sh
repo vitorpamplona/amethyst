@@ -255,6 +255,117 @@ prompt_for_a_npub() {
   [[ "$A_HEX" != "$A_NPUB" ]] && info "A hex:  $A_HEX"
 }
 
+# Trigger wn's on-demand discovery for A and dump what wn actually
+# learned — kinds 10002 / 10050 / 10051 from A's configured relays.
+# Called after prompt_for_a_npub so wn's SQLite cache is populated
+# BEFORE the test suite starts, and so the operator can spot "wn sees
+# nothing for A" failures up front instead of as a cryptic Test 03
+# timeout.
+#
+# Implementation:
+#  - `wn keys check <npub>` calls `resolve_user_blocking` which issues
+#    a targeted fetch for kinds [0, 10002, 10050, 10051] on the
+#    discovery-plane relays. That's the only published side-effect
+#    way to populate wn's user_relays table (no public CLI reads
+#    another user's relay lists directly).
+#  - After the fetch, `sqlite3` is used to SELECT from `user_relays`
+#    joined against `users` + `relays`. If sqlite3 isn't installed
+#    the probe degrades to "trust it, go run the tests" with a warning.
+discover_a_relays() {
+  banner "Discovering A's advertised relays via wn"
+  step "wn_b keys check \$A_NPUB — populates wn's user_relays cache for A"
+  local kp_raw kp_event_id
+  kp_raw=$(wn_b --json keys check "$A_NPUB" 2>>"$LOG_FILE" || true)
+  printf 'wn_b keys check A raw: %s\n' "$kp_raw" >>"$LOG_FILE"
+  kp_event_id=$(printf '%s' "$kp_raw" | jq -r '.result.event_id // .event_id // empty' 2>/dev/null || true)
+  if [[ -n "$kp_event_id" && "$kp_event_id" != "null" ]]; then
+    info "wn_b found A's KeyPackage (kind:30443) — discovery plane is working"
+  else
+    warn "wn_b could NOT find A's KeyPackage. wn is bootstrapped on ${DEFAULT_RELAYS[*]}."
+    warn "Either Amethyst never published a KeyPackage, or it's only on relays wn can't reach."
+    warn "All later tests will fail. Fix this before continuing (tap KP publish in Amethyst settings)."
+  fi
+  # Also prime wn_c so Tests 04+ (which use C as a third member) can
+  # target A without another round-trip later.
+  wn_c --json keys check "$A_NPUB" >>"$LOG_FILE" 2>&1 || true
+
+  # Give wn ~3s to process the kind:10002/10050/10051 events that
+  # came back in the same fetch (they're not event_id-returned, they
+  # just land in user_relays via the subscription callback).
+  sleep 3
+
+  if ! command -v sqlite3 >/dev/null 2>&1; then
+    warn "sqlite3 not installed — skipping wn user_relays cache probe."
+    warn "If Test 03 fails with 'no invite arrived', install sqlite3 or rerun with --local-relays."
+    return
+  fi
+
+  # wn stores its database under $data_dir/release/<something>.sqlite.
+  # Find the DB file by looking for the only *.sqlite under release/.
+  local db
+  db=$(find "$B_DIR/release" -maxdepth 1 -name '*.sqlite' -print -quit 2>/dev/null || true)
+  if [[ -z "$db" || ! -s "$db" ]]; then
+    warn "wn SQLite DB not found under $B_DIR/release — cannot probe user_relays."
+    return
+  fi
+
+  step "wn_b's cached view of A's relay lists (SELECT from user_relays)"
+  local rows
+  rows=$(sqlite3 -readonly "$db" \
+    "SELECT ur.relay_type, r.url FROM user_relays ur
+       JOIN users u ON u.id = ur.user_id
+       JOIN relays r ON r.id = ur.relay_id
+      WHERE LOWER(HEX(u.pubkey)) = LOWER('$A_HEX')
+      ORDER BY ur.relay_type, r.url;" 2>>"$LOG_FILE" || true)
+  if [[ -z "$rows" ]]; then
+    warn "wn has NO cached relay entries for A ($A_HEX)."
+    warn "  → Amethyst hasn't published kind:10002/10050/10051 to any relay wn_b can reach."
+    warn "  → Welcomes and gift wraps will not reach Amethyst. Tests 03+ will fail."
+    return
+  fi
+
+  # Collate by relay_type for readability.
+  local nip65 inbox kp
+  nip65=$(printf '%s\n' "$rows" | awk -F'|' '$1=="nip65"{print "    "$2}')
+  inbox=$(printf '%s\n' "$rows" | awk -F'|' '$1=="inbox"{print "    "$2}')
+  kp=$(printf '%s\n' "$rows" | awk -F'|' '$1=="key_package"{print "    "$2}')
+  info "A's kind:10002 (nip65):"
+  printf '%s\n' "${nip65:-    <none — A hasn't published or wn can't reach that list>}" | tee -a "$LOG_FILE" >&2
+  info "A's kind:10050 (DM inbox, used for Marmot welcome delivery):"
+  printf '%s\n' "${inbox:-    <none — Marmot welcomes will fall back to NIP-65 read relays>}" | tee -a "$LOG_FILE" >&2
+  info "A's kind:10051 (KeyPackage relays):"
+  printf '%s\n' "${kp:-    <none — KeyPackage discovery may still work via NIP-65>}" | tee -a "$LOG_FILE" >&2
+
+  # Warn loudly if A's DM inbox is non-empty but shares no relay with
+  # wn_b's own configured set — that's the exact failure mode the
+  # operator already hit ("my DM inbox has auth.nostr1.com, wn can't
+  # publish there") and it silently breaks Test 03+.
+  if [[ -n "$inbox" ]]; then
+    local wn_relays
+    wn_relays=$(wn_b --json relays list 2>/dev/null \
+      | jq -r '(.result // .)[]? | (.url // .relay.url // empty)' 2>/dev/null)
+    local overlap=""
+    while IFS= read -r a_url; do
+      a_url="${a_url#    }"
+      [[ -z "$a_url" ]] && continue
+      if printf '%s\n' "$wn_relays" | grep -qxF "$a_url"; then
+        overlap+="$a_url,"
+      fi
+    done <<< "$inbox"
+    overlap="${overlap%,}"
+    if [[ -z "$overlap" ]]; then
+      warn "A's DM inbox (kind:10050) shares ZERO relays with wn_b's bootstrap set."
+      warn "  wn may still reach A's 10050 relays if they're public — but if any require"
+      warn "  NIP-42 AUTH (auth.nostr1.com) or a whitelist (relay.0xchat.com), the welcome"
+      warn "  gift wrap silently fails to publish."
+      warn "  Real-world fix: edit Amethyst's DM Inbox list to include at least one of:"
+      warn "    ${DEFAULT_RELAYS[*]}"
+    else
+      info "A's DM inbox overlaps wn's bootstrap at: $overlap — welcomes should flow"
+    fi
+  fi
+}
+
 # --- relays ------------------------------------------------------------------
 configure_relays() {
   banner "Configuring relays"
@@ -409,29 +520,42 @@ configure_relays() {
 }
 
 instruct_amethyst_setup() {
-  local list
   if [[ "$USE_LOCAL_RELAYS" -eq 1 ]]; then
-    list="  ws://10.0.2.2:8080    (Android emulator)
-  ws://<your-LAN-ip>:8080  (physical device on same Wi-Fi)"
-  else
-    list=$(printf '  %s\n' "${DEFAULT_RELAYS[@]}")
+    # Offline/sandbox path: we own the only relay, so the harness DOES
+    # need to dictate Amethyst's relay config — nothing is discoverable
+    # via the public network.
+    prompt_human "Configure Amethyst to match this --local-relays harness:
+  1. Settings -> Relays:  add as READ+WRITE
+       ws://10.0.2.2:8080     (Android emulator)
+       ws://<your-LAN-ip>:8080  (physical device on same Wi-Fi)
+  2. Settings -> Key Package Relays:  add the SAME URL
+  3. Settings -> DM Inbox Relays (NIP-17/kind:10050):  add the SAME URL
+  4. Trigger key-package publish (toggle KP relay on/off if needed)
+  5. Confirm your Amethyst account is logged in with npub: $A_NPUB"
+    return
   fi
-  prompt_human "Configure Amethyst to match this harness:
-  1. Settings -> Relays:  add the following as READ+WRITE
-$list
-  2. Settings -> Key Package Relays:  add the SAME URLs
-  3. Settings -> DM Inbox Relays (NIP-17/kind:10050):  add the SAME URLs.
-     CRITICAL for Test 03+: when wn invites Amethyst it fetches A's
-     kind:10050 and publishes the welcome gift wrap there. Amethyst's
-     built-in DM inbox defaults (auth.nostr1.com, relay.0xchat.com)
-     are not reachable from the wn daemon in this harness, so unless
-     the five harness relays are in the 10050 list the gift wrap lands
-     on relays Amethyst-the-reader isn't subscribed to.
-  4. Trigger key-package publish (toggle KP relay on/off if needed).
-  5. Re-publish the NIP-65 + DM-inbox lists if Amethyst hasn't already
-     (relay toggles usually republish automatically; verify by looking
-     for kind:10002 / 10050 in any relay inspector).
-  6. Confirm your Amethyst account is logged in with npub: $A_NPUB"
+
+  # Public-relay path: the harness should behave like any real Nostr
+  # client — discover A's advertised relays via kind:10002 / 10050 /
+  # 10051 and publish there, rather than forcing A to adopt the
+  # harness's own relay set. That lets the tests surface real-world
+  # interop failures (e.g. A's DM inbox points at auth-required or
+  # unreachable relays) instead of hiding them behind shared config.
+  prompt_human "No relay reconfiguration required. Just confirm:
+  1. Amethyst is logged in as npub:
+       $A_NPUB
+  2. Amethyst has published (on its own chosen relays):
+       - kind:30443 KeyPackage
+       - kind:10051 Key Package Relay List
+       - kind:10050 DM Inbox Relay List
+       - kind:10002 NIP-65 Outbox/Inbox Relay List
+     Any one of Amethyst's public write relays will do — the wn daemons
+     below are bootstrapped on $(printf '%s, ' "${DEFAULT_RELAYS[@]}" | sed 's/, $//') and will
+     discover A's advertised relays automatically.
+  3. If the wn-side diagnostic after this prompt shows that wn cannot
+     see any of A's four lists, Amethyst hasn't published them to any
+     relay wn can reach — republish them (toggle a relay off/on in
+     Settings, then verify via an external relay inspector)."
 }
 
 # ==== tests ==================================================================
@@ -1103,6 +1227,15 @@ main() {
   banner "Post-configure baseline diagnostics"
   dump_daemon_diagnostics B "post-configure"
   dump_daemon_diagnostics C "post-configure"
+
+  # Let wn discover A's advertised relays via its normal subscription
+  # plane, then dump what wn actually sees. This is the "Am I going to
+  # be able to reach this user?" probe — surfaces up front the kind of
+  # failure (A's 10050 unreachable from wn, missing KP list, etc.) that
+  # would otherwise bite as a silent Test 03 timeout.
+  if [[ "$USE_LOCAL_RELAYS" -ne 1 ]]; then
+    discover_a_relays
+  fi
 
   instruct_amethyst_setup
 
