@@ -82,6 +82,20 @@ test_07_metadata_rename() {
     record_result "$id" fail "B saw name=\"$seen\" not \"Interop-02-renamed\""; return
   }
 
+  # MIP-01: only admins may rename. GROUP_02 was created by amy (sole
+  # admin), so for B's rename to be accepted by wn's MIP-01 check amy
+  # must first promote B. amy adds B to admin_pubkeys via GCE, which
+  # the harness consumes via `marmot group promote` — equivalent to
+  # `wn groups promote` but issued by the quartz side. Without this
+  # step B's own wn silently refuses the rename on its MIP-01
+  # `ensure_account_is_group_admin` check, and the kind:445 is never
+  # published.
+  amy_json marmot group promote "$gid" "$B_NPUB" >/dev/null 2>&1 || {
+    record_result "$id" fail "amy promote-B failed"; return
+  }
+  # Let wn apply the promote commit before issuing the rename.
+  sleep 3
+
   # Now B renames back and A should pick it up.
   wn_b groups rename "$mls_gid" "Interop-02-reverse" >/dev/null 2>&1 || true
   if amy_json marmot await rename "$gid" --name "Interop-02-reverse" --timeout 120 >/dev/null; then
