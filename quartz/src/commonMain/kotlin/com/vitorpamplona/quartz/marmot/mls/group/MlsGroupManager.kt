@@ -174,10 +174,11 @@ class MlsGroupManager(
         nostrGroupId: HexKey,
         identity: ByteArray,
         signingKey: ByteArray? = null,
+        initialExtensions: List<com.vitorpamplona.quartz.marmot.mls.tree.Extension> = emptyList(),
     ): MlsGroup =
         mutex.withLock {
             Log.d(TAG) { "createGroup($nostrGroupId): creating new MLS group" }
-            val group = MlsGroup.create(identity, signingKey)
+            val group = MlsGroup.create(identity, signingKey, initialExtensions)
             groups[nostrGroupId] = group
             persistGroup(nostrGroupId)
             Log.d(TAG) { "createGroup($nostrGroupId): done, in-memory group count=${groups.size}" }

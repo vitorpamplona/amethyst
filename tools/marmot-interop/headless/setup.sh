@@ -39,7 +39,7 @@ preflight() {
       2>&1 | tee -a "$LOG_FILE"
   fi
 
-  # Two harness-only patches to wnd so it runs fully offline / in
+  # Three harness-only patches to wnd so it runs fully offline / in
   # sandboxes that block outbound + kernel keyring:
   #   1. discovery-env: honour $WHITENOISE_DISCOVERY_RELAYS so we can
   #      point wnd at our loopback relay instead of the baked-in public
@@ -47,9 +47,17 @@ preflight() {
   #   2. mock-keyring: honour $WHITENOISE_MOCK_KEYRING so wnd uses the
   #      integration-tests mock keyring store when the kernel keyutils
   #      syscalls are blocked (common in containers / CI).
+  #   3. defaults-env: reuse the same env var so `Relay::defaults()`
+  #      (what `create-identity` stamps into the new account's NIP-65 /
+  #      inbox / key-package lists) points at the loopback relay too.
+  #      Without it every account wnd creates carries damus.io /
+  #      primal.net / nos.lol, and every later activate / publish burns
+  #      connection budget on unreachable sockets — enough to break the
+  #      account-inbox subscription plane and drop kind:1059 delivery.
   local -a patches=(
     "whitenoise-discovery-env.patch"
     "whitenoise-mock-keyring.patch"
+    "whitenoise-defaults-env.patch"
   )
   for name in "${patches[@]}"; do
     local marker="$WN_REPO/.headless-patched-${name%.patch}"
@@ -267,4 +275,9 @@ configure_relays() {
 
   step "publishing A's KeyPackage"
   amy_a marmot key-package publish >>"$LOG_FILE" 2>&1 || warn "amy marmot key-package publish failed"
+  # Give nostr-rs-relay a breath to fsync the kind:10002 / 10050 / 30443
+  # writes and push them out on the discovery subscription so that the
+  # first `wn keys check` that follows actually sees them instead of
+  # racing the relay's WAL flush.
+  sleep 2
 }

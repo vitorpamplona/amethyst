@@ -2260,6 +2260,14 @@ class Account(
     /**
      * Leave a Marmot MLS group.
      * Publishes the SelfRemove proposal and removes local state.
+     *
+     * MIP-01/MIP-03: admins MUST first publish a GroupContextExtensions
+     * commit dropping themselves from `admin_pubkeys` before issuing a
+     * SelfRemove proposal. Without that, [MlsGroup.selfRemove] throws
+     * `IllegalStateException("Admin must self-demote via GroupContextExtensions
+     * before SelfRemove (MIP-01)")` and the leave aborts. Demote commit and
+     * SelfRemove proposal both go to the same group relays, demote first so
+     * peers apply it before they see the SelfRemove.
      */
     suspend fun leaveMarmotGroup(
         nostrGroupId: HexKey,
@@ -2267,6 +2275,27 @@ class Account(
     ) {
         val manager = marmotManager ?: return
         if (!isWriteable()) return
+
+        val metadata = manager.groupMetadata(nostrGroupId)
+        if (metadata != null && metadata.adminPubkeys.contains(signer.pubKey)) {
+            val remaining = metadata.adminPubkeys.filter { it != signer.pubKey }.toMutableList()
+            // MIP-03 also rejects any GCE commit that leaves the group with zero
+            // admins. If we're the only one, promote an arbitrary non-self
+            // member to admin before stepping down.
+            if (remaining.isEmpty()) {
+                val heir =
+                    manager
+                        .memberPubkeys(nostrGroupId)
+                        .map { it.pubkey }
+                        .firstOrNull { it != signer.pubKey }
+                if (heir != null) remaining.add(heir)
+            }
+            if (remaining.isNotEmpty()) {
+                val demoted = metadata.copy(adminPubkeys = remaining)
+                val demoteCommit = manager.updateGroupMetadata(nostrGroupId, demoted)
+                client.publish(demoteCommit.signedEvent, groupRelays)
+            }
+        }
 
         val outbound = manager.leaveGroup(nostrGroupId)
         client.publish(outbound.signedEvent, groupRelays)

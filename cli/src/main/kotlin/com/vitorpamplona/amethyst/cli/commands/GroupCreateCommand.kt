@@ -40,9 +40,12 @@ object GroupCreateCommand {
             ctx.prepare()
             val gid = RandomInstance.bytes(32).toHexKey()
 
-            ctx.marmot.createGroup(gid)
-
-            // Stamp initial metadata via the shared factory so UI + CLI stay byte-identical.
+            // Stamp initial metadata via the shared factory so UI + CLI stay
+            // byte-identical. Bake the MarmotGroupData extension into the
+            // epoch-0 GroupContext directly (see `MarmotManager.createGroup`)
+            // so later invitees receive a pre-populated group from the
+            // welcome and never have to chase an undecryptable bootstrap
+            // commit that predates their membership.
             val outboxUrls = ctx.outboxRelays().map { it.url }
             val metadata =
                 MarmotGroupData.bootstrap(
@@ -51,19 +54,14 @@ object GroupCreateCommand {
                     outboxRelays = outboxUrls,
                     name = name,
                 )
-            val commit = ctx.marmot.updateGroupMetadata(gid, metadata)
-
-            // Group relays == what the metadata carries, which on first commit is our outbox.
-            val targets = ctx.outboxRelays()
-            val ack = ctx.publish(commit.signedEvent, targets)
+            ctx.marmot.createGroup(gid, initialMetadata = metadata)
 
             Json.writeLine(
                 mapOf(
                     "group_id" to gid,
+                    "mls_group_id" to ctx.marmot.mlsGroupIdHex(gid),
                     "name" to name,
                     "epoch" to ctx.marmot.groupEpoch(gid),
-                    "commit_event_id" to commit.signedEvent.id,
-                    "published_to" to ack.filterValues { it }.keys.map { it.url },
                 ),
             )
             return 0

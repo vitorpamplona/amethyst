@@ -66,12 +66,13 @@ object GroupMetadataCommands {
 
     private suspend fun edit(
         dataDir: DataDir,
-        gid: HexKey,
+        rawGid: HexKey,
         mutate: suspend (Context, MarmotGroupData) -> MarmotGroupData,
     ): Int {
         val ctx = Context.open(dataDir)
         try {
             ctx.prepare()
+            val gid = ctx.resolveGroupId(rawGid)
             ctx.syncIncoming()
             if (!ctx.marmot.isMember(gid)) return Json.error("not_member", gid)
             val outboxUrls = ctx.outboxRelays().map { it.url }

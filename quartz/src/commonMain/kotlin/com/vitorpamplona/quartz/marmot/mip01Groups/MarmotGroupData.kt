@@ -191,7 +191,22 @@ data class MarmotGroupData(
     fun toExtension(): Extension = Extension(EXTENSION_ID_INT, encodeTls())
 
     companion object {
-        const val CURRENT_VERSION = 3
+        /**
+         * Version we emit for freshly created groups and fresh GCE commits.
+         *
+         * Held at 2 (not 3) because the Rust mdk-core MLS engine used by
+         * whitenoise-rs (the only other shipping Marmot client today) is
+         * stricter than MIP-01's "ignore trailing bytes for forward
+         * compatibility" rule — it rejects v3 payloads with
+         * `ExtensionFormatError("Trailing bytes in NostrGroupDataExtension")`,
+         * which means our v3 welcomes/commits never get applied and every
+         * cross-client group flow breaks. We still PARSE v3 happily via
+         * [decodeTls] (any peer that sends us a v3 group will round-trip),
+         * but we don't create them until mdk-core catches up.
+         *
+         * Bump back to 3 once mdk publishes the forward-compat fix.
+         */
+        const val CURRENT_VERSION = 2
 
         /** Versions this implementation understands. v0 is reserved/invalid per MIP-01. */
         val SUPPORTED_VERSIONS: Set<Int> = setOf(1, 2, 3)

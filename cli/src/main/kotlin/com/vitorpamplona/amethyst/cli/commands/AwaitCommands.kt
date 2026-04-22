@@ -108,6 +108,7 @@ object AwaitCommands {
                     Json.writeLine(
                         mapOf(
                             "group_id" to match,
+                            "mls_group_id" to ctx.marmot.mlsGroupIdHex(match),
                             "name" to (ctx.marmot.groupMetadata(match)?.name ?: ""),
                             "epoch" to ctx.marmot.groupEpoch(match),
                         ),
@@ -127,7 +128,7 @@ object AwaitCommands {
         rest: Array<String>,
     ): Int =
         pollCondition(dataDir, rest, "await member <gid> <npub>", targetIdx = 1) { ctx, rawArgs ->
-            val gid = rawArgs[0]
+            val gid = ctx.resolveGroupId(rawArgs[0])
             val target = ctx.requireUserHex(rawArgs[1])
             if (!ctx.marmot.isMember(gid)) {
                 null
@@ -143,7 +144,7 @@ object AwaitCommands {
         rest: Array<String>,
     ): Int =
         pollCondition(dataDir, rest, "await admin <gid> <npub>", targetIdx = 1) { ctx, rawArgs ->
-            val gid = rawArgs[0]
+            val gid = ctx.resolveGroupId(rawArgs[0])
             val target = ctx.requireUserHex(rawArgs[1])
             if (!ctx.marmot.isMember(gid)) {
                 null
@@ -163,13 +164,13 @@ object AwaitCommands {
         rest: Array<String>,
     ): Int {
         if (rest.isEmpty()) return Json.error("bad_args", "await rename <gid> --name <name>")
-        val gid = rest[0]
         val args = Args(rest.drop(1).toTypedArray())
         val wantedName = args.requireFlag("name")
         val timeoutSecs = args.longFlag("timeout", 30)
         val ctx = Context.open(dataDir)
         try {
             ctx.prepare()
+            val gid = ctx.resolveGroupId(rest[0])
             val deadline = System.currentTimeMillis() + timeoutSecs * 1000
             while (System.currentTimeMillis() < deadline) {
                 ctx.syncIncoming(timeoutMs = 3_000)
@@ -191,13 +192,13 @@ object AwaitCommands {
         rest: Array<String>,
     ): Int {
         if (rest.isEmpty()) return Json.error("bad_args", "await epoch <gid> --min N")
-        val gid = rest[0]
         val args = Args(rest.drop(1).toTypedArray())
         val min = args.longFlag("min", 1)
         val timeoutSecs = args.longFlag("timeout", 30)
         val ctx = Context.open(dataDir)
         try {
             ctx.prepare()
+            val gid = ctx.resolveGroupId(rest[0])
             val deadline = System.currentTimeMillis() + timeoutSecs * 1000
             while (System.currentTimeMillis() < deadline) {
                 ctx.syncIncoming(timeoutMs = 3_000)
@@ -219,13 +220,13 @@ object AwaitCommands {
         rest: Array<String>,
     ): Int {
         if (rest.isEmpty()) return Json.error("bad_args", "await message <gid> --match STRING")
-        val gid = rest[0]
         val args = Args(rest.drop(1).toTypedArray())
         val needle = args.requireFlag("match")
         val timeoutSecs = args.longFlag("timeout", 30)
         val ctx = Context.open(dataDir)
         try {
             ctx.prepare()
+            val gid = ctx.resolveGroupId(rest[0])
             val deadline = System.currentTimeMillis() + timeoutSecs * 1000
             while (System.currentTimeMillis() < deadline) {
                 ctx.syncIncoming(timeoutMs = 3_000)

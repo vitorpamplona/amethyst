@@ -56,10 +56,10 @@ object GroupReadCommands {
         rest: Array<String>,
     ): Int {
         if (rest.isEmpty()) return Json.error("bad_args", "group show <group_id>")
-        val gid = rest[0]
         val ctx = Context.open(dataDir)
         try {
             ctx.prepare()
+            val gid = ctx.resolveGroupId(rest[0])
             ctx.syncIncoming()
             if (!ctx.marmot.isMember(gid)) return Json.error("not_member", gid)
             val meta = ctx.marmot.groupMetadata(gid)
@@ -70,6 +70,7 @@ object GroupReadCommands {
             Json.writeLine(
                 mapOf(
                     "group_id" to gid,
+                    "mls_group_id" to ctx.marmot.mlsGroupIdHex(gid),
                     "name" to (meta?.name ?: ""),
                     "description" to (meta?.description ?: ""),
                     "epoch" to ctx.marmot.groupEpoch(gid),
@@ -90,10 +91,10 @@ object GroupReadCommands {
         rest: Array<String>,
     ): Int {
         if (rest.isEmpty()) return Json.error("bad_args", "group members <group_id>")
-        val gid = rest[0]
         val ctx = Context.open(dataDir)
         try {
             ctx.prepare()
+            val gid = ctx.resolveGroupId(rest[0])
             ctx.syncIncoming()
             if (!ctx.marmot.isMember(gid)) return Json.error("not_member", gid)
             val members =
@@ -112,10 +113,10 @@ object GroupReadCommands {
         rest: Array<String>,
     ): Int {
         if (rest.isEmpty()) return Json.error("bad_args", "group admins <group_id>")
-        val gid = rest[0]
         val ctx = Context.open(dataDir)
         try {
             ctx.prepare()
+            val gid = ctx.resolveGroupId(rest[0])
             ctx.syncIncoming()
             if (!ctx.marmot.isMember(gid)) return Json.error("not_member", gid)
             val m = ctx.marmot.groupMetadata(gid)

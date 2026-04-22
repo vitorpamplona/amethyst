@@ -262,11 +262,24 @@ class MarmotManager(
 
     /**
      * Create a new MLS group.
+     *
+     * When [initialMetadata] is non-null it is baked into epoch 0's
+     * GroupContext.extensions. Later joiners' welcomes therefore carry the
+     * group name / admin list / relays from the get-go and no separate
+     * "bootstrap commit" needs to be published. The bootstrap-commit path
+     * works in theory, but it produces a kind:445 encrypted with epoch 0's
+     * exporter secret that no post-membership peer (amethyst or wn) has,
+     * so each such peer wastes their commit-retry budget on an
+     * undecryptable event before processing the real state.
      */
-    suspend fun createGroup(nostrGroupId: HexKey): HexKey {
+    suspend fun createGroup(
+        nostrGroupId: HexKey,
+        initialMetadata: MarmotGroupData? = null,
+    ): HexKey {
         Log.d("MarmotManager") { "createGroup($nostrGroupId): by ${signer.pubKey.take(8)}…" }
         val identity = signer.pubKey.hexToByteArray()
-        groupManager.createGroup(nostrGroupId, identity)
+        val extras = initialMetadata?.let { listOf(it.toExtension()) } ?: emptyList()
+        groupManager.createGroup(nostrGroupId, identity, initialExtensions = extras)
         subscriptionManager.subscribeGroup(nostrGroupId)
         Log.d("MarmotManager") { "createGroup($nostrGroupId): persisted and subscribed" }
         return nostrGroupId
@@ -346,13 +359,24 @@ class MarmotManager(
     /**
      * Update group metadata (name, description, etc.) via a GroupContextExtensions proposal.
      * Creates a GCE proposal, commits it, and returns the commit event to publish.
+     *
+     * RFC 9420 §12.1.7: a GroupContextExtensions proposal REPLACES the entire
+     * extension list in GroupContext. Peers (notably mdk-core / whitenoise-rs)
+     * reject welcomes whose GroupContext is missing the required-capabilities
+     * extension, and strip metadata from groups whose context lacks the
+     * MarmotGroupData extension. We therefore preserve every other existing
+     * extension and overwrite only the slot we actually want to update.
      */
     suspend fun updateGroupMetadata(
         nostrGroupId: HexKey,
         metadata: MarmotGroupData,
     ): OutboundGroupEvent {
-        val commitResult =
-            groupManager.updateGroupExtensions(nostrGroupId, listOf(metadata.toExtension()))
+        val group =
+            groupManager.getGroup(nostrGroupId)
+                ?: throw IllegalStateException("Not a member of group $nostrGroupId")
+        val preserved = group.extensions.filter { it.extensionType != MarmotGroupData.EXTENSION_ID_INT }
+        val merged = preserved + metadata.toExtension()
+        val commitResult = groupManager.updateGroupExtensions(nostrGroupId, merged)
         val commitEvent =
             outboundProcessor.buildCommitEvent(
                 nostrGroupId = nostrGroupId,
@@ -479,6 +503,18 @@ class MarmotManager(
      * Get the current epoch for a group.
      */
     fun groupEpoch(nostrGroupId: HexKey): Long? = groupManager.getGroup(nostrGroupId)?.epoch
+
+    /**
+     * Hex-encoded MLS group id for the group keyed by [nostrGroupId], or null if
+     * that group is not locally known.
+     *
+     * Interop note: whitenoise-rs (and every mdk consumer) indexes groups by the
+     * MLS GroupContext's groupId, NOT the MIP-01 nostr_group_id that we use as
+     * the primary key internally. When a harness or external caller needs to
+     * cross-reference a group with another client (e.g. the interop harness
+     * calling `wn messages list <mls_id>`), it needs this translation.
+     */
+    fun mlsGroupIdHex(nostrGroupId: HexKey): HexKey? = groupManager.getGroup(nostrGroupId)?.groupId?.toHexKey()
 
     /**
      * Resolve the MLS leaf index for a member by Nostr pubkey, or null if that

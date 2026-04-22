@@ -1,0 +1,24 @@
+--- a/src/whitenoise/relays.rs
++++ b/src/whitenoise/relays.rs
+@@ -98,6 +98,21 @@
+     }
+
+     pub(crate) fn defaults() -> Vec<Relay> {
++        // marmot-interop-headless patch: honour $WHITENOISE_DISCOVERY_RELAYS
++        // (comma-separated list) when present so newly created accounts only
++        // ever get our loopback relay baked into their NIP-65 / inbox /
++        // key-package lists. Without this override, `create-identity` stamps
++        // the hard-coded public set into the account's relay lists, and every
++        // later activate / publish burns connection budget on unreachable
++        // sockets — enough to break inbox-plane activation and drop kind:1059.
++        if let Ok(from_env) = std::env::var("WHITENOISE_DISCOVERY_RELAYS") {
++            let parsed: Vec<Relay> = from_env
++                .split(',').map(str::trim).filter(|s| !s.is_empty())
++                .filter_map(|u| RelayUrl::parse(u).ok())
++                .map(|url| Relay::new(&url))
++                .collect();
++            if !parsed.is_empty() { return parsed; }
++        }
+         let urls: &[&str] = if cfg!(debug_assertions) {
+             &["ws://localhost:8080", "ws://localhost:7777"]
+         } else {

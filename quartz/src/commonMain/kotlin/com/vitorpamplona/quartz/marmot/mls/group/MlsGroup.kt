@@ -1929,6 +1929,7 @@ class MlsGroup private constructor(
         fun create(
             identity: ByteArray,
             signingKey: ByteArray? = null,
+            initialExtensions: List<com.vitorpamplona.quartz.marmot.mls.tree.Extension> = emptyList(),
         ): MlsGroup {
             val sigKp =
                 signingKey?.let { key ->
@@ -1953,13 +1954,18 @@ class MlsGroup private constructor(
             tree.setLeaf(0, leafNode)
 
             val treeHash = tree.treeHash()
+            // Start with required_capabilities + whatever the caller wants to
+            // bake into epoch 0 (e.g. the MIP-01 MarmotGroupData extension so
+            // new peers who join later can see the group name without first
+            // decrypting a pre-membership bootstrap commit — see MIP-03).
+            val baseExtensions = listOf(buildMarmotRequiredCapabilitiesExtension())
             val groupContext =
                 GroupContext(
                     groupId = groupId,
                     epoch = 0,
                     treeHash = treeHash,
                     confirmedTranscriptHash = ByteArray(0),
-                    extensions = listOf(buildMarmotRequiredCapabilitiesExtension()),
+                    extensions = baseExtensions + initialExtensions,
                 )
 
             // Initial key schedule with zero secrets
