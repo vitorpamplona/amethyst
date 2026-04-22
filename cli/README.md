@@ -1,0 +1,183 @@
+# Amy — Amethyst CLI
+
+`amy` is the non-interactive command-line face of Amethyst. It speaks the
+same Nostr protocol as the Android and Desktop apps, shares the same
+`quartz` and `commons` code, and aims to eventually expose every feature
+the GUI offers as a command you can script.
+
+Amy exists for three audiences at once:
+
+1. **Humans** using Amethyst from a terminal or remote shell.
+2. **Agents / LLMs** driving a Nostr account through a deterministic,
+   JSON-typed interface — no interactive prompts, no screen scraping.
+3. **Interop test harnesses** that put Amethyst side-by-side with the
+   other ~100 Nostr clients publishing and consuming the same events.
+   Any flow that is tested in the Amethyst app should be reproducible
+   through `amy` — that's the bar.
+
+> Today Amy covers identity, relay config, account bootstrap, and
+> Marmot / MLS group chat (MIP-00 / NIP-445). Everything else from the
+> Android app is on the roadmap — see [ROADMAP.md](./ROADMAP.md).
+>
+> To extend Amy, see [DEVELOPMENT.md](./DEVELOPMENT.md).
+
+---
+
+## Output contract
+
+What every caller — user, script, agent, CI — can rely on:
+
+- **stdout is JSON. One line. One object.** Stable snake_case keys.
+  Pipe it into `jq`, parse it from Python, hand it to an agent.
+- **stderr is for humans.** Progress, warnings, per-relay ACK traces.
+  Safe to discard.
+- **Exit codes are the real signal.**
+  - `0` — success
+  - `1` — runtime error (JSON `{"error":"…","detail":"…"}` on stderr)
+  - `2` — bad arguments
+  - `124` — `await` timed out
+- **No interactive prompts, ever.** Passwords, names, keys — all flags.
+- **Data-dir is the whole world.** All state (identity, relays, MLS
+  epochs, message archives, run cursors) lives under `--data-dir PATH`.
+  Delete to reset; copy to move; `AMETHYST_CLI_DATA` env var overrides
+  the default `./amethyst-cli-data`.
+
+The rationale behind each of these lives in
+[DEVELOPMENT.md](./DEVELOPMENT.md). Breaking any of them is a breaking
+change to Amy's public API.
+
+---
+
+## Install
+
+Until Amy ships as a signed native binary (see
+[cli/plans/2026-04-21-cli-distribution.md](./plans/2026-04-21-cli-distribution.md)),
+run it from source:
+
+```bash
+# One-shot run — positional args go after `--args`, quoted as one string
+./gradlew :cli:run --quiet --args="whoami"
+
+# Or build a runnable distribution and use the generated launch script
+./gradlew :cli:installDist
+./cli/build/install/amy/bin/amy whoami
+```
+
+The `installDist` tree under `cli/build/install/amy/` is self-contained
+(JVM launcher + jars) and is what downstream packaging will wrap.
+
+**Requirements:** JDK 21.
+
+---
+
+## Quick start
+
+```bash
+# 1. Create a data-dir with a full Amethyst-style account.
+#    Generates a keypair, seeds default NIP-65 / inbox / key-package
+#    relays, and publishes the nine bootstrap events.
+amy --data-dir ./alice create --name "Alice"
+
+# 2. Publish a fresh MLS KeyPackage so others can invite you.
+amy --data-dir ./alice marmot key-package publish
+
+# 3. Create a group, invite someone, send a message.
+amy --data-dir ./alice marmot group create --name "Test Group"
+amy --data-dir ./alice marmot group add <GID> npub1...bob
+amy --data-dir ./alice marmot message send <GID> "hello"
+
+# 4. On the receiving side — poll until Bob sees the invite.
+amy --data-dir ./bob marmot await group --name "Test Group" --timeout 60
+amy --data-dir ./bob marmot message list <GID>
+```
+
+Compose with `jq` to chain commands:
+
+```bash
+GID=$(amy --data-dir ./alice marmot group create --name "Test" | jq -r .group_id)
+```
+
+For an interop-test script template, see
+[DEVELOPMENT.md § Testing](./DEVELOPMENT.md#testing).
+
+---
+
+## Command reference
+
+Run `amy --help` for the canonical list. As of today:
+
+| Verb | Summary |
+|---|---|
+| `init [--nsec NSEC]` | Create or import a bare identity. Does not publish anything. |
+| `create [--name NAME]` | Provision a full account + publish the nine Amethyst bootstrap events. |
+| `login KEY [--password X] [--private]` | Import `nsec` / `ncryptsec` / BIP-39 mnemonic / `npub` / `nprofile` / hex / NIP-05. Read-only when no secret material is supplied. |
+| `whoami` | Print the identity stored in `--data-dir`. |
+| `relay add URL [--type T]` | `T = nip65 \| inbox \| key_package \| all`. |
+| `relay list` | Dump configured relays by bucket. |
+| `relay publish-lists` | Publish kind:10002 (NIP-65) + kind:10050 (DM inbox). |
+| `marmot key-package publish` | Publish a fresh MLS KeyPackage (kind:30443). |
+| `marmot key-package check NPUB` | Fetch someone else's KeyPackage from their advertised relays. |
+| `marmot group create [--name NAME]` | New empty group with you as sole admin. |
+| `marmot group list` | All groups you're a member of. |
+| `marmot group show GID` | Full group state (members, admins, epoch, metadata). |
+| `marmot group members GID` | Members only. |
+| `marmot group admins GID` | Admins only. |
+| `marmot group add GID NPUB [NPUB…]` | Fetch KeyPackages for the npubs and commit an add. |
+| `marmot group rename GID NAME` | Commit a metadata change. |
+| `marmot group promote GID NPUB` | Make an existing member an admin. |
+| `marmot group demote GID NPUB` | Revoke admin. |
+| `marmot group remove GID NPUB` | Remove a member. |
+| `marmot group leave GID` | Self-remove. |
+| `marmot message send GID TEXT` | Publish a kind:9 inner event into the group. |
+| `marmot message list GID [--limit N]` | Decrypted inner events, oldest first. |
+| `marmot await key-package NPUB` | Block until a KeyPackage is seen on relays. |
+| `marmot await group --name NAME` | Block until we're added to a group with that name. |
+| `marmot await member GID NPUB` | Block until NPUB is in GID's member set. |
+| `marmot await admin GID NPUB` | Block until NPUB is an admin of GID. |
+| `marmot await message GID --match TEXT` | Block until a message containing `TEXT` lands. |
+| `marmot await rename GID --name NAME` | Block until GID's name matches. |
+| `marmot await epoch GID --min N` | Block until GID's MLS epoch is ≥ N. |
+
+All `await` verbs accept `--timeout SECS` (default 30). Timeout exits 124
+so scripts can distinguish "condition never happened" from "the command
+itself crashed".
+
+### Global flags
+
+- `--data-dir PATH` — defaults to `./amethyst-cli-data` or
+  `$AMETHYST_CLI_DATA`. Always an absolute path after resolution.
+- `--help` / `-h` — usage summary.
+
+---
+
+## Data-dir layout
+
+```
+<data-dir>/
+├── identity.json         # nsec/npub/hex — the account
+├── relays.json           # nip65 / inbox / key_package buckets
+├── state.json            # sync cursors (giftWrapSince, groupSince)
+├── keypackages.bundle    # MLS KeyPackage bundles (NostrSignerInternal)
+└── groups/
+    ├── <gid>.mls         # MLS group state per group
+    └── <gid>.log         # decrypted inner events (one JSON per line)
+```
+
+All files are plain JSON or framed binary — human-inspectable, easy to
+diff across two data-dirs in a test run.
+
+---
+
+## Troubleshooting
+
+- **`no identity`** — run `init`, `create`, or `login` first, or pass a
+  different `--data-dir`.
+- **`not_member`** — the group GID is unknown to this data-dir. Run
+  `marmot group list` to confirm, or `marmot await group --name …` to
+  wait for an invite to arrive.
+- **Hang on a network verb** — Amy connects to the relays in
+  `relays.json`; verify with `amy relay list`. Every network-bound
+  operation has a timeout — use `--timeout` for `await`, or wrap the
+  whole command in `timeout(1)` if you're scripting.
+- **Nothing seems to publish** — inspect stderr; each publish prints
+  per-relay `OK` / `REJECT` via the `[cli] …` traces.

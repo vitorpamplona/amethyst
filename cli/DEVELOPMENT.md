@@ -1,0 +1,239 @@
+# Developing Amy
+
+How to touch the `cli/` module without breaking its public contract.
+
+- What Amy is and what's already shipped: [README.md](./README.md).
+- What to build next and in what order: [ROADMAP.md](./ROADMAP.md).
+- Plans for cross-cutting work: see this module's `plans/` folder
+  and `commons/plans/` for shared-code work consumed by Amy.
+
+The rule this doc defends: **`cli/` is a thin assembly layer**. If
+you're writing Nostr protocol logic, filter building, state machines,
+or encryption in here, stop — that code belongs in `quartz/` or
+`commons/`.
+
+---
+
+## Design principles
+
+1. **Non-interactive.** One verb = one JSON object on stdout = one
+   exit code. No REPL, no daemon, no prompts. Any network wait is an
+   explicit `await` verb with a `--timeout`.
+2. **Thin command layer.** Each file in `commands/` parses args,
+   calls into `commons/` or `quartz/`, and prints JSON. A file longer
+   than ~200 lines is a code smell — the logic is living in the wrong
+   module.
+3. **Everything persistent is on-disk.** No in-memory caches that
+   survive between invocations. Every run reloads cursors, MLS state,
+   identity, and relay config. This is what makes Amy safe to run
+   from CI and from 100 parallel interop scenarios.
+4. **Shared defaults.** When Amethyst picks a default relay, kind, or
+   tag — Amy calls the same helper. No hand-rolled duplicates. If the
+   helper doesn't exist yet, extract it to `commons/` first.
+5. **JSON is the public API.** Output-shape changes are breaking
+   changes. Version them explicitly in commit messages; update interop
+   fixtures.
+
+---
+
+## Architecture
+
+```
+cli/src/main/kotlin/com/vitorpamplona/amethyst/cli/
+├── Main.kt                    # argv → subcommand dispatch
+├── Args.kt                    # tiny flag parser (no framework)
+├── Json.kt                    # single-line stdout + error printer
+├── Config.kt                  # Identity, RelayConfig, RunState, DataDir
+├── Context.kt                 # per-run wiring: signer + NostrClient +
+│                              #   MarmotManager + publish/drain/sync helpers
+├── stores/FileStores.kt       # File-backed MLS / KP / message stores
+└── commands/
+    ├── Commands.kt            # dispatcher
+    ├── InitCommands.kt        # init, whoami
+    ├── CreateCommand.kt       # full bootstrap (→ commons/account/)
+    ├── LoginCommand.kt        # nsec/ncryptsec/mnemonic/npub/nprofile/hex/nip05
+    ├── RelayCommands.kt       # add/list/publish-lists
+    ├── KeyPackageCommands.kt  # marmot key-package publish / check
+    ├── GroupCommands.kt       # marmot group create/list/show/…
+    ├── GroupCreateCommand.kt
+    ├── GroupReadCommands.kt
+    ├── GroupAddMemberCommand.kt
+    ├── GroupMembershipCommands.kt
+    ├── GroupMetadataCommands.kt
+    ├── MessageCommands.kt     # marmot message send / list
+    └── AwaitCommands.kt       # poll-until-condition helpers
+```
+
+**Dependencies:** `:quartz` + `:commons` + kotlinx-coroutines + OkHttp
++ Jackson. **No Android, no Compose.** Amy compiles on any JDK 21
+host. Never add a Gradle dependency on `:amethyst` or `:desktopApp`.
+
+**`Context.kt` is the backbone.** Most commands follow this template:
+
+```kotlin
+val ctx = Context.open(dataDir)
+try {
+    ctx.prepare()               // restore MLS state + connect relays
+    ctx.syncIncoming()          // pull new gift-wraps + group events
+    // ...call into commons/ or quartz/ to build an event...
+    val ack = ctx.publish(event, targets)
+    Json.writeLine(mapOf(...))
+} finally {
+    ctx.close()                 // flush RunState, disconnect
+}
+```
+
+---
+
+## How to add a command
+
+Rule of thumb: **no new logic in `cli/`**. Every command is an
+assembly of things that already work elsewhere.
+
+### 1. Audit (mandatory)
+
+Before writing anything, answer three questions:
+
+1. Is the Nostr-protocol piece (event kind, tags, encryption)
+   already in `quartz/`? If not, add it there first.
+2. Is the business logic (state, default values, ordering, filter
+   assembly) already in `commons/`? If not, extract it from
+   `amethyst/` into `commons/` in a preceding commit. See the
+   [extraction recipe](#extract-from-android) below.
+3. What is the smallest signed event or query this command has to
+   produce? That shape is the JSON your command will echo.
+
+### 2. Extract from Android
+
+The single most important recurring task for Amy's growth. Most
+Amethyst features today live in `amethyst/src/main/java/…/model/` or
+`…/service/` with Android-only imports (`Context`, `SharedPreferences`,
+`WorkManager`, `Log`, `Bitmap`). Amy cannot call those directly — they
+have to move.
+
+1. Identify the class in `amethyst/` (e.g. `ReactionPost.kt`).
+2. List its Android dependencies.
+3. For each dependency, choose:
+   - **Inline-able** (one call, trivial): delete.
+   - **Platform-abstractable**: add `expect`/`actual` in
+     `commons/commonMain/…` + `commons/androidMain/…` +
+     `commons/jvmMain/…`. (See `kotlin-multiplatform` skill.)
+   - **Inversion-of-control**: take it as a constructor arg. Amy
+     supplies a JVM flavour.
+4. Move the file to `commons/commonMain/…`.
+5. Update the Android caller to use the new location. Add a JVM test.
+6. Only now, add the `cli/commands/…` file that calls it.
+
+**What to keep in `amethyst/`:** screens, navigation, Android-specific
+side-effects (notifications, background services, camera, Intents).
+Everything else is a candidate to move.
+
+### 3. Command file template
+
+```kotlin
+package com.vitorpamplona.amethyst.cli.commands
+
+import com.vitorpamplona.amethyst.cli.Args
+import com.vitorpamplona.amethyst.cli.Context
+import com.vitorpamplona.amethyst.cli.DataDir
+import com.vitorpamplona.amethyst.cli.Json
+
+object NoteCommands {
+    suspend fun dispatch(dataDir: DataDir, tail: Array<String>): Int {
+        if (tail.isEmpty()) return Json.error("bad_args", "note <publish|read|…>")
+        val rest = tail.drop(1).toTypedArray()
+        return when (tail[0]) {
+            "publish" -> publish(dataDir, rest)
+            else -> Json.error("bad_args", "note ${tail[0]}")
+        }
+    }
+
+    private suspend fun publish(dataDir: DataDir, rest: Array<String>): Int {
+        val args = Args(rest)
+        val text = args.positional(0, "text")
+        val ctx = Context.open(dataDir)
+        try {
+            ctx.prepare()
+            val event = com.vitorpamplona.amethyst.commons.note.buildTextNote(ctx.signer, text)
+            val ack = ctx.publish(event, ctx.outboxRelays())
+            Json.writeLine(mapOf(
+                "event_id" to event.id,
+                "kind" to event.kind,
+                "published_to" to ack.filterValues { it }.keys.map { it.url },
+            ))
+            return 0
+        } finally { ctx.close() }
+    }
+}
+```
+
+Wire it into `Commands.kt`, add a top-level branch in `Main.kt`'s
+`dispatch`, and extend `printUsage()`. Keep [README.md](./README.md)'s
+command table and [ROADMAP.md](./ROADMAP.md)'s parity matrix in sync.
+
+### 4. Output-shape conventions
+
+- Top-level object always.
+- Stable snake_case keys.
+- Event IDs as hex strings (not npub-style).
+- Pubkeys as hex (`"pubkey":…`) **and** bech32 when the pubkey is the
+  primary subject (`"npub":…`).
+- Relay URLs as strings, normalized, never objects.
+- Lists of events under a plural key (`"messages"`, `"members"`).
+- Errors via `Json.error("code","detail")` — single lower_snake code,
+  free-form detail.
+
+---
+
+## Testing
+
+Most of what Amy does is already exercised by tests in `quartz` and
+`commons` — the protocol, the builders, the state machines. The thin
+Amy-specific layer still needs its own coverage:
+
+| Layer | Test approach |
+|---|---|
+| Argument parsing (`Args`, flag forms, `--data-dir=…` vs `--data-dir …`) | Plain JVM unit tests in `cli/src/test/kotlin/`. |
+| Error / exit-code contract (bad args → 2, await timeout → 124, runtime → 1) | Table-driven tests invoking `main(argv)` with captured stdout/stderr. |
+| JSON output shape (each command's keys and types) | Snapshot tests: run a command against a throwaway data-dir, assert the JSON matches a golden file. |
+| File layout on disk (`identity.json`, `relays.json`, `groups/*.mls`, `keypackages.bundle`) | Structural assertions after a command sequence. |
+| Round-trip between two data-dirs on a local relay | End-to-end shell scripts under `cli/src/test/resources/scripts/`. Spin up `nostr-rs-relay`, run Alice + Bob, assert await verbs resolve. |
+| Interop with other clients | External harness consumes Amy as a binary; out of scope here but the JSON contract is what keeps it stable. |
+
+**What not to test here:** event signing, filter assembly, MLS
+correctness, NIP-44 encryption. Those belong in `quartz`/`commons`.
+If an Amy bug can only be caught here, it's a contract violation
+(wrong key name, wrong exit code), not a protocol bug.
+
+**Interop-test script template:**
+
+```bash
+set -euo pipefail
+TMP=$(mktemp -d)
+A=$TMP/alice; B=$TMP/bob
+
+amy --data-dir "$A" create --name Alice
+amy --data-dir "$B" create --name Bob
+
+# ... the scenario under test ...
+
+amy --data-dir "$B" marmot await message "$GID" --match "hello" --timeout 60
+```
+
+If an Amethyst scenario cannot be scripted through Amy yet, that's
+a gap — add it to [ROADMAP.md](./ROADMAP.md).
+
+---
+
+## Housekeeping
+
+- Run `./gradlew spotlessApply` before every commit.
+- Keep three things in sync: `printUsage()` in `Main.kt`, the command
+  table in [README.md](./README.md), and the parity matrix in
+  [ROADMAP.md](./ROADMAP.md). They drift fast.
+- Never add a Gradle dependency on `:amethyst` or `:desktopApp`. If
+  you need something from there, move it to `commons/` first.
+- Never introduce a blocking prompt (`readLine()`, interactive
+  password input). Take it as a flag.
+- Keep each command file small. Past ~200 lines, split — the Marmot
+  `group` verbs are already a cautionary tale.
