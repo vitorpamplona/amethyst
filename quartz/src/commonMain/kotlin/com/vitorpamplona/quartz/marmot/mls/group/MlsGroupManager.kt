@@ -341,9 +341,22 @@ class MlsGroupManager(
             // hiding the real bug. Capture the original throwable, try
             // retained epochs as a fallback, and re-raise the captured one
             // if nothing decrypts.
+            val retainedBefore = group.retainedSecrets()
+            val preEpoch = group.epoch
             val currentFailure: Throwable? =
                 try {
-                    return@withLock group.decrypt(messageBytes)
+                    val result = group.decrypt(messageBytes)
+                    // PrivateMessage commits apply inline through
+                    // `MlsGroup.decrypt` → `processCommit`; the epoch advances
+                    // in memory but the CLI reopens a fresh Context on every
+                    // command, so we MUST persist here or reloaded state
+                    // silently reverts to the pre-commit extensions (including
+                    // admin list).
+                    if (result.contentType == com.vitorpamplona.quartz.marmot.mls.framing.ContentType.COMMIT && group.epoch != preEpoch) {
+                        pushRetainedEpoch(nostrGroupId, retainedBefore)
+                        persistGroup(nostrGroupId)
+                    }
+                    return@withLock result
                 } catch (t: Throwable) {
                     t
                 }
