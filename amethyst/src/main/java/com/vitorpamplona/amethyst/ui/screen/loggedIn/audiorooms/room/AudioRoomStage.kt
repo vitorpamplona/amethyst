@@ -33,6 +33,8 @@ import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MicOff
 import androidx.compose.material.icons.filled.PanTool
 import androidx.compose.material.icons.outlined.PanTool
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilledIconButton
@@ -53,6 +55,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
@@ -62,6 +66,7 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size40dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
+import com.vitorpamplona.nestsclient.NestsListenerState
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresenceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ParticipantTag
@@ -132,6 +137,17 @@ private fun AudioRoomStageContent(
         }
     }
 
+    // Audio listener owner. Auto-connects on enter, tears down on dispose.
+    val connectionVm: AudioRoomConnectionViewModel =
+        viewModel(key = "AudioRoom-${event.address().toValue()}")
+    val connectionState by connectionVm.state.collectAsStateWithLifecycle()
+    LaunchedEffect(event.address().toValue()) {
+        connectionVm.connect(event, accountViewModel.account.signer)
+    }
+    DisposableEffect(event.address().toValue()) {
+        onDispose { connectionVm.disconnect() }
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth().padding(8.dp),
         shape = RoundedCornerShape(12.dp),
@@ -151,6 +167,11 @@ private fun AudioRoomStageContent(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+
+            ConnectionChip(
+                state = connectionState,
+                onRetry = { connectionVm.connect(event, accountViewModel.account.signer) },
+            )
 
             if (hosts.isNotEmpty() || speakers.isNotEmpty()) {
                 StagePeopleRow(
@@ -208,6 +229,61 @@ private fun AudioRoomStageContent(
             }
         }
     }
+}
+
+@Composable
+private fun ConnectionChip(
+    state: NestsListenerState,
+    onRetry: () -> Unit,
+) {
+    val (label, color, clickable) =
+        when (state) {
+            is NestsListenerState.Idle -> {
+                Triple(
+                    stringRes(R.string.audio_room_conn_idle),
+                    MaterialTheme.colorScheme.surface,
+                    true,
+                )
+            }
+
+            is NestsListenerState.Connecting -> {
+                Triple(
+                    stringRes(R.string.audio_room_conn_connecting, state.step.name),
+                    MaterialTheme.colorScheme.surface,
+                    false,
+                )
+            }
+
+            is NestsListenerState.Connected -> {
+                Triple(
+                    stringRes(R.string.audio_room_conn_connected),
+                    MaterialTheme.colorScheme.primaryContainer,
+                    false,
+                )
+            }
+
+            is NestsListenerState.Failed -> {
+                Triple(
+                    stringRes(R.string.audio_room_conn_failed, state.reason),
+                    MaterialTheme.colorScheme.errorContainer,
+                    true,
+                )
+            }
+
+            is NestsListenerState.Closed -> {
+                Triple(
+                    stringRes(R.string.audio_room_conn_closed),
+                    MaterialTheme.colorScheme.surface,
+                    true,
+                )
+            }
+        }
+    AssistChip(
+        modifier = Modifier.padding(top = 8.dp),
+        onClick = { if (clickable) onRetry() },
+        label = { Text(label, style = MaterialTheme.typography.labelSmall) },
+        colors = AssistChipDefaults.assistChipColors(containerColor = color),
+    )
 }
 
 @Composable

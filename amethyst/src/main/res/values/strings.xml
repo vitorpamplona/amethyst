@@ -495,6 +495,11 @@
     <string name="audio_room_lower_hand">Lower hand</string>
     <string name="audio_room_mute">Mute</string>
     <string name="audio_room_unmute">Unmute</string>
+    <string name="audio_room_conn_idle">Audio not connected — tap to retry</string>
+    <string name="audio_room_conn_connecting">Connecting to audio (%1$s)</string>
+    <string name="audio_room_conn_connected">Audio connected</string>
+    <string name="audio_room_conn_failed">Audio failed: %1$s</string>
+    <string name="audio_room_conn_closed">Audio session closed</string>
     <string name="longs">Videos</string>
     <string name="articles">Articles</string>
     <string name="private_bookmarks">Private Bookmarks</string>
