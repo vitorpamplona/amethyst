@@ -34,7 +34,13 @@ C_HEX=""
 A_NPUB=""
 A_HEX=""
 
-DEFAULT_RELAYS=( "wss://relay.damus.io" "wss://nos.lol" "wss://relay.primal.net" )
+DEFAULT_RELAYS=(
+  "wss://relay.damus.io"
+  "wss://nos.lol"
+  "wss://relay.primal.net"
+  "wss://nostr.bitcoiner.social"
+  "wss://nostr.mom"
+)
 USE_LOCAL_RELAYS=0
 ENABLE_TRANSPONDER=0
 NO_BUILD=0
