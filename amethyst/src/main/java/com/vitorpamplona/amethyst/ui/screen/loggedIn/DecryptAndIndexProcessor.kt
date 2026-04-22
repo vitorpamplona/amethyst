@@ -592,20 +592,41 @@ class GroupEventHandler(
                         "GroupEventHandler.add: ApplicationMessage decrypted innerKind=${innerEvent.kind} " +
                             "innerId=${innerEvent.id.take(8)}… author=${innerEvent.pubKey.take(8)}…"
                     }
-                    if (cache.justConsume(innerEvent, null, false)) {
-                        val innerNote = cache.getOrCreateNote(innerEvent.id)
+                    // `cache.justConsume` returns false if LocalCache already
+                    // has this inner event id — typically because a previous
+                    // session persisted the inner JSON and the startup
+                    // restore loop in Account reloaded it into the cache
+                    // before this kind:445 arrived. The chatroom may still
+                    // not have it (e.g. the user's chatroom snapshot was
+                    // dropped, or the restore-from-disk path raced ahead and
+                    // the cache populated before the chatroom was hydrated).
+                    // `addMessage` is itself idempotent (`addMessageSync`
+                    // dedupes by Note identity), so always surface the note
+                    // in the chatroom — otherwise the message is silently
+                    // dropped and the operator sees only the "duplicate" log.
+                    val isNew = cache.justConsume(innerEvent, null, false)
+                    val innerNote = cache.getOrCreateNote(innerEvent.id)
+                    if (isNew) {
                         innerNote.event = innerEvent
-
-                        // Track the message in the Marmot group chatroom
-                        account.marmotGroupList.addMessage(result.groupId, innerNote)
-
-                        // Persist the decrypted plaintext so the message
-                        // survives an app restart. Marmot/MLS application
-                        // messages cannot be re-decrypted once the ratchet
-                        // has advanced, so we must capture them here.
-                        manager.persistDecryptedMessage(result.groupId, result.innerEventJson)
                     } else {
-                        Log.d("MarmotDbg") { "GroupEventHandler.add: inner event already in cache (duplicate)" }
+                        Log.d("MarmotDbg") {
+                            "GroupEventHandler.add: inner event already in cache — surfacing in chatroom anyway"
+                        }
+                    }
+
+                    // Track the message in the Marmot group chatroom
+                    account.marmotGroupList.addMessage(result.groupId, innerNote)
+
+                    // Persist the decrypted plaintext so the message
+                    // survives an app restart. Marmot/MLS application
+                    // messages cannot be re-decrypted once the ratchet
+                    // has advanced, so we must capture them here. Skip
+                    // when the cache reported duplicate — the message
+                    // was already persisted on the run that originally
+                    // decrypted it (the message store appends, so a
+                    // re-persist would silently grow the on-disk log).
+                    if (isNew) {
+                        manager.persistDecryptedMessage(result.groupId, result.innerEventJson)
                     }
                 }
 
