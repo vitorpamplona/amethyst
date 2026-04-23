@@ -37,13 +37,30 @@ test_09_reply_react_unreact() {
   amy_json marmot message send "$gid" "replying via amy" >/dev/null || {
     record_result "$id" fail "amy send reply failed"; return
   }
-  if wait_for_message B "$mls_gid" "replying via amy" 90; then
+  if ! wait_for_message B "$mls_gid" "replying via amy" 90; then
+    record_result "$id" fail "B didn't receive reply"; return
+  fi
+
+  # amy react — look up the anchor id from amy's own decrypted log (B's kind:9
+  # "anchor for reactions" was delivered + persisted during wait_for_message),
+  # then hand that id to the new react verb.
+  sleep 3
+  local a_anchor_id
+  a_anchor_id=$(amy_json marmot message list "$gid" --limit 50 2>/dev/null \
+                  | jq -r '[.messages[]? | select((.content // "") == "anchor for reactions")][0].id // empty')
+  if [[ -z "$a_anchor_id" || "$a_anchor_id" == "null" ]]; then
+    record_result "$id" fail "amy couldn't find anchor message in local log"; return
+  fi
+  if ! amy_json marmot message react "$gid" "$a_anchor_id" "🍕" >/dev/null; then
+    record_result "$id" fail "amy marmot message react failed"; return
+  fi
+
+  # Round-trip: B should surface amy's kind:7 reaction in its messages stream.
+  if wait_for_message B "$mls_gid" "🍕" 90; then
     record_result "$id" pass
   else
-    record_result "$id" fail "B didn't receive reply"
+    record_result "$id" fail "B didn't receive amy's reaction"
   fi
-  # NB: react/unreact round-trip verification requires a CLI verb we don't have
-  # yet (amy marmot message react). Once we add it, expand this test.
 }
 
 test_10_concurrent_commits() {

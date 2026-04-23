@@ -211,6 +211,8 @@ private fun printUsage() {
         |
         |  marmot message send GID TEXT               publish kind:9 inner event into the group
         |  marmot message list GID [--limit N]        dump decrypted inner events
+        |  marmot message react GID EVENT_ID EMOJI    publish kind:7 reaction targeting an inner event
+        |  marmot message delete GID EVENT_ID…        publish kind:5 deletion targeting inner events
         |
         |  marmot await key-package NPUB              (all await verbs take --timeout SECS, default 30;
         |  marmot await group --name NAME              exit 124 on timeout)

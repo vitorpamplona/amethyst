@@ -192,6 +192,61 @@ class MarmotManager(
     }
 
     /**
+     * Build a kind:7 reaction inner event targeting another inner event in
+     * the same group. Like [buildTextMessage], the inner event is an
+     * unsigned rumor (MIP-03). The reaction uses NIP-25 conventions: content
+     * is the emoji / `+` / `-`; e-tag + p-tag + k-tag reference the target.
+     */
+    suspend fun buildReactionMessage(
+        nostrGroupId: HexKey,
+        targetEvent: Event,
+        reaction: String,
+        persistOwn: Boolean = true,
+    ): TextMessageBundle {
+        val template =
+            com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
+                .build(
+                    reaction,
+                    com.vitorpamplona.quartz.nip01Core.hints
+                        .EventHintBundle(targetEvent),
+                )
+        val innerEvent =
+            com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
+                .assembleRumor<com.vitorpamplona.quartz.nip25Reactions.ReactionEvent>(
+                    signer.pubKey,
+                    template,
+                )
+        val outbound = buildGroupMessage(nostrGroupId, innerEvent)
+        if (persistOwn) persistDecryptedMessage(nostrGroupId, innerEvent.toJson())
+        return TextMessageBundle(outbound = outbound, innerEvent = innerEvent)
+    }
+
+    /**
+     * Build a kind:5 deletion inner event targeting one or more prior inner
+     * events in the same group. Unsigned rumor (MIP-03); e-tag + k-tag for
+     * each target per NIP-09.
+     */
+    suspend fun buildDeletionMessage(
+        nostrGroupId: HexKey,
+        targetEvents: List<Event>,
+        persistOwn: Boolean = true,
+    ): TextMessageBundle {
+        require(targetEvents.isNotEmpty()) { "buildDeletionMessage: targetEvents must not be empty" }
+        val template =
+            com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+                .build(targetEvents)
+        val innerEvent =
+            com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
+                .assembleRumor<com.vitorpamplona.quartz.nip09Deletions.DeletionEvent>(
+                    signer.pubKey,
+                    template,
+                )
+        val outbound = buildGroupMessage(nostrGroupId, innerEvent)
+        if (persistOwn) persistDecryptedMessage(nostrGroupId, innerEvent.toJson())
+        return TextMessageBundle(outbound = outbound, innerEvent = innerEvent)
+    }
+
+    /**
      * Add a member to a group by consuming their published [KeyPackageEvent].
      *
      * Convenience over [addMember] that handles base64 decoding and lifts the

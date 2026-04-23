@@ -25,17 +25,20 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Json
+import com.vitorpamplona.quartz.nip01Core.core.Event
 
 object MessageCommands {
     suspend fun dispatch(
         dataDir: DataDir,
         tail: Array<String>,
     ): Int {
-        if (tail.isEmpty()) return Json.error("bad_args", "message <send|list> …")
+        if (tail.isEmpty()) return Json.error("bad_args", "message <send|list|react|delete> …")
         val rest = tail.drop(1).toTypedArray()
         return when (tail[0]) {
             "send" -> send(dataDir, rest)
             "list" -> list(dataDir, rest)
+            "react" -> react(dataDir, rest)
+            "delete" -> delete(dataDir, rest)
             else -> Json.error("bad_args", "message ${tail[0]}")
         }
     }
@@ -110,5 +113,97 @@ object MessageCommands {
         } finally {
             ctx.close()
         }
+    }
+
+    private suspend fun react(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        if (rest.size < 3) return Json.error("bad_args", "message react <gid> <target_event_id> <emoji>")
+        val targetId = rest[1]
+        val emoji = rest[2]
+        val ctx = Context.open(dataDir)
+        try {
+            ctx.prepare()
+            val gid = ctx.resolveGroupId(rest[0])
+            ctx.syncIncoming()
+            if (!ctx.marmot.isMember(gid)) return Json.error("not_member", gid)
+
+            val target = findStoredInnerEvent(ctx, gid, targetId) ?: return Json.error("not_found", targetId)
+            val bundle = ctx.marmot.buildReactionMessage(gid, target, emoji)
+            val targets = ctx.marmotGroupRelays(gid).ifEmpty { ctx.outboxRelays() }
+            val ack = ctx.publish(bundle.outbound.signedEvent, targets)
+
+            Json.writeLine(
+                mapOf(
+                    "group_id" to gid,
+                    "inner_event_id" to bundle.innerEvent.id,
+                    "outer_event_id" to bundle.outbound.signedEvent.id,
+                    "kind" to bundle.innerEvent.kind,
+                    "target_event_id" to target.id,
+                    "reaction" to emoji,
+                    "published_to" to ack.filterValues { it }.keys.map { it.url },
+                ),
+            )
+            return 0
+        } finally {
+            ctx.close()
+        }
+    }
+
+    private suspend fun delete(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        if (rest.size < 2) return Json.error("bad_args", "message delete <gid> <target_event_id> [target_event_id ...]")
+        val ctx = Context.open(dataDir)
+        try {
+            ctx.prepare()
+            val gid = ctx.resolveGroupId(rest[0])
+            ctx.syncIncoming()
+            if (!ctx.marmot.isMember(gid)) return Json.error("not_member", gid)
+
+            val targetIds = rest.drop(1)
+            val targets =
+                targetIds.map { id ->
+                    findStoredInnerEvent(ctx, gid, id) ?: return Json.error("not_found", id)
+                }
+
+            val bundle = ctx.marmot.buildDeletionMessage(gid, targets)
+            val relays = ctx.marmotGroupRelays(gid).ifEmpty { ctx.outboxRelays() }
+            val ack = ctx.publish(bundle.outbound.signedEvent, relays)
+
+            Json.writeLine(
+                mapOf(
+                    "group_id" to gid,
+                    "inner_event_id" to bundle.innerEvent.id,
+                    "outer_event_id" to bundle.outbound.signedEvent.id,
+                    "kind" to bundle.innerEvent.kind,
+                    "target_event_ids" to targets.map { it.id },
+                    "published_to" to ack.filterValues { it }.keys.map { it.url },
+                ),
+            )
+            return 0
+        } finally {
+            ctx.close()
+        }
+    }
+
+    /**
+     * Scan the group's persisted inner-message log for an event matching
+     * [targetId] and reconstruct the full `Event`. Required by `react` and
+     * `delete` because the NIP-25 / NIP-09 templates need the target's
+     * `pubKey` + `kind` for p-tag / k-tag, not just the id.
+     */
+    private suspend fun findStoredInnerEvent(
+        ctx: Context,
+        nostrGroupId: String,
+        targetId: String,
+    ): Event? {
+        for (line in ctx.marmot.loadStoredMessages(nostrGroupId)) {
+            val parsed = Event.fromJsonOrNull(line) ?: continue
+            if (parsed.id == targetId) return parsed
+        }
+        return null
     }
 }
