@@ -26,6 +26,7 @@ import android.content.Context.RECEIVER_EXPORTED
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineExceptionHandler
@@ -75,7 +76,8 @@ class PokeyReceiver : BroadcastReceiver() {
 
             scope.launch {
                 try {
-                    EventNotificationConsumer(context.applicationContext).findAccountAndConsume(Event.fromJson(eventStr))
+                    // Feeds the shared cache; NotificationDispatcher observes and dispatches.
+                    LocalCache.justConsume(Event.fromJson(eventStr), null, false)
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to parse Pokey Event", e)
                 }
