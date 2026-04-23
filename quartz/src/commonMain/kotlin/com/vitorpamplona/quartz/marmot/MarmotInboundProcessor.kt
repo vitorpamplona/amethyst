@@ -229,16 +229,24 @@ class MarmotInboundProcessor(
                 GroupEventResult.Error(groupId, "Failed to process GroupEvent: ${e.message}", e)
             }
 
-        // Track ALL processed events for deduplication (including errors to prevent replay DoS)
-        processedIdsMutex.withLock {
-            processedEventIds.add(eventId)
-            // Trim the set if it exceeds the max size
-            if (processedEventIds.size > MAX_PROCESSED_IDS) {
-                val iterator = processedEventIds.iterator()
-                val toRemove = processedEventIds.size - MAX_PROCESSED_IDS
-                repeat(toRemove) {
-                    iterator.next()
-                    iterator.remove()
+        // Track processed events for dedup — except UndecryptableOuterLayer,
+        // which must stay retryable. These events are typically future-epoch
+        // arrivals buffered by the handler and replayed after a
+        // CommitProcessed advances our epoch; marking them processed here
+        // would cause the retry to hit the Duplicate early-return above and
+        // skip MLS decryption entirely. DoS is already bounded by the
+        // handler's per-group pending buffer.
+        if (result !is GroupEventResult.UndecryptableOuterLayer) {
+            processedIdsMutex.withLock {
+                processedEventIds.add(eventId)
+                // Trim the set if it exceeds the max size
+                if (processedEventIds.size > MAX_PROCESSED_IDS) {
+                    val iterator = processedEventIds.iterator()
+                    val toRemove = processedEventIds.size - MAX_PROCESSED_IDS
+                    repeat(toRemove) {
+                        iterator.next()
+                        iterator.remove()
+                    }
                 }
             }
         }

@@ -236,6 +236,61 @@ class MarmotPipelineTest {
         }
     }
 
+    /**
+     * Regression: the interop harness's Test 12 drove future-epoch kind:445
+     * events into Amethyst before the epoch-advancing commit arrived — those
+     * failed with [GroupEventResult.UndecryptableOuterLayer] and were buffered
+     * by the handler for a post-commit retry. The retry fired after the
+     * commit but then came back as [GroupEventResult.Duplicate] instead of
+     * re-attempting decrypt, so the messages were silently dropped until app
+     * restart re-fetched them from relays.
+     *
+     * The cause was [MarmotInboundProcessor.processGroupEvent] adding the
+     * outer event id to `processedEventIds` after *every* call, including
+     * UndecryptableOuterLayer. The retry replayed the same event, hit the
+     * dedup early-return, and skipped MLS processing entirely. An undecryptable
+     * outer layer must stay retryable — the handler's pending buffer already
+     * bounds memory per-group.
+     */
+    @Test
+    fun testInboundUndecryptableOuterLayerStaysRetryable() {
+        runBlocking {
+            val manager = createGroupManager()
+            manager.createGroup(groupId, "alice".encodeToByteArray())
+
+            val keyPackageRotationManager = KeyPackageRotationManager()
+            val inbound = MarmotInboundProcessor(manager, keyPackageRotationManager)
+
+            // A kind:445 for our group whose ciphertext won't decrypt under
+            // our current exporter key — the shape a future-epoch event has
+            // before its commit arrives. 64 bytes is well past MIN_CONTENT_LENGTH
+            // so we exercise the AEAD failure path, not a short-input reject.
+            @OptIn(kotlin.io.encoding.ExperimentalEncodingApi::class)
+            val garbageCiphertext =
+                kotlin.io.encoding.Base64
+                    .encode(ByteArray(64) { 0x42.toByte() })
+            val template =
+                GroupEvent.build(
+                    encryptedContentBase64 = garbageCiphertext,
+                    nostrGroupId = groupId,
+                )
+            val signer = NostrSignerInternal(KeyPair())
+            val event: GroupEvent = signer.sign(template)
+
+            val first = inbound.processGroupEvent(event)
+            assertIs<GroupEventResult.UndecryptableOuterLayer>(
+                first,
+                "first pass must surface UndecryptableOuterLayer so the handler can buffer for retry",
+            )
+
+            val second = inbound.processGroupEvent(event)
+            assertIs<GroupEventResult.UndecryptableOuterLayer>(
+                second,
+                "replaying the same undecryptable event (what retryPendingFor does after a CommitProcessed) must re-attempt decrypt, not short-circuit as Duplicate",
+            )
+        }
+    }
+
     @Test
     fun testInboundRejectsNonMemberGroup() {
         runBlocking {
