@@ -20,9 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -30,6 +27,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteAndMap
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
@@ -87,14 +86,14 @@ fun FavoriteAlgoFeedToggle(
     ) {
         if (isFavorite) {
             Icon(
-                imageVector = Icons.Filled.Star,
+                symbol = MaterialSymbols.Star,
                 contentDescription = stringRes(R.string.remove_dvm_from_favorites),
                 modifier = iconSizeModifier,
                 tint = MaterialTheme.colorScheme.primary,
             )
         } else {
             Icon(
-                imageVector = Icons.Outlined.StarBorder,
+                symbol = MaterialSymbols.StarBorder,
                 contentDescription = stringRes(R.string.add_dvm_to_favorites),
                 modifier = iconSizeModifier,
                 tint = MaterialTheme.colorScheme.onSurface,

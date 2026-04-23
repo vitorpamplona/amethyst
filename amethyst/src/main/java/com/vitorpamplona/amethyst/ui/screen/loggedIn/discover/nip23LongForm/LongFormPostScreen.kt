@@ -45,10 +45,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Image
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -85,6 +81,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
@@ -609,7 +607,7 @@ private fun BannerImageArea(
                         .padding(4.dp),
             ) {
                 Icon(
-                    Icons.Default.Close,
+                    MaterialSymbols.Close,
                     contentDescription = "Remove header image",
                     tint = Color.White,
                 )
@@ -635,7 +633,7 @@ private fun BannerImageArea(
                 verticalArrangement = Arrangement.Center,
             ) {
                 Icon(
-                    Icons.Default.Image,
+                    MaterialSymbols.Image,
                     contentDescription = null,
                     modifier = Modifier.size(48.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -705,7 +703,7 @@ private fun TagInputSection(
             },
         ) {
             Icon(
-                Icons.Default.Add,
+                MaterialSymbols.Add,
                 contentDescription = "Add tag",
             )
         }
@@ -725,7 +723,7 @@ private fun TagInputSection(
                     label = { Text(tag) },
                     trailingIcon = {
                         Icon(
-                            Icons.Default.Close,
+                            MaterialSymbols.Close,
                             contentDescription = "Remove $tag",
                             modifier = Modifier.size(16.dp),
                         )

@@ -29,10 +29,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.PictureInPicture
-import androidx.compose.material.icons.filled.SaveAlt
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -47,7 +43,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -55,6 +50,9 @@ import androidx.media3.common.Player
 import androidx.media3.common.Tracks
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.model.VideoButtonLocation
 import com.vitorpamplona.amethyst.model.VideoPlayerAction
@@ -255,7 +253,7 @@ fun RenderTopButtons(
                 VideoPlayerAction.Share -> {
                     AnimatedTopBarIconButton(
                         controllerVisible = controllerVisible,
-                        imageVector = Icons.Default.Share,
+                        symbol = MaterialSymbols.Share,
                         contentDescription = stringRes(R.string.share_or_save),
                         onClick = { shareDialogVisible.value = true },
                     )
@@ -264,7 +262,7 @@ fun RenderTopButtons(
                 VideoPlayerAction.Download -> {
                     AnimatedTopBarIconButton(
                         controllerVisible = controllerVisible,
-                        imageVector = Icons.Default.SaveAlt,
+                        symbol = MaterialSymbols.SaveAlt,
                         contentDescription = stringRes(R.string.download_to_phone),
                         onClick = saveAction,
                     )
@@ -273,7 +271,7 @@ fun RenderTopButtons(
                 VideoPlayerAction.PictureInPicture -> {
                     AnimatedTopBarIconButton(
                         controllerVisible = controllerVisible,
-                        imageVector = Icons.Default.PictureInPicture,
+                        symbol = MaterialSymbols.PictureInPicture,
                         contentDescription = stringRes(R.string.picture_in_picture),
                         onClick = onPictureInPictureClick,
                     )
@@ -323,7 +321,7 @@ fun RenderTopButtons(
 @Composable
 internal fun AnimatedTopBarIconButton(
     controllerVisible: State<Boolean>,
-    imageVector: ImageVector,
+    symbol: MaterialSymbol,
     contentDescription: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -348,7 +346,7 @@ internal fun AnimatedTopBarIconButton(
                 modifier = Size50Modifier,
             ) {
                 Icon(
-                    imageVector = imageVector,
+                    symbol = symbol,
                     contentDescription = contentDescription,
                     tint = MaterialTheme.colorScheme.onBackground,
                     modifier = Size20Modifier,

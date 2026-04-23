@@ -30,8 +30,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.DriveFileMove
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -52,6 +50,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
 import com.vitorpamplona.amethyst.ui.components.DeletedItemsBanner
@@ -163,7 +163,7 @@ private fun RenderOldBookmarkScreen(
                 text = { Text(stringRes(R.string.migrate_bookmarks_button)) },
                 icon = {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.DriveFileMove,
+                        symbol = MaterialSymbols.AutoMirrored.DriveFileMove,
                         contentDescription = stringRes(R.string.migrate_bookmarks_button),
                     )
                 },

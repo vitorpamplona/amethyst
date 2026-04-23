@@ -30,10 +30,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AttachFile
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -46,6 +42,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import java.io.File
 
 @Composable
@@ -63,14 +61,14 @@ fun MediaAttachmentRow(
         ) {
             IconButton(onClick = onAttach) {
                 Icon(
-                    Icons.Default.AttachFile,
+                    MaterialSymbols.AttachFile,
                     contentDescription = "Attach media",
                     tint = MaterialTheme.colorScheme.primary,
                 )
             }
             IconButton(onClick = onPaste) {
                 Icon(
-                    Icons.Default.ContentPaste,
+                    MaterialSymbols.ContentPaste,
                     contentDescription = "Paste from clipboard",
                     tint = MaterialTheme.colorScheme.primary,
                 )
@@ -113,7 +111,7 @@ private fun AttachedFileThumbnail(
             )
             IconButton(onClick = onRemove, modifier = Modifier.size(20.dp)) {
                 Icon(
-                    Icons.Default.Close,
+                    MaterialSymbols.Close,
                     contentDescription = "Remove",
                     tint = MaterialTheme.colorScheme.error,
                     modifier = Modifier.size(16.dp),

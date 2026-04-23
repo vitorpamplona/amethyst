@@ -26,9 +26,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Forward10
-import androidx.compose.material.icons.filled.Replay10
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
@@ -38,6 +35,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.service.playback.composable.SKIP_SECONDS
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
@@ -88,9 +87,9 @@ fun SkipButton(
     isForward: Boolean,
     onClick: () -> Unit,
 ) {
-    val icon = if (isForward) Icons.Default.Forward10 else Icons.Default.Replay10
+    val icon = if (isForward) MaterialSymbols.Forward10 else MaterialSymbols.Replay10
     val label = if (isForward) stringRes(R.string.skip_forward, SKIP_SECONDS) else stringRes(R.string.skip_back, SKIP_SECONDS)
     IconButton(onClick = onClick, modifier = Modifier.size(48.dp)) {
-        Icon(imageVector = icon, contentDescription = label, tint = Color.White, modifier = Modifier.size(32.dp))
+        Icon(symbol = icon, contentDescription = label, tint = Color.White, modifier = Modifier.size(32.dp))
     }
 }

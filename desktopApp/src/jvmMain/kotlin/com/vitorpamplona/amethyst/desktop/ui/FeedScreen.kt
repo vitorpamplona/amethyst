@@ -36,10 +36,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Dns
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
@@ -61,6 +57,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.compose.elements.BoostedMark
 import com.vitorpamplona.amethyst.commons.compose.layouts.GenericRepostLayout
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.richtext.UrlParser
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
@@ -701,7 +699,7 @@ private fun FeedHeader(
                         modifier = Modifier.size(24.dp),
                     ) {
                         Icon(
-                            Icons.Default.Dns,
+                            MaterialSymbols.Dns,
                             contentDescription = "Edit Feed Relays",
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(18.dp),
@@ -714,7 +712,7 @@ private fun FeedHeader(
                     modifier = Modifier.size(24.dp),
                 ) {
                     Icon(
-                        Icons.Default.Refresh,
+                        MaterialSymbols.Refresh,
                         contentDescription = "Refresh",
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(18.dp),
@@ -727,7 +725,7 @@ private fun FeedHeader(
             onClick = onCompose,
             enabled = account != null && !account.isReadOnly,
         ) {
-            Icon(Icons.Default.Add, "New Post", Modifier.size(18.dp))
+            Icon(MaterialSymbols.Add, "New Post", Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
             Text("New Post")
         }

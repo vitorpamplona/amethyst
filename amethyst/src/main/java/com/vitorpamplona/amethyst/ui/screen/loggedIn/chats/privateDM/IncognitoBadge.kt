@@ -21,32 +21,22 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM
 
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.theme.IncognitoIconModifier
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
-import com.vitorpamplona.quartz.nip17Dm.base.NIP17Group
 
 @Composable
 fun IncognitoBadge(baseNote: Note) {
-    if (baseNote.event is NIP17Group) {
+    if (baseNote.event is PrivateDmEvent) {
         Icon(
-            painter = painterRes(resourceId = R.drawable.incognito, 1),
-            null,
-            modifier = IncognitoIconModifier,
-            tint = MaterialTheme.colorScheme.placeholderText,
-        )
-        Spacer(modifier = StdHorzSpacer)
-    } else if (baseNote.event is PrivateDmEvent) {
-        Icon(
-            painter = painterRes(resourceId = R.drawable.incognito_off, 1),
-            null,
+            symbol = MaterialSymbols.NoEncryption,
+            contentDescription = null,
             modifier = IncognitoIconModifier,
             tint = MaterialTheme.colorScheme.placeholderText,
         )

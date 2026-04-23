@@ -35,8 +35,6 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -55,6 +53,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
@@ -356,7 +356,7 @@ fun NewProductButton(
         containerColor = MaterialTheme.colorScheme.primary,
     ) {
         Icon(
-            imageVector = Icons.Outlined.Add,
+            symbol = MaterialSymbols.Add,
             contentDescription = stringRes(id = R.string.new_product),
             modifier = Size26Modifier,
             tint = Color.White,
@@ -378,7 +378,7 @@ fun NewLongFormMarkdownButton(
         containerColor = MaterialTheme.colorScheme.primary,
     ) {
         Icon(
-            imageVector = Icons.Outlined.Add,
+            symbol = MaterialSymbols.Add,
             contentDescription = stringRes(id = R.string.new_long_form_post),
             modifier = Size26Modifier,
             tint = Color.White,

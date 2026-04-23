@@ -34,10 +34,6 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material.icons.outlined.EmojiEmotions
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -56,6 +52,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.model.nip30CustomEmojis.OwnedEmojiPack
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
@@ -237,13 +235,13 @@ private fun EmojiPackOptionsButton(
             onDismiss = { isMenuOpen.value = false },
         ) {
             M3ActionSection {
-                M3ActionRow(icon = Icons.Outlined.Edit, text = stringRes(R.string.edit_emoji_pack)) {
+                M3ActionRow(icon = MaterialSymbols.Edit, text = stringRes(R.string.edit_emoji_pack)) {
                     onEdit()
                     isMenuOpen.value = false
                 }
             }
             M3ActionSection {
-                M3ActionRow(icon = Icons.Outlined.Delete, text = stringRes(R.string.quick_action_delete), isDestructive = true) {
+                M3ActionRow(icon = MaterialSymbols.Delete, text = stringRes(R.string.quick_action_delete), isDestructive = true) {
                     onDelete()
                     isMenuOpen.value = false
                 }
@@ -279,7 +277,7 @@ private fun MyEmojiListRow(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Icon(
-                    imageVector = Icons.Outlined.EmojiEmotions,
+                    symbol = MaterialSymbols.EmojiEmotions,
                     contentDescription = null,
                     modifier = Size40Modifier,
                 )
@@ -298,7 +296,7 @@ fun EmojiPackFab(onAddPack: () -> Unit) {
         },
         icon = {
             Icon(
-                imageVector = Icons.Outlined.EmojiEmotions,
+                symbol = MaterialSymbols.EmojiEmotions,
                 contentDescription = null,
             )
         },

@@ -21,8 +21,6 @@
 package com.vitorpamplona.amethyst.ui.components
 
 import androidx.compose.foundation.Image
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Face
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -34,6 +32,8 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
 import coil3.compose.AsyncImage
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.icons.symbols.rememberMaterialSymbolPainter
 import com.vitorpamplona.amethyst.commons.robohash.CachedRobohash
 import com.vitorpamplona.amethyst.commons.ui.components.ProfilePictureUrl
 import com.vitorpamplona.amethyst.ui.theme.isLight
@@ -54,7 +54,7 @@ fun RobohashAsyncImage(
         )
     } else {
         Image(
-            imageVector = Icons.Default.Face,
+            painter = rememberMaterialSymbolPainter(MaterialSymbols.Face),
             contentDescription = contentDescription,
             colorFilter = MaterialTheme.colorScheme.onBackgroundColorFilter,
             modifier = modifier,
@@ -84,10 +84,7 @@ fun RobohashFallbackAsyncImage(
                 )
             } else {
                 forwardingPainter(
-                    painter =
-                        rememberVectorPainter(
-                            image = Icons.Default.Face,
-                        ),
+                    painter = rememberMaterialSymbolPainter(MaterialSymbols.Face),
                     colorFilter = MaterialTheme.colorScheme.onBackgroundColorFilter,
                 )
             }
@@ -117,7 +114,7 @@ fun RobohashFallbackAsyncImage(
             )
         } else {
             Image(
-                imageVector = Icons.Default.Face,
+                painter = rememberMaterialSymbolPainter(MaterialSymbols.Face),
                 contentDescription = contentDescription,
                 colorFilter = MaterialTheme.colorScheme.onBackgroundColorFilter,
                 modifier = modifier,

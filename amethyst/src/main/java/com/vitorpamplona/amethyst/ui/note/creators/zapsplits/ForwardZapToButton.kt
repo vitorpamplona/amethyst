@@ -25,9 +25,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowForwardIos
-import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -39,6 +36,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.ZapSplit
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
@@ -82,7 +81,7 @@ fun ZapSplitPreview() {
                 .width(25.dp),
         ) {
             Icon(
-                imageVector = Icons.Outlined.Bolt,
+                symbol = MaterialSymbols.Bolt,
                 contentDescription = stringRes(id = R.string.zaps),
                 modifier =
                     Modifier
@@ -91,7 +90,7 @@ fun ZapSplitPreview() {
                 tint = BitcoinOrange,
             )
             Icon(
-                imageVector = Icons.AutoMirrored.Outlined.ArrowForwardIos,
+                symbol = MaterialSymbols.AutoMirrored.ArrowForwardIos,
                 contentDescription = stringRes(id = R.string.zaps),
                 modifier =
                     Modifier

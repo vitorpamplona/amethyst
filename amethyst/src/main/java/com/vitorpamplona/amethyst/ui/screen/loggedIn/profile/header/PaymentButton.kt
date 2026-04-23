@@ -23,8 +23,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header
 import android.content.Intent
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
@@ -37,6 +35,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
@@ -85,7 +85,7 @@ fun PaymentButtonWithTargets(targets: List<PaymentTarget>) {
         contentPadding = ZeroPadding,
     ) {
         Icon(
-            imageVector = Icons.Outlined.AccountBalanceWallet,
+            symbol = MaterialSymbols.AccountBalanceWallet,
             contentDescription = stringRes(R.string.payment_targets),
         )
     }
@@ -98,7 +98,7 @@ fun PaymentButtonWithTargets(targets: List<PaymentTarget>) {
             M3ActionSection {
                 targets.forEach { target ->
                     M3ActionRow(
-                        icon = Icons.Outlined.AccountBalanceWallet,
+                        icon = MaterialSymbols.AccountBalanceWallet,
                         text = "${target.type.replaceFirstChar(Char::titlecase)}: ${target.authority}",
                         onClick = {
                             expanded = false

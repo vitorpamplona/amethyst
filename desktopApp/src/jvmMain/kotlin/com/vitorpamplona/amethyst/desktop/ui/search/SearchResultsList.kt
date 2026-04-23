@@ -34,12 +34,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Article
-import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.Forum
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -58,8 +52,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.search.AdvancedSearchBarState
 import com.vitorpamplona.amethyst.commons.search.SearchSortOrder
 import com.vitorpamplona.amethyst.commons.ui.components.UserSearchCard
@@ -106,7 +102,7 @@ fun SearchResultsList(
                 SortableHeader(
                     title = "People",
                     count = people.size,
-                    icon = Icons.Default.Person,
+                    icon = MaterialSymbols.Person,
                     options = SearchSortOrder.PEOPLE_OPTIONS,
                     selected = peopleSortOrder,
                     onSelect = { state.updatePeopleSortOrder(it) },
@@ -147,7 +143,7 @@ fun SearchResultsList(
                 SortableHeader(
                     title = "Notes",
                     count = textNotes.size,
-                    icon = Icons.Default.Description,
+                    icon = MaterialSymbols.Description,
                     options = SearchSortOrder.EVENT_OPTIONS,
                     selected = eventSortOrder,
                     onSelect = { state.updateEventSortOrder(it) },
@@ -192,7 +188,7 @@ fun SearchResultsList(
                 SortableHeader(
                     title = "Articles",
                     count = articles.size,
-                    icon = Icons.AutoMirrored.Default.Article,
+                    icon = MaterialSymbols.AutoMirrored.Article,
                     options = SearchSortOrder.EVENT_OPTIONS,
                     selected = eventSortOrder,
                     onSelect = { state.updateEventSortOrder(it) },
@@ -234,7 +230,7 @@ fun SearchResultsList(
                 SortableHeader(
                     title = "Other",
                     count = otherNotes.size,
-                    icon = Icons.Default.Forum,
+                    icon = MaterialSymbols.Forum,
                     options = SearchSortOrder.EVENT_OPTIONS,
                     selected = eventSortOrder,
                     onSelect = { state.updateEventSortOrder(it) },
@@ -264,7 +260,7 @@ fun SearchResultsList(
 private fun SortableHeader(
     title: String,
     count: Int,
-    icon: ImageVector,
+    icon: MaterialSymbol,
     options: List<SearchSortOrder>,
     selected: SearchSortOrder,
     onSelect: (SearchSortOrder) -> Unit,
@@ -282,7 +278,7 @@ private fun SortableHeader(
             modifier = Modifier.clickable(onClick = onToggleCollapse).padding(vertical = 4.dp),
         ) {
             Icon(
-                Icons.Default.ExpandMore,
+                MaterialSymbols.ExpandMore,
                 contentDescription = if (collapsed) "Expand $title" else "Collapse $title",
                 modifier = Modifier.size(18.dp).rotate(chevronRotation),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -343,7 +339,7 @@ private fun <T> ExpandableSection(
             onClick = { expanded = true },
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Icon(Icons.Default.ExpandMore, contentDescription = null, modifier = Modifier.size(16.dp))
+            Icon(MaterialSymbols.ExpandMore, contentDescription = null, modifier = Modifier.size(16.dp))
             Text("Show all ${remaining.size} more")
         }
     }

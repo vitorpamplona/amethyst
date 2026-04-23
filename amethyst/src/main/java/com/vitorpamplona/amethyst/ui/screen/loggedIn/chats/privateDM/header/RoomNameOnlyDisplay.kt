@@ -69,7 +69,15 @@ fun DisplayUserSetAsSubject(
     fontWeight: FontWeight = FontWeight.Bold,
 ) {
     val userList = remember(room) { room.users.toList() }
+    DisplayUserSetAsSubject(userList, accountViewModel, fontWeight)
+}
 
+@Composable
+fun DisplayUserSetAsSubject(
+    userList: List<HexKey>,
+    accountViewModel: AccountViewModel,
+    fontWeight: FontWeight = FontWeight.Bold,
+) {
     if (userList.size == 1) {
         // Regular Design
         Row {

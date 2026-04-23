@@ -24,9 +24,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Visibility
-import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -48,6 +45,8 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.SimpleQrCodeScanner
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -85,8 +84,7 @@ fun KeyTextField(
             Row {
                 IconButton(onClick = { showCharsKey = !showCharsKey }) {
                     Icon(
-                        imageVector =
-                            if (showCharsKey) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
+                        symbol = if (showCharsKey) MaterialSymbols.VisibilityOff else MaterialSymbols.Visibility,
                         contentDescription =
                             if (showCharsKey) {
                                 stringRes(R.string.show_password)

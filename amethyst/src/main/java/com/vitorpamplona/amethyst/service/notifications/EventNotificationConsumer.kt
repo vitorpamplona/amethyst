@@ -45,10 +45,10 @@ import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.sendZa
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.ScreenAuthAccount
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderQueryState
+import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.experimental.notifications.wake.WakeUpEvent
-import com.vitorpamplona.quartz.marmot.WelcomeResult
 import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
@@ -63,8 +63,6 @@ import com.vitorpamplona.quartz.nip21UriScheme.toNostrUri
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
-import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
-import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip64Chess.baseEvent.BaseChessEvent
 import com.vitorpamplona.quartz.nip64Chess.challenge.accept.LiveChessGameAcceptEvent
 import com.vitorpamplona.quartz.nip64Chess.move.LiveChessMoveEvent
@@ -115,96 +113,73 @@ class EventNotificationConsumer(
         }
     }
 
-    suspend fun consume(event: GiftWrapEvent) =
+    /**
+     * Entry point for notification-relevant events arriving into [LocalCache]
+     * from any source (FCM push, UnifiedPush, Pokey, active relay subscriptions,
+     * NotificationRelayService). The [NotificationDispatcher] only invokes this
+     * after [Account.newNotesPreProcessor] has fully unwrapped wraps and seals,
+     * so this method receives the final inner payload directly.
+     *
+     * Matches the event to a logged-in account by its `p` tags and dispatches
+     * to [dispatchForAccount].
+     */
+    suspend fun consumeFromCache(event: Event) =
         withWakeLock {
-            Log.d(TAG, "New Notification Arrived")
+            Log.d(TAG) { "New Notification from cache: kind=${event.kind} id=${event.id}" }
 
-            // PushNotification Wraps don't include a receiver.
-            // Test with all logged in accounts
-            var matchAccount = false
-            LocalPreferences.allSavedAccounts().forEach {
-                if (!matchAccount && (it.hasPrivKey || it.loggedInWithExternalSigner)) {
-                    LocalPreferences.loadAccountConfigFromEncryptedStorage(it.npub)?.let { acc ->
-                        Log.d(TAG) { "New Notification Testing if for ${it.npub}" }
-                        try {
-                            val account = Amethyst.instance.accountsCache.loadAccount(acc)
-                            consumeIfMatchesAccount(event, account)
-                            matchAccount = true
-                        } catch (e: Exception) {
-                            if (e is CancellationException) throw e
-                            Log.d(TAG) { "Message was not for user ${it.npub}: ${e.message}" }
-                        }
-                    }
+            if (!notificationManager().areNotificationsEnabled()) return@withWakeLock
+
+            val taggedNpubs =
+                event
+                    .taggedUserIds()
+                    .mapTo(mutableSetOf()) { LocalCache.getOrCreateUser(it).pubkeyNpub() }
+            if (taggedNpubs.isEmpty()) return@withWakeLock
+
+            LocalPreferences.allSavedAccounts().forEach { savedAccount ->
+                if (!savedAccount.hasPrivKey && !savedAccount.loggedInWithExternalSigner) return@forEach
+                if (savedAccount.npub !in taggedNpubs) return@forEach
+
+                val accountSettings = LocalPreferences.loadAccountConfigFromEncryptedStorage(savedAccount.npub) ?: return@forEach
+                try {
+                    val account = Amethyst.instance.accountsCache.loadAccount(accountSettings)
+                    dispatchForAccount(event, account)
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                    Log.d(TAG) { "Failed to dispatch ${event.kind} ${event.id} for ${savedAccount.npub}: ${e.message}" }
                 }
             }
         }
 
-    private suspend fun consumeIfMatchesAccount(
-        pushWrappedEvent: GiftWrapEvent,
+    private suspend fun dispatchForAccount(
+        event: Event,
         account: Account,
     ) {
-        val notificationEvent = pushWrappedEvent.unwrapThrowing(account.signer)
-        consumeNotificationEvent(notificationEvent, account)
-    }
-
-    suspend fun consumeNotificationEvent(
-        notificationEvent: Event,
-        account: Account,
-    ) {
-        Log.d(TAG) { "New Notification ${notificationEvent.kind} ${notificationEvent.id} Arrived for ${account.signer.pubKey}" }
-        val consumed = LocalCache.hasConsumed(notificationEvent)
-        Log.d(TAG) { "New Notification ${notificationEvent.kind} ${notificationEvent.id} Arrived for ${account.signer.pubKey} consumed= $consumed" }
-        if (!consumed) {
-            Log.d(TAG, "New Notification was verified")
-            if (!notificationManager().areNotificationsEnabled()) return
-            Log.d(TAG, "Notifications are enabled")
-
-            unwrapAndConsume(notificationEvent, account.signer)?.let { innerNote ->
-                val innerEvent = innerNote.event
-                Log.d(TAG) { "Unwrapped consume ${innerEvent?.javaClass?.simpleName}" }
-
-                when (innerEvent) {
-                    is PrivateDmEvent -> {
-                        notify(innerEvent, account)
-                    }
-
-                    is LnZapEvent -> {
-                        notify(innerEvent, account)
-                    }
-
-                    is ChatMessageEvent -> {
-                        notify(innerEvent, account)
-                    }
-
-                    is ChatMessageEncryptedFileHeaderEvent -> {
-                        notify(innerEvent, account)
-                    }
-
-                    is ReactionEvent -> {
-                        notify(innerEvent, account)
-                    }
-
-                    is LiveChessGameAcceptEvent -> {
-                        notifyChessEvent(innerEvent, account, R.string.app_notification_chess_challenge_accepted)
-                    }
-
-                    is LiveChessMoveEvent -> {
-                        notifyChessEvent(innerEvent, account, R.string.app_notification_chess_your_turn)
-                    }
-
-                    is CallOfferEvent -> {
-                        notifyIncomingCall(innerEvent, account)
-                    }
-
-                    is WakeUpEvent -> {
-                        wakeUpFor(innerEvent, innerNote, account)
-                    }
-
-                    is WelcomeEvent -> {
-                        notify(innerEvent, account)
-                    }
-                }
+        // Calls and wake-ups are high-priority and always notify, even when MainActivity is visible.
+        when (event) {
+            is CallOfferEvent -> {
+                notifyIncomingCall(event, account)
+                return
             }
+
+            is WakeUpEvent -> {
+                wakeUpFor(event, LocalCache.getOrCreateNote(event.id), account)
+                return
+            }
+        }
+
+        // Everything else is suppressed while the user is actively on the home screen.
+        if (MainActivity.isResumed) return
+
+        when (event) {
+            is PrivateDmEvent -> notify(event, account)
+            is LnZapEvent -> notify(event, account)
+            is ChatMessageEvent -> notify(event, account)
+            is ChatMessageEncryptedFileHeaderEvent -> notify(event, account)
+            is ReactionEvent -> notify(event, account)
+            is LiveChessGameAcceptEvent -> notifyChessEvent(event, account, R.string.app_notification_chess_challenge_accepted)
+            is LiveChessMoveEvent -> notifyChessEvent(event, account, R.string.app_notification_chess_your_turn)
+            // WelcomeEvent is dispatched directly from processMarmotWelcomeFlow
+            // (no `p` tag, so tag-based matching doesn't work).
         }
     }
 
@@ -245,79 +220,6 @@ class EventNotificationConsumer(
                     Amethyst.instance.sources.userFinder
                         .unsubscribe(authorState)
                 }
-            }
-        }
-    }
-
-    suspend fun findAccountAndConsume(event: Event) =
-        withWakeLock {
-            Log.d(TAG, "New Notification Arrived")
-            val users = event.taggedUserIds().map { LocalCache.getOrCreateUser(it) }
-            val npubs = users.map { it.pubkeyNpub() }.toSet()
-
-            // PushNotification Wraps don't include a receiver.
-            // Test with all logged in accounts
-            var matchAccount = false
-            LocalPreferences.allSavedAccounts().forEach {
-                if (!matchAccount && (it.hasPrivKey || it.loggedInWithExternalSigner) && it.npub in npubs) {
-                    LocalPreferences.loadAccountConfigFromEncryptedStorage(it.npub)?.let { accountSettings ->
-                        Log.d(TAG) { "New Notification Testing if for ${it.npub}" }
-                        try {
-                            val account = Amethyst.instance.accountsCache.loadAccount(accountSettings)
-                            consumeNotificationEvent(event, account)
-                            matchAccount = true
-                        } catch (e: Exception) {
-                            if (e is CancellationException) throw e
-                            Log.d(TAG) { "Message was not for user ${it.npub}: ${e.message}" }
-                        }
-                    }
-                }
-            }
-        }
-
-    private suspend fun unwrapAndConsume(
-        event: Event,
-        signer: NostrSigner,
-    ): Note? {
-        if (LocalCache.hasConsumed(event)) return null
-
-        return when (event) {
-            is GiftWrapEvent -> {
-                if (LocalCache.justConsume(event, null, false)) {
-                    // new event
-                    val inner = event.unwrapThrowing(signer)
-                    // clear the encrypted payload to save memory
-                    LocalCache.getOrCreateNote(event.id).event = event.copyNoContent()
-
-                    unwrapAndConsume(inner, signer)
-                } else {
-                    null
-                }
-            }
-
-            is SealedRumorEvent -> {
-                if (LocalCache.justConsume(event, null, false)) {
-                    // new event
-                    val inner = event.unsealThrowing(signer)
-                    // clear the encrypted payload to save memory
-                    LocalCache.getOrCreateNote(event.id).event = event.copyNoContent()
-
-                    val note = LocalCache.getOrCreateNote(inner.id)
-                    // this is not verifiable
-                    if (LocalCache.justConsume(inner, null, true)) {
-                        note
-                    } else {
-                        null
-                    }
-                } else {
-                    null
-                }
-            }
-
-            else -> {
-                val note = LocalCache.getOrCreateNote(event.id)
-                LocalCache.justConsume(event, null, false)
-                note
             }
         }
     }
@@ -469,38 +371,28 @@ class EventNotificationConsumer(
         }
     }
 
-    private suspend fun notify(
+    /**
+     * Welcomes have no `p` tag, so [consumeFromCache]'s tag-based account match
+     * can't route them. They are instead dispatched here directly by
+     * [com.vitorpamplona.amethyst.ui.screen.loggedIn.processMarmotWelcomeFlow]
+     * after [MarmotManager.processWelcome] joins the group — which is also the
+     * only place we reliably know which account the invite was for.
+     */
+    suspend fun notifyWelcome(
         event: WelcomeEvent,
         account: Account,
-    ) {
+    ) = withWakeLock {
         Log.d(TAG, "New Marmot Welcome to Notify")
 
+        if (!notificationManager().areNotificationsEnabled()) return@withWakeLock
+        if (MainActivity.isResumed) return@withWakeLock
+
         // old event being re-broadcast
-        if (event.createdAt < TimeUtils.fifteenMinutesAgo()) return
+        if (event.createdAt < TimeUtils.fifteenMinutesAgo()) return@withWakeLock
         // a welcome we ourselves emitted
-        if (event.pubKey == account.signer.pubKey) return
+        if (event.pubKey == account.signer.pubKey) return@withWakeLock
 
-        val nostrGroupId = event.nostrGroupId() ?: return
-        val manager = account.marmotManager ?: return
-
-        // Best-effort: process the welcome here so the chatroom is hydrated
-        // before composing the notification body. The push-notification
-        // background path does NOT go through Account.eventProcessor, so
-        // without this the invitee would only join the group later, when
-        // they next open the app and the relay subscription redelivers.
-        if (!manager.isMember(nostrGroupId)) {
-            try {
-                val result = manager.processWelcome(event, nostrGroupId)
-                if (result is WelcomeResult.Joined) {
-                    val chatroom = account.marmotGroupList.getOrCreateGroup(result.nostrGroupId)
-                    manager.syncMetadataTo(result.nostrGroupId, chatroom)
-                    account.marmotGroupList.notifyGroupChanged(result.nostrGroupId)
-                }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                Log.w(TAG) { "Failed to process Marmot Welcome from notification path: ${e.message}" }
-            }
-        }
+        val nostrGroupId = event.nostrGroupId() ?: return@withWakeLock
 
         val chatroom = account.marmotGroupList.getOrCreateGroup(nostrGroupId)
         val groupName = chatroom.displayName.value?.takeIf { it.isNotBlank() } ?: "a private group"

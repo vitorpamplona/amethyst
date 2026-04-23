@@ -49,18 +49,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.outlined.CollectionsBookmark
-import androidx.compose.material.icons.outlined.Drafts
-import androidx.compose.material.icons.outlined.ExpandLess
-import androidx.compose.material.icons.outlined.ExpandMore
-import androidx.compose.material.icons.outlined.GroupAdd
-import androidx.compose.material.icons.outlined.Photo
-import androidx.compose.material.icons.outlined.SettingsInputAntenna
-import androidx.compose.material.icons.outlined.SmartDisplay
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -81,7 +69,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
@@ -99,6 +86,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.model.Account
@@ -467,7 +457,7 @@ fun SendButton(
         onClick = onClick,
     ) {
         Icon(
-            imageVector = Icons.AutoMirrored.Filled.Send,
+            symbol = MaterialSymbols.AutoMirrored.Send,
             null,
             modifier = Size20Modifier,
             tint = tint,
@@ -482,7 +472,7 @@ fun UserStatusDeleteButton(onClick: () -> Unit) {
         onClick = onClick,
     ) {
         Icon(
-            imageVector = Icons.Default.Delete,
+            symbol = MaterialSymbols.Delete,
             null,
             modifier = Size20Modifier,
             tint = MaterialTheme.colorScheme.placeholderText,
@@ -549,7 +539,7 @@ fun ListContent(
         CollapsibleSection(title = R.string.drawer_section_create) {
             NavigationRow(
                 title = R.string.share_hls_video,
-                icon = Icons.Outlined.SettingsInputAntenna,
+                icon = MaterialSymbols.SettingsInputAntenna,
                 tint = MaterialTheme.colorScheme.onBackground,
                 nav = nav,
                 route = Route.NewHlsVideo,
@@ -558,8 +548,7 @@ fun ListContent(
             if (isDebug) {
                 NavigationRow(
                     title = R.string.route_chess,
-                    icon = R.drawable.ic_chess,
-                    iconReference = 1,
+                    icon = MaterialSymbols.ChessKnight,
                     tint = MaterialTheme.colorScheme.onBackground,
                     nav = nav,
                     route = Route.Chess,
@@ -585,7 +574,7 @@ fun ListContent(
 
         IconRow(
             title = R.string.drawer_accounts,
-            icon = Icons.Outlined.GroupAdd,
+            icon = MaterialSymbols.GroupAdd,
             tint = MaterialTheme.colorScheme.onBackground,
             onClick = openSheet,
         )
@@ -653,7 +642,7 @@ fun CollapsibleSection(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Icon(
-                imageVector = if (expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
+                symbol = if (expanded) MaterialSymbols.ExpandLess else MaterialSymbols.ExpandMore,
                 contentDescription = sectionTitle,
                 modifier = Size22Modifier,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -711,7 +700,7 @@ fun NavigationRow(
 @Composable
 fun NavigationRow(
     title: Int,
-    icon: ImageVector,
+    icon: MaterialSymbol,
     tint: Color,
     nav: INav,
     route: Route,
@@ -730,7 +719,7 @@ fun NavigationRow(
 @Composable
 fun NavigationRow(
     title: Int,
-    icon: ImageVector,
+    icon: MaterialSymbol,
     tint: Color,
     nav: INav,
     computeRoute: () -> Route,
@@ -783,7 +772,7 @@ fun IconRow(
 @Composable
 fun IconRow(
     title: Int,
-    icon: ImageVector,
+    icon: MaterialSymbol,
     tint: Color,
     onClick: () -> Unit,
 ) {
@@ -800,7 +789,7 @@ fun IconRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
-            imageVector = icon,
+            symbol = icon,
             contentDescription = title,
             modifier = Size22ModifierWith4Padding,
             tint = tint,
@@ -943,19 +932,19 @@ private fun CollapsibleSectionPreview() {
             CollapsibleSection(title = R.string.drawer_section_you) {
                 IconRow(
                     title = R.string.profile,
-                    icon = Icons.Default.AccountCircle,
+                    icon = MaterialSymbols.AccountCircle,
                     tint = MaterialTheme.colorScheme.primary,
                     onClick = {},
                 )
                 IconRow(
                     title = R.string.bookmarks,
-                    icon = Icons.Outlined.CollectionsBookmark,
+                    icon = MaterialSymbols.CollectionsBookmark,
                     tint = MaterialTheme.colorScheme.onBackground,
                     onClick = {},
                 )
                 IconRow(
                     title = R.string.drafts,
-                    icon = Icons.Outlined.Drafts,
+                    icon = MaterialSymbols.Drafts,
                     tint = MaterialTheme.colorScheme.onBackground,
                     onClick = {},
                 )
@@ -963,13 +952,13 @@ private fun CollapsibleSectionPreview() {
             CollapsibleSection(title = R.string.drawer_section_feeds) {
                 IconRow(
                     title = R.string.pictures,
-                    icon = Icons.Outlined.Photo,
+                    icon = MaterialSymbols.Photo,
                     tint = MaterialTheme.colorScheme.onBackground,
                     onClick = {},
                 )
                 IconRow(
                     title = R.string.longs,
-                    icon = Icons.Outlined.SmartDisplay,
+                    icon = MaterialSymbols.SmartDisplay,
                     tint = MaterialTheme.colorScheme.onBackground,
                     onClick = {},
                 )

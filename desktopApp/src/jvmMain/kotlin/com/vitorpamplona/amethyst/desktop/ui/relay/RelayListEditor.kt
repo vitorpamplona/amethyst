@@ -28,10 +28,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Circle
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -50,6 +46,8 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
@@ -104,7 +102,7 @@ fun RelayListEditor(
                     if (error == null) newRelayUrl = ""
                 },
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Add relay")
+                Icon(MaterialSymbols.Add, contentDescription = "Add relay")
             }
         }
 
@@ -118,7 +116,7 @@ fun RelayListEditor(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        Icons.Default.Circle,
+                        MaterialSymbols.Circle,
                         contentDescription = null,
                         modifier = Modifier.size(8.dp),
                         tint =
@@ -144,7 +142,7 @@ fun RelayListEditor(
                 }
                 IconButton(onClick = { onRemove(url) }, modifier = Modifier.size(28.dp)) {
                     Icon(
-                        Icons.Default.Close,
+                        MaterialSymbols.Close,
                         contentDescription = "Remove",
                         modifier = Modifier.size(16.dp),
                     )

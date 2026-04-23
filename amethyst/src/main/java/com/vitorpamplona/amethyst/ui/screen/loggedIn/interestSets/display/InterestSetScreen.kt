@@ -30,11 +30,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.LockOpen
-import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -53,6 +48,8 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.nip51Lists.interestSets.InterestSet
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
@@ -141,7 +138,7 @@ private fun InterestSetContent(
                 },
                 enabled = newHashtag.isNotBlank(),
             ) {
-                Icon(Icons.Default.Add, contentDescription = stringRes(R.string.interest_set_add_hashtag))
+                Icon(MaterialSymbols.Add, contentDescription = stringRes(R.string.interest_set_add_hashtag))
             }
         }
 
@@ -151,7 +148,7 @@ private fun InterestSetContent(
             label = { Text(stringRes(R.string.interest_set_hashtag_private_toggle)) },
             leadingIcon = {
                 Icon(
-                    imageVector = if (isPrivate) Icons.Default.Lock else Icons.Default.LockOpen,
+                    symbol = if (isPrivate) MaterialSymbols.Lock else MaterialSymbols.LockOpen,
                     contentDescription = null,
                 )
             },
@@ -230,7 +227,7 @@ private fun HashtagRow(
         leadingContent = {
             IconButton(onClick = onToggle) {
                 Icon(
-                    imageVector = if (isPrivate) Icons.Default.Lock else Icons.Default.LockOpen,
+                    symbol = if (isPrivate) MaterialSymbols.Lock else MaterialSymbols.LockOpen,
                     contentDescription = stringRes(R.string.interest_set_toggle_visibility),
                 )
             }
@@ -238,7 +235,7 @@ private fun HashtagRow(
         trailingContent = {
             IconButton(onClick = onDelete) {
                 Icon(
-                    imageVector = Icons.Outlined.Delete,
+                    symbol = MaterialSymbols.Delete,
                     contentDescription = stringRes(R.string.quick_action_delete),
                 )
             }

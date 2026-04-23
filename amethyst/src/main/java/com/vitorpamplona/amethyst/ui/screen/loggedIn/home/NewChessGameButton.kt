@@ -21,8 +21,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.home
 
 import androidx.activity.compose.LocalActivity
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
@@ -33,6 +31,8 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.chess.NewChessGameDialog
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.ChessViewModelFactory
@@ -60,7 +60,7 @@ fun NewChessGameButton(
         onClick = { showDialog = true },
     ) {
         Icon(
-            imageVector = Icons.Default.Add,
+            symbol = MaterialSymbols.Add,
             contentDescription = stringRes(R.string.new_chess_game),
         )
     }

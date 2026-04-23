@@ -36,12 +36,6 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Report
-import androidx.compose.material.icons.outlined.Collections
-import androidx.compose.material.icons.outlined.ContentCopy
-import androidx.compose.material.icons.outlined.Link
-import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -82,6 +76,8 @@ import coil3.size.Size
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaLocalImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaLocalVideo
@@ -872,7 +868,7 @@ fun ShareMediaAction(
             if ((videoUri != null && !videoUri.startsWith("file")) || postNostrUri != null) {
                 M3ActionSection {
                     if (videoUri != null && !videoUri.startsWith("file")) {
-                        M3ActionRow(icon = Icons.Outlined.Link, text = stringRes(R.string.copy_url_to_clipboard)) {
+                        M3ActionRow(icon = MaterialSymbols.Link, text = stringRes(R.string.copy_url_to_clipboard)) {
                             scope.launch {
                                 clipboardManager.setText(videoUri)
                             }
@@ -880,13 +876,13 @@ fun ShareMediaAction(
                         }
                     }
                     postNostrUri?.let {
-                        M3ActionRow(icon = Icons.Outlined.ContentCopy, text = stringRes(R.string.copy_the_note_id_to_the_clipboard)) {
+                        M3ActionRow(icon = MaterialSymbols.ContentCopy, text = stringRes(R.string.copy_the_note_id_to_the_clipboard)) {
                             scope.launch {
                                 clipboardManager.setText(it)
                             }
                             onDismiss()
                         }
-                        M3ActionRow(icon = Icons.Outlined.Collections, text = stringRes(R.string.add_media_to_gallery)) {
+                        M3ActionRow(icon = MaterialSymbols.Collections, text = stringRes(R.string.add_media_to_gallery)) {
                             if (videoUri != null) {
                                 val n19 = Nip19Parser.uriToRoute(postNostrUri)?.entity as? NEvent
                                 if (n19 != null) {
@@ -909,7 +905,7 @@ fun ShareMediaAction(
                         is MediaUrlImage -> {
                             videoUri?.let {
                                 if (videoUri.isNotEmpty()) {
-                                    M3ActionRow(icon = Icons.Outlined.Share, text = stringRes(R.string.share_image)) {
+                                    M3ActionRow(icon = MaterialSymbols.Share, text = stringRes(R.string.share_image)) {
                                         accountViewModel.viewModelScope.launch { shareImageFile(context, videoUri, mimeType) }
                                         onDismiss()
                                     }
@@ -921,7 +917,7 @@ fun ShareMediaAction(
                             videoUri?.let {
                                 if (videoUri.isNotEmpty()) {
                                     M3ActionRow(
-                                        icon = Icons.Outlined.Share,
+                                        icon = MaterialSymbols.Share,
                                         text = stringRes(R.string.share_video),
                                         enabled = !isDownloadingVideo.value,
                                     ) {
@@ -951,7 +947,7 @@ fun ShareMediaAction(
 
                         is MediaLocalVideo -> {
                             content.localFile?.let { localFile ->
-                                M3ActionRow(icon = Icons.Outlined.Share, text = stringRes(R.string.share_video)) {
+                                M3ActionRow(icon = MaterialSymbols.Share, text = stringRes(R.string.share_video)) {
                                     accountViewModel.viewModelScope.launch { shareLocalVideoFile(context, localFile, mimeType) }
                                     onDismiss()
                                 }
@@ -1173,7 +1169,7 @@ private fun HashVerificationSymbol(verifiedHash: Boolean) {
             },
         ) {
             Icon(
-                imageVector = Icons.Default.Report,
+                symbol = MaterialSymbols.Report,
                 contentDescription = stringRes(id = R.string.hash_verification_failed),
                 modifier = Size30Modifier,
                 tint = Color.Red,

@@ -33,10 +33,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Error
-import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -46,6 +42,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 
 @Composable
 fun DmBroadcastBanner(
@@ -87,17 +85,17 @@ fun DmBroadcastBanner(
                         when (status) {
                             is DmBroadcastStatus.Subscribing,
                             is DmBroadcastStatus.Sending,
-                            -> Icons.Default.Sync
+                            -> MaterialSymbols.Sync
 
-                            is DmBroadcastStatus.Sent -> Icons.Default.CheckCircle
+                            is DmBroadcastStatus.Sent -> MaterialSymbols.CheckCircle
 
-                            is DmBroadcastStatus.Failed -> Icons.Default.Error
+                            is DmBroadcastStatus.Failed -> MaterialSymbols.Error
 
-                            is DmBroadcastStatus.Idle -> Icons.Default.Sync
+                            is DmBroadcastStatus.Idle -> MaterialSymbols.Sync
                         }
 
                     Icon(
-                        imageVector = icon,
+                        symbol = icon,
                         contentDescription = null,
                         modifier = Modifier.size(16.dp),
                         tint = contentColor,

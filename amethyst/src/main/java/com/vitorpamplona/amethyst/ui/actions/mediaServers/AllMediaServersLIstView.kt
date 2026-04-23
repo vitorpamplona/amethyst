@@ -29,9 +29,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -44,6 +41,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.SettingsCategory
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.SettingsCategoryWithButton
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -209,7 +208,7 @@ fun MediaServerEntry(
                 },
             ) {
                 Icon(
-                    imageVector = if (isAmethystDefault) Icons.Rounded.Add else Icons.Rounded.Delete,
+                    symbol = if (isAmethystDefault) MaterialSymbols.Add else MaterialSymbols.Delete,
                     contentDescription =
                         if (isAmethystDefault) {
                             stringRes(id = R.string.add_media_server)

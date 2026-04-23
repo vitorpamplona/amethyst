@@ -20,22 +20,8 @@
  */
 package com.vitorpamplona.amethyst.desktop.ui.deck
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.Chat
-import androidx.compose.material.icons.filled.Code
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Explore
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Groups
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.MenuBook
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.SportsEsports
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.Work
-import androidx.compose.ui.graphics.vector.ImageVector
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.desktop.LayoutMode
 
 data class Workspace(
@@ -57,25 +43,25 @@ data class Workspace(
 }
 
 object WorkspaceIcons {
-    private val icons: Map<String, ImageVector> =
+    private val icons: Map<String, MaterialSymbol> =
         mapOf(
-            "Groups" to Icons.Default.Groups,
-            "Edit" to Icons.Default.Edit,
-            "MenuBook" to Icons.Default.MenuBook,
-            "Home" to Icons.Default.Home,
-            "Chat" to Icons.Default.Chat,
-            "Search" to Icons.Default.Search,
-            "SportsEsports" to Icons.Default.SportsEsports,
-            "Bookmark" to Icons.Default.Bookmark,
-            "Explore" to Icons.Default.Explore,
-            "Person" to Icons.Default.Person,
-            "Star" to Icons.Default.Star,
-            "Favorite" to Icons.Default.Favorite,
-            "Work" to Icons.Default.Work,
-            "Code" to Icons.Default.Code,
+            "Groups" to MaterialSymbols.Groups,
+            "Edit" to MaterialSymbols.Edit,
+            "MenuBook" to MaterialSymbols.MenuBook,
+            "Home" to MaterialSymbols.Home,
+            "Chat" to MaterialSymbols.Chat,
+            "Search" to MaterialSymbols.Search,
+            "SportsEsports" to MaterialSymbols.SportsEsports,
+            "Bookmark" to MaterialSymbols.Bookmark,
+            "Explore" to MaterialSymbols.Explore,
+            "Person" to MaterialSymbols.Person,
+            "Star" to MaterialSymbols.Star,
+            "Favorite" to MaterialSymbols.Favorite,
+            "Work" to MaterialSymbols.Work,
+            "Code" to MaterialSymbols.Code,
         )
 
     val availableNames: List<String> = icons.keys.sorted()
 
-    fun resolve(name: String): ImageVector = icons[name] ?: Icons.Default.Home
+    fun resolve(name: String): MaterialSymbol = icons[name] ?: MaterialSymbols.Home
 }

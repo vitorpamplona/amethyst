@@ -33,9 +33,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AddPhotoAlternate
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -61,6 +58,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserPicture
@@ -118,7 +117,7 @@ fun ProfileHeader(
             ) {
                 Icon(
                     tint = MaterialTheme.colorScheme.placeholderText,
-                    imageVector = Icons.Default.MoreVert,
+                    symbol = MaterialSymbols.MoreVert,
                     contentDescription = stringRes(R.string.more_options),
                 )
 
@@ -275,7 +274,7 @@ private fun ProfilePictureUploadButton(
             contentAlignment = Alignment.Center,
         ) {
             Icon(
-                imageVector = Icons.Default.AddPhotoAlternate,
+                symbol = MaterialSymbols.AddPhotoAlternate,
                 contentDescription = stringRes(R.string.upload_image),
                 modifier = Modifier.size(40.dp),
                 tint = MaterialTheme.colorScheme.onSurface,

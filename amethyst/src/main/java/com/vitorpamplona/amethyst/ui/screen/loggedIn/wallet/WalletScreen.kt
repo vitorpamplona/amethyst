@@ -35,15 +35,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -74,6 +65,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -98,7 +91,7 @@ fun WalletScreen(
                 navigationIcon = {
                     IconButton(onClick = { nav.popBack() }) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            symbol = MaterialSymbols.AutoMirrored.ArrowBack,
                             contentDescription = stringRes(R.string.back),
                         )
                     }
@@ -106,7 +99,7 @@ fun WalletScreen(
                 actions = {
                     IconButton(onClick = { nav.nav(Route.WalletAdd) }) {
                         Icon(
-                            imageVector = Icons.Filled.Add,
+                            symbol = MaterialSymbols.Add,
                             contentDescription = stringRes(R.string.wallet_add),
                         )
                     }
@@ -156,7 +149,7 @@ private fun NoWalletSetup(
         )
         Spacer(modifier = Modifier.height(24.dp))
         Button(onClick = { nav.nav(Route.WalletAdd) }) {
-            Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+            Icon(MaterialSymbols.Add, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(8.dp))
             Text(stringRes(R.string.wallet_add_connection))
         }
@@ -231,7 +224,7 @@ private fun MultiWalletHomeContent(
                         .height(48.dp),
                 shape = RoundedCornerShape(12.dp),
             ) {
-                Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                Icon(MaterialSymbols.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(stringRes(R.string.wallet_add))
             }
@@ -327,7 +320,7 @@ private fun WalletCard(
                         if (walletInfo.isDefault) {
                             Spacer(modifier = Modifier.width(8.dp))
                             Icon(
-                                imageVector = Icons.Filled.Star,
+                                symbol = MaterialSymbols.Star,
                                 contentDescription = stringRes(R.string.wallet_default),
                                 modifier = Modifier.size(16.dp),
                                 tint = MaterialTheme.colorScheme.primary,
@@ -352,7 +345,7 @@ private fun WalletCard(
                             modifier = Modifier.size(28.dp),
                         ) {
                             Icon(
-                                Icons.Filled.KeyboardArrowUp,
+                                MaterialSymbols.KeyboardArrowUp,
                                 contentDescription = stringRes(R.string.wallet_move_up),
                                 modifier = Modifier.size(20.dp),
                             )
@@ -363,7 +356,7 @@ private fun WalletCard(
                             modifier = Modifier.size(28.dp),
                         ) {
                             Icon(
-                                Icons.Filled.KeyboardArrowDown,
+                                MaterialSymbols.KeyboardArrowDown,
                                 contentDescription = stringRes(R.string.wallet_move_down),
                                 modifier = Modifier.size(20.dp),
                             )
@@ -418,7 +411,7 @@ private fun WalletCard(
                         modifier = Modifier.height(36.dp),
                         shape = RoundedCornerShape(8.dp),
                     ) {
-                        Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(14.dp))
+                        Icon(MaterialSymbols.Check, contentDescription = null, modifier = Modifier.size(14.dp))
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(stringRes(R.string.wallet_set_default), style = MaterialTheme.typography.bodySmall)
                     }
@@ -429,7 +422,7 @@ private fun WalletCard(
                     modifier = Modifier.height(36.dp),
                     shape = RoundedCornerShape(8.dp),
                 ) {
-                    Icon(Icons.Filled.Edit, contentDescription = null, modifier = Modifier.size(14.dp))
+                    Icon(MaterialSymbols.Edit, contentDescription = null, modifier = Modifier.size(14.dp))
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(stringRes(R.string.wallet_rename), style = MaterialTheme.typography.bodySmall)
                 }
@@ -441,7 +434,7 @@ private fun WalletCard(
                     modifier = Modifier.size(36.dp),
                 ) {
                     Icon(
-                        Icons.Filled.Delete,
+                        MaterialSymbols.Delete,
                         contentDescription = stringRes(R.string.wallet_remove),
                         modifier = Modifier.size(18.dp),
                         tint = MaterialTheme.colorScheme.error,
