@@ -186,7 +186,7 @@ private fun SearchBar(
 
         // bech32 auto-resolve: navigate on hit without displaying results
         launch {
-            searchBarViewModel.directEventResolver.filterNotNull().collect { route ->
+            searchBarViewModel.directRouteResolver.filterNotNull().collect { route ->
                 nav.nav(route)
                 searchBarViewModel.clear()
             }
@@ -215,6 +215,7 @@ private fun hasNonDefaultFilters(
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
+@Suppress("AssignedValueIsNeverRead")
 @Composable
 private fun SearchFilterRow(searchBarViewModel: SearchBarViewModel) {
     val currentScope by searchBarViewModel.scope.collectAsStateWithLifecycle()
