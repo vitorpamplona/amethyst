@@ -488,29 +488,50 @@ class MlsGroup private constructor(
         // the decryption into `UpdatePathError(UnableToDecrypt)`.
         val updatePath: UpdatePath? =
             if (needsPath && pathSecrets.isNotEmpty()) {
-                val copath = BinaryTree.copath(myLeafIndex, tree.leafCount)
+                // RFC 9420 §7.9: UpdatePath carries one node per entry in the
+                // **filtered** direct path — parents whose copath subtree has
+                // empty resolution are omitted (encrypting to them is
+                // equivalent to encrypting to their only non-blank child).
+                // Sender and receiver must agree on filtering or the
+                // UpdatePath length check fails and openmls/wn reject the
+                // commit with "UpdatePath node count doesn't match".
+                val (filteredDp, filteredCp) = tree.filteredDirectPath(myLeafIndex)
+                val directPath = BinaryTree.directPath(myLeafIndex, tree.leafCount)
+
+                // path_secrets are derived one per UNFILTERED level so the
+                // KDF chain reaches the root regardless of filtering
+                // (commit_secret = DeriveSecret(root_path_secret, "path")
+                // must be computable even when the root is in a filtered-out
+                // position). Select the subset aligned to the filtered
+                // direct path for UpdatePath node generation.
+                val filteredPathSecrets =
+                    directPath.indices.mapNotNull { i ->
+                        val idxInFiltered = filteredDp.indexOf(directPath[i])
+                        if (idxInFiltered >= 0) pathSecrets[i] else null
+                    }
 
                 // Capture sibling tree hashes BEFORE applying the UpdatePath —
                 // parent_hash computation (RFC 9420 §7.9.2) uses the
-                // ORIGINAL sibling-subtree tree hashes.
+                // ORIGINAL sibling-subtree tree hashes. Only needed at the
+                // filtered positions (those are the nodes whose parent_hash
+                // we're going to compute).
                 val preUpdateSiblingHashes = capturePreUpdateSiblingHashes(myLeafIndex)
 
                 // Stage path-keys into the tree so subsequent parent_hash /
                 // tree_hash computations reflect the new keys. We'll fill in
                 // the HPKE-encrypted secrets once we know the post-commit
-                // context bytes.
+                // context bytes. One staged node per FILTERED level.
                 val stagedPathNodes =
-                    pathSecrets.zip(copath).map { (pathKey, _) ->
+                    filteredPathSecrets.map { pathKey ->
                         UpdatePathNode(pathKey.publicKey, emptyList())
                     }
                 tree.applyUpdatePath(myLeafIndex, stagedPathNodes)
 
-                // Compute parent_hash for every direct-path parent node and
-                // for the committer's leaf (RFC 9420 §7.9.2).
+                // Compute parent_hash for every FILTERED-direct-path parent
+                // node and for the committer's leaf (RFC 9420 §7.9.2).
                 val (parentNodeHashes, leafParentHash) =
                     computeSenderParentHashes(myLeafIndex, preUpdateSiblingHashes)
-                val directPath = BinaryTree.directPath(myLeafIndex, tree.leafCount)
-                for (nodeIdx in directPath) {
+                for (nodeIdx in filteredDp) {
                     val existing = tree.getNode(nodeIdx)
                     if (existing is com.vitorpamplona.quartz.marmot.mls.tree.TreeNode.Parent) {
                         tree.setParent(
@@ -559,7 +580,7 @@ class MlsGroup private constructor(
                         ).toTlsBytes()
 
                 val pathNodes =
-                    stagedPathNodes.zip(copath).zip(pathSecrets) { (staged, copathNode), pathKey ->
+                    stagedPathNodes.zip(filteredCp).zip(filteredPathSecrets) { (staged, copathNode), pathKey ->
                         val resolution =
                             tree.resolution(copathNode).filterNot { resNode ->
                                 BinaryTree.isLeaf(resNode) &&
@@ -1291,12 +1312,15 @@ class MlsGroup private constructor(
             }
 
             // After verification, patch the computed parent_hash values into
-            // the direct-path parent nodes. The sender's tree has these
+            // the FILTERED-direct-path parent nodes. The sender's tree has these
             // values filled in; receivers must match for treeHash() to agree
-            // (and thus for the epoch key schedule to converge).
+            // (and thus for the epoch key schedule to converge). Unfiltered
+            // parents have been blanked by the proposal or were never on the
+            // chain — skip them.
             val (recvParentHashes, _) =
                 computeSenderParentHashes(senderLeafIndex, preUpdateSiblingHashes)
-            for (nodeIdx in BinaryTree.directPath(senderLeafIndex, tree.leafCount)) {
+            val (filteredDp, filteredCp) = tree.filteredDirectPath(senderLeafIndex)
+            for (nodeIdx in filteredDp) {
                 val existing = tree.getNode(nodeIdx)
                 if (existing is com.vitorpamplona.quartz.marmot.mls.tree.TreeNode.Parent) {
                     tree.setParent(
@@ -1308,8 +1332,15 @@ class MlsGroup private constructor(
                 }
             }
 
-            // Decrypt path secret from our copath node
-            val directPath = BinaryTree.directPath(senderLeafIndex, tree.leafCount)
+            // Decrypt path secret from our copath node.
+            //
+            // RFC 9420 §7.9: UpdatePath nodes align to the sender's FILTERED
+            // direct path, so `commonAncestorIdx` must be computed against
+            // that filtered list (not the unfiltered directPath). Using the
+            // unfiltered index picks the wrong `updatePath.nodes[i]` and
+            // HPKE-decrypt fails silently — causing `ConfirmationTagMismatch`
+            // at best, or a completely wrong commit_secret at worst.
+            val unfilteredDirectPath = BinaryTree.directPath(senderLeafIndex, tree.leafCount)
             val myPath = BinaryTree.directPath(myLeafIndex, tree.leafCount)
 
             // Path-decryption context (RFC 9420 §7.6): matches what the
@@ -1322,11 +1353,19 @@ class MlsGroup private constructor(
                         treeHash = tree.treeHash(),
                     ).toTlsBytes()
 
-            // Find the common ancestor
-            val commonAncestorIdx = directPath.indexOfFirst { it in myPath }
-            if (commonAncestorIdx >= 0 && commonAncestorIdx < updatePath.nodes.size) {
-                val pathNode = updatePath.nodes[commonAncestorIdx]
-                val copathNodeIdx = BinaryTree.copath(senderLeafIndex, tree.leafCount)[commonAncestorIdx]
+            // Find the unfiltered common-ancestor index (we need this for the
+            // KDF step count: commit_secret = DeriveSecret(path_secret[root])
+            // requires walking one KDF step per unfiltered level from the
+            // common ancestor to the root).
+            val commonAncestorUnfilteredIdx = unfilteredDirectPath.indexOfFirst { it in myPath }
+            // Find the filtered common-ancestor index (for picking the right
+            // UpdatePath node + copath resolution).
+            val commonAncestorNode =
+                if (commonAncestorUnfilteredIdx >= 0) unfilteredDirectPath[commonAncestorUnfilteredIdx] else -1
+            val commonAncestorFilteredIdx = filteredDp.indexOf(commonAncestorNode)
+            if (commonAncestorFilteredIdx >= 0 && commonAncestorFilteredIdx < updatePath.nodes.size) {
+                val pathNode = updatePath.nodes[commonAncestorFilteredIdx]
+                val copathNodeIdx = filteredCp[commonAncestorFilteredIdx]
                 val resolution =
                     tree.resolution(copathNodeIdx).filterNot { resNode ->
                         BinaryTree.isLeaf(resNode) &&
@@ -1354,7 +1393,13 @@ class MlsGroup private constructor(
                     // advances one step past the root; quartz was stopping at the root
                     // and diverging — that's what caused `ConfirmationTagMismatch` on
                     // every cross-impl commit.
-                    val stepsToRoot = directPath.size - commonAncestorIdx - 1
+                    //
+                    // Step count is measured against the UNFILTERED direct
+                    // path — the path_secret chain advances one KDF step per
+                    // level regardless of whether that level emits a
+                    // UpdatePath node, so filtering changes which nodes carry
+                    // ciphertext but not the number of KDF steps.
+                    val stepsToRoot = unfilteredDirectPath.size - commonAncestorUnfilteredIdx - 1
                     var currentSecret = pathSecret
                     repeat(stepsToRoot) {
                         currentSecret = MlsCryptoProvider.deriveSecret(currentSecret, "path")
@@ -1568,30 +1613,40 @@ class MlsGroup private constructor(
         senderLeafIndex: Int,
         preUpdateSiblingHashes: Map<Int, ByteArray>,
     ): Pair<Map<Int, ByteArray>, ByteArray> {
-        val directPath = BinaryTree.directPath(senderLeafIndex, tree.leafCount)
-        if (directPath.isEmpty()) return Pair(emptyMap(), ByteArray(0))
+        // RFC 9420 §7.9.2: parent_hash chain walks the FILTERED direct path.
+        // A filtered-out parent is never on the chain because its copath
+        // subtree is blank — there's no sibling tree hash to fold into the
+        // next hop. Using the unfiltered path here produces a chain that
+        // doesn't match what openmls/wn compute on the other side.
+        val (filteredDp, _) = tree.filteredDirectPath(senderLeafIndex)
+        val unfilteredDp = BinaryTree.directPath(senderLeafIndex, tree.leafCount)
+        if (filteredDp.isEmpty()) return Pair(emptyMap(), ByteArray(0))
+
+        // preUpdateSiblingHashes is indexed by level in the UNFILTERED path —
+        // map each filtered node to its unfiltered level so we pick the
+        // correct sibling tree hash.
+        val filteredLevels = filteredDp.map { unfilteredDp.indexOf(it) }
 
         val hashes = mutableMapOf<Int, ByteArray>()
         // Root's parent_hash is empty by convention (RFC 9420 §7.9.2).
-        hashes[directPath.last()] = ByteArray(0)
+        hashes[filteredDp.last()] = ByteArray(0)
 
         // Walk top-down (root has no parent → already set). For each node
-        // X below root, parent_hash(X) = Hash(encode(ParentHashInput{
-        //     encryption_key = parent(X).encryption_key,
-        //     parent_hash    = parent(X).parent_hash,
-        //     original_sibling_tree_hash = tree_hash(sibling(X))_preUpdate,
-        // })).
-        for (i in directPath.size - 2 downTo 0) {
-            val xIdx = directPath[i]
-            val parentIdx = directPath[i + 1]
+        // X below root on the filtered path, parent_hash(X) is computed
+        // with parent(X)'s fields, where "parent" is the NEXT entry on the
+        // filtered direct path.
+        for (i in filteredDp.size - 2 downTo 0) {
+            val xIdx = filteredDp[i]
+            val parentIdx = filteredDp[i + 1]
+            val parentLevel = filteredLevels[i + 1]
             val parentNode = tree.getNode(parentIdx)
             if (parentNode !is com.vitorpamplona.quartz.marmot.mls.tree.TreeNode.Parent) {
                 hashes[xIdx] = ByteArray(0)
                 continue
             }
             val siblingTreeHash =
-                preUpdateSiblingHashes[i + 1]
-                    ?: error("missing pre-update sibling tree hash at level ${i + 1}")
+                preUpdateSiblingHashes[parentLevel]
+                    ?: error("missing pre-update sibling tree hash at level $parentLevel")
             hashes[xIdx] =
                 MlsCryptoProvider.hash(
                     encodeParentHashInput(
@@ -1603,14 +1658,15 @@ class MlsGroup private constructor(
         }
 
         // The committer's leaf carries parent_hash(parent(leaf)) = parent_hash
-        // computed with the immediate parent's (directPath[0]) fields.
-        val immediateParentIdx = directPath.first()
+        // computed with the immediate parent's (filteredDp[0]) fields.
+        val immediateParentIdx = filteredDp.first()
+        val immediateParentLevel = filteredLevels.first()
         val immediateParent = tree.getNode(immediateParentIdx)
         val leafParentHash =
             if (immediateParent is com.vitorpamplona.quartz.marmot.mls.tree.TreeNode.Parent) {
                 val siblingTreeHash =
-                    preUpdateSiblingHashes[0]
-                        ?: error("missing pre-update sibling tree hash at leaf level")
+                    preUpdateSiblingHashes[immediateParentLevel]
+                        ?: error("missing pre-update sibling tree hash at level $immediateParentLevel")
                 MlsCryptoProvider.hash(
                     encodeParentHashInput(
                         encryptionKey = immediateParent.parentNode.encryptionKey,
@@ -1676,8 +1732,12 @@ class MlsGroup private constructor(
         updatePath: UpdatePath,
         preUpdateSiblingHashes: Map<Int, ByteArray>,
     ): Boolean {
-        val directPath = BinaryTree.directPath(senderLeafIndex, tree.leafCount)
-        if (directPath.isEmpty()) return true
+        // Filtered direct path drives the parent_hash chain — a sender
+        // with an empty filtered direct path has no parents to hash so
+        // the leaf's parent_hash field should be an empty byte string
+        // and we can short-circuit verification.
+        val (filteredDp, _) = tree.filteredDirectPath(senderLeafIndex)
+        if (filteredDp.isEmpty()) return true
 
         // RFC 9420 §7.9.2: compute what the sender's parent_hash chain
         // SHOULD have been given the post-update tree state, then compare

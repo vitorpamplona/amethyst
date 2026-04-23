@@ -158,6 +158,84 @@ class MarmotPipelineTest {
         }
     }
 
+    /**
+     * Regression: the interop harness's Test 12 (offline catch-up) drove
+     * kind:9 application messages encrypted under epoch N into an Amethyst
+     * receiver that had already processed a 1→N+1 commit (e.g. add-member).
+     * Those epoch-N messages ought to decrypt through the retained-epoch
+     * fallback in [MlsGroupManager.decrypt], but the fallback was silently
+     * returning null because `tryDecryptWithRetainedEpoch` derived the
+     * sender-data sample using `AEAD_KEY_LENGTH` (16) instead of
+     * `HASH_OUTPUT_LENGTH` (32) — the same bug that was fixed on the
+     * main decrypt path earlier but never propagated to the retained
+     * branch. This test reproduces the flow and asserts the retained
+     * path actually decrypts.
+     */
+    @Test
+    fun testDecryptRetainedEpoch_ApplicationMessageAfterCommit() {
+        runBlocking {
+            val aliceMgr = createGroupManager()
+            val bobMgr = createGroupManager()
+
+            // 32-byte identities so they fit the MarmotGroupData 32-byte
+            // admin-pubkey slots.
+            val aliceId = ByteArray(32) { 0xA1.toByte() }
+            val bobId = ByteArray(32) { 0xB2.toByte() }
+            val carolId = ByteArray(32) { 0xC3.toByte() }
+
+            aliceMgr.createGroup(groupId, aliceId)
+            // Install the MarmotGroupData extension so Welcome messages carry
+            // the NostrGroupData (MlsGroupManager.processWelcome requires it).
+            aliceMgr.updateGroupExtensions(
+                nostrGroupId = groupId,
+                extensions =
+                    listOf(
+                        com.vitorpamplona.quartz.marmot.mip01Groups
+                            .MarmotGroupData(
+                                nostrGroupId = groupId,
+                                adminPubkeys = listOf(aliceId.toHexKey()),
+                            ).toExtension(),
+                    ),
+            )
+
+            // Bob joins at epoch 2 (epoch 0 = create, epoch 1 = GCE above,
+            // epoch 2 = add Bob).
+            val aliceGroup = aliceMgr.getGroup(groupId)!!
+            val bobBundle = aliceGroup.createKeyPackage(bobId, ByteArray(0))
+            val addBob = aliceMgr.addMember(groupId, bobBundle.keyPackage.toTlsBytes())
+            bobMgr.processWelcome(addBob.welcomeBytes!!, bobBundle)
+            val bobJoinEpoch = aliceMgr.getGroup(groupId)!!.epoch
+            assertEquals(bobJoinEpoch, bobMgr.getGroup(groupId)!!.epoch, "bob must be at alice's epoch after Welcome")
+
+            // Bob encrypts a message at his current epoch — this would be
+            // held by a lossy relay and only reach Alice after she's
+            // already processed the next commit.
+            val bobStaleMsg = bobMgr.encrypt(groupId, "bob's offline epoch-N message".encodeToByteArray())
+
+            // Alice adds Carol, advancing to epoch N+1. Bob's earlier
+            // message is now out-of-order relative to Alice's tree state.
+            val carolBundle = aliceGroup.createKeyPackage(carolId, ByteArray(0))
+            aliceMgr.addMember(groupId, carolBundle.keyPackage.toTlsBytes())
+            assertEquals(
+                bobJoinEpoch + 1,
+                aliceMgr.getGroup(groupId)!!.epoch,
+                "alice must have advanced one epoch past bob's encrypt time",
+            )
+
+            // Bob's stale message now arrives at Alice. The primary decrypt
+            // path throws "Message epoch X doesn't match current epoch X+1";
+            // the retained-epoch fallback inside MlsGroupManager.decrypt
+            // must pick it up.
+            val decrypted = aliceMgr.decrypt(groupId, bobStaleMsg)
+            assertEquals(
+                "bob's offline epoch-N message",
+                decrypted.content.decodeToString(),
+                "Alice must decrypt Bob's pre-commit message via retained-epoch fallback",
+            )
+            assertEquals(bobJoinEpoch, decrypted.epoch, "message was encrypted at bob's join epoch")
+        }
+    }
+
     @Test
     fun testInboundRejectsNonMemberGroup() {
         runBlocking {

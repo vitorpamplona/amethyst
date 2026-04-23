@@ -354,6 +354,66 @@ class MlsGroupLifecycleTest {
         assertEquals(bob2.leafIndex, aliceSees.senderLeafIndex)
     }
 
+    /**
+     * Regression: 3-member group, committer removes the MIDDLE leaf while the
+     * trailing leaf remains occupied. Interop harness Test 06 hit this with
+     * whitenoise-rs: the interop log showed quartz rejecting wn's commit
+     * with "Failed to apply commit: UpdatePath node count (1) doesn't match
+     * direct path length (2)". That error comes from
+     * `RatchetTree.applyUpdatePath` comparing the received node count against
+     * the CURRENT tree's direct-path length — the two sides disagree on the
+     * post-proposal leaf_count, so the path-length invariant breaks.
+     *
+     * Scenario Amethyst observed:
+     *   Tree before: [B=leaf 0 (admin/committer), C=leaf 1, A=leaf 2]
+     *   Commit:       Remove(leaf 1)
+     *   Tree after:   [B=leaf 0, _blank_, A=leaf 2]   (leaf 2 still occupied,
+     *                                                  so RFC §7.8 does NOT trim)
+     *
+     * Both sender and every receiver should end up at leaf_count=3 post-
+     * proposal with the sender's direct path at size 2 ([node 1, root 3]).
+     * If quartz's receiver processes the commit cleanly, the test passes. If
+     * this reproduction also reports "UpdatePath node count … doesn't match
+     * direct path length …", we've isolated the bug to the quartz side, not
+     * a wn-specific oddity.
+     */
+    @Test
+    fun testRemoveMiddleLeaf_ReceiverAcceptsCommit() {
+        // Alice creates, adds Bob (→ leaf 1), adds Carol (→ leaf 2).
+        val alice = MlsGroup.create("alice".encodeToByteArray())
+
+        val bobBundle = createStandaloneKeyPackage("bob")
+        val addBobResult = alice.addMember(bobBundle.keyPackage.toTlsBytes())
+        val bob = MlsGroup.processWelcome(addBobResult.welcomeBytes!!, bobBundle)
+
+        val carolBundle = createStandaloneKeyPackage("carol")
+        val addCarolResult = alice.addMember(carolBundle.keyPackage.toTlsBytes())
+        bob.processFramedCommit(addCarolResult.framedCommitBytes)
+        val carol = MlsGroup.processWelcome(addCarolResult.welcomeBytes!!, carolBundle)
+
+        check(alice.memberCount == 3 && bob.memberCount == 3 && carol.memberCount == 3) {
+            "pre-condition: all three members must be present"
+        }
+
+        // Alice removes Bob (leaf 1) — the MIDDLE leaf. Carol (leaf 2) stays,
+        // so trailing-blank trim does NOT fire and leaf_count stays at 3.
+        val removeResult = alice.removeMember(bob.leafIndex)
+
+        // Carol, the remaining non-committer, must be able to apply the
+        // commit. This is where the interop regression surfaces.
+        carol.processFramedCommit(removeResult.framedCommitBytes)
+
+        // After the Remove, Alice and Carol are the only members but the
+        // tree still has leaf_count=3 (leaf 1 blank, leaf 2 = Carol).
+        assertEquals(alice.epoch, carol.epoch, "Carol must be at Alice's epoch after remove")
+        assertEquals(2, alice.memberCount, "Alice: 2 active members after removing Bob")
+        assertEquals(2, carol.memberCount, "Carol: 2 active members after removing Bob")
+
+        // Post-remove forward-secrecy round-trip: Alice sends, Carol decrypts.
+        val msg = "after removing bob".encodeToByteArray()
+        assertContentEquals(msg, carol.decrypt(alice.encrypt(msg)).content)
+    }
+
     // -----------------------------------------------------------------------
     // 8. Signing key rotation (Update proposal)
     // -----------------------------------------------------------------------

@@ -34,7 +34,13 @@ C_HEX=""
 A_NPUB=""
 A_HEX=""
 
-DEFAULT_RELAYS=( "wss://relay.damus.io" "wss://nos.lol" "wss://relay.primal.net" )
+DEFAULT_RELAYS=(
+  "wss://relay.damus.io"
+  "wss://nos.lol"
+  "wss://relay.primal.net"
+  "wss://nostr.bitcoiner.social"
+  "wss://nostr.mom"
+)
 USE_LOCAL_RELAYS=0
 ENABLE_TRANSPONDER=0
 NO_BUILD=0
@@ -249,6 +255,128 @@ prompt_for_a_npub() {
   [[ "$A_HEX" != "$A_NPUB" ]] && info "A hex:  $A_HEX"
 }
 
+# Trigger wn's on-demand discovery for A and dump what wn actually
+# learned — kinds 10002 / 10050 / 10051 from A's configured relays.
+# Called after prompt_for_a_npub so wn's SQLite cache is populated
+# BEFORE the test suite starts, and so the operator can spot "wn sees
+# nothing for A" failures up front instead of as a cryptic Test 03
+# timeout.
+#
+# Implementation:
+#  - `wn keys check <npub>` calls `resolve_user_blocking` which issues
+#    a targeted fetch for kinds [0, 10002, 10050, 10051] on the
+#    discovery-plane relays. That's the only published side-effect
+#    way to populate wn's user_relays table (no public CLI reads
+#    another user's relay lists directly).
+#  - After the fetch, `sqlite3` is used to SELECT from `user_relays`
+#    joined against `users` + `relays`. If sqlite3 isn't installed
+#    the probe degrades to "trust it, go run the tests" with a warning.
+discover_a_relays() {
+  banner "Discovering A's advertised relays via wn"
+  step "wn_b keys check \$A_NPUB — populates wn's user_relays cache for A"
+  local kp_raw kp_event_id
+  kp_raw=$(wn_b --json keys check "$A_NPUB" 2>>"$LOG_FILE" || true)
+  printf 'wn_b keys check A raw: %s\n' "$kp_raw" >>"$LOG_FILE"
+  kp_event_id=$(printf '%s' "$kp_raw" | jq -r '.result.event_id // .event_id // empty' 2>/dev/null || true)
+  if [[ -n "$kp_event_id" && "$kp_event_id" != "null" ]]; then
+    info "wn_b found A's KeyPackage (kind:30443) — discovery plane is working"
+  else
+    warn "wn_b could NOT find A's KeyPackage. wn is bootstrapped on ${DEFAULT_RELAYS[*]}."
+    warn "Either Amethyst never published a KeyPackage, or it's only on relays wn can't reach."
+    warn "All later tests will fail. Fix this before continuing (tap KP publish in Amethyst settings)."
+  fi
+  # Also prime wn_c so Tests 04+ (which use C as a third member) can
+  # target A without another round-trip later.
+  wn_c --json keys check "$A_NPUB" >>"$LOG_FILE" 2>&1 || true
+
+  # Give wn ~3s to process the kind:10002/10050/10051 events that
+  # came back in the same fetch (they're not event_id-returned, they
+  # just land in user_relays via the subscription callback).
+  sleep 3
+
+  if ! command -v sqlite3 >/dev/null 2>&1; then
+    warn "sqlite3 not installed — skipping wn user_relays cache probe."
+    warn "If Test 03 fails with 'no invite arrived', install sqlite3 or rerun with --local-relays."
+    return
+  fi
+
+  # wn stores its database under $data_dir/release/<something>.sqlite.
+  # Find the DB file by looking for the only *.sqlite under release/.
+  local db
+  db=$(find "$B_DIR/release" -maxdepth 1 -name '*.sqlite' -print -quit 2>/dev/null || true)
+  if [[ -z "$db" || ! -s "$db" ]]; then
+    warn "wn SQLite DB not found under $B_DIR/release — cannot probe user_relays."
+    return
+  fi
+
+  step "wn_b's cached view of A's relay lists (SELECT from user_relays)"
+  local rows
+  # wn's SQLite schema stores `users.pubkey` — we don't have a public
+  # CLI to confirm the column type, and in practice it's been observed
+  # stored as both BLOB (raw 32 bytes) and TEXT (lowercase hex) across
+  # versions. Try both forms so the probe doesn't falsely report "NO
+  # cached relay entries" when the cache is actually populated (symptom:
+  # this diagnostic warned loudly even though Tests 02/03/04/05 were
+  # delivering welcomes successfully — the welcomes were flowing, the
+  # probe was just querying the wrong column encoding).
+  rows=$(sqlite3 -readonly "$db" \
+    "SELECT ur.relay_type, r.url FROM user_relays ur
+       JOIN users u ON u.id = ur.user_id
+       JOIN relays r ON r.id = ur.relay_id
+      WHERE u.pubkey = X'$A_HEX'
+         OR LOWER(CAST(u.pubkey AS TEXT)) = LOWER('$A_HEX')
+      ORDER BY ur.relay_type, r.url;" 2>>"$LOG_FILE" || true)
+  if [[ -z "$rows" ]]; then
+    warn "wn has NO cached relay entries for A ($A_HEX)."
+    warn "  → Either Amethyst hasn't published kind:10002/10050/10051 to any relay wn_b"
+    warn "    can reach, OR wn's SQLite schema changed pubkey column encoding again."
+    warn "  → If later tests deliver welcomes successfully, the schema is the culprit;"
+    warn "    grep the daemon's migration files for the users.pubkey column type."
+    return
+  fi
+
+  # Collate by relay_type for readability.
+  local nip65 inbox kp
+  nip65=$(printf '%s\n' "$rows" | awk -F'|' '$1=="nip65"{print "    "$2}')
+  inbox=$(printf '%s\n' "$rows" | awk -F'|' '$1=="inbox"{print "    "$2}')
+  kp=$(printf '%s\n' "$rows" | awk -F'|' '$1=="key_package"{print "    "$2}')
+  info "A's kind:10002 (nip65):"
+  printf '%s\n' "${nip65:-    <none — A hasn't published or wn can't reach that list>}" | tee -a "$LOG_FILE" >&2
+  info "A's kind:10050 (DM inbox, used for Marmot welcome delivery):"
+  printf '%s\n' "${inbox:-    <none — Marmot welcomes will fall back to NIP-65 read relays>}" | tee -a "$LOG_FILE" >&2
+  info "A's kind:10051 (KeyPackage relays):"
+  printf '%s\n' "${kp:-    <none — KeyPackage discovery may still work via NIP-65>}" | tee -a "$LOG_FILE" >&2
+
+  # Warn loudly if A's DM inbox is non-empty but shares no relay with
+  # wn_b's own configured set — that's the exact failure mode the
+  # operator already hit ("my DM inbox has auth.nostr1.com, wn can't
+  # publish there") and it silently breaks Test 03+.
+  if [[ -n "$inbox" ]]; then
+    local wn_relays
+    wn_relays=$(wn_b --json relays list 2>/dev/null \
+      | jq -r '(.result // .)[]? | (.url // .relay.url // empty)' 2>/dev/null)
+    local overlap=""
+    while IFS= read -r a_url; do
+      a_url="${a_url#    }"
+      [[ -z "$a_url" ]] && continue
+      if printf '%s\n' "$wn_relays" | grep -qxF "$a_url"; then
+        overlap+="$a_url,"
+      fi
+    done <<< "$inbox"
+    overlap="${overlap%,}"
+    if [[ -z "$overlap" ]]; then
+      warn "A's DM inbox (kind:10050) shares ZERO relays with wn_b's bootstrap set."
+      warn "  wn may still reach A's 10050 relays if they're public — but if any require"
+      warn "  NIP-42 AUTH (auth.nostr1.com) or a whitelist (relay.0xchat.com), the welcome"
+      warn "  gift wrap silently fails to publish."
+      warn "  Real-world fix: edit Amethyst's DM Inbox list to include at least one of:"
+      warn "    ${DEFAULT_RELAYS[*]}"
+    else
+      info "A's DM inbox overlaps wn's bootstrap at: $overlap — welcomes should flow"
+    fi
+  fi
+}
+
 # --- relays ------------------------------------------------------------------
 configure_relays() {
   banner "Configuring relays"
@@ -280,6 +408,36 @@ configure_relays() {
     add_relay wn_b "$r"
     add_relay wn_c "$r"
   done
+
+  # Push a kind:0 profile for each wn identity BEFORE the kind:30443 /
+  # 10050 / 1059 probes. Several public relays (damus.io in particular)
+  # silently drop non-profile kinds from accounts they've never seen
+  # before, so a fresh wn identity created inside the harness never gets
+  # its gift wraps or inbox lists stored. Publishing kind:0 first
+  # registers the account in the relay's "known users" set, which lets
+  # every later publish go through.
+  publish_profile() {
+    local who="$1" wnfn
+    if [[ "$who" == "B" ]]; then wnfn=wn_b; else wnfn=wn_c; fi
+    local name="marmot-interop $who"
+    local about="Scripted wn identity for Amethyst<->whitenoise-rs interop harness"
+    local out
+    if out=$("$wnfn" profile update --name "$name" --about "$about" 2>&1); then
+      info "$who kind:0 published (name=\"$name\")"
+      printf '%s profile update: %s\n' "$who" "$out" >>"$LOG_FILE"
+    else
+      warn "$who profile update failed: $out"
+      printf '%s profile update: %s\n' "$who" "$out" >>"$LOG_FILE"
+    fi
+  }
+  step "publishing kind:0 profiles so relays treat B and C as 'known' accounts"
+  publish_profile B
+  publish_profile C
+  # Give the relay a beat to persist + ack the kind:0 before the next
+  # publish (some relays gate subsequent writes on the profile being
+  # indexed, and without this pause the first `keys publish` that
+  # follows sometimes races ahead of the kind:0 commit).
+  sleep 2
 
   step "B relay list after configure"
   local relay_list
@@ -333,7 +491,15 @@ configure_relays() {
   fi
 
   step "sanity-check kinds 10050/1059/445: B creates group + invites C + exchanges a message"
-  local sanity_gid sanity_c_gid sanity_create
+  local sanity_gid sanity_c_gid sanity_create c_ignore
+  # Snapshot C's pending invites before we publish, so wait_for_invite
+  # doesn't fire on a stale welcome left over from a previous run (wnd
+  # persists pending invites across restarts — we saw this cause the
+  # kind:445 sanity probe to send to B's new group while C was still
+  # sitting on an unaccepted welcome from a previous group that B
+  # wasn't a member of anymore).
+  c_ignore=$(snapshot_invites C)
+  [[ -n "$c_ignore" ]] && info "C already has stale invites, ignoring: $c_ignore"
   sanity_create=$(wn_b --json groups create "sanity-check" "$C_NPUB" 2>>"$LOG_FILE" || true)
   sanity_gid=$(printf '%s' "$sanity_create" | jq_group_id)
   printf 'sanity groups create raw: %s\n' "$sanity_create" >>"$LOG_FILE"
@@ -341,8 +507,11 @@ configure_relays() {
     warn "sanity group create failed — see $LOG_FILE (stale account state? rerun with 'rm -rf state/')"
   else
     info "sanity group id: $sanity_gid"
-    if sanity_c_gid=$(wait_for_invite C 30); then
+    if sanity_c_gid=$(wait_for_invite C 30 "$c_ignore"); then
       info "kind:10050+1059 ok — C received welcome (gid: $sanity_c_gid)"
+      if [[ "$sanity_c_gid" != "$sanity_gid" ]]; then
+        warn "gid mismatch — C saw $sanity_c_gid, B created $sanity_gid (likely a stale welcome slipped past the filter)"
+      fi
       wn_c groups accept "$sanity_c_gid" >/dev/null 2>&1 || true
       wn_b messages send "$sanity_gid" "sanity-ping" >/dev/null 2>&1 || true
       if wait_for_message C "$sanity_c_gid" "sanity-ping" 30; then
@@ -362,19 +531,42 @@ configure_relays() {
 }
 
 instruct_amethyst_setup() {
-  local list
   if [[ "$USE_LOCAL_RELAYS" -eq 1 ]]; then
-    list="  ws://10.0.2.2:8080    (Android emulator)
-  ws://<your-LAN-ip>:8080  (physical device on same Wi-Fi)"
-  else
-    list=$(printf '  %s\n' "${DEFAULT_RELAYS[@]}")
+    # Offline/sandbox path: we own the only relay, so the harness DOES
+    # need to dictate Amethyst's relay config — nothing is discoverable
+    # via the public network.
+    prompt_human "Configure Amethyst to match this --local-relays harness:
+  1. Settings -> Relays:  add as READ+WRITE
+       ws://10.0.2.2:8080     (Android emulator)
+       ws://<your-LAN-ip>:8080  (physical device on same Wi-Fi)
+  2. Settings -> Key Package Relays:  add the SAME URL
+  3. Settings -> DM Inbox Relays (NIP-17/kind:10050):  add the SAME URL
+  4. Trigger key-package publish (toggle KP relay on/off if needed)
+  5. Confirm your Amethyst account is logged in with npub: $A_NPUB"
+    return
   fi
-  prompt_human "Configure Amethyst to match this harness:
-  1. Settings -> Relays:  add the following as READ+WRITE
-$list
-  2. Settings -> Key Package Relays:  add the SAME URLs
-  3. Trigger key-package publish (toggle KP relay on/off if needed)
-  4. Confirm your Amethyst account is logged in with npub: $A_NPUB"
+
+  # Public-relay path: the harness should behave like any real Nostr
+  # client — discover A's advertised relays via kind:10002 / 10050 /
+  # 10051 and publish there, rather than forcing A to adopt the
+  # harness's own relay set. That lets the tests surface real-world
+  # interop failures (e.g. A's DM inbox points at auth-required or
+  # unreachable relays) instead of hiding them behind shared config.
+  prompt_human "No relay reconfiguration required. Just confirm:
+  1. Amethyst is logged in as npub:
+       $A_NPUB
+  2. Amethyst has published (on its own chosen relays):
+       - kind:30443 KeyPackage
+       - kind:10051 Key Package Relay List
+       - kind:10050 DM Inbox Relay List
+       - kind:10002 NIP-65 Outbox/Inbox Relay List
+     Any one of Amethyst's public write relays will do — the wn daemons
+     below are bootstrapped on $(printf '%s, ' "${DEFAULT_RELAYS[@]}" | sed 's/, $//') and will
+     discover A's advertised relays automatically.
+  3. If the wn-side diagnostic after this prompt shows that wn cannot
+     see any of A's four lists, Amethyst hasn't published them to any
+     relay wn can reach — republish them (toggle a relay off/on in
+     Settings, then verify via an external relay inspector)."
 }
 
 # ==== tests ==================================================================
@@ -421,6 +613,12 @@ test_02_amethyst_creates_group() {
   # Amethyst sends it.
   dump_daemon_diagnostics B "pre-invite baseline"
 
+  # Snapshot B's already-pending invites so we can tell the new welcome
+  # apart from a leftover from a previous run.
+  local b_ignore
+  b_ignore=$(snapshot_invites B)
+  [[ -n "$b_ignore" ]] && info "B already has stale invites, ignoring: $b_ignore"
+
   prompt_human "In Amethyst:
   1. Tap '+' -> Create Group
   2. Name: Interop-02
@@ -434,7 +632,7 @@ that's the bug."
 
   step "polling B's daemon for invite (60s, heartbeat every ~10s)"
   local gid
-  if ! gid=$(wait_for_invite B 60); then
+  if ! gid=$(wait_for_invite B 60 "$b_ignore"); then
     fail_msg "no invite arrived at B"
     dump_daemon_diagnostics B "post-timeout (test_02)"
     prompt_amethyst_logcat "test_02 timeout"
@@ -473,11 +671,41 @@ that's the bug."
   fi
 
   step "B sends reply"
-  wn_b messages send "$gid" "hello from wn" >/dev/null 2>&1 || warn "send returned nonzero"
+  local send_out
+  if ! send_out=$(wn_b messages send "$gid" "hello from wn" 2>&1); then
+    warn "wn messages send returned nonzero: $send_out"
+  fi
+  printf 'wn messages send (test_02 reply) raw: %s\n' "$send_out" >>"$LOG_FILE"
+  # Give the relay a couple seconds to fan the commit/message back out to
+  # Amethyst's subscription before we ask the operator to eyeball the UI.
+  sleep 4
+
+  # Dump the B side up front — if B's own store doesn't contain the reply
+  # or the MLS extension relays don't match what Amethyst subscribes to,
+  # the operator can confirm "fail" with a specific reason instead of a
+  # blind eyeball check.
+  dump_outbound_diagnostics B "$gid" "hello from wn" "test_02 B->A reply"
 
   if confirm "Does Amethyst now show 'hello from wn' in the same group?"; then
     record_result "02 Amethyst->B create+invite" pass
   else
+    # The B-side dump above told us whether the send reached B's own DB and
+    # which relays wn tagged on the kind:445. Now pull the Amethyst side so
+    # the failure report has both halves of the pipe: which relays the
+    # kind:445 subscription actually targets, whether the event arrived,
+    # and (if it did) whether GroupEventHandler dropped it.
+    prompt_human "Capture Amethyst's side of the B->A kind:445 path. On the adb host:
+
+    adb logcat -d -v time | grep -E \
+        'MarmotDbg|GroupEventHandler|MarmotGroupEventsEoseManager|kind:445' \\
+        | tail -n 200 > /tmp/amethyst-marmot.log
+
+Then paste /tmp/amethyst-marmot.log here. Key lines to look for:
+  - 'MarmotGroupEventsEoseManager.updateFilter: group=${gid:0:8}…' + the relay
+    list — must match the 'group relays (MLS extension)' in the B-side dump.
+  - 'GroupEventHandler.add: kind:445 id=… groupId=${gid:0:8}…' (event arrived).
+  - 'GroupEventHandler.add: not a member of group=${gid:0:8}…' (dropped).
+  - 'GroupEventHandler.add: processGroupEvent returned ApplicationMessage…' (decrypted)."
     record_result "02 Amethyst->B create+invite" fail "Amethyst did not display reply"
   fi
 }
@@ -543,13 +771,17 @@ test_04_three_member_group() {
 
   dump_daemon_diagnostics C "pre-invite baseline (test_04)"
 
+  local c_ignore
+  c_ignore=$(snapshot_invites C)
+  [[ -n "$c_ignore" ]] && info "C already has stale invites, ignoring: $c_ignore"
+
   prompt_human "In Amethyst, open the group from Test 02 (or 'Interop-04-bootstrap').
   Group Info -> Add Member -> paste: $C_NPUB
   Confirm the invite is sent."
 
   step "polling C for invite (60s, heartbeat every ~10s)"
   local c_gid
-  if ! c_gid=$(wait_for_invite C 60); then
+  if ! c_gid=$(wait_for_invite C 60 "$c_ignore"); then
     fail_msg "C never received invite"
     dump_daemon_diagnostics C "post-timeout (test_04)"
     prompt_amethyst_logcat "test_04 timeout"
@@ -582,7 +814,8 @@ test_05_wn_adds_amethyst_existing() {
   banner "Test 05 — wn adds Amethyst to existing B+C group"
 
   step "B creates group with only C, then adds A"
-  local out gid
+  local out gid c_ignore
+  c_ignore=$(snapshot_invites C)
   out=$(wn_b --json groups create "Interop-05" "$C_NPUB" 2>>"$LOG_FILE")
   printf 'wn groups create raw output: %s\n' "$out" >>"$LOG_FILE"
   gid=$(printf '%s' "$out" | jq_group_id)
@@ -592,8 +825,9 @@ test_05_wn_adds_amethyst_existing() {
     return
   fi
   save_state GROUP_05 "$gid"
-  if wait_for_invite C 30 >/dev/null; then
-    wn_c groups accept "$gid" >/dev/null 2>&1 || true
+  local c_new_gid
+  if c_new_gid=$(wait_for_invite C 30 "$c_ignore"); then
+    wn_c groups accept "$c_new_gid" >/dev/null 2>&1 || true
   fi
 
   step "B adds A to the group"
@@ -624,33 +858,61 @@ test_06_member_removal() {
     skip_msg "Test 06 requires Test 05 state"; record_result "06 member removal" skip "no GROUP_05"; return
   fi
 
-  prompt_human "In Amethyst, open group 'Interop-05' -> Group Info -> Members.
-  Tap C ($C_NPUB) -> Remove.
-  Confirm the removal."
+  # Interop-05 was created by B (wn), so B is the sole admin. Per
+  # MIP-03 `enforceAuthorizedProposalSet`, non-admin members may only
+  # commit a self-Update or a SelfRemove-only proposal set — a Remove
+  # proposal from A (a plain member here) is rejected before publish
+  # with "non-admin members may only commit …". The previous revision
+  # of this test asked the operator to remove C from Amethyst's UI,
+  # which is correct per spec to REJECT — so the test itself was
+  # misaligned with the admin model. Drive the removal from B (the
+  # admin) instead, and observe its effect on A + C.
+  step "B (admin) removes C from Interop-05"
+  local remove_out
+  if ! remove_out=$(wn_b groups remove-members "$gid" "$C_NPUB" 2>&1); then
+    fail_msg "wn_b groups remove-members failed: $remove_out"
+    printf 'wn_b groups remove-members: %s\n' "$remove_out" >>"$LOG_FILE"
+    record_result "06 member removal" fail "wn remove returned nonzero"
+    return
+  fi
+  printf 'wn_b groups remove-members: %s\n' "$remove_out" >>"$LOG_FILE"
 
-  step "verifying C is removed (60s poll)"
-  local deadline=$(( $(date +%s) + 60 )) removed=0
+  step "verifying C is removed from B's + C's view (60s poll)"
+  local deadline=$(( $(date +%s) + 60 )) removed_b=0 removed_c=0
   while [[ $(date +%s) -lt $deadline ]]; do
+    if ! wn_b --json groups members "$gid" 2>/dev/null \
+         | jq -e --arg p "$C_HEX" '(.result // .) | .[]? | select((.pubkey // .public_key) == $p)' >/dev/null 2>&1; then
+      removed_b=1
+    fi
     if ! wn_c --json groups members "$gid" 2>/dev/null \
          | jq -e --arg p "$C_HEX" '(.result // .) | .[]? | select((.pubkey // .public_key) == $p)' >/dev/null 2>&1; then
-      removed=1; break
+      removed_c=1
     fi
+    [[ "$removed_b" -eq 1 ]] && break
     sleep 3
   done
+  if [[ "$removed_b" -ne 1 ]]; then
+    warn "B still shows C as a member after remove — commit may not have applied"
+  fi
+  info "post-remove: B sees C gone=$removed_b, C sees self gone=$removed_c"
 
-  if [[ "$removed" -ne 1 ]]; then
-    warn "C still appears to be a member; proceeding anyway"
+  prompt_human "In Amethyst, open 'Interop-05' -> Group Info and confirm C is no longer listed."
+  if ! confirm "Does Amethyst's member list now show only you and B (not C)?"; then
+    record_result "06 member removal" fail "Amethyst still shows C as a member"
+    return
   fi
 
   prompt_human "In Amethyst, send: 'after removing C'"
   if wait_for_message B "$gid" "after removing C" 30; then
-    info "B still receives messages (expected)"
+    info "B still receives messages (expected — B + A are the remaining members)"
   else
     fail_msg "B stopped receiving messages (unexpected)"
     record_result "06 member removal" fail "B lost access"; return
   fi
 
-  # C should NOT be able to decrypt the new message
+  # C should NOT be able to decrypt the new message — forward secrecy
+  # at the post-remove epoch means C's retained keys cannot open any
+  # kind:445 sealed under the new epoch's exporter.
   sleep 5
   if wait_for_message C "$gid" "after removing C" 10; then
     fail_msg "C still decrypted a post-removal message — forward secrecy broken"
@@ -664,37 +926,58 @@ test_06_member_removal() {
 test_07_metadata_rename() {
   banner "Test 07 — Group metadata rename round-trip (MIP-01)"
 
-  local gid
-  gid=$(load_state GROUP_02 || true)
-  if [[ -z "${gid:-}" ]]; then
-    skip_msg "no GROUP_02"; record_result "07 metadata rename" skip "no group state"; return
-  fi
-
-  prompt_human "In Amethyst, open group 'Interop-02' -> Group Info -> Edit.
+  # Forward direction: A (admin of Interop-02) renames → B observes.
+  local gid_a
+  gid_a=$(load_state GROUP_02 || true)
+  if [[ -z "${gid_a:-}" ]]; then
+    skip_msg "no GROUP_02"; record_result "07a metadata rename A->B" skip "no group state"
+  else
+    prompt_human "In Amethyst, open group 'Interop-02' -> Group Info -> Edit.
   Rename to: Interop-02-renamed
   Save."
 
-  step "polling B for name change (60s)"
-  local deadline=$(( $(date +%s) + 60 )) name=""
-  while [[ $(date +%s) -lt $deadline ]]; do
-    name=$(wn_b --json groups show "$gid" 2>/dev/null | jq -r '(.result // .) | .name // empty')
-    [[ "$name" == "Interop-02-renamed" ]] && break
-    sleep 3
-  done
-  if [[ "$name" == "Interop-02-renamed" ]]; then
-    pass_msg "B sees renamed group"
-  else
-    fail_msg "B still sees name: $name"
-    record_result "07 metadata rename" fail "rename did not propagate to B"; return
+    step "polling B for name change (60s)"
+    local deadline_a=$(( $(date +%s) + 60 )) name_a=""
+    while [[ $(date +%s) -lt $deadline_a ]]; do
+      name_a=$(wn_b --json groups show "$gid_a" 2>/dev/null | jq -r '(.result // .) | .name // empty')
+      [[ "$name_a" == "Interop-02-renamed" ]] && break
+      sleep 3
+    done
+    if [[ "$name_a" == "Interop-02-renamed" ]]; then
+      pass_msg "B sees renamed Interop-02"
+      record_result "07a metadata rename A->B" pass
+    else
+      fail_msg "B still sees name: $name_a"
+      record_result "07a metadata rename A->B" fail "rename did not propagate to B"
+    fi
   fi
 
-  step "B renames back"
-  wn_b groups rename "$gid" "Interop-02-reverse" >/dev/null 2>&1 || true
+  # Reverse direction: B (admin of Interop-03) renames → A observes.
+  #
+  # The previous revision issued the reverse rename on Interop-02 via
+  # `wn_b groups rename` — but B is a plain member of Interop-02, so
+  # MIP-03's `enforceAuthorizedProposalSet` rejects the GCE commit on
+  # the wn side and the rename never reaches any relay. Use the group
+  # B actually owns (Interop-03) for the reverse leg instead.
+  local gid_b
+  gid_b=$(load_state GROUP_03 || true)
+  if [[ -z "${gid_b:-}" ]]; then
+    skip_msg "no GROUP_03 — skipping reverse rename"
+    record_result "07b metadata rename B->A" skip "no GROUP_03"
+    return
+  fi
 
-  if confirm "Does Amethyst now show the group name as 'Interop-02-reverse'?"; then
-    record_result "07 metadata rename" pass
+  step "B (admin) renames Interop-03 -> Interop-03-renamed"
+  local rename_out
+  if ! rename_out=$(wn_b groups rename "$gid_b" "Interop-03-renamed" 2>&1); then
+    warn "wn_b groups rename returned nonzero: $rename_out"
+    printf 'wn_b groups rename: %s\n' "$rename_out" >>"$LOG_FILE"
+  fi
+
+  if confirm "Does Amethyst now show the group previously named 'Interop-03' as 'Interop-03-renamed'?"; then
+    record_result "07b metadata rename B->A" pass
   else
-    record_result "07 metadata rename" fail "Amethyst did not pick up rename"
+    record_result "07b metadata rename B->A" fail "Amethyst did not pick up rename"
   fi
 }
 
@@ -710,9 +993,11 @@ test_08_admin_promote_demote() {
   step "B (creator+admin) adds C so we have 3 members"
   wn_c keys publish >/dev/null 2>&1 || true
   sleep 3
+  local c_ignore_08 c_new_gid_08
+  c_ignore_08=$(snapshot_invites C)
   wn_b groups add-members "$gid" "$C_NPUB" >/dev/null 2>&1 || warn "add-members C returned nonzero"
-  if wait_for_invite C 30 >/dev/null; then
-    wn_c groups accept "$gid" >/dev/null 2>&1 || true
+  if c_new_gid_08=$(wait_for_invite C 30 "$c_ignore_08"); then
+    wn_c groups accept "$c_new_gid_08" >/dev/null 2>&1 || true
   fi
 
   step "B promotes A to admin"
@@ -814,7 +1099,10 @@ test_10_concurrent_commits() {
 
   step "verifying B's view is consistent (name + epoch)"
   local b_view
-  b_view=$(wn_b --json groups show "$gid" 2>/dev/null | jq '{name, epoch}' 2>/dev/null || echo "{}")
+  # Post-v0.2 wn wraps `groups show` output in {"result": {...}}; peel
+  # that wrapper before extracting the fields so the info log isn't
+  # "name: null, epoch: null" on every run.
+  b_view=$(wn_b --json groups show "$gid" 2>/dev/null | jq '(.result // .) | {name, epoch}' 2>/dev/null || echo "{}")
   info "B state: $b_view"
 
   prompt_human "Read the group name now shown in Amethyst."
@@ -890,9 +1178,11 @@ test_12_offline_catchup() {
   done
 
   step "B adds C, then sends 3 more messages"
+  local c_ignore_12 c_new_gid_12
+  c_ignore_12=$(snapshot_invites C)
   wn_b groups add-members "$gid" "$C_NPUB" >/dev/null 2>&1 || true
-  if wait_for_invite C 30 >/dev/null; then
-    wn_c groups accept "$gid" >/dev/null 2>&1 || true
+  if c_new_gid_12=$(wait_for_invite C 30 "$c_ignore_12"); then
+    wn_c groups accept "$c_new_gid_12" >/dev/null 2>&1 || true
   fi
   for i in 6 7 8; do
     wn_b messages send "$gid" "offline-msg-$i" >/dev/null 2>&1 || true
@@ -1004,6 +1294,15 @@ main() {
   banner "Post-configure baseline diagnostics"
   dump_daemon_diagnostics B "post-configure"
   dump_daemon_diagnostics C "post-configure"
+
+  # Let wn discover A's advertised relays via its normal subscription
+  # plane, then dump what wn actually sees. This is the "Am I going to
+  # be able to reach this user?" probe — surfaces up front the kind of
+  # failure (A's 10050 unreachable from wn, missing KP list, etc.) that
+  # would otherwise bite as a silent Test 03 timeout.
+  if [[ "$USE_LOCAL_RELAYS" -ne 1 ]]; then
+    discover_a_relays
+  fi
 
   instruct_amethyst_setup
 

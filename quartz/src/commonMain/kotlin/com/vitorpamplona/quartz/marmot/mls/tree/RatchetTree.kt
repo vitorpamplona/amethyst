@@ -267,21 +267,50 @@ class RatchetTree(
     }
 
     /**
+     * RFC 9420 §4.1.2 "filtered direct path":
+     *   the direct path of a leaf node L, with any parent node removed whose
+     *   child on the copath of L has an empty resolution (unmerged_leaves
+     *   count toward the resolution).
+     *
+     * Returns parallel lists (filteredDirectPath, filteredCopath). This is
+     * what openmls / whitenoise-rs use for `UpdatePath.nodes` generation
+     * and application — omitting a parent whose copath subtree is entirely
+     * blank is spec-required because encrypting to that parent's key pair
+     * is equivalent to encrypting to its only non-blank child (which is
+     * already on the direct path). Relevant in, e.g., a 3-member group
+     * where the committer removes the middle leaf: the sibling subtree at
+     * the level above the committer becomes fully blank, and the parent at
+     * that level is dropped from the UpdatePath.
+     */
+    fun filteredDirectPath(leafIndex: Int): Pair<List<Int>, List<Int>> {
+        val directPath = BinaryTree.directPath(leafIndex, _leafCount)
+        val copath = BinaryTree.copath(leafIndex, _leafCount)
+        val filteredDp = mutableListOf<Int>()
+        val filteredCp = mutableListOf<Int>()
+        for (i in directPath.indices) {
+            if (resolution(copath[i]).isNotEmpty()) {
+                filteredDp.add(directPath[i])
+                filteredCp.add(copath[i])
+            }
+        }
+        return filteredDp to filteredCp
+    }
+
+    /**
      * Apply an UpdatePath to the tree: update parent nodes along the sender's
-     * direct path with the provided path nodes.
+     * **filtered** direct path (RFC 9420 §7.9) with the provided path nodes.
      */
     fun applyUpdatePath(
         senderLeafIndex: Int,
         pathNodes: List<UpdatePathNode>,
     ) {
-        val directPath = BinaryTree.directPath(senderLeafIndex, _leafCount)
-
-        require(pathNodes.size == directPath.size) {
-            "UpdatePath node count (${pathNodes.size}) doesn't match direct path length (${directPath.size})"
+        val (filteredDp, _) = filteredDirectPath(senderLeafIndex)
+        require(pathNodes.size == filteredDp.size) {
+            "UpdatePath node count (${pathNodes.size}) doesn't match filtered direct path length (${filteredDp.size})"
         }
 
-        for (i in directPath.indices) {
-            val nodeIdx = directPath[i]
+        for (i in filteredDp.indices) {
+            val nodeIdx = filteredDp[i]
             val pathNode = pathNodes[i]
 
             setParent(

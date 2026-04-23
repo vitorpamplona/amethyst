@@ -177,17 +177,50 @@ jq_group_id() {
 
 # ------- polling helpers -----------------------------------------------------
 
-# wait_for_invite <B|C> <timeout-seconds>
-# Echoes the first new group_id that appears in `wn groups invites --json`.
+# Snapshot currently-pending invites on <B|C> as a comma-separated list of
+# gids. Use this BEFORE triggering a publish that should produce a new
+# welcome, then pass the result to `wait_for_invite` as the ignore list so
+# a stale welcome left over from a previous harness run (wnd persists
+# pending invites across restarts) doesn't register as the arrival we
+# just triggered.
+snapshot_invites() {
+    local who="$1" wnfn
+    if [[ "$who" == "B" ]]; then wnfn=wn_b
+    else                         wnfn=wn_c; fi
+    local raw
+    raw=$("$wnfn" --json groups invites 2>/dev/null || true)
+    # jq_group_id reads one invite at a time, so iterate the array in shell
+    # rather than trying to handle all shapes in a single jq expression.
+    local gids=()
+    while IFS= read -r one; do
+        [[ -z "$one" || "$one" == "null" ]] && continue
+        local g
+        g=$(printf '%s' "$one" | jq_group_id)
+        [[ -n "$g" ]] && gids+=("$g")
+    done < <(printf '%s' "$raw" | jq -c '(.result // .) | .[]?' 2>/dev/null)
+    # bash 3.2 (stock macOS) treats "${gids[*]}" on an empty array as an
+    # unbound reference under `set -u`, so guard the expansion.
+    if (( ${#gids[@]} > 0 )); then
+        local IFS=','
+        printf '%s' "${gids[*]}"
+    fi
+}
+
+# wait_for_invite <B|C> <timeout-seconds> [ignore-csv]
+# Echoes the first pending group_id that isn't listed in <ignore-csv>
+# (comma-separated hex gids). Use the ignore list to skip welcomes left
+# pending by previous harness runs — otherwise `wait_for_invite` can
+# fire on a stale invite and the caller ends up driving a group the
+# publisher isn't a member of, which then looks like a kind:445 drop.
 # Returns 1 on timeout.
 #
 # Also prints a heartbeat every ~10s with:
 #   - elapsed/remaining time
-#   - current count of pending welcomes (should be 0 until it isn't)
+#   - current count of pending welcomes (total, pre-filter)
 #   - last relevant line of wnd stderr (grep for welcome/giftwrap/subscribe/error)
 # so a stalled poll gives the operator something to forward.
 wait_for_invite() {
-    local who="$1" timeout="${2:-60}" deadline gid start last_hb
+    local who="$1" timeout="${2:-60}" ignore_csv="${3:-}" deadline gid start last_hb
     local wnfn data_dir
     if [[ "$who" == "B" ]]; then wnfn=wn_b; data_dir="$B_DIR"
     else                         wnfn=wn_c; data_dir="$C_DIR"; fi
@@ -198,27 +231,32 @@ wait_for_invite() {
         # Post-v0.2 `wn --json groups invites` returns `{"result": [...]}`
         # (older builds returned the bare array). Peel the wrapper when
         # present so a pending invite is actually detected.
-        gid=$("$wnfn" --json groups invites 2>/dev/null \
-                | jq -c '(.result // .) | .[0] // empty' 2>/dev/null | jq_group_id || true)
-        if [[ -n "${gid:-}" ]]; then
-            printf '%s\n' "$gid"
-            return 0
-        fi
+        local raw
+        raw=$("$wnfn" --json groups invites 2>/dev/null || true)
+        # Walk every pending invite (not just .[0]) so we skip past stales.
+        while IFS= read -r one; do
+            [[ -z "$one" || "$one" == "null" ]] && continue
+            gid=$(printf '%s' "$one" | jq_group_id)
+            [[ -z "$gid" ]] && continue
+            if [[ ",$ignore_csv," != *",$gid,"* ]]; then
+                printf '%s\n' "$gid"
+                return 0
+            fi
+        done < <(printf '%s' "$raw" | jq -c '(.result // .) | .[]?' 2>/dev/null)
 
         # Heartbeat every ~10s.
         local now=$(date +%s)
         if (( now - last_hb >= 10 )); then
             local elapsed=$(( now - start )) remaining=$(( deadline - now ))
             local pending
-            pending=$("$wnfn" --json groups invites 2>/dev/null \
-                        | jq '(.result // .) | length' 2>/dev/null || echo "?")
+            pending=$(printf '%s' "$raw" | jq '(.result // .) | length' 2>/dev/null || echo "?")
             local recent=""
             if [[ -f "$data_dir/logs/stderr.log" ]]; then
                 recent=$(tail -n 200 "$data_dir/logs/stderr.log" 2>/dev/null \
                     | grep -iE 'welcome|giftwrap|gift_wrap|mls|subscribe|1059|444|error|warn' \
                     | tail -n 1 || true)
             fi
-            info "$who wait_for_invite +${elapsed}s (remaining ${remaining}s)  pending=$pending  tail: ${recent:-<no relevant wnd log yet>}"
+            info "$who wait_for_invite +${elapsed}s (remaining ${remaining}s)  pending=$pending  ignoring=${ignore_csv:-<none>}  tail: ${recent:-<no relevant wnd log yet>}"
             last_hb=$now
         fi
 
@@ -293,13 +331,56 @@ extract_pubkey() {
     if [[ -n "$v" ]]; then printf '%s' "$v"; return; fi
 }
 
-# Best-effort npub -> hex conversion via `wn users show`. If the lookup fails
-# (e.g. --json not supported or user not resolvable), returns the input
-# unchanged — downstream comparisons tolerate either form.
+# Pure-awk bech32 decoder for npub1... → 32-byte lowercase hex. Needed because
+# `wn users show` only resolves identities the local daemon already knows
+# about, so A's npub (the Amethyst account) can't be converted via wn — and a
+# failed conversion leaks the raw npub into hex-equality checks like the
+# member-list assertion in Test 02, which then fails with
+# "member list missing npub1…".
+bech32_decode_npub() {
+    local npub="$1"
+    [[ "$npub" == npub1* ]] || return 1
+    local body="${npub#npub1}"
+    # Need at least 6 chars of checksum + some data.
+    (( ${#body} > 6 )) || return 1
+    local hex
+    hex=$(awk -v data="$body" 'BEGIN {
+        charset = "qpzry9x8gf2tvdw0s3jn54khce6mua7l"
+        for (i = 0; i < 32; i++) map[substr(charset, i + 1, 1)] = i
+        data = substr(data, 1, length(data) - 6)
+        acc = 0; bits = 0; out = ""
+        for (i = 1; i <= length(data); i++) {
+            c = substr(data, i, 1)
+            if (!(c in map)) exit 1
+            acc = acc * 32 + map[c]
+            bits += 5
+            while (bits >= 8) {
+                bits -= 8
+                pow = 1
+                for (j = 0; j < bits; j++) pow *= 2
+                byte = int(acc / pow)
+                acc -= byte * pow
+                out = out sprintf("%02x", byte)
+            }
+        }
+        print out
+    }' 2>/dev/null) || return 1
+    # 32-byte x-only pubkey = 64 hex chars.
+    [[ ${#hex} -eq 64 ]] || return 1
+    printf '%s' "$hex"
+}
+
+# npub -> hex conversion. Tries `wn users show` first (handy when it works,
+# since it also validates the npub against the daemon's view), then falls
+# back to a local bech32 decode so unknown npubs still convert. Returns the
+# input unchanged only if both paths fail, which should never happen for a
+# well-formed npub.
 npub_to_hex() {
     local npub="$1" raw hex
     raw=$(wn_b --json users show "$npub" 2>/dev/null || true)
-    hex=$(printf '%s' "$raw" | jq -r '.pubkey // .public_key // .hex // empty' 2>/dev/null || true)
+    hex=$(printf '%s' "$raw" \
+        | jq -r '(.result // .) | (.pubkey // .public_key // .hex // .[0]?.pubkey // .[0]?.public_key // empty)' \
+        2>/dev/null || true)
     if [[ -z "$hex" || "$hex" == "null" ]]; then
         # fallback to yaml-ish output
         raw=$(wn_b users show "$npub" 2>/dev/null || true)
@@ -307,9 +388,13 @@ npub_to_hex() {
     fi
     if [[ -n "$hex" && "$hex" != "null" ]]; then
         printf '%s' "$hex"
-    else
-        printf '%s' "$npub"
+        return
     fi
+    if hex=$(bech32_decode_npub "$npub"); then
+        printf '%s' "$hex"
+        return
+    fi
+    printf '%s' "$npub"
 }
 
 # ------- state file ----------------------------------------------------------
@@ -422,6 +507,70 @@ prompt_amethyst_logcat() {
 
 Then paste /tmp/amethyst-marmot.log contents here so the failure report has
 both the Amethyst-side publish log and the wn-side subscription log ($note)."
+}
+
+# Dump everything we know about an outbound kind:445 from a wn daemon, so
+# when the operator reports "Amethyst didn't see it" we can tell them which
+# side of the wire to investigate:
+#
+#   - `messages list` output (did the daemon persist the message locally,
+#     i.e. is this a relay-reach issue, a membership issue, or a pure
+#     Amethyst-receive issue?)
+#   - `groups show` metadata (which MLS-extension relays is wn using for
+#     this group — these are the SAME relays Amethyst subscribes to, so if
+#     the lists don't match that's the bug)
+#   - live relay connection status
+#
+# Output is tee'd to stderr (live) and $LOG_FILE (forward).
+dump_outbound_diagnostics() {
+    local who="$1" gid="$2" needle="${3:-}" tag="${4:-post-send}"
+    local wnfn
+    if [[ "$who" == "B" ]]; then wnfn=wn_b
+    else                         wnfn=wn_c; fi
+
+    printf '\n%s%s---- [%s] %s outbound diagnostics (group %.8s…) ----%s\n' \
+        "$C_BOLD" "$C_CYAN" "$tag" "$who" "$gid" "$C_RESET" >&2
+    printf '\n==== [%s] %s outbound diagnostics (group %s) ====\n' "$tag" "$who" "$gid" >>"$LOG_FILE"
+
+    step "$who local view of latest messages in group"
+    local list_raw
+    list_raw=$("$wnfn" --json messages list "$gid" --limit 5 2>/dev/null || true)
+    printf '  %s\n' "${list_raw:-<no output>}" >>"$LOG_FILE"
+    printf '%s' "$list_raw" \
+        | jq -r '(.result // .) | .[]? | "  \(.id // .event_id // "?") \((.content // .text // "") | tostring | .[0:80])"' 2>/dev/null \
+        | tee -a "$LOG_FILE" >&2 || true
+    if [[ -n "$needle" ]]; then
+        if printf '%s' "$list_raw" | jq -e --arg n "$needle" \
+             '(.result // .) | .[]? | select((.content // .text // "") | contains($n))' \
+             >/dev/null 2>&1; then
+            info "$who local store contains \"$needle\" — send reached wn's own DB (kind:445 went out)"
+        else
+            warn "$who local store does NOT contain \"$needle\" — `messages send` never persisted; check stderr.log"
+        fi
+    fi
+
+    step "$who MLS group metadata (relays here are what Amethyst subscribes on)"
+    local meta_raw
+    meta_raw=$("$wnfn" --json groups show "$gid" 2>/dev/null || true)
+    printf '  %s\n' "${meta_raw:-<no output>}" >>"$LOG_FILE"
+    local meta_relays
+    meta_relays=$(printf '%s' "$meta_raw" \
+        | jq -r '(.result // .) | (.relays // .group.relays // [])[]? | (. | tostring)' 2>/dev/null \
+        | paste -sd',' -)
+    info "  group relays (MLS extension): ${meta_relays:-<none — Amethyst will fall back to homeRelays>}"
+    local meta_name meta_epoch
+    meta_name=$(printf '%s' "$meta_raw" | jq -r '(.result // .) | (.name // .group.name // "?")' 2>/dev/null)
+    meta_epoch=$(printf '%s' "$meta_raw" | jq -r '(.result // .) | (.epoch // .group.epoch // "?")' 2>/dev/null)
+    info "  group name: $meta_name   epoch: $meta_epoch"
+
+    step "$who relay connection status right now"
+    "$wnfn" --json relays list 2>/dev/null \
+        | jq -r '(.result // .)[]? | "  \(.url // .relay.url // "?") [\(.type // "?")] [\(.status // .connection_status // "?")]"' 2>/dev/null \
+        | tee -a "$LOG_FILE" >&2 || true
+
+    printf '%s%s---- end outbound diagnostics ----%s\n\n' \
+        "$C_BOLD" "$C_CYAN" "$C_RESET" >&2
+    printf '==== end [%s] %s outbound diagnostics ====\n\n' "$tag" "$who" >>"$LOG_FILE"
 }
 
 # ------- group cleanup -------------------------------------------------------

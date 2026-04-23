@@ -1477,7 +1477,16 @@ class AccountViewModel(
                     alt(caption)
                 }
             }
-        val innerEvent = account.signer.sign(template)
+        // MIP-03: inner events MUST remain unsigned (no `sig`) so a leaked
+        // plaintext can't be replayed as a valid public kind:9. Authorship
+        // is authenticated by the MLS sender's LeafNode + the pubkey↔
+        // credential-identity equality check on the receive side.
+        val innerEvent =
+            com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
+                .assembleRumor<com.vitorpamplona.quartz.nip01Core.core.Event>(
+                    account.signer.pubKey,
+                    template,
+                )
         val relays = marmotGroupRelays(nostrGroupId)
         account.sendMarmotGroupMessage(nostrGroupId, innerEvent, relays)
     }

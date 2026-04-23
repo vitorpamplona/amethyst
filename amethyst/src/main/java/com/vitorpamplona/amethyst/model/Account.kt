@@ -2167,15 +2167,33 @@ class Account(
      * Publish or rotate KeyPackage events.
      */
     suspend fun publishMarmotKeyPackages() {
-        val manager = marmotManager ?: return
-        if (!isWriteable()) return
+        val manager =
+            marmotManager ?: run {
+                Log.w("MarmotDbg") { "publishMarmotKeyPackages: marmotManager is NULL — no-op" }
+                return
+            }
+        if (!isWriteable()) {
+            Log.w("MarmotDbg") { "publishMarmotKeyPackages: account is not writeable — no-op" }
+            return
+        }
 
         val relays = keyPackagePublishRelays()
+        val needsRotation = manager.needsKeyPackageRotation()
+        Log.d("MarmotDbg") {
+            "publishMarmotKeyPackages: needsRotation=$needsRotation relays=${relays.size}"
+        }
 
-        if (manager.needsKeyPackageRotation()) {
+        if (needsRotation) {
             val rotatedEvents = manager.rotateConsumedKeyPackages(relays.toList())
+            Log.d("MarmotDbg") {
+                "publishMarmotKeyPackages: rotateConsumedKeyPackages produced ${rotatedEvents.size} event(s)"
+            }
             rotatedEvents.forEach { event ->
                 cache.justConsumeMyOwnEvent(event)
+                Log.d("MarmotDbg") {
+                    "publishMarmotKeyPackages: publishing rotated kind:${event.kind} id=${event.id.take(8)}… " +
+                        "→ ${relays.size} relay(s): ${relays.map { it.url }}"
+                }
                 client.publish(event, relays)
             }
         }
@@ -2313,12 +2331,30 @@ class Account(
         targetLeafIndex: Int,
         groupRelays: Set<NormalizedRelayUrl>,
     ) {
-        val manager = marmotManager ?: return
-        if (!isWriteable()) return
+        Log.d("MarmotDbg") {
+            "removeMarmotGroupMember: group=${nostrGroupId.take(8)}… targetLeafIndex=$targetLeafIndex " +
+                "groupRelays=${groupRelays.size}"
+        }
+        val manager =
+            marmotManager ?: run {
+                Log.w("MarmotDbg") { "removeMarmotGroupMember: marmotManager is NULL — no-op" }
+                return
+            }
+        if (!isWriteable()) {
+            Log.w("MarmotDbg") { "removeMarmotGroupMember: account is not writeable — no-op" }
+            return
+        }
 
         val outbound = manager.removeMember(nostrGroupId, targetLeafIndex)
+        Log.d("MarmotDbg") {
+            "removeMarmotGroupMember: built commit kind=${outbound.signedEvent.kind} id=${outbound.signedEvent.id.take(8)}…"
+        }
         val chatroom = marmotGroupList.getOrCreateGroup(nostrGroupId)
         manager.syncMetadataTo(nostrGroupId, chatroom)
+        Log.d("MarmotDbg") {
+            "removeMarmotGroupMember: publishing commit id=${outbound.signedEvent.id.take(8)}… " +
+                "to ${groupRelays.size} relay(s): ${groupRelays.map { it.url }}"
+        }
         client.publish(outbound.signedEvent, groupRelays)
     }
 
@@ -3075,11 +3111,14 @@ class Account(
                                 val innerEvent =
                                     com.vitorpamplona.quartz.nip01Core.core.Event
                                         .fromJson(json)
-                                // wasVerified=true: these events were already verified
-                                // via MLS credential identity when first decrypted (see
-                                // GroupEventHandler). Persisted inner events are
-                                // unsigned per MIP-03, so justVerify would fail and
-                                // reactions/deletions would silently drop here.
+                                // wasVerified=true: MIP-03 inner events are
+                                // unsigned rumors (empty sig), authenticated
+                                // via the MLS credential-identity check in
+                                // GroupEventHandler when first decrypted.
+                                // Running Nostr sig verify here (justVerify
+                                // via wasVerified=false) would silently drop
+                                // kind:7 reactions / kind:5 deletions since
+                                // they never carry a Schnorr signature.
                                 val isNew = cache.justConsume(innerEvent, null, true)
                                 val innerNote = cache.getOrCreateNote(innerEvent.id)
                                 if (isNew) {
