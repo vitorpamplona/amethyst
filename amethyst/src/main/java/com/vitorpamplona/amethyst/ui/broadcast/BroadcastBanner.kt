@@ -38,6 +38,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Error
@@ -97,7 +98,9 @@ fun BroadcastBanner(
     ) {
         Surface(
             color = MaterialTheme.colorScheme.surfaceContainer,
-            tonalElevation = 2.dp,
+            tonalElevation = 3.dp,
+            shadowElevation = 6.dp,
+            shape = RoundedCornerShape(20.dp),
             modifier =
                 Modifier
                     .fillMaxWidth()

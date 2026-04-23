@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -130,10 +131,11 @@ fun DisplaySnack(
             },
             modifier =
                 Modifier
-                    .fillMaxWidth()
                     .align(Alignment.BottomCenter)
                     .navigationBarsPadding()
-                    .padding(bottom = 50.dp),
+                    .padding(start = 12.dp, end = 12.dp, bottom = 58.dp)
+                    .fillMaxWidth(0.94f)
+                    .widthIn(max = 560.dp),
         )
     }
 }
