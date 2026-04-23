@@ -137,9 +137,10 @@ Run `amy --help` for the canonical list. As of today:
 | `marmot await message GID --match TEXT` | Block until a message containing `TEXT` lands. |
 | `marmot await rename GID --name NAME` | Block until GID's name matches. |
 | `marmot await epoch GID --min N` | Block until GID's MLS epoch is ≥ N. |
-| `dm send RECIPIENT TEXT` | Send a NIP-17 gift-wrapped DM (kind:14 inside kind:1059). Publishes to the recipient's kind:10050 → kind:10002 read → our bootstrap pool. |
-| `dm list [--peer NPUB] [--since TS] [--limit N] [--timeout SECS]` | Drain and decrypt gift wraps on our inbox relays. With neither `--peer` nor `--since` the gift-wrap cursor in `state.json` is advanced to the newest message seen. |
-| `dm await --peer NPUB --match TEXT [--timeout SECS]` | Block until a DM from NPUB containing TEXT arrives. Timeout exits 124. |
+| `dm send RECIPIENT TEXT [--allow-fallback]` | Send a NIP-17 gift-wrapped text DM (kind:14 inside kind:1059). Default delivers only to the recipient's kind:10050 (per NIP-17); pass `--allow-fallback` to fall back to kind:10002 read marker → bootstrap pool. |
+| `dm send-file RECIPIENT URL --key HEX --nonce HEX [--mime-type M] [--hash H] [--original-hash H] [--size N] [--dim WxH] [--blurhash S] [--allow-fallback]` | Send a NIP-17 encrypted-file message (kind:15 inside kind:1059). The file must already be uploaded; `--key`/`--nonce` carry the AES-GCM material that recipients use to decrypt the bytes at `URL`. |
+| `dm list [--peer NPUB] [--since TS] [--limit N] [--timeout SECS]` | Drain and decrypt gift wraps on our inbox relays. Returns kind:14 (text) and kind:15 (file) messages with a `type` discriminator. With neither `--peer` nor `--since` the gift-wrap cursor in `state.json` is advanced to the newest message seen. |
+| `dm await --peer NPUB --match TEXT [--timeout SECS]` | Block until a DM from NPUB containing TEXT arrives (matches text content for kind:14, URL for kind:15). Timeout exits 124. |
 
 All `await` verbs accept `--timeout SECS` (default 30). Timeout exits 124
 so scripts can distinguish "condition never happened" from "the command
