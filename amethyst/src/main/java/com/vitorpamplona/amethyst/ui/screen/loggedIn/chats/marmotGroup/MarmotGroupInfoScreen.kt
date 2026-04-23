@@ -84,6 +84,7 @@ import com.vitorpamplona.amethyst.ui.note.RenderRelayIcon
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
+import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.amethyst.ui.theme.MediumRelayIconModifier
@@ -219,6 +220,17 @@ fun MarmotGroupInfoScreen(
 
             // Members list (scrollable, takes remaining vertical space)
             LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                if (groupRelays.isNotEmpty()) {
+                    item {
+                        RelayHealthSection(
+                            relayUrls = groupRelays,
+                            relayActivity = relayActivity,
+                            nav = nav,
+                        )
+                        HorizontalDivider()
+                    }
+                }
+
                 item {
                     Text(
                         text = "Members",
@@ -786,6 +798,104 @@ fun GroupRelayTile(
                         .size(6.dp)
                         .clip(CircleShape)
                         .background(dotColor),
+            )
+        }
+    }
+}
+
+/**
+ * Detailed per-relay listing showing URL, connection-status dot, and the
+ * freshness of the most recent kind:445 group event we've received from
+ * each relay. Complements the compact [GroupRelayStrip] at the top of the
+ * screen — that one is an at-a-glance visual; this one surfaces the
+ * underlying data so users can diagnose which relay is lagging.
+ */
+@Composable
+fun RelayHealthSection(
+    relayUrls: List<String>,
+    relayActivity: Map<NormalizedRelayUrl, Long>,
+    nav: INav,
+) {
+    val normalized =
+        remember(relayUrls) {
+            relayUrls.mapNotNull { url -> url.normalizeRelayUrlOrNull()?.let { url to it } }
+        }
+    if (normalized.isEmpty()) return
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = "Relays",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+        )
+        val nowSeconds = System.currentTimeMillis() / 1000L
+        normalized.forEach { (raw, relay) ->
+            val lastSeen = relayActivity[relay]
+            val isActive = lastSeen != null && (nowSeconds - lastSeen) <= RELAY_ACTIVITY_WINDOW_SECS
+            RelayHealthRow(
+                relay = relay,
+                fallbackUrl = raw,
+                lastSeen = lastSeen,
+                isActive = isActive,
+                nav = nav,
+            )
+        }
+    }
+}
+
+@Composable
+private fun RelayHealthRow(
+    relay: NormalizedRelayUrl,
+    fallbackUrl: String,
+    lastSeen: Long?,
+    isActive: Boolean,
+    nav: INav,
+) {
+    val context = LocalContext.current
+    val dotColor =
+        if (isActive) {
+            MaterialTheme.colorScheme.allGoodColor
+        } else {
+            MaterialTheme.colorScheme.placeholderText
+        }
+    val subtitle =
+        if (lastSeen == null) {
+            "no events yet"
+        } else {
+            "last event${timeAgo(lastSeen, context)}"
+        }
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable { nav.nav(Route.RelayInfo(relay.url)) }
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier =
+                Modifier
+                    .size(8.dp)
+                    .clip(CircleShape)
+                    .background(dotColor),
+        )
+        Column(
+            modifier =
+                Modifier
+                    .padding(start = 12.dp)
+                    .weight(1f),
+        ) {
+            Text(
+                text = relay.url.ifEmpty { fallbackUrl },
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
