@@ -74,7 +74,15 @@ the end of the run.
 | dm-03 | Strict kind:10050 refuses sends to an inboxless recipient |
 | dm-04 | `--allow-fallback` opts into the NIP-65 read / bootstrap chain |
 | dm-05 | File message reference mode round-trip (kind:15 with manual key/nonce) |
-| dm-06 | No-flag `dm list` advances the gift-wrap cursor (second call empty) |
+| dm-06 | `dm list --since` filters out older messages (window-slide past the newest event returns 0) |
+
+**Relay binding note:** the DM harness binds the loopback relay to
+`127.0.0.2` (not `127.0.0.1`) because Quartz's `RelayTag.parse` rejects
+localhost URLs via `isLocalHost()` — so `ws://127.0.0.1` in a kind:10050
+event is silently stripped during recipient-relay resolution, which
+would make strict-mode DM sends spuriously fail. `127.0.0.2` is still
+pure loopback and isn't matched by that filter. Override with
+`--host 127.0.0.5` etc. if `127.0.0.2` is taken.
 
 **Note:** dm-05 validates the kind:15 wire format via reference mode
 (caller supplies the URL + AES-GCM key/nonce). The upload-mode variant

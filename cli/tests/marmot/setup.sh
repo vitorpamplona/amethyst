@@ -170,7 +170,7 @@ description = "Loopback relay for marmot-interop-headless.sh — do not use for 
 data_directory = "$RELAY_DATA"
 
 [network]
-address = "127.0.0.1"
+address = "${RELAY_HOST:-127.0.0.1}"
 port = $RELAY_PORT
 
 [options]
@@ -198,7 +198,7 @@ EOF
 
   local deadline=$(( $(date +%s) + 20 ))
   while [[ $(date +%s) -lt $deadline ]]; do
-    if curl -sSf -m 1 "http://127.0.0.1:$RELAY_PORT/" >/dev/null 2>&1; then
+    if curl -sSf -m 1 "http://${RELAY_HOST:-127.0.0.1}:$RELAY_PORT/" >/dev/null 2>&1; then
       info "relay up"
       return 0
     fi

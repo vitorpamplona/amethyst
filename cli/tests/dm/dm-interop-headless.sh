@@ -27,11 +27,16 @@ AMY_BIN="$REPO_ROOT/cli/build/install/amy/bin/amy"
 # Share the nostr-rs-relay checkout with the Marmot harness to avoid
 # rebuilding it twice. Override RELAY_REPO / RELAY_DATA if you want full
 # isolation between runs.
+# Bind the loopback relay to 127.0.0.2 rather than 127.0.0.1 so Quartz's
+# `isLocalHost()` filter doesn't silently strip it out of the kind:10050
+# inbox events during recipient-relay resolution. 127.0.0.2 is still pure
+# loopback — no network traffic, no config needed.
+RELAY_HOST="${RELAY_HOST:-127.0.0.2}"
 RELAY_REPO="${RELAY_REPO:-$TESTS_DIR/marmot/state-headless/nostr-rs-relay}"
 RELAY_BIN="$RELAY_REPO/target/release/nostr-rs-relay"
 RELAY_DATA="$STATE_DIR/relay"
 RELAY_PORT="${RELAY_PORT:-8090}"
-RELAY_URL="ws://127.0.0.1:$RELAY_PORT"
+RELAY_URL="ws://$RELAY_HOST:$RELAY_PORT"
 NO_BUILD=0
 
 A_NPUB=""
@@ -41,7 +46,8 @@ D_HEX=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --port)     RELAY_PORT="$2"; RELAY_URL="ws://127.0.0.1:$RELAY_PORT"; shift ;;
+    --port)     RELAY_PORT="$2"; RELAY_URL="ws://$RELAY_HOST:$RELAY_PORT"; shift ;;
+    --host)     RELAY_HOST="$2"; RELAY_URL="ws://$RELAY_HOST:$RELAY_PORT"; shift ;;
     --no-build) NO_BUILD=1 ;;
     -h|--help)
       sed -n '3,12p' "${BASH_SOURCE[0]}" | sed 's/^# \?//'
@@ -97,4 +103,4 @@ test_02_dm_list_surfaces_history
 test_03_dm_send_rejects_no_inbox
 test_04_dm_send_allow_fallback
 test_05_dm_file_reference_round_trip
-test_06_dm_list_cursor_advance
+test_06_dm_list_since_filter

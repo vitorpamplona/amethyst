@@ -192,29 +192,39 @@ test_05_dm_file_reference_round_trip() {
   record_result "$id" pass
 }
 
-test_06_dm_list_cursor_advance() {
-  banner "DM-06 — no-flag dm list advances the giftWrapSince cursor"
-  local id="dm-06 cursor advance"
+test_06_dm_list_since_filter() {
+  banner "DM-06 — --since filters out older messages"
+  local id="dm-06 since filter"
 
-  # First no-flag list: drains everything and advances the cursor to now.
-  local first_out first_count
-  first_out=$(amy_json_d dm list --timeout 5) || {
-    record_result "$id" fail "first dm list failed"; return
+  # Baseline: a --peer query (stateless) should surface every message so
+  # far. We need at least one to have a meaningful window to slide past.
+  local baseline baseline_count
+  baseline=$(amy_json_d dm list --peer "$A_NPUB" --timeout 5) || {
+    record_result "$id" fail "baseline dm list failed"; return
   }
-  first_count=$(printf '%s' "$first_out" | jq -r '.messages | length')
-  info "first dm list returned $first_count message(s)"
+  baseline_count=$(printf '%s' "$baseline" | jq -r '.messages | length')
+  info "baseline messages with A: $baseline_count"
+  if [[ "$baseline_count" -lt 1 ]]; then
+    record_result "$id" fail "no messages to filter — earlier tests didn't populate"; return
+  fi
 
-  # Second no-flag list: nothing new should land.
-  local second_out second_count
-  second_out=$(amy_json_d dm list --timeout 5) || {
-    record_result "$id" fail "second dm list failed"; return
+  # Now query with --since set to a timestamp 2 days after the newest
+  # message. filterGiftWrapsToPubkey subtracts its own two-day lookback
+  # window, so the effective `since` lands right after the newest event
+  # — nothing should come back.
+  local newest
+  newest=$(printf '%s' "$baseline" | jq -r '[.messages[].created_at] | max')
+  local future=$(( newest + 2 * 24 * 60 * 60 + 3600 ))
+  local after after_count
+  after=$(amy_json_d dm list --peer "$A_NPUB" --since "$future" --timeout 5) || {
+    record_result "$id" fail "since-query failed"; return
   }
-  second_count=$(printf '%s' "$second_out" | jq -r '.messages | length')
-  info "second dm list returned $second_count message(s)"
+  after_count=$(printf '%s' "$after" | jq -r '.messages | length')
+  info "after --since $future: $after_count message(s)"
 
-  if [[ "$first_count" -ge 1 && "$second_count" -eq 0 ]]; then
+  if [[ "$after_count" -eq 0 ]]; then
     record_result "$id" pass
   else
-    record_result "$id" fail "expected first>=1, second==0; got first=$first_count second=$second_count"
+    record_result "$id" fail "expected 0 after future --since; got $after_count"
   fi
 }
