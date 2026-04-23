@@ -59,6 +59,7 @@ object MaterialSymbols {
     val Chat = MaterialSymbol("\uE0C9")
     val Check = MaterialSymbol("\uE5CA")
     val CheckCircle = MaterialSymbol("\uF0BE")
+    val ChessKnight = MaterialSymbol("\uF25E")
     val Checklist = MaterialSymbol("\uE6B1")
     val ChevronRight = MaterialSymbol("\uE5CC")
     val Circle = MaterialSymbol("\uEF4A")

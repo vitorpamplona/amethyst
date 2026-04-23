@@ -548,8 +548,7 @@ fun ListContent(
             if (isDebug) {
                 NavigationRow(
                     title = R.string.route_chess,
-                    icon = R.drawable.ic_chess,
-                    iconReference = 1,
+                    icon = MaterialSymbols.ChessKnight,
                     tint = MaterialTheme.colorScheme.onBackground,
                     nav = nav,
                     route = Route.Chess,
