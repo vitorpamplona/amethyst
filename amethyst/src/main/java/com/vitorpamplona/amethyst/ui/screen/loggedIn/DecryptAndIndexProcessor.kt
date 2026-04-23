@@ -50,6 +50,8 @@ import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallRejectEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallRenegotiateEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 class EventProcessor(
     private val account: Account,
@@ -549,6 +551,29 @@ class GroupEventHandler(
     private val account: Account,
     private val cache: LocalCache,
 ) : EventHandler<GroupEvent> {
+    /**
+     * Per-group buffer of kind:445 events whose outer ChaCha20-Poly1305
+     * layer couldn't be decrypted yet — typically because they carry an
+     * epoch the receiver hasn't advanced to. The relay subscription
+     * doesn't guarantee arrival order, so a run like
+     *
+     *   1) B sends msg-1..5 at epoch 1
+     *   2) B adds C (commit advances B → epoch 2)
+     *   3) B sends msg-6..8 at epoch 2
+     *   4) B renames (commit advances B → epoch 3)
+     *
+     * can reach a receiver in the order {msg-6, msg-7, msg-8, rename,
+     * add-C, msg-1..5} depending on relay ordering. Everything from step
+     * 3+ above is `UndecryptableOuterLayer` until the add-C commit lands;
+     * we re-run those pending events every time an epoch-advancing
+     * CommitProcessed fires for the same group.
+     *
+     * Bounded per-group so a stuck stream of "truly undecryptable"
+     * pre-join events can't grow unbounded. FIFO eviction on overflow.
+     */
+    private val pendingUndecryptable: MutableMap<String, ArrayDeque<GroupEvent>> = mutableMapOf()
+    private val pendingMutex = Mutex()
+
     override suspend fun add(
         event: GroupEvent,
         eventNote: Note,
@@ -642,6 +667,10 @@ class GroupEventHandler(
                     // Sync MIP-01 metadata after epoch advance (extensions may have changed)
                     val chatroom = account.marmotGroupList.getOrCreateGroup(result.groupId)
                     manager.syncMetadataTo(result.groupId, chatroom)
+                    // Epoch just advanced — drain any kind:445 events that
+                    // previously failed as UndecryptableOuterLayer for this
+                    // group. See `pendingUndecryptable` for the scenario.
+                    retryPendingFor(result.groupId, eventNote, publicNote)
                 }
 
                 is GroupEventResult.CommitPending -> {
@@ -655,12 +684,31 @@ class GroupEventHandler(
                 }
 
                 is GroupEventResult.UndecryptableOuterLayer -> {
-                    // Expected for commits + application messages from epochs
-                    // that predate our join — per MLS forward secrecy we
-                    // never held those keys. Not a bug, not a warning.
+                    // Two common causes for this result:
+                    //   (a) event's epoch predates our join — we never held
+                    //       those exporter keys, nothing to retry later.
+                    //   (b) event's epoch is ahead of our current one — the
+                    //       epoch-advancing commit for this group hasn't
+                    //       arrived yet but will in a moment (relays don't
+                    //       guarantee arrival order across a kind:445
+                    //       subscription). We can't tell (a) from (b) here,
+                    //       so buffer the event and retry after any future
+                    //       CommitProcessed for this group advances us.
+                    //
+                    // Bounded per-group: keep the most recent
+                    // MAX_PENDING_PER_GROUP events, FIFO-evict on overflow.
+                    // Prevents a flood of genuinely pre-join events from
+                    // pinning unbounded memory.
                     Log.d("MarmotDbg") {
                         "GroupEventHandler.add: undecryptable outer layer for group=${result.groupId.take(8)}… " +
-                            "(current + ${result.retainedEpochCount} retained epoch key(s) tried) — likely from before our join"
+                            "(current + ${result.retainedEpochCount} retained epoch key(s) tried) — buffering for post-commit retry"
+                    }
+                    pendingMutex.withLock {
+                        val queue = pendingUndecryptable.getOrPut(result.groupId) { ArrayDeque() }
+                        if (queue.size >= MAX_PENDING_PER_GROUP) {
+                            queue.removeFirst()
+                        }
+                        queue.addLast(event)
                     }
                 }
 
@@ -672,5 +720,38 @@ class GroupEventHandler(
             if (e is CancellationException) throw e
             Log.e("MarmotDbg", "GroupEventHandler.add: exception processing kind:445", e)
         }
+    }
+
+    /**
+     * Drain the pending-undecryptable queue for [groupId] and re-run each
+     * event through `add`. A successful retry may itself emit another
+     * CommitProcessed and trigger recursive draining — that's fine, MLS
+     * epoch advances are strictly monotonic so recursion depth is bounded
+     * by the number of queued events.
+     *
+     * `eventNote` / `publicNote` are re-used for the retry path; they only
+     * feed into relay-activity tracking and compose-note lookup, both of
+     * which are safe to re-fire with the triggering event's notes.
+     */
+    private suspend fun retryPendingFor(
+        groupId: String,
+        eventNote: Note,
+        publicNote: Note,
+    ) {
+        val drained =
+            pendingMutex.withLock {
+                pendingUndecryptable.remove(groupId)?.toList() ?: return
+            }
+        if (drained.isEmpty()) return
+        Log.d("MarmotDbg") {
+            "GroupEventHandler.retryPendingFor: replaying ${drained.size} previously-undecryptable kind:445 event(s) for group=${groupId.take(8)}…"
+        }
+        for (pending in drained) {
+            add(pending, eventNote, publicNote)
+        }
+    }
+
+    companion object {
+        private const val MAX_PENDING_PER_GROUP = 64
     }
 }
