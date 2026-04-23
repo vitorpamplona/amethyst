@@ -29,60 +29,60 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-class DesktopMediaMetadataTest {
+class MediaMetadataReaderTest {
     // --- guessMimeType ---
 
     @Test
     fun guessMimeTypeForJpeg() {
-        assertEquals("image/jpeg", DesktopMediaMetadata.guessMimeType(File("photo.jpg")))
-        assertEquals("image/jpeg", DesktopMediaMetadata.guessMimeType(File("photo.jpeg")))
-        assertEquals("image/jpeg", DesktopMediaMetadata.guessMimeType(File("photo.JPEG")))
+        assertEquals("image/jpeg", MediaMetadataReader.guessMimeType(File("photo.jpg")))
+        assertEquals("image/jpeg", MediaMetadataReader.guessMimeType(File("photo.jpeg")))
+        assertEquals("image/jpeg", MediaMetadataReader.guessMimeType(File("photo.JPEG")))
     }
 
     @Test
     fun guessMimeTypeForPng() {
-        assertEquals("image/png", DesktopMediaMetadata.guessMimeType(File("image.png")))
+        assertEquals("image/png", MediaMetadataReader.guessMimeType(File("image.png")))
     }
 
     @Test
     fun guessMimeTypeForGif() {
-        assertEquals("image/gif", DesktopMediaMetadata.guessMimeType(File("anim.gif")))
+        assertEquals("image/gif", MediaMetadataReader.guessMimeType(File("anim.gif")))
     }
 
     @Test
     fun guessMimeTypeForWebp() {
-        assertEquals("image/webp", DesktopMediaMetadata.guessMimeType(File("image.webp")))
+        assertEquals("image/webp", MediaMetadataReader.guessMimeType(File("image.webp")))
     }
 
     @Test
     fun guessMimeTypeForSvg() {
-        assertEquals("image/svg+xml", DesktopMediaMetadata.guessMimeType(File("icon.svg")))
+        assertEquals("image/svg+xml", MediaMetadataReader.guessMimeType(File("icon.svg")))
     }
 
     @Test
     fun guessMimeTypeForAvif() {
-        assertEquals("image/avif", DesktopMediaMetadata.guessMimeType(File("photo.avif")))
+        assertEquals("image/avif", MediaMetadataReader.guessMimeType(File("photo.avif")))
     }
 
     @Test
     fun guessMimeTypeForVideoFormats() {
-        assertEquals("video/mp4", DesktopMediaMetadata.guessMimeType(File("clip.mp4")))
-        assertEquals("video/webm", DesktopMediaMetadata.guessMimeType(File("clip.webm")))
-        assertEquals("video/quicktime", DesktopMediaMetadata.guessMimeType(File("clip.mov")))
+        assertEquals("video/mp4", MediaMetadataReader.guessMimeType(File("clip.mp4")))
+        assertEquals("video/webm", MediaMetadataReader.guessMimeType(File("clip.webm")))
+        assertEquals("video/quicktime", MediaMetadataReader.guessMimeType(File("clip.mov")))
     }
 
     @Test
     fun guessMimeTypeForAudioFormats() {
-        assertEquals("audio/mpeg", DesktopMediaMetadata.guessMimeType(File("song.mp3")))
-        assertEquals("audio/ogg", DesktopMediaMetadata.guessMimeType(File("track.ogg")))
-        assertEquals("audio/wav", DesktopMediaMetadata.guessMimeType(File("sound.wav")))
-        assertEquals("audio/flac", DesktopMediaMetadata.guessMimeType(File("lossless.flac")))
+        assertEquals("audio/mpeg", MediaMetadataReader.guessMimeType(File("song.mp3")))
+        assertEquals("audio/ogg", MediaMetadataReader.guessMimeType(File("track.ogg")))
+        assertEquals("audio/wav", MediaMetadataReader.guessMimeType(File("sound.wav")))
+        assertEquals("audio/flac", MediaMetadataReader.guessMimeType(File("lossless.flac")))
     }
 
     @Test
     fun guessMimeTypeForUnknownExtension() {
-        assertEquals("application/octet-stream", DesktopMediaMetadata.guessMimeType(File("data.xyz")))
-        assertEquals("application/octet-stream", DesktopMediaMetadata.guessMimeType(File("noext")))
+        assertEquals("application/octet-stream", MediaMetadataReader.guessMimeType(File("data.xyz")))
+        assertEquals("application/octet-stream", MediaMetadataReader.guessMimeType(File("noext")))
     }
 
     // --- compute ---
@@ -91,7 +91,7 @@ class DesktopMediaMetadataTest {
     fun computeForPngImage() {
         val file = createTempPng(width = 10, height = 5)
         try {
-            val meta = DesktopMediaMetadata.compute(file)
+            val meta = MediaMetadataReader.compute(file)
 
             assertEquals("image/png", meta.mimeType)
             assertTrue(meta.size > 0)
@@ -110,7 +110,7 @@ class DesktopMediaMetadataTest {
         file.deleteOnExit()
         file.writeText("hello world")
         try {
-            val meta = DesktopMediaMetadata.compute(file)
+            val meta = MediaMetadataReader.compute(file)
 
             assertEquals("application/octet-stream", meta.mimeType)
             assertEquals(11L, meta.size)
@@ -129,8 +129,8 @@ class DesktopMediaMetadataTest {
         file.deleteOnExit()
         file.writeBytes(byteArrayOf(1, 2, 3, 4, 5))
         try {
-            val meta1 = DesktopMediaMetadata.compute(file)
-            val meta2 = DesktopMediaMetadata.compute(file)
+            val meta1 = MediaMetadataReader.compute(file)
+            val meta2 = MediaMetadataReader.compute(file)
             assertEquals(meta1.sha256, meta2.sha256)
         } finally {
             file.delete()
@@ -143,7 +143,7 @@ class DesktopMediaMetadataTest {
         file.deleteOnExit()
         file.writeBytes(byteArrayOf(0, 0, 0))
         try {
-            val meta = DesktopMediaMetadata.compute(file)
+            val meta = MediaMetadataReader.compute(file)
             assertEquals("video/mp4", meta.mimeType)
             assertNull(meta.width)
             assertNull(meta.height)

@@ -127,6 +127,10 @@ private suspend fun dispatch(argv: Array<String>): Int {
             marmotDispatch(dataDir, tail)
         }
 
+        "dm" -> {
+            Commands.dm(dataDir, tail)
+        }
+
         else -> {
             System.err.println("unknown subcommand: $head")
             printUsage()
@@ -188,6 +192,19 @@ private fun printUsage() {
         |  relay add URL [--type T]      T=nip65|inbox|key_package|all (default all)
         |  relay list                    print configured relays
         |  relay publish-lists           publish kind:10002 + kind:10050
+        |
+        |Direct messages (NIP-17):
+        |  dm send RECIPIENT TEXT                     send a gift-wrapped DM
+        |    [--allow-fallback]                       (default: only deliver to recipient's kind:10050)
+        |  dm send-file RECIPIENT --file PATH         encrypt + upload to Blossom + publish kind:15
+        |    --server URL [--mime-type M]
+        |  dm send-file RECIPIENT URL --key HEX       reference-mode: file already uploaded
+        |    --nonce HEX [--mime-type M] [--hash H]
+        |    [--size N] [--dim WxH] [--blurhash S]
+        |  dm list [--peer NPUB] [--since TS]         list decrypted DMs (kind:14 text +
+        |          [--limit N] [--timeout SECS]       kind:15 file with `type` discriminator)
+        |  dm await --peer NPUB --match TEXT          wait for a matching DM
+        |           [--timeout SECS]                  (default 30s, exit 124 on timeout)
         |
         |Marmot (MLS group messaging):
         |  marmot key-package publish                 publish a fresh KeyPackage

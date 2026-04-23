@@ -86,6 +86,7 @@ import androidx.compose.ui.window.PopupProperties
 import com.vitorpamplona.amethyst.commons.model.IAccount
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
+import com.vitorpamplona.amethyst.commons.service.upload.UploadOrchestrator
 import com.vitorpamplona.amethyst.commons.ui.chat.ChatMessageCompose
 import com.vitorpamplona.amethyst.commons.ui.chat.ChatroomHeader
 import com.vitorpamplona.amethyst.commons.ui.chat.DmBroadcastBanner
@@ -97,7 +98,6 @@ import com.vitorpamplona.amethyst.commons.util.toTimeAgo
 import com.vitorpamplona.amethyst.commons.viewmodels.ChatNewMessageState
 import com.vitorpamplona.amethyst.commons.viewmodels.ChatroomFeedViewModel
 import com.vitorpamplona.amethyst.desktop.DesktopPreferences
-import com.vitorpamplona.amethyst.desktop.service.upload.DesktopUploadOrchestrator
 import com.vitorpamplona.amethyst.desktop.ui.media.DesktopFilePicker
 import com.vitorpamplona.amethyst.desktop.ui.media.MediaAttachmentRow
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
@@ -801,7 +801,7 @@ private suspend fun sendEncryptedFiles(
     account: IAccount,
     cacheProvider: ICacheProvider,
 ) {
-    val orchestrator = DesktopUploadOrchestrator()
+    val orchestrator = UploadOrchestrator()
     val server = DesktopPreferences.preferredBlossomServer
     val recipients = roomKey.users.mapNotNull { cacheProvider.getUserIfExists(it) }.map { it.toPTag() }
 
@@ -819,10 +819,8 @@ private suspend fun sendEncryptedFiles(
                 hash = result.encryptedHash,
                 size = result.encryptedSize,
                 dimension =
-                    if (result.metadata.width != null && result.metadata.height != null) {
-                        DimensionTag(result.metadata.width, result.metadata.height)
-                    } else {
-                        null
+                    result.metadata.width?.let { w ->
+                        result.metadata.height?.let { h -> DimensionTag(w, h) }
                     },
                 blurhash = result.metadata.blurhash,
                 thumbhash = result.metadata.thumbhash,

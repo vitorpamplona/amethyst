@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 #
-# headless/tests-extras.sh — tests 09, 10, 12, 13.
+# tests-extras.sh — tests 09, 10, 12, 13.
 # Focus: reactions/replies, concurrent commits, offline catchup, KP rotation.
 
 test_09_reply_react_unreact() {

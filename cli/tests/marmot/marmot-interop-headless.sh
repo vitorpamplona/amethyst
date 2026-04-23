@@ -14,7 +14,8 @@
 set -uo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd -- "$SCRIPT_DIR/../.." && pwd)"
+REPO_ROOT="$(cd -- "$SCRIPT_DIR/../../.." && pwd)"
+TESTS_DIR="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 STATE_DIR="$SCRIPT_DIR/state-headless"
 LOG_DIR="$STATE_DIR/logs"
 A_DIR="$STATE_DIR/A"
@@ -66,19 +67,19 @@ mkdir -p "$STATE_DIR" "$LOG_DIR" "$A_DIR" "$B_DIR/logs" "$C_DIR/logs"
 : >"$RESULTS_FILE"
 
 # Reuse colours / logging / dump_daemon_diagnostics from the interactive harness.
-# shellcheck source=lib.sh
-source "$SCRIPT_DIR/lib.sh"
+# shellcheck source=../lib.sh
+source "$TESTS_DIR/lib.sh"
 
-# shellcheck source=headless/setup.sh
-source "$SCRIPT_DIR/headless/setup.sh"
-# shellcheck source=headless/helpers.sh
-source "$SCRIPT_DIR/headless/helpers.sh"
-# shellcheck source=headless/tests-create.sh
-source "$SCRIPT_DIR/headless/tests-create.sh"
-# shellcheck source=headless/tests-manage.sh
-source "$SCRIPT_DIR/headless/tests-manage.sh"
-# shellcheck source=headless/tests-extras.sh
-source "$SCRIPT_DIR/headless/tests-extras.sh"
+# shellcheck source=setup.sh
+source "$SCRIPT_DIR/setup.sh"
+# shellcheck source=../headless/helpers.sh
+source "$TESTS_DIR/headless/helpers.sh"
+# shellcheck source=tests-create.sh
+source "$SCRIPT_DIR/tests-create.sh"
+# shellcheck source=tests-manage.sh
+source "$SCRIPT_DIR/tests-manage.sh"
+# shellcheck source=tests-extras.sh
+source "$SCRIPT_DIR/tests-extras.sh"
 
 # Make sure Ctrl+C / SIGTERM / SIGHUP all run the full cleanup path —
 # otherwise wnd is nohup'd and keeps running after the script dies,

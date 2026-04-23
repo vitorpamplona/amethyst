@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 #
-# headless/helpers.sh — thin wrappers that keep the per-test code tight.
+# helpers.sh — thin wrappers that keep the per-test code tight.
 
 # --- amy wrapper -------------------------------------------------------------
 amy_a() { "$AMY_BIN" --data-dir "$A_DIR" "$@"; }

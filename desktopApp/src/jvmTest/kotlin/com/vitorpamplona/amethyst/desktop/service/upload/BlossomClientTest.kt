@@ -37,7 +37,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
-class DesktopBlossomClientTest {
+class BlossomClientTest {
     private fun mockOkHttp(
         responseCode: Int,
         body: String = "",
@@ -67,7 +67,7 @@ class DesktopBlossomClientTest {
         runTest {
             val json =
                 """{"url":"https://blossom.example.com/abc123.png","sha256":"abc123","size":1024}"""
-            val client = DesktopBlossomClient(mockOkHttp(200, json))
+            val client = BlossomClient(mockOkHttp(200, json))
 
             val file = File.createTempFile("test_", ".png")
             file.deleteOnExit()
@@ -94,7 +94,7 @@ class DesktopBlossomClientTest {
     fun uploadFailureThrowsException() =
         runTest {
             val headers = Headers.headersOf("X-Reason", "File too large")
-            val client = DesktopBlossomClient(mockOkHttp(413, "", headers))
+            val client = BlossomClient(mockOkHttp(413, "", headers))
 
             val file = File.createTempFile("test_", ".png")
             file.deleteOnExit()
@@ -119,7 +119,7 @@ class DesktopBlossomClientTest {
     @Test
     fun uploadFailureUsesStatusCodeWhenNoXReason() =
         runTest {
-            val client = DesktopBlossomClient(mockOkHttp(500))
+            val client = BlossomClient(mockOkHttp(500))
 
             val file = File.createTempFile("test_", ".png")
             file.deleteOnExit()
@@ -159,7 +159,7 @@ class DesktopBlossomClientTest {
                     .body("""{"url":"https://example.com/hash"}""".toResponseBody())
                     .build()
 
-            val client = DesktopBlossomClient(mockClient)
+            val client = BlossomClient(mockClient)
             val file = File.createTempFile("test_", ".png")
             file.deleteOnExit()
             file.writeBytes(byteArrayOf(1))
@@ -199,7 +199,7 @@ class DesktopBlossomClientTest {
                     .body("""{"url":"https://example.com/hash"}""".toResponseBody())
                     .build()
 
-            val client = DesktopBlossomClient(mockClient)
+            val client = BlossomClient(mockClient)
             val file = File.createTempFile("test_", ".png")
             file.deleteOnExit()
             file.writeBytes(byteArrayOf(1))
