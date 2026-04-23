@@ -592,7 +592,15 @@ class GroupEventHandler(
                         "GroupEventHandler.add: ApplicationMessage decrypted innerKind=${innerEvent.kind} " +
                             "innerId=${innerEvent.id.take(8)}… author=${innerEvent.pubKey.take(8)}…"
                     }
-                    if (cache.justConsume(innerEvent, null, false)) {
+                    // wasVerified=true: MIP-03 inner events are unsigned (sig is empty
+                    // or placeholder), so justVerify() would fail. Authenticity is
+                    // already guaranteed by the MLS layer — MarmotInboundProcessor
+                    // enforces innerEvent.pubKey == MLS sender credential identity
+                    // before returning ApplicationMessage. Without this, side-channel
+                    // inner events from other Marmot clients (kind:7 reactions,
+                    // kind:5 deletions) are silently dropped by LocalCache, so a
+                    // WhiteNoise reaction never attaches to its target chat bubble.
+                    if (cache.justConsume(innerEvent, null, true)) {
                         val innerNote = cache.getOrCreateNote(innerEvent.id)
                         innerNote.event = innerEvent
 

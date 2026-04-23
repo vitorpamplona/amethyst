@@ -3075,7 +3075,12 @@ class Account(
                                 val innerEvent =
                                     com.vitorpamplona.quartz.nip01Core.core.Event
                                         .fromJson(json)
-                                val isNew = cache.justConsume(innerEvent, null, false)
+                                // wasVerified=true: these events were already verified
+                                // via MLS credential identity when first decrypted (see
+                                // GroupEventHandler). Persisted inner events are
+                                // unsigned per MIP-03, so justVerify would fail and
+                                // reactions/deletions would silently drop here.
+                                val isNew = cache.justConsume(innerEvent, null, true)
                                 val innerNote = cache.getOrCreateNote(innerEvent.id)
                                 if (isNew) {
                                     innerNote.event = innerEvent
