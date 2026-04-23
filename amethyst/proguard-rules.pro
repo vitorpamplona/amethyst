@@ -63,3 +63,9 @@
 -keep class com.vitorpamplona.quartz.** { *; }
 -keep class com.vitorpamplona.amethyst.** { *; }
 -keep class com.vitorpamplona.ammolite.** { *; }
+
+# Room generates *_Impl subclasses instantiated reflectively via no-arg constructor.
+# -keepnames preserves the name but R8 still strips the unused <init>().
+-keep class * extends androidx.room.RoomDatabase {
+    <init>();
+}
