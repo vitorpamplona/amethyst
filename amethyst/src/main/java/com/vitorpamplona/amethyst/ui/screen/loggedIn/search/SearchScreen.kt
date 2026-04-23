@@ -217,7 +217,6 @@ private fun hasNonDefaultFilters(
 @OptIn(ExperimentalMaterial3Api::class)
 @Suppress("AssignedValueIsNeverRead")
 @Composable
-@Suppress("AssignedValueIsNeverRead")
 private fun SearchFilterRow(searchBarViewModel: SearchBarViewModel) {
     val currentScope by searchBarViewModel.scope.collectAsStateWithLifecycle()
     val currentSource by searchBarViewModel.source.collectAsStateWithLifecycle()
