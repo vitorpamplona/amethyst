@@ -30,9 +30,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.CellTower
-import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
@@ -57,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.DeletedItemsBanner
@@ -383,14 +381,14 @@ fun BookmarkGroupActionsMenuButton(
         ) {
             M3ActionSection {
                 M3ActionRow(
-                    icon = Icons.Outlined.CellTower,
+                    icon = MaterialSymbols.CellTower,
                     text = stringRes(R.string.bookmark_list_broadcast_btn_label),
                 ) {
                     onBroadcastList()
                     isActionListOpen.value = false
                 }
                 M3ActionRow(
-                    icon = Icons.Outlined.Delete,
+                    icon = MaterialSymbols.Delete,
                     text = stringRes(R.string.bookmark_list_delete_btn_label),
                     isDestructive = true,
                 ) {

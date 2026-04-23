@@ -33,11 +33,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowDownward
-import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -61,6 +56,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
@@ -119,7 +116,7 @@ fun WalletTransactionsScreen(
                 navigationIcon = {
                     IconButton(onClick = { nav.popBack() }) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            symbol = MaterialSymbols.AutoMirrored.ArrowBack,
                             contentDescription = stringRes(R.string.back),
                         )
                     }
@@ -127,7 +124,7 @@ fun WalletTransactionsScreen(
                 actions = {
                     IconButton(onClick = { walletViewModel.fetchTransactions() }) {
                         Icon(
-                            imageVector = Icons.Filled.Refresh,
+                            symbol = MaterialSymbols.Refresh,
                             contentDescription = stringRes(R.string.wallet_refresh),
                         )
                     }
@@ -295,8 +292,7 @@ private fun TransactionItem(
             Spacer(modifier = Modifier.width(12.dp))
         } else {
             Icon(
-                imageVector =
-                    if (isIncoming) Icons.Filled.ArrowDownward else Icons.Filled.ArrowUpward,
+                symbol = if (isIncoming) MaterialSymbols.ArrowDownward else MaterialSymbols.ArrowUpward,
                 contentDescription =
                     if (isIncoming) {
                         stringRes(R.string.wallet_incoming)

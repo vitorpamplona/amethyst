@@ -29,9 +29,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -53,6 +50,8 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
@@ -117,7 +116,7 @@ fun BlockedRelayEditor(
                     if (error == null) newRelayUrl = ""
                 },
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Add relay")
+                Icon(MaterialSymbols.Add, contentDescription = "Add relay")
             }
         }
 
@@ -142,7 +141,7 @@ fun BlockedRelayEditor(
                 )
                 IconButton(onClick = { localRelays.remove(url) }, modifier = Modifier.size(28.dp)) {
                     Icon(
-                        Icons.Default.Close,
+                        MaterialSymbols.Close,
                         contentDescription = "Remove",
                         modifier = Modifier.size(16.dp),
                     )

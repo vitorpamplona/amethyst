@@ -29,8 +29,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationRail
@@ -46,6 +44,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.domain.nip46.SignerConnectionState
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.ui.components.BunkerHeartbeatIndicator
 import com.vitorpamplona.amethyst.desktop.DesktopScreen
 import com.vitorpamplona.amethyst.desktop.account.AccountManager
@@ -131,7 +131,7 @@ fun SinglePaneLayout(
                     onClick = onOpenAppDrawer,
                     icon = {
                         Icon(
-                            Icons.Default.Apps,
+                            MaterialSymbols.Apps,
                             contentDescription = "App Drawer",
                             modifier = Modifier.size(22.dp),
                         )

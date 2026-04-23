@@ -20,12 +20,11 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.gallery
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.note.QuickActionAlertDialogOneButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -61,7 +60,7 @@ fun DeleteFromGalleryDialog(
     QuickActionAlertDialogOneButton(
         title = stringRes(R.string.quick_action_request_deletion_gallery_title),
         textContent = stringRes(R.string.quick_action_request_deletion_gallery_alert_body_v2),
-        buttonIcon = Icons.Default.Delete,
+        buttonIcon = MaterialSymbols.Delete,
         buttonText = stringRes(R.string.quick_action_delete_dialog_btn),
         onClickDoOnce = {
             accountViewModel.removeFromMediaGallery(note)

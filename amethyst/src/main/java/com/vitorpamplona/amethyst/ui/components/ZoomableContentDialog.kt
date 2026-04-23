@@ -48,10 +48,6 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -84,6 +80,8 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaLocalImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaLocalVideo
@@ -351,7 +349,7 @@ private fun DialogContent(
                     colors = ButtonDefaults.outlinedButtonColors().copy(containerColor = MaterialTheme.colorScheme.background),
                 ) {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        symbol = MaterialSymbols.AutoMirrored.ArrowBack,
                         contentDescription = stringRes(R.string.back),
                     )
                 }
@@ -366,7 +364,7 @@ private fun DialogContent(
                             colors = ButtonDefaults.outlinedButtonColors().copy(containerColor = MaterialTheme.colorScheme.background),
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Share,
+                                symbol = MaterialSymbols.Share,
                                 modifier = Size20Modifier,
                                 contentDescription = stringRes(R.string.quick_action_share),
                             )
@@ -421,7 +419,7 @@ private fun DialogContent(
                                 colors = ButtonDefaults.outlinedButtonColors().copy(containerColor = MaterialTheme.colorScheme.background),
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.Download,
+                                    symbol = MaterialSymbols.Download,
                                     modifier = Size20Modifier,
                                     contentDescription = stringRes(R.string.download_to_phone),
                                 )

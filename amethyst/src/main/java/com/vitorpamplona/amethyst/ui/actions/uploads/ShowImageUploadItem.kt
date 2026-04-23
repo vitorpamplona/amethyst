@@ -38,9 +38,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AudioFile
-import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -65,6 +62,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView
 import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
@@ -126,12 +126,12 @@ fun ShowImageGallery(
         )
     } else if (media.isAudio() == true) {
         FilePreviewPlaceholder(
-            icon = Icons.Default.AudioFile,
+            icon = MaterialSymbols.AudioFile,
             label = media.mimeType ?: "audio/*",
         )
     } else if (media.isDocument()) {
         FilePreviewPlaceholder(
-            icon = Icons.Default.PictureAsPdf,
+            icon = MaterialSymbols.PictureAsPdf,
             label = media.mimeType ?: "application/pdf",
         )
     } else if (media.isVideo() == true && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -279,7 +279,7 @@ fun UploadingState(
 
 @Composable
 fun FilePreviewPlaceholder(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: MaterialSymbol,
     label: String,
 ) {
     Box(
@@ -295,7 +295,7 @@ fun FilePreviewPlaceholder(
             modifier = Modifier.padding(8.dp),
         ) {
             Icon(
-                imageVector = icon,
+                symbol = icon,
                 contentDescription = label,
                 modifier = Modifier.size(40.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,

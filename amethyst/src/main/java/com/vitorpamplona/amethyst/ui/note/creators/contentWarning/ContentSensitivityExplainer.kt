@@ -28,9 +28,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -44,6 +41,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -67,7 +66,7 @@ fun ContentSensitivityExplainer(
                     .width(25.dp),
             ) {
                 Icon(
-                    imageVector = Icons.Default.VisibilityOff,
+                    symbol = MaterialSymbols.VisibilityOff,
                     contentDescription = stringRes(id = R.string.content_warning),
                     modifier =
                         Modifier
@@ -76,7 +75,7 @@ fun ContentSensitivityExplainer(
                     tint = Color.Red,
                 )
                 Icon(
-                    imageVector = Icons.Rounded.Warning,
+                    symbol = MaterialSymbols.Warning,
                     contentDescription = stringRes(id = R.string.content_warning),
                     modifier =
                         Modifier

@@ -60,17 +60,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.AddCircle
-import androidx.compose.material.icons.outlined.ContentPaste
-import androidx.compose.material.icons.outlined.RadioButtonUnchecked
-import androidx.compose.material.icons.outlined.Visibility
-import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -102,6 +91,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.ui.components.util.getText
@@ -259,7 +250,7 @@ fun UpdateZapAmountContent(
                     },
                     trailingIcon = {
                         Icon(
-                            imageVector = Icons.Filled.Close,
+                            symbol = MaterialSymbols.Close,
                             contentDescription = stringRes(R.string.remove),
                             modifier = Modifier.size(InputChipDefaults.AvatarSize),
                         )
@@ -304,7 +295,7 @@ fun UpdateZapAmountContent(
                         enabled = postViewModel.nextAmount.text.isNotBlank(),
                     ) {
                         Icon(
-                            imageVector = Icons.Outlined.AddCircle,
+                            symbol = MaterialSymbols.AddCircle,
                             contentDescription = stringRes(R.string.add),
                             modifier = Size20Modifier,
                         )
@@ -394,7 +385,7 @@ fun UpdateZapAmountContent(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 Icon(
-                    imageVector = if (connected) Icons.Filled.CheckCircle else Icons.Outlined.RadioButtonUnchecked,
+                    symbol = if (connected) MaterialSymbols.CheckCircle else MaterialSymbols.RadioButtonUnchecked,
                     contentDescription = null,
                     tint = statusColor,
                     modifier = Modifier.size(18.dp),
@@ -436,7 +427,7 @@ fun UpdateZapAmountContent(
                 },
             ) {
                 Icon(
-                    imageVector = Icons.Outlined.Add,
+                    symbol = MaterialSymbols.Add,
                     contentDescription = null,
                     modifier = Modifier.size(18.dp),
                 )
@@ -464,7 +455,7 @@ fun UpdateZapAmountContent(
                 },
             ) {
                 Icon(
-                    imageVector = Icons.Outlined.ContentPaste,
+                    symbol = MaterialSymbols.ContentPaste,
                     contentDescription = stringRes(id = R.string.paste_from_clipboard),
                     modifier = Size24Modifier,
                     tint = MaterialTheme.colorScheme.primary,
@@ -522,7 +513,7 @@ fun UpdateZapAmountContent(
                 fontSize = Font14SP,
             )
             Icon(
-                imageVector = if (showManualConfig) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                symbol = if (showManualConfig) MaterialSymbols.ExpandLess else MaterialSymbols.ExpandMore,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.placeholderText,
                 modifier = Modifier.size(20.dp),
@@ -629,11 +620,11 @@ fun UpdateZapAmountContent(
                                 },
                             ) {
                                 Icon(
-                                    imageVector =
+                                    symbol =
                                         if (showPassword) {
-                                            Icons.Outlined.VisibilityOff
+                                            MaterialSymbols.VisibilityOff
                                         } else {
-                                            Icons.Outlined.Visibility
+                                            MaterialSymbols.Visibility
                                         },
                                     contentDescription =
                                         if (showPassword) {

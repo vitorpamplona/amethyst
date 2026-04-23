@@ -36,9 +36,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.CallEnd
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -59,6 +56,8 @@ import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.call.CallManager
 import com.vitorpamplona.amethyst.commons.call.CallState
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.call.session.CallSession
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -256,7 +255,7 @@ private fun CallInProgressUI(
                 modifier = Modifier.size(64.dp),
             ) {
                 Icon(
-                    Icons.Default.CallEnd,
+                    MaterialSymbols.CallEnd,
                     contentDescription = stringRes(R.string.call_hangup),
                     tint = Color.White,
                     modifier = Modifier.size(32.dp),
@@ -321,7 +320,7 @@ private fun IncomingCallUI(
                     modifier = Modifier.size(64.dp),
                 ) {
                     Icon(
-                        Icons.Default.CallEnd,
+                        MaterialSymbols.CallEnd,
                         contentDescription = stringRes(R.string.call_reject),
                         tint = Color.White,
                         modifier = Modifier.size(32.dp),
@@ -334,7 +333,7 @@ private fun IncomingCallUI(
                     modifier = Modifier.size(64.dp),
                 ) {
                     Icon(
-                        Icons.Default.Call,
+                        MaterialSymbols.Call,
                         contentDescription = stringRes(R.string.call_accept),
                         tint = Color.White,
                         modifier = Modifier.size(32.dp),

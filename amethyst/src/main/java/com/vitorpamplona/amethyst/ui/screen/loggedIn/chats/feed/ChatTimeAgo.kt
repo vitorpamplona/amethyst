@@ -23,8 +23,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -35,6 +33,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.note.timeAgoShort
 import com.vitorpamplona.amethyst.ui.note.timeAheadNoDot
@@ -75,7 +75,7 @@ fun ChatDisplayExpiration(expirationDate: Long) {
     ) {
         Spacer(modifier = StdHorzSpacer)
         Icon(
-            imageVector = Icons.Outlined.Timer,
+            symbol = MaterialSymbols.Timer,
             contentDescription = stringRes(R.string.expiration_date_label),
             modifier = Modifier.size(12.dp),
             tint = MaterialTheme.colorScheme.placeholderText,

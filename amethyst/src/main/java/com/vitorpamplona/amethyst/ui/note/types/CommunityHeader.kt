@@ -32,9 +32,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalButton
@@ -60,6 +57,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.model.AddressableNote
@@ -462,7 +461,7 @@ fun EditCommunityButton(
         onClick = { nav.nav(Route.EditCommunity(note.address)) },
     ) {
         Icon(
-            imageVector = Icons.Outlined.Edit,
+            symbol = MaterialSymbols.Edit,
             modifier = Size18Modifier,
             contentDescription = stringRes(R.string.edit_community),
         )
@@ -543,7 +542,7 @@ fun ShareCommunityButton(
         },
     ) {
         Icon(
-            imageVector = Icons.Default.Share,
+            symbol = MaterialSymbols.Share,
             modifier = Size18Modifier,
             contentDescription = stringRes(R.string.quick_action_share),
         )

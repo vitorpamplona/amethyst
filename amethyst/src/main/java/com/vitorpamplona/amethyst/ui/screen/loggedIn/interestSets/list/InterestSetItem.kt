@@ -25,11 +25,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ContentCopy
-import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material.icons.outlined.Tag
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.Text
@@ -40,6 +35,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.nip51Lists.interestSets.InterestSet
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
@@ -96,7 +93,7 @@ fun InterestSetItem(
                 },
                 leadingContent = {
                     Icon(
-                        imageVector = Icons.Outlined.Tag,
+                        symbol = MaterialSymbols.Tag,
                         contentDescription = null,
                         modifier = Size40Modifier,
                     )
@@ -126,17 +123,17 @@ private fun InterestSetOptionsButton(
             onDismiss = { isMenuOpen.value = false },
         ) {
             M3ActionSection {
-                M3ActionRow(icon = Icons.Outlined.Edit, text = stringRes(R.string.interest_set_rename)) {
+                M3ActionRow(icon = MaterialSymbols.Edit, text = stringRes(R.string.interest_set_rename)) {
                     onRename()
                     isMenuOpen.value = false
                 }
-                M3ActionRow(icon = Icons.Outlined.ContentCopy, text = stringRes(R.string.interest_set_clone)) {
+                M3ActionRow(icon = MaterialSymbols.ContentCopy, text = stringRes(R.string.interest_set_clone)) {
                     onClone()
                     isMenuOpen.value = false
                 }
             }
             M3ActionSection {
-                M3ActionRow(icon = Icons.Outlined.Delete, text = stringRes(R.string.quick_action_delete), isDestructive = true) {
+                M3ActionRow(icon = MaterialSymbols.Delete, text = stringRes(R.string.quick_action_delete), isDestructive = true) {
                     onDelete()
                     isMenuOpen.value = false
                 }

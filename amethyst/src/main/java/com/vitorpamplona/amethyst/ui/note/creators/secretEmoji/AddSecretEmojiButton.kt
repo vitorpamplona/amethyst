@@ -20,13 +20,13 @@
  */
 package com.vitorpamplona.amethyst.ui.note.creators.secretEmoji
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Assistant
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
@@ -41,14 +41,14 @@ fun AddSecretEmojiButton(
     ) {
         if (!isSecretEmojiActive) {
             Icon(
-                imageVector = Icons.Outlined.Assistant,
+                symbol = MaterialSymbols.Assistant,
                 contentDescription = stringRes(id = R.string.secret_emoji_maker_explainer),
                 modifier = Size20Modifier,
                 tint = MaterialTheme.colorScheme.onBackground,
             )
         } else {
             Icon(
-                imageVector = Icons.Outlined.Assistant,
+                symbol = MaterialSymbols.Assistant,
                 contentDescription = stringRes(id = R.string.secret_emoji_maker_explainer),
                 modifier = Size20Modifier,
                 tint = BitcoinOrange,

@@ -21,14 +21,14 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.list
 
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -44,7 +44,7 @@ fun NewCommunityButton(nav: INav) {
         containerColor = MaterialTheme.colorScheme.primary,
     ) {
         Icon(
-            imageVector = Icons.Outlined.Add,
+            symbol = MaterialSymbols.Add,
             contentDescription = stringRes(id = R.string.new_community),
             modifier = Size26Modifier,
             tint = Color.White,

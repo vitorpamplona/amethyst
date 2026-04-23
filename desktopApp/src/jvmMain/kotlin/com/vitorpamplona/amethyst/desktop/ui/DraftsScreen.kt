@@ -31,9 +31,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -54,6 +51,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.desktop.service.drafts.DesktopDraftStore
 import com.vitorpamplona.amethyst.desktop.service.drafts.DraftEntry
 import kotlinx.coroutines.launch
@@ -79,7 +78,7 @@ fun DraftsScreen(
                 color = MaterialTheme.colorScheme.onBackground,
             )
             Button(onClick = { onOpenEditor(null) }) {
-                Icon(Icons.Default.Add, contentDescription = null)
+                Icon(MaterialSymbols.Add, contentDescription = null)
                 Text("New Draft", modifier = Modifier.padding(start = 4.dp))
             }
         }
@@ -178,7 +177,7 @@ private fun DraftCard(
             }
             IconButton(onClick = onDelete) {
                 Icon(
-                    Icons.Default.Delete,
+                    MaterialSymbols.Delete,
                     contentDescription = "Delete draft",
                     tint = MaterialTheme.colorScheme.error,
                 )

@@ -28,9 +28,6 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -42,6 +39,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.commons.domain.nip46.SignerConnectionState
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.tor.TorServiceStatus
 import com.vitorpamplona.amethyst.commons.ui.components.BunkerHeartbeatIndicator
 import com.vitorpamplona.amethyst.desktop.ui.tor.TorStatusIndicator
@@ -77,7 +76,7 @@ fun DeckSidebar(
 
         IconButton(onClick = onAddColumn) {
             Icon(
-                Icons.Default.Add,
+                MaterialSymbols.Add,
                 contentDescription = "Add Column",
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -97,7 +96,7 @@ fun DeckSidebar(
 
         IconButton(onClick = onOpenSettings) {
             Icon(
-                Icons.Default.Settings,
+                MaterialSymbols.Settings,
                 contentDescription = "Settings",
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )

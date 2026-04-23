@@ -30,8 +30,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -56,6 +54,8 @@ import androidx.media3.common.Tracks
 import androidx.media3.common.VideoSize
 import androidx.media3.common.util.UnstableApi
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.PinBottomIconSize
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
@@ -108,7 +108,7 @@ fun VideoQualityButton(
                 modifier = Size50Modifier,
             ) {
                 Icon(
-                    imageVector = Icons.Default.Settings,
+                    symbol = MaterialSymbols.Settings,
                     contentDescription = stringRes(id = R.string.call_settings_video_quality),
                     tint = MaterialTheme.colorScheme.onBackground,
                     modifier = Size20Modifier,

@@ -27,15 +27,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.VolumeOff
-import androidx.compose.material.icons.automirrored.filled.VolumeUp
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.PictureInPicture
-import androidx.compose.material.icons.filled.SaveAlt
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.ZoomOutMap
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -48,6 +39,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.tooling.preview.Preview
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.VideoPlayerAction
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
@@ -140,7 +133,7 @@ fun OverflowMenuButton(
             modifier = Size50Modifier,
         ) {
             Icon(
-                imageVector = Icons.Default.MoreVert,
+                symbol = MaterialSymbols.MoreVert,
                 contentDescription = stringRes(R.string.more_options),
                 tint = MaterialTheme.colorScheme.onBackground,
                 modifier = Size20Modifier,
@@ -159,7 +152,7 @@ fun OverflowMenuButton(
                         VideoPlayerAction.Fullscreen -> {
                             onFullscreenClick?.let { zoom ->
                                 M3ActionRow(
-                                    icon = Icons.Default.ZoomOutMap,
+                                    icon = MaterialSymbols.ZoomOutMap,
                                     text = stringRes(R.string.video_player_settings_action_fullscreen),
                                 ) {
                                     menuExpanded.value = false
@@ -170,7 +163,7 @@ fun OverflowMenuButton(
 
                         VideoPlayerAction.Mute -> {
                             M3ActionRow(
-                                icon = if (startingMuteState) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp,
+                                icon = if (startingMuteState) MaterialSymbols.AutoMirrored.VolumeOff else MaterialSymbols.AutoMirrored.VolumeUp,
                                 text = if (startingMuteState) stringRes(R.string.muted_button) else stringRes(R.string.mute_button),
                             ) {
                                 menuExpanded.value = false
@@ -180,7 +173,7 @@ fun OverflowMenuButton(
 
                         VideoPlayerAction.Quality -> {
                             M3ActionRow(
-                                icon = Icons.Default.Settings,
+                                icon = MaterialSymbols.Settings,
                                 text = stringRes(R.string.call_settings_video_quality),
                             ) {
                                 menuExpanded.value = false
@@ -190,7 +183,7 @@ fun OverflowMenuButton(
 
                         VideoPlayerAction.Share -> {
                             M3ActionRow(
-                                icon = Icons.Default.Share,
+                                icon = MaterialSymbols.Share,
                                 text = stringRes(R.string.share_or_save),
                             ) {
                                 menuExpanded.value = false
@@ -200,7 +193,7 @@ fun OverflowMenuButton(
 
                         VideoPlayerAction.Download -> {
                             M3ActionRow(
-                                icon = Icons.Default.SaveAlt,
+                                icon = MaterialSymbols.SaveAlt,
                                 text = stringRes(R.string.download_to_phone),
                             ) {
                                 menuExpanded.value = false
@@ -210,7 +203,7 @@ fun OverflowMenuButton(
 
                         VideoPlayerAction.PictureInPicture -> {
                             M3ActionRow(
-                                icon = Icons.Default.PictureInPicture,
+                                icon = MaterialSymbols.PictureInPicture,
                                 text = stringRes(R.string.picture_in_picture),
                             ) {
                                 menuExpanded.value = false

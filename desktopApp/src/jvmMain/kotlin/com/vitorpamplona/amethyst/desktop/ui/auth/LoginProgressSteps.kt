@@ -28,9 +28,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -40,6 +37,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.desktop.account.LoginProgress
 import com.vitorpamplona.amethyst.desktop.account.RelayLoginStatus
 
@@ -111,7 +110,7 @@ private fun StepRow(step: StepInfo) {
         when (step.state) {
             StepState.DONE -> {
                 Icon(
-                    Icons.Default.Check,
+                    MaterialSymbols.Check,
                     contentDescription = null,
                     tint = Color(0xFF4CAF50),
                     modifier = Modifier.size(16.dp),
@@ -155,7 +154,7 @@ private fun RelayRow(
         when (status) {
             RelayLoginStatus.EVENT_SENT -> {
                 Icon(
-                    Icons.Default.Check,
+                    MaterialSymbols.Check,
                     contentDescription = null,
                     tint = Color(0xFF2196F3),
                     modifier = Modifier.size(12.dp),
@@ -164,7 +163,7 @@ private fun RelayRow(
 
             RelayLoginStatus.CONNECTED -> {
                 Icon(
-                    Icons.Default.Check,
+                    MaterialSymbols.Check,
                     contentDescription = null,
                     tint = Color(0xFF4CAF50),
                     modifier = Modifier.size(12.dp),
@@ -175,7 +174,7 @@ private fun RelayRow(
             RelayLoginStatus.SEND_FAILED,
             -> {
                 Icon(
-                    Icons.Default.Close,
+                    MaterialSymbols.Close,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.error,
                     modifier = Modifier.size(12.dp),

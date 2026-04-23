@@ -53,7 +53,6 @@ kotlin {
                 implementation(libs.jetbrains.compose.foundation)
                 implementation(libs.jetbrains.compose.runtime)
                 implementation(libs.jetbrains.compose.material3)
-                implementation(libs.jetbrains.compose.material.icons.extended)
                 implementation(libs.jetbrains.compose.ui.tooling.preview)
 
                 // Lifecycle ViewModel (KMP since 2.8.0)

@@ -34,17 +34,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AlternateEmail
-import androidx.compose.material.icons.filled.Block
-import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.FormatQuote
-import androidx.compose.material.icons.filled.PersonAdd
-import androidx.compose.material.icons.filled.PersonRemove
-import androidx.compose.material.icons.filled.Report
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
@@ -66,16 +55,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.core.graphics.ColorUtils
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -285,7 +275,7 @@ fun CardBody(
     Column(modifier = Modifier.width(IntrinsicSize.Min)) {
         Row(modifier = Modifier.height(IntrinsicSize.Min)) {
             NoteQuickActionItem(
-                icon = Icons.Default.ContentCopy,
+                icon = MaterialSymbols.ContentCopy,
                 label = stringRes(R.string.quick_action_copy_text),
             ) {
                 accountViewModel.decrypt(note) {
@@ -299,7 +289,7 @@ fun CardBody(
             }
             VerticalDivider(color = primaryLight)
             NoteQuickActionItem(
-                Icons.Default.AlternateEmail,
+                MaterialSymbols.AlternateEmail,
                 stringRes(R.string.quick_action_copy_user_id),
             ) {
                 note.author?.let {
@@ -312,7 +302,7 @@ fun CardBody(
             }
             VerticalDivider(color = primaryLight)
             NoteQuickActionItem(
-                Icons.Default.FormatQuote,
+                MaterialSymbols.FormatQuote,
                 stringRes(R.string.quick_action_copy_note_id),
             ) {
                 scope.launch {
@@ -326,7 +316,7 @@ fun CardBody(
                 VerticalDivider(color = primaryLight)
 
                 NoteQuickActionItem(
-                    Icons.Default.Block,
+                    MaterialSymbols.Block,
                     stringRes(R.string.quick_action_block),
                 ) {
                     if (accountViewModel.account.settings.hideBlockAlertDialog) {
@@ -344,7 +334,7 @@ fun CardBody(
         Row(modifier = Modifier.height(IntrinsicSize.Min)) {
             if (isOwnNote) {
                 NoteQuickActionItem(
-                    Icons.Default.Delete,
+                    MaterialSymbols.Delete,
                     stringRes(R.string.quick_action_delete),
                 ) {
                     if (accountViewModel.account.settings.hideDeleteRequestDialog) {
@@ -356,7 +346,7 @@ fun CardBody(
                 }
             } else if (isFollowingUser) {
                 NoteQuickActionItem(
-                    Icons.Default.PersonRemove,
+                    MaterialSymbols.PersonRemove,
                     stringRes(R.string.quick_action_unfollow),
                 ) {
                     accountViewModel.unfollow(note.author!!)
@@ -364,7 +354,7 @@ fun CardBody(
                 }
             } else {
                 NoteQuickActionItem(
-                    Icons.Default.PersonAdd,
+                    MaterialSymbols.PersonAdd,
                     stringRes(R.string.quick_action_follow),
                 ) {
                     accountViewModel.follow(note.author!!)
@@ -374,7 +364,7 @@ fun CardBody(
 
             VerticalDivider(color = primaryLight)
             NoteQuickActionItem(
-                icon = ImageVector.vectorResource(id = R.drawable.relays),
+                icon = MaterialSymbols.Dns,
                 label = stringRes(R.string.broadcast),
             ) {
                 accountViewModel.broadcast(note)
@@ -384,14 +374,14 @@ fun CardBody(
             VerticalDivider(color = primaryLight)
             if (isOwnNote && note.isDraft()) {
                 NoteQuickActionItem(
-                    Icons.Default.Edit,
+                    MaterialSymbols.Edit,
                     stringRes(R.string.edit_draft),
                 ) {
                     onWantsToEditDraft()
                 }
             } else {
                 NoteQuickActionItem(
-                    icon = Icons.Default.Share,
+                    icon = MaterialSymbols.Share,
                     label = stringRes(R.string.quick_action_share),
                 ) {
                     val sendIntent =
@@ -422,7 +412,7 @@ fun CardBody(
                 VerticalDivider(color = primaryLight)
 
                 NoteQuickActionItem(
-                    Icons.Default.Report,
+                    MaterialSymbols.Report,
                     stringRes(R.string.quick_action_report),
                 ) {
                     showReportDialog.value = true
@@ -434,7 +424,7 @@ fun CardBody(
 
 @Composable
 fun NoteQuickActionItem(
-    icon: ImageVector,
+    icon: MaterialSymbol,
     label: String,
     onClick: () -> Unit,
 ) {
@@ -447,7 +437,7 @@ fun NoteQuickActionItem(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Icon(
-            imageVector = icon,
+            symbol = icon,
             contentDescription = null,
             modifier =
                 Modifier
@@ -468,7 +458,7 @@ fun DeleteAlertDialog(
     QuickActionAlertDialog(
         title = stringRes(R.string.quick_action_request_deletion_alert_title),
         textContent = stringRes(R.string.quick_action_request_deletion_alert_body),
-        buttonIcon = Icons.Default.Delete,
+        buttonIcon = MaterialSymbols.Delete,
         buttonText = stringRes(R.string.quick_action_delete_dialog_btn),
         onClickDoOnce = {
             accountViewModel.delete(note)
@@ -491,7 +481,7 @@ private fun BlockAlertDialog(
 ) = QuickActionAlertDialog(
     title = stringRes(R.string.report_dialog_block_hide_user_btn),
     textContent = stringRes(R.string.report_dialog_blocking_a_user),
-    buttonIcon = Icons.Default.Block,
+    buttonIcon = MaterialSymbols.Block,
     buttonText = stringRes(R.string.quick_action_block_dialog_btn),
     buttonColors =
         ButtonDefaults.buttonColors(
@@ -514,7 +504,7 @@ private fun BlockAlertDialog(
 fun QuickActionAlertDialog(
     title: String,
     textContent: String,
-    buttonIcon: ImageVector,
+    buttonIcon: MaterialSymbol,
     buttonText: String,
     buttonColors: ButtonColors = ButtonDefaults.buttonColors(),
     onClickDoOnce: () -> Unit,
@@ -526,7 +516,7 @@ fun QuickActionAlertDialog(
         textContent = textContent,
         icon = {
             Icon(
-                imageVector = buttonIcon,
+                symbol = buttonIcon,
                 contentDescription = null,
             )
         },
@@ -615,7 +605,7 @@ fun QuickActionAlertDialog(
 fun QuickActionAlertDialogOneButton(
     title: String,
     textContent: String,
-    buttonIcon: ImageVector,
+    buttonIcon: MaterialSymbol,
     buttonText: String,
     buttonColors: ButtonColors = ButtonDefaults.buttonColors(),
     onClickDoOnce: () -> Unit,
@@ -626,7 +616,7 @@ fun QuickActionAlertDialogOneButton(
         textContent = textContent,
         icon = {
             Icon(
-                imageVector = buttonIcon,
+                symbol = buttonIcon,
                 contentDescription = null,
             )
         },

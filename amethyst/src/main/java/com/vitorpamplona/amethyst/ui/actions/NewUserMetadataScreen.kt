@@ -35,9 +35,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -57,6 +54,8 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectSingleFromGallery
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
@@ -347,7 +346,7 @@ private fun ExpandableSection(
             modifier = Modifier.weight(1f),
         )
         Icon(
-            imageVector = if (expanded.value) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+            symbol = if (expanded.value) MaterialSymbols.ExpandLess else MaterialSymbols.ExpandMore,
             contentDescription = if (expanded.value) "Collapse" else "Expand",
             tint = MaterialTheme.colorScheme.placeholderText,
         )

@@ -31,7 +31,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -39,11 +38,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 
@@ -95,7 +95,7 @@ fun M3ActionSection(content: @Composable ColumnScope.() -> Unit) {
 
 @Composable
 fun M3ActionRow(
-    icon: ImageVector,
+    icon: MaterialSymbol,
     text: String,
     isDestructive: Boolean = false,
     enabled: Boolean = true,
@@ -125,7 +125,7 @@ fun M3ActionRow(
                 .padding(horizontal = 16.dp, vertical = 10.dp),
     ) {
         Icon(
-            imageVector = icon,
+            symbol = icon,
             contentDescription = null,
             modifier = Size20Modifier,
             tint = tint,

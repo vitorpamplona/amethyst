@@ -21,8 +21,6 @@
 package com.vitorpamplona.amethyst.commons.ui.components
 
 import androidx.compose.foundation.Image
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Face
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -30,6 +28,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.icons.symbols.rememberMaterialSymbolPainter
 import com.vitorpamplona.amethyst.commons.robohash.CachedRobohash
 
 /**
@@ -67,7 +67,7 @@ fun RobohashImage(
         )
     } else {
         Image(
-            imageVector = Icons.Default.Face,
+            painter = rememberMaterialSymbolPainter(MaterialSymbols.Face),
             contentDescription = contentDescription,
             colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onBackground),
             modifier = modifier,
@@ -99,7 +99,7 @@ fun RobohashImage(
         )
     } else {
         Image(
-            imageVector = Icons.Default.Face,
+            painter = rememberMaterialSymbolPainter(MaterialSymbols.Face),
             contentDescription = contentDescription,
             colorFilter = colorFilter ?: ColorFilter.tint(MaterialTheme.colorScheme.onBackground),
             modifier = modifier,

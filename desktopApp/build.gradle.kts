@@ -31,7 +31,6 @@ kotlin {
 dependencies {
     implementation(compose.desktop.currentOs)
     implementation(libs.jetbrains.compose.material3)
-    implementation(libs.jetbrains.compose.material.icons.extended)
     implementation(libs.jetbrains.compose.components.resources)
 
     // Quartz Nostr library (will use JVM target)

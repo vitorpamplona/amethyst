@@ -24,8 +24,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
@@ -40,6 +38,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.creators.location.LoadCityName
@@ -68,7 +68,7 @@ fun DisplayGeohashExternalId(
     Row(modifier = MaterialTheme.colorScheme.replyModifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
         LoadCityName(geohash) { cityName ->
             Icon(
-                imageVector = Icons.Default.LocationOn,
+                symbol = MaterialSymbols.LocationOn,
                 contentDescription = stringRes(id = R.string.geohash_exclusive),
                 modifier = Modifier.size(20.dp),
                 tint = MaterialTheme.colorScheme.primary,

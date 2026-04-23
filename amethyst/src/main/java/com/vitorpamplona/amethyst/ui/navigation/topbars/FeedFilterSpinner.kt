@@ -36,16 +36,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ViewList
-import androidx.compose.material.icons.automirrored.outlined.VolumeOff
-import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.outlined.AutoAwesome
-import androidx.compose.material.icons.outlined.Groups
-import androidx.compose.material.icons.outlined.LocationOn
-import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material.icons.outlined.Public
-import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -78,6 +68,8 @@ import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.service.call.CallSessionBridge.accountViewModel
@@ -261,7 +253,7 @@ fun FeedFilterSpinner(
             }
 
             Icon(
-                imageVector = Icons.Default.ExpandMore,
+                symbol = MaterialSymbols.ExpandMore,
                 contentDescription = explainer,
                 modifier = Size20Modifier,
                 tint = MaterialTheme.colorScheme.placeholderText,
@@ -579,54 +571,54 @@ private fun FeedIcon(
     val icon =
         when (item.code) {
             is TopFilter.Global -> {
-                Icons.Outlined.Public
+                MaterialSymbols.Public
             }
 
             is TopFilter.AroundMe -> {
-                Icons.Outlined.LocationOn
+                MaterialSymbols.LocationOn
             }
 
             is TopFilter.AllFollows -> {
-                Icons.Outlined.Groups
+                MaterialSymbols.Groups
             }
 
             is TopFilter.AllUserFollows -> {
-                Icons.Outlined.Person
+                MaterialSymbols.Person
             }
 
             is TopFilter.DefaultFollows -> {
-                Icons.Outlined.Groups
+                MaterialSymbols.Groups
             }
 
             is TopFilter.MuteList -> {
-                Icons.AutoMirrored.Outlined.VolumeOff
+                MaterialSymbols.AutoMirrored.VolumeOff
             }
 
             is TopFilter.PeopleList -> {
-                Icons.AutoMirrored.Outlined.ViewList
+                MaterialSymbols.AutoMirrored.ViewList
             }
 
             is TopFilter.FavoriteAlgoFeed -> {
-                Icons.Outlined.AutoAwesome
+                MaterialSymbols.AutoAwesome
             }
 
             is TopFilter.AllFavoriteAlgoFeeds -> {
-                Icons.Outlined.AutoAwesome
+                MaterialSymbols.AutoAwesome
             }
 
             else -> {
                 when (item.name) {
-                    is GeoHashName -> Icons.Outlined.LocationOn
-                    is RelayName -> Icons.Outlined.Storage
-                    is CommunityName -> Icons.Outlined.Groups
-                    is PeopleListName -> Icons.AutoMirrored.Outlined.ViewList
-                    is FavoriteAlgoFeedName -> Icons.Outlined.AutoAwesome
-                    else -> Icons.Outlined.Person
+                    is GeoHashName -> MaterialSymbols.LocationOn
+                    is RelayName -> MaterialSymbols.Storage
+                    is CommunityName -> MaterialSymbols.Groups
+                    is PeopleListName -> MaterialSymbols.AutoMirrored.ViewList
+                    is FavoriteAlgoFeedName -> MaterialSymbols.AutoAwesome
+                    else -> MaterialSymbols.Person
                 }
             }
         }
     Icon(
-        imageVector = icon,
+        symbol = icon,
         contentDescription = null,
         modifier = modifier,
         tint = MaterialTheme.colorScheme.onSurfaceVariant,

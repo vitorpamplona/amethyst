@@ -24,8 +24,6 @@ import androidx.annotation.OptIn
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.PlayCircleOutline
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -43,6 +41,8 @@ import coil3.compose.AsyncImagePainter
 import coil3.compose.SubcomposeAsyncImage
 import coil3.compose.SubcomposeAsyncImageContent
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
@@ -248,7 +248,7 @@ fun UrlImageView(
                     is AsyncImagePainter.State.Error -> {
                         Box(defaultModifier, contentAlignment = Alignment.Center) {
                             Icon(
-                                imageVector = Icons.Default.PlayCircleOutline,
+                                symbol = MaterialSymbols.PlayCircleOutline,
                                 contentDescription = stringRes(id = R.string.play),
                                 modifier = Size50Modifier,
                                 tint = MaterialTheme.colorScheme.onBackground,
@@ -273,14 +273,14 @@ fun UrlImageView(
                     thumbhash = content.thumbhash,
                 )
                 Icon(
-                    imageVector = Icons.Default.PlayCircleOutline,
+                    symbol = MaterialSymbols.PlayCircleOutline,
                     contentDescription = stringRes(id = R.string.play),
                     modifier = Size50Modifier,
                     tint = Color.White,
                 )
             } else {
                 Icon(
-                    imageVector = Icons.Default.PlayCircleOutline,
+                    symbol = MaterialSymbols.PlayCircleOutline,
                     contentDescription = stringRes(id = R.string.play),
                     modifier = Size50Modifier,
                     tint = Color.White,

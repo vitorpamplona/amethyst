@@ -32,9 +32,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -74,6 +71,8 @@ import com.vitorpamplona.amethyst.commons.chess.OutgoingChallengeCard
 import com.vitorpamplona.amethyst.commons.chess.OverlappingAvatars
 import com.vitorpamplona.amethyst.commons.chess.PublicGameCard
 import com.vitorpamplona.amethyst.commons.chess.SpectatingGameCard
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -166,7 +165,7 @@ fun ChessLobbyScreen(
                 navigationIcon = {
                     IconButton(onClick = { nav.popBack() }) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            symbol = MaterialSymbols.AutoMirrored.ArrowBack,
                             contentDescription = stringRes(R.string.back),
                         )
                     }
@@ -174,7 +173,7 @@ fun ChessLobbyScreen(
                 actions = {
                     IconButton(onClick = { showRelaySettings = true }) {
                         Icon(
-                            imageVector = Icons.Default.Settings,
+                            symbol = MaterialSymbols.Settings,
                             contentDescription = stringRes(R.string.relay_settings),
                         )
                     }

@@ -31,9 +31,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -49,6 +46,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.chess.ChessConfig
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -278,7 +277,7 @@ private fun RelayRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Icon(
-            imageVector = Icons.Default.CheckCircle,
+            symbol = MaterialSymbols.CheckCircle,
             contentDescription = stringRes(R.string.connected),
             tint =
                 if (isPreferred) {
@@ -317,11 +316,11 @@ private fun ChessRelayRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Icon(
-            imageVector =
+            symbol =
                 if (isConnected) {
-                    Icons.Default.CheckCircle
+                    MaterialSymbols.CheckCircle
                 } else {
-                    Icons.Default.Close
+                    MaterialSymbols.Close
                 },
             contentDescription = if (isConnected) "Connected" else "Not connected",
             tint =

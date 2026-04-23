@@ -35,10 +35,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.PersonAdd
-import androidx.compose.material.icons.outlined.Circle
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
@@ -58,6 +54,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEventAndMap
@@ -283,7 +281,7 @@ private fun ImportHeader() {
     Column {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
-                Icons.Default.PersonAdd,
+                MaterialSymbols.PersonAdd,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(28.dp),
@@ -320,7 +318,7 @@ private fun FollowEntryRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
-            if (isSelected) Icons.Filled.CheckCircle else Icons.Outlined.Circle,
+            if (isSelected) MaterialSymbols.CheckCircle else MaterialSymbols.Circle,
             contentDescription = null,
             tint =
                 if (isSelected) {

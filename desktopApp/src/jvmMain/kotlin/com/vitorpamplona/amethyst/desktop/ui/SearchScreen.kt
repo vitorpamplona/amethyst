@@ -39,18 +39,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.Dns
-import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.Tag
-import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -86,6 +74,8 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.chess.RelaySyncStatus
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.search.AdvancedSearchBarState
 import com.vitorpamplona.amethyst.commons.search.QuerySerializer
 import com.vitorpamplona.amethyst.commons.search.SavedSearch
@@ -375,7 +365,7 @@ fun SearchScreen(
                 placeholder = { Text("Search notes, people, tags... or use operators") },
                 leadingIcon = {
                     Icon(
-                        Icons.Default.Search,
+                        MaterialSymbols.Search,
                         contentDescription = "Search",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -384,7 +374,7 @@ fun SearchScreen(
                     if (displayText.isNotEmpty()) {
                         IconButton(onClick = { state.clearSearch() }) {
                             Icon(
-                                Icons.Default.Clear,
+                                MaterialSymbols.Clear,
                                 contentDescription = "Clear",
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -397,7 +387,7 @@ fun SearchScreen(
             if (account != null && !account.isReadOnly) {
                 IconButton(onClick = { showRelayPicker = true }) {
                     Icon(
-                        Icons.Default.Dns,
+                        MaterialSymbols.Dns,
                         contentDescription = "Search Relays",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -405,7 +395,7 @@ fun SearchScreen(
             }
             IconButton(onClick = { state.togglePanel() }) {
                 Icon(
-                    Icons.Default.Tune,
+                    MaterialSymbols.Tune,
                     contentDescription = "Advanced Search",
                     tint =
                         if (panelExpanded) {
@@ -553,7 +543,7 @@ private fun SearchEmptyState(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Icon(
-                        Icons.Default.Star,
+                        MaterialSymbols.Star,
                         contentDescription = null,
                         modifier = Modifier.size(16.dp),
                         tint = MaterialTheme.colorScheme.primary,
@@ -573,7 +563,7 @@ private fun SearchEmptyState(
                     }
                     IconButton(onClick = { onDeleteSaved(saved.id) }) {
                         Icon(
-                            Icons.Default.Delete,
+                            MaterialSymbols.Delete,
                             contentDescription = "Delete",
                             modifier = Modifier.size(16.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -613,7 +603,7 @@ private fun SearchEmptyState(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Icon(
-                        Icons.Default.History,
+                        MaterialSymbols.History,
                         contentDescription = null,
                         modifier = Modifier.size(16.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -709,12 +699,12 @@ private fun SearchResultCard(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Icon(
-                imageVector =
+                symbol =
                     when (result) {
-                        is SearchResult.UserResult -> Icons.Default.Person
-                        is SearchResult.NoteResult -> Icons.Default.Description
-                        is SearchResult.AddressResult -> Icons.Default.Description
-                        is SearchResult.HashtagResult -> Icons.Default.Tag
+                        is SearchResult.UserResult -> MaterialSymbols.Person
+                        is SearchResult.NoteResult -> MaterialSymbols.Description
+                        is SearchResult.AddressResult -> MaterialSymbols.Description
+                        is SearchResult.HashtagResult -> MaterialSymbols.Tag
                     },
                 contentDescription = null,
                 modifier = Modifier.size(24.dp),
@@ -746,7 +736,7 @@ private fun SearchResultCard(
             }
 
             Icon(
-                Icons.AutoMirrored.Filled.ArrowForward,
+                MaterialSymbols.AutoMirrored.ArrowForward,
                 contentDescription = "Navigate",
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
