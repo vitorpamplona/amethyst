@@ -21,17 +21,12 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header
 
 import android.content.Intent
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Block
-import androidx.compose.material.icons.outlined.CheckCircle
-import androidx.compose.material.icons.outlined.ContentCopy
-import androidx.compose.material.icons.outlined.Report
-import androidx.compose.material.icons.outlined.Share
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
@@ -63,7 +58,7 @@ fun UserProfileDropDownMenu(
         // Share section
         M3ActionSection {
             M3ActionRow(
-                icon = Icons.Outlined.ContentCopy,
+                icon = MaterialSymbols.ContentCopy,
                 text = stringRes(R.string.copy_user_id),
             ) {
                 scope.launch {
@@ -72,7 +67,7 @@ fun UserProfileDropDownMenu(
                 }
             }
             M3ActionRow(
-                icon = Icons.Outlined.Share,
+                icon = MaterialSymbols.Share,
                 text = stringRes(R.string.quick_action_share),
             ) {
                 val sendIntent =
@@ -96,7 +91,7 @@ fun UserProfileDropDownMenu(
             M3ActionSection {
                 if (accountViewModel.account.isHidden(user)) {
                     M3ActionRow(
-                        icon = Icons.Outlined.CheckCircle,
+                        icon = MaterialSymbols.CheckCircle,
                         text = stringRes(R.string.unblock_user),
                     ) {
                         accountViewModel.show(user)
@@ -104,7 +99,7 @@ fun UserProfileDropDownMenu(
                     }
                 } else {
                     M3ActionRow(
-                        icon = Icons.Outlined.Block,
+                        icon = MaterialSymbols.Block,
                         text = stringRes(R.string.block_hide_user),
                         isDestructive = true,
                     ) {
@@ -116,27 +111,27 @@ fun UserProfileDropDownMenu(
 
             // Report section
             M3ActionSection {
-                M3ActionRow(icon = Icons.Outlined.Report, text = stringRes(R.string.report_spam_scam), isDestructive = true) {
+                M3ActionRow(icon = MaterialSymbols.Report, text = stringRes(R.string.report_spam_scam), isDestructive = true) {
                     accountViewModel.report(user, ReportType.SPAM)
                     onDismiss()
                 }
-                M3ActionRow(icon = Icons.Outlined.Report, text = stringRes(R.string.report_hateful_speech), isDestructive = true) {
+                M3ActionRow(icon = MaterialSymbols.Report, text = stringRes(R.string.report_hateful_speech), isDestructive = true) {
                     accountViewModel.report(user, ReportType.PROFANITY)
                     onDismiss()
                 }
-                M3ActionRow(icon = Icons.Outlined.Report, text = stringRes(R.string.report_impersonation), isDestructive = true) {
+                M3ActionRow(icon = MaterialSymbols.Report, text = stringRes(R.string.report_impersonation), isDestructive = true) {
                     accountViewModel.report(user, ReportType.IMPERSONATION)
                     onDismiss()
                 }
-                M3ActionRow(icon = Icons.Outlined.Report, text = stringRes(R.string.report_nudity_porn), isDestructive = true) {
+                M3ActionRow(icon = MaterialSymbols.Report, text = stringRes(R.string.report_nudity_porn), isDestructive = true) {
                     accountViewModel.report(user, ReportType.NUDITY)
                     onDismiss()
                 }
-                M3ActionRow(icon = Icons.Outlined.Report, text = stringRes(R.string.report_illegal_behaviour), isDestructive = true) {
+                M3ActionRow(icon = MaterialSymbols.Report, text = stringRes(R.string.report_illegal_behaviour), isDestructive = true) {
                     accountViewModel.report(user, ReportType.ILLEGAL)
                     onDismiss()
                 }
-                M3ActionRow(icon = Icons.Outlined.Report, text = stringRes(R.string.report_malware), isDestructive = true) {
+                M3ActionRow(icon = MaterialSymbols.Report, text = stringRes(R.string.report_malware), isDestructive = true) {
                     accountViewModel.report(user, ReportType.MALWARE)
                     onDismiss()
                 }

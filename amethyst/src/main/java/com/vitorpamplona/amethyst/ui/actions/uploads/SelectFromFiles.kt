@@ -24,8 +24,6 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.height
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
@@ -39,6 +37,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.collections.immutable.ImmutableList
@@ -83,7 +83,7 @@ private fun FileSelectButton(
     ) {
         if (!isUploading) {
             Icon(
-                imageVector = Icons.Default.AttachFile,
+                symbol = MaterialSymbols.AttachFile,
                 contentDescription = stringRes(id = R.string.upload_file),
                 modifier = Modifier.height(20.dp),
                 tint = tint,

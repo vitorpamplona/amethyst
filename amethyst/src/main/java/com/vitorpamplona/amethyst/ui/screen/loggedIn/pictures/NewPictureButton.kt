@@ -30,10 +30,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AddPhotoAlternate
-import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -48,6 +44,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.actions.NewMediaModel
 import com.vitorpamplona.amethyst.ui.actions.NewMediaView
 import com.vitorpamplona.amethyst.ui.actions.uploads.GallerySelect
@@ -129,7 +127,7 @@ fun NewPictureButton(
                     containerColor = MaterialTheme.colorScheme.primary,
                 ) {
                     Icon(
-                        imageVector = Icons.Default.CameraAlt,
+                        symbol = MaterialSymbols.CameraAlt,
                         contentDescription = stringRes(id = R.string.take_a_picture),
                         modifier = Modifier.size(26.dp),
                         tint = Color.White,
@@ -148,7 +146,7 @@ fun NewPictureButton(
                     containerColor = MaterialTheme.colorScheme.primary,
                 ) {
                     Icon(
-                        imageVector = Icons.Default.AddPhotoAlternate,
+                        symbol = MaterialSymbols.AddPhotoAlternate,
                         contentDescription = stringRes(id = R.string.upload_image),
                         modifier = Modifier.size(26.dp),
                         tint = Color.White,
@@ -171,7 +169,7 @@ fun NewPictureButton(
                 exit = fadeOut(),
             ) {
                 Icon(
-                    imageVector = Icons.Outlined.Close,
+                    symbol = MaterialSymbols.Close,
                     contentDescription = stringRes(id = R.string.new_picture),
                     modifier = Size26Modifier,
                     tint = Color.White,

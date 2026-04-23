@@ -33,11 +33,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -70,6 +65,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.model.Note
@@ -148,7 +145,7 @@ private fun RenderWebBookmarksScreen(
                 containerColor = MaterialTheme.colorScheme.primary,
             ) {
                 Icon(
-                    imageVector = Icons.Default.Add,
+                    symbol = MaterialSymbols.Add,
                     contentDescription = stringResource(R.string.web_bookmark_add_title),
                 )
             }
@@ -304,19 +301,19 @@ private fun WebBookmarkCard(
             Row {
                 IconButton(onClick = { uriHandler.openUri(event.url()) }) {
                     Icon(
-                        imageVector = Icons.Default.OpenInBrowser,
+                        symbol = MaterialSymbols.OpenInBrowser,
                         contentDescription = stringResource(R.string.web_bookmark_open_url),
                     )
                 }
                 IconButton(onClick = { showEditDialog = true }) {
                     Icon(
-                        imageVector = Icons.Default.Edit,
+                        symbol = MaterialSymbols.Edit,
                         contentDescription = stringResource(R.string.web_bookmark_edit_title),
                     )
                 }
                 IconButton(onClick = { showDeleteDialog = true }) {
                     Icon(
-                        imageVector = Icons.Default.Delete,
+                        symbol = MaterialSymbols.Delete,
                         contentDescription = stringResource(R.string.web_bookmark_delete),
                         tint = MaterialTheme.colorScheme.error,
                     )

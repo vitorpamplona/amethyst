@@ -22,9 +22,6 @@ package com.vitorpamplona.amethyst.desktop.ui.auth
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -42,6 +39,8 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.login_hide_key
 import com.vitorpamplona.amethyst.commons.resources.login_key_label
@@ -79,7 +78,7 @@ fun KeyInputField(
         trailingIcon = {
             IconButton(onClick = { showKey = !showKey }) {
                 Icon(
-                    if (showKey) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                    if (showKey) MaterialSymbols.VisibilityOff else MaterialSymbols.Visibility,
                     contentDescription = if (showKey) stringResource(Res.string.login_hide_key) else stringResource(Res.string.login_show_key),
                 )
             }

@@ -29,13 +29,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.Article
-import androidx.compose.material.icons.outlined.CollectionsBookmark
-import androidx.compose.material.icons.outlined.ContentCopy
-import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.Description
-import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilledTonalButton
@@ -57,6 +50,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.nip51Lists.labeledBookmarkLists.LabeledBookmarkList
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
@@ -135,7 +130,7 @@ fun BookmarkGroupItem(
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         Icon(
-                            imageVector = Icons.Outlined.CollectionsBookmark,
+                            symbol = MaterialSymbols.CollectionsBookmark,
                             contentDescription = stringRes(R.string.bookmark_list_icon_label),
                             modifier = Size40Modifier,
                         )
@@ -186,7 +181,7 @@ private fun BookmarkGroupActions(
             onClick = openArticleBookmarks,
         ) {
             Icon(
-                imageVector = Icons.AutoMirrored.Outlined.Article,
+                symbol = MaterialSymbols.AutoMirrored.Article,
                 contentDescription = null,
             )
             Text(stringRes(R.string.bookmark_list_articles_btn_label))
@@ -233,7 +228,7 @@ fun BookmarkMembershipStatusAndNumberDisplay(
                     horizontalArrangement = SpacedBy2dp,
                 ) {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Outlined.Article,
+                        symbol = MaterialSymbols.AutoMirrored.Article,
                         modifier = Size10Modifier,
                         contentDescription = null,
                     )
@@ -299,21 +294,21 @@ private fun GroupOptionsMenu(
             onDismiss = onDismiss,
         ) {
             M3ActionSection {
-                M3ActionRow(icon = Icons.Outlined.Edit, text = stringRes(R.string.follow_set_rename_btn_label)) {
+                M3ActionRow(icon = MaterialSymbols.Edit, text = stringRes(R.string.follow_set_rename_btn_label)) {
                     onGroupRename()
                     onDismiss()
                 }
-                M3ActionRow(icon = Icons.Outlined.Description, text = stringRes(R.string.follow_set_desc_modify_label)) {
+                M3ActionRow(icon = MaterialSymbols.Description, text = stringRes(R.string.follow_set_desc_modify_label)) {
                     onGroupDescriptionChange()
                     onDismiss()
                 }
-                M3ActionRow(icon = Icons.Outlined.ContentCopy, text = stringRes(R.string.follow_set_copy_action_btn_label)) {
+                M3ActionRow(icon = MaterialSymbols.ContentCopy, text = stringRes(R.string.follow_set_copy_action_btn_label)) {
                     isCopyDialogOpen.value = true
                     onDismiss()
                 }
             }
             M3ActionSection {
-                M3ActionRow(icon = Icons.Outlined.Delete, text = stringRes(R.string.quick_action_delete), isDestructive = true) {
+                M3ActionRow(icon = MaterialSymbols.Delete, text = stringRes(R.string.quick_action_delete), isDestructive = true) {
                     onDelete()
                     onDismiss()
                 }

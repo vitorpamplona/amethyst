@@ -263,7 +263,6 @@ dependencies {
 
     // Material 3 Design
     implementation libs.androidx.material3
-    implementation libs.androidx.material.icons
 
     // Adaptive Layout / Two Pane
     implementation libs.androidx.material3.windowSize

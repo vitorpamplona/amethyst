@@ -37,8 +37,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CurrencyBitcoin
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -74,6 +72,8 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView
@@ -457,14 +457,14 @@ private fun AddLnInvoiceButton(
     ) {
         if (!isLnInvoiceActive) {
             Icon(
-                imageVector = Icons.Default.CurrencyBitcoin,
+                symbol = MaterialSymbols.CurrencyBitcoin,
                 contentDescription = stringRes(id = R.string.add_bitcoin_invoice),
                 modifier = Modifier.size(20.dp),
                 tint = MaterialTheme.colorScheme.onBackground,
             )
         } else {
             Icon(
-                imageVector = Icons.Default.CurrencyBitcoin,
+                symbol = MaterialSymbols.CurrencyBitcoin,
                 contentDescription = stringRes(id = R.string.cancel_bitcoin_invoice),
                 modifier = Modifier.size(20.dp),
                 tint = BitcoinOrange,

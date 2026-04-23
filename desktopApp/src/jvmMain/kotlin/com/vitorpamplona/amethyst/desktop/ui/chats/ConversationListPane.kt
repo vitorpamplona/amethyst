@@ -38,10 +38,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Dns
-import androidx.compose.material.icons.filled.Group
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -67,6 +63,8 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
 import com.vitorpamplona.amethyst.commons.util.toTimeAgo
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
@@ -186,7 +184,7 @@ fun ConversationListPane(
                 modifier = Modifier.size(32.dp),
             ) {
                 Icon(
-                    Icons.Default.Dns,
+                    MaterialSymbols.Dns,
                     contentDescription = "DM Relays",
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(20.dp),
@@ -197,7 +195,7 @@ fun ConversationListPane(
                 modifier = Modifier.size(32.dp),
             ) {
                 Icon(
-                    Icons.Default.Add,
+                    MaterialSymbols.Add,
                     contentDescription = "New conversation",
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(20.dp),
@@ -324,7 +322,7 @@ private fun ConversationCard(
             )
         } else if (item.isGroup) {
             Icon(
-                Icons.Default.Group,
+                MaterialSymbols.Group,
                 contentDescription = "Group",
                 modifier = Modifier.size(40.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,

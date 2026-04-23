@@ -32,10 +32,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Public
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -56,6 +52,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.highlights.HighlightData
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.desktop.service.highlights.DesktopHighlightStore
@@ -208,7 +206,7 @@ private fun HighlightCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Icon(
-                        imageVector = if (highlight.published) Icons.Default.Public else Icons.Default.Lock,
+                        symbol = if (highlight.published) MaterialSymbols.Public else MaterialSymbols.Lock,
                         contentDescription = if (highlight.published) "Published" else "Private",
                         modifier = Modifier.size(14.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -218,7 +216,7 @@ private fun HighlightCard(
 
             IconButton(onClick = onDelete) {
                 Icon(
-                    Icons.Default.Delete,
+                    MaterialSymbols.Delete,
                     contentDescription = "Delete highlight",
                     tint = MaterialTheme.colorScheme.error,
                 )

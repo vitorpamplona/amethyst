@@ -22,25 +22,6 @@ package com.vitorpamplona.amethyst.ui.note
 
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.OpenInNew
-import androidx.compose.material.icons.automirrored.outlined.OpenInNew
-import androidx.compose.material.icons.filled.Bolt
-import androidx.compose.material.icons.filled.Cancel
-import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.DownloadForOffline
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.Link
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.PushPin
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.outlined.AddReaction
-import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.Mic
-import androidx.compose.material.icons.outlined.PlayCircle
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -62,6 +43,8 @@ import com.vitorpamplona.amethyst.commons.icons.Repost
 import com.vitorpamplona.amethyst.commons.icons.Reposted
 import com.vitorpamplona.amethyst.commons.icons.Search
 import com.vitorpamplona.amethyst.commons.icons.Zap
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Size19Modifier
@@ -94,7 +77,7 @@ fun FollowingIcon(modifier: Modifier) {
 @Composable
 fun ArrowBackIcon(tint: Color = MaterialTheme.colorScheme.grayText) {
     Icon(
-        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+        symbol = MaterialSymbols.AutoMirrored.ArrowBack,
         contentDescription = stringRes(R.string.back),
         tint = tint,
     )
@@ -106,7 +89,7 @@ fun DownloadForOfflineIcon(
     tint: Color = MaterialTheme.colorScheme.primary,
 ) {
     Icon(
-        imageVector = Icons.Default.DownloadForOffline,
+        symbol = MaterialSymbols.DownloadForOffline,
         contentDescription = stringRes(id = R.string.accessibility_download_for_offline),
         modifier = remember(iconSize) { Modifier.size(iconSize) },
         tint = tint,
@@ -132,7 +115,7 @@ fun ChangeReactionIcon(
     tint: Color = Color.Unspecified,
 ) {
     Icon(
-        imageVector = Icons.Outlined.AddReaction,
+        symbol = MaterialSymbols.AddReaction,
         contentDescription = stringRes(id = R.string.change_reaction),
         modifier = modifier,
         tint = tint,
@@ -184,7 +167,7 @@ fun LightningAddressIcon(
     tint: Color = Color.Unspecified,
 ) {
     Icon(
-        imageVector = Icons.Default.Bolt,
+        symbol = MaterialSymbols.Bolt,
         contentDescription = stringRes(R.string.lightning_address),
         tint = tint,
         modifier = modifier,
@@ -222,7 +205,7 @@ fun ZapIcon(
     contentDescriptor: Int = R.string.zap_description,
 ) {
     Icon(
-        imageVector = Icons.Default.Bolt,
+        symbol = MaterialSymbols.Bolt,
         contentDescription = stringRes(contentDescriptor),
         tint = tint,
         modifier = modifier,
@@ -249,7 +232,7 @@ fun ShareIcon(
     tint: Color = Color.Unspecified,
 ) {
     Icon(
-        imageVector = Icons.Default.Share,
+        symbol = MaterialSymbols.Share,
         modifier = modifier,
         contentDescription = stringRes(R.string.share_or_save),
         tint = tint,
@@ -269,7 +252,7 @@ fun CashuIcon(modifier: Modifier) {
 @Composable
 fun CopyIcon(modifier: Modifier) {
     Icon(
-        imageVector = Icons.Default.ContentCopy,
+        symbol = MaterialSymbols.ContentCopy,
         stringRes(id = R.string.copy_to_clipboard),
         modifier = modifier,
     )
@@ -278,7 +261,7 @@ fun CopyIcon(modifier: Modifier) {
 @Composable
 fun OpenInNewIcon(modifier: Modifier) {
     Icon(
-        imageVector = Icons.AutoMirrored.Filled.OpenInNew,
+        symbol = MaterialSymbols.AutoMirrored.OpenInNew,
         stringRes(id = R.string.copy_to_clipboard),
         modifier = modifier,
     )
@@ -290,7 +273,7 @@ fun ExpandLessIcon(
     contentDescriptor: Int,
 ) {
     Icon(
-        imageVector = Icons.Default.ExpandLess,
+        symbol = MaterialSymbols.ExpandLess,
         contentDescription = stringRes(id = contentDescriptor),
         modifier = modifier,
         tint = MaterialTheme.colorScheme.subtleButton,
@@ -303,7 +286,7 @@ fun ExpandMoreIcon(
     contentDescriptor: Int,
 ) {
     Icon(
-        imageVector = Icons.Default.ExpandMore,
+        symbol = MaterialSymbols.ExpandMore,
         contentDescription = stringRes(id = contentDescriptor),
         modifier = modifier,
         tint = MaterialTheme.colorScheme.subtleButton,
@@ -316,7 +299,7 @@ fun VoiceReplyIcon(
     tint: Color,
 ) {
     Icon(
-        imageVector = Icons.Outlined.Mic,
+        symbol = MaterialSymbols.Mic,
         contentDescription = stringRes(id = R.string.record_a_message),
         tint = tint,
         modifier = iconSizeModifier,
@@ -339,7 +322,7 @@ fun CommentIcon(
 @Composable
 fun CancelIcon() {
     Icon(
-        imageVector = Icons.Default.Cancel,
+        symbol = MaterialSymbols.Cancel,
         contentDescription = stringRes(id = R.string.cancel),
         modifier = Size30Modifier,
         tint = MaterialTheme.colorScheme.placeholderText,
@@ -349,7 +332,7 @@ fun CancelIcon() {
 @Composable
 fun CloseIcon() {
     Icon(
-        imageVector = Icons.Outlined.Close,
+        symbol = MaterialSymbols.Close,
         contentDescription = stringRes(id = R.string.cancel),
         modifier = Size20Modifier,
     )
@@ -374,7 +357,7 @@ fun PlayIcon(
     tint: Color,
 ) {
     Icon(
-        imageVector = Icons.Outlined.PlayCircle,
+        symbol = MaterialSymbols.PlayCircle,
         contentDescription = stringRes(id = R.string.accessibility_play_username),
         modifier = modifier,
         tint = tint,
@@ -387,7 +370,7 @@ fun PinIcon(
     tint: Color,
 ) {
     Icon(
-        imageVector = Icons.Default.PushPin,
+        symbol = MaterialSymbols.PushPin,
         contentDescription = stringRes(id = R.string.accessibility_pushpin),
         modifier = modifier,
         tint = tint,
@@ -400,7 +383,7 @@ fun EnablePiP(
     tint: Color,
 ) {
     Icon(
-        imageVector = Icons.AutoMirrored.Outlined.OpenInNew,
+        symbol = MaterialSymbols.AutoMirrored.OpenInNew,
         contentDescription = stringRes(id = R.string.enter_picture_in_picture),
         modifier = modifier,
         tint = tint,
@@ -410,7 +393,7 @@ fun EnablePiP(
 @Composable
 fun ClearTextIcon() {
     Icon(
-        imageVector = Icons.Default.Clear,
+        symbol = MaterialSymbols.Clear,
         contentDescription = stringRes(R.string.clear),
     )
 }
@@ -421,7 +404,7 @@ fun LinkIcon(
     tint: Color,
 ) {
     Icon(
-        imageVector = Icons.Default.Link,
+        symbol = MaterialSymbols.Link,
         contentDescription = stringRes(R.string.website),
         modifier = modifier,
         tint = tint,
@@ -431,7 +414,7 @@ fun LinkIcon(
 @Composable
 fun VerticalDotsIcon() {
     Icon(
-        imageVector = Icons.Default.MoreVert,
+        symbol = MaterialSymbols.MoreVert,
         contentDescription = stringRes(id = R.string.note_options),
         modifier = Size19Modifier,
         tint = MaterialTheme.colorScheme.placeholderText,

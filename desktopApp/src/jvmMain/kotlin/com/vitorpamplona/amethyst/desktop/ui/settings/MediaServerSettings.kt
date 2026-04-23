@@ -31,10 +31,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -64,6 +60,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.desktop.service.media.ServerHealthCheck
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
@@ -173,7 +171,7 @@ fun MediaServerSettings(
                 },
                 enabled = newServerUrl.isNotBlank() && isValidServerUrl(newServerUrl.trim()),
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Add")
+                Icon(MaterialSymbols.Add, contentDescription = "Add")
                 Spacer(Modifier.width(4.dp))
                 Text("Add")
             }
@@ -203,7 +201,7 @@ fun MediaServerSettings(
             if (isChecking) {
                 CircularProgressIndicator(modifier = Modifier.size(16.dp))
             } else {
-                Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+                Icon(MaterialSymbols.Refresh, contentDescription = "Refresh")
             }
             Spacer(Modifier.width(4.dp))
             Text("Check All")
@@ -295,7 +293,7 @@ private fun ServerRow(
 
             IconButton(onClick = onRefresh) {
                 Icon(
-                    Icons.Default.Refresh,
+                    MaterialSymbols.Refresh,
                     contentDescription = "Refresh",
                     modifier = Modifier.size(18.dp),
                 )
@@ -303,7 +301,7 @@ private fun ServerRow(
 
             IconButton(onClick = onRemove) {
                 Icon(
-                    Icons.Default.Delete,
+                    MaterialSymbols.Delete,
                     contentDescription = "Remove",
                     modifier = Modifier.size(18.dp),
                     tint = MaterialTheme.colorScheme.error,

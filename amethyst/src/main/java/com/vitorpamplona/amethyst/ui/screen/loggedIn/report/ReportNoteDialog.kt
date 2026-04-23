@@ -28,9 +28,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Block
-import androidx.compose.material.icons.filled.Report
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -52,13 +49,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.ui.components.TitleExplainer
@@ -122,7 +121,7 @@ fun ReportNoteDialog(
                 SpacerH16()
                 ActionButton(
                     text = stringRes(R.string.report_dialog_block_hide_user_btn),
-                    icon = Icons.Default.Block,
+                    icon = MaterialSymbols.Block,
                     onClick = {
                         note.author?.let { accountViewModel.hide(it) }
                         onDismiss()
@@ -158,7 +157,7 @@ fun ReportNoteDialog(
 
                 ActionButton(
                     text = stringRes(R.string.report_dialog_post_report_btn),
-                    icon = Icons.Default.Report,
+                    icon = MaterialSymbols.Report,
                     enabled = selectedReason in 0..reportTypes.lastIndex,
                     onClick = {
                         accountViewModel.report(
@@ -189,7 +188,7 @@ private fun SectionHeader(text: String) =
 @Composable
 private fun ActionButton(
     text: String,
-    icon: ImageVector,
+    icon: MaterialSymbol,
     enabled: Boolean = true,
     onClick: () -> Unit,
 ) = Button(
@@ -203,7 +202,7 @@ private fun ActionButton(
         horizontalArrangement = Arrangement.Center,
     ) {
         Icon(
-            imageVector = icon,
+            symbol = icon,
             contentDescription = null,
             tint = Color.White,
         )

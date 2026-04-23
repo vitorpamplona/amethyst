@@ -31,14 +31,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Dns
-import androidx.compose.material.icons.filled.Language
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.LockOpen
-import androidx.compose.material.icons.filled.Numbers
-import androidx.compose.material.icons.filled.Tag
-import androidx.compose.material.icons.filled.TravelExplore
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -48,13 +40,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -121,7 +115,7 @@ fun RenderRelayDiscovery(
         // Network type
         if (networkTypes.isNotEmpty()) {
             DiscoveryInfoRow(
-                icon = Icons.Default.Language,
+                icon = MaterialSymbols.Language,
                 label = stringRes(R.string.relay_monitor_network),
                 value = networkTypes.joinToString { it.code },
             )
@@ -130,7 +124,7 @@ fun RenderRelayDiscovery(
         // Relay type
         if (relayTypes.isNotEmpty()) {
             DiscoveryInfoRow(
-                icon = Icons.Default.Dns,
+                icon = MaterialSymbols.Dns,
                 label = stringRes(R.string.relay_monitor_relay_type),
                 value = relayTypes.joinToString(),
             )
@@ -139,7 +133,7 @@ fun RenderRelayDiscovery(
         // Requirements
         if (requirements.isNotEmpty()) {
             DiscoveryInfoRow(
-                icon = if (requirements.any { !it.negated }) Icons.Default.Lock else Icons.Default.LockOpen,
+                icon = if (requirements.any { !it.negated }) MaterialSymbols.Lock else MaterialSymbols.LockOpen,
                 label = stringRes(R.string.relay_monitor_requirements),
                 value =
                     requirements.joinToString { req ->
@@ -151,7 +145,7 @@ fun RenderRelayDiscovery(
         // Supported NIPs
         if (supportedNips.isNotEmpty()) {
             DiscoveryInfoRow(
-                icon = Icons.Default.Numbers,
+                icon = MaterialSymbols.Numbers,
                 label = stringRes(R.string.relay_monitor_supported_nips),
                 value = supportedNips.sorted().joinToString(),
             )
@@ -160,7 +154,7 @@ fun RenderRelayDiscovery(
         // Accepted kinds
         if (acceptedKinds.isNotEmpty()) {
             DiscoveryInfoRow(
-                icon = Icons.Default.Dns,
+                icon = MaterialSymbols.Dns,
                 label = stringRes(R.string.relay_discovery_accepted_kinds),
                 value =
                     acceptedKinds.joinToString { kind ->
@@ -176,7 +170,7 @@ fun RenderRelayDiscovery(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(
-                    Icons.Default.Tag,
+                    MaterialSymbols.Tag,
                     contentDescription = null,
                     modifier = Modifier.size(18.dp),
                     tint = MaterialTheme.colorScheme.secondary,
@@ -196,7 +190,7 @@ fun RenderRelayDiscovery(
         // Geohashes
         if (geohashes.isNotEmpty()) {
             DiscoveryInfoRow(
-                icon = Icons.Default.TravelExplore,
+                icon = MaterialSymbols.TravelExplore,
                 label = stringRes(R.string.relay_discovery_geohash),
                 value = geohashes.joinToString(),
             )
@@ -264,7 +258,7 @@ private fun TopicChip(topic: String) {
 
 @Composable
 private fun DiscoveryInfoRow(
-    icon: ImageVector,
+    icon: MaterialSymbol,
     label: String,
     value: String,
 ) {

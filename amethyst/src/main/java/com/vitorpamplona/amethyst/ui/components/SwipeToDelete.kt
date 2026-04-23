@@ -30,9 +30,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -54,6 +51,8 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.coroutines.launch
 
@@ -157,12 +156,12 @@ fun DismissBackground(dismissState: SwipeToDismissBoxState) {
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Icon(
-            Icons.Default.Delete,
+            MaterialSymbols.Delete,
             contentDescription = stringRes(id = R.string.request_deletion),
         )
         Spacer(modifier = Modifier)
         Icon(
-            Icons.Default.Delete,
+            MaterialSymbols.Delete,
             contentDescription = stringRes(id = R.string.request_deletion),
         )
     }
@@ -212,7 +211,7 @@ fun ConfirmDeleteBackground(
             horizontalArrangement = Arrangement.Center,
         ) {
             Icon(
-                Icons.Default.Delete,
+                MaterialSymbols.Delete,
                 contentDescription = stringRes(id = R.string.request_deletion),
                 tint = Color.White,
             )
@@ -233,7 +232,7 @@ fun ConfirmDeleteBackground(
             horizontalArrangement = Arrangement.Center,
         ) {
             Icon(
-                Icons.Default.Close,
+                MaterialSymbols.Close,
                 contentDescription = stringRes(id = R.string.cancel),
                 tint = Color.White,
             )

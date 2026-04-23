@@ -30,8 +30,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Circle
 import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -42,6 +40,8 @@ import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.desktop.network.Nip11Fetcher
 import com.vitorpamplona.amethyst.desktop.network.RelayMetrics
 import com.vitorpamplona.amethyst.desktop.network.RelayStatus
@@ -75,7 +75,7 @@ fun RelayMetricCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     // Status indicator
                     Icon(
-                        Icons.Default.Circle,
+                        MaterialSymbols.Circle,
                         contentDescription = if (status.connected) "Connected" else "Disconnected",
                         modifier = Modifier.size(10.dp),
                         tint =

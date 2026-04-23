@@ -38,13 +38,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -84,6 +77,8 @@ import com.vitorpamplona.amethyst.commons.chess.PublicGame
 import com.vitorpamplona.amethyst.commons.chess.PublicGameCard
 import com.vitorpamplona.amethyst.commons.chess.SpectatingGameCard
 import com.vitorpamplona.amethyst.commons.data.UserMetadataCache
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
@@ -193,7 +188,7 @@ fun ChessScreen(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (selectedGameId != null) {
                     IconButton(onClick = { viewModel.selectGame(null) }) {
-                        Icon(Icons.AutoMirrored.Default.ArrowBack, "Back to list")
+                        Icon(MaterialSymbols.AutoMirrored.ArrowBack, "Back to list")
                     }
                     Spacer(Modifier.width(8.dp))
                 }
@@ -211,13 +206,13 @@ fun ChessScreen(
                 ) {
                     // Refresh button
                     IconButton(onClick = { viewModel.forceRefresh() }) {
-                        Icon(Icons.Default.Refresh, "Refresh")
+                        Icon(MaterialSymbols.Refresh, "Refresh")
                     }
 
                     // New Game button
                     if (!account.isReadOnly) {
                         Button(onClick = { showNewGameDialog = true }) {
-                            Icon(Icons.Default.Add, "New Game")
+                            Icon(MaterialSymbols.Add, "New Game")
                             Spacer(Modifier.width(8.dp))
                             Text("New Game")
                         }
@@ -728,9 +723,9 @@ private fun DesktopChessGameLayout(
                 ) {
                     Icon(
                         if (showInfoPanel) {
-                            Icons.AutoMirrored.Filled.KeyboardArrowRight
+                            MaterialSymbols.AutoMirrored.KeyboardArrowRight
                         } else {
-                            Icons.AutoMirrored.Filled.KeyboardArrowLeft
+                            MaterialSymbols.AutoMirrored.KeyboardArrowLeft
                         },
                         contentDescription = if (showInfoPanel) "Hide info panel" else "Show info panel",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -907,7 +902,7 @@ private fun DesktopChessGameLayout(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 ) {
-                                    Icon(Icons.Default.Visibility, contentDescription = null)
+                                    Icon(MaterialSymbols.Visibility, contentDescription = null)
                                     Text(
                                         "Watching game - spectator mode",
                                         style = MaterialTheme.typography.bodyMedium,

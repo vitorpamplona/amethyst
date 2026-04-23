@@ -38,13 +38,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.AttachFile
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.LockOpen
-import androidx.compose.material.icons.outlined.AddReaction
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -83,6 +76,8 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.IAccount
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
@@ -230,7 +225,7 @@ fun ChatPane(
                         modifier = Modifier.size(40.dp),
                     ) {
                         Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
+                            MaterialSymbols.AutoMirrored.ArrowBack,
                             contentDescription = "Back to conversations",
                         )
                     }
@@ -517,7 +512,7 @@ private fun MessageWithReactions(
                         when (event) {
                             is PrivateDmEvent -> {
                                 Icon(
-                                    Icons.Default.LockOpen,
+                                    MaterialSymbols.LockOpen,
                                     contentDescription = "NIP-04 (legacy)",
                                     modifier = Modifier.size(12.dp),
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
@@ -528,7 +523,7 @@ private fun MessageWithReactions(
                             is ChatMessageEncryptedFileHeaderEvent,
                             -> {
                                 Icon(
-                                    Icons.Default.Lock,
+                                    MaterialSymbols.Lock,
                                     contentDescription = "NIP-17 (encrypted)",
                                     modifier = Modifier.size(12.dp),
                                     tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
@@ -572,7 +567,7 @@ private fun MessageWithReactions(
                                     modifier = Modifier.size(20.dp),
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Outlined.AddReaction,
+                                        symbol = MaterialSymbols.AddReaction,
                                         contentDescription = "React",
                                         modifier = Modifier.size(14.dp),
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -709,7 +704,7 @@ private fun MessageInput(
                 modifier = Modifier.size(40.dp),
             ) {
                 Icon(
-                    Icons.Default.AttachFile,
+                    MaterialSymbols.AttachFile,
                     contentDescription = "Attach file",
                     tint =
                         if (isUploading) {
@@ -749,7 +744,7 @@ private fun MessageInput(
                 modifier = Modifier.size(40.dp),
             ) {
                 Icon(
-                    Icons.AutoMirrored.Filled.Send,
+                    MaterialSymbols.AutoMirrored.Send,
                     contentDescription = "Send",
                     tint =
                         if (canSend && !isUploading) {
@@ -768,7 +763,7 @@ private fun MessageInput(
             modifier = Modifier.padding(start = 4.dp),
         ) {
             Icon(
-                imageVector = Icons.Default.Lock,
+                symbol = MaterialSymbols.Lock,
                 contentDescription = "NIP-17 (encrypted)",
                 modifier = Modifier.size(16.dp),
                 tint = MaterialTheme.colorScheme.primary,

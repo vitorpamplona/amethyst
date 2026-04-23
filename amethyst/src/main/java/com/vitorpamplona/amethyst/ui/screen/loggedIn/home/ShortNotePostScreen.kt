@@ -40,8 +40,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Poll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -66,6 +64,8 @@ import androidx.core.net.toUri
 import androidx.core.util.Consumer
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.FileServerSelectionRow
 import com.vitorpamplona.amethyst.ui.actions.uploads.MAX_VOICE_RECORD_SECONDS
@@ -695,14 +695,14 @@ private fun AddPollButton(
     ) {
         if (!isPollActive) {
             Icon(
-                imageVector = Icons.Outlined.Poll,
+                symbol = MaterialSymbols.Poll,
                 contentDescription = stringRes(id = R.string.poll),
                 modifier = Modifier.height(22.dp),
                 tint = MaterialTheme.colorScheme.onBackground,
             )
         } else {
             Icon(
-                imageVector = Icons.Outlined.Poll,
+                symbol = MaterialSymbols.Poll,
                 contentDescription = stringRes(id = R.string.disable_poll),
                 modifier = Modifier.height(22.dp),
                 tint = MaterialTheme.colorScheme.primary,

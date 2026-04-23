@@ -31,9 +31,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -47,6 +44,8 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip65RelayList.Nip65RelayListState
 import com.vitorpamplona.amethyst.desktop.model.DesktopAccountRelays
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
@@ -185,7 +184,7 @@ private fun CollapsibleSection(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
-            if (expanded) Icons.Default.ExpandMore else Icons.Default.ChevronRight,
+            if (expanded) MaterialSymbols.ExpandMore else MaterialSymbols.ChevronRight,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
         )

@@ -23,9 +23,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.GroupAdd
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -37,6 +34,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -64,7 +63,7 @@ fun MarmotGroupChatScreen(
                 navigationIcon = {
                     IconButton(onClick = { nav.popBack() }) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            symbol = MaterialSymbols.AutoMirrored.ArrowBack,
                             contentDescription = "Back",
                         )
                     }
@@ -88,7 +87,7 @@ fun MarmotGroupChatScreen(
                 actions = {
                     IconButton(onClick = { nav.nav(Route.MarmotGroupInfo(nostrGroupId)) }) {
                         Icon(
-                            imageVector = Icons.Default.GroupAdd,
+                            symbol = MaterialSymbols.GroupAdd,
                             contentDescription = "Add Member",
                         )
                     }

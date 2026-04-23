@@ -39,8 +39,6 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -74,6 +72,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.search.SearchScope
 import com.vitorpamplona.amethyst.commons.search.SearchSortOrder
 import com.vitorpamplona.amethyst.commons.search.SearchSource
@@ -215,7 +215,6 @@ private fun hasNonDefaultFilters(
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
-@Suppress("AssignedValueIsNeverRead")
 @Composable
 @Suppress("AssignedValueIsNeverRead")
 private fun SearchFilterRow(searchBarViewModel: SearchBarViewModel) {
@@ -293,7 +292,7 @@ private fun FilterIconButton(
     Box {
         IconButton(onClick = onClick) {
             Icon(
-                imageVector = Icons.Outlined.Tune,
+                symbol = MaterialSymbols.Tune,
                 contentDescription = stringRes(R.string.search_filters_open),
             )
         }

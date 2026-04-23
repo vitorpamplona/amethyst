@@ -38,10 +38,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Key
-import androidx.compose.material.icons.outlined.Visibility
-import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -85,6 +81,8 @@ import com.halilibo.richtext.ui.RichTextStyle
 import com.halilibo.richtext.ui.material3.RichText
 import com.halilibo.richtext.ui.resolveDefaults
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -222,8 +220,7 @@ private fun AccountBackupScreenContent(
                     Row {
                         IconButton(onClick = { showCharsPassword = !showCharsPassword }) {
                             Icon(
-                                imageVector =
-                                    if (showCharsPassword) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
+                                symbol = if (showCharsPassword) MaterialSymbols.VisibilityOff else MaterialSymbols.Visibility,
                                 contentDescription =
                                     if (showCharsPassword) {
                                         stringRes(R.string.show_password)
@@ -288,7 +285,7 @@ private fun NSecCopyButton(accountViewModel: AccountViewModel) {
     ) {
         Icon(
             tint = MaterialTheme.colorScheme.onPrimary,
-            imageVector = Icons.Default.Key,
+            symbol = MaterialSymbols.Key,
             contentDescription =
                 stringRes(R.string.copies_the_nsec_id_your_password_to_the_clipboard_for_backup),
             modifier = Modifier.padding(end = 5.dp),
@@ -334,7 +331,7 @@ private fun EncryptNSecCopyButton(
                 enabled = password.value.text.isNotBlank(),
             ) {
                 Icon(
-                    imageVector = Icons.Default.Key,
+                    symbol = MaterialSymbols.Key,
                     contentDescription =
                         stringRes(R.string.copies_the_nsec_id_your_password_to_the_clipboard_for_backup),
                     modifier = Modifier.padding(end = 5.dp),

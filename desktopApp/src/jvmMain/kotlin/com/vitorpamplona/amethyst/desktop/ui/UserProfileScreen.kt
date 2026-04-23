@@ -38,13 +38,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.PersonAdd
-import androidx.compose.material.icons.filled.PersonRemove
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -72,6 +65,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip02FollowList.FollowAction
 import com.vitorpamplona.amethyst.commons.profile.ProfileBroadcastBanner
 import com.vitorpamplona.amethyst.commons.profile.ProfileBroadcastStatus
@@ -472,7 +467,7 @@ fun UserProfileScreen(
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             IconButton(onClick = onBack) {
-                                Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+                                Icon(MaterialSymbols.AutoMirrored.ArrowBack, "Back")
                             }
                             Spacer(Modifier.width(8.dp))
                             Text(
@@ -490,7 +485,7 @@ fun UserProfileScreen(
                                 },
                             ) {
                                 Icon(
-                                    Icons.Default.Edit,
+                                    MaterialSymbols.Edit,
                                     contentDescription = "Edit profile",
                                     modifier = Modifier.size(18.dp),
                                 )
@@ -554,7 +549,7 @@ fun UserProfileScreen(
 
                                         else -> {
                                             Icon(
-                                                if (isFollowing) Icons.Default.PersonRemove else Icons.Default.PersonAdd,
+                                                if (isFollowing) MaterialSymbols.PersonRemove else MaterialSymbols.PersonAdd,
                                                 contentDescription = if (isFollowing) "Unfollow" else "Follow",
                                                 modifier = Modifier.size(18.dp),
                                             )
@@ -639,7 +634,7 @@ fun UserProfileScreen(
                                                 modifier = Modifier.size(20.dp),
                                             ) {
                                                 Icon(
-                                                    if (copied) Icons.Default.Check else Icons.Default.ContentCopy,
+                                                    if (copied) MaterialSymbols.Check else MaterialSymbols.ContentCopy,
                                                     contentDescription = if (copied) "Copied" else "Copy npub",
                                                     modifier = Modifier.size(14.dp),
                                                     tint =
@@ -901,7 +896,7 @@ fun UserProfileScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+                    Icon(MaterialSymbols.AutoMirrored.ArrowBack, "Back")
                 }
                 Spacer(Modifier.width(8.dp))
                 UserAvatar(

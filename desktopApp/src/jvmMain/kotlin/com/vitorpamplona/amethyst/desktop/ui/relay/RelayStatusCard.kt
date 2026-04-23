@@ -26,9 +26,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -41,6 +38,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.tor.TorServiceStatus
 import com.vitorpamplona.amethyst.desktop.network.RelayStatus
 import com.vitorpamplona.amethyst.desktop.ui.tor.LocalTorState
@@ -82,14 +81,14 @@ fun RelayStatusCard(
 
                 if (status.connected) {
                     Icon(
-                        Icons.Default.Check,
+                        MaterialSymbols.Check,
                         contentDescription = "Connected",
                         tint = statusColor,
                         modifier = Modifier.size(20.dp),
                     )
                 } else if (status.error != null) {
                     Icon(
-                        Icons.Default.Close,
+                        MaterialSymbols.Close,
                         contentDescription = "Error",
                         tint = statusColor,
                         modifier = Modifier.size(20.dp),
@@ -148,7 +147,7 @@ fun RelayStatusCard(
 
             IconButton(onClick = onRemove) {
                 Icon(
-                    Icons.Default.Close,
+                    MaterialSymbols.Close,
                     contentDescription = "Remove relay",
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

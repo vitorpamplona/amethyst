@@ -38,16 +38,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.Error
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.OpenInBrowser
-import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -78,6 +68,8 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -350,7 +342,7 @@ fun LightboxOverlay(
 
                     is DownloadState.Done -> {
                         Icon(
-                            Icons.Default.Check,
+                            MaterialSymbols.Check,
                             contentDescription = null,
                             tint = Color.White,
                             modifier = Modifier.size(16.dp),
@@ -365,7 +357,7 @@ fun LightboxOverlay(
 
                     is DownloadState.Failed -> {
                         Icon(
-                            Icons.Default.Error,
+                            MaterialSymbols.Error,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.onErrorContainer,
                             modifier = Modifier.size(16.dp),
@@ -412,7 +404,7 @@ fun LightboxOverlay(
                 modifier = Modifier.align(Alignment.TopStart).padding(8.dp),
             ) {
                 Icon(
-                    Icons.Default.Close,
+                    MaterialSymbols.Close,
                     contentDescription = "Close",
                     tint = Color.White,
                     modifier = Modifier.size(32.dp),
@@ -443,7 +435,7 @@ fun LightboxOverlay(
                     modifier = Modifier.align(Alignment.CenterStart).padding(16.dp),
                 ) {
                     Icon(
-                        Icons.AutoMirrored.Filled.ArrowBack,
+                        MaterialSymbols.AutoMirrored.ArrowBack,
                         contentDescription = "Previous",
                         tint = Color.White,
                         modifier = Modifier.size(48.dp),
@@ -457,7 +449,7 @@ fun LightboxOverlay(
                     modifier = Modifier.align(Alignment.CenterEnd).padding(16.dp),
                 ) {
                     Icon(
-                        Icons.AutoMirrored.Filled.ArrowForward,
+                        MaterialSymbols.AutoMirrored.ArrowForward,
                         contentDescription = "Next",
                         tint = Color.White,
                         modifier = Modifier.size(48.dp),
@@ -480,7 +472,7 @@ private fun MoreOptionsMenu(
     Box {
         IconButton(onClick = onExpandMenu, modifier = Modifier.size(32.dp)) {
             Icon(
-                Icons.Default.MoreVert,
+                MaterialSymbols.MoreVert,
                 contentDescription = "More options",
                 tint = Color.White,
                 modifier = Modifier.size(20.dp),
@@ -493,7 +485,7 @@ private fun MoreOptionsMenu(
         ) {
             DropdownMenuItem(
                 text = { Text("Save") },
-                leadingIcon = { Icon(Icons.Default.Save, contentDescription = null) },
+                leadingIcon = { Icon(MaterialSymbols.Save, contentDescription = null) },
                 onClick = {
                     onDismissMenu()
                     onSave()
@@ -501,7 +493,7 @@ private fun MoreOptionsMenu(
             )
             DropdownMenuItem(
                 text = { Text("Copy URL") },
-                leadingIcon = { Icon(Icons.Default.ContentCopy, contentDescription = null) },
+                leadingIcon = { Icon(MaterialSymbols.ContentCopy, contentDescription = null) },
                 onClick = {
                     onDismissMenu()
                     onCopyUrl()
@@ -509,7 +501,7 @@ private fun MoreOptionsMenu(
             )
             DropdownMenuItem(
                 text = { Text("Open in Browser") },
-                leadingIcon = { Icon(Icons.Default.OpenInBrowser, contentDescription = null) },
+                leadingIcon = { Icon(MaterialSymbols.OpenInBrowser, contentDescription = null) },
                 onClick = {
                     onDismissMenu()
                     onOpenInBrowser()

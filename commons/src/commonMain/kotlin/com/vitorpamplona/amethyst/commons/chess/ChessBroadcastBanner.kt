@@ -38,12 +38,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.CloudSync
-import androidx.compose.material.icons.filled.Error
-import androidx.compose.material.icons.filled.HourglassBottom
-import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -54,9 +48,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 
 /**
  * Shared banner showing chess broadcast status - broadcast progress, sync status, etc.
@@ -93,7 +89,7 @@ fun ChessBroadcastBanner(
                         .animateContentSize(),
             ) {
                 Icon(
-                    imageVector = getStatusIcon(status),
+                    symbol = getStatusIcon(status),
                     contentDescription = null,
                     tint = getStatusIconColor(status),
                     modifier = Modifier.size(18.dp),
@@ -162,15 +158,15 @@ private fun getStatusBackgroundColor(status: ChessBroadcastStatus): Color =
         }
     }
 
-private fun getStatusIcon(status: ChessBroadcastStatus): ImageVector =
+private fun getStatusIcon(status: ChessBroadcastStatus): MaterialSymbol =
     when (status) {
-        is ChessBroadcastStatus.Broadcasting -> Icons.Default.Sync
-        is ChessBroadcastStatus.Success -> Icons.Default.CheckCircle
-        is ChessBroadcastStatus.Failed -> Icons.Default.Error
-        is ChessBroadcastStatus.WaitingForOpponent -> Icons.Default.HourglassBottom
-        is ChessBroadcastStatus.Syncing -> Icons.Default.CloudSync
-        is ChessBroadcastStatus.Desynced -> Icons.Default.Error
-        is ChessBroadcastStatus.Idle -> Icons.Default.CheckCircle
+        is ChessBroadcastStatus.Broadcasting -> MaterialSymbols.Sync
+        is ChessBroadcastStatus.Success -> MaterialSymbols.CheckCircle
+        is ChessBroadcastStatus.Failed -> MaterialSymbols.Error
+        is ChessBroadcastStatus.WaitingForOpponent -> MaterialSymbols.HourglassBottom
+        is ChessBroadcastStatus.Syncing -> MaterialSymbols.CloudSync
+        is ChessBroadcastStatus.Desynced -> MaterialSymbols.Error
+        is ChessBroadcastStatus.Idle -> MaterialSymbols.CheckCircle
     }
 
 @Composable

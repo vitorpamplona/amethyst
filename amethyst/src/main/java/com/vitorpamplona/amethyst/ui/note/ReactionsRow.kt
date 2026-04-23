@@ -50,8 +50,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
@@ -103,6 +101,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.ReactionRowAction
 import com.vitorpamplona.amethyst.model.ReactionRowItem
@@ -361,7 +361,7 @@ fun PayReaction(
             onClick = { expanded = true },
         ) {
             Icon(
-                imageVector = Icons.Outlined.AccountBalanceWallet,
+                symbol = MaterialSymbols.AccountBalanceWallet,
                 contentDescription = stringRes(R.string.payment_targets),
                 tint = grayTint,
                 modifier = iconSizeModifier,
@@ -376,7 +376,7 @@ fun PayReaction(
                 M3ActionSection {
                     if (targets.isEmpty()) {
                         M3ActionRow(
-                            icon = Icons.Outlined.AccountBalanceWallet,
+                            icon = MaterialSymbols.AccountBalanceWallet,
                             text = stringRes(R.string.no_payment_targets_message),
                             enabled = false,
                             onClick = {},
@@ -384,7 +384,7 @@ fun PayReaction(
                     } else {
                         targets.forEach { target ->
                             M3ActionRow(
-                                icon = Icons.Outlined.AccountBalanceWallet,
+                                icon = MaterialSymbols.AccountBalanceWallet,
                                 text = "${target.type.replaceFirstChar(Char::titlecase)}: ${target.authority}",
                                 onClick = {
                                     expanded = false

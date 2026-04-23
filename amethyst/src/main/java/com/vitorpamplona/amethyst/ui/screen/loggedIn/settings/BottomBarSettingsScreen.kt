@@ -34,8 +34,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DragIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -62,6 +60,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarCatalog
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItemDef
@@ -349,7 +349,7 @@ private fun NavBarItemCard(
             ) {
                 if (canDrag) {
                     Icon(
-                        Icons.Default.DragIndicator,
+                        MaterialSymbols.DragIndicator,
                         contentDescription = stringRes(R.string.bottom_bar_settings_reorder),
                         modifier = Modifier.size(24.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -369,7 +369,7 @@ private fun NavBarIconBox(def: NavBarItemDef) {
         val description = stringRes(def.labelRes)
         val tint = MaterialTheme.colorScheme.onBackground
         Icon(
-            imageVector = def.icon,
+            symbol = def.icon,
             contentDescription = description,
             modifier = Modifier.size(24.dp),
             tint = tint,

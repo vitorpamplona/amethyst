@@ -26,9 +26,6 @@ import androidx.compose.foundation.TooltipPlacement
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Shield
-import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -40,6 +37,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.tor.TorServiceStatus
 
 /**
@@ -56,19 +55,19 @@ fun TorStatusIndicator(
     val (icon, tint, tooltip) =
         when (status) {
             is TorServiceStatus.Off -> {
-                Triple(Icons.Outlined.Shield, Color.Gray, "Tor: Off")
+                Triple(MaterialSymbols.Shield, Color.Gray, "Tor: Off")
             }
 
             is TorServiceStatus.Connecting -> {
-                Triple(Icons.Filled.Shield, Color(0xFFFFB300), "Tor: Connecting...")
+                Triple(MaterialSymbols.Shield, Color(0xFFFFB300), "Tor: Connecting...")
             }
 
             is TorServiceStatus.Active -> {
-                Triple(Icons.Filled.Shield, Color(0xFF4CAF50), "Tor: Connected")
+                Triple(MaterialSymbols.Shield, Color(0xFF4CAF50), "Tor: Connected")
             }
 
             is TorServiceStatus.Error -> {
-                Triple(Icons.Outlined.Shield, Color(0xFFF44336), "Tor: ${status.message}")
+                Triple(MaterialSymbols.Shield, Color(0xFFF44336), "Tor: ${status.message}")
             }
         }
 
@@ -91,7 +90,7 @@ fun TorStatusIndicator(
         if (onClick != null) {
             IconButton(onClick = onClick, modifier = modifier.size(28.dp)) {
                 Icon(
-                    imageVector = icon,
+                    symbol = icon,
                     contentDescription = tooltip,
                     tint = tint,
                     modifier = Modifier.size(20.dp),
@@ -99,7 +98,7 @@ fun TorStatusIndicator(
             }
         } else {
             Icon(
-                imageVector = icon,
+                symbol = icon,
                 contentDescription = tooltip,
                 tint = tint,
                 modifier = modifier.size(20.dp),

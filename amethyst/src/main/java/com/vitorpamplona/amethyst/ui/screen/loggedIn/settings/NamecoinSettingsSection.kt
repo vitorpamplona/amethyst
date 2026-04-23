@@ -37,11 +37,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -74,6 +69,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.service.namecoin.NamecoinSettings
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.DEFAULT_ELECTRUMX_SERVERS
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumxServer
@@ -160,7 +157,7 @@ fun NamecoinSettingsSection(
                     ) {
                         TextButton(onClick = onReset) {
                             Icon(
-                                Icons.Default.Refresh,
+                                MaterialSymbols.Refresh,
                                 contentDescription = null,
                                 modifier = Modifier.size(16.dp),
                             )
@@ -542,7 +539,7 @@ private fun SectionHeader(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
-                Icons.Default.Lock,
+                MaterialSymbols.Lock,
                 contentDescription = null,
                 tint = Color(0xFF4A90D9), // Namecoin blue
                 modifier = Modifier.size(22.dp),
@@ -658,7 +655,7 @@ private fun CustomServersList(
                     modifier = Modifier.size(28.dp),
                 ) {
                     Icon(
-                        Icons.Default.Close,
+                        MaterialSymbols.Close,
                         contentDescription = "Remove server",
                         tint = MaterialTheme.colorScheme.error,
                         modifier = Modifier.size(16.dp),
@@ -733,7 +730,7 @@ private fun AddServerInput(onAdd: (String) -> Unit) {
                     ),
         ) {
             Icon(
-                Icons.Default.Add,
+                MaterialSymbols.Add,
                 contentDescription = "Add server",
                 tint = MaterialTheme.colorScheme.primary,
             )

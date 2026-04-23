@@ -41,10 +41,6 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -75,6 +71,8 @@ import com.vitorpamplona.amethyst.commons.compose.article.ArticleHeader
 import com.vitorpamplona.amethyst.commons.compose.article.TableOfContents
 import com.vitorpamplona.amethyst.commons.compose.article.extractTableOfContents
 import com.vitorpamplona.amethyst.commons.compose.markdown.RenderMarkdown
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip23LongContent.ReadingTimeCalculator
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
@@ -415,7 +413,7 @@ fun ArticleReaderScreen(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onBack) {
                     Icon(
-                        Icons.AutoMirrored.Filled.ArrowBack,
+                        MaterialSymbols.AutoMirrored.ArrowBack,
                         contentDescription = "Back",
                         modifier = Modifier.size(24.dp),
                     )
@@ -531,9 +529,9 @@ fun ArticleReaderScreen(
                                     ) {
                                         Icon(
                                             if (showHighlightsPanel) {
-                                                Icons.Default.KeyboardArrowDown
+                                                MaterialSymbols.KeyboardArrowDown
                                             } else {
-                                                Icons.AutoMirrored.Filled.KeyboardArrowRight
+                                                MaterialSymbols.AutoMirrored.KeyboardArrowRight
                                             },
                                             contentDescription = "Toggle highlights",
                                             modifier = Modifier.size(20.dp),
