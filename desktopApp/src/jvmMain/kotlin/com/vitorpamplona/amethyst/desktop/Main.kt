@@ -71,6 +71,7 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
+import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.unwrapAndUnsealOrNull
 import com.vitorpamplona.amethyst.desktop.account.AccountManager
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
@@ -1022,13 +1023,9 @@ fun MainContent(
                     }
 
                     is com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent -> {
-                        // NIP-17: unwrap gift wrap → seal → inner event
+                        // NIP-17: peel both the gift-wrap and sealed-rumor layers.
                         scope.launch {
-                            val seal =
-                                event.unwrapOrNull(iAccount.signer)
-                                    as? com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
-                                    ?: return@launch
-                            val innerEvent = seal.unsealOrNull(iAccount.signer) ?: return@launch
+                            val innerEvent = event.unwrapAndUnsealOrNull(iAccount.signer) ?: return@launch
                             when (innerEvent) {
                                 is com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent -> {
                                     val innerNote = localCache.getOrCreateNote(innerEvent.id)

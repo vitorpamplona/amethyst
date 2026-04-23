@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.marmot
 
+import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.unwrapAndUnsealOrNull
 import com.vitorpamplona.quartz.marmot.GroupEventResult
 import com.vitorpamplona.quartz.marmot.MarmotInboundProcessor
 import com.vitorpamplona.quartz.marmot.WelcomeResult
@@ -27,7 +28,6 @@ import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 
 /**
@@ -96,19 +96,12 @@ suspend fun MarmotManager.ingest(event: Event): MarmotIngestResult =
 
 private suspend fun MarmotManager.ingestGiftWrap(wrap: GiftWrapEvent): MarmotIngestResult =
     try {
-        // NIP-59 wraps contain TWO encryption layers:
-        //   kind:1059 gift wrap → kind:13 sealed rumor → the rumor itself.
-        // `GiftWrapEvent.unwrapOrNull` only peels the outer layer; when the
-        // result is a [SealedRumorEvent] we must unseal it to reach the
-        // kind:444 Welcome rumor. The old code checked `isWelcomeEvent` on
-        // the seal (kind:13) and always took the Ignored branch, which is
-        // why every inbound Welcome was silently dropped by the CLI and by
-        // any non-Amethyst consumer.
-        val rumor =
-            when (val inner = wrap.unwrapOrNull(signer) ?: return MarmotIngestResult.Ignored) {
-                is SealedRumorEvent -> inner.unsealOrNull(signer) ?: return MarmotIngestResult.Ignored
-                else -> inner
-            }
+        // NIP-59 wraps carry two encryption layers (kind:1059 → kind:13 → rumor).
+        // [unwrapAndUnsealOrNull] peels both so we land directly on the inner
+        // kind:444 Welcome rumor. Checking `isWelcomeEvent` on the seal itself
+        // (the old bug) always took the Ignored branch and silently dropped
+        // every inbound Welcome.
+        val rumor = wrap.unwrapAndUnsealOrNull(signer) ?: return MarmotIngestResult.Ignored
         if (!MarmotInboundProcessor.isWelcomeEvent(rumor) || rumor !is WelcomeEvent) {
             return MarmotIngestResult.Ignored
         }

@@ -26,13 +26,13 @@ import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Json
 import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.filterGiftWrapsToPubkey
+import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.unwrapAndUnsealOrNull
 import com.vitorpamplona.quartz.marmot.RecipientRelayFetcher
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip17Dm.NIP17Factory
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
-import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import kotlinx.coroutines.delay
 
@@ -258,8 +258,7 @@ object DmCommands {
         val out = mutableListOf<DecryptedDm>()
         for ((relay, event) in raw) {
             if (event !is GiftWrapEvent) continue
-            val sealed = event.unwrapOrNull(ctx.signer) as? SealedRumorEvent ?: continue
-            val inner = sealed.unsealOrNull(ctx.signer) as? ChatMessageEvent ?: continue
+            val inner = event.unwrapAndUnsealOrNull(ctx.signer) as? ChatMessageEvent ?: continue
             if (!seen.add(inner.id)) continue
             val members = inner.groupMembers()
             if (peerHex != null && peerHex !in members) continue
