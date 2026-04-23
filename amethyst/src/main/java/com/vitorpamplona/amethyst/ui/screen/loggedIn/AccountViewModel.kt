@@ -1551,6 +1551,22 @@ class AccountViewModel(
         account.removeMarmotGroupMember(nostrGroupId, targetLeafIndex, relays)
     }
 
+    suspend fun grantMarmotGroupAdmin(
+        nostrGroupId: String,
+        targetPubKey: String,
+    ) {
+        val relays = marmotGroupRelays(nostrGroupId)
+        account.grantMarmotGroupAdmin(nostrGroupId, targetPubKey, relays)
+    }
+
+    suspend fun revokeMarmotGroupAdmin(
+        nostrGroupId: String,
+        targetPubKey: String,
+    ) {
+        val relays = marmotGroupRelays(nostrGroupId)
+        account.revokeMarmotGroupAdmin(nostrGroupId, targetPubKey, relays)
+    }
+
     suspend fun updateMarmotGroupMetadata(
         nostrGroupId: String,
         name: String,
