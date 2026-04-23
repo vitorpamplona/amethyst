@@ -85,7 +85,7 @@ preflight() {
     if ! command -v "$cmd" >/dev/null 2>&1; then
       fail_msg "missing required tool: $cmd"; exit 1
     fi
-    info "$cmd: $(command -v "$cmd")"
+    printf '  %s: %s\n' "$cmd" "$(command -v "$cmd")" >>"$LOG_FILE"
   done
 
   WN_BIN="$WN_REPO/target/release/wn"
@@ -104,8 +104,7 @@ preflight() {
     ( cd "$WN_REPO" && cargo build --release --features cli --bin wn --bin wnd ) \
       2>&1 | tee -a "$LOG_FILE"
   fi
-  info "wn:  $WN_BIN"
-  info "wnd: $WND_BIN"
+  printf '  wn:  %s\n  wnd: %s\n' "$WN_BIN" "$WND_BIN" >>"$LOG_FILE"
 }
 
 # --- daemons -----------------------------------------------------------------
@@ -309,16 +308,12 @@ discover_a_relays() {
     return
   fi
 
-  step "wn_b's cached view of A's relay lists (SELECT from user_relays)"
+  # Screen: one-line summary (counts per list). Full rows to $LOG_FILE.
   local rows
-  # wn's SQLite schema stores `users.pubkey` — we don't have a public
-  # CLI to confirm the column type, and in practice it's been observed
-  # stored as both BLOB (raw 32 bytes) and TEXT (lowercase hex) across
-  # versions. Try both forms so the probe doesn't falsely report "NO
-  # cached relay entries" when the cache is actually populated (symptom:
-  # this diagnostic warned loudly even though Tests 02/03/04/05 were
-  # delivering welcomes successfully — the welcomes were flowing, the
-  # probe was just querying the wrong column encoding).
+  # wn's SQLite schema stores `users.pubkey` — observed as both BLOB
+  # (raw 32 bytes) and TEXT (lowercase hex) across versions. Try both
+  # forms so the probe doesn't falsely report "NO cached relay entries"
+  # when the cache is actually populated.
   rows=$(sqlite3 -readonly "$db" \
     "SELECT ur.relay_type, r.url FROM user_relays ur
        JOIN users u ON u.id = ur.user_id
@@ -330,22 +325,25 @@ discover_a_relays() {
     warn "wn has NO cached relay entries for A ($A_HEX)."
     warn "  → Either Amethyst hasn't published kind:10002/10050/10051 to any relay wn_b"
     warn "    can reach, OR wn's SQLite schema changed pubkey column encoding again."
-    warn "  → If later tests deliver welcomes successfully, the schema is the culprit;"
-    warn "    grep the daemon's migration files for the users.pubkey column type."
     return
   fi
 
-  # Collate by relay_type for readability.
+  # Collate by relay_type. Full lists go to $LOG_FILE, only a count
+  # summary reaches stderr so the happy path stays quiet.
   local nip65 inbox kp
-  nip65=$(printf '%s\n' "$rows" | awk -F'|' '$1=="nip65"{print "    "$2}')
-  inbox=$(printf '%s\n' "$rows" | awk -F'|' '$1=="inbox"{print "    "$2}')
-  kp=$(printf '%s\n' "$rows" | awk -F'|' '$1=="key_package"{print "    "$2}')
-  info "A's kind:10002 (nip65):"
-  printf '%s\n' "${nip65:-    <none — A hasn't published or wn can't reach that list>}" | tee -a "$LOG_FILE" >&2
-  info "A's kind:10050 (DM inbox, used for Marmot welcome delivery):"
-  printf '%s\n' "${inbox:-    <none — Marmot welcomes will fall back to NIP-65 read relays>}" | tee -a "$LOG_FILE" >&2
-  info "A's kind:10051 (KeyPackage relays):"
-  printf '%s\n' "${kp:-    <none — KeyPackage discovery may still work via NIP-65>}" | tee -a "$LOG_FILE" >&2
+  nip65=$(printf '%s\n' "$rows" | awk -F'|' '$1=="nip65"{print $2}')
+  inbox=$(printf '%s\n' "$rows" | awk -F'|' '$1=="inbox"{print $2}')
+  kp=$(printf '%s\n' "$rows" | awk -F'|' '$1=="key_package"{print $2}')
+  {
+    printf "A's kind:10002 (nip65):\n%s\n" "${nip65:-  <none>}"
+    printf "A's kind:10050 (DM inbox):\n%s\n" "${inbox:-  <none>}"
+    printf "A's kind:10051 (KeyPackage relays):\n%s\n" "${kp:-  <none>}"
+  } >>"$LOG_FILE"
+  local n_nip65 n_inbox n_kp
+  n_nip65=$(printf '%s' "$nip65" | grep -c '.' || true)
+  n_inbox=$(printf '%s' "$inbox" | grep -c '.' || true)
+  n_kp=$(printf '%s' "$kp" | grep -c '.' || true)
+  info "A's relay lists: nip65=$n_nip65, inbox=$n_inbox, key_package=$n_kp (full lists in $LOG_FILE)"
 
   # Warn loudly if A's DM inbox is non-empty but shares no relay with
   # wn_b's own configured set — that's the exact failure mode the
@@ -386,16 +384,24 @@ configure_relays() {
   else
     relays=( "${DEFAULT_RELAYS[@]}" )
   fi
+  # Each relay × 3 types × 2 daemons produces a lot of repetitive "ok"
+  # lines — the happy path doesn't need any of it on screen. Quiet the
+  # per-add logging into $LOG_FILE and only surface real failures as
+  # warnings. A single summary line prints at the end.
+  local adds_ok=0 adds_dup=0 adds_fail=0
   add_relay() {
     local wn_fn="$1" r="$2" t add_out
     for t in nip65 inbox key_package; do
       if add_out=$("$wn_fn" relays add --type "$t" "$r" 2>&1); then
-        info "$wn_fn relays add --type $t $r: ok"
+        adds_ok=$((adds_ok+1))
+        printf '%s relays add --type %s %s: ok\n' "$wn_fn" "$t" "$r" >>"$LOG_FILE"
       else
         case "$add_out" in
           *"already exists"*|*"already added"*|*"duplicate"*)
-            info "$wn_fn relays add --type $t $r: already exists, skipping" ;;
+            adds_dup=$((adds_dup+1))
+            printf '%s relays add --type %s %s: already exists\n' "$wn_fn" "$t" "$r" >>"$LOG_FILE" ;;
           *)
+            adds_fail=$((adds_fail+1))
             warn "$wn_fn relays add --type $t $r failed: $add_out"
             printf '%s relays add --type %s %s: %s\n' "$wn_fn" "$t" "$r" "$add_out" >>"$LOG_FILE" ;;
         esac
@@ -403,11 +409,12 @@ configure_relays() {
     done
   }
 
+  step "adding ${#relays[@]} relay(s) × 3 types × 2 daemons"
   for r in "${relays[@]}"; do
-    step "adding $r to both daemons"
     add_relay wn_b "$r"
     add_relay wn_c "$r"
   done
+  info "relay add: $adds_ok ok, $adds_dup already-present, $adds_fail failed"
 
   # Push a kind:0 profile for each wn identity BEFORE the kind:30443 /
   # 10050 / 1059 probes. Several public relays (damus.io in particular)
@@ -423,8 +430,7 @@ configure_relays() {
     local about="Scripted wn identity for Amethyst<->whitenoise-rs interop harness"
     local out
     if out=$("$wnfn" profile update --name "$name" --about "$about" 2>&1); then
-      info "$who kind:0 published (name=\"$name\")"
-      printf '%s profile update: %s\n' "$who" "$out" >>"$LOG_FILE"
+      printf '%s profile update ok: %s\n' "$who" "$out" >>"$LOG_FILE"
     else
       warn "$who profile update failed: $out"
       printf '%s profile update: %s\n' "$who" "$out" >>"$LOG_FILE"
@@ -439,10 +445,10 @@ configure_relays() {
   # follows sometimes races ahead of the kind:0 commit).
   sleep 2
 
-  step "B relay list after configure"
+  # Full relay list goes to $LOG_FILE only — the per-relay status rarely
+  # matters unless a later test fails, and it's 5-10 noisy lines otherwise.
   local relay_list
   relay_list=$(wn_b --json relays list 2>/dev/null || true)
-  info "B relays: $(printf '%s' "$relay_list" | jq -r '.result[]? | "\(.url) [\(.status)]"' 2>/dev/null | tr '\n' '  ')"
   printf 'B relay list: %s\n' "$relay_list" >>"$LOG_FILE"
 
   # Sanity check is split across three relay-level surfaces so a failure
@@ -459,35 +465,34 @@ configure_relays() {
   # anyway but at least the operator will have the diagnostic hint here.
   step "sanity-check kind:30443: B+C publish + symmetric discover"
   local publish_out
-  if publish_out=$(wn_b keys publish 2>&1); then
-    info "wn_b keys publish: ok"
-  else
+  if ! publish_out=$(wn_b keys publish 2>&1); then
     warn "wn_b keys publish failed: $publish_out"
-    printf 'wn_b keys publish: %s\n' "$publish_out" >>"$LOG_FILE"
   fi
-  if publish_out=$(wn_c keys publish 2>&1); then
-    info "wn_c keys publish: ok"
-  else
+  printf 'wn_b keys publish: %s\n' "$publish_out" >>"$LOG_FILE"
+  if ! publish_out=$(wn_c keys publish 2>&1); then
     warn "wn_c keys publish failed: $publish_out"
-    printf 'wn_c keys publish: %s\n' "$publish_out" >>"$LOG_FILE"
   fi
+  printf 'wn_c keys publish: %s\n' "$publish_out" >>"$LOG_FILE"
   sleep 4
-  local sanity_raw sanity_id
+  local sanity_raw sanity_id sanity_cb="" sanity_bc=""
   sanity_raw=$(wn_c --json keys check "$B_NPUB" 2>>"$LOG_FILE" || true)
   sanity_id=$(printf '%s' "$sanity_raw" | jq -r '.result.event_id // .event_id // empty' 2>/dev/null || true)
+  printf 'sanity keys check B raw: %s\n' "$sanity_raw" >>"$LOG_FILE"
   if [[ -n "$sanity_id" && "$sanity_id" != "null" ]]; then
-    info "kind:30443 C->B ok (event_id: $sanity_id)"
+    sanity_cb="$sanity_id"
   else
     warn "kind:30443 C->B failed — relays may be rejecting KeyPackages"
-    printf 'sanity keys check B raw: %s\n' "$sanity_raw" >>"$LOG_FILE"
   fi
   sanity_raw=$(wn_b --json keys check "$C_NPUB" 2>>"$LOG_FILE" || true)
   sanity_id=$(printf '%s' "$sanity_raw" | jq -r '.result.event_id // .event_id // empty' 2>/dev/null || true)
+  printf 'sanity keys check C raw: %s\n' "$sanity_raw" >>"$LOG_FILE"
   if [[ -n "$sanity_id" && "$sanity_id" != "null" ]]; then
-    info "kind:30443 B->C ok (event_id: $sanity_id)"
+    sanity_bc="$sanity_id"
   else
     warn "kind:30443 B->C failed — relays may be rejecting KeyPackages"
-    printf 'sanity keys check C raw: %s\n' "$sanity_raw" >>"$LOG_FILE"
+  fi
+  if [[ -n "$sanity_cb" && -n "$sanity_bc" ]]; then
+    info "kind:30443 B<->C ok (C->B=${sanity_cb:0:8}… B->C=${sanity_bc:0:8}…)"
   fi
 
   step "sanity-check kinds 10050/1059/445: B creates group + invites C + exchanges a message"
@@ -506,16 +511,15 @@ configure_relays() {
   if [[ -z "$sanity_gid" ]]; then
     warn "sanity group create failed — see $LOG_FILE (stale account state? rerun with 'rm -rf state/')"
   else
-    info "sanity group id: $sanity_gid"
+    printf 'sanity group id: %s\n' "$sanity_gid" >>"$LOG_FILE"
     if sanity_c_gid=$(wait_for_invite C 30 "$c_ignore"); then
-      info "kind:10050+1059 ok — C received welcome (gid: $sanity_c_gid)"
       if [[ "$sanity_c_gid" != "$sanity_gid" ]]; then
         warn "gid mismatch — C saw $sanity_c_gid, B created $sanity_gid (likely a stale welcome slipped past the filter)"
       fi
       wn_c groups accept "$sanity_c_gid" >/dev/null 2>&1 || true
       wn_b messages send "$sanity_gid" "sanity-ping" >/dev/null 2>&1 || true
       if wait_for_message C "$sanity_c_gid" "sanity-ping" 30; then
-        info "kind:445 ok — C decrypted sanity-ping"
+        info "sanity kinds 10050/1059/445 ok (B->C welcome + message round-trip)"
       else
         warn "kind:445 failed — C never decrypted sanity-ping (relays may be dropping group messages)"
         warn "Consider rerunning with --local-relays."
@@ -577,7 +581,6 @@ test_01_keypackage_discovery() {
   step "B fetches A's KeyPackage from relays"
   local kp_relays kp_raw kp_event_id
   kp_relays=$(wn_b --json relays list 2>/dev/null || wn_b relays list 2>/dev/null || true)
-  info "B relay list: $kp_relays"
   printf 'B relay list: %s\n' "$kp_relays" >>"$LOG_FILE"
 
   kp_raw=$(wn_b --json keys check "$A_NPUB" 2>>"$LOG_FILE" || true)
@@ -589,7 +592,7 @@ test_01_keypackage_discovery() {
     record_result "01a KeyPackage A->B" pass
   else
     fail_msg "B cannot find A's KeyPackage. Did Amethyst publish to the same relays?"
-    info "raw response from wn keys check: $kp_raw"
+    printf 'raw response from wn keys check: %s\n' "$kp_raw" >>"$LOG_FILE"
     record_result "01a KeyPackage A->B" fail "wn keys check returned no event_id"
   fi
 
@@ -606,15 +609,9 @@ test_01_keypackage_discovery() {
 test_02_amethyst_creates_group() {
   banner "Test 02 — Amethyst creates group, invites B"
 
-  # Baseline dump BEFORE the human triggers the publish in Amethyst.
-  # If this diagnostic shows B has no inbox relays (or the inbox relays
-  # differ from the ones Amethyst has cached for B's kind:10050 list),
-  # the welcome gift wrap will never reach B no matter how correctly
-  # Amethyst sends it.
-  dump_daemon_diagnostics B "pre-invite baseline"
-
   # Snapshot B's already-pending invites so we can tell the new welcome
-  # apart from a leftover from a previous run.
+  # apart from a leftover from a previous run. Baseline daemon dump is
+  # skipped on the happy path — dumped on timeout below instead.
   local b_ignore
   b_ignore=$(snapshot_invites B)
   [[ -n "$b_ignore" ]] && info "B already has stale invites, ignoring: $b_ignore"
@@ -680,20 +677,13 @@ that's the bug."
   # Amethyst's subscription before we ask the operator to eyeball the UI.
   sleep 4
 
-  # Dump the B side up front — if B's own store doesn't contain the reply
-  # or the MLS extension relays don't match what Amethyst subscribes to,
-  # the operator can confirm "fail" with a specific reason instead of a
-  # blind eyeball check.
-  dump_outbound_diagnostics B "$gid" "hello from wn" "test_02 B->A reply"
-
   if confirm "Does Amethyst now show 'hello from wn' in the same group?"; then
     record_result "02 Amethyst->B create+invite" pass
   else
-    # The B-side dump above told us whether the send reached B's own DB and
-    # which relays wn tagged on the kind:445. Now pull the Amethyst side so
-    # the failure report has both halves of the pipe: which relays the
-    # kind:445 subscription actually targets, whether the event arrived,
-    # and (if it did) whether GroupEventHandler dropped it.
+    # Dump the B side so the failure report shows whether the send reached
+    # B's own DB and which relays wn tagged on the kind:445, then ask for
+    # the Amethyst side so the report has both halves of the pipe.
+    dump_outbound_diagnostics B "$gid" "hello from wn" "test_02 B->A reply"
     prompt_human "Capture Amethyst's side of the B->A kind:445 path. On the adb host:
 
     adb logcat -d -v time | grep -E \
@@ -769,8 +759,8 @@ test_04_three_member_group() {
   fi
   info "using group $gid"
 
-  dump_daemon_diagnostics C "pre-invite baseline (test_04)"
-
+  # Baseline C-side daemon dump is skipped on the happy path; the
+  # invite-timeout branch below still dumps on failure.
   local c_ignore
   c_ignore=$(snapshot_invites C)
   [[ -n "$c_ignore" ]] && info "C already has stale invites, ignoring: $c_ignore"
@@ -1203,7 +1193,30 @@ test_12_offline_catchup() {
 }
 
 test_13_keypackage_rotation() {
-  banner "Test 13 — KeyPackage rotation"
+  banner "Test 13 — KeyPackage rotation (MIP-00 consumption-driven)"
+
+  # Per MIP-00, a KeyPackage is rotated when it's *consumed* by an incoming
+  # Welcome — the init_key is effectively spent and the client must
+  # publish a fresh KeyPackage to the same d-tag slot.
+  #
+  # Earlier revisions of this test asked the human to restart Amethyst or
+  # toggle KP relays, on the assumption that either would republish a
+  # fresh KP. Neither actually does in current Amethyst:
+  #   - Restart: `Account.ensureMarmotKeyPackagePublished` early-returns
+  #     whenever a bundle already exists on disk — no rotation.
+  #   - Toggle KP relays: `Account.saveKeyPackageRelayList` re-publishes
+  #     the existing kind:30443 to the new relay set, same event_id.
+  #
+  # So drive the real MIP-00 flow instead: have B create a one-off group
+  # with A as invitee. The Welcome gift-wrap delivered to A consumes A's
+  # KeyPackage, `DecryptAndIndexProcessor` sees `needsKeyPackageRotation`
+  # on the ingest result, and calls `publishMarmotKeyPackages` which
+  # rotates the consumed slot and publishes a new kind:30443 to the same
+  # d-tag. B's `keys check` then returns a different event_id.
+  #
+  # Rotation fires on Welcome *receive* (decrypt), not on human accept, so
+  # the operator's accept is nice-to-have for group hygiene but not on the
+  # critical path for this test.
 
   step "B records A's current KP event id"
   local before
@@ -1213,12 +1226,24 @@ test_13_keypackage_rotation() {
     fail_msg "no existing KP for A"; record_result "13 keypackage rotation" fail "no KP found"; return
   fi
 
-  prompt_human "In Amethyst, trigger a KeyPackage rotation:
-    Option 1: Settings -> Key Package Relays -> toggle OFF all KP relays, then toggle ON.
-    Option 2: Restart the Amethyst app (KeyPackageRotationManager runs at startup).
-  Press <Enter> when Amethyst has published a new KP."
+  step "B creates group 'Interop-13-rotation' with A as sole invitee (consumes A's KP)"
+  local out gid
+  out=$(wn_b --json groups create "Interop-13-rotation" "$A_NPUB" 2>>"$LOG_FILE")
+  printf 'wn groups create (test_13) raw output: %s\n' "$out" >>"$LOG_FILE"
+  gid=$(printf '%s' "$out" | jq_group_id)
+  if [[ -z "$gid" ]]; then
+    fail_msg "could not create Interop-13-rotation"
+    record_result "13 keypackage rotation" fail "create failed"
+    return
+  fi
+  save_state GROUP_13 "$gid"
+  info "group_id: $gid"
 
-  step "waiting for a new KP event id at B (60s)"
+  prompt_human "In Amethyst, you should see a new invite 'Interop-13-rotation' from $B_NPUB.
+  Accepting is NOT required for rotation (processing the Welcome is enough),
+  but please accept it to keep group state tidy. Press <Enter> when done."
+
+  step "waiting for A's rotated KP event_id at B (60s)"
   local deadline=$(( $(date +%s) + 60 )) after=""
   while [[ $(date +%s) -lt $deadline ]]; do
     after=$(wn_b --json keys check "$A_NPUB" 2>/dev/null | jq -r '.result.event_id // .event_id // empty')
@@ -1226,10 +1251,11 @@ test_13_keypackage_rotation() {
     sleep 3
   done
   if [[ -n "$after" && "$after" != "$before" ]]; then
-    pass_msg "A's KP rotated: $before -> $after"
+    pass_msg "A's KP rotated after Welcome consumption: $before -> $after"
     record_result "13 keypackage rotation" pass
   else
-    record_result "13 keypackage rotation" fail "no new KP event_id observed"
+    fail_msg "A's KP event_id unchanged ($before) 60s after Welcome — MIP-00 rotation did not fire"
+    record_result "13 keypackage rotation" fail "no new KP event_id after invite"
   fi
 }
 
@@ -1287,17 +1313,13 @@ main() {
   prompt_for_a_npub
   configure_relays
 
-  # Baseline dump after relays are configured but before any tests run.
-  # This is the single most useful log to forward when Test 02 fails —
-  # it shows whether B's kind:10050 (inbox) relay list actually landed
-  # on the relays Amethyst will look at for the giftwrap delivery target.
-  banner "Post-configure baseline diagnostics"
-  dump_daemon_diagnostics B "post-configure"
-  dump_daemon_diagnostics C "post-configure"
+  # Baseline daemon dumps are no longer run unconditionally — they produce
+  # 100+ lines per daemon and the happy path doesn't need them. Each test
+  # that polls for an invite still calls `dump_daemon_diagnostics` on
+  # timeout, which is the failure mode those dumps are meant to diagnose.
 
   # Let wn discover A's advertised relays via its normal subscription
-  # plane, then dump what wn actually sees. This is the "Am I going to
-  # be able to reach this user?" probe — surfaces up front the kind of
+  # plane, then summarise what wn sees. Surfaces up front the kind of
   # failure (A's 10050 unreachable from wn, missing KP list, etc.) that
   # would otherwise bite as a silent Test 03 timeout.
   if [[ "$USE_LOCAL_RELAYS" -ne 1 ]]; then
