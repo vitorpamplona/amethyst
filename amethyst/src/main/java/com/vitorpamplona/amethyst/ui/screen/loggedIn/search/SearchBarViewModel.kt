@@ -228,18 +228,24 @@ class SearchBarViewModel(
             val filtered = if (follows != null) raw.filter { it.author?.pubkeyHex in follows } else raw
 
             when (order) {
-                SearchSortOrder.POPULAR ->
+                SearchSortOrder.POPULAR -> {
                     filtered.sortedWith(
                         compareByDescending<com.vitorpamplona.amethyst.model.Note> { it.zapsAmount }
                             .thenByDescending { it.createdAt() ?: 0L },
                     )
+                }
 
-                SearchSortOrder.OLDEST ->
+                SearchSortOrder.OLDEST -> {
                     filtered.sortedBy { it.createdAt() ?: 0L }
+                }
 
-                SearchSortOrder.RELEVANCE, SearchSortOrder.NEWEST -> filtered.sortedWith(DefaultFeedOrder)
+                SearchSortOrder.RELEVANCE, SearchSortOrder.NEWEST -> {
+                    filtered.sortedWith(DefaultFeedOrder)
+                }
 
-                else -> filtered.sortedWith(DefaultFeedOrder)
+                else -> {
+                    filtered.sortedWith(DefaultFeedOrder)
+                }
             }
         }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
