@@ -51,12 +51,12 @@ import androidx.compose.ui.draganddrop.DragAndDropEvent
 import androidx.compose.ui.draganddrop.DragAndDropTarget
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import com.vitorpamplona.amethyst.commons.service.upload.UploadOrchestrator
+import com.vitorpamplona.amethyst.commons.service.upload.UploadResult
 import com.vitorpamplona.amethyst.desktop.DesktopPreferences
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
-import com.vitorpamplona.amethyst.desktop.service.upload.DesktopUploadOrchestrator
 import com.vitorpamplona.amethyst.desktop.service.upload.DesktopUploadTracker
-import com.vitorpamplona.amethyst.desktop.service.upload.UploadResult
 import com.vitorpamplona.amethyst.desktop.ui.compose.ComposeRelayPicker
 import com.vitorpamplona.amethyst.desktop.ui.compose.RelayPickerState
 import com.vitorpamplona.amethyst.desktop.ui.media.ClipboardPasteHandler
@@ -103,7 +103,7 @@ fun ComposeNoteDialog(
     val attachedFiles = remember { mutableStateListOf<File>() }
     val uploadTracker = remember { DesktopUploadTracker() }
     val uploadState by uploadTracker.state.collectAsState()
-    val orchestrator = remember { DesktopUploadOrchestrator() }
+    val orchestrator = remember { UploadOrchestrator() }
     var selectedServer by remember { mutableStateOf(DesktopPreferences.preferredBlossomServer) }
     var postAsPicture by remember { mutableStateOf(false) }
 
@@ -482,11 +482,11 @@ private fun buildPictureMetas(results: List<UploadResult>): List<com.vitorpamplo
             mimeType = meta.mimeType,
             blurhash = meta.blurhash,
             dimension =
-                if (meta.width != null && meta.height != null) {
-                    com.vitorpamplona.quartz.nip94FileMetadata.tags
-                        .DimensionTag(meta.width, meta.height)
-                } else {
-                    null
+                meta.width?.let { w ->
+                    meta.height?.let { h ->
+                        com.vitorpamplona.quartz.nip94FileMetadata.tags
+                            .DimensionTag(w, h)
+                    }
                 },
             hash = meta.sha256,
             size = meta.size.toInt(),

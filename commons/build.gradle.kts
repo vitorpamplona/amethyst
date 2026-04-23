@@ -104,6 +104,9 @@ kotlin {
 
                 // Secure key storage via OS keychain (macOS/Windows/Linux)
                 implementation(libs.java.keyring)
+
+                // EXIF stripping for image uploads (used by service/upload/MediaCompressor).
+                implementation(libs.commons.imaging)
             }
         }
 

@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.desktop.service.upload
+package com.vitorpamplona.amethyst.commons.service.upload
 
 import com.vitorpamplona.amethyst.commons.blurhash.toBlurhash
 import com.vitorpamplona.amethyst.commons.blurhash.toPlatformImage
@@ -38,7 +38,12 @@ data class MediaMetadata(
     val thumbhash: String? = null,
 )
 
-object DesktopMediaMetadata {
+/**
+ * Reads media metadata (sha256, size, mime-type, dimensions, blurhash, thumbhash)
+ * from a JVM [File]. Named to avoid colliding with the [MediaMetadata] data class
+ * in the same package.
+ */
+object MediaMetadataReader {
     fun compute(file: File): MediaMetadata {
         val bytes = file.readBytes()
         val hash = sha256(bytes).toHexKey()

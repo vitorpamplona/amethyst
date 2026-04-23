@@ -18,9 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.desktop.service.upload
+package com.vitorpamplona.amethyst.commons.service.upload
 
-import com.vitorpamplona.amethyst.desktop.network.DesktopHttpClient
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomUploadResult
 import kotlinx.coroutines.Dispatchers
@@ -34,11 +33,16 @@ import okio.BufferedSink
 import okio.source
 import java.io.File
 
-class DesktopBlossomClient(
-    private val clientOverride: OkHttpClient? = null,
+/**
+ * Blossom HTTP client for JVM consumers (desktop + CLI). Owns no global
+ * state — pass a configured [OkHttpClient] (e.g. desktop's Tor-aware
+ * `DesktopHttpClient.currentClient()`) for proxying / connection pooling.
+ * The default constructor uses a fresh OkHttpClient — fine for one-shot
+ * uses such as the CLI.
+ */
+class BlossomClient(
+    private val okHttpClient: OkHttpClient = OkHttpClient(),
 ) {
-    private val okHttpClient: OkHttpClient get() = clientOverride ?: DesktopHttpClient.currentClient()
-
     suspend fun upload(
         file: File,
         contentType: String,
@@ -72,7 +76,8 @@ class DesktopBlossomClient(
                     val reason = it.headers["X-Reason"] ?: it.code.toString()
                     throw RuntimeException("Upload failed ($serverBaseUrl): $reason")
                 }
-                JsonMapper.fromJson<BlossomUploadResult>(it.body.string())
+                val body = it.body ?: throw RuntimeException("Upload to $serverBaseUrl returned no body")
+                JsonMapper.fromJson<BlossomUploadResult>(body.string())
             }
         }
 
@@ -103,7 +108,8 @@ class DesktopBlossomClient(
                     val reason = it.headers["X-Reason"] ?: it.code.toString()
                     throw RuntimeException("Upload failed ($serverBaseUrl): $reason")
                 }
-                JsonMapper.fromJson<BlossomUploadResult>(it.body.string())
+                val body = it.body ?: throw RuntimeException("Upload to $serverBaseUrl returned no body")
+                JsonMapper.fromJson<BlossomUploadResult>(body.string())
             }
         }
 }
