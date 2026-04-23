@@ -40,6 +40,7 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.SearchQueryState
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.userUriPrefixes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
@@ -58,6 +59,7 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Rfc3986
 import com.vitorpamplona.quartz.utils.startsWithAny
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
@@ -171,19 +173,47 @@ class SearchBarViewModel(
             }.flowOn(Dispatchers.IO)
 
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-    val directEventResolver: Flow<Route?> =
+    val directRouteResolver: Flow<Route?> =
         searchTerm
-            .debounce(200)
             .mapLatest { term ->
                 if (term.isBlank()) return@mapLatest null
-                runCatching {
-                    when (val parsed = Nip19Parser.uriToRoute(term)?.entity) {
-                        is NEvent -> Route.Note(parsed.hex)
-                        is NNote -> Route.Note(parsed.hex)
-                        is NAddress -> Route.Note(parsed.aTag())
-                        else -> null
+                val parsed =
+                    runCatching { Nip19Parser.uriToRoute(term)?.entity }
+                        .onFailure { if (it is CancellationException) throw it }
+                        .getOrNull()
+                        ?: return@mapLatest null
+                when (parsed) {
+                    is NPub -> {
+                        LocalCache.consume(parsed)
+                        Route.Profile(parsed.hex)
                     }
-                }.getOrNull()
+
+                    is NProfile -> {
+                        LocalCache.consume(parsed)
+                        Route.Profile(parsed.hex)
+                    }
+
+                    is NNote -> {
+                        LocalCache.consume(parsed)
+                        Route.Note(parsed.hex)
+                    }
+
+                    is NEvent -> {
+                        LocalCache.consume(parsed)
+                        routeFor(LocalCache.getOrCreateNote(parsed.hex), account)
+                            ?: Route.EventRedirect(parsed.hex)
+                    }
+
+                    is NAddress -> {
+                        LocalCache.consume(parsed)
+                        routeFor(LocalCache.getOrCreateAddressableNote(parsed.address()), account)
+                            ?: Route.EventRedirect(parsed.aTag())
+                    }
+
+                    else -> {
+                        null
+                    }
+                }
             }.flowOn(Dispatchers.IO)
 
     val searchResultsUsers =
