@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.desktop.service.upload
+package com.vitorpamplona.amethyst.commons.service.upload
 
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
@@ -39,8 +39,8 @@ data class EncryptedUploadResult(
     val encryptedSize: Int,
 )
 
-class DesktopUploadOrchestrator(
-    private val client: DesktopBlossomClient = DesktopBlossomClient(),
+class UploadOrchestrator(
+    private val client: BlossomClient = BlossomClient(),
 ) {
     suspend fun upload(
         file: File,
@@ -52,17 +52,17 @@ class DesktopUploadOrchestrator(
         // 1. Strip EXIF if requested (JPEG only)
         val processedFile =
             if (stripExif) {
-                DesktopMediaCompressor.stripExif(file)
+                MediaCompressor.stripExif(file)
             } else {
                 file
             }
 
         // 2. Compute metadata (hash, dimensions, blurhash)
-        val metadata = DesktopMediaMetadata.compute(processedFile)
+        val metadata = MediaMetadataReader.compute(processedFile)
 
         // 3. Create auth header
         val authHeader =
-            DesktopBlossomAuth.createUploadAuth(
+            BlossomAuth.createUploadAuth(
                 hash = metadata.sha256,
                 size = metadata.size,
                 alt = alt ?: "Uploading ${file.name}",
@@ -98,7 +98,7 @@ class DesktopUploadOrchestrator(
         signer: NostrSigner,
     ): EncryptedUploadResult {
         // 1. Compute pre-encryption metadata (dimensions, blurhash, mime, originalHash)
-        val metadata = DesktopMediaMetadata.compute(file)
+        val metadata = MediaMetadataReader.compute(file)
 
         // 2. Read file bytes and encrypt
         val plaintext = file.readBytes()
@@ -110,7 +110,7 @@ class DesktopUploadOrchestrator(
 
         // 4. Create Blossom auth with encrypted hash and size
         val authHeader =
-            DesktopBlossomAuth.createUploadAuth(
+            BlossomAuth.createUploadAuth(
                 hash = encryptedHash,
                 size = encryptedSize.toLong(),
                 alt = "Encrypted upload",

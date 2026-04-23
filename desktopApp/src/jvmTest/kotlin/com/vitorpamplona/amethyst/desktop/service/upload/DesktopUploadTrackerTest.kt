@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.desktop.service.upload
 
+import com.vitorpamplona.amethyst.commons.service.upload.MediaMetadata
+import com.vitorpamplona.amethyst.commons.service.upload.UploadResult
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomUploadResult
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest

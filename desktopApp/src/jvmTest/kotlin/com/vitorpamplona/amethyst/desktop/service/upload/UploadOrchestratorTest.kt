@@ -36,24 +36,24 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-class DesktopUploadOrchestratorTest {
+class UploadOrchestratorTest {
     @BeforeTest
     fun setup() {
-        mockkObject(DesktopBlossomAuth)
+        mockkObject(BlossomAuth)
         coEvery {
-            DesktopBlossomAuth.createUploadAuth(any(), any(), any(), any())
+            BlossomAuth.createUploadAuth(any(), any(), any(), any())
         } returns "Nostr fakeAuthToken"
     }
 
     @AfterTest
     fun teardown() {
-        unmockkObject(DesktopBlossomAuth)
+        unmockkObject(BlossomAuth)
     }
 
     @Test
     fun uploadCallsClientWithCorrectParameters() =
         runTest {
-            val mockClient = mockk<DesktopBlossomClient>()
+            val mockClient = mockk<BlossomClient>()
             val fileSlot = slot<File>()
             val contentTypeSlot = slot<String>()
             val urlSlot = slot<String>()
@@ -72,7 +72,7 @@ class DesktopUploadOrchestratorTest {
                     size = 100,
                 )
 
-            val orchestrator = DesktopUploadOrchestrator(mockClient)
+            val orchestrator = UploadOrchestrator(mockClient)
 
             val file = File.createTempFile("test_", ".png")
             file.deleteOnExit()
@@ -112,7 +112,7 @@ class DesktopUploadOrchestratorTest {
     @Test
     fun uploadPassesSameFileWhenNoStripExif() =
         runTest {
-            val mockClient = mockk<DesktopBlossomClient>()
+            val mockClient = mockk<BlossomClient>()
             val fileSlot = slot<File>()
 
             coEvery {
@@ -124,7 +124,7 @@ class DesktopUploadOrchestratorTest {
                 )
             } returns BlossomUploadResult(url = "https://example.com/hash")
 
-            val orchestrator = DesktopUploadOrchestrator(mockClient)
+            val orchestrator = UploadOrchestrator(mockClient)
 
             val file = File.createTempFile("test_", ".txt")
             file.deleteOnExit()
@@ -150,13 +150,13 @@ class DesktopUploadOrchestratorTest {
     @Test
     fun uploadComputesMetadata() =
         runTest {
-            val mockClient = mockk<DesktopBlossomClient>()
+            val mockClient = mockk<BlossomClient>()
 
             coEvery {
                 mockClient.upload(any<java.io.File>(), any<String>(), any<String>(), any())
             } returns BlossomUploadResult(url = "https://example.com/hash")
 
-            val orchestrator = DesktopUploadOrchestrator(mockClient)
+            val orchestrator = UploadOrchestrator(mockClient)
 
             val file = File.createTempFile("test_", ".txt")
             file.deleteOnExit()
@@ -185,7 +185,7 @@ class DesktopUploadOrchestratorTest {
     @Test
     fun uploadPassesAuthHeaderToClient() =
         runTest {
-            val mockClient = mockk<DesktopBlossomClient>()
+            val mockClient = mockk<BlossomClient>()
             val authSlot = slot<String?>()
 
             coEvery {
@@ -197,7 +197,7 @@ class DesktopUploadOrchestratorTest {
                 )
             } returns BlossomUploadResult(url = "https://example.com/hash")
 
-            val orchestrator = DesktopUploadOrchestrator(mockClient)
+            val orchestrator = UploadOrchestrator(mockClient)
 
             val file = File.createTempFile("test_", ".txt")
             file.deleteOnExit()

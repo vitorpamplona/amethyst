@@ -98,7 +98,10 @@ GID=$(amy --data-dir ./alice marmot group create --name "Test" | jq -r .group_id
 ```
 
 For an interop-test script template, see
-[DEVELOPMENT.md § Testing](./DEVELOPMENT.md#testing).
+[DEVELOPMENT.md § Testing](./DEVELOPMENT.md#testing). The runnable
+harnesses live under [`cli/tests/`](./tests/README.md) —
+`cli/tests/marmot/` for MLS group messaging vs whitenoise-rs,
+`cli/tests/dm/` for NIP-17 DMs between two `amy` clients.
 
 ---
 
@@ -137,6 +140,11 @@ Run `amy --help` for the canonical list. As of today:
 | `marmot await message GID --match TEXT` | Block until a message containing `TEXT` lands. |
 | `marmot await rename GID --name NAME` | Block until GID's name matches. |
 | `marmot await epoch GID --min N` | Block until GID's MLS epoch is ≥ N. |
+| `dm send RECIPIENT TEXT [--allow-fallback]` | Send a NIP-17 gift-wrapped text DM (kind:14 inside kind:1059). Default delivers only to the recipient's kind:10050 (per NIP-17); pass `--allow-fallback` to fall back to kind:10002 read marker → bootstrap pool. |
+| `dm send-file RECIPIENT --file PATH --server URL [--mime-type M] [--allow-fallback]` | Encrypt the local file with a fresh AES-GCM cipher, upload the ciphertext to the Blossom server, then publish a kind:15 NIP-17 file message referencing the returned URL. The auto-detected hash, size, dimensions, and blurhash from the upload are folded into the event. The response also surfaces the encryption key + nonce so the same blob can be re-shared without re-uploading. |
+| `dm send-file RECIPIENT URL --key HEX --nonce HEX [--mime-type M] [--hash H] [--original-hash H] [--size N] [--dim WxH] [--blurhash S] [--allow-fallback]` | Reference-mode variant: the file is already uploaded; `--key`/`--nonce` carry the AES-GCM material that recipients use to decrypt the bytes at `URL`. Useful when the upload happened elsewhere or to re-publish a previously-uploaded blob. |
+| `dm list [--peer NPUB] [--since TS] [--limit N] [--timeout SECS]` | Drain and decrypt gift wraps on our inbox relays. Returns kind:14 (text) and kind:15 (file) messages with a `type` discriminator. With neither `--peer` nor `--since` the gift-wrap cursor in `state.json` is advanced to the newest message seen. |
+| `dm await --peer NPUB --match TEXT [--timeout SECS]` | Block until a DM from NPUB containing TEXT arrives (matches text content for kind:14, URL for kind:15). Timeout exits 124. |
 
 All `await` verbs accept `--timeout SECS` (default 30). Timeout exits 124
 so scripts can distinguish "condition never happened" from "the command

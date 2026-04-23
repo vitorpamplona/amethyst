@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 #
-# headless/tests-create.sh — tests 01..05.
+# tests-create.sh — tests 01..05.
 # Focus: KeyPackage discovery, group creation, invites, initial messages.
 
 test_01_keypackage_discovery() {

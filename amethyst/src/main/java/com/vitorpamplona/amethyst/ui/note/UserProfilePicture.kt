@@ -232,18 +232,27 @@ fun NonClickableUserPictures(
     size: Dp,
     accountViewModel: AccountViewModel,
 ) {
+    NonClickableUserPictures(room.users.toList(), size, accountViewModel)
+}
+
+@Composable
+fun NonClickableUserPictures(
+    userHexList: List<HexKey>,
+    size: Dp,
+    accountViewModel: AccountViewModel,
+) {
     Box(Modifier.size(size), contentAlignment = Alignment.TopEnd) {
-        when (room.users.size) {
+        when (userHexList.size) {
             0 -> {}
 
             1 -> {
-                LoadUser(baseUserHex = room.users.first(), accountViewModel) {
+                LoadUser(baseUserHex = userHexList.first(), accountViewModel) {
                     it?.let { BaseUserPicture(it, size, accountViewModel, outerModifier = Modifier) }
                 }
             }
 
             2 -> {
-                val userList = room.users.toList()
+                val userList = userHexList
 
                 LoadUser(baseUserHex = userList[0], accountViewModel) {
                     it?.let {
@@ -268,7 +277,7 @@ fun NonClickableUserPictures(
             }
 
             3 -> {
-                val userList = room.users.toList()
+                val userList = userHexList
 
                 LoadUser(baseUserHex = userList[0], accountViewModel) {
                     it?.let {
@@ -303,7 +312,7 @@ fun NonClickableUserPictures(
             }
 
             else -> {
-                val userList = room.users.toList()
+                val userList = userHexList
 
                 LoadUser(baseUserHex = userList[0], accountViewModel) {
                     it?.let {

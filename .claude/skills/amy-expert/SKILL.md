@@ -104,9 +104,15 @@ Wire-up checklist:
 4. Extend `printUsage()` in `Main.kt`.
 5. Add the row to `cli/README.md`'s command table.
 6. Update `cli/ROADMAP.md` — move the row from 🆕 / 📦 to ✅.
+7. If the verb changes observable wire behaviour (a new event kind,
+   a new relay-routing rule, a new JSON discriminator), add a case
+   in the appropriate harness under `cli/tests/` — `cli/tests/marmot/`
+   for MLS flows, `cli/tests/dm/` for NIP-17, or a new sibling suite
+   if it's neither.
 
 If you change output shape: note it in the commit message, bump the
-example in `README.md`, update any interop fixtures.
+example in `README.md`, update any interop fixtures under
+`cli/tests/`.
 
 ## Where things live
 
@@ -116,6 +122,11 @@ cli/
 ├── DEVELOPMENT.md         # touch-the-code: architecture, conventions, testing
 ├── ROADMAP.md             # parity matrix + ordered milestones
 ├── plans/                 # dated design docs (use for new subsystems)
+├── tests/                 # end-to-end shell harnesses against a local relay
+│   ├── lib.sh             # shared logging + result tracking
+│   ├── headless/          # shared amy wrappers + assertions
+│   ├── marmot/            # MLS group-messaging interop (vs whitenoise-rs)
+│   └── dm/                # NIP-17 DM interop (two amy clients)
 └── src/main/kotlin/…/cli/
     ├── Main.kt            # argv dispatch
     ├── Args.kt            # flag parser

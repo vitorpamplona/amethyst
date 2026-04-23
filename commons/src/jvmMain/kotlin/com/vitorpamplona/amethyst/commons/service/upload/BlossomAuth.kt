@@ -18,33 +18,26 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.desktop.service.upload
+package com.vitorpamplona.amethyst.commons.service.upload
 
-import org.apache.commons.imaging.Imaging
-import org.apache.commons.imaging.formats.jpeg.exif.ExifRewriter
-import java.io.ByteArrayOutputStream
-import java.io.File
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nipB7Blossom.BlossomAuthorizationEvent
+import java.util.Base64
 
-object DesktopMediaCompressor {
-    fun stripExif(file: File): File {
-        if (!file.name.lowercase().let { it.endsWith(".jpg") || it.endsWith(".jpeg") }) {
-            return file
-        }
+object BlossomAuth {
+    suspend fun createUploadAuth(
+        hash: HexKey,
+        size: Long,
+        alt: String,
+        signer: NostrSigner,
+    ): String {
+        val event = BlossomAuthorizationEvent.createUploadAuth(hash, size, alt, signer)
+        return encodeAuthHeader(event)
+    }
 
-        return try {
-            val bytes = file.readBytes()
-            // Check if it has EXIF data
-            val metadata = Imaging.getMetadata(bytes)
-            if (metadata == null) return file
-
-            val baos = ByteArrayOutputStream()
-            ExifRewriter().removeExifMetadata(bytes, baos)
-            val stripped = File.createTempFile("stripped_", ".jpg")
-            stripped.writeBytes(baos.toByteArray())
-            stripped.deleteOnExit()
-            stripped
-        } catch (_: Exception) {
-            file
-        }
+    fun encodeAuthHeader(event: BlossomAuthorizationEvent): String {
+        val b64 = Base64.getEncoder().encodeToString(event.toJson().toByteArray())
+        return "Nostr $b64"
     }
 }

@@ -27,7 +27,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class DesktopMediaCompressorTest {
+class MediaCompressorTest {
     @Test
     fun stripExifReturnsSameFileForPng() {
         val file = File.createTempFile("test_", ".png")
@@ -35,7 +35,7 @@ class DesktopMediaCompressorTest {
         val img = BufferedImage(2, 2, BufferedImage.TYPE_INT_RGB)
         ImageIO.write(img, "png", file)
 
-        val result = DesktopMediaCompressor.stripExif(file)
+        val result = MediaCompressor.stripExif(file)
 
         // Should return the same file object since it's not JPEG
         assertEquals(file, result)
@@ -48,7 +48,7 @@ class DesktopMediaCompressorTest {
         file.deleteOnExit()
         file.writeText("not a jpeg")
 
-        val result = DesktopMediaCompressor.stripExif(file)
+        val result = MediaCompressor.stripExif(file)
 
         assertEquals(file, result)
         file.delete()
@@ -60,7 +60,7 @@ class DesktopMediaCompressorTest {
         file.deleteOnExit()
         file.writeBytes(byteArrayOf(0, 0, 0))
 
-        val result = DesktopMediaCompressor.stripExif(file)
+        val result = MediaCompressor.stripExif(file)
 
         assertEquals(file, result)
         file.delete()
@@ -71,7 +71,7 @@ class DesktopMediaCompressorTest {
         // Create a minimal JPEG without EXIF
         val file = createMinimalJpeg()
         try {
-            val result = DesktopMediaCompressor.stripExif(file)
+            val result = MediaCompressor.stripExif(file)
             // Should return the same file since there's no EXIF to strip
             assertEquals(file, result)
         } finally {
@@ -87,7 +87,7 @@ class DesktopMediaCompressorTest {
         val img = BufferedImage(4, 4, BufferedImage.TYPE_INT_RGB)
         ImageIO.write(img, "jpg", file)
 
-        val result = DesktopMediaCompressor.stripExif(file)
+        val result = MediaCompressor.stripExif(file)
 
         // Result should be a valid file regardless
         assertTrue(result.exists())
@@ -107,7 +107,7 @@ class DesktopMediaCompressorTest {
         val img = BufferedImage(2, 2, BufferedImage.TYPE_INT_RGB)
         ImageIO.write(img, "jpg", file)
 
-        val result = DesktopMediaCompressor.stripExif(file)
+        val result = MediaCompressor.stripExif(file)
 
         assertTrue(result.exists())
         if (result != file) result.delete()

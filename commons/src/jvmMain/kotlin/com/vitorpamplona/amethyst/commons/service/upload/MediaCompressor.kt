@@ -18,32 +18,33 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip59GiftWraps
+package com.vitorpamplona.amethyst.commons.service.upload
 
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip59Giftwrap.wraps.EphemeralGiftWrapEvent
-import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
-import com.vitorpamplona.quartz.utils.TimeUtils
+import org.apache.commons.imaging.Imaging
+import org.apache.commons.imaging.formats.jpeg.exif.ExifRewriter
+import java.io.ByteArrayOutputStream
+import java.io.File
 
-fun filterGiftWrapsToPubkey(
-    relay: NormalizedRelayUrl,
-    pubkey: HexKey?,
-    since: Long?,
-): List<RelayBasedFilter> {
-    if (pubkey.isNullOrEmpty()) return emptyList()
+object MediaCompressor {
+    fun stripExif(file: File): File {
+        if (!file.name.lowercase().let { it.endsWith(".jpg") || it.endsWith(".jpeg") }) {
+            return file
+        }
 
-    return listOf(
-        RelayBasedFilter(
-            relay = relay,
-            filter =
-                Filter(
-                    kinds = listOf(GiftWrapEvent.KIND, EphemeralGiftWrapEvent.KIND),
-                    tags = mapOf("p" to listOf(pubkey)),
-                    since = since?.minus(TimeUtils.twoDays()),
-                ),
-        ),
-    )
+        return try {
+            val bytes = file.readBytes()
+            // Check if it has EXIF data
+            val metadata = Imaging.getMetadata(bytes)
+            if (metadata == null) return file
+
+            val baos = ByteArrayOutputStream()
+            ExifRewriter().removeExifMetadata(bytes, baos)
+            val stripped = File.createTempFile("stripped_", ".jpg")
+            stripped.writeBytes(baos.toByteArray())
+            stripped.deleteOnExit()
+            stripped
+        } catch (_: Exception) {
+            file
+        }
+    }
 }

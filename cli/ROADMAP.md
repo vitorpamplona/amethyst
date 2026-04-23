@@ -52,7 +52,7 @@ Status legend: ✅ shipped · 📦 logic lives in `commons/`, needs a command ·
 | NIP-01 feed read (`amy feed home`, `amy feed hashtag #X`, `amy feed profile NPUB`) | 🆕 | Extract `FeedFilter` usage from `amethyst/ui/dal/` into `commons/` entry points. |
 | NIP-02 follow list add / remove / list | 🆕 | Logic in `amethyst/model/nip02FollowLists/`. |
 | NIP-09 event deletion | 🆕 | Builder exists in quartz. |
-| NIP-17 DMs send / list / read | 🆕 | Gift-wrap path is already in `commons/` via Marmot — generalise. |
+| NIP-17 DMs send / list / await | ✅ | `DmCommands` — reuses Quartz `NIP17Factory` + `RecipientRelayFetcher`; filter extracted to `commons/relayClient/nip17Dm/`. Plan: [`cli/plans/2026-04-23-nip17-dm.md`](./plans/2026-04-23-nip17-dm.md). |
 | NIP-18 reposts / quotes | 🆕 | |
 | NIP-25 reactions | 🆕 | |
 | NIP-51 lists (bookmarks, mute, follow sets) | 🆕 | `amethyst/model/nip51Lists/` |
@@ -94,7 +94,12 @@ move anything, re-audit — you're probably duplicating logic.
 7. **`amy zap send|verify`** (NIP-57).
 8. **Distribution** — Homebrew + Scoop + `.deb` in the same release
    pipeline as desktop. Plan: `cli/plans/2026-04-21-cli-distribution.md`.
-9. **Test suite** — end-to-end against a local relay.
+9. **Test suite** — end-to-end against a local relay. Marmot interop is
+   covered by `cli/tests/marmot/marmot-interop-headless.sh`; NIP-17 DM
+   interop between two `amy` clients is covered by
+   `cli/tests/dm/dm-interop-headless.sh` (text + file + strict 10050 +
+   fallback + cursor-advance). Neither runs in CI yet (both need Rust +
+   ~3 min cold relay build).
 10. **Everything else in the matrix.**
 
 ---

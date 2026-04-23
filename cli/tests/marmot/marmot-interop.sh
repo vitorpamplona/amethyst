@@ -10,6 +10,7 @@
 set -uo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+TESTS_DIR="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 STATE_DIR="$SCRIPT_DIR/state"
 LOG_DIR="$STATE_DIR/logs"
 B_DIR="$STATE_DIR/B"
@@ -75,8 +76,8 @@ mkdir -p "$STATE_DIR" "$LOG_DIR" "$B_DIR/logs" "$C_DIR/logs"
 : >"$LOG_FILE"
 : >"$RESULTS_FILE"
 
-# shellcheck source=lib.sh
-source "$SCRIPT_DIR/lib.sh"
+# shellcheck source=../lib.sh
+source "$TESTS_DIR/lib.sh"
 
 # --- preflight ---------------------------------------------------------------
 preflight() {

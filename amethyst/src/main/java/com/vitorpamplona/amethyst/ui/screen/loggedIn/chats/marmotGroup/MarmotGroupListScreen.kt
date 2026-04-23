@@ -64,7 +64,9 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.note.NonClickableUserPictures
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header.DisplayUserSetAsSubject
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -178,6 +180,7 @@ fun MarmotGroupListScreen(
                         MarmotGroupListItem(
                             groupId = groupId,
                             chatroom = chatroom,
+                            accountViewModel = accountViewModel,
                             onClick = {
                                 nav.nav(Route.MarmotGroupChat(groupId))
                             },
@@ -212,10 +215,13 @@ private fun loadGroupList(
 fun MarmotGroupListItem(
     groupId: HexKey,
     chatroom: MarmotGroupChatroom,
+    accountViewModel: AccountViewModel,
     onClick: () -> Unit,
 ) {
     val displayName by chatroom.displayName.collectAsStateWithLifecycle()
     val unread by chatroom.unreadCount.collectAsStateWithLifecycle()
+    val members by chatroom.members.collectAsStateWithLifecycle()
+    val memberPubkeys = remember(members) { members.map { it.pubkey } }
     val newestMessage = chatroom.newestMessage
 
     Row(
@@ -224,17 +230,40 @@ fun MarmotGroupListItem(
                 .fillMaxWidth()
                 .clickable(onClick = onClick)
                 .padding(horizontal = 16.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = displayName ?: "Group ${groupId.take(8)}...",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = if (unread > 0) FontWeight.Bold else FontWeight.Normal,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+        if (memberPubkeys.isNotEmpty()) {
+            NonClickableUserPictures(
+                userHexList = memberPubkeys,
+                size = 55.dp,
+                accountViewModel = accountViewModel,
             )
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            if (!displayName.isNullOrBlank()) {
+                Text(
+                    text = displayName!!,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = if (unread > 0) FontWeight.Bold else FontWeight.Normal,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            } else if (memberPubkeys.isNotEmpty()) {
+                DisplayUserSetAsSubject(
+                    userList = memberPubkeys,
+                    accountViewModel = accountViewModel,
+                    fontWeight = if (unread > 0) FontWeight.Bold else FontWeight.Normal,
+                )
+            } else {
+                Text(
+                    text = "Group ${groupId.take(8)}...",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = if (unread > 0) FontWeight.Bold else FontWeight.Normal,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
             if (newestMessage != null) {
                 Text(
                     text = newestMessage.event?.content ?: "",

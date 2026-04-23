@@ -70,4 +70,9 @@ object Commands {
         dataDir: DataDir,
         tail: Array<String>,
     ): Int = AwaitCommands.dispatch(dataDir, tail)
+
+    suspend fun dm(
+        dataDir: DataDir,
+        tail: Array<String>,
+    ): Int = DmCommands.dispatch(dataDir, tail)
 }

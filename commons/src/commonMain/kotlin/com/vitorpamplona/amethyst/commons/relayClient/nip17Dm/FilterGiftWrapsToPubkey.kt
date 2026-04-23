@@ -18,26 +18,32 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.desktop.service.upload
+package com.vitorpamplona.amethyst.commons.relayClient.nip17Dm
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nipB7Blossom.BlossomAuthorizationEvent
-import java.util.Base64
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip59Giftwrap.wraps.EphemeralGiftWrapEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
+import com.vitorpamplona.quartz.utils.TimeUtils
 
-object DesktopBlossomAuth {
-    suspend fun createUploadAuth(
-        hash: HexKey,
-        size: Long,
-        alt: String,
-        signer: NostrSigner,
-    ): String {
-        val event = BlossomAuthorizationEvent.createUploadAuth(hash, size, alt, signer)
-        return encodeAuthHeader(event)
-    }
+fun filterGiftWrapsToPubkey(
+    relay: NormalizedRelayUrl,
+    pubkey: HexKey?,
+    since: Long?,
+): List<RelayBasedFilter> {
+    if (pubkey.isNullOrEmpty()) return emptyList()
 
-    fun encodeAuthHeader(event: BlossomAuthorizationEvent): String {
-        val b64 = Base64.getEncoder().encodeToString(event.toJson().toByteArray())
-        return "Nostr $b64"
-    }
+    return listOf(
+        RelayBasedFilter(
+            relay = relay,
+            filter =
+                Filter(
+                    kinds = listOf(GiftWrapEvent.KIND, EphemeralGiftWrapEvent.KIND),
+                    tags = mapOf("p" to listOf(pubkey)),
+                    since = since?.minus(TimeUtils.twoDays()),
+                ),
+        ),
+    )
 }

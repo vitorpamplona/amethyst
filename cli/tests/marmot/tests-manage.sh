@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 #
-# headless/tests-manage.sh — tests 06, 07, 08, 11.
+# tests-manage.sh — tests 06, 07, 08, 11.
 # Focus: removal, metadata rename, admin promote/demote, leave.
 
 test_06_member_removal() {

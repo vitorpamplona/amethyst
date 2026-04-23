@@ -197,8 +197,8 @@ Amy-specific layer still needs its own coverage:
 | Error / exit-code contract (bad args → 2, await timeout → 124, runtime → 1) | Table-driven tests invoking `main(argv)` with captured stdout/stderr. |
 | JSON output shape (each command's keys and types) | Snapshot tests: run a command against a throwaway data-dir, assert the JSON matches a golden file. |
 | File layout on disk (`identity.json`, `relays.json`, `groups/*.mls`, `keypackages.bundle`) | Structural assertions after a command sequence. |
-| Round-trip between two data-dirs on a local relay | End-to-end shell scripts under `cli/src/test/resources/scripts/`. Spin up `nostr-rs-relay`, run Alice + Bob, assert await verbs resolve. |
-| Interop with other clients | External harness consumes Amy as a binary; out of scope here but the JSON contract is what keeps it stable. |
+| Round-trip between two data-dirs on a local relay | End-to-end shell harnesses under `cli/tests/`. Each harness spins up a local `nostr-rs-relay`, bootstraps two or more fresh identities in their own `--data-dir`s, and drives a scenario via `amy` (+ `wn` for Marmot interop against whitenoise-rs). Today there are two suites: `cli/tests/marmot/` (13 MLS scenarios vs whitenoise-rs) and `cli/tests/dm/` (NIP-17 DM round-trips between two `amy` clients). |
+| Interop with other clients | Covered by `cli/tests/marmot/marmot-interop-headless.sh` (drives Amy against whitenoise-rs `wn`/`wnd`). Add new scenarios there or start a new sibling under `cli/tests/`. |
 
 **What not to test here:** event signing, filter assembly, MLS
 correctness, NIP-44 encryption. Those belong in `quartz`/`commons`.
@@ -206,6 +206,11 @@ If an Amy bug can only be caught here, it's a contract violation
 (wrong key name, wrong exit code), not a protocol bug.
 
 **Interop-test script template:**
+
+The canonical examples live under `cli/tests/` — read
+[`cli/tests/README.md`](./tests/README.md) for the layout, then
+crib from `cli/tests/dm/tests-dm.sh` or `cli/tests/marmot/tests-create.sh`.
+At the byte-banging level, a minimal round-trip looks like:
 
 ```bash
 set -euo pipefail
