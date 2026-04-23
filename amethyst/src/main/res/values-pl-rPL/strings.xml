@@ -1690,7 +1690,7 @@
     <string name="bradcasting_result_partial">Niektóre akcje nie powiodły się</string>
     <string name="bradcasting_result_success">Wszystkie akcje udane</string>
     <string name="bradcasting_result_failure">Wszystkie akcje nieudane</string>
-    <string name="reaction">Reakcja</string>
+    <string name="reaction">Reakcję</string>
     <string name="voice_post">Wiadomość głosowa</string>
     <string name="voice_reply">Odpowiedź głosowa</string>
     <string name="closing_time">Czas zakończenia głosowania</string>
