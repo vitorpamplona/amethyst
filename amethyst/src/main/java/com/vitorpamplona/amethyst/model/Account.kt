@@ -2319,6 +2319,12 @@ class Account(
         }
 
         val outbound = manager.leaveGroup(nostrGroupId)
+        // manager.leaveGroup already wiped MLS state, relay subscriptions and
+        // the persisted message log. Drop the in-memory chatroom too — that
+        // releases the strong refs to the decrypted inner notes so LocalCache
+        // (which holds them weakly) can GC them, and the Notification feed
+        // (which iterates marmotGroupList.rooms) stops surfacing the group.
+        marmotGroupList.removeGroup(nostrGroupId)
         client.publish(outbound.signedEvent, groupRelays)
     }
 

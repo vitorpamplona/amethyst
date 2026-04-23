@@ -127,8 +127,15 @@ class MarmotGroupList(
         }
     }
 
+    /**
+     * Drop a group from the in-memory list. Also clears the chatroom's own
+     * message set and the note→group index: LocalCache holds notes weakly, so
+     * once these strong references go away the decrypted inner messages
+     * become eligible for GC and stop appearing in the Notification feed.
+     */
     fun removeGroup(nostrGroupId: HexKey) {
-        rooms.remove(nostrGroupId)
+        val chatroom = rooms.remove(nostrGroupId)
+        chatroom?.clearAllMessagesSync()?.forEach { noteToGroupIndex.remove(it.idHex) }
         _groupListChanges.tryEmit(nostrGroupId)
     }
 

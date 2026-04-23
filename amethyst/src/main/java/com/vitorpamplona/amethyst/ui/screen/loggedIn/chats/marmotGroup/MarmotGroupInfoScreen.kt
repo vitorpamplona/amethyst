@@ -316,7 +316,6 @@ fun MarmotGroupInfoScreen(
                 scope.launch(Dispatchers.IO) {
                     try {
                         accountViewModel.leaveMarmotGroup(nostrGroupId)
-                        accountViewModel.account.marmotGroupList.removeGroup(nostrGroupId)
                         nav.nav(Route.Message)
                     } catch (e: Exception) {
                         isLeaving = false
