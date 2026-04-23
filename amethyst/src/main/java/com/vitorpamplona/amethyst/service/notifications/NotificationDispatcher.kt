@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.service.notifications
 
 import android.content.Context
+import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.quartz.experimental.notifications.wake.WakeUpEvent
 import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
@@ -63,6 +64,11 @@ class NotificationDispatcher(
         // listed here — by the time we care, Account.newNotesPreProcessor has
         // already unwrapped them and inserted the inner payload into LocalCache,
         // which fires the observer a second time on the inner event.
+        //
+        // WelcomeEvent (kind:444) is also excluded: it has no `p` tag, so
+        // consumeFromCache can't route it. It's delivered directly via
+        // [notifyWelcome] from processMarmotWelcomeFlow, which does know the
+        // recipient account.
         private val NOTIFICATION_KINDS =
             listOf(
                 // Direct-arrival
@@ -75,7 +81,6 @@ class NotificationDispatcher(
                 // Unwrapped from GiftWrap → Seal
                 ChatMessageEvent.KIND,
                 ChatMessageEncryptedFileHeaderEvent.KIND,
-                WelcomeEvent.KIND,
                 // Unwrapped from EphemeralGiftWrap
                 CallOfferEvent.KIND,
             )
@@ -105,5 +110,23 @@ class NotificationDispatcher(
     fun stop() {
         job?.cancel()
         job = null
+    }
+
+    /**
+     * Direct-invocation entry point for [WelcomeEvent]. Bypasses the
+     * cache-observer path because Welcomes have no `p` tag for account
+     * routing. Called from processMarmotWelcomeFlow once MLS group join
+     * succeeds — at which point we know which account the invite was for.
+     */
+    suspend fun notifyWelcome(
+        event: WelcomeEvent,
+        account: Account,
+    ) {
+        try {
+            consumer.notifyWelcome(event, account)
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.e(TAG, "Failed to dispatch Welcome notification ${event.id}", e)
+        }
     }
 }

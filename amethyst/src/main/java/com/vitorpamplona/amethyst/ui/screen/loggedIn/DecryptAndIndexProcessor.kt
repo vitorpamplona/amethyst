@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.call.CallManager
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
 import com.vitorpamplona.amethyst.model.Account
@@ -397,6 +398,11 @@ private suspend fun processMarmotWelcomeFlow(
             if (result.needsKeyPackageRotation) {
                 account.publishMarmotKeyPackages()
             }
+
+            // Fire the "You've been added to <group>" notification. Welcomes
+            // have no `p` tag, so the cache-observer path can't route them;
+            // this is the single point where we know the recipient account.
+            Amethyst.instance.notificationDispatcher.notifyWelcome(innerEvent, account)
         }
 
         is WelcomeResult.AlreadyJoined -> {

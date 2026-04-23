@@ -49,7 +49,6 @@ import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.experimental.notifications.wake.WakeUpEvent
-import com.vitorpamplona.quartz.marmot.WelcomeResult
 import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
@@ -179,7 +178,8 @@ class EventNotificationConsumer(
             is ReactionEvent -> notify(event, account)
             is LiveChessGameAcceptEvent -> notifyChessEvent(event, account, R.string.app_notification_chess_challenge_accepted)
             is LiveChessMoveEvent -> notifyChessEvent(event, account, R.string.app_notification_chess_your_turn)
-            is WelcomeEvent -> notify(event, account)
+            // WelcomeEvent is dispatched directly from processMarmotWelcomeFlow
+            // (no `p` tag, so tag-based matching doesn't work).
         }
     }
 
@@ -371,38 +371,28 @@ class EventNotificationConsumer(
         }
     }
 
-    private suspend fun notify(
+    /**
+     * Welcomes have no `p` tag, so [consumeFromCache]'s tag-based account match
+     * can't route them. They are instead dispatched here directly by
+     * [com.vitorpamplona.amethyst.ui.screen.loggedIn.processMarmotWelcomeFlow]
+     * after [MarmotManager.processWelcome] joins the group — which is also the
+     * only place we reliably know which account the invite was for.
+     */
+    suspend fun notifyWelcome(
         event: WelcomeEvent,
         account: Account,
-    ) {
+    ) = withWakeLock {
         Log.d(TAG, "New Marmot Welcome to Notify")
 
+        if (!notificationManager().areNotificationsEnabled()) return@withWakeLock
+        if (MainActivity.isResumed) return@withWakeLock
+
         // old event being re-broadcast
-        if (event.createdAt < TimeUtils.fifteenMinutesAgo()) return
+        if (event.createdAt < TimeUtils.fifteenMinutesAgo()) return@withWakeLock
         // a welcome we ourselves emitted
-        if (event.pubKey == account.signer.pubKey) return
+        if (event.pubKey == account.signer.pubKey) return@withWakeLock
 
-        val nostrGroupId = event.nostrGroupId() ?: return
-        val manager = account.marmotManager ?: return
-
-        // Best-effort: process the welcome here so the chatroom is hydrated
-        // before composing the notification body. The push-notification
-        // background path does NOT go through Account.eventProcessor, so
-        // without this the invitee would only join the group later, when
-        // they next open the app and the relay subscription redelivers.
-        if (!manager.isMember(nostrGroupId)) {
-            try {
-                val result = manager.processWelcome(event, nostrGroupId)
-                if (result is WelcomeResult.Joined) {
-                    val chatroom = account.marmotGroupList.getOrCreateGroup(result.nostrGroupId)
-                    manager.syncMetadataTo(result.nostrGroupId, chatroom)
-                    account.marmotGroupList.notifyGroupChanged(result.nostrGroupId)
-                }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                Log.w(TAG) { "Failed to process Marmot Welcome from notification path: ${e.message}" }
-            }
-        }
+        val nostrGroupId = event.nostrGroupId() ?: return@withWakeLock
 
         val chatroom = account.marmotGroupList.getOrCreateGroup(nostrGroupId)
         val groupName = chatroom.displayName.value?.takeIf { it.isNotBlank() } ?: "a private group"
