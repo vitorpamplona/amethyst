@@ -592,28 +592,28 @@ class GroupEventHandler(
                         "GroupEventHandler.add: ApplicationMessage decrypted innerKind=${innerEvent.kind} " +
                             "innerId=${innerEvent.id.take(8)}… author=${innerEvent.pubKey.take(8)}…"
                     }
-                    // Treat the inner event as pre-verified. MLS already
-                    // authenticated the sender: MarmotInboundProcessor.
-                    // processPrivateMessage rejects any inner event whose
-                    // `pubkey` field doesn't match the MLS sender's
-                    // credential identity. Running Nostr sig verify again
-                    // here is a redundant gate — and one that silently
-                    // dropped wn-signed inner events (wn's kind:9 rumors
-                    // don't always round-trip Amethyst's `event.verify()`,
-                    // e.g. because of JSON canonicalization differences).
-                    // Without this, justConsume returned false, the chatroom
-                    // never got the message, and the operator saw nothing
-                    // but a misleading "inner event already in cache" log.
+                    // wasVerified=true: MIP-03 inner events are unsigned
+                    // rumors (empty sig); LocalCache.justVerify would reject
+                    // every one on Schnorr verification. Authenticity is
+                    // already guaranteed by MLS — MarmotInboundProcessor
+                    // enforces innerEvent.pubKey == MLS sender's credential
+                    // identity before returning ApplicationMessage. Without
+                    // this, wn-signed kind:9 chat messages, kind:7 reactions,
+                    // and kind:5 deletions would all silently drop here.
+                    //
+                    // Always call marmotGroupList.addMessage regardless of
+                    // justConsume's return value. `addMessageSync` dedupes
+                    // by Note identity, so a duplicate is a cheap no-op —
+                    // but a previous-session persist that hydrated the
+                    // cache at startup without populating the chatroom
+                    // needs this path to surface the note (otherwise the
+                    // operator saw nothing but a misleading "inner event
+                    // already in cache" log and the message never rendered).
                     val isNew = cache.justConsume(innerEvent, null, true)
                     val innerNote = cache.getOrCreateNote(innerEvent.id)
-                    if (!isNew) {
-                        // Legit duplicate: a prior session persisted the
-                        // inner JSON and the startup restore loop hydrated
-                        // the cache before this kind:445 arrived. The
-                        // chatroom may still not have it (restore order /
-                        // chatroom snapshot drop), so `addMessage` runs
-                        // unconditionally — `MarmotGroupChatroom.addMessageSync`
-                        // dedupes by Note identity if it was already there.
+                    if (isNew) {
+                        innerNote.event = innerEvent
+                    } else {
                         Log.d("MarmotDbg") {
                             "GroupEventHandler.add: inner event already in cache — surfacing in chatroom anyway"
                         }

@@ -3111,10 +3111,14 @@ class Account(
                                 val innerEvent =
                                     com.vitorpamplona.quartz.nip01Core.core.Event
                                         .fromJson(json)
-                                // MIP-03 inner events are unsigned rumors
-                                // (empty sig); pass wasVerified=true so
-                                // LocalCache skips the Nostr secp256k1 check
-                                // that would silently reject them.
+                                // wasVerified=true: MIP-03 inner events are
+                                // unsigned rumors (empty sig), authenticated
+                                // via the MLS credential-identity check in
+                                // GroupEventHandler when first decrypted.
+                                // Running Nostr sig verify here (justVerify
+                                // via wasVerified=false) would silently drop
+                                // kind:7 reactions / kind:5 deletions since
+                                // they never carry a Schnorr signature.
                                 val isNew = cache.justConsume(innerEvent, null, true)
                                 val innerNote = cache.getOrCreateNote(innerEvent.id)
                                 if (isNew) {
