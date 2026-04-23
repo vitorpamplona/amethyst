@@ -44,6 +44,7 @@ import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.chess.ChessScreen
 import com.vitorpamplona.amethyst.desktop.model.DesktopIAccount
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
+import com.vitorpamplona.amethyst.desktop.network.Nip11Fetcher
 import com.vitorpamplona.amethyst.desktop.service.drafts.DesktopDraftStore
 import com.vitorpamplona.amethyst.desktop.service.highlights.DesktopHighlightStore
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
@@ -60,6 +61,7 @@ import com.vitorpamplona.amethyst.desktop.ui.ThreadScreen
 import com.vitorpamplona.amethyst.desktop.ui.UserProfileScreen
 import com.vitorpamplona.amethyst.desktop.ui.ZapFeedback
 import com.vitorpamplona.amethyst.desktop.ui.chats.DesktopMessagesScreen
+import com.vitorpamplona.amethyst.desktop.ui.relay.RelayDashboardScreen
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect.Nip47URINorm
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -99,10 +101,12 @@ fun DeckColumnContainer(
     subscriptionsCoordinator: DesktopRelaySubscriptionsCoordinator,
     highlightStore: DesktopHighlightStore,
     draftStore: DesktopDraftStore,
+    nip11Fetcher: Nip11Fetcher,
     appScope: CoroutineScope,
     onShowComposeDialog: () -> Unit,
     onShowReplyDialog: (com.vitorpamplona.quartz.nip01Core.core.Event) -> Unit,
     onZapFeedback: (ZapFeedback) -> Unit,
+    onNavigateToRelays: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val navState = remember(column.id) { ColumnNavigationState() }
@@ -141,6 +145,7 @@ fun DeckColumnContainer(
                 subscriptionsCoordinator = subscriptionsCoordinator,
                 highlightStore = highlightStore,
                 draftStore = draftStore,
+                nip11Fetcher = nip11Fetcher,
                 appScope = appScope,
                 compactMode = true,
                 onShowComposeDialog = onShowComposeDialog,
@@ -150,6 +155,7 @@ fun DeckColumnContainer(
                 onNavigateToThread = { navState.push(DesktopScreen.Thread(it)) },
                 onNavigateToArticle = { navState.push(DesktopScreen.Article(it)) },
                 onNavigateToEditor = { navState.push(DesktopScreen.Editor(it)) },
+                onNavigateToRelays = onNavigateToRelays,
             )
             if (currentOverlay != null) {
                 Surface(
@@ -191,6 +197,7 @@ internal fun RootContent(
     subscriptionsCoordinator: DesktopRelaySubscriptionsCoordinator,
     highlightStore: DesktopHighlightStore? = null,
     draftStore: DesktopDraftStore? = null,
+    nip11Fetcher: Nip11Fetcher,
     appScope: CoroutineScope,
     compactMode: Boolean = false,
     onShowComposeDialog: () -> Unit,
@@ -200,6 +207,7 @@ internal fun RootContent(
     onNavigateToThread: (String) -> Unit,
     onNavigateToArticle: (String) -> Unit = {},
     onNavigateToEditor: (String?) -> Unit = {},
+    onNavigateToRelays: () -> Unit = {},
 ) {
     val scope = rememberCoroutineScope()
 
@@ -209,6 +217,7 @@ internal fun RootContent(
                 relayManager = relayManager,
                 localCache = localCache,
                 account = account,
+                iAccount = iAccount,
                 nwcConnection = nwcConnection,
                 subscriptionsCoordinator = subscriptionsCoordinator,
                 initialFeedMode = FeedMode.FOLLOWING,
@@ -216,6 +225,7 @@ internal fun RootContent(
                 onNavigateToProfile = onNavigateToProfile,
                 onNavigateToThread = onNavigateToThread,
                 onZapFeedback = onZapFeedback,
+                onNavigateToRelays = onNavigateToRelays,
             )
         }
 
@@ -239,6 +249,7 @@ internal fun RootContent(
                 localCache = localCache,
                 relayManager = relayManager,
                 subscriptionsCoordinator = subscriptionsCoordinator,
+                account = account,
                 onNavigateToProfile = onNavigateToProfile,
                 onNavigateToThread = onNavigateToThread,
             )
@@ -275,6 +286,7 @@ internal fun RootContent(
                 relayManager = relayManager,
                 localCache = localCache,
                 account = account,
+                iAccount = iAccount,
                 nwcConnection = nwcConnection,
                 subscriptionsCoordinator = subscriptionsCoordinator,
                 initialFeedMode = FeedMode.GLOBAL,
@@ -282,6 +294,7 @@ internal fun RootContent(
                 onNavigateToProfile = onNavigateToProfile,
                 onNavigateToThread = onNavigateToThread,
                 onZapFeedback = onZapFeedback,
+                onNavigateToRelays = onNavigateToRelays,
             )
         }
 
@@ -320,6 +333,18 @@ internal fun RootContent(
                 torStatus = torState.status,
                 torSettings = torState.settings,
                 onTorSettingsChanged = torState.onSettingsChanged,
+            )
+        }
+
+        DeckColumnType.Relays -> {
+            val accountRelays = com.vitorpamplona.amethyst.desktop.ui.relay.LocalAccountRelays.current
+            RelayDashboardScreen(
+                relayManager = relayManager,
+                nip11Fetcher = nip11Fetcher,
+                nip65State = iAccount.nip65RelayList,
+                accountRelays = accountRelays ?: return,
+                signer = iAccount.signer,
+                onPublish = { event -> relayManager.broadcastToAll(event) },
             )
         }
 
@@ -398,6 +423,7 @@ internal fun RootContent(
                 localCache = localCache,
                 relayManager = relayManager,
                 subscriptionsCoordinator = subscriptionsCoordinator,
+                account = account,
                 initialQuery = "#${columnType.tag}",
                 onNavigateToProfile = onNavigateToProfile,
                 onNavigateToThread = onNavigateToThread,

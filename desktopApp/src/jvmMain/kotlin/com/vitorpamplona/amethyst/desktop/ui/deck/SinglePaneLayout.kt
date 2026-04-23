@@ -52,6 +52,7 @@ import com.vitorpamplona.amethyst.desktop.account.AccountManager
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
+import com.vitorpamplona.amethyst.desktop.network.Nip11Fetcher
 import com.vitorpamplona.amethyst.desktop.service.highlights.DesktopHighlightStore
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.desktop.ui.ZapFeedback
@@ -73,6 +74,7 @@ fun SinglePaneLayout(
     subscriptionsCoordinator: DesktopRelaySubscriptionsCoordinator,
     highlightStore: DesktopHighlightStore,
     draftStore: com.vitorpamplona.amethyst.desktop.service.drafts.DesktopDraftStore,
+    nip11Fetcher: Nip11Fetcher,
     appScope: CoroutineScope,
     singlePaneState: SinglePaneState,
     pinnedNavBarState: PinnedNavBarState,
@@ -190,6 +192,7 @@ fun SinglePaneLayout(
                     subscriptionsCoordinator = subscriptionsCoordinator,
                     highlightStore = highlightStore,
                     draftStore = draftStore,
+                    nip11Fetcher = nip11Fetcher,
                     appScope = appScope,
                     onShowComposeDialog = onShowComposeDialog,
                     onShowReplyDialog = onShowReplyDialog,
@@ -198,6 +201,7 @@ fun SinglePaneLayout(
                     onNavigateToThread = { navState.push(DesktopScreen.Thread(it)) },
                     onNavigateToArticle = { navState.push(DesktopScreen.Article(it)) },
                     onNavigateToEditor = { navState.push(DesktopScreen.Editor(it)) },
+                    onNavigateToRelays = { singlePaneState.navigate(DeckColumnType.Relays) },
                 )
                 if (currentOverlay != null) {
                     Surface(

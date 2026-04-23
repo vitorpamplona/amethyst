@@ -85,6 +85,8 @@ fun DesktopMessagesScreen(
     onNavigateToProfile: (String) -> Unit = {},
 ) {
     val scope = rememberCoroutineScope()
+    val accountRelays = com.vitorpamplona.amethyst.desktop.ui.relay.LocalAccountRelays.current
+    var showDmRelayPicker by remember { mutableStateOf(false) }
     val listState =
         remember(account) {
             ChatroomListState(account, cacheProvider, relayManager, localCache, scope)
@@ -110,6 +112,11 @@ fun DesktopMessagesScreen(
                     true
                 }
 
+                event.key == Key.R && isModifier && event.isShiftPressed -> {
+                    showDmRelayPicker = true
+                    true
+                }
+
                 else -> {
                     false
                 }
@@ -126,6 +133,7 @@ fun DesktopMessagesScreen(
             onNavigateToProfile = onNavigateToProfile,
             listFocusRequester = listFocusRequester,
             onShowNewDm = { showNewDmDialog = true },
+            onShowRelayPicker = { showDmRelayPicker = true },
             keyHandler = keyHandler,
         )
     } else {
@@ -138,6 +146,7 @@ fun DesktopMessagesScreen(
             onNavigateToProfile = onNavigateToProfile,
             listFocusRequester = listFocusRequester,
             onShowNewDm = { showNewDmDialog = true },
+            onShowRelayPicker = { showDmRelayPicker = true },
             keyHandler = keyHandler,
         )
     }
@@ -152,6 +161,36 @@ fun DesktopMessagesScreen(
                 showNewDmDialog = false
             },
             onDismiss = { showNewDmDialog = false },
+        )
+    }
+
+    if (showDmRelayPicker && accountRelays != null) {
+        val pickerRelays =
+            remember {
+                androidx.compose.runtime.mutableStateListOf<com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl>().also {
+                    it.addAll(accountRelays.dmRelayList.value.sortedBy { r -> r.url })
+                }
+            }
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showDmRelayPicker = false },
+            title = { androidx.compose.material3.Text("DM Relays") },
+            text = {
+                com.vitorpamplona.amethyst.desktop.ui.relay.DmRelayEditor(
+                    dmRelays = accountRelays.dmRelayList,
+                    signer = account.signer,
+                    onPublish = { event ->
+                        relayManager.broadcastToAll(event)
+                        accountRelays.consumePublishedEvent(event)
+                        accountRelays.setDmRelays(pickerRelays.toSet())
+                    },
+                    onDmRelaysUpdated = { accountRelays.setDmRelays(it) },
+                )
+            },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = { showDmRelayPicker = false }) {
+                    androidx.compose.material3.Text("Close")
+                }
+            },
         )
     }
 }
@@ -170,6 +209,7 @@ private fun CompactMessagesContent(
     onNavigateToProfile: (String) -> Unit,
     listFocusRequester: FocusRequester,
     onShowNewDm: () -> Unit,
+    onShowRelayPicker: () -> Unit = {},
     keyHandler: Modifier,
 ) {
     Box(modifier = Modifier.fillMaxSize().then(keyHandler)) {
@@ -208,6 +248,7 @@ private fun CompactMessagesContent(
                 selectedRoom = selectedRoom,
                 onConversationSelected = { listState.selectRoom(it) },
                 onNewConversation = onShowNewDm,
+                onShowRelayPicker = onShowRelayPicker,
                 focusRequester = listFocusRequester,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -229,6 +270,7 @@ private fun SplitMessagesContent(
     onNavigateToProfile: (String) -> Unit,
     listFocusRequester: FocusRequester,
     onShowNewDm: () -> Unit,
+    onShowRelayPicker: () -> Unit = {},
     keyHandler: Modifier,
 ) {
     Row(modifier = Modifier.fillMaxSize().then(keyHandler)) {
@@ -237,6 +279,7 @@ private fun SplitMessagesContent(
             selectedRoom = selectedRoom,
             onConversationSelected = { listState.selectRoom(it) },
             onNewConversation = onShowNewDm,
+            onShowRelayPicker = onShowRelayPicker,
             focusRequester = listFocusRequester,
             modifier = Modifier.width(280.dp),
         )

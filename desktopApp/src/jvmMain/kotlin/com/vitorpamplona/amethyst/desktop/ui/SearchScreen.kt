@@ -44,12 +44,14 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Tag
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -64,6 +66,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -91,6 +94,7 @@ import com.vitorpamplona.amethyst.commons.search.SearchResult
 import com.vitorpamplona.amethyst.commons.search.SearchResultFilter
 import com.vitorpamplona.amethyst.commons.search.parseSearchInput
 import com.vitorpamplona.amethyst.desktop.SearchHistoryStore
+import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
@@ -100,6 +104,9 @@ import com.vitorpamplona.amethyst.desktop.subscriptions.createMetadataSubscripti
 import com.vitorpamplona.amethyst.desktop.subscriptions.createSearchPeopleSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.generateSubId
 import com.vitorpamplona.amethyst.desktop.subscriptions.rememberSubscription
+import com.vitorpamplona.amethyst.desktop.ui.relay.LocalAccountRelays
+import com.vitorpamplona.amethyst.desktop.ui.relay.LocalRelayCategories
+import com.vitorpamplona.amethyst.desktop.ui.relay.SearchRelayEditor
 import com.vitorpamplona.amethyst.desktop.ui.search.AdvancedSearchPanel
 import com.vitorpamplona.amethyst.desktop.ui.search.SearchResultsList
 import com.vitorpamplona.amethyst.desktop.ui.search.SearchSyncBanner
@@ -111,6 +118,7 @@ fun SearchScreen(
     localCache: DesktopLocalCache,
     relayManager: DesktopRelayConnectionManager,
     subscriptionsCoordinator: DesktopRelaySubscriptionsCoordinator? = null,
+    account: AccountState.LoggedIn? = null,
     initialQuery: String = "",
     onNavigateToProfile: (String) -> Unit,
     onNavigateToThread: (String) -> Unit,
@@ -118,8 +126,10 @@ fun SearchScreen(
     modifier: Modifier = Modifier,
 ) {
     val scope = rememberCoroutineScope()
+    val accountRelays = LocalAccountRelays.current
     val state = remember { AdvancedSearchBarState(scope) }
     val focusRequester = remember { FocusRequester() }
+    var showRelayPicker by remember { mutableStateOf(false) }
 
     // Pre-fill initial query
     LaunchedEffect(initialQuery) {
@@ -131,6 +141,8 @@ fun SearchScreen(
     val connectedRelays by relayManager.connectedRelays.collectAsState()
     val relayStatuses by relayManager.relayStatuses.collectAsState()
     val allRelayUrls = remember(relayStatuses) { relayStatuses.keys }
+    val relayCategories = LocalRelayCategories.current
+    val searchRelays by relayCategories.searchRelays.collectAsState()
     val displayText by state.displayText.collectAsState()
     // Track TextFieldValue locally to preserve cursor position
     var textFieldValue by remember { mutableStateOf(TextFieldValue(displayText)) }
@@ -160,7 +172,7 @@ fun SearchScreen(
     LaunchedEffect(debouncedQuery) {
         if (!debouncedQuery.isEmpty && bech32Results.isEmpty()) {
             state.clearResults()
-            state.initRelayStates(allRelayUrls)
+            state.initRelayStates(searchRelays)
             if (shouldSearchPeople) {
                 state.startSearching("people-search")
             }
@@ -171,9 +183,9 @@ fun SearchScreen(
         }
     }
 
-    // NIP-50 people search subscription (use allRelayUrls — subscribe will connect)
-    rememberSubscription(connectedRelays, debouncedQuery, relayManager = relayManager) {
-        if (allRelayUrls.isEmpty() || debouncedQuery.isEmpty) {
+    // NIP-50 people search subscription (use searchRelays from relay categories)
+    rememberSubscription(searchRelays, debouncedQuery, relayManager = relayManager) {
+        if (searchRelays.isEmpty() || debouncedQuery.isEmpty) {
             return@rememberSubscription null
         }
         if (bech32Results.isNotEmpty()) return@rememberSubscription null
@@ -183,7 +195,7 @@ fun SearchScreen(
         }
 
         createSearchPeopleSubscription(
-            relays = allRelayUrls,
+            relays = searchRelays,
             searchQuery =
                 debouncedQuery.text.ifBlank {
                     QuerySerializer.serialize(debouncedQuery)
@@ -212,9 +224,9 @@ fun SearchScreen(
         )
     }
 
-    // NIP-50 advanced note search subscription (use allRelayUrls)
-    rememberSubscription(connectedRelays, debouncedQuery, relayManager = relayManager) {
-        if (allRelayUrls.isEmpty() || debouncedQuery.isEmpty) {
+    // NIP-50 advanced note search subscription (use searchRelays from relay categories)
+    rememberSubscription(searchRelays, debouncedQuery, relayManager = relayManager) {
+        if (searchRelays.isEmpty() || debouncedQuery.isEmpty) {
             return@rememberSubscription null
         }
         if (bech32Results.isNotEmpty()) return@rememberSubscription null
@@ -225,7 +237,7 @@ fun SearchScreen(
         SubscriptionConfig(
             subId = generateSubId("adv-search"),
             filters = filters,
-            relays = allRelayUrls,
+            relays = searchRelays,
             onEvent = { event, _, relay, _ ->
                 if (event.kind == MetadataEvent.KIND) return@SubscriptionConfig
                 if (state.trackRelayEvent(relay.url, event.id)) {
@@ -382,6 +394,15 @@ fun SearchScreen(
                 singleLine = true,
                 shape = RoundedCornerShape(12.dp),
             )
+            if (account != null && !account.isReadOnly) {
+                IconButton(onClick = { showRelayPicker = true }) {
+                    Icon(
+                        Icons.Default.Dns,
+                        contentDescription = "Search Relays",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
             IconButton(onClick = { state.togglePanel() }) {
                 Icon(
                     Icons.Default.Tune,
@@ -394,6 +415,36 @@ fun SearchScreen(
                         },
                 )
             }
+        }
+
+        // Search relay picker dialog
+        if (showRelayPicker && account != null) {
+            val pickerRelays =
+                remember {
+                    mutableStateListOf<com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl>().also {
+                        it.addAll(searchRelays)
+                    }
+                }
+            AlertDialog(
+                onDismissRequest = { showRelayPicker = false },
+                title = { Text("Search Relays") },
+                text = {
+                    SearchRelayEditor(
+                        localRelays = pickerRelays,
+                        signer = account.signer,
+                        onPublish = { event ->
+                            relayManager.broadcastToAll(event)
+                            accountRelays?.consumePublishedEvent(event)
+                            accountRelays?.setSearchRelays(pickerRelays.toSet())
+                        },
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = { showRelayPicker = false }) {
+                        Text("Close")
+                    }
+                },
+            )
         }
 
         // Expandable advanced panel

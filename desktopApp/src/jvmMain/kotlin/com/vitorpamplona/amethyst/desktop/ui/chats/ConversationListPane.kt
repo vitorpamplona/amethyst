@@ -40,6 +40,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -91,6 +92,7 @@ fun ConversationListPane(
     selectedRoom: ChatroomKey?,
     onConversationSelected: (ChatroomKey) -> Unit,
     onNewConversation: () -> Unit = {},
+    onShowRelayPicker: () -> Unit = {},
     focusRequester: FocusRequester = remember { FocusRequester() },
     modifier: Modifier = Modifier,
 ) {
@@ -179,6 +181,17 @@ fun ConversationListPane(
                 color = MaterialTheme.colorScheme.onBackground,
             )
 
+            IconButton(
+                onClick = onShowRelayPicker,
+                modifier = Modifier.size(32.dp),
+            ) {
+                Icon(
+                    Icons.Default.Dns,
+                    contentDescription = "DM Relays",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
             IconButton(
                 onClick = onNewConversation,
                 modifier = Modifier.size(32.dp),

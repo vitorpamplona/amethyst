@@ -45,6 +45,7 @@ import com.vitorpamplona.amethyst.desktop.account.AccountManager
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
+import com.vitorpamplona.amethyst.desktop.network.Nip11Fetcher
 import com.vitorpamplona.amethyst.desktop.service.highlights.DesktopHighlightStore
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.desktop.ui.ZapFeedback
@@ -64,10 +65,12 @@ fun DeckLayout(
     subscriptionsCoordinator: DesktopRelaySubscriptionsCoordinator,
     highlightStore: DesktopHighlightStore,
     draftStore: com.vitorpamplona.amethyst.desktop.service.drafts.DesktopDraftStore,
+    nip11Fetcher: Nip11Fetcher,
     appScope: CoroutineScope,
     onShowComposeDialog: () -> Unit,
     onShowReplyDialog: (com.vitorpamplona.quartz.nip01Core.core.Event) -> Unit,
     onZapFeedback: (ZapFeedback) -> Unit,
+    onNavigateToRelays: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val columns by deckState.columns.collectAsState()
@@ -118,10 +121,12 @@ fun DeckLayout(
                     subscriptionsCoordinator = subscriptionsCoordinator,
                     highlightStore = highlightStore,
                     draftStore = draftStore,
+                    nip11Fetcher = nip11Fetcher,
                     appScope = appScope,
                     onShowComposeDialog = onShowComposeDialog,
                     onShowReplyDialog = onShowReplyDialog,
                     onZapFeedback = onZapFeedback,
+                    onNavigateToRelays = onNavigateToRelays,
                 )
             }
         }
