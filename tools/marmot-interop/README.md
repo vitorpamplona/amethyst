@@ -1,6 +1,6 @@
-# Marmot Interop Test Harness
+# Interop Test Harnesses
 
-Two flavours, same scenarios:
+Two flavours of the Marmot harness, same scenarios:
 
 - **`marmot-interop.sh`** — interactive. Drives B/C via `wn` and **prompts the
   human** to perform each Amethyst-side step in the mobile UI (Identity A).
@@ -10,7 +10,15 @@ Two flavours, same scenarios:
   end-to-end and exits with a pass/fail summary. Use this for CI and for
   iterating on the Nostr/Marmot plumbing without needing to touch a phone.
 
-Both harnesses validate Amethyst against **whitenoise-rs**
+A third, slimmer harness covers the NIP-17 DM surface:
+
+- **`dm-interop-headless.sh`** — two `amy` processes (Identity A and
+  Identity D) exchange NIP-17 DMs through the loopback nostr-rs-relay.
+  No whitenoise-rs required — only `amy` and the relay binary (which
+  is shared with the Marmot harness's checkout at
+  `state-headless/nostr-rs-relay/`).
+
+Both Marmot harnesses validate Amethyst against **whitenoise-rs**
 (https://github.com/marmot-protocol/whitenoise-rs), the reference Rust
 implementation that powers the White Noise Flutter app. Every test records a
 pass/fail/skip result into a tab-separated log, and the summary is printed at
@@ -33,6 +41,23 @@ the end of the run.
 | 11 | Leave group | – |
 | 12 | Offline catch-up / replay | – |
 | 13 | KeyPackage rotation | – |
+
+### DM (amy ↔ amy, NIP-17) — `dm-interop-headless.sh`
+
+| # | Test |
+|---|---|
+| dm-01 | Text round-trip A↔D (kind:14) |
+| dm-02 | `dm list` returns prior exchange with `type:text` discriminator |
+| dm-03 | Strict kind:10050 refuses sends to an inboxless recipient |
+| dm-04 | `--allow-fallback` opts into the NIP-65 read / bootstrap chain |
+| dm-05 | File message reference mode round-trip (kind:15 with manual key/nonce) |
+| dm-06 | No-flag `dm list` advances the gift-wrap cursor (second call empty) |
+
+**Note:** dm-05 validates the kind:15 wire format via reference mode
+(caller supplies the URL + AES-GCM key/nonce). The upload-mode variant
+(`dm send-file --file PATH --server URL`) needs a local Blossom server
+and isn't scripted here — the upload classes are unit-tested on desktop
+at `desktopApp/src/jvmTest/kotlin/.../service/upload/`.
 | 14 | Push notifications (MIP-05) | opt-in via `--transponder` |
 
 ## Prerequisites
