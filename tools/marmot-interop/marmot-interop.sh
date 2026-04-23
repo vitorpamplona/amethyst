@@ -1203,7 +1203,30 @@ test_12_offline_catchup() {
 }
 
 test_13_keypackage_rotation() {
-  banner "Test 13 — KeyPackage rotation"
+  banner "Test 13 — KeyPackage rotation (MIP-00 consumption-driven)"
+
+  # Per MIP-00, a KeyPackage is rotated when it's *consumed* by an incoming
+  # Welcome — the init_key is effectively spent and the client must
+  # publish a fresh KeyPackage to the same d-tag slot.
+  #
+  # Earlier revisions of this test asked the human to restart Amethyst or
+  # toggle KP relays, on the assumption that either would republish a
+  # fresh KP. Neither actually does in current Amethyst:
+  #   - Restart: `Account.ensureMarmotKeyPackagePublished` early-returns
+  #     whenever a bundle already exists on disk — no rotation.
+  #   - Toggle KP relays: `Account.saveKeyPackageRelayList` re-publishes
+  #     the existing kind:30443 to the new relay set, same event_id.
+  #
+  # So drive the real MIP-00 flow instead: have B create a one-off group
+  # with A as invitee. The Welcome gift-wrap delivered to A consumes A's
+  # KeyPackage, `DecryptAndIndexProcessor` sees `needsKeyPackageRotation`
+  # on the ingest result, and calls `publishMarmotKeyPackages` which
+  # rotates the consumed slot and publishes a new kind:30443 to the same
+  # d-tag. B's `keys check` then returns a different event_id.
+  #
+  # Rotation fires on Welcome *receive* (decrypt), not on human accept, so
+  # the operator's accept is nice-to-have for group hygiene but not on the
+  # critical path for this test.
 
   step "B records A's current KP event id"
   local before
@@ -1213,12 +1236,24 @@ test_13_keypackage_rotation() {
     fail_msg "no existing KP for A"; record_result "13 keypackage rotation" fail "no KP found"; return
   fi
 
-  prompt_human "In Amethyst, trigger a KeyPackage rotation:
-    Option 1: Settings -> Key Package Relays -> toggle OFF all KP relays, then toggle ON.
-    Option 2: Restart the Amethyst app (KeyPackageRotationManager runs at startup).
-  Press <Enter> when Amethyst has published a new KP."
+  step "B creates group 'Interop-13-rotation' with A as sole invitee (consumes A's KP)"
+  local out gid
+  out=$(wn_b --json groups create "Interop-13-rotation" "$A_NPUB" 2>>"$LOG_FILE")
+  printf 'wn groups create (test_13) raw output: %s\n' "$out" >>"$LOG_FILE"
+  gid=$(printf '%s' "$out" | jq_group_id)
+  if [[ -z "$gid" ]]; then
+    fail_msg "could not create Interop-13-rotation"
+    record_result "13 keypackage rotation" fail "create failed"
+    return
+  fi
+  save_state GROUP_13 "$gid"
+  info "group_id: $gid"
 
-  step "waiting for a new KP event id at B (60s)"
+  prompt_human "In Amethyst, you should see a new invite 'Interop-13-rotation' from $B_NPUB.
+  Accepting is NOT required for rotation (processing the Welcome is enough),
+  but please accept it to keep group state tidy. Press <Enter> when done."
+
+  step "waiting for A's rotated KP event_id at B (60s)"
   local deadline=$(( $(date +%s) + 60 )) after=""
   while [[ $(date +%s) -lt $deadline ]]; do
     after=$(wn_b --json keys check "$A_NPUB" 2>/dev/null | jq -r '.result.event_id // .event_id // empty')
@@ -1226,10 +1261,11 @@ test_13_keypackage_rotation() {
     sleep 3
   done
   if [[ -n "$after" && "$after" != "$before" ]]; then
-    pass_msg "A's KP rotated: $before -> $after"
+    pass_msg "A's KP rotated after Welcome consumption: $before -> $after"
     record_result "13 keypackage rotation" pass
   else
-    record_result "13 keypackage rotation" fail "no new KP event_id observed"
+    fail_msg "A's KP event_id unchanged ($before) 60s after Welcome — MIP-00 rotation did not fire"
+    record_result "13 keypackage rotation" fail "no new KP event_id after invite"
   fi
 }
 
