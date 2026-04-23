@@ -68,14 +68,17 @@ class CustomMediaSourceFactory(
 
     override fun createMediaSource(mediaItem: MediaItem): MediaSource {
         val live = isLiveStream(mediaItem)
+        val itemMime = mediaItem.localConfiguration?.mimeType
+        val source =
+            if (live) {
+                nonCachingFactory.createMediaSource(mediaItem)
+            } else {
+                cachingFactory.createMediaSource(mediaItem)
+            }
         Log.d("CustomMediaSourceFactory") {
-            "createMediaSource(${if (live) "BYPASS" else "CACHE"}): ${mediaItem.mediaId}"
+            "createMediaSource(${if (live) "BYPASS" else "CACHE"}): id=${mediaItem.mediaId} mime=$itemMime -> ${source::class.java.simpleName}"
         }
-        return if (live) {
-            nonCachingFactory.createMediaSource(mediaItem)
-        } else {
-            cachingFactory.createMediaSource(mediaItem)
-        }
+        return source
     }
 
     private fun isLiveStream(mediaItem: MediaItem): Boolean {
