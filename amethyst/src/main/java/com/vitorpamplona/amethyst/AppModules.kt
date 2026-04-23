@@ -50,6 +50,7 @@ import com.vitorpamplona.amethyst.service.images.ImageLoaderSetup
 import com.vitorpamplona.amethyst.service.images.ThumbnailDiskCache
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.notifications.AlwaysOnNotificationServiceManager
+import com.vitorpamplona.amethyst.service.notifications.NotificationDispatcher
 import com.vitorpamplona.amethyst.service.notifications.PokeyReceiver
 import com.vitorpamplona.amethyst.service.okhttp.DualHttpClientManager
 import com.vitorpamplona.amethyst.service.okhttp.DualHttpClientManagerForRelays
@@ -397,6 +398,11 @@ class AppModules(
     // Manages always-on notification service lifecycle
     val alwaysOnNotificationServiceManager = AlwaysOnNotificationServiceManager(appContext, applicationIOScope)
 
+    // Observes LocalCache for notification-relevant events and routes them to
+    // EventNotificationConsumer. Sources: FCM, UnifiedPush, Pokey, active relay
+    // subscriptions, and NotificationRelayService.
+    val notificationDispatcher = NotificationDispatcher(appContext, applicationIOScope)
+
     // Organizes cache clearing
     val trimmingService by
         lazy {
@@ -494,6 +500,9 @@ class AppModules(
         // registers to receive events
         pokeyReceiver.register(appContext)
 
+        // starts observing LocalCache for notification-worthy events
+        notificationDispatcher.start()
+
         // Watch for account login and start/stop always-on notification service
         applicationIOScope.launch {
             sessionManager.accountContent.collectLatest { state ->
@@ -515,6 +524,7 @@ class AppModules(
 
     fun terminate(appContext: Context) {
         pokeyReceiver.unregister(appContext)
+        notificationDispatcher.stop()
         BackgroundMedia.removeBackgroundControllerAndReleaseIt()
         PlaybackServiceClient.shutdown()
         alwaysOnNotificationServiceManager.stop()

@@ -56,6 +56,15 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
+    companion object {
+        // True only while MainActivity is resumed. Used by the notification
+        // pipeline to suppress in-app notifications — PiP/Call activities
+        // have their own lifecycle, so MainActivity is paused while they're up.
+        @Volatile
+        var isResumed: Boolean = false
+            private set
+    }
+
     @RequiresApi(Build.VERSION_CODES.R)
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
@@ -74,6 +83,7 @@ class MainActivity : AppCompatActivity() {
     @OptIn(DelicateCoroutinesApi::class)
     override fun onResume() {
         super.onResume()
+        isResumed = true
 
         Log.d("ActivityLifecycle") { "MainActivity.onResume $this" }
 
@@ -82,6 +92,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onPause() {
+        isResumed = false
         Log.d("ActivityLifecycle") { "MainActivity.onPause $this" }
 
         @OptIn(DelicateCoroutinesApi::class)

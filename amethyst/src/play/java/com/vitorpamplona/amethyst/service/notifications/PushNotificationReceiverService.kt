@@ -27,6 +27,7 @@ import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.utils.Log
@@ -64,10 +65,11 @@ class PushNotificationReceiverService : FirebaseMessagingService() {
         return null
     }
 
-    private suspend fun receiveIfNew(event: GiftWrapEvent) {
+    private fun receiveIfNew(event: GiftWrapEvent) {
         if (eventCache.get(event.id) == null) {
             eventCache.put(event.id, event.id)
-            EventNotificationConsumer(applicationContext).consume(event)
+            // Feeds the shared cache; NotificationDispatcher observes and dispatches.
+            LocalCache.justConsume(event, null, false)
         }
     }
 

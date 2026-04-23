@@ -26,6 +26,7 @@ import android.util.LruCache
 import androidx.core.content.ContextCompat
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.utils.Log
@@ -73,10 +74,11 @@ class PushMessageReceiver : MessagingReceiver() {
         return null
     }
 
-    private suspend fun receiveIfNew(event: GiftWrapEvent) {
+    private fun receiveIfNew(event: GiftWrapEvent) {
         if (eventCache.get(event.id) == null) {
             eventCache.put(event.id, event.id)
-            EventNotificationConsumer(appContext).consume(event)
+            // Feeds the shared cache; NotificationDispatcher observes and dispatches.
+            LocalCache.justConsume(event, null, false)
         }
     }
 
