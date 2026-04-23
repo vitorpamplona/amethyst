@@ -1191,6 +1191,13 @@ class AccountViewModel(
             account.changeReactionRowItems(items)
         }
 
+    fun videoPlayerButtonItemsFlow() = account.settings.syncedSettings.videoPlayer.buttonItems
+
+    fun changeVideoPlayerButtonItems(items: List<com.vitorpamplona.amethyst.model.VideoPlayerButtonItem>) =
+        launchSigner {
+            account.changeVideoPlayerButtonItems(items)
+        }
+
     fun updateZapAmounts(
         amountSet: List<Long>,
         selectedZapType: LnZapEvent.ZapType,

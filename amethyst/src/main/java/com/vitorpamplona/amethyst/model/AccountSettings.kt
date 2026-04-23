@@ -267,6 +267,15 @@ class AccountSettings(
         return false
     }
 
+    fun changeVideoPlayerButtonItems(newItems: List<VideoPlayerButtonItem>): Boolean {
+        if (syncedSettings.videoPlayer.buttonItems.value != newItems) {
+            syncedSettings.videoPlayer.buttonItems.tryEmit(newItems.toImmutableList())
+            saveAccountSettings()
+            return true
+        }
+        return false
+    }
+
     fun defaultNwcWallet(): NwcWalletEntryNorm? {
         val id = defaultNwcWalletId.value
         val wallets = nwcWallets.value
