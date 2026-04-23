@@ -46,6 +46,8 @@ import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.PersonRemove
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -115,6 +117,8 @@ fun MarmotGroupInfoScreen(
     var showLeaveDialog by remember { mutableStateOf(false) }
     var isLeaving by remember { mutableStateOf(false) }
     var memberToRemove by remember { mutableStateOf<GroupMemberInfo?>(null) }
+    var memberToPromote by remember { mutableStateOf<GroupMemberInfo?>(null) }
+    var memberToDemote by remember { mutableStateOf<GroupMemberInfo?>(null) }
     var addSearchInput by remember { mutableStateOf("") }
     var addStatus by remember { mutableStateOf<String?>(null) }
     var isAddError by remember { mutableStateOf(false) }
@@ -224,17 +228,30 @@ fun MarmotGroupInfoScreen(
                     )
                 }
 
+                val isMeAdmin = myPubkey in adminPubkeys
                 items(members, key = { it.leafIndex }) { member ->
                     val isMe = member.pubkey == myPubkey
                     val isAdmin = member.pubkey in adminPubkeys
+                    // Only admins can mutate other members' roles. Self-promote
+                    // is a no-op; self-demote must go through the leave flow so
+                    // we hide the toggle for the current user.
+                    val canToggleAdmin = isMeAdmin && !isMe
+                    // Guard against removing the last admin (MIP-03 depletion
+                    // guard would otherwise reject the commit).
+                    val canDemote = canToggleAdmin && isAdmin && adminPubkeys.size > 1
+                    val canPromote = canToggleAdmin && !isAdmin
                     MemberRow(
                         member = member,
                         isMe = isMe,
                         isAdmin = isAdmin,
                         canRemove = !isMe,
+                        canPromote = canPromote,
+                        canDemote = canDemote,
                         accountViewModel = accountViewModel,
                         nav = nav,
                         onRemoveClick = { memberToRemove = member },
+                        onPromoteClick = { memberToPromote = member },
+                        onDemoteClick = { memberToDemote = member },
                     )
                     HorizontalDivider()
                 }
@@ -347,6 +364,66 @@ fun MarmotGroupInfoScreen(
             onDismiss = { memberToRemove = null },
         )
     }
+
+    memberToPromote?.let { member ->
+        ConfirmGrantAdminDialog(
+            memberPubkey = member.pubkey,
+            accountViewModel = accountViewModel,
+            onConfirm = {
+                memberToPromote = null
+                scope.launch(Dispatchers.IO) {
+                    try {
+                        accountViewModel.grantMarmotGroupAdmin(nostrGroupId, member.pubkey)
+                        launch(Dispatchers.Main) {
+                            Toast
+                                .makeText(context, "Admin privileges granted", Toast.LENGTH_SHORT)
+                                .show()
+                        }
+                    } catch (e: Exception) {
+                        launch(Dispatchers.Main) {
+                            Toast
+                                .makeText(
+                                    context,
+                                    "Failed to grant admin: ${e.message}",
+                                    Toast.LENGTH_LONG,
+                                ).show()
+                        }
+                    }
+                }
+            },
+            onDismiss = { memberToPromote = null },
+        )
+    }
+
+    memberToDemote?.let { member ->
+        ConfirmRevokeAdminDialog(
+            memberPubkey = member.pubkey,
+            accountViewModel = accountViewModel,
+            onConfirm = {
+                memberToDemote = null
+                scope.launch(Dispatchers.IO) {
+                    try {
+                        accountViewModel.revokeMarmotGroupAdmin(nostrGroupId, member.pubkey)
+                        launch(Dispatchers.Main) {
+                            Toast
+                                .makeText(context, "Admin privileges revoked", Toast.LENGTH_SHORT)
+                                .show()
+                        }
+                    } catch (e: Exception) {
+                        launch(Dispatchers.Main) {
+                            Toast
+                                .makeText(
+                                    context,
+                                    "Failed to revoke admin: ${e.message}",
+                                    Toast.LENGTH_LONG,
+                                ).show()
+                        }
+                    }
+                }
+            },
+            onDismiss = { memberToDemote = null },
+        )
+    }
 }
 
 @Composable
@@ -424,9 +501,13 @@ fun MemberRow(
     isMe: Boolean,
     isAdmin: Boolean,
     canRemove: Boolean,
+    canPromote: Boolean,
+    canDemote: Boolean,
     accountViewModel: AccountViewModel,
     nav: INav,
     onRemoveClick: () -> Unit,
+    onPromoteClick: () -> Unit,
+    onDemoteClick: () -> Unit,
 ) {
     Row(
         modifier =
@@ -457,6 +538,23 @@ fun MemberRow(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     fontWeight = if (isMe || isAdmin) FontWeight.Bold else FontWeight.Normal,
+                )
+            }
+        }
+        if (canPromote) {
+            IconButton(onClick = onPromoteClick) {
+                Icon(
+                    imageVector = Icons.Outlined.StarBorder,
+                    contentDescription = "Grant admin privileges",
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+            }
+        } else if (canDemote) {
+            IconButton(onClick = onDemoteClick) {
+                Icon(
+                    imageVector = Icons.Default.Star,
+                    contentDescription = "Revoke admin privileges",
+                    tint = MaterialTheme.colorScheme.primary,
                 )
             }
         }
@@ -516,6 +614,67 @@ private fun ConfirmRemoveMemberDialog(
         confirmButton = {
             TextButton(onClick = onConfirm) {
                 Text("Remove", color = MaterialTheme.colorScheme.error)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        },
+    )
+}
+
+@Composable
+private fun ConfirmGrantAdminDialog(
+    memberPubkey: HexKey,
+    accountViewModel: AccountViewModel,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Grant Admin Privileges") },
+        text = {
+            LoadUser(baseUserHex = memberPubkey, accountViewModel = accountViewModel) { user ->
+                val name = user?.toBestDisplayName() ?: "${memberPubkey.take(16)}..."
+                Text(
+                    "Make \"$name\" an admin of this group? Admins can add or remove members, " +
+                        "change group info, and grant admin privileges to other members.",
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text("Grant")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        },
+    )
+}
+
+@Composable
+private fun ConfirmRevokeAdminDialog(
+    memberPubkey: HexKey,
+    accountViewModel: AccountViewModel,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Revoke Admin Privileges") },
+        text = {
+            LoadUser(baseUserHex = memberPubkey, accountViewModel = accountViewModel) { user ->
+                val name = user?.toBestDisplayName() ?: "${memberPubkey.take(16)}..."
+                Text("Revoke admin privileges from \"$name\"? They will remain a member of the group.")
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text("Revoke", color = MaterialTheme.colorScheme.error)
             }
         },
         dismissButton = {
