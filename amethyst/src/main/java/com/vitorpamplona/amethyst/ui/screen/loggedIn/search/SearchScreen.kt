@@ -20,27 +20,49 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.search
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Tune
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.focusRequester
@@ -52,6 +74,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.search.SearchScope
+import com.vitorpamplona.amethyst.commons.search.SearchSortOrder
+import com.vitorpamplona.amethyst.commons.search.SearchSource
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.TextSearchDataSourceSubscription
@@ -77,6 +102,7 @@ import com.vitorpamplona.amethyst.ui.theme.StdTopPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 
 @Composable
@@ -157,10 +183,254 @@ private fun SearchBar(
                 }
             }
         }
+
+        // bech32 auto-resolve: navigate on hit without displaying results
+        launch {
+            searchBarViewModel.directEventResolver.filterNotNull().collect { route ->
+                nav.nav(route)
+                searchBarViewModel.clear()
+            }
+        }
     }
 
-    SearchTextField(searchBarViewModel, Modifier.statusBarsPadding())
+    Column(modifier = Modifier.statusBarsPadding()) {
+        SearchTextField(searchBarViewModel, Modifier)
+        SearchFilterRow(searchBarViewModel)
+    }
 }
+
+// Must match SearchBarViewModel.source's initial value.
+private val DEFAULT_SOURCE = SearchSource.RELAYS
+
+private fun hasNonDefaultFilters(
+    scope: SearchScope,
+    source: SearchSource,
+    followsOnly: Boolean,
+    sort: SearchSortOrder,
+): Boolean {
+    if (source != DEFAULT_SOURCE) return true
+    if (followsOnly) return true
+    if (scope != SearchScope.PEOPLE && sort != SearchSortOrder.EVENT_DEFAULT) return true
+    return false
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SearchFilterRow(searchBarViewModel: SearchBarViewModel) {
+    val currentScope by searchBarViewModel.scope.collectAsStateWithLifecycle()
+    val currentSource by searchBarViewModel.source.collectAsStateWithLifecycle()
+    val currentFollowsOnly by searchBarViewModel.followsOnly.collectAsStateWithLifecycle()
+    val currentSort by searchBarViewModel.sortOrder.collectAsStateWithLifecycle()
+
+    var sheetOpen by remember { mutableStateOf(false) }
+
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        SingleChoiceSegmentedButtonRow(modifier = Modifier.weight(1f)) {
+            val scopes = listOf(SearchScope.ALL, SearchScope.PEOPLE, SearchScope.NOTES)
+            scopes.forEachIndexed { index, s ->
+                SegmentedButton(
+                    selected = currentScope == s,
+                    onClick = { searchBarViewModel.updateScope(s) },
+                    shape = SegmentedButtonDefaults.itemShape(index = index, count = scopes.size),
+                ) {
+                    Text(
+                        text =
+                            when (s) {
+                                SearchScope.ALL -> stringRes(R.string.search_scope_all)
+                                SearchScope.PEOPLE -> stringRes(R.string.search_scope_people)
+                                SearchScope.NOTES -> stringRes(R.string.search_scope_notes)
+                            },
+                    )
+                }
+            }
+        }
+
+        FilterIconButton(
+            hasBadge =
+                hasNonDefaultFilters(
+                    scope = currentScope,
+                    source = currentSource,
+                    followsOnly = currentFollowsOnly,
+                    sort = currentSort,
+                ),
+            onClick = { sheetOpen = true },
+        )
+    }
+
+    if (sheetOpen) {
+        SearchFiltersSheet(
+            scope = currentScope,
+            source = currentSource,
+            followsOnly = currentFollowsOnly,
+            sort = currentSort,
+            onSourceChange = searchBarViewModel::updateSource,
+            onFollowsOnlyChange = searchBarViewModel::updateFollowsOnly,
+            onSortChange = searchBarViewModel::updateSortOrder,
+            onReset = {
+                searchBarViewModel.updateSource(DEFAULT_SOURCE)
+                searchBarViewModel.updateFollowsOnly(false)
+                searchBarViewModel.updateSortOrder(SearchSortOrder.EVENT_DEFAULT)
+            },
+            onDismiss = { sheetOpen = false },
+        )
+    }
+}
+
+@Composable
+private fun FilterIconButton(
+    hasBadge: Boolean,
+    onClick: () -> Unit,
+) {
+    Box {
+        IconButton(onClick = onClick) {
+            Icon(
+                imageVector = Icons.Outlined.Tune,
+                contentDescription = stringRes(R.string.search_filters_open),
+            )
+        }
+        if (hasBadge) {
+            Box(
+                modifier =
+                    Modifier
+                        .align(Alignment.TopEnd)
+                        .offset(x = (-10).dp, y = 10.dp)
+                        .size(8.dp)
+                        .background(MaterialTheme.colorScheme.primary, CircleShape),
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SearchFiltersSheet(
+    scope: SearchScope,
+    source: SearchSource,
+    followsOnly: Boolean,
+    sort: SearchSortOrder,
+    onSourceChange: (SearchSource) -> Unit,
+    onFollowsOnlyChange: (Boolean) -> Unit,
+    onSortChange: (SearchSortOrder) -> Unit,
+    onReset: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+    ) {
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp),
+        ) {
+            Text(
+                text = stringRes(R.string.search_filters_title),
+                style = MaterialTheme.typography.titleMedium,
+            )
+
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = stringRes(R.string.search_filters_section_source),
+                    style = MaterialTheme.typography.labelLarge,
+                )
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                    val sources = listOf(SearchSource.LOCAL, SearchSource.RELAYS)
+                    sources.forEachIndexed { index, s ->
+                        SegmentedButton(
+                            selected = source == s,
+                            onClick = { onSourceChange(s) },
+                            shape = SegmentedButtonDefaults.itemShape(index = index, count = sources.size),
+                        ) {
+                            Text(
+                                text =
+                                    when (s) {
+                                        SearchSource.LOCAL -> stringRes(R.string.search_source_local)
+                                        SearchSource.RELAYS -> stringRes(R.string.search_source_relays)
+                                    },
+                            )
+                        }
+                    }
+                }
+            }
+
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable { onFollowsOnlyChange(!followsOnly) }
+                        .padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stringRes(R.string.search_follows_only),
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.bodyLarge,
+                )
+                Switch(
+                    checked = followsOnly,
+                    onCheckedChange = onFollowsOnlyChange,
+                )
+            }
+
+            if (scope != SearchScope.PEOPLE) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        text = stringRes(R.string.search_filters_section_sort),
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                    SearchSortOrder.EVENT_OPTIONS.forEach { opt ->
+                        Row(
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .selectable(
+                                        selected = sort == opt,
+                                        onClick = { onSortChange(opt) },
+                                    ).padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            RadioButton(
+                                selected = sort == opt,
+                                onClick = { onSortChange(opt) },
+                            )
+                            Text(
+                                text = sortLabel(opt),
+                                modifier = Modifier.padding(start = 8.dp),
+                                style = MaterialTheme.typography.bodyLarge,
+                            )
+                        }
+                    }
+                }
+            }
+
+            TextButton(onClick = onReset) {
+                Text(stringRes(R.string.search_filters_reset))
+            }
+        }
+    }
+}
+
+@Composable
+private fun sortLabel(opt: SearchSortOrder): String =
+    when (opt) {
+        SearchSortOrder.NEWEST -> stringRes(R.string.search_sort_newest)
+        SearchSortOrder.RELEVANCE -> stringRes(R.string.search_sort_relevance)
+        SearchSortOrder.POPULAR -> stringRes(R.string.search_sort_popular)
+        SearchSortOrder.OLDEST -> stringRes(R.string.search_sort_oldest)
+        SearchSortOrder.NAME_AZ, SearchSortOrder.NAME_ZA -> opt.label
+    }
 
 @Composable
 private fun SearchTextField(

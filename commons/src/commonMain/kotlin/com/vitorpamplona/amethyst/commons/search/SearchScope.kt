@@ -20,21 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.search
 
-enum class SearchSortOrder(
-    val label: String,
-) {
-    NEWEST("Newest"),
-    OLDEST("Oldest"),
-    RELEVANCE("Relevance"),
-    POPULAR("Popular"),
-    NAME_AZ("A → Z"),
-    NAME_ZA("Z → A"),
-    ;
-
-    companion object {
-        val EVENT_OPTIONS = listOf(RELEVANCE, NEWEST, POPULAR)
-        val PEOPLE_OPTIONS = listOf(NAME_AZ, NAME_ZA)
-        val EVENT_DEFAULT = NEWEST
-        val PEOPLE_DEFAULT = NAME_AZ
-    }
+enum class SearchScope {
+    ALL,
+    PEOPLE,
+    NOTES,
 }
