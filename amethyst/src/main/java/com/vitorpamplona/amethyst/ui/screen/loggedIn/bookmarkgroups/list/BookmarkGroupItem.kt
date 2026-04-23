@@ -43,7 +43,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -172,7 +171,7 @@ private fun BookmarkGroupActions(
             onClick = openPostBookmarks,
         ) {
             Icon(
-                painter = painterResource(R.drawable.post),
+                symbol = MaterialSymbols.News,
                 contentDescription = null,
             )
             Text(stringRes(R.string.bookmark_list_posts_btn_label))
@@ -212,7 +211,7 @@ fun BookmarkMembershipStatusAndNumberDisplay(
                     horizontalArrangement = SpacedBy2dp,
                 ) {
                     Icon(
-                        painter = painterResource(R.drawable.post),
+                        symbol = MaterialSymbols.News,
                         modifier = Size10Modifier,
                         contentDescription = null,
                     )

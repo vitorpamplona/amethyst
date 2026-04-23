@@ -142,6 +142,8 @@ object MaterialSymbols {
     val MoreVert = MaterialSymbol("\uE5D4")
     val MoveToInbox = MaterialSymbol("\uE168")
     val MusicNote = MaterialSymbol("\uE405")
+    val News = MaterialSymbol("\uE032")
+    val NoEncryption = MaterialSymbol("\uF03F")
     val Notifications = MaterialSymbol("\uE7F5")
     val Numbers = MaterialSymbol("\uEAC7")
     val OpenInBrowser = MaterialSymbol("\uE89D")
