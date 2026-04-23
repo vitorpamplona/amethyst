@@ -311,28 +311,21 @@ class GiftWrapEventHandler(
 
         eventNote.event = event.copyNoContent()
 
-        // Check if the unwrapped event is a Marmot WelcomeEvent (kind:444)
-        if (MarmotInboundProcessor.isWelcomeEvent(innerGift)) {
-            Log.d("MarmotDbg") {
-                "GiftWrapEventHandler: detected Marmot WelcomeEvent — routing to processMarmotWelcome"
-            }
-            processMarmotWelcome(innerGift, eventNote, publicNote)
-            return
-        }
-
         if (cache.justConsume(innerGift, null, false)) {
             cache.copyRelaysFromTo(publicNote, innerGift)
             val innerGiftNote = cache.getOrCreateNote(innerGift.id)
-            eventProcessor.consumeEvent(innerGift, innerGiftNote, publicNote)
-        }
-    }
 
-    private suspend fun processMarmotWelcome(
-        innerEvent: Event,
-        eventNote: Note,
-        publicNote: Note,
-    ) {
-        processMarmotWelcomeFlow(innerEvent, account)
+            // Marmot Welcomes need MLS processing in addition to being cached,
+            // but they do not route through the normal eventProcessor consumer.
+            if (MarmotInboundProcessor.isWelcomeEvent(innerGift)) {
+                Log.d("MarmotDbg") {
+                    "GiftWrapEventHandler: detected Marmot WelcomeEvent — routing to processMarmotWelcomeFlow"
+                }
+                processMarmotWelcomeFlow(innerGift, account)
+            } else {
+                eventProcessor.consumeEvent(innerGift, innerGiftNote, publicNote)
+            }
+        }
     }
 
     private suspend fun processExistingGiftWrap(
@@ -472,23 +465,23 @@ class SealedRumorEventHandler(
 
         eventNote.event = event.copyNoContent()
 
+        cache.justConsume(innerRumor, null, true)
+        cache.copyRelaysFromTo(publicNote, innerRumor)
+
+        val innerRumorNote = cache.getOrCreateNote(innerRumor.id)
+
         // Marmot Welcome: GiftWrap → Seal → WelcomeEvent. The Seal handler
         // is the actual point at which we see the kind:444 inner. Route it
-        // straight to the shared flow — there's no normal LocalCache event
-        // handler for kind:444, so otherwise it would be silently dropped.
+        // to the MLS flow for group joining in addition to caching — there's
+        // no normal eventProcessor consumer for kind:444.
         if (MarmotInboundProcessor.isWelcomeEvent(innerRumor)) {
             Log.d("MarmotDbg") {
                 "SealedRumorEventHandler: detected Marmot WelcomeEvent inside seal — routing to processMarmotWelcomeFlow"
             }
             processMarmotWelcomeFlow(innerRumor, account)
-            return
+        } else {
+            eventProcessor.consumeEvent(innerRumor, innerRumorNote, publicNote)
         }
-
-        cache.justConsume(innerRumor, null, true)
-        cache.copyRelaysFromTo(publicNote, innerRumor)
-
-        val innerRumorNote = cache.getOrCreateNote(innerRumor.id)
-        eventProcessor.consumeEvent(innerRumor, innerRumorNote, publicNote)
     }
 
     private suspend fun processExistingSealedRumor(

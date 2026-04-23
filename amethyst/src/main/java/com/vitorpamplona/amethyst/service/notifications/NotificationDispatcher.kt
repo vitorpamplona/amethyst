@@ -23,15 +23,17 @@ package com.vitorpamplona.amethyst.service.notifications
 import android.content.Context
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.quartz.experimental.notifications.wake.WakeUpEvent
+import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
+import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
+import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
-import com.vitorpamplona.quartz.nip59Giftwrap.wraps.EphemeralGiftWrapEvent
-import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip64Chess.challenge.accept.LiveChessGameAcceptEvent
 import com.vitorpamplona.quartz.nip64Chess.move.LiveChessMoveEvent
+import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallOfferEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -56,20 +58,26 @@ class NotificationDispatcher(
     companion object {
         private const val TAG = "NotificationDispatcher"
 
-        // Kinds that can trigger notifications. GiftWrap and EphemeralGiftWrap carry
-        // most encrypted payloads (DMs, Chess, CallOffer, Welcome); the rest arrive
-        // unwrapped. SealedRumor (kind 13) is intentionally omitted — it only exists
-        // inside a GiftWrap, and the wrapper drives the unwrap.
+        // The dispatcher observes the *final* notification payload kinds.
+        // GiftWrap/EphemeralGiftWrap (1059/21059) and SealedRumor (13) are NOT
+        // listed here — by the time we care, Account.newNotesPreProcessor has
+        // already unwrapped them and inserted the inner payload into LocalCache,
+        // which fires the observer a second time on the inner event.
         private val NOTIFICATION_KINDS =
             listOf(
-                GiftWrapEvent.KIND,
-                EphemeralGiftWrapEvent.KIND,
+                // Direct-arrival
                 PrivateDmEvent.KIND,
                 LnZapEvent.KIND,
                 ReactionEvent.KIND,
                 LiveChessGameAcceptEvent.KIND,
                 LiveChessMoveEvent.KIND,
                 WakeUpEvent.KIND,
+                // Unwrapped from GiftWrap → Seal
+                ChatMessageEvent.KIND,
+                ChatMessageEncryptedFileHeaderEvent.KIND,
+                WelcomeEvent.KIND,
+                // Unwrapped from EphemeralGiftWrap
+                CallOfferEvent.KIND,
             )
     }
 

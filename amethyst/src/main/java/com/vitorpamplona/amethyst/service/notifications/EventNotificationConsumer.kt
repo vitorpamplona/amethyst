@@ -64,8 +64,6 @@ import com.vitorpamplona.quartz.nip21UriScheme.toNostrUri
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
-import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
-import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip64Chess.baseEvent.BaseChessEvent
 import com.vitorpamplona.quartz.nip64Chess.challenge.accept.LiveChessGameAcceptEvent
 import com.vitorpamplona.quartz.nip64Chess.move.LiveChessMoveEvent
@@ -117,15 +115,14 @@ class EventNotificationConsumer(
     }
 
     /**
-     * Entry point for events arriving into [LocalCache] from any source (FCM push,
-     * UnifiedPush, Pokey, active relay subscriptions, NotificationRelayService).
-     * The caller is the [NotificationDispatcher] which observes [LocalCache] for
-     * notification-relevant kinds and guarantees per-event first-delivery semantics
-     * (the [LocalCache] observer only fires on new insertions), so no hasConsumed
-     * check is needed here.
+     * Entry point for notification-relevant events arriving into [LocalCache]
+     * from any source (FCM push, UnifiedPush, Pokey, active relay subscriptions,
+     * NotificationRelayService). The [NotificationDispatcher] only invokes this
+     * after [Account.newNotesPreProcessor] has fully unwrapped wraps and seals,
+     * so this method receives the final inner payload directly.
      *
-     * Iterates the logged-in accounts, decrypting wraps with each signer until one
-     * matches (wraps don't carry a recipient hint).
+     * Matches the event to a logged-in account by its `p` tags and dispatches
+     * to [dispatchForAccount].
      */
     suspend fun consumeFromCache(event: Event) =
         withWakeLock {
@@ -133,39 +130,26 @@ class EventNotificationConsumer(
 
             if (!notificationManager().areNotificationsEnabled()) return@withWakeLock
 
+            val taggedNpubs =
+                event
+                    .taggedUserIds()
+                    .mapTo(mutableSetOf()) { LocalCache.getOrCreateUser(it).pubkeyNpub() }
+            if (taggedNpubs.isEmpty()) return@withWakeLock
+
             LocalPreferences.allSavedAccounts().forEach { savedAccount ->
                 if (!savedAccount.hasPrivKey && !savedAccount.loggedInWithExternalSigner) return@forEach
-
-                // For unwrapped events with `p` tags, only try accounts that are tagged.
-                if (event !is GiftWrapEvent) {
-                    val taggedNpubs = event.taggedUserIds().mapTo(mutableSetOf()) { LocalCache.getOrCreateUser(it).pubkeyNpub() }
-                    if (taggedNpubs.isNotEmpty() && savedAccount.npub !in taggedNpubs) return@forEach
-                }
+                if (savedAccount.npub !in taggedNpubs) return@forEach
 
                 val accountSettings = LocalPreferences.loadAccountConfigFromEncryptedStorage(savedAccount.npub) ?: return@forEach
                 try {
                     val account = Amethyst.instance.accountsCache.loadAccount(accountSettings)
-                    if (consumeForAccount(event, account)) return@withWakeLock
+                    dispatchForAccount(event, account)
                 } catch (e: Exception) {
                     if (e is CancellationException) throw e
-                    Log.d(TAG) { "Message was not for user ${savedAccount.npub}: ${e.message}" }
+                    Log.d(TAG) { "Failed to dispatch ${event.kind} ${event.id} for ${savedAccount.npub}: ${e.message}" }
                 }
             }
         }
-
-    /**
-     * Tries to process [event] for [account]. Unwraps gift wraps and seals as needed,
-     * updating [LocalCache] so the UI can surface the content later. Returns true if
-     * the event matched this account (i.e. decryption succeeded or tagging matched).
-     */
-    private suspend fun consumeForAccount(
-        event: Event,
-        account: Account,
-    ): Boolean {
-        val inner = unwrapFully(event, account.signer) ?: return false
-        dispatchForAccount(inner, account)
-        return true
-    }
 
     private suspend fun dispatchForAccount(
         event: Event,
@@ -239,46 +223,6 @@ class EventNotificationConsumer(
             }
         }
     }
-
-    /**
-     * Fully unwraps gift wraps and seals so the inner notification-relevant event
-     * can be dispatched. Updates [LocalCache] so the inner events are available to
-     * the UI and clears the outer encrypted payloads to save memory. Returns null
-     * if the signer cannot decrypt the wrap (i.e. this event isn't for this account).
-     *
-     * Idempotent: safe to call whether or not the outer event is already in cache,
-     * since [NotificationDispatcher] invokes this after [LocalCache] has already
-     * stored the wrapper.
-     */
-    private suspend fun unwrapFully(
-        event: Event,
-        signer: NostrSigner,
-    ): Event? =
-        try {
-            when (event) {
-                // EphemeralGiftWrapEvent inherits GiftWrapEvent; both handled here.
-                is GiftWrapEvent -> {
-                    val inner = event.unwrapThrowing(signer)
-                    LocalCache.getOrCreateNote(event.id).event = event.copyNoContent()
-                    unwrapFully(inner, signer)
-                }
-
-                is SealedRumorEvent -> {
-                    val inner = event.unsealThrowing(signer)
-                    LocalCache.getOrCreateNote(event.id).event = event.copyNoContent()
-                    // seal payload is not verifiable via signature
-                    LocalCache.justConsume(inner, null, true)
-                    inner
-                }
-
-                else -> {
-                    event
-                }
-            }
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            null
-        }
 
     private suspend fun notify(
         event: ChatMessageEncryptedFileHeaderEvent,

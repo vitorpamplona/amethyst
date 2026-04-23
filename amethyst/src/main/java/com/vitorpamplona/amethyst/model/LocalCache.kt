@@ -67,6 +67,7 @@ import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryE
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
+import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
@@ -2808,6 +2809,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is VoiceReplyEvent -> consumeRegularEvent(event, relay, wasVerified)
                 is WakeUpEvent -> consumeRegularEvent(event, relay, wasVerified)
                 is WebBookmarkEvent -> consumeBaseReplaceable(event, relay, wasVerified)
+                is WelcomeEvent -> consumeRegularEvent(event, relay, wasVerified)
                 is WikiNoteEvent -> consume(event, relay, wasVerified)
                 is PaymentTargetsEvent -> consume(event, relay, wasVerified)
                 else -> Log.w("Event Not Supported") { "From ${relay?.url}: ${event.toJson()}" }.let { false }
