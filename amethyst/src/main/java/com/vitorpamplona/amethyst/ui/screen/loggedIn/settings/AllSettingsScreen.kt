@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
+import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -28,16 +29,27 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -54,6 +66,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 @Preview
 @Composable
@@ -72,6 +86,10 @@ fun AllSettingsScreen(
     nav: INav,
 ) {
     val tint = MaterialTheme.colorScheme.onBackground
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var showResetMarmotDialog by remember { mutableStateOf(false) }
+    var isResettingMarmot by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -232,8 +250,85 @@ fun AllSettingsScreen(
                 tint = tint,
                 onClick = { nav.nav(Route.VanishEvents) },
             )
+            HorizontalDivider()
+            SettingsNavigationRow(
+                title = R.string.reset_marmot_state,
+                icon = MaterialSymbols.DeleteSweep,
+                tint = tint,
+                onClick = { if (!isResettingMarmot) showResetMarmotDialog = true },
+            )
         }
     }
+
+    if (showResetMarmotDialog) {
+        ResetMarmotStateDialog(
+            onConfirm = {
+                showResetMarmotDialog = false
+                isResettingMarmot = true
+                scope.launch(Dispatchers.IO) {
+                    val successMessage = stringRes(context, R.string.reset_marmot_success)
+                    try {
+                        accountViewModel.resetMarmotState()
+                        launch(Dispatchers.Main) {
+                            Toast.makeText(context, successMessage, Toast.LENGTH_SHORT).show()
+                        }
+                    } catch (e: Exception) {
+                        val failureMessage =
+                            stringRes(context, R.string.reset_marmot_failure, e.message ?: "")
+                        launch(Dispatchers.Main) {
+                            Toast.makeText(context, failureMessage, Toast.LENGTH_LONG).show()
+                        }
+                    } finally {
+                        isResettingMarmot = false
+                    }
+                }
+            },
+            onDismiss = { showResetMarmotDialog = false },
+        )
+    }
+}
+
+@Composable
+private fun ResetMarmotStateDialog(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = {
+            Icon(
+                symbol = MaterialSymbols.Warning,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.error,
+                modifier = Modifier.size(32.dp),
+            )
+        },
+        title = {
+            Text(
+                text = stringRes(R.string.reset_marmot_confirm_title),
+                textAlign = TextAlign.Center,
+            )
+        },
+        text = {
+            Text(text = stringRes(R.string.reset_marmot_confirm_body))
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                colors =
+                    ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                    ),
+            ) {
+                Text(stringRes(R.string.reset_marmot_confirm_action))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringRes(R.string.cancel))
+            }
+        },
+    )
 }
 
 @Composable

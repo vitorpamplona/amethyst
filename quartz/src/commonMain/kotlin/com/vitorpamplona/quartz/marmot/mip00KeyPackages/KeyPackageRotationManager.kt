@@ -157,6 +157,26 @@ class KeyPackageRotationManager(
         }
     }
 
+    /**
+     * Wipe all in-memory KeyPackage bundles plus the persisted snapshot.
+     * Intended for user-initiated Marmot resets — the caller is responsible
+     * for re-publishing KeyPackages afterwards (e.g. via
+     * `Account.ensureMarmotKeyPackagePublished`).
+     */
+    suspend fun clearAllState() =
+        mutex.withLock {
+            activeBundles.clear()
+            pendingRotations.clear()
+            eventIdToSlot.clear()
+            namedSlotDTags.clear()
+            val store = store ?: return@withLock
+            try {
+                store.delete()
+            } catch (e: Exception) {
+                Log.w("KeyPackageRotationManager", "clearAllState(): failed to delete snapshot: ${e.message}")
+            }
+        }
+
     private data class Snapshot(
         val bundles: Map<String, KeyPackageBundle>,
         val pending: Set<String>,

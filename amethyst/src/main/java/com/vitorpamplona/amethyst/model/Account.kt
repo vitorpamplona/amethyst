@@ -2335,6 +2335,29 @@ class Account(
     }
 
     /**
+     * User-initiated "nuclear" reset for the Marmot subsystem.
+     *
+     * Wipes every MLS group, every retained epoch secret, every persisted
+     * KeyPackage bundle, every relay subscription and every in-memory
+     * chatroom associated with this account. Does NOT broadcast any
+     * SelfRemove/leave commits to peers — if the user is in this flow at
+     * all, local state may already be unusable and a graceful leave is
+     * probably not possible. Peers will see the user as unresponsive until
+     * their next commit evicts the stale leaf.
+     *
+     * A fresh KeyPackage will be republished lazily on the next
+     * `ensureMarmotKeyPackagePublished` cycle, so the account remains
+     * reachable for future group invites.
+     */
+    suspend fun resetMarmotState() {
+        Log.w("MarmotDbg") { "resetMarmotState(): wiping all Marmot state for ${signer.pubKey.take(8)}…" }
+        marmotManager?.resetAllState()
+        for (groupId in marmotGroupList.allGroupIds()) {
+            marmotGroupList.removeGroup(groupId)
+        }
+    }
+
+    /**
      * Remove a member from a Marmot MLS group.
      * Publishes the commit GroupEvent to group relays.
      */

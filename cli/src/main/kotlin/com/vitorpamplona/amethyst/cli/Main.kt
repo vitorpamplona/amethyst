@@ -166,6 +166,10 @@ private suspend fun marmotDispatch(
             Commands.await(dataDir, rest)
         }
 
+        "reset" -> {
+            Commands.reset(dataDir, rest)
+        }
+
         else -> {
             System.err.println("unknown marmot subcommand: $head")
             printUsage()
@@ -224,6 +228,8 @@ private fun printUsage() {
         |
         |  marmot message send GID TEXT               publish kind:9 inner event into the group
         |  marmot message list GID [--limit N]        dump decrypted inner events
+        |  marmot message react GID EVENT_ID EMOJI    publish kind:7 reaction targeting an inner event
+        |  marmot message delete GID EVENT_ID…        publish kind:5 deletion targeting inner events
         |
         |  marmot await key-package NPUB              (all await verbs take --timeout SECS, default 30;
         |  marmot await group --name NAME              exit 124 on timeout)
@@ -232,6 +238,8 @@ private fun printUsage() {
         |  marmot await message GID --match TEXT
         |  marmot await rename GID --name NAME
         |  marmot await epoch GID --min N
+        |
+        |  marmot reset [--yes]                       wipe all local MLS/KeyPackage state (destructive)
         """.trimMargin(),
     )
 }

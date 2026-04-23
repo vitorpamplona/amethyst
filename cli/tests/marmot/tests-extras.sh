@@ -37,13 +37,30 @@ test_09_reply_react_unreact() {
   amy_json marmot message send "$gid" "replying via amy" >/dev/null || {
     record_result "$id" fail "amy send reply failed"; return
   }
-  if wait_for_message B "$mls_gid" "replying via amy" 90; then
+  if ! wait_for_message B "$mls_gid" "replying via amy" 90; then
+    record_result "$id" fail "B didn't receive reply"; return
+  fi
+
+  # amy react — look up the anchor id from amy's own decrypted log (B's kind:9
+  # "anchor for reactions" was delivered + persisted during wait_for_message),
+  # then hand that id to the new react verb.
+  sleep 3
+  local a_anchor_id
+  a_anchor_id=$(amy_json marmot message list "$gid" --limit 50 2>/dev/null \
+                  | jq -r '[.messages[]? | select((.content // "") == "anchor for reactions")][0].id // empty')
+  if [[ -z "$a_anchor_id" || "$a_anchor_id" == "null" ]]; then
+    record_result "$id" fail "amy couldn't find anchor message in local log"; return
+  fi
+  if ! amy_json marmot message react "$gid" "$a_anchor_id" "🍕" >/dev/null; then
+    record_result "$id" fail "amy marmot message react failed"; return
+  fi
+
+  # Round-trip: B should surface amy's kind:7 reaction in its messages stream.
+  if wait_for_message B "$mls_gid" "🍕" 90; then
     record_result "$id" pass
   else
-    record_result "$id" fail "B didn't receive reply"
+    record_result "$id" fail "B didn't receive amy's reaction"
   fi
-  # NB: react/unreact round-trip verification requires a CLI verb we don't have
-  # yet (amy marmot message react). Once we add it, expand this test.
 }
 
 test_10_concurrent_commits() {
@@ -191,44 +208,147 @@ test_14_wn_removes_a() {
   banner "Test 14 — wn (admin) removes A; amy processes Remove"
   local id="14 wn removes amy"
 
-  # Known gap: wn (mdk-core/openmls) emits the filtered direct-path
-  # form of UpdatePath on Remove commits per RFC 9420 §7.7 — when the
-  # copath of a direct-path node has an empty resolution (every leaf
-  # under it is blank) the corresponding UpdatePathNode is omitted.
-  # Quartz's RatchetTree.applyUpdatePath currently requires the
-  # unfiltered node count (`pathNodes.size == directPath.size`) so
-  # every wn->amy Remove triggers
-  #   "UpdatePath node count (N) doesn't match direct path length (N+k)".
-  # That's a pre-existing quartz conformance bug, out of scope for
-  # this branch; the harness carries the test so it starts passing
-  # the moment the filtered-path path is wired up.
-  record_result "$id" skip "pending filtered_direct_path support in applyUpdatePath"
+  # Exercises inbound filtered-direct-path per RFC 9420 §7.7: wn
+  # (mdk-core/openmls) strips UpdatePathNodes whose copath has empty
+  # resolution, and amy must accept the short path on receive. Quartz
+  # wires this on both sides as of commit 3279c246.
+
+  local out mls_gid
+  out=$(wn_b --json groups create "Interop-14" "$C_NPUB" 2>>"$LOG_FILE") || {
+    record_result "$id" fail "wn create Interop-14 failed"; return
+  }
+  mls_gid=$(printf '%s' "$out" | jq_group_id)
+  [[ -n "$mls_gid" ]] || { record_result "$id" fail "no group_id from create"; return; }
+  wait_for_invite C 30 >/dev/null && wn_c groups accept "$mls_gid" >/dev/null 2>&1 || true
+
+  wn_b groups add-members "$mls_gid" "$A_NPUB" >/dev/null 2>&1 || {
+    record_result "$id" fail "wn add-members A failed"; return
+  }
+  local a_gid
+  a_gid=$(amy_json marmot await group --name "Interop-14" --timeout 30 | jq -r '.group_id // empty')
+  [[ -n "$a_gid" ]] || { record_result "$id" fail "A never received Interop-14 invite"; return; }
+
+  # B (admin) removes A. The resulting commit carries a filtered
+  # UpdatePath; amy must apply it without throwing on the node-count
+  # mismatch that used to happen pre-filter-support.
+  wn_b groups remove-members "$mls_gid" "$A_NPUB" >/dev/null 2>&1 || {
+    record_result "$id" fail "wn remove-members A failed"; return
+  }
+
+  # Amy should observe that she's no longer a member. `group show` returns
+  # a not_member error as soon as the Remove commit is applied locally.
+  local deadline=$(( $(date +%s) + 120 )) removed=0
+  while [[ $(date +%s) -lt $deadline ]]; do
+    local show rc
+    show=$(amy_json marmot group show "$a_gid" 2>&1)
+    rc=$?
+    if [[ $rc -ne 0 ]] && printf '%s' "$show" | jq -e '.error == "not_member"' >/dev/null 2>&1; then
+      removed=1; break
+    fi
+    sleep 3
+  done
+  if [[ "$removed" -eq 1 ]]; then
+    record_result "$id" pass
+  else
+    record_result "$id" fail "amy still considered herself a member after wn Remove"
+  fi
 }
 
 test_15_wn_member_leaves() {
   banner "Test 15 — wn_c leaves; amy + wn_b process SelfRemove"
   local id="15 wn_c leaves"
 
-  # Same filtered_direct_path gap as test 14: when wn_c leaves a
-  # 3-member group, wn_b folds the SelfRemove into a commit whose
-  # UpdatePath uses RFC 9420 §7.7 filtering, and amy's strict
-  # applyUpdatePath rejects it. Skip until quartz handles the
-  # filtered form on inbound.
-  record_result "$id" skip "pending filtered_direct_path support in applyUpdatePath"
+  # Same filtered-direct-path path as test 14, but the trigger is a
+  # SelfRemove proposal from C that wn_b folds into a commit. Amy stays
+  # a member here — verification is that the commit applies cleanly and
+  # the group continues to function afterwards.
+
+  local out mls_gid
+  out=$(wn_b --json groups create "Interop-15" "$C_NPUB" 2>>"$LOG_FILE") || {
+    record_result "$id" fail "wn create Interop-15 failed"; return
+  }
+  mls_gid=$(printf '%s' "$out" | jq_group_id)
+  [[ -n "$mls_gid" ]] || { record_result "$id" fail "no group_id from create"; return; }
+  wait_for_invite C 30 >/dev/null && wn_c groups accept "$mls_gid" >/dev/null 2>&1 || true
+
+  wn_b groups add-members "$mls_gid" "$A_NPUB" >/dev/null 2>&1 || {
+    record_result "$id" fail "wn add-members A failed"; return
+  }
+  local a_gid
+  a_gid=$(amy_json marmot await group --name "Interop-15" --timeout 30 | jq -r '.group_id // empty')
+  [[ -n "$a_gid" ]] || { record_result "$id" fail "A never received Interop-15 invite"; return; }
+
+  # C self-removes. wn_b picks up the SelfRemove proposal and commits it.
+  wn_c groups leave "$mls_gid" >/dev/null 2>&1 || true
+  sleep 5
+  # Nudge B to commit any outstanding proposals via a no-op rename round-trip.
+  wn_b groups rename "$mls_gid" "Interop-15 (C left)" >/dev/null 2>&1 || true
+
+  # Wait for amy to see C gone AND stay a member herself.
+  local deadline=$(( $(date +%s) + 120 )) ok=0
+  while [[ $(date +%s) -lt $deadline ]]; do
+    local show
+    show=$(amy_json marmot group show "$a_gid" 2>/dev/null) || { sleep 3; continue; }
+    local c_still
+    c_still=$(printf '%s' "$show" | jq --arg p "$C_HEX" '[.members[]? | select(.pubkey == $p)] | length')
+    local a_still
+    a_still=$(printf '%s' "$show" | jq --arg p "$A_HEX" '[.members[]? | select(.pubkey == $p)] | length')
+    if [[ "$c_still" == "0" && "$a_still" == "1" ]]; then
+      ok=1; break
+    fi
+    sleep 3
+  done
+  if [[ "$ok" -ne 1 ]]; then
+    record_result "$id" fail "amy never saw a (C gone, A present) state"; return
+  fi
+
+  # Post-commit round-trip: amy sends, B receives. Confirms encryption
+  # survived the filtered UpdatePath application on amy's side.
+  amy_json marmot message send "$a_gid" "after wn_c leave" >/dev/null || {
+    record_result "$id" fail "amy send failed after wn_c leave"; return
+  }
+  if wait_for_message B "$mls_gid" "after wn_c leave" 90; then
+    record_result "$id" pass
+  else
+    record_result "$id" fail "B didn't receive amy's post-leave message"
+  fi
 }
 
 test_16_wn_keypackage_rotation() {
   banner "Test 16 — wn rotates KeyPackage; amy discovers new KP"
   local id="16 wn keypackage rotation"
 
-  # amy's KeyPackageFetcher.fetchKeyPackage calls client.fetchFirst,
-  # which returns the first matching event a relay sends — nostr-rs-relay
-  # typically serves kind:443 events in storage order, not created_at
-  # order, so after a rotation amy may keep seeing the older event_id
-  # depending on which arrives first. Making this test deterministic
-  # requires a "fetch latest by created_at" KeyPackage fetcher; until
-  # then the check flaps. The inverse direction (test 13, amy rotates
-  # and wn sees via `wn keys check` which is an addressable index) is
-  # the reliable one.
-  record_result "$id" skip "pending createdAt-sorted KeyPackage fetch path"
+  # KeyPackageFetcher now drains to EOSE and returns the event with the
+  # highest created_at, so a freshly-rotated KP is reliably preferred
+  # over an older one still held on some relays. This test verifies
+  # the wn->amy direction of that behaviour.
+
+  # Capture the KP amy currently sees for B (the one B originally published).
+  local before
+  before=$(amy_json marmot key-package check "$B_NPUB" 2>/dev/null \
+             | jq -r '.event_id // empty')
+  if [[ -z "$before" ]]; then
+    record_result "$id" fail "no prior KP visible to amy for B"; return
+  fi
+
+  # Ask B to rotate. `wn keys publish` writes a new kind:443 with a fresh
+  # created_at; the old event may or may not be evicted depending on the
+  # relay's retention policy, so both may coexist for a while.
+  wn_b keys publish >/dev/null 2>&1 || {
+    record_result "$id" fail "wn_b keys publish failed"; return
+  }
+
+  local deadline=$(( $(date +%s) + 60 )) after=""
+  while [[ $(date +%s) -lt $deadline ]]; do
+    after=$(amy_json marmot key-package check "$B_NPUB" 2>/dev/null \
+              | jq -r '.event_id // empty')
+    [[ -n "$after" && "$after" != "$before" ]] && break
+    sleep 3
+  done
+  if [[ -n "$after" && "$after" != "$before" ]]; then
+    info "amy saw KP rotation: ${before:0:8}… → ${after:0:8}…"
+    record_result "$id" pass
+  else
+    record_result "$id" fail "amy kept seeing the pre-rotation KP"
+  fi
 }

@@ -23,7 +23,7 @@ package com.vitorpamplona.quartz.marmot.mip00KeyPackages
 import com.vitorpamplona.quartz.marmot.MarmotFilters
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchFirst
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 /**
@@ -60,8 +60,16 @@ object KeyPackageFetcher {
         }
 
     /**
-     * One-shot fetch of a user's KeyPackage across [relays], returning the first
-     * matching event or `null` if none of the relays yielded one before timeout.
+     * Drain every kind:443 KeyPackage event for [targetPubKey] across [relays]
+     * and return the most recently published one (highest `created_at`), or
+     * `null` if nothing arrived before the timeout.
+     *
+     * Returning the newest is important after a KeyPackage rotation: MIP-00
+     * does not use addressable replacement for kind:443, so a relay may still
+     * hold the prior KP alongside the new one. `fetchFirst` would race the
+     * relays and pick whichever replied first, which would frequently be the
+     * older event. Draining to EOSE and selecting by `created_at` matches
+     * MDK/whitenoise semantics and keeps freshly-rotated bundles reachable.
      */
     suspend fun fetchKeyPackage(
         client: INostrClient,
@@ -71,8 +79,10 @@ object KeyPackageFetcher {
     ): KeyPackageEvent? {
         if (relays.isEmpty()) return null
         val filter = MarmotFilters.keyPackagesByAuthor(targetPubKey)
-        val event = client.fetchFirst(filters = relays.associateWith { listOf(filter) }, timeoutMs = timeoutMs)
-        return event as? KeyPackageEvent
+        val events = client.fetchAll(filters = relays.associateWith { listOf(filter) }, timeoutMs = timeoutMs)
+        // fetchAll returns events sorted by created_at DESC, so the first
+        // KeyPackageEvent is the most recent one any relay had.
+        return events.firstNotNullOfOrNull { it as? KeyPackageEvent }
     }
 
     /**

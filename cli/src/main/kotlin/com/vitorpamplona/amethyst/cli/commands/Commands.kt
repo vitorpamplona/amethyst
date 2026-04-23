@@ -71,6 +71,11 @@ object Commands {
         tail: Array<String>,
     ): Int = AwaitCommands.dispatch(dataDir, tail)
 
+    suspend fun reset(
+        dataDir: DataDir,
+        tail: Array<String>,
+    ): Int = MarmotResetCommand.run(dataDir, tail)
+
     suspend fun dm(
         dataDir: DataDir,
         tail: Array<String>,
