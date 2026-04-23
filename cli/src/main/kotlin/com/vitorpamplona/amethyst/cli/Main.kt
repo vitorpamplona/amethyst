@@ -162,6 +162,10 @@ private suspend fun marmotDispatch(
             Commands.await(dataDir, rest)
         }
 
+        "reset" -> {
+            Commands.reset(dataDir, rest)
+        }
+
         else -> {
             System.err.println("unknown marmot subcommand: $head")
             printUsage()
@@ -215,6 +219,8 @@ private fun printUsage() {
         |  marmot await message GID --match TEXT
         |  marmot await rename GID --name NAME
         |  marmot await epoch GID --min N
+        |
+        |  marmot reset [--yes]                       wipe all local MLS/KeyPackage state (destructive)
         """.trimMargin(),
     )
 }
