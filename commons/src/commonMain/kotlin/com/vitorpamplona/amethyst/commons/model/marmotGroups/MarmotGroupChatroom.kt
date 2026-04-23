@@ -202,4 +202,21 @@ class MarmotGroupChatroom(
         changesFlow.get()?.tryEmit(ListChange.SetDeletion<Note>(toRemove))
         return toRemove
     }
+
+    /**
+     * Drop every message from this chatroom. Used when the local user leaves
+     * the group: cuts the strong references held in [messages] so the
+     * decrypted inner notes become eligible for GC out of LocalCache (which
+     * holds them weakly).
+     */
+    @Synchronized
+    fun clearAllMessagesSync(): Set<Note> {
+        val toRemove = messages
+        if (toRemove.isEmpty()) return toRemove
+        messages = emptySet()
+        newestMessage = null
+        unreadCount.value = 0
+        changesFlow.get()?.tryEmit(ListChange.SetDeletion<Note>(toRemove))
+        return toRemove
+    }
 }
