@@ -27,8 +27,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -57,6 +55,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.note.timeAheadNoDot
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
@@ -102,7 +102,7 @@ fun ExpirationDatePicker(model: IExpiration) {
                     .padding(bottom = 5.dp),
         ) {
             Icon(
-                imageVector = Icons.Outlined.Timer,
+                symbol = MaterialSymbols.Timer,
                 contentDescription = stringRes(R.string.expiration_date_label),
                 modifier = Modifier.size(20.dp),
                 tint = Color(0xFFFF6600),
@@ -132,7 +132,7 @@ fun ExpirationDatePicker(model: IExpiration) {
                 modifier = Modifier.padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(Icons.Outlined.Timer, contentDescription = stringResource(R.string.expiration_date_select))
+                Icon(MaterialSymbols.Timer, contentDescription = stringResource(R.string.expiration_date_select))
                 Spacer(Modifier.width(12.dp))
 
                 if (model.expirationDate < TimeUtils.oneMinuteFromNow()) {

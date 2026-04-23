@@ -23,8 +23,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28
 import android.content.Intent
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
@@ -32,6 +30,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.njumpLink
@@ -73,7 +73,7 @@ fun ShareChatButton(
         contentPadding = ZeroPadding,
     ) {
         Icon(
-            imageVector = Icons.Default.Share,
+            symbol = MaterialSymbols.Share,
             contentDescription = stringRes(R.string.quick_action_share),
             modifier = Size20Modifier,
         )

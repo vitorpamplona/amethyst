@@ -28,13 +28,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ContentCopy
-import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material.icons.outlined.Groups
-import androidx.compose.material.icons.outlined.Lock
-import androidx.compose.material.icons.outlined.Public
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
@@ -56,6 +49,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.nip51Lists.peopleList.PeopleList
@@ -210,7 +205,7 @@ fun PeopleListItem(
         leadingContent = {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
-                    imageVector = Icons.Outlined.Groups,
+                    symbol = MaterialSymbols.Groups,
                     contentDescription = stringRes(R.string.follow_set_icon_description),
                     modifier = Size50ModifierOffset10,
                 )
@@ -247,7 +242,7 @@ fun DisplayParticipantNumberAndStatus(
                     horizontalArrangement = SpacedBy2dp,
                 ) {
                     Icon(
-                        imageVector = Icons.Outlined.Lock,
+                        symbol = MaterialSymbols.Lock,
                         modifier = Size10Modifier,
                         contentDescription = null,
                     )
@@ -263,7 +258,7 @@ fun DisplayParticipantNumberAndStatus(
                     horizontalArrangement = SpacedBy2dp,
                 ) {
                     Icon(
-                        imageVector = Icons.Outlined.Public,
+                        symbol = MaterialSymbols.Public,
                         modifier = Size10Modifier,
                         contentDescription = null,
                     )
@@ -319,17 +314,17 @@ private fun ListOptionsMenu(
             onDismiss = onDismiss,
         ) {
             M3ActionSection {
-                M3ActionRow(icon = Icons.Outlined.Edit, text = stringRes(R.string.follow_set_edit_list_metadata)) {
+                M3ActionRow(icon = MaterialSymbols.Edit, text = stringRes(R.string.follow_set_edit_list_metadata)) {
                     onListEditMetadata()
                     onDismiss()
                 }
-                M3ActionRow(icon = Icons.Outlined.ContentCopy, text = stringRes(R.string.follow_set_copy_action_btn_label)) {
+                M3ActionRow(icon = MaterialSymbols.ContentCopy, text = stringRes(R.string.follow_set_copy_action_btn_label)) {
                     isCopyDialogOpen.value = true
                     onDismiss()
                 }
             }
             M3ActionSection {
-                M3ActionRow(icon = Icons.Outlined.Delete, text = stringRes(R.string.quick_action_delete), isDestructive = true) {
+                M3ActionRow(icon = MaterialSymbols.Delete, text = stringRes(R.string.quick_action_delete), isDestructive = true) {
                     onDelete()
                     onDismiss()
                 }

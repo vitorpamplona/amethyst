@@ -29,10 +29,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.ContentPaste
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -56,6 +52,8 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.components.util.getText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.painterRes
@@ -94,7 +92,7 @@ fun AddWalletScreen(
                 navigationIcon = {
                     IconButton(onClick = { nav.popBack() }) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            symbol = MaterialSymbols.AutoMirrored.ArrowBack,
                             contentDescription = stringRes(R.string.back),
                         )
                     }
@@ -144,7 +142,7 @@ fun AddWalletScreen(
                     },
                 ) {
                     Icon(
-                        imageVector = Icons.Outlined.Add,
+                        symbol = MaterialSymbols.Add,
                         contentDescription = null,
                         modifier = Modifier.size(18.dp),
                     )
@@ -167,7 +165,7 @@ fun AddWalletScreen(
                     },
                 ) {
                     Icon(
-                        imageVector = Icons.Outlined.ContentPaste,
+                        symbol = MaterialSymbols.ContentPaste,
                         contentDescription = stringRes(id = R.string.paste_from_clipboard),
                         modifier = Size24Modifier,
                         tint = MaterialTheme.colorScheme.primary,

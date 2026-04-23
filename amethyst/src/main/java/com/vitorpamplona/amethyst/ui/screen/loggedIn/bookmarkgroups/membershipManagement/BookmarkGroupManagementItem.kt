@@ -27,14 +27,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.BookmarkAdd
-import androidx.compose.material.icons.filled.BookmarkRemove
-import androidx.compose.material.icons.outlined.BookmarkAdd
-import androidx.compose.material.icons.outlined.CollectionsBookmark
-import androidx.compose.material.icons.outlined.Lock
-import androidx.compose.material.icons.outlined.Public
-import androidx.compose.material.icons.outlined.RemoveCircleOutline
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
@@ -47,6 +39,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.ui.components.M3ActionSection
@@ -88,7 +82,7 @@ fun BookmarkGroupManagementItem(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Icon(
-                    imageVector = Icons.Outlined.CollectionsBookmark,
+                    symbol = MaterialSymbols.CollectionsBookmark,
                     contentDescription = stringRes(R.string.bookmark_list_icon_label),
                     modifier = Size50Modifier,
                 )
@@ -131,15 +125,15 @@ fun BookmarkStatusInList(
 
         val icon =
             if (isPublicMemberBookmark) {
-                Icons.Outlined.Public
+                MaterialSymbols.Public
             } else if (isPrivateMemberBookmark) {
-                Icons.Outlined.Lock
+                MaterialSymbols.Lock
             } else {
-                Icons.Outlined.RemoveCircleOutline
+                MaterialSymbols.RemoveCircleOutline
             }
 
         Icon(
-            imageVector = icon,
+            symbol = icon,
             contentDescription = text,
             modifier = Size15Modifier,
             tint = MaterialTheme.colorScheme.primary,
@@ -167,14 +161,14 @@ fun BookmarkManagementOptions(
         ) {
             M3ActionSection {
                 M3ActionRow(
-                    icon = Icons.Outlined.BookmarkAdd,
+                    icon = MaterialSymbols.BookmarkAdd,
                     text = stringRes(R.string.public_bookmark_add_action_label),
                 ) {
                     onAddBookmark(false)
                     isBookmarkAddTapped.value = false
                 }
                 M3ActionRow(
-                    icon = Icons.Outlined.Lock,
+                    icon = MaterialSymbols.Lock,
                     text = stringRes(R.string.private_bookmark_add_action_label),
                 ) {
                     onAddBookmark(true)
@@ -210,13 +204,13 @@ fun BookmarkManagementOptions(
         ) {
             if (isBookmarkInList) {
                 Icon(
-                    imageVector = Icons.Filled.BookmarkRemove,
+                    symbol = MaterialSymbols.BookmarkRemove,
                     contentDescription = stringRes(R.string.bookmark_remove_action_desc),
                     tint = MaterialTheme.colorScheme.onErrorContainer,
                 )
             } else {
                 Icon(
-                    imageVector = Icons.Filled.BookmarkAdd,
+                    symbol = MaterialSymbols.BookmarkAdd,
                     contentDescription = stringRes(R.string.bookmark_add_action_desc),
                     tint = MaterialTheme.colorScheme.onPrimary,
                 )

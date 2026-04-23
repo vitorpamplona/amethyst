@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChann
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.commons.model.observables.CreatedAtIdHexComparator
 import com.vitorpamplona.amethyst.commons.model.observables.EventListMatchingFilter
+import com.vitorpamplona.amethyst.commons.model.observables.NewEventMatchingFilter
 import com.vitorpamplona.amethyst.commons.model.observables.NoteListMatchingFilter
 import com.vitorpamplona.amethyst.commons.model.observables.Observable
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
@@ -66,6 +67,7 @@ import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryE
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
+import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
@@ -379,6 +381,25 @@ object LocalCache : ILocalCache, ICacheProvider {
                 observables.remove(cachedFilter)
             }
         }.buffer(kotlinx.coroutines.channels.Channel.CONFLATED)
+
+    /**
+     * Emits each new event that matches the filter, one at a time, as it is
+     * inserted into the cache. Unlike [observeEvents], this does not accumulate
+     * a list — useful for per-event reactive pipelines like notifications.
+     */
+    fun <T : Event> observeNewEvents(filter: Filter): Flow<T> =
+        callbackFlow {
+            val newFilter =
+                NewEventMatchingFilter<T>(filter) {
+                    trySend(it)
+                }
+
+            observables.put(newFilter, newFilter)
+
+            awaitClose {
+                observables.remove(newFilter)
+            }
+        }
 
     @Suppress("UNCHECKED_CAST")
     fun <T : Event> observeLatestEvent(filter: Filter) = observeEvents<T>(filter).map { it.firstOrNull() }
@@ -2788,6 +2809,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is VoiceReplyEvent -> consumeRegularEvent(event, relay, wasVerified)
                 is WakeUpEvent -> consumeRegularEvent(event, relay, wasVerified)
                 is WebBookmarkEvent -> consumeBaseReplaceable(event, relay, wasVerified)
+                is WelcomeEvent -> consumeRegularEvent(event, relay, wasVerified)
                 is WikiNoteEvent -> consume(event, relay, wasVerified)
                 is PaymentTargetsEvent -> consume(event, relay, wasVerified)
                 else -> Log.w("Event Not Supported") { "From ${relay?.url}: ${event.toJson()}" }.let { false }

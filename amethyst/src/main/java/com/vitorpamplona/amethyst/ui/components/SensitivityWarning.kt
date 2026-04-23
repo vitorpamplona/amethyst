@@ -33,9 +33,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.FilledTonalButton
@@ -63,6 +60,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.imageLoader
 import coil3.request.ImageRequest
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
@@ -268,7 +267,7 @@ private fun ContentWarningOverlayBody(
                     .width(90.dp),
             ) {
                 Icon(
-                    imageVector = Icons.Default.Visibility,
+                    symbol = MaterialSymbols.Visibility,
                     contentDescription = stringRes(R.string.content_warning),
                     modifier =
                         Modifier
@@ -277,7 +276,7 @@ private fun ContentWarningOverlayBody(
                     tint = Color.White,
                 )
                 Icon(
-                    imageVector = Icons.Rounded.Warning,
+                    symbol = MaterialSymbols.Warning,
                     contentDescription = stringRes(R.string.content_warning),
                     modifier =
                         Modifier
@@ -352,7 +351,7 @@ fun ContentWarningNote(
                             .width(90.dp),
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Visibility,
+                            symbol = MaterialSymbols.Visibility,
                             contentDescription = stringRes(R.string.content_warning),
                             modifier =
                                 Modifier
@@ -361,7 +360,7 @@ fun ContentWarningNote(
                             tint = MaterialTheme.colorScheme.onBackground,
                         )
                         Icon(
-                            imageVector = Icons.Rounded.Warning,
+                            symbol = MaterialSymbols.Warning,
                             contentDescription = stringRes(R.string.content_warning),
                             modifier =
                                 Modifier

@@ -23,10 +23,6 @@ package com.vitorpamplona.amethyst.ui.note
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.OpenInNew
-import androidx.compose.material.icons.filled.Downloading
-import androidx.compose.material.icons.filled.Report
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
@@ -49,6 +45,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.hashtags.Tunestr
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.Nip05State
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.Nip05VerifState
 import com.vitorpamplona.amethyst.model.AddressableNote
@@ -303,7 +301,7 @@ fun DisplayStatusInner(
             onClick = { runCatching { uri.openUri(url.trim()) } },
         ) {
             Icon(
-                imageVector = Icons.AutoMirrored.Filled.OpenInNew,
+                symbol = MaterialSymbols.AutoMirrored.OpenInNew,
                 null,
                 modifier = Size15Modifier,
                 tint = MaterialTheme.colorScheme.lessImportantLink,
@@ -323,7 +321,7 @@ fun DisplayStatusInner(
                     },
                 ) {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.OpenInNew,
+                        symbol = MaterialSymbols.AutoMirrored.OpenInNew,
                         null,
                         modifier = Size15Modifier,
                         tint = MaterialTheme.colorScheme.lessImportantLink,
@@ -345,7 +343,7 @@ fun DisplayStatusInner(
                     },
                 ) {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.OpenInNew,
+                        symbol = MaterialSymbols.AutoMirrored.OpenInNew,
                         null,
                         modifier = Size15Modifier,
                         tint = MaterialTheme.colorScheme.lessImportantLink,
@@ -362,7 +360,7 @@ fun DisplayStatusInner(
                     onClick = { nav.nav(routeForUser(nostrPTag)) },
                 ) {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.OpenInNew,
+                        symbol = MaterialSymbols.AutoMirrored.OpenInNew,
                         null,
                         modifier = Size15Modifier,
                         tint = MaterialTheme.colorScheme.lessImportantLink,
@@ -461,7 +459,7 @@ fun RenderNIP05VerifiedSymbol(
         when (it) {
             is Nip05VerifState.Verifying -> {
                 Icon(
-                    imageVector = Icons.Default.Downloading,
+                    symbol = MaterialSymbols.Downloading,
                     contentDescription = stringRes(id = R.string.nip05_checking),
                     modifier = modifier,
                     tint = Color.Yellow,
@@ -470,7 +468,7 @@ fun RenderNIP05VerifiedSymbol(
 
             is Nip05VerifState.NotStarted -> {
                 Icon(
-                    imageVector = Icons.Default.Downloading,
+                    symbol = MaterialSymbols.Downloading,
                     contentDescription = stringRes(id = R.string.nip05_checking),
                     modifier = modifier,
                     tint = Color.Yellow,
@@ -488,7 +486,7 @@ fun RenderNIP05VerifiedSymbol(
 
             is Nip05VerifState.Failed -> {
                 Icon(
-                    imageVector = Icons.Default.Report,
+                    symbol = MaterialSymbols.Report,
                     contentDescription = stringRes(id = R.string.nip05_failed),
                     modifier = modifier,
                     tint = Color.Red,
@@ -497,7 +495,7 @@ fun RenderNIP05VerifiedSymbol(
 
             is Nip05VerifState.Error -> {
                 Icon(
-                    imageVector = Icons.Default.Report,
+                    symbol = MaterialSymbols.Report,
                     contentDescription = stringRes(id = R.string.nip05_failed),
                     modifier = modifier,
                     tint = Color.Red,

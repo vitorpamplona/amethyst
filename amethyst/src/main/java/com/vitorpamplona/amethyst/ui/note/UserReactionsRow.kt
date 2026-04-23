@@ -25,9 +25,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bolt
-import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -42,6 +39,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NotificationSummaryState
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
@@ -70,7 +69,7 @@ fun UserReactionsRow(
             )
 
             Icon(
-                imageVector = Icons.Default.ExpandMore,
+                symbol = MaterialSymbols.ExpandMore,
                 null,
                 modifier = Size20Modifier,
                 tint = MaterialTheme.colorScheme.placeholderText,
@@ -98,7 +97,7 @@ fun UserReactionsRow(
 @Composable
 private fun UserZapModel(model: NotificationSummaryState) {
     Icon(
-        imageVector = Icons.Default.Bolt,
+        symbol = MaterialSymbols.Bolt,
         contentDescription = stringRes(R.string.zaps),
         modifier = Size24Modifier,
         tint = BitcoinOrange,

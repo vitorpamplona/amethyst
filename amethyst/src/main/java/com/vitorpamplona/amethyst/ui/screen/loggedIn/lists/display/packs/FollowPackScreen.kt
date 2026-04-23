@@ -35,11 +35,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.CellTower
-import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults.cardElevation
@@ -66,6 +61,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
@@ -285,7 +281,7 @@ private fun ListActionsMenuButton(
             onDismiss = { isActionListOpen.value = false },
         ) {
             M3ActionSection {
-                M3ActionRow(icon = Icons.Outlined.Share, text = stringRes(R.string.quick_action_share)) {
+                M3ActionRow(icon = MaterialSymbols.Share, text = stringRes(R.string.quick_action_share)) {
                     val sendIntent =
                         Intent().apply {
                             action = Intent.ACTION_SEND
@@ -305,17 +301,17 @@ private fun ListActionsMenuButton(
                     context.startActivity(shareIntent)
                     isActionListOpen.value = false
                 }
-                M3ActionRow(icon = Icons.Outlined.Edit, text = stringRes(R.string.follow_pack_edit_list_metadata)) {
+                M3ActionRow(icon = MaterialSymbols.Edit, text = stringRes(R.string.follow_pack_edit_list_metadata)) {
                     onEditList()
                     isActionListOpen.value = false
                 }
-                M3ActionRow(icon = Icons.Outlined.CellTower, text = stringRes(R.string.follow_pack_broadcast)) {
+                M3ActionRow(icon = MaterialSymbols.CellTower, text = stringRes(R.string.follow_pack_broadcast)) {
                     onBroadcastList()
                     isActionListOpen.value = false
                 }
             }
             M3ActionSection {
-                M3ActionRow(icon = Icons.Outlined.Delete, text = stringRes(R.string.follow_pack_delete), isDestructive = true) {
+                M3ActionRow(icon = MaterialSymbols.Delete, text = stringRes(R.string.follow_pack_delete), isDestructive = true) {
                     onDeleteList()
                     isActionListOpen.value = false
                 }

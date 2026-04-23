@@ -34,10 +34,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.recalculateWindowInsets
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.BookmarkAdd
-import androidx.compose.material.icons.filled.BookmarkRemove
-import androidx.compose.material.icons.outlined.EmojiEmotions
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
@@ -50,6 +46,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteAndMap
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -176,7 +174,7 @@ private fun EmojiPackSelectionItem(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Icon(
-                    imageVector = Icons.Outlined.EmojiEmotions,
+                    symbol = MaterialSymbols.EmojiEmotions,
                     contentDescription = null,
                     modifier = Size40Modifier,
                 )
@@ -203,13 +201,13 @@ private fun EmojiPackSelectionItem(
                 ) {
                     if (isIncluded) {
                         Icon(
-                            imageVector = Icons.Filled.BookmarkRemove,
+                            symbol = MaterialSymbols.BookmarkRemove,
                             contentDescription = stringRes(R.string.remove_from_emoji_list),
                             tint = MaterialTheme.colorScheme.onErrorContainer,
                         )
                     } else {
                         Icon(
-                            imageVector = Icons.Filled.BookmarkAdd,
+                            symbol = MaterialSymbols.BookmarkAdd,
                             contentDescription = stringRes(R.string.add_to_emoji_list),
                             tint = MaterialTheme.colorScheme.onPrimary,
                         )

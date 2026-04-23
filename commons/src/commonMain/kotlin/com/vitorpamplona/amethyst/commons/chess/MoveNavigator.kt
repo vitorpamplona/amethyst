@@ -24,11 +24,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.SkipNext
-import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -37,6 +32,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 
 /**
  * Move navigation controls for stepping through chess game positions
@@ -65,7 +62,7 @@ fun MoveNavigator(
             enabled = currentMove > 0,
         ) {
             Icon(
-                Icons.Default.SkipPrevious,
+                MaterialSymbols.SkipPrevious,
                 contentDescription = "Start position",
                 tint =
                     if (currentMove > 0) {
@@ -82,7 +79,7 @@ fun MoveNavigator(
             enabled = currentMove > 0,
         ) {
             Icon(
-                Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                MaterialSymbols.AutoMirrored.KeyboardArrowLeft,
                 contentDescription = "Previous move",
                 tint =
                     if (currentMove > 0) {
@@ -106,7 +103,7 @@ fun MoveNavigator(
             enabled = currentMove < totalMoves,
         ) {
             Icon(
-                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                MaterialSymbols.AutoMirrored.KeyboardArrowRight,
                 contentDescription = "Next move",
                 tint =
                     if (currentMove < totalMoves) {
@@ -123,7 +120,7 @@ fun MoveNavigator(
             enabled = currentMove < totalMoves,
         ) {
             Icon(
-                Icons.Default.SkipNext,
+                MaterialSymbols.SkipNext,
                 contentDescription = "Final position",
                 tint =
                     if (currentMove < totalMoves) {

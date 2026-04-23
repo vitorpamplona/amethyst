@@ -32,13 +32,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.CloudDownload
-import androidx.compose.material.icons.filled.Error
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.HourglassEmpty
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -51,11 +44,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.chess.RelaySyncState
 import com.vitorpamplona.amethyst.commons.chess.RelaySyncStatus
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import kotlinx.collections.immutable.ImmutableList
 
 @Composable
@@ -103,7 +98,7 @@ fun SearchSyncBanner(
                 )
 
                 Icon(
-                    imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    symbol = if (isExpanded) MaterialSymbols.ExpandLess else MaterialSymbols.ExpandMore,
                     contentDescription = if (isExpanded) "Collapse" else "Expand",
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(16.dp),
@@ -132,7 +127,7 @@ fun SearchSyncBanner(
                                 modifier = Modifier.fillMaxWidth(),
                             ) {
                                 Icon(
-                                    imageVector = relayStatusIcon(relay.status),
+                                    symbol = relayStatusIcon(relay.status),
                                     contentDescription = null,
                                     tint = relayStatusColor(relay.status),
                                     modifier = Modifier.size(14.dp),
@@ -159,13 +154,13 @@ fun SearchSyncBanner(
     }
 }
 
-private fun relayStatusIcon(status: RelaySyncStatus): ImageVector =
+private fun relayStatusIcon(status: RelaySyncStatus): MaterialSymbol =
     when (status) {
-        RelaySyncStatus.CONNECTING -> Icons.Default.HourglassEmpty
-        RelaySyncStatus.WAITING -> Icons.Default.HourglassEmpty
-        RelaySyncStatus.RECEIVING -> Icons.Default.CloudDownload
-        RelaySyncStatus.EOSE_RECEIVED -> Icons.Default.CheckCircle
-        RelaySyncStatus.FAILED -> Icons.Default.Error
+        RelaySyncStatus.CONNECTING -> MaterialSymbols.HourglassEmpty
+        RelaySyncStatus.WAITING -> MaterialSymbols.HourglassEmpty
+        RelaySyncStatus.RECEIVING -> MaterialSymbols.CloudDownload
+        RelaySyncStatus.EOSE_RECEIVED -> MaterialSymbols.CheckCircle
+        RelaySyncStatus.FAILED -> MaterialSymbols.Error
     }
 
 @Composable

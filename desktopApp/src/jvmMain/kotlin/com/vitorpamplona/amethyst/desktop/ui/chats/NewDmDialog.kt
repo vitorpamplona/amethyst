@@ -29,9 +29,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -51,6 +48,8 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.search.SearchResult
 import com.vitorpamplona.amethyst.commons.ui.components.UserSearchCard
@@ -161,12 +160,12 @@ fun NewDmDialog(
                             .focusRequester(focusRequester),
                     placeholder = { Text("Search users by name or npub...") },
                     leadingIcon = {
-                        Icon(Icons.Default.Search, contentDescription = null)
+                        Icon(MaterialSymbols.Search, contentDescription = null)
                     },
                     trailingIcon = {
                         if (searchText.isNotEmpty()) {
                             IconButton(onClick = { searchState.clearSearch() }) {
-                                Icon(Icons.Default.Clear, contentDescription = "Clear")
+                                Icon(MaterialSymbols.Clear, contentDescription = "Clear")
                             }
                         }
                     },

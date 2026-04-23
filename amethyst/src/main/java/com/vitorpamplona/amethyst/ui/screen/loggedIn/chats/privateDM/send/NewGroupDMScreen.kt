@@ -39,10 +39,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AddPhotoAlternate
-import androidx.compose.material.icons.filled.Videocam
-import androidx.compose.material.icons.outlined.CameraAlt
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -74,6 +70,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.EncryptedMediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.EncryptedMediaUrlVideo
@@ -424,7 +422,7 @@ private fun BottomRowActions(
                 onClick = { accountViewModel.toastManager.toast(R.string.messages_cant_upload_title, R.string.messages_cant_upload_explainer) },
             ) {
                 Icon(
-                    imageVector = Icons.Default.AddPhotoAlternate,
+                    symbol = MaterialSymbols.AddPhotoAlternate,
                     contentDescription = stringRes(id = R.string.upload_image),
                     modifier = Modifier.height(25.dp),
                     tint = MaterialTheme.colorScheme.placeholderText,
@@ -443,7 +441,7 @@ private fun BottomRowActions(
                 },
             ) {
                 Icon(
-                    imageVector = Icons.Outlined.CameraAlt,
+                    symbol = MaterialSymbols.CameraAlt,
                     contentDescription = stringRes(id = R.string.take_a_picture),
                     modifier = Modifier.height(22.dp),
                     tint = MaterialTheme.colorScheme.placeholderText,
@@ -462,7 +460,7 @@ private fun BottomRowActions(
                 },
             ) {
                 Icon(
-                    imageVector = Icons.Default.Videocam,
+                    symbol = MaterialSymbols.Videocam,
                     contentDescription = stringRes(id = R.string.record_a_video),
                     modifier = Modifier.height(22.dp),
                     tint = MaterialTheme.colorScheme.placeholderText,

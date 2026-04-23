@@ -28,9 +28,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.PauseCircleOutline
-import androidx.compose.material.icons.filled.PlayCircleOutline
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -51,6 +48,8 @@ import androidx.media3.ui.compose.ContentFrame
 import androidx.media3.ui.compose.SURFACE_TYPE_TEXTURE_VIEW
 import androidx.media3.ui.compose.state.rememberPlayPauseButtonState
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.playback.composable.DEFAULT_MUTED_SETTING
@@ -252,7 +251,7 @@ fun PlayPauseButton(controllerState: MediaControllerState) {
         modifier = Size75Modifier,
     ) {
         Icon(
-            imageVector = if (state.showPlay) Icons.Default.PlayCircleOutline else Icons.Default.PauseCircleOutline,
+            symbol = if (state.showPlay) MaterialSymbols.PlayCircleOutline else MaterialSymbols.PauseCircleOutline,
             contentDescription = if (state.showPlay) stringResource(R.string.play) else stringResource(R.string.pause),
             modifier = Size50Modifier,
             tint = Color.White,

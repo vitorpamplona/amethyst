@@ -29,20 +29,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.Article
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Dns
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Extension
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Public
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Tag
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -50,10 +36,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 
 @Composable
 fun ColumnHeader(
@@ -81,7 +69,7 @@ fun ColumnHeader(
         if (hasBackStack) {
             IconButton(onClick = onBack, modifier = Modifier.size(28.dp)) {
                 Icon(
-                    Icons.AutoMirrored.Filled.ArrowBack,
+                    MaterialSymbols.AutoMirrored.ArrowBack,
                     contentDescription = "Back",
                     modifier = Modifier.size(16.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -91,7 +79,7 @@ fun ColumnHeader(
         }
 
         Icon(
-            imageVector = column.type.icon(),
+            symbol = column.type.icon(),
             contentDescription = null,
             modifier = Modifier.size(16.dp),
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -111,7 +99,7 @@ fun ColumnHeader(
         if (canClose) {
             IconButton(onClick = onClose, modifier = Modifier.size(28.dp)) {
                 Icon(
-                    Icons.Default.Close,
+                    MaterialSymbols.Close,
                     contentDescription = "Close column",
                     modifier = Modifier.size(16.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -121,24 +109,24 @@ fun ColumnHeader(
     }
 }
 
-fun DeckColumnType.icon(): ImageVector =
+fun DeckColumnType.icon(): MaterialSymbol =
     when (this) {
-        DeckColumnType.HomeFeed -> Icons.Default.Home
-        DeckColumnType.Notifications -> Icons.Default.Notifications
-        DeckColumnType.Messages -> Icons.Default.Email
-        DeckColumnType.Search -> Icons.Default.Search
-        DeckColumnType.Reads -> Icons.AutoMirrored.Filled.Article
-        DeckColumnType.Bookmarks -> com.vitorpamplona.amethyst.commons.icons.Bookmark
-        DeckColumnType.GlobalFeed -> Icons.Default.Public
-        DeckColumnType.MyProfile -> Icons.Default.Person
-        DeckColumnType.Chess -> Icons.Default.Extension
-        DeckColumnType.Settings -> Icons.Default.Settings
-        DeckColumnType.Relays -> Icons.Default.Dns
-        is DeckColumnType.Article -> Icons.AutoMirrored.Filled.Article
-        is DeckColumnType.Editor -> Icons.AutoMirrored.Filled.Article
-        DeckColumnType.Drafts -> Icons.AutoMirrored.Filled.Article
-        DeckColumnType.MyHighlights -> Icons.AutoMirrored.Filled.Article
-        is DeckColumnType.Profile -> Icons.Default.Person
-        is DeckColumnType.Thread -> Icons.AutoMirrored.Filled.Article
-        is DeckColumnType.Hashtag -> Icons.Default.Tag
+        DeckColumnType.HomeFeed -> MaterialSymbols.Home
+        DeckColumnType.Notifications -> MaterialSymbols.Notifications
+        DeckColumnType.Messages -> MaterialSymbols.Email
+        DeckColumnType.Search -> MaterialSymbols.Search
+        DeckColumnType.Reads -> MaterialSymbols.AutoMirrored.Article
+        DeckColumnType.Bookmarks -> MaterialSymbols.Bookmark
+        DeckColumnType.GlobalFeed -> MaterialSymbols.Public
+        DeckColumnType.MyProfile -> MaterialSymbols.Person
+        DeckColumnType.Chess -> MaterialSymbols.Extension
+        DeckColumnType.Settings -> MaterialSymbols.Settings
+        DeckColumnType.Relays -> MaterialSymbols.Dns
+        is DeckColumnType.Article -> MaterialSymbols.AutoMirrored.Article
+        is DeckColumnType.Editor -> MaterialSymbols.AutoMirrored.Article
+        DeckColumnType.Drafts -> MaterialSymbols.AutoMirrored.Article
+        DeckColumnType.MyHighlights -> MaterialSymbols.AutoMirrored.Article
+        is DeckColumnType.Profile -> MaterialSymbols.Person
+        is DeckColumnType.Thread -> MaterialSymbols.AutoMirrored.Article
+        is DeckColumnType.Hashtag -> MaterialSymbols.Tag
     }

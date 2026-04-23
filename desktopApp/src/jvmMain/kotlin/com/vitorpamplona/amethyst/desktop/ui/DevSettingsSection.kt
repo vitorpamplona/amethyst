@@ -30,9 +30,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -51,6 +48,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
@@ -85,7 +84,7 @@ fun DevSettingsSection(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Icon(
-                Icons.Default.Warning,
+                MaterialSymbols.Warning,
                 contentDescription = "Warning",
                 tint = Color(0xFFFF9800),
             )
@@ -205,7 +204,7 @@ private fun KeyRow(
                     ),
             ) {
                 Icon(
-                    Icons.Default.ContentCopy,
+                    MaterialSymbols.ContentCopy,
                     contentDescription = "Copy",
                     modifier = Modifier.padding(end = 4.dp),
                 )

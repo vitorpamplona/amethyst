@@ -34,9 +34,6 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.PushPin
-import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -61,6 +58,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.compose.produceCachedStateAsync
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
@@ -1550,7 +1549,7 @@ fun DisplayExpiration(expirationDate: Long) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
-            imageVector = Icons.Outlined.Timer,
+            symbol = MaterialSymbols.Timer,
             contentDescription = stringRes(R.string.expiration_date_label),
             modifier = Modifier.padding(start = 5.dp).size(15.dp),
             tint = MaterialTheme.colorScheme.placeholderText,
@@ -1681,7 +1680,7 @@ fun FirstUserInfoRow(
 @Composable
 fun PinnedMark() {
     Icon(
-        imageVector = Icons.Default.PushPin,
+        symbol = MaterialSymbols.PushPin,
         contentDescription = stringRes(R.string.pinned_notes),
         modifier = Modifier.padding(start = 5.dp).size(16.dp),
         tint = MaterialTheme.colorScheme.placeholderText,

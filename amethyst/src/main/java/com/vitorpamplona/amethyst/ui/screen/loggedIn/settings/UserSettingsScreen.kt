@@ -38,12 +38,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -68,6 +62,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
@@ -154,7 +150,7 @@ private fun SearchableLanguageList(
             placeholder = { Text(stringRes(R.string.search_languages)) },
             leadingIcon = {
                 Icon(
-                    imageVector = Icons.Default.Search,
+                    symbol = MaterialSymbols.Search,
                     contentDescription = null,
                     modifier = Modifier.size(20.dp),
                 )
@@ -266,7 +262,7 @@ fun DontTranslateFromSetting(accountViewModel: AccountViewModel) {
                     label = { Text(JavaLocale.forLanguageTag(languageCode).displayName) },
                     trailingIcon = {
                         Icon(
-                            imageVector = Icons.Default.Close,
+                            symbol = MaterialSymbols.Close,
                             contentDescription = stringRes(R.string.remove_language, languageCode),
                             modifier = Modifier.size(InputChipDefaults.IconSize),
                         )
@@ -280,7 +276,7 @@ fun DontTranslateFromSetting(accountViewModel: AccountViewModel) {
                 label = { Text(stringRes(R.string.add_language)) },
                 leadingIcon = {
                     Icon(
-                        imageVector = Icons.Default.Add,
+                        symbol = MaterialSymbols.Add,
                         contentDescription = null,
                         modifier = Modifier.size(InputChipDefaults.IconSize),
                     )
@@ -342,7 +338,7 @@ fun LanguagePreferencesSetting(accountViewModel: AccountViewModel) {
                 modifier = Modifier.align(Alignment.CenterHorizontally),
             ) {
                 Icon(
-                    imageVector = Icons.Default.Add,
+                    symbol = MaterialSymbols.Add,
                     contentDescription = null,
                     modifier = Modifier.size(18.dp),
                 )
@@ -375,7 +371,7 @@ private fun LanguagePreferenceCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(
-                    imageVector = Icons.Default.SwapHoriz,
+                    symbol = MaterialSymbols.SwapHoriz,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(20.dp),
@@ -393,7 +389,7 @@ private fun LanguagePreferenceCard(
                     modifier = Modifier.size(32.dp),
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Delete,
+                        symbol = MaterialSymbols.Delete,
                         contentDescription = stringRes(R.string.delete_preference),
                         tint = MaterialTheme.colorScheme.error,
                         modifier = Modifier.size(18.dp),
@@ -501,7 +497,7 @@ private fun AddLanguagePairCard(
                 }
 
                 Icon(
-                    imageVector = Icons.Default.SwapHoriz,
+                    symbol = MaterialSymbols.SwapHoriz,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(20.dp),

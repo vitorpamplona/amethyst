@@ -42,10 +42,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Error
-import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -83,6 +79,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.davotoula.lightcompressor.hls.HlsLadder
 import com.davotoula.lightcompressor.utils.CompressorUtils
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -221,7 +219,7 @@ private fun EmptyPickVideoCard(onClick: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Icon(
-                imageVector = Icons.Default.VideoLibrary,
+                symbol = MaterialSymbols.VideoLibrary,
                 contentDescription = null,
                 modifier = Modifier.size(48.dp),
                 tint = MaterialTheme.colorScheme.primary,
@@ -249,7 +247,7 @@ private fun PickedVideoCard(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
-                imageVector = Icons.Default.VideoLibrary,
+                symbol = MaterialSymbols.VideoLibrary,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(32.dp),
@@ -616,7 +614,7 @@ private fun PhaseRow(
         when {
             done -> {
                 Icon(
-                    imageVector = Icons.Default.CheckCircle,
+                    symbol = MaterialSymbols.CheckCircle,
                     contentDescription = null,
                     tint = Color(0xFF22C55E),
                     modifier = Modifier.size(20.dp),
@@ -665,7 +663,7 @@ private fun SuccessBody(
         verticalArrangement = Arrangement.Center,
     ) {
         Icon(
-            imageVector = Icons.Default.CheckCircle,
+            symbol = MaterialSymbols.CheckCircle,
             contentDescription = null,
             modifier = Modifier.size(72.dp),
             tint = Color(0xFF22C55E),
@@ -748,7 +746,7 @@ private fun FailureBody(
         verticalArrangement = Arrangement.Center,
     ) {
         Icon(
-            imageVector = Icons.Default.Error,
+            symbol = MaterialSymbols.Error,
             contentDescription = null,
             modifier = Modifier.size(72.dp),
             tint = MaterialTheme.colorScheme.error,

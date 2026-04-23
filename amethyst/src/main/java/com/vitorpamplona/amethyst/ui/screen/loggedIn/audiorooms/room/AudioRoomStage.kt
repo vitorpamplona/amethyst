@@ -28,9 +28,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.PanTool
-import androidx.compose.material.icons.outlined.PanTool
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilledTonalIconButton
@@ -50,6 +47,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
@@ -181,7 +180,7 @@ private fun AudioRoomStageContent(
             ) {
                 FilledTonalIconButton(onClick = { handRaised = !handRaised }) {
                     Icon(
-                        imageVector = if (handRaised) Icons.Filled.PanTool else Icons.Outlined.PanTool,
+                        symbol = if (handRaised) MaterialSymbols.PanTool else MaterialSymbols.PanTool,
                         contentDescription =
                             stringRes(
                                 if (handRaised) R.string.audio_room_lower_hand else R.string.audio_room_raise_hand,

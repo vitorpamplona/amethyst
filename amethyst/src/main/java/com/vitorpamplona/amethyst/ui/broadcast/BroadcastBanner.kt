@@ -39,11 +39,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Error
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -60,6 +55,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.defaults.Constants
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.service.broadcast.BroadcastEvent
 import com.vitorpamplona.amethyst.service.broadcast.BroadcastStatus
 import com.vitorpamplona.amethyst.service.broadcast.RelayResult
@@ -140,7 +137,7 @@ private fun SingleBroadcastContent(broadcast: BroadcastEvent) {
         modifier = Modifier.fillMaxWidth(),
     ) {
         Icon(
-            imageVector = Icons.Default.Sync,
+            symbol = MaterialSymbols.Sync,
             contentDescription = stringRes(R.string.broadcasting),
             tint = MaterialTheme.colorScheme.primary,
             modifier = Modifier.size(18.dp),
@@ -198,7 +195,7 @@ private fun MultipleBroadcastsContent(broadcasts: ImmutableList<BroadcastEvent>)
         modifier = Modifier.fillMaxWidth(),
     ) {
         Icon(
-            imageVector = Icons.Default.Sync,
+            symbol = MaterialSymbols.Sync,
             contentDescription = stringRes(R.string.broadcasting),
             tint = MaterialTheme.colorScheme.primary,
             modifier = Modifier.size(18.dp),
@@ -258,15 +255,15 @@ fun CompletedBroadcastContent(
 
         val (statusIcon, iconTint) =
             when (broadcast.status) {
-                BroadcastStatus.SUCCESS -> Icons.Default.CheckCircle to successColor
-                BroadcastStatus.PARTIAL -> Icons.Default.Error to warningColor
-                BroadcastStatus.FAILED -> Icons.Default.Error to MaterialTheme.colorScheme.error
-                BroadcastStatus.IN_PROGRESS -> Icons.Default.CheckCircle to MaterialTheme.colorScheme.primary
+                BroadcastStatus.SUCCESS -> MaterialSymbols.CheckCircle to successColor
+                BroadcastStatus.PARTIAL -> MaterialSymbols.Error to warningColor
+                BroadcastStatus.FAILED -> MaterialSymbols.Error to MaterialTheme.colorScheme.error
+                BroadcastStatus.IN_PROGRESS -> MaterialSymbols.CheckCircle to MaterialTheme.colorScheme.primary
             }
 
         // Small status icon (like BroadcastBanner)
         Icon(
-            imageVector = statusIcon,
+            symbol = statusIcon,
             contentDescription = broadcast.status.name,
             tint = iconTint,
             modifier = Modifier.size(18.dp),
@@ -310,7 +307,7 @@ fun CompletedBroadcastContent(
                 modifier = Modifier.size(22.dp),
             ) {
                 Icon(
-                    imageVector = Icons.Default.Refresh,
+                    symbol = MaterialSymbols.Refresh,
                     contentDescription = stringRes(R.string.retry_failed),
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(18.dp),
@@ -353,16 +350,16 @@ fun MultipleCompletedBroadcastContent(
 
         val (statusIcon, iconTint) =
             if (allSuccess) {
-                Icons.Default.CheckCircle to successColor
+                MaterialSymbols.CheckCircle to successColor
             } else if (allFailed) {
-                Icons.Default.Error to MaterialTheme.colorScheme.error
+                MaterialSymbols.Error to MaterialTheme.colorScheme.error
             } else {
-                Icons.Default.Error to warningColor
+                MaterialSymbols.Error to warningColor
             }
 
         // Small status icon (like BroadcastBanner)
         Icon(
-            imageVector = statusIcon,
+            symbol = statusIcon,
             contentDescription =
                 if (allSuccess) {
                     stringRes(R.string.bradcasting_result_success)
@@ -413,7 +410,7 @@ fun MultipleCompletedBroadcastContent(
                 modifier = Modifier.size(22.dp),
             ) {
                 Icon(
-                    imageVector = Icons.Default.Refresh,
+                    symbol = MaterialSymbols.Refresh,
                     contentDescription = stringRes(R.string.retry_failed),
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(18.dp),

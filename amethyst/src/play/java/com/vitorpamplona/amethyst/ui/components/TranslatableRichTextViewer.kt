@@ -25,8 +25,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -51,6 +49,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.os.ConfigurationCompat
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.service.lang.LanguageTranslatorService
 import com.vitorpamplona.amethyst.service.lang.TranslationsCache
@@ -200,7 +200,7 @@ private fun TranslationMessage(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         if (source in accountViewModel.dontTranslateFrom()) {
                             Icon(
-                                imageVector = Icons.Default.Check,
+                                symbol = MaterialSymbols.Check,
                                 contentDescription = null,
                                 modifier = Modifier.size(24.dp),
                             )
@@ -229,7 +229,7 @@ private fun TranslationMessage(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         if (accountViewModel.account.settings.preferenceBetween(source, target) == source) {
                             Icon(
-                                imageVector = Icons.Default.Check,
+                                symbol = MaterialSymbols.Check,
                                 contentDescription = null,
                                 modifier = Modifier.size(24.dp),
                             )
@@ -259,7 +259,7 @@ private fun TranslationMessage(
                                 .preferenceBetween(source, target) == target
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Check,
+                                symbol = MaterialSymbols.Check,
                                 contentDescription = null,
                                 modifier = Modifier.size(24.dp),
                             )
@@ -294,7 +294,7 @@ private fun TranslationMessage(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 if (accountViewModel.account.settings.translateToContains(lang.language)) {
                                     Icon(
-                                        imageVector = Icons.Default.Check,
+                                        symbol = MaterialSymbols.Check,
                                         contentDescription = null,
                                         modifier = Modifier.size(24.dp),
                                     )

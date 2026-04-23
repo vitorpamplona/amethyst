@@ -32,10 +32,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.CalendarMonth
-import androidx.compose.material.icons.outlined.DeleteForever
-import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -70,6 +66,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
@@ -240,7 +238,7 @@ fun RequestToVanishScreen(
                     verticalAlignment = Alignment.Top,
                 ) {
                     Icon(
-                        imageVector = Icons.Outlined.Warning,
+                        symbol = MaterialSymbols.Warning,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.error,
                         modifier = Modifier.size(24.dp),
@@ -286,7 +284,7 @@ fun RequestToVanishScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(
-                        Icons.Outlined.CalendarMonth,
+                        MaterialSymbols.CalendarMonth,
                         contentDescription = stringRes(R.string.vanish_select_date),
                     )
                     Spacer(Modifier.width(12.dp))
@@ -327,7 +325,7 @@ fun RequestToVanishScreen(
                     ),
             ) {
                 Icon(
-                    Icons.Outlined.DeleteForever,
+                    MaterialSymbols.DeleteForever,
                     contentDescription = null,
                     modifier = Modifier.size(20.dp),
                 )
@@ -417,7 +415,7 @@ private fun ConfirmVanishDialog(
         onDismissRequest = onDismiss,
         icon = {
             Icon(
-                Icons.Outlined.Warning,
+                MaterialSymbols.Warning,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.error,
                 modifier = Modifier.size(32.dp),

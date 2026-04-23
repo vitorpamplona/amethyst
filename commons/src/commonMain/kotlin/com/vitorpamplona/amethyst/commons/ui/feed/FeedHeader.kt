@@ -24,10 +24,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -36,6 +32,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.ui.theme.RelayStatusColors
 
 /**
@@ -93,7 +91,7 @@ fun RelayStatusIndicator(
             }
 
         Icon(
-            imageVector = if (connectedCount > 0) Icons.Default.Check else Icons.Default.Close,
+            symbol = if (connectedCount > 0) MaterialSymbols.Check else MaterialSymbols.Close,
             contentDescription = null,
             tint = statusColor,
             modifier = Modifier.size(16.dp),
@@ -107,7 +105,7 @@ fun RelayStatusIndicator(
 
         IconButton(onClick = onRefresh) {
             Icon(
-                Icons.Default.Refresh,
+                MaterialSymbols.Refresh,
                 contentDescription = "Reconnect",
                 tint = MaterialTheme.colorScheme.primary,
             )

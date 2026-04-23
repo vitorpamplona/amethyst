@@ -29,8 +29,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MilitaryTech
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -42,6 +40,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
@@ -102,7 +102,7 @@ fun BadgeCompose(
                     modifier = Modifier.width(55.dp).padding(0.dp),
                 ) {
                     Icon(
-                        imageVector = Icons.Default.MilitaryTech,
+                        symbol = MaterialSymbols.MilitaryTech,
                         null,
                         modifier = Modifier.size(25.dp).align(Alignment.TopEnd),
                         tint = MaterialTheme.colorScheme.primary,

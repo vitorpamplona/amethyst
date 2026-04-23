@@ -29,10 +29,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -60,6 +56,8 @@ import com.vitorpamplona.amethyst.commons.icons.BookmarkFilled
 import com.vitorpamplona.amethyst.commons.icons.Reply
 import com.vitorpamplona.amethyst.commons.icons.Repost
 import com.vitorpamplona.amethyst.commons.icons.Zap
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip18Reposts.RepostAction
 import com.vitorpamplona.amethyst.commons.model.nip25Reactions.ReactionAction
 import com.vitorpamplona.amethyst.commons.model.nip51Bookmarks.BookmarkAction
@@ -552,7 +550,7 @@ fun NoteActionsRow(
                 modifier = Modifier.size(32.dp),
             ) {
                 Icon(
-                    if (isLiked) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                    if (isLiked) MaterialSymbols.Favorite else MaterialSymbols.FavoriteBorder,
                     contentDescription = if (isLiked) "Unlike" else "Like",
                     tint =
                         if (isLiked) {
@@ -731,7 +729,7 @@ fun NoteActionsRow(
                 modifier = Modifier.size(32.dp),
             ) {
                 Icon(
-                    Icons.Default.MoreVert,
+                    MaterialSymbols.MoreVert,
                     contentDescription = "More options",
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(18.dp),

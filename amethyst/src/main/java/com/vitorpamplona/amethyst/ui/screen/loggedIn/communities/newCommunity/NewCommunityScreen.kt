@@ -39,9 +39,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AddPhotoAlternate
-import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -74,6 +71,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.Nip05State
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
@@ -345,7 +344,7 @@ private fun ExistingCommunityCover(
         )
         IconButton(onClick = onClear) {
             Icon(
-                imageVector = Icons.Outlined.Close,
+                symbol = MaterialSymbols.Close,
                 contentDescription = stringRes(R.string.remove),
                 tint = MaterialTheme.colorScheme.onSurface,
             )
@@ -370,7 +369,7 @@ private fun CommunityImagePlaceholder(onClick: () -> Unit) {
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(
-                imageVector = Icons.Default.AddPhotoAlternate,
+                symbol = MaterialSymbols.AddPhotoAlternate,
                 contentDescription = null,
                 modifier = Modifier.size(56.dp),
                 tint = MaterialTheme.colorScheme.primary,
@@ -516,7 +515,7 @@ private fun SelectedModeratorRow(
         } else if (onRemove != null) {
             IconButton(onClick = onRemove) {
                 Icon(
-                    imageVector = Icons.Outlined.Close,
+                    symbol = MaterialSymbols.Close,
                     contentDescription = stringRes(R.string.remove),
                 )
             }

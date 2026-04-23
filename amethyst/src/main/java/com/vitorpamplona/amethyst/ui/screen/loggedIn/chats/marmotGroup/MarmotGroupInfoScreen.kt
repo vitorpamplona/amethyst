@@ -40,14 +40,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.ExitToApp
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.PersonAdd
-import androidx.compose.material.icons.filled.PersonRemove
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -75,6 +67,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.marmot.GroupMemberInfo
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.components.util.setText
@@ -142,7 +136,7 @@ fun MarmotGroupInfoScreen(
                 navigationIcon = {
                     IconButton(onClick = { nav.popBack() }) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            symbol = MaterialSymbols.AutoMirrored.ArrowBack,
                             contentDescription = "Back",
                         )
                     }
@@ -151,7 +145,7 @@ fun MarmotGroupInfoScreen(
                 actions = {
                     IconButton(onClick = { nav.nav(Route.MarmotGroupEditInfo(nostrGroupId)) }) {
                         Icon(
-                            imageVector = Icons.Default.Edit,
+                            symbol = MaterialSymbols.Edit,
                             contentDescription = "Edit Group Info",
                         )
                     }
@@ -160,7 +154,7 @@ fun MarmotGroupInfoScreen(
                         enabled = !isLeaving,
                     ) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ExitToApp,
+                            symbol = MaterialSymbols.AutoMirrored.ExitToApp,
                             contentDescription = "Leave Group",
                             tint = MaterialTheme.colorScheme.error,
                         )
@@ -455,7 +449,7 @@ private fun AddMemberInline(
                 trailingContent = { user ->
                     IconButton(onClick = { onAdd(user) }) {
                         Icon(
-                            imageVector = Icons.Default.PersonAdd,
+                            symbol = MaterialSymbols.PersonAdd,
                             contentDescription = "Add to group",
                             tint = MaterialTheme.colorScheme.primary,
                         )
@@ -543,7 +537,7 @@ fun MemberRow(
         if (canPromote) {
             IconButton(onClick = onPromoteClick) {
                 Icon(
-                    imageVector = Icons.Outlined.StarBorder,
+                    symbol = MaterialSymbols.StarBorder,
                     contentDescription = "Grant admin privileges",
                     tint = MaterialTheme.colorScheme.primary,
                 )
@@ -551,7 +545,7 @@ fun MemberRow(
         } else if (canDemote) {
             IconButton(onClick = onDemoteClick) {
                 Icon(
-                    imageVector = Icons.Default.Star,
+                    symbol = MaterialSymbols.Star,
                     contentDescription = "Revoke admin privileges",
                     tint = MaterialTheme.colorScheme.primary,
                 )
@@ -560,7 +554,7 @@ fun MemberRow(
         if (canRemove) {
             IconButton(onClick = onRemoveClick) {
                 Icon(
-                    imageVector = Icons.Default.PersonRemove,
+                    symbol = MaterialSymbols.PersonRemove,
                     contentDescription = "Remove Member",
                     tint = MaterialTheme.colorScheme.error,
                 )

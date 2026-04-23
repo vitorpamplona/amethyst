@@ -34,10 +34,6 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -62,6 +58,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.nip30CustomEmojis.OwnedEmojiPack
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
@@ -139,7 +137,7 @@ private fun EmojiPackScreenView(
                 text = { Text(text = stringRes(R.string.add_emoji_fab)) },
                 icon = {
                     Icon(
-                        imageVector = Icons.Outlined.Add,
+                        symbol = MaterialSymbols.Add,
                         contentDescription = null,
                     )
                 },
@@ -196,7 +194,7 @@ private fun EmojiPackScreenView(
         ) {
             M3ActionSection {
                 M3ActionRow(
-                    icon = Icons.Outlined.Delete,
+                    icon = MaterialSymbols.Delete,
                     text = stringRes(R.string.quick_action_delete),
                     isDestructive = true,
                 ) {
@@ -281,7 +279,7 @@ private fun EmojiCell(
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
-                    imageVector = Icons.Filled.Lock,
+                    symbol = MaterialSymbols.Lock,
                     contentDescription = privateLabel,
                     tint = Color.White,
                     modifier = Modifier.size(10.dp),
