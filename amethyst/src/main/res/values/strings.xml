@@ -1880,6 +1880,11 @@
     <string name="search_sort_oldest">Oldest</string>
     <string name="search_sort_relevance">Relevance</string>
     <string name="search_sort_popular">Popular</string>
+    <string name="search_filters_title">Filters</string>
+    <string name="search_filters_reset">Reset</string>
+    <string name="search_filters_section_source">Source</string>
+    <string name="search_filters_section_sort">Sort by</string>
+    <string name="search_filters_open">Filters</string>
 
     <string name="dont_translate_from">Don\'t Translate From</string>
     <string name="dont_translate_from_description">Languages shown here will not be translated. Select a language to remove it and have it translated again.</string>

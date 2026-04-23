@@ -89,7 +89,7 @@ class SearchBarViewModel(
     val scope = MutableStateFlow(SearchScope.ALL)
     val source = MutableStateFlow(SearchSource.RELAYS)
     val followsOnly = MutableStateFlow(false)
-    val sortOrder = MutableStateFlow(SearchSortOrder.DEFAULT_EVENT)
+    val sortOrder = MutableStateFlow(SearchSortOrder.EVENT_DEFAULT)
 
     val searchTerm =
         searchValueFlow

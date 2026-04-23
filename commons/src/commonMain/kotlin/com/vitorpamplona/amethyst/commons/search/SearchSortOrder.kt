@@ -34,7 +34,7 @@ enum class SearchSortOrder(
     companion object {
         val EVENT_OPTIONS = listOf(RELEVANCE, NEWEST, POPULAR)
         val PEOPLE_OPTIONS = listOf(NAME_AZ, NAME_ZA)
-        val DEFAULT_EVENT = NEWEST
-        val DEFAULT_PEOPLE = NAME_AZ
+        val EVENT_DEFAULT = NEWEST
+        val PEOPLE_DEFAULT = NAME_AZ
     }
 }
