@@ -148,6 +148,13 @@ fun AllSettingsScreen(
             )
             HorizontalDivider()
             SettingsNavigationRow(
+                title = R.string.video_player_settings,
+                icon = Icons.Outlined.VideoSettings,
+                tint = tint,
+                onClick = { nav.nav(Route.VideoPlayerSettings) },
+            )
+            HorizontalDivider()
+            SettingsNavigationRow(
                 title = R.string.zaps,
                 icon = Icons.Outlined.Bolt,
                 tint = tint,
@@ -217,13 +224,6 @@ fun AllSettingsScreen(
                 icon = Icons.Outlined.Dashboard,
                 tint = tint,
                 onClick = { nav.nav(Route.BottomBarSettings) },
-            )
-            HorizontalDivider()
-            SettingsNavigationRow(
-                title = R.string.video_player_settings,
-                icon = Icons.Outlined.VideoSettings,
-                tint = tint,
-                onClick = { nav.nav(Route.VideoPlayerSettings) },
             )
             HorizontalDivider(thickness = 4.dp)
             SettingsSectionHeader(R.string.danger_zone)
