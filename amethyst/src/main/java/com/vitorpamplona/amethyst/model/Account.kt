@@ -2167,15 +2167,33 @@ class Account(
      * Publish or rotate KeyPackage events.
      */
     suspend fun publishMarmotKeyPackages() {
-        val manager = marmotManager ?: return
-        if (!isWriteable()) return
+        val manager =
+            marmotManager ?: run {
+                Log.w("MarmotDbg") { "publishMarmotKeyPackages: marmotManager is NULL — no-op" }
+                return
+            }
+        if (!isWriteable()) {
+            Log.w("MarmotDbg") { "publishMarmotKeyPackages: account is not writeable — no-op" }
+            return
+        }
 
         val relays = keyPackagePublishRelays()
+        val needsRotation = manager.needsKeyPackageRotation()
+        Log.d("MarmotDbg") {
+            "publishMarmotKeyPackages: needsRotation=$needsRotation relays=${relays.size}"
+        }
 
-        if (manager.needsKeyPackageRotation()) {
+        if (needsRotation) {
             val rotatedEvents = manager.rotateConsumedKeyPackages(relays.toList())
+            Log.d("MarmotDbg") {
+                "publishMarmotKeyPackages: rotateConsumedKeyPackages produced ${rotatedEvents.size} event(s)"
+            }
             rotatedEvents.forEach { event ->
                 cache.justConsumeMyOwnEvent(event)
+                Log.d("MarmotDbg") {
+                    "publishMarmotKeyPackages: publishing rotated kind:${event.kind} id=${event.id.take(8)}… " +
+                        "→ ${relays.size} relay(s): ${relays.map { it.url }}"
+                }
                 client.publish(event, relays)
             }
         }
