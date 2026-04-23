@@ -81,7 +81,6 @@ fun RenderTopButtonsPreview() {
         Box(Modifier.background(BitcoinOrange)) {
             RenderTopButtons(
                 mediaData = MediaItemData("http://test.mp4"),
-                videoGroup = null,
                 hasMultipleQualities = false,
                 qualityButton = {},
                 controllerVisible = remember { mutableStateOf(true) },
@@ -141,7 +140,6 @@ fun RenderTopButtons(
 
     RenderTopButtons(
         mediaData = mediaData,
-        videoGroup = videoGroup,
         hasMultipleQualities = hasMultipleQualities,
         qualityButton = {
             VideoQualityButton(
@@ -186,7 +184,6 @@ fun RenderTopButtons(
 @Composable
 fun RenderTopButtons(
     mediaData: MediaItemData,
-    videoGroup: Tracks.Group?,
     hasMultipleQualities: Boolean,
     qualityButton: @Composable () -> Unit,
     controllerVisible: MutableState<Boolean>,
@@ -217,8 +214,19 @@ fun RenderTopButtons(
             VideoPlayerAction.PictureInPicture -> pipSupported
         }
 
-    val topBarActions = buttonItems.filter { it.location == VideoButtonLocation.TopBar && isAvailable(it.action) }.map { it.action }
-    val overflowActions = buttonItems.filter { it.location == VideoButtonLocation.OverflowMenu && isAvailable(it.action) }.map { it.action }
+    val canFullscreen = onZoomClick != null
+    val topBarActions =
+        remember(buttonItems, canFullscreen, hasMultipleQualities, isLive, pipSupported) {
+            buttonItems
+                .filter { it.location == VideoButtonLocation.TopBar && isAvailable(it.action) }
+                .map { it.action }
+        }
+    val overflowActions =
+        remember(buttonItems, canFullscreen, hasMultipleQualities, isLive, pipSupported) {
+            buttonItems
+                .filter { it.location == VideoButtonLocation.OverflowMenu && isAvailable(it.action) }
+                .map { it.action }
+        }
 
     Row(modifier) {
         topBarActions.forEach { action ->
@@ -274,19 +282,17 @@ fun RenderTopButtons(
         }
 
         if (overflowActions.isNotEmpty()) {
-            Box {
-                AnimatedOverflowMenuButton(
-                    controllerVisible = controllerVisible,
-                    actions = overflowActions,
-                    onFullscreenClick = onZoomClick,
-                    onMuteClick = { onMuteClick(!startingMuteState) },
-                    startingMuteState = startingMuteState,
-                    onQualityClick = onOverflowQualityClick,
-                    onShareClick = { shareDialogVisible.value = true },
-                    onSaveClick = saveAction,
-                    onPipClick = onPictureInPictureClick,
-                )
-            }
+            AnimatedOverflowMenuButton(
+                controllerVisible = controllerVisible,
+                actions = overflowActions,
+                onFullscreenClick = onZoomClick,
+                onMuteClick = { onMuteClick(!startingMuteState) },
+                startingMuteState = startingMuteState,
+                onQualityClick = onOverflowQualityClick,
+                onShareClick = { shareDialogVisible.value = true },
+                onSaveClick = saveAction,
+                onPipClick = onPictureInPictureClick,
+            )
         }
 
         if (shareDialogVisible.value) {
