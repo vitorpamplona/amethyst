@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.desktop.service.upload
 
+import com.vitorpamplona.amethyst.commons.service.upload.MediaMetadataReader
 import java.awt.image.BufferedImage
 import java.io.File
 import javax.imageio.ImageIO

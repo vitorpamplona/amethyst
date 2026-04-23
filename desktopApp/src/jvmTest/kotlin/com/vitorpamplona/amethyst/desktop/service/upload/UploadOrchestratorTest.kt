@@ -20,6 +20,9 @@
  */
 package com.vitorpamplona.amethyst.desktop.service.upload
 
+import com.vitorpamplona.amethyst.commons.service.upload.BlossomAuth
+import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
+import com.vitorpamplona.amethyst.commons.service.upload.UploadOrchestrator
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomUploadResult
 import io.mockk.coEvery
 import io.mockk.coVerify

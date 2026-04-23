@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.desktop.service.upload
 
+import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
