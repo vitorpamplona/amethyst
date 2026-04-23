@@ -1536,6 +1536,10 @@ class AccountViewModel(
         account.leaveMarmotGroup(nostrGroupId, relays)
     }
 
+    suspend fun resetMarmotState() {
+        account.resetMarmotState()
+    }
+
     /**
      * Get the relay set for a Marmot group from MLS GroupContext metadata.
      * Falls back to outbox relays if the group has no configured relays.

@@ -520,6 +520,32 @@ class MlsGroupManager(
         store.delete(nostrGroupId)
     }
 
+    /**
+     * Wipe all MLS group state, both in-memory and on-disk. Intended as a
+     * user-initiated "nuclear" reset for the Marmot subsystem — does NOT
+     * publish any SelfRemove/leave events, because the reset path is meant
+     * to recover from unusable local state where graceful leave may not
+     * even be possible.
+     *
+     * The union of in-memory group IDs and [MlsGroupStateStore.listGroups]
+     * is used so any orphaned on-disk state (e.g. a prior restore that
+     * failed to decode into memory) is also removed.
+     */
+    suspend fun clearAllState() =
+        mutex.withLock {
+            val ids = (groups.keys + store.listGroups().toSet()).toList()
+            Log.d(TAG) { "clearAllState(): wiping ${ids.size} group(s): $ids" }
+            for (id in ids) {
+                try {
+                    removeGroupStateUnlocked(id)
+                } catch (e: Exception) {
+                    Log.w(TAG) { "clearAllState(): failed to wipe $id: ${e.message}" }
+                }
+            }
+            groups.clear()
+            retainedEpochs.clear()
+        }
+
     // --- Key Export ---
 
     /**

@@ -1122,6 +1122,12 @@
     <string name="account_settings">Account Settings</string>
     <string name="app_settings">App Settings</string>
     <string name="danger_zone">Danger Zone</string>
+    <string name="reset_marmot_state">Reset Marmot State</string>
+    <string name="reset_marmot_confirm_title">Reset Marmot State?</string>
+    <string name="reset_marmot_confirm_body">This will permanently delete every Marmot group chat, message history, and MLS key on this device for the current account. Peers will not be notified and may still see you in groups until their next commit. This cannot be undone. A new KeyPackage will be published the next time the app syncs.</string>
+    <string name="reset_marmot_confirm_action">Reset</string>
+    <string name="reset_marmot_success">Marmot state reset.</string>
+    <string name="reset_marmot_failure">Failed to reset Marmot state: %1$s</string>
     <string name="connectivity_type_always">Always</string>
     <string name="connectivity_type_wifi_only">Wifi-only</string>
     <string name="connectivity_type_unmetered_wifi_only">Unmetered WiFi</string>

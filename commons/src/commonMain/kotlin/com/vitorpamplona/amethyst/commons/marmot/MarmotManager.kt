@@ -296,6 +296,36 @@ class MarmotManager(
     }
 
     /**
+     * Nuke all local Marmot state — every MLS group, every retained epoch
+     * secret, every persisted KeyPackage bundle, and every relay
+     * subscription. Does NOT publish any leave/SelfRemove commits: the
+     * reset path is specifically for recovering from corrupted or
+     * unrecoverable local state where graceful teardown may be impossible.
+     *
+     * The caller is responsible for wiping any higher-level in-memory
+     * structures (e.g. `MarmotGroupList`) and for re-publishing a fresh
+     * KeyPackage once the reset completes, if the account is still active.
+     */
+    suspend fun resetAllState() {
+        Log.w("MarmotManager") { "resetAllState(): wiping all Marmot local state for ${signer.pubKey.take(8)}…" }
+        try {
+            groupManager.clearAllState()
+        } catch (e: Exception) {
+            Log.w("MarmotManager", "resetAllState(): groupManager.clearAllState failed: ${e.message}")
+        }
+        try {
+            keyPackageRotationManager.clearAllState()
+        } catch (e: Exception) {
+            Log.w("MarmotManager", "resetAllState(): keyPackageRotationManager.clearAllState failed: ${e.message}")
+        }
+        try {
+            subscriptionManager.clear()
+        } catch (e: Exception) {
+            Log.w("MarmotManager", "resetAllState(): subscriptionManager.clear failed: ${e.message}")
+        }
+    }
+
+    /**
      * Leave a group.
      * Returns proposal bytes to publish (as a GroupEvent).
      */
