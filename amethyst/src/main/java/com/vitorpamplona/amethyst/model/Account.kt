@@ -2379,6 +2379,63 @@ class Account(
         client.publish(outbound.signedEvent, groupRelays)
     }
 
+    /**
+     * Grant admin privileges to [targetPubKey] in a Marmot MLS group by
+     * appending them to `admin_pubkeys` via a GroupContextExtensions commit.
+     *
+     * No-op if the group has no prior metadata (shouldn't happen outside the
+     * first bootstrap commit) or the target is already an admin. Callers
+     * must be an admin themselves — the MLS engine enforces this via the
+     * MIP-03 authorization gate in `enforceAuthorizedProposalSet`.
+     */
+    suspend fun grantMarmotGroupAdmin(
+        nostrGroupId: HexKey,
+        targetPubKey: HexKey,
+        groupRelays: Set<NormalizedRelayUrl>,
+    ) {
+        val manager = marmotManager ?: return
+        if (!isWriteable()) return
+
+        val metadata = manager.groupMetadata(nostrGroupId) ?: return
+        if (metadata.adminPubkeys.contains(targetPubKey)) return
+
+        val outboxRelayStrings = outboxRelays.flow.value.map { it.url }
+        val updated =
+            metadata
+                .copy(adminPubkeys = metadata.adminPubkeys + targetPubKey)
+                .withMergedRelays(outboxRelayStrings)
+        updateMarmotGroupMetadata(nostrGroupId, updated, groupRelays)
+    }
+
+    /**
+     * Revoke admin privileges from [targetPubKey]. Rejects any change that
+     * would leave the group with zero admins — MIP-03's admin-depletion guard
+     * in [com.vitorpamplona.quartz.marmot.mls.group.MlsGroup] would otherwise
+     * throw at commit time.
+     */
+    suspend fun revokeMarmotGroupAdmin(
+        nostrGroupId: HexKey,
+        targetPubKey: HexKey,
+        groupRelays: Set<NormalizedRelayUrl>,
+    ) {
+        val manager = marmotManager ?: return
+        if (!isWriteable()) return
+
+        val metadata = manager.groupMetadata(nostrGroupId) ?: return
+        if (!metadata.adminPubkeys.contains(targetPubKey)) return
+        val remaining = metadata.adminPubkeys.filter { it != targetPubKey }
+        check(remaining.isNotEmpty()) {
+            "Cannot revoke the last admin from a Marmot group (MIP-03)"
+        }
+
+        val outboxRelayStrings = outboxRelays.flow.value.map { it.url }
+        val updated =
+            metadata
+                .copy(adminPubkeys = remaining)
+                .withMergedRelays(outboxRelayStrings)
+        updateMarmotGroupMetadata(nostrGroupId, updated, groupRelays)
+    }
+
     suspend fun createStatus(newStatus: String) = sendMyPublicAndPrivateOutbox(UserStatusAction.create(newStatus, signer))
 
     suspend fun publishCallSignaling(wrap: EphemeralGiftWrapEvent) {
