@@ -660,8 +660,18 @@ class MlsGroupManager(
             if (privMsg.epoch != retained.epoch) return null
 
             // Derive sender data key/nonce using ciphertext sample (RFC 9420 §6.3.1)
+            // RFC 9420 §6.3.2: ciphertext_sample is the first KDF.Nh bytes
+            // (32 for HKDF-SHA256), not AEAD.Nk (16). Using AEAD.Nk here made
+            // sender-data decryption silently fail for every retained-epoch
+            // message and turned the fallback path into a no-op — the
+            // symptom was interop Test 12 (offline catch-up): kind:9
+            // messages encrypted under epoch N arriving after a 1→N+1
+            // commit got rejected with "Message epoch X doesn't match
+            // current epoch Y" instead of being pulled through this path.
+            // Same fix already applied to MlsGroup.decrypt (line ~878);
+            // this branch was missed when that one was patched.
             val ciphertextSample =
-                privMsg.ciphertext.copyOfRange(0, minOf(privMsg.ciphertext.size, MlsCryptoProvider.AEAD_KEY_LENGTH))
+                privMsg.ciphertext.copyOfRange(0, minOf(privMsg.ciphertext.size, MlsCryptoProvider.HASH_OUTPUT_LENGTH))
             val senderDataKey =
                 MlsCryptoProvider.expandWithLabel(
                     retained.senderDataSecret,
@@ -710,13 +720,23 @@ class MlsGroupManager(
             contentAad.putUint8(privMsg.contentType.value)
             contentAad.putOpaqueVarInt(privMsg.authenticatedData)
 
-            val plaintext =
+            val pmcBytes =
                 MlsCryptoProvider.aeadDecrypt(kng.key, guardedNonce, contentAad.toByteArray(), privMsg.ciphertext)
+
+            // AEAD plaintext is a PrivateMessageContent struct (RFC 9420
+            // §6.3.1): `applicationData<V> || signature<V> || padding`. The
+            // main decrypt path parses this and returns the inner
+            // applicationData; the retained-epoch branch was returning the
+            // raw struct, which made callers see a length-prefixed blob
+            // with signature + zero-padding glued onto the end. Extract the
+            // applicationData the same way.
+            val pmcReader = TlsReader(pmcBytes)
+            val applicationData = pmcReader.readOpaqueVarInt()
 
             DecryptedMessage(
                 senderLeafIndex = senderLeafIndex,
                 contentType = privMsg.contentType,
-                content = plaintext,
+                content = applicationData,
                 epoch = privMsg.epoch,
             )
         } catch (_: Exception) {
