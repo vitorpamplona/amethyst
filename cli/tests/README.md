@@ -1,22 +1,45 @@
-# Interop Test Harnesses
+# amy CLI test harnesses
 
-Two flavours of the Marmot harness, same scenarios:
+Shell-based end-to-end harnesses that drive the `amy` CLI binary against a
+loopback `nostr-rs-relay`. Layout:
 
-- **`marmot-interop.sh`** — interactive. Drives B/C via `wn` and **prompts the
-  human** to perform each Amethyst-side step in the mobile UI (Identity A).
-  Use this for final UI verification.
-- **`marmot-interop-headless.sh`** — zero prompts. Drives A via the `amy` CLI
-  (`./gradlew :cli:installDist`) and B/C via `wn`. Runs every scenario
-  end-to-end and exits with a pass/fail summary. Use this for CI and for
-  iterating on the Nostr/Marmot plumbing without needing to touch a phone.
+```
+cli/tests/
+├── lib.sh                 # shared logging, results, assertions
+├── headless/              # shared bits used by every harness
+│   └── helpers.sh
+├── marmot/                # Marmot / MLS group-messaging interop
+│   ├── marmot-interop.sh           # interactive — prompts Amethyst Android UI
+│   ├── marmot-interop-headless.sh  # zero-prompt
+│   ├── setup.sh                    # preflight + wn + relay + identities
+│   ├── tests-create.sh             # tests 01–05
+│   ├── tests-manage.sh             # tests 06–08, 11
+│   ├── tests-extras.sh             # tests 09, 10, 12, 13
+│   └── patches/                    # whitenoise-rs harness patches
+└── dm/                    # NIP-17 DM interop (amy ↔ amy)
+    ├── dm-interop-headless.sh
+    ├── setup.sh                    # preflight + identities
+    └── tests-dm.sh
+```
+
+The Marmot harnesses come in two flavours, same scenarios:
+
+- **`marmot/marmot-interop.sh`** — interactive. Drives B/C via `wn` and
+  **prompts the human** to perform each Amethyst-side step in the mobile UI
+  (Identity A). Use this for final UI verification.
+- **`marmot/marmot-interop-headless.sh`** — zero prompts. Drives A via the
+  `amy` CLI (`./gradlew :cli:installDist`) and B/C via `wn`. Runs every
+  scenario end-to-end and exits with a pass/fail summary. Use this for CI
+  and for iterating on the Nostr/Marmot plumbing without needing to touch a
+  phone.
 
 A third, slimmer harness covers the NIP-17 DM surface:
 
-- **`dm-interop-headless.sh`** — two `amy` processes (Identity A and
+- **`dm/dm-interop-headless.sh`** — two `amy` processes (Identity A and
   Identity D) exchange NIP-17 DMs through the loopback nostr-rs-relay.
   No whitenoise-rs required — only `amy` and the relay binary (which
   is shared with the Marmot harness's checkout at
-  `state-headless/nostr-rs-relay/`).
+  `marmot/state-headless/nostr-rs-relay/`).
 
 Both Marmot harnesses validate Amethyst against **whitenoise-rs**
 (https://github.com/marmot-protocol/whitenoise-rs), the reference Rust
@@ -42,7 +65,7 @@ the end of the run.
 | 12 | Offline catch-up / replay | – |
 | 13 | KeyPackage rotation | – |
 
-### DM (amy ↔ amy, NIP-17) — `dm-interop-headless.sh`
+### DM (amy ↔ amy, NIP-17) — `dm/dm-interop-headless.sh`
 
 | # | Test |
 |---|---|

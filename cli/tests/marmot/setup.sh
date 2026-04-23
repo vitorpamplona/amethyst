@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 #
-# headless/setup.sh — preflight + daemon lifecycle + identity bootstrap.
+# setup.sh — preflight + daemon lifecycle + identity bootstrap.
 # Sourced from marmot-interop-headless.sh.
 
 # --- preflight ---------------------------------------------------------------
@@ -90,7 +90,7 @@ preflight() {
     if [[ ! -f "$marker" ]]; then
       step "patching whitenoise-rs: $name"
       if ( cd "$WN_REPO" && patch -p1 --forward --reject-file=- \
-             <"$SCRIPT_DIR/headless/patches/$name" >>"$LOG_FILE" 2>&1 ); then
+             <"$SCRIPT_DIR/patches/$name" >>"$LOG_FILE" 2>&1 ); then
         touch "$marker"
         # Invalidate the previous build so the patched source is picked up.
         rm -f "$WN_BIN" "$WND_BIN"

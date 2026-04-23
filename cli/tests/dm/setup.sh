@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 #
-# headless/setup-dm.sh — amy-only preflight + identity bootstrap for the
+# setup.sh — amy-only preflight + identity bootstrap for the
 # NIP-17 DM interop harness. Much slimmer than the Marmot setup:
 #
 #   - Builds `amy` (same retry-on-503 logic as setup.sh).
@@ -11,7 +11,7 @@
 #     recipient-inbox routing has something to resolve to.
 #
 # The heavy `start_local_relay` / `stop_local_relay` helpers live in
-# headless/setup.sh and are sourced by the top-level harness.
+# the Marmot harness's setup.sh and are sourced by the top-level harness.
 
 # --- preflight (amy + relay only, no wn / Marmot patches) -------------------
 preflight_dm() {

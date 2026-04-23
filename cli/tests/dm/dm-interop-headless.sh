@@ -11,7 +11,8 @@
 set -uo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd -- "$SCRIPT_DIR/../.." && pwd)"
+REPO_ROOT="$(cd -- "$SCRIPT_DIR/../../.." && pwd)"
+TESTS_DIR="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 STATE_DIR="$SCRIPT_DIR/state-dm-headless"
 LOG_DIR="$STATE_DIR/logs"
 A_DIR="$STATE_DIR/A"
@@ -26,7 +27,7 @@ AMY_BIN="$REPO_ROOT/cli/build/install/amy/bin/amy"
 # Share the nostr-rs-relay checkout with the Marmot harness to avoid
 # rebuilding it twice. Override RELAY_REPO / RELAY_DATA if you want full
 # isolation between runs.
-RELAY_REPO="${RELAY_REPO:-$SCRIPT_DIR/state-headless/nostr-rs-relay}"
+RELAY_REPO="${RELAY_REPO:-$TESTS_DIR/marmot/state-headless/nostr-rs-relay}"
 RELAY_BIN="$RELAY_REPO/target/release/nostr-rs-relay"
 RELAY_DATA="$STATE_DIR/relay"
 RELAY_PORT="${RELAY_PORT:-8090}"
@@ -54,22 +55,23 @@ mkdir -p "$STATE_DIR" "$LOG_DIR" "$A_DIR" "$D_DIR"
 : >"$LOG_FILE"
 : >"$RESULTS_FILE"
 
-# Reuse the logging + result helpers from the Marmot harness. lib.sh
-# also declares wn-specific helpers; they're harmless when unused.
-# shellcheck source=lib.sh
-source "$SCRIPT_DIR/lib.sh"
+# Reuse the logging + result helpers shared between every harness.
+# lib.sh declares wn-specific helpers too — harmless when unused.
+# shellcheck source=../lib.sh
+source "$TESTS_DIR/lib.sh"
 
-# Reuse start_local_relay / stop_local_relay from setup.sh. preflight()
-# there also builds whitenoise-rs, which we don't need — setup-dm.sh
+# Reuse start_local_relay / stop_local_relay from the Marmot harness's
+# setup.sh — the relay lifecycle is identical. preflight() there also
+# builds whitenoise-rs, which we don't need; setup.sh in this dir
 # defines a slimmer preflight_dm().
-# shellcheck source=headless/setup.sh
-source "$SCRIPT_DIR/headless/setup.sh"
-# shellcheck source=headless/setup-dm.sh
-source "$SCRIPT_DIR/headless/setup-dm.sh"
-# shellcheck source=headless/helpers.sh
-source "$SCRIPT_DIR/headless/helpers.sh"
-# shellcheck source=headless/tests-dm.sh
-source "$SCRIPT_DIR/headless/tests-dm.sh"
+# shellcheck source=../marmot/setup.sh
+source "$TESTS_DIR/marmot/setup.sh"
+# shellcheck source=setup.sh
+source "$SCRIPT_DIR/setup.sh"
+# shellcheck source=../headless/helpers.sh
+source "$TESTS_DIR/headless/helpers.sh"
+# shellcheck source=tests-dm.sh
+source "$SCRIPT_DIR/tests-dm.sh"
 
 cleanup() {
   local rc=$?

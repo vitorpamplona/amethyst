@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 #
-# headless/tests-dm.sh — NIP-17 DM interop tests for two `amy` clients.
+# tests-dm.sh — NIP-17 DM interop tests for two `amy` clients.
 #
 # Identity A (sender) and Identity D (recipient) each live in their own
 # --data-dir and share one loopback nostr-rs-relay. Tests cover:

@@ -95,11 +95,11 @@ move anything, re-audit — you're probably duplicating logic.
 8. **Distribution** — Homebrew + Scoop + `.deb` in the same release
    pipeline as desktop. Plan: `cli/plans/2026-04-21-cli-distribution.md`.
 9. **Test suite** — end-to-end against a local relay. Marmot interop is
-   covered by `tools/marmot-interop/marmot-interop-headless.sh`; NIP-17
-   DM interop between two `amy` clients is covered by
-   `tools/marmot-interop/dm-interop-headless.sh` (text + file + strict
-   10050 + fallback + cursor-advance). Neither runs in CI yet (both
-   need Rust + ~3 min cold relay build).
+   covered by `cli/tests/marmot/marmot-interop-headless.sh`; NIP-17 DM
+   interop between two `amy` clients is covered by
+   `cli/tests/dm/dm-interop-headless.sh` (text + file + strict 10050 +
+   fallback + cursor-advance). Neither runs in CI yet (both need Rust +
+   ~3 min cold relay build).
 10. **Everything else in the matrix.**
 
 ---
