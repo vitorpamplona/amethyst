@@ -98,7 +98,10 @@ GID=$(amy --data-dir ./alice marmot group create --name "Test" | jq -r .group_id
 ```
 
 For an interop-test script template, see
-[DEVELOPMENT.md § Testing](./DEVELOPMENT.md#testing).
+[DEVELOPMENT.md § Testing](./DEVELOPMENT.md#testing). The runnable
+harnesses live under [`cli/tests/`](./tests/README.md) —
+`cli/tests/marmot/` for MLS group messaging vs whitenoise-rs,
+`cli/tests/dm/` for NIP-17 DMs between two `amy` clients.
 
 ---
 
