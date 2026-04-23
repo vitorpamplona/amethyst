@@ -195,7 +195,7 @@
     <string name="known">Znajomi</string>
     <string name="new_requests">Nowe</string>
     <string name="blocked_users">Zablokowani użytkownicy</string>
-    <string name="new_threads">Nowe Wpisy</string>
+    <string name="new_threads">Nowe wątki</string>
     <string name="conversations">Komentarze</string>
     <string name="feed">Aktualności</string>
     <string name="mod_queue">Moderacja</string>
@@ -1194,7 +1194,7 @@
         Po zainstalowaniu, wybierz w ustawieniach aplikację, którą chcesz użyć.
     </string>
     <string name="payment_required_title">Wiadomość od %1$s</string>
-    <string name="thread_title">Wpis</string>
+    <string name="thread_title">Wątek</string>
     <string name="send_the_seller_a_message">Wyślij sprzedawcy wiadomość</string>
     <string name="hi_seller_is_this_still_available">Witaj %1$s, czy to nadal jest dostępne?</string>
     <string name="hi_there_is_this_still_available">Cześć, czy to jest nadal dostępne?</string>
@@ -1384,6 +1384,23 @@
     <string name="reactions_settings_share_description">Prześlij ten wpis na zewnątrz</string>
     <string name="reactions_settings_pay">Zapłać</string>
     <string name="reactions_settings_pay_description">Prześlij płatność autorowi za pośrednictwem jego danych do płatności</string>
+    <string name="video_player_settings">Przyciski odtwarzacza wideo</string>
+    <string name="video_player_settings_description">Wybierz, które przyciski mają być widoczne w odtwarzaczu wideo, a które w rozwijanym menu. Przeciągnij, aby zmienić kolejność.</string>
+    <string name="video_player_settings_reorder">Zmień kolejność</string>
+    <string name="video_player_settings_location_top_bar">Górny pasek</string>
+    <string name="video_player_settings_location_overflow">Rozwijane menu</string>
+    <string name="video_player_settings_action_fullscreen">Pełny ekran</string>
+    <string name="video_player_settings_action_fullscreen_description">Otwórz film w trybie pełnoekranowego powiększenia</string>
+    <string name="video_player_settings_action_mute">Wycisz</string>
+    <string name="video_player_settings_action_mute_description">Włącz lub wyłącz dźwięk</string>
+    <string name="video_player_settings_action_quality">Jakość Wideo</string>
+    <string name="video_player_settings_action_quality_description">Wybierz rozdzielczość dla filmów HLS (opcja ukryta dla filmów innych niż HLS)</string>
+    <string name="video_player_settings_action_share">Udostępnij lub zapisz</string>
+    <string name="video_player_settings_action_share_description">Udostępnij link wideo na zewnątrz</string>
+    <string name="video_player_settings_action_download">Zapisz w telefonie</string>
+    <string name="video_player_settings_action_download_description">Pobierz wideo na swoje urządzenie (opcja ukryta podczas transmisji na żywo)</string>
+    <string name="video_player_settings_action_pip">Obraz w Obrazie</string>
+    <string name="video_player_settings_action_pip_description">Odtwórz wideo w pływającym oknie (opcja ukryta, jeśli nie jest obsługiwana)</string>
     <string name="profile_image_of_user">Zdjęcie profilowe %1$s</string>
     <string name="relay_info">Transmiter %1$s</string>
     <string name="expand_relay_list">Rozwiń listę transmiterów</string>
@@ -1616,6 +1633,21 @@
     <string name="unable_to_share_video">Nie można udostępnić filmu, spróbuj ponownie później…</string>
     <string name="downloading_video_for_sharing">Pobieranie filmu…</string>
     <string name="search_by_hashtag">Szukaj tagu: #%1$s</string>
+    <string name="search_scope_all">Wszytko</string>
+    <string name="search_scope_people">Osoby</string>
+    <string name="search_scope_notes">Wpisy</string>
+    <string name="search_source_local">Lokalne</string>
+    <string name="search_source_relays">Transmitery</string>
+    <string name="search_follows_only">Jedynie obserwowani</string>
+    <string name="search_sort_newest">Najnowszych</string>
+    <string name="search_sort_oldest">Najstarszych</string>
+    <string name="search_sort_relevance">Trafności</string>
+    <string name="search_sort_popular">Popularności</string>
+    <string name="search_filters_title">Filtry</string>
+    <string name="search_filters_reset">Zresetuj</string>
+    <string name="search_filters_section_source">Źródła</string>
+    <string name="search_filters_section_sort">Sortuj według</string>
+    <string name="search_filters_open">Filtry</string>
     <string name="dont_translate_from">Nie tłumacz z</string>
     <string name="dont_translate_from_description">Języki wyświetlane tutaj nie będą tłumaczone. Wybierz język, aby usunąć go z listy języków nietłumaczonych.</string>
     <string name="translate_to">Przetłumacz na</string>
@@ -1667,7 +1699,7 @@
     <string name="follow_pack_delete">Usuń pakiet</string>
     <string name="kinds">Typy</string>
     <string name="retry_failed">Powtórka nieudana</string>
-    <string name="tap_to_view_details">Naciśnij, aby zobaczyć szczegóły</string>
+    <string name="tap_to_view_details">Kliknij, aby zobaczyć szczegóły</string>
     <string name="event_sent">%1$s wysłano</string>
     <string name="broadcast_results">Wyniki przekazu</string>
     <string name="broadcasts_number">Przekazów (%1$d)</string>
