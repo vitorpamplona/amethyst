@@ -238,14 +238,37 @@ test_16_wn_keypackage_rotation() {
   banner "Test 16 — wn rotates KeyPackage; amy discovers new KP"
   local id="16 wn keypackage rotation"
 
-  # amy's KeyPackageFetcher.fetchKeyPackage calls client.fetchFirst,
-  # which returns the first matching event a relay sends — nostr-rs-relay
-  # typically serves kind:443 events in storage order, not created_at
-  # order, so after a rotation amy may keep seeing the older event_id
-  # depending on which arrives first. Making this test deterministic
-  # requires a "fetch latest by created_at" KeyPackage fetcher; until
-  # then the check flaps. The inverse direction (test 13, amy rotates
-  # and wn sees via `wn keys check` which is an addressable index) is
-  # the reliable one.
-  record_result "$id" skip "pending createdAt-sorted KeyPackage fetch path"
+  # KeyPackageFetcher now drains to EOSE and returns the event with the
+  # highest created_at, so a freshly-rotated KP is reliably preferred
+  # over an older one still held on some relays. This test verifies
+  # the wn->amy direction of that behaviour.
+
+  # Capture the KP amy currently sees for B (the one B originally published).
+  local before
+  before=$(amy_json marmot key-package check "$B_NPUB" 2>/dev/null \
+             | jq -r '.event_id // empty')
+  if [[ -z "$before" ]]; then
+    record_result "$id" fail "no prior KP visible to amy for B"; return
+  fi
+
+  # Ask B to rotate. `wn keys publish` writes a new kind:443 with a fresh
+  # created_at; the old event may or may not be evicted depending on the
+  # relay's retention policy, so both may coexist for a while.
+  wn_b keys publish >/dev/null 2>&1 || {
+    record_result "$id" fail "wn_b keys publish failed"; return
+  }
+
+  local deadline=$(( $(date +%s) + 60 )) after=""
+  while [[ $(date +%s) -lt $deadline ]]; do
+    after=$(amy_json marmot key-package check "$B_NPUB" 2>/dev/null \
+              | jq -r '.event_id // empty')
+    [[ -n "$after" && "$after" != "$before" ]] && break
+    sleep 3
+  done
+  if [[ -n "$after" && "$after" != "$before" ]]; then
+    info "amy saw KP rotation: ${before:0:8}… → ${after:0:8}…"
+    record_result "$id" pass
+  else
+    record_result "$id" fail "amy kept seeing the pre-rotation KP"
+  fi
 }
