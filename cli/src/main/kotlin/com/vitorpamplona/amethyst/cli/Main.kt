@@ -195,8 +195,14 @@ private fun printUsage() {
         |
         |Direct messages (NIP-17):
         |  dm send RECIPIENT TEXT                     send a gift-wrapped DM
-        |  dm list [--peer NPUB] [--since TS]         list decrypted DMs (advances cursor
-        |          [--limit N] [--timeout SECS]       only when no flags are passed)
+        |    [--allow-fallback]                       (default: only deliver to recipient's kind:10050)
+        |  dm send-file RECIPIENT --file PATH         encrypt + upload to Blossom + publish kind:15
+        |    --server URL [--mime-type M]
+        |  dm send-file RECIPIENT URL --key HEX       reference-mode: file already uploaded
+        |    --nonce HEX [--mime-type M] [--hash H]
+        |    [--size N] [--dim WxH] [--blurhash S]
+        |  dm list [--peer NPUB] [--since TS]         list decrypted DMs (kind:14 text +
+        |          [--limit N] [--timeout SECS]       kind:15 file with `type` discriminator)
         |  dm await --peer NPUB --match TEXT          wait for a matching DM
         |           [--timeout SECS]                  (default 30s, exit 124 on timeout)
         |

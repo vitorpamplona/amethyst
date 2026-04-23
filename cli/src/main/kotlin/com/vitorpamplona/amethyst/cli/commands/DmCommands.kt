@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Json
 import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.filterGiftWrapsToPubkey
 import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.unwrapAndUnsealOrNull
+import com.vitorpamplona.amethyst.commons.service.upload.UploadOrchestrator
 import com.vitorpamplona.quartz.marmot.RecipientRelayFetcher
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -93,30 +94,129 @@ object DmCommands {
         }
     }
 
+    /**
+     * Two modes:
+     *
+     *  - **Upload mode** (`--file PATH --server URL`): generate a random
+     *    AES-GCM cipher, encrypt the local file, upload the ciphertext to
+     *    the Blossom server, then publish a kind:15 referencing the
+     *    returned URL. The auto-detected hash, size, dimensions, mime
+     *    type, and blurhash from the upload are folded into the event.
+     *
+     *  - **Reference mode** (positional URL + `--key HEX --nonce HEX`):
+     *    the file is already uploaded somewhere; just publish a kind:15
+     *    pointing at it. Caller-supplied flags fill in the metadata.
+     *
+     * Mode selection: the `--file` flag turns on upload mode. Otherwise
+     * reference mode is required.
+     */
     private suspend fun sendFile(
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
-        if (rest.size < 2) {
-            return Json.error(
-                "bad_args",
-                "dm send-file <recipient> <url> --key <hex> --nonce <hex> [--mime-type <m>] [--hash <hex>] " +
-                    "[--original-hash <hex>] [--size <n>] [--dim <WxH>] [--blurhash <s>] [--allow-fallback]",
-            )
+        if (rest.isEmpty()) return Json.error("bad_args", USAGE_SEND_FILE)
+        val args = Args(rest.drop(1).toTypedArray())
+        val allowFallback = args.bool("allow-fallback")
+        val recipientInput = rest[0]
+
+        val ctx = Context.open(dataDir)
+        try {
+            ctx.prepare()
+            val recipient = ctx.requireUserHex(recipientInput)
+
+            val (template, summary) =
+                if (args.flag("file") != null) {
+                    buildUploadModeTemplate(ctx, recipient, args)
+                        ?: return 1
+                } else {
+                    buildReferenceModeTemplate(args, recipient)
+                        ?: return 1
+                }
+
+            val result = NIP17Factory().createEncryptedFileNIP17(template, ctx.signer)
+            return publishWraps(ctx, result, allowFallback, extra = summary)
+        } finally {
+            ctx.close()
         }
-        val url = rest[1]
-        val args = Args(rest.drop(2).toTypedArray())
+    }
+
+    private suspend fun buildUploadModeTemplate(
+        ctx: Context,
+        recipient: com.vitorpamplona.quartz.nip01Core.core.HexKey,
+        args: Args,
+    ): Pair<com.vitorpamplona.quartz.nip01Core.signers.EventTemplate<ChatMessageEncryptedFileHeaderEvent>, Map<String, Any?>>? {
+        val file = java.io.File(args.requireFlag("file"))
+        if (!file.exists()) {
+            Json.error("bad_args", "file does not exist: ${file.absolutePath}")
+            return null
+        }
+        val server = args.requireFlag("server")
+        val cipher =
+            com.vitorpamplona.quartz.utils.ciphers
+                .AESGCM()
+        val orchestrator = UploadOrchestrator()
+        val uploaded = orchestrator.uploadEncrypted(file, cipher, server, ctx.signer)
+        val uploadedUrl =
+            uploaded.blossom.url ?: run {
+                Json.error("upload_failed", "Blossom server $server returned no URL")
+                return null
+            }
+        val mimeType = args.flag("mime-type") ?: uploaded.metadata.mimeType
+        val dimension =
+            uploaded.metadata.width?.let { w ->
+                uploaded.metadata.height?.let { h ->
+                    com.vitorpamplona.quartz.nip94FileMetadata.tags
+                        .DimensionTag(w, h)
+                }
+            }
+        val template =
+            ChatMessageEncryptedFileHeaderEvent.build(
+                to = listOf(PTag(recipient)),
+                url = uploadedUrl,
+                cipher = cipher,
+                mimeType = mimeType,
+                hash = uploaded.encryptedHash,
+                size = uploaded.encryptedSize,
+                dimension = dimension,
+                blurhash = uploaded.metadata.blurhash,
+                originalHash = uploaded.metadata.sha256,
+            )
+        // Surface the cipher material on stdout so callers can re-share
+        // or republish the same encrypted blob without re-uploading.
+        val summary =
+            mapOf(
+                "url" to uploadedUrl,
+                "encryption_key" to cipher.keyBytes.toHexKey(),
+                "encryption_nonce" to cipher.nonce.toHexKey(),
+                "encrypted_hash" to uploaded.encryptedHash,
+                "encrypted_size" to uploaded.encryptedSize,
+                "original_hash" to uploaded.metadata.sha256,
+                "mime_type" to mimeType,
+            )
+        return template to summary
+    }
+
+    private fun buildReferenceModeTemplate(
+        args: Args,
+        recipient: com.vitorpamplona.quartz.nip01Core.core.HexKey,
+    ): Pair<com.vitorpamplona.quartz.nip01Core.signers.EventTemplate<ChatMessageEncryptedFileHeaderEvent>, Map<String, Any?>>? {
+        val url =
+            args.positionalOrNull(0) ?: run {
+                Json.error("bad_args", USAGE_SEND_FILE)
+                return null
+            }
         val keyHex = args.requireFlag("key")
         val nonceHex = args.requireFlag("nonce")
         val keyBytes =
             runCatching { keyHex.hexToByteArray() }.getOrElse {
-                return Json.error("bad_args", "--key must be hex (got ${keyHex.length} chars)")
+                Json.error("bad_args", "--key must be hex (got ${keyHex.length} chars)")
+                return null
             }
         val nonceBytes =
             runCatching { nonceHex.hexToByteArray() }.getOrElse {
-                return Json.error("bad_args", "--nonce must be hex (got ${nonceHex.length} chars)")
+                Json.error("bad_args", "--nonce must be hex (got ${nonceHex.length} chars)")
+                return null
             }
-
         val mimeType = args.flag("mime-type")
         val hash = args.flag("hash")
         val originalHash = args.flag("original-hash")
@@ -126,42 +226,40 @@ object DmCommands {
             args.flag("dim")?.let { raw ->
                 val match =
                     Regex("^(\\d+)x(\\d+)$").matchEntire(raw)
-                        ?: return Json.error("bad_args", "--dim must be WxH (got '$raw')")
+                        ?: run {
+                            Json.error("bad_args", "--dim must be WxH (got '$raw')")
+                            return null
+                        }
                 com.vitorpamplona.quartz.nip94FileMetadata.tags
                     .DimensionTag(match.groupValues[1].toInt(), match.groupValues[2].toInt())
             }
-        val allowFallback = args.bool("allow-fallback")
-
-        val ctx = Context.open(dataDir)
-        try {
-            ctx.prepare()
-            val recipient = ctx.requireUserHex(rest[0])
-            val cipher =
-                com.vitorpamplona.quartz.utils.ciphers
-                    .AESGCM(keyBytes, nonceBytes)
-            val template =
-                ChatMessageEncryptedFileHeaderEvent.build(
-                    to = listOf(PTag(recipient)),
-                    url = url,
-                    cipher = cipher,
-                    mimeType = mimeType,
-                    hash = hash,
-                    size = size,
-                    dimension = dimension,
-                    blurhash = blurhash,
-                    originalHash = originalHash,
-                )
-            val result = NIP17Factory().createEncryptedFileNIP17(template, ctx.signer)
-            return publishWraps(ctx, result, allowFallback)
-        } finally {
-            ctx.close()
-        }
+        val cipher =
+            com.vitorpamplona.quartz.utils.ciphers
+                .AESGCM(keyBytes, nonceBytes)
+        val template =
+            ChatMessageEncryptedFileHeaderEvent.build(
+                to = listOf(PTag(recipient)),
+                url = url,
+                cipher = cipher,
+                mimeType = mimeType,
+                hash = hash,
+                size = size,
+                dimension = dimension,
+                blurhash = blurhash,
+                originalHash = originalHash,
+            )
+        return template to emptyMap()
     }
+
+    private const val USAGE_SEND_FILE: String =
+        "dm send-file <recipient> [--file PATH --server URL | URL --key HEX --nonce HEX] " +
+            "[--mime-type M] [--hash HEX] [--original-hash HEX] [--size N] [--dim WxH] [--blurhash S] [--allow-fallback]"
 
     private suspend fun publishWraps(
         ctx: Context,
         result: NIP17Factory.Result,
         allowFallback: Boolean,
+        extra: Map<String, Any?> = emptyMap(),
     ): Int {
         val recipientsOut = mutableListOf<Map<String, Any?>>()
         for (wrap in result.wraps) {
@@ -184,13 +282,14 @@ object DmCommands {
                 ),
             )
         }
-        Json.writeLine(
-            mapOf(
-                "event_id" to result.msg.id,
-                "kind" to result.msg.kind,
-                "recipients" to recipientsOut,
-            ),
-        )
+        val out =
+            buildMap {
+                put("event_id", result.msg.id)
+                put("kind", result.msg.kind)
+                putAll(extra)
+                put("recipients", recipientsOut)
+            }
+        Json.writeLine(out)
         return 0
     }
 
