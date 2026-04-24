@@ -245,8 +245,6 @@ fun NotificationsScreen(
             onRefresh = { relayManager.connect() },
         )
 
-        Spacer(Modifier.height(16.dp))
-
         if (connectedRelays.isEmpty()) {
             LoadingState("Connecting to relays...")
         } else if (notifications.isEmpty() && !initialLoadComplete) {
