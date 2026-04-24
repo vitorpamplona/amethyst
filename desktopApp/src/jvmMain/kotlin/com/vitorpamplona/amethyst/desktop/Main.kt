@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.desktop
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -46,7 +47,6 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
-import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -82,6 +82,7 @@ import com.vitorpamplona.amethyst.desktop.model.DesktopRelayCategories
 import com.vitorpamplona.amethyst.desktop.network.DefaultRelays
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.network.Nip11Fetcher
+import com.vitorpamplona.amethyst.desktop.platform.applyNativeWindowChrome
 import com.vitorpamplona.amethyst.desktop.service.highlights.DesktopHighlightStore
 import com.vitorpamplona.amethyst.desktop.service.images.DesktopImageLoaderSetup
 import com.vitorpamplona.amethyst.desktop.service.media.VlcjPlayerPool
@@ -131,7 +132,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.time.Duration.Companion.seconds
 
-private val isMacOS = System.getProperty("os.name").lowercase().contains("mac")
+private val isMacOS = com.vitorpamplona.amethyst.desktop.platform.PlatformInfo.isMacOS
 
 enum class LayoutMode {
     SINGLE_PANE,
@@ -184,6 +185,15 @@ sealed class DesktopScreen {
 private var activeTorManager: com.vitorpamplona.amethyst.desktop.tor.DesktopTorManager? = null
 
 fun main() {
+    // macOS: route the app's MenuBar to the system menu bar at the top of the
+    // screen and set the application name shown in the apple-menu. Both must be
+    // set before AWT initializes (i.e. before any Swing/AWT class loads).
+    if (com.vitorpamplona.amethyst.desktop.platform.PlatformInfo.isMacOS) {
+        System.setProperty("apple.laf.useScreenMenuBar", "true")
+        System.setProperty("apple.awt.application.name", "Amethyst")
+        System.setProperty("apple.awt.application.appearance", "system")
+    }
+
     Log.minLevel = LogLevel.DEBUG
     DesktopImageLoaderSetup.setup()
     Runtime.getRuntime().addShutdownHook(
@@ -247,6 +257,10 @@ fun main() {
             state = windowState,
             title = "Amethyst",
         ) {
+            // macOS: transparent + full-window-content title bar so the deck/sidebar
+            // shows through, with traffic lights still drawn on top. No-op elsewhere.
+            applyNativeWindowChrome()
+
             MenuBar {
                 Menu("File") {
                     Item(
@@ -738,9 +752,10 @@ fun App(
         }
     }
 
-    MaterialTheme(
-        colorScheme = darkColorScheme(),
-    ) {
+    val isDark by com.vitorpamplona.amethyst.desktop.platform
+        .rememberSystemDark(LocalAwtWindow.current)
+
+    com.vitorpamplona.amethyst.desktop.platform.PlatformMaterialTheme(isDark = isDark) {
         ProvideMaterialSymbols {
             Surface(
                 modifier = Modifier.fillMaxSize(),
@@ -1102,6 +1117,19 @@ fun MainContent(
     ) {
         Box(Modifier.fillMaxSize()) {
             Column(Modifier.fillMaxSize()) {
+                // macOS: reserve a title bar strip so deck/sidebar content doesn't
+                // underlap the traffic lights. The strip is colored to match the
+                // sidebar so the whole top edge reads as one continuous toolbar.
+                if (!isImmersive &&
+                    com.vitorpamplona.amethyst.desktop.platform.PlatformInfo.isMacOS
+                ) {
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .height(com.vitorpamplona.amethyst.desktop.platform.titleBarInsetTop)
+                            .background(MaterialTheme.colorScheme.surfaceContainer),
+                    )
+                }
                 Row(Modifier.fillMaxSize().weight(1f)) {
                     when (layoutMode) {
                         LayoutMode.SINGLE_PANE -> {

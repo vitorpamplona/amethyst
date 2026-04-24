@@ -57,9 +57,9 @@ fun DeckSidebar(
     Column(
         modifier =
             modifier
-                .width(48.dp)
+                .width(56.dp)
                 .fillMaxHeight()
-                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .background(MaterialTheme.colorScheme.surfaceContainer)
                 .padding(vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Top,
