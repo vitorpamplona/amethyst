@@ -59,6 +59,13 @@ internal class FsQueryPlanner(
             return idsDriver(ids)
         }
 
+        // NIP-50 search drives by FTS first when present so the AND
+        // intersection of token sets is the smallest possible candidate
+        // pool. All other predicates are post-filtered via Filter.match.
+        filter.search?.takeIf { it.isNotBlank() }?.let { search ->
+            return ftsDriver(search)
+        }
+
         firstTagKey(filter)?.let { (name, values) ->
             return mergeDesc(values.map { v -> walkDir(layout.tagValueDir(name, hasher.hash(name, v))) })
         }
@@ -105,6 +112,50 @@ internal class FsQueryPlanner(
             if (!Files.isDirectory(layout.idxKind)) return@sequence
             val subs = Files.list(layout.idxKind).use { it.toList() }
             yieldAll(mergeDesc(subs.map { walkDir(it) }))
+        }
+
+    /**
+     * NIP-50 driver. Tokenises the search string, walks each
+     * `idx/fts/<token>/` listing, and intersects them by id (AND across
+     * tokens — matching SQLite FTS5 default semantics). Output is sorted
+     * by `createdAt` DESC.
+     */
+    private fun ftsDriver(search: String): Sequence<Candidate> =
+        sequence {
+            val tokens = FsSearchTokenizer.tokenize(search)
+            if (tokens.isEmpty()) return@sequence
+            // Materialise each token's listing, then intersect by id.
+            val perToken =
+                tokens.map { token ->
+                    val map = HashMap<HexKey, Long>()
+                    val dir = layout.ftsTokenDir(token)
+                    if (Files.isDirectory(dir)) {
+                        Files.list(dir).use { stream ->
+                            for (entry in stream) {
+                                val parsed = FsLayout.parseEntry(entry.fileName.toString()) ?: continue
+                                map[parsed.second] = parsed.first
+                            }
+                        }
+                    }
+                    map
+                }
+            if (perToken.any { it.isEmpty() }) return@sequence
+            // Start from the smallest set, intersect successively.
+            val sorted = perToken.sortedBy { it.size }
+            var acc = sorted[0]
+            for (i in 1 until sorted.size) {
+                val next = sorted[i]
+                val merged = HashMap<HexKey, Long>(acc.size)
+                for ((id, ts) in acc) {
+                    if (next.containsKey(id)) merged[id] = ts
+                }
+                acc = merged
+                if (acc.isEmpty()) return@sequence
+            }
+            acc.entries
+                .map { Candidate(it.value, it.key) }
+                .sortedByDescending { it.createdAt }
+                .forEach { yield(it) }
         }
 
     // ---- index directory walker --------------------------------------

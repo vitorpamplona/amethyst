@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.store.sqlite.DefaultIndexingStrategy
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.IndexingStrategy
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.TagNameValueHasher
 import com.vitorpamplona.quartz.nip40Expiration.expiration
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
@@ -66,6 +67,11 @@ internal class FsIndexer(
         val exp = event.expiration()
         if (exp != null && exp > 0) {
             out.add(layout.expirationEntry(exp, event.id))
+        }
+        if (event is SearchableEvent) {
+            for (token in FsSearchTokenizer.tokenize(event.indexableContent())) {
+                out.add(layout.ftsEntry(token, event.createdAt, event.id))
+            }
         }
         return out
     }

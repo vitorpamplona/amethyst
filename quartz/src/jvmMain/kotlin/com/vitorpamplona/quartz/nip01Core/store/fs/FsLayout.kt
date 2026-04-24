@@ -46,6 +46,7 @@ internal class FsLayout(
     val idxOwner: Path = idx.resolve(IDX_OWNER)
     val idxTag: Path = idx.resolve(IDX_TAG)
     val idxExpiresAt: Path = idx.resolve(IDX_EXPIRES_AT)
+    val idxFts: Path = idx.resolve(IDX_FTS)
     val replaceable: Path = root.resolve(REPLACEABLE_DIR)
     val addressable: Path = root.resolve(ADDRESSABLE_DIR)
     val tombstones: Path = root.resolve(TOMBSTONES_DIR)
@@ -88,6 +89,15 @@ internal class FsLayout(
         exp: Long,
         id: HexKey,
     ): Path = idxExpiresAt.resolve(entryName(exp, id))
+
+    /** NIP-50 FTS entry: `idx/fts/<token>/<ts>-<id>`, hardlink to canonical. */
+    fun ftsEntry(
+        token: String,
+        ts: Long,
+        id: HexKey,
+    ): Path = idxFts.resolve(token).resolve(entryName(ts, id))
+
+    fun ftsTokenDir(token: String): Path = idxFts.resolve(token)
 
     /** Directory that holds every indexed value for a tag name. */
     fun tagDir(name: String): Path = idxTag.resolve(name)
@@ -139,6 +149,7 @@ internal class FsLayout(
         Files.createDirectories(idxOwner)
         Files.createDirectories(idxTag)
         Files.createDirectories(idxExpiresAt)
+        Files.createDirectories(idxFts)
         Files.createDirectories(replaceable)
         Files.createDirectories(addressable)
         Files.createDirectories(tombstonesId)
@@ -174,6 +185,7 @@ internal class FsLayout(
         const val IDX_OWNER = "owner"
         const val IDX_TAG = "tag"
         const val IDX_EXPIRES_AT = "expires_at"
+        const val IDX_FTS = "fts"
         const val REPLACEABLE_DIR = "replaceable"
         const val ADDRESSABLE_DIR = "addressable"
         const val TOMBSTONES_DIR = "tombstones"
