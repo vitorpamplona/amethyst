@@ -91,7 +91,7 @@ test_03_dm_send_rejects_no_inbox() {
   # Generate a throwaway identity but do NOT publish its kind:10050.
   local tmpdir; tmpdir=$(mktemp -d "${STATE_DIR}/ghost.XXXXXX")
   local ghost_out ghost_npub
-  ghost_out=$("$AMY_BIN" --data-dir "$tmpdir" init) || {
+  ghost_out=$("$AMY_BIN" --data-dir "$tmpdir" --secret-backend plaintext init) || {
     record_result "$id" fail "ghost init failed"; rm -rf "$tmpdir"; return
   }
   ghost_npub=$(printf '%s' "$ghost_out" | jq -r '.npub')
@@ -121,7 +121,7 @@ test_04_dm_send_allow_fallback() {
   # publish should succeed even though the ghost has no 10050.
   local tmpdir; tmpdir=$(mktemp -d "${STATE_DIR}/ghost.XXXXXX")
   local ghost_out ghost_npub
-  ghost_out=$("$AMY_BIN" --data-dir "$tmpdir" init) || {
+  ghost_out=$("$AMY_BIN" --data-dir "$tmpdir" --secret-backend plaintext init) || {
     record_result "$id" fail "ghost init failed"; rm -rf "$tmpdir"; return
   }
   ghost_npub=$(printf '%s' "$ghost_out" | jq -r '.npub')
