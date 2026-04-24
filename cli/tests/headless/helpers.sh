@@ -3,7 +3,10 @@
 # helpers.sh — thin wrappers that keep the per-test code tight.
 
 # --- amy wrapper -------------------------------------------------------------
-amy_a() { "$AMY_BIN" --data-dir "$A_DIR" "$@"; }
+# `--secret-backend=plaintext` keeps these throwaway interop runs headless —
+# the default `auto` would try the OS keychain (not available in CI) and then
+# ask for a NIP-49 passphrase. Plaintext still writes 0600-owner-only.
+amy_a() { "$AMY_BIN" --data-dir "$A_DIR" --secret-backend plaintext "$@"; }
 
 # Run amy, log stderr, surface JSON on stdout, remember last result.
 amy_json() {

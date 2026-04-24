@@ -47,7 +47,7 @@ object CreateCommand {
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
-        if (dataDir.loadIdentityOrNull() != null) {
+        if (dataDir.identityExists()) {
             return Json.error("exists", "identity already exists at ${dataDir.identityFile}")
         }
         val args = Args(rest)

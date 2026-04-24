@@ -52,7 +52,7 @@ object LoginCommand {
         if (rest.isEmpty()) {
             return Json.error("bad_args", "login <nsec|ncryptsec|mnemonic|npub|nprofile|hex|nip05> [--password X]")
         }
-        if (dataDir.loadIdentityOrNull() != null) {
+        if (dataDir.identityExists()) {
             return Json.error("exists", "identity already exists at ${dataDir.identityFile}; use a fresh --data-dir or delete it first")
         }
 

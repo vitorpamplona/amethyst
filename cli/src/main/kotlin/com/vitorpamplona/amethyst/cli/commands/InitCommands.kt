@@ -30,20 +30,30 @@ object InitCommands {
         dataDir: DataDir,
         args: Args,
     ): Int {
-        val existing = dataDir.loadIdentityOrNull()
-        val id =
-            existing ?: run {
-                val nsec = args.flag("nsec")
-                val created = if (nsec != null) Identity.fromNsec(nsec) else Identity.create()
-                dataDir.saveIdentity(created)
-                created
-            }
+        // On re-run we return metadata only. Unlocking the stored secret here
+        // would trigger a keychain prompt / passphrase dialog even though the
+        // caller clearly already has the identity set up.
+        dataDir.loadIdentityFileOrNull()?.let { existing ->
+            Json.writeLine(
+                mapOf(
+                    "npub" to existing.npub,
+                    "hex" to existing.pubKeyHex,
+                    "nsec" to null,
+                    "existing" to true,
+                    "data_dir" to dataDir.root.absolutePath,
+                ),
+            )
+            return 0
+        }
+        val nsec = args.flag("nsec")
+        val created = if (nsec != null) Identity.fromNsec(nsec) else Identity.create()
+        dataDir.saveIdentity(created)
         Json.writeLine(
             mapOf(
-                "npub" to id.npub,
-                "hex" to id.pubKeyHex,
-                "nsec" to id.nsec,
-                "existing" to (existing != null),
+                "npub" to created.npub,
+                "hex" to created.pubKeyHex,
+                "nsec" to created.nsec,
+                "existing" to false,
                 "data_dir" to dataDir.root.absolutePath,
             ),
         )
@@ -51,14 +61,16 @@ object InitCommands {
     }
 
     suspend fun whoami(dataDir: DataDir): Int {
-        val id = dataDir.loadIdentityOrNull()
-        if (id == null) {
+        // Intentionally metadata-only so `whoami` doesn't pop a keychain prompt
+        // or ask for a NIP-49 passphrase just to echo the npub.
+        val file = dataDir.loadIdentityFileOrNull()
+        if (file == null) {
             return Json.error("no_identity", "No identity at ${dataDir.identityFile}. Run `init` first.")
         }
         Json.writeLine(
             mapOf(
-                "npub" to id.npub,
-                "hex" to id.pubKeyHex,
+                "npub" to file.npub,
+                "hex" to file.pubKeyHex,
                 "data_dir" to dataDir.root.absolutePath,
             ),
         )
