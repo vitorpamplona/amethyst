@@ -28,7 +28,6 @@ import com.vitorpamplona.quartz.experimental.notifications.wake.WakeUpEvent
 import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
@@ -91,8 +90,8 @@ class NotificationDispatcher(
         // consumeFromCache can't route it. It's delivered directly via
         // [notifyWelcome] from processMarmotWelcomeFlow, which does know the
         // recipient account.
-        private val NOTIFICATION_KINDS =
-            listOf(
+        private val NOTIFICATION_KINDS: Set<Int> =
+            setOf(
                 // Direct-arrival
                 PrivateDmEvent.KIND,
                 LnZapEvent.KIND,
@@ -158,32 +157,30 @@ class NotificationDispatcher(
                             return@collectLatest
                         }
 
-                        val filter =
-                            Filter(
-                                kinds = NOTIFICATION_KINDS,
-                                // Only route events that p-tag one of our accounts.
-                                // consumeFromCache still routes by `p` tag, so the
-                                // filter narrows exactly the same set it would accept.
-                                tags = mapOf("p" to pubkeys.toList()),
-                                since = dispatcherSince,
-                            )
-
                         Log.d(TAG) { "Observing notifications for ${pubkeys.size} account(s)." }
 
-                        // Rolling-window age cutoff that matches each downstream
-                        // notify() method's existing 15-min freshness rule. The
-                        // Nostr Filter's `since` is a fixed value captured at
-                        // dispatcher start; this predicate re-evaluates per event
-                        // so we keep pruning re-broadcasts as time advances.
-                        // Applied account-agnostically — calls use 20s downstream
-                        // (see CallManager.MAX_EVENT_AGE_SECONDS), which is strictly
-                        // stricter than 15 min, so they still pass.
-                        val freshnessPredicate: (Event) -> Boolean = { event ->
-                            event.createdAt >= TimeUtils.fifteenMinutesAgo()
+                        // Single observer predicate. Each check is cheap and
+                        // short-circuits so kind mismatch (by far the most
+                        // common case) rejects before any allocation.
+                        //
+                        // - kind ∈ NOTIFICATION_KINDS    — channel-relevant types
+                        // - createdAt ≥ dispatcherSince  — `limit: 0` semantics,
+                        //   drops re-broadcasts from before this session
+                        // - createdAt ≥ fifteenMinutesAgo — rolling freshness,
+                        //   matches the downstream per-channel policy. Calls
+                        //   use a stricter 20s check in notifyIncomingCall so
+                        //   they still pass through.
+                        // - any `p` tag matching one of our accounts — narrows
+                        //   to events consumeFromCache would route anyway.
+                        val predicate = { event: Event ->
+                            event.kind in NOTIFICATION_KINDS &&
+                                event.createdAt >= dispatcherSince &&
+                                event.createdAt >= TimeUtils.fifteenMinutesAgo() &&
+                                event.tags.any { it.size > 1 && it[0] == "p" && it[1] in pubkeys }
                         }
 
                         LocalCache
-                            .observeNewEvents<Event>(filter, freshnessPredicate)
+                            .observeNewEvents<Event>(predicate)
                             .collect { event ->
                                 try {
                                     consumer.consumeFromCache(event)

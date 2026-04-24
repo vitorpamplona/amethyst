@@ -383,21 +383,20 @@ object LocalCache : ILocalCache, ICacheProvider {
         }.buffer(kotlinx.coroutines.channels.Channel.CONFLATED)
 
     /**
-     * Emits each new event that matches the filter, one at a time, as it is
-     * inserted into the cache. Unlike [observeEvents], this does not accumulate
-     * a list — useful for per-event reactive pipelines like notifications.
+     * Emits each new event for which [predicate] returns true, one at a time,
+     * as it is inserted into the cache. Unlike [observeEvents], this does not
+     * accumulate a list — useful for per-event reactive pipelines like
+     * notifications.
      *
-     * The optional [predicate] runs after the Nostr [Filter] matches and lets
-     * callers reject events on fields the Filter grammar can't express (e.g.
-     * a rolling `createdAt` window that drifts as wall-clock time advances).
+     * The predicate runs on every insertion, so keep it cheap. Callers with a
+     * Nostr [Filter] can pass `filter::match`; compose additional local checks
+     * (rolling windows, derived fields the Filter grammar can't express) with
+     * `&&`.
      */
-    fun <T : Event> observeNewEvents(
-        filter: Filter,
-        predicate: (Event) -> Boolean = { true },
-    ): Flow<T> =
+    fun <T : Event> observeNewEvents(predicate: (Event) -> Boolean): Flow<T> =
         callbackFlow {
             val newFilter =
-                NewEventMatchingFilter<T>(filter, predicate) {
+                NewEventMatchingFilter<T>(predicate) {
                     trySend(it)
                 }
 
@@ -407,6 +406,8 @@ object LocalCache : ILocalCache, ICacheProvider {
                 observables.remove(newFilter)
             }
         }
+
+    fun <T : Event> observeNewEvents(filter: Filter): Flow<T> = observeNewEvents(filter::match)
 
     @Suppress("UNCHECKED_CAST")
     fun <T : Event> observeLatestEvent(filter: Filter) = observeEvents<T>(filter).map { it.firstOrNull() }
