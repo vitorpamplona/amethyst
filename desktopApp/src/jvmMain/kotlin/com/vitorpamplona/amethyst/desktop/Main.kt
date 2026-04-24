@@ -198,6 +198,7 @@ fun main() {
         val workspaceManager = remember { WorkspaceManager(deckScope).also { it.load() } }
         val accountManager = remember { AccountManager.create() }
         val accountState by accountManager.accountState.collectAsState()
+        val allAccounts by accountManager.allAccounts.collectAsState()
         var showAppDrawer by remember { mutableStateOf(false) }
 
         // Tor state at Window level — survives key() app rebuild
@@ -663,6 +664,9 @@ fun App(
         subscriptionsCoordinator.start()
 
         scope.launch(Dispatchers.IO) {
+            // Migrate legacy single-account files and load account list
+            accountManager.migrateAndLoadAccounts()
+
             if (accountManager.hasBunkerAccount()) {
                 // Show connecting UI while dedicated NIP-46 client connects
                 accountManager.setConnectingRelays()
@@ -1016,7 +1020,18 @@ fun MainContent(
 
                     LayoutMode.DECK -> {
                         if (!isImmersive) {
+                            val allAccountsState by accountManager.allAccounts.collectAsState()
                             DeckSidebar(
+                                activeNpub = accountManager.currentAccount()?.npub,
+                                allAccounts = allAccountsState,
+                                onSwitchAccount = { npub ->
+                                    scope.launch(Dispatchers.IO) {
+                                        accountManager.switchAccount(npub)
+                                    }
+                                },
+                                onAddAccount = {
+                                    // TODO: Show add account dialog
+                                },
                                 onAddColumn = onShowAppDrawer,
                                 onOpenSettings = {
                                     if (deckState.hasColumnOfType(DeckColumnType.Settings)) {
