@@ -24,7 +24,6 @@ import android.app.NotificationManager
 import android.content.Context
 import android.graphics.drawable.BitmapDrawable
 import android.os.PowerManager
-import androidx.compose.runtime.getValue
 import androidx.core.content.ContextCompat
 import coil3.ImageLoader
 import coil3.asDrawable

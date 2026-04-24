@@ -20,6 +20,10 @@
  */
 package com.vitorpamplona.amethyst.ui.tor
 
+import com.vitorpamplona.amethyst.ui.tor.ArtiNative.initialize
+import com.vitorpamplona.amethyst.ui.tor.ArtiNative.startSocksProxy
+import com.vitorpamplona.amethyst.ui.tor.ArtiNative.stopSocksProxy
+
 /**
  * JNI bridge to the custom-built Arti native library (libarti_android.so).
  *

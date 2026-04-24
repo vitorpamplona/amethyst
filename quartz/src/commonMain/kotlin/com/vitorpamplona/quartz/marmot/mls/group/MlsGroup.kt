@@ -36,6 +36,7 @@ import com.vitorpamplona.quartz.marmot.mls.framing.Sender
 import com.vitorpamplona.quartz.marmot.mls.framing.SenderType
 import com.vitorpamplona.quartz.marmot.mls.framing.WireFormat
 import com.vitorpamplona.quartz.marmot.mls.framing.encodeSender
+import com.vitorpamplona.quartz.marmot.mls.group.MlsGroup.Companion.externalJoin
 import com.vitorpamplona.quartz.marmot.mls.messages.Commit
 import com.vitorpamplona.quartz.marmot.mls.messages.CommitResult
 import com.vitorpamplona.quartz.marmot.mls.messages.EncryptedGroupSecrets

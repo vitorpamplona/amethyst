@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.nestsclient.moq
 
+import com.vitorpamplona.nestsclient.moq.MoqSession.Companion.client
+import com.vitorpamplona.nestsclient.moq.MoqSession.Companion.server
 import com.vitorpamplona.nestsclient.transport.WebTransportBidiStream
 import com.vitorpamplona.nestsclient.transport.WebTransportSession
 import kotlinx.coroutines.CompletableDeferred

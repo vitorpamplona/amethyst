@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.call
 
+import com.vitorpamplona.amethyst.commons.call.CallManager.Companion.CALL_TIMEOUT_MS
+import com.vitorpamplona.amethyst.commons.call.CallManager.Companion.CONNECTING_TIMEOUT_MS
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner

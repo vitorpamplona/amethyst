@@ -56,7 +56,6 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitiveOrNSFW
 import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
-import kotlin.text.ifEmpty
 
 @Composable
 fun FileHeaderCardCompose(

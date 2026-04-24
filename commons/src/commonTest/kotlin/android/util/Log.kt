@@ -20,8 +20,6 @@
  */
 package android.util
 
-import kotlin.jvm.JvmStatic
-
 class Log {
     companion object {
         @JvmStatic

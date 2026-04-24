@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.quartz.marmot.mip00KeyPackages
 
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageUtils.isCryptographicallyValid
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageUtils.isValid
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.tags.EncodingTag
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.tags.MlsCiphersuiteTag
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.tags.MlsProtocolVersionTag
