@@ -68,10 +68,6 @@ jobs:
       - name: Test + Build Desktop (gradle)
         run: ./gradlew test :desktopApp:${{ matrix.desktop-task }} --no-daemon
 
-      - name: Build Android Debug APKs (gradle)
-        if: matrix.os == 'ubuntu-latest'
-        run: ./gradlew assembleDebug --no-daemon
-
       - name: Build Android Benchmark APKs (gradle)
         if: matrix.os == 'ubuntu-latest'
         run: ./gradlew assembleBenchmark --no-daemon
@@ -92,20 +88,6 @@ jobs:
         with:
           name: ${{ matrix.desktop-artifact-name }}
           path: ${{ matrix.desktop-artifact-path }}
-
-      - name: Upload Play APK
-        uses: actions/upload-artifact@v7
-        if: matrix.os == 'ubuntu-latest'
-        with:
-          name: Play Debug APK
-          path: amethyst/build/outputs/apk/play/debug/amethyst-play-universal-debug.apk
-
-      - name: Upload FDroid APK
-        uses: actions/upload-artifact@v7
-        if: matrix.os == 'ubuntu-latest'
-        with:
-          name: FDroid Debug APK
-          path: amethyst/build/outputs/apk/fdroid/debug/amethyst-fdroid-universal-debug.apk
 
       - name: Upload Play APK Benchmark
         uses: actions/upload-artifact@v7
