@@ -882,6 +882,11 @@
     <string name="app_notification_replies_channel_message">%1$s replied</string>
     <string name="app_notification_replies_channel_message_for">on: %1$s</string>
     <string name="app_notification_replies_summary">New replies</string>
+    <string name="app_notification_mentions_channel_id" translatable="false">MentionsID</string>
+    <string name="app_notification_mentions_channel_name">Mentions</string>
+    <string name="app_notification_mentions_channel_description">Notifies you when somebody mentions or cites you in a post</string>
+    <string name="app_notification_mentions_channel_message">%1$s mentioned you</string>
+    <string name="app_notification_mentions_summary">New mentions</string>
 
     <!-- Call notifications and UI -->
     <string name="app_notification_calls_channel_name">Incoming calls</string>

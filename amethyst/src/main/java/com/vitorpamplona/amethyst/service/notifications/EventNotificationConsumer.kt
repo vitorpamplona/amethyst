@@ -38,8 +38,10 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.call.notification.CallNotifier
+import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.InlineReplyTarget
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.sendChessNotification
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.sendDMNotification
+import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.sendMentionNotification
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.sendReactionNotification
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.sendReplyNotification
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.sendZapNotification
@@ -665,14 +667,19 @@ class EventNotificationConsumer(
         // don't notify for own notes
         if (event.pubKey == account.signer.pubKey) return
 
-        // must be a reply (NIP-10) — plain mentions are not handled on this channel.
-        val replyTargetId = event.replyingTo() ?: return
+        val replyTargetId = event.replyingTo()
 
-        // only notify when the reply targets a note authored by the current account.
-        val repliedNote = LocalCache.getNoteIfExists(replyTargetId) ?: return
-        if (repliedNote.author?.pubkeyHex != account.signer.pubKey) return
+        if (replyTargetId != null) {
+            val repliedNote = LocalCache.getNoteIfExists(replyTargetId)
+            if (repliedNote?.author?.pubkeyHex == account.signer.pubKey) {
+                val threadRoot = event.markedRoot()?.eventId ?: event.unmarkedRoot()?.eventId ?: replyTargetId
+                notifyReply(event, account, repliedNote.event?.content, threadRoot)
+                return
+            }
+        }
 
-        notifyReply(event, account, repliedNote.event?.content)
+        // Not a reply to us but we're p-tagged — a mention or citation.
+        notifyMention(event, account)
     }
 
     private suspend fun notify(
@@ -698,13 +705,20 @@ class EventNotificationConsumer(
                 .replyingTo()
                 ?.let { LocalCache.getNoteIfExists(it)?.event?.content }
 
-        notifyReply(event, account, parentContent)
+        val threadRoot =
+            event.rootEventIds().firstOrNull()
+                ?: event.rootAddressIds().firstOrNull()
+                ?: event.replyingToAddressOrEvent()
+                ?: event.id
+
+        notifyReply(event, account, parentContent, threadRoot)
     }
 
     private suspend fun notifyReply(
         event: Event,
         account: Account,
         parentContent: String?,
+        threadRootId: String,
     ) {
         val replyNote = LocalCache.getNoteIfExists(event.id) ?: return
 
@@ -747,13 +761,52 @@ class EventNotificationConsumer(
 
         notificationManager()
             .sendReplyNotification(
-                event.id,
-                content,
-                title,
-                event.createdAt,
-                userPicture,
-                noteUri,
-                applicationContext,
+                id = event.id,
+                messageBody = content,
+                messageTitle = title,
+                time = event.createdAt,
+                pictureUrl = userPicture,
+                uri = noteUri,
+                applicationContext = applicationContext,
+                threadRootId = threadRootId,
+                inlineReply = InlineReplyTarget(accountNpub = accountNpub, targetEventId = event.id),
+            )
+    }
+
+    private suspend fun notifyMention(
+        event: TextNoteEvent,
+        account: Account,
+    ) {
+        val note = LocalCache.getNoteIfExists(event.id) ?: return
+
+        val author = LocalCache.getOrCreateUser(event.pubKey)
+        val user = author.toBestDisplayName()
+        val userPicture = author.profilePicture()
+
+        val title = stringRes(applicationContext, R.string.app_notification_mentions_channel_message, user)
+
+        val content =
+            event.content
+                .split("\n")
+                .firstOrNull { it.isNotBlank() }
+                ?.take(280)
+                ?: ""
+
+        val accountNpub =
+            account.signer.pubKey
+                .hexToByteArray()
+                .toNpub()
+        val noteUri = note.toNEvent() + ACCOUNT_QUERY_PARAM + accountNpub
+
+        notificationManager()
+            .sendMentionNotification(
+                id = event.id,
+                messageBody = content,
+                messageTitle = title,
+                time = event.createdAt,
+                pictureUrl = userPicture,
+                uri = noteUri,
+                applicationContext = applicationContext,
             )
     }
 
