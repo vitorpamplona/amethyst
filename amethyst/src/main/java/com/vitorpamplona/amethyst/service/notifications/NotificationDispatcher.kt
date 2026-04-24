@@ -32,10 +32,22 @@ import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
+import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
+import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
+import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip64Chess.challenge.accept.LiveChessGameAcceptEvent
 import com.vitorpamplona.quartz.nip64Chess.move.LiveChessMoveEvent
+import com.vitorpamplona.quartz.nip68Picture.PictureEvent
+import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
+import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
+import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
+import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
+import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
+import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallOfferEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
@@ -79,6 +91,19 @@ class NotificationDispatcher(
                 ReactionEvent.KIND,
                 TextNoteEvent.KIND,
                 CommentEvent.KIND,
+                // Public content kinds — routed to the Mentions channel when p-tagged.
+                PictureEvent.KIND,
+                VideoNormalEvent.KIND,
+                VideoShortEvent.KIND,
+                VideoHorizontalEvent.KIND,
+                VideoVerticalEvent.KIND,
+                ChannelMessageEvent.KIND,
+                PollEvent.KIND,
+                GitPatchEvent.KIND,
+                GitIssueEvent.KIND,
+                HighlightEvent.KIND,
+                LongTextNoteEvent.KIND,
+                WikiNoteEvent.KIND,
                 LiveChessGameAcceptEvent.KIND,
                 LiveChessMoveEvent.KIND,
                 WakeUpEvent.KIND,

@@ -65,12 +65,24 @@ import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip21UriScheme.toNostrUri
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
+import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
+import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
+import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nip64Chess.baseEvent.BaseChessEvent
 import com.vitorpamplona.quartz.nip64Chess.challenge.accept.LiveChessGameAcceptEvent
 import com.vitorpamplona.quartz.nip64Chess.move.LiveChessMoveEvent
+import com.vitorpamplona.quartz.nip68Picture.PictureEvent
+import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
+import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
+import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
+import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
+import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
+import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallOfferEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -177,13 +189,35 @@ class EventNotificationConsumer(
 
         when (event) {
             is PrivateDmEvent -> notify(event, account)
+
             is LnZapEvent -> notify(event, account)
+
             is ChatMessageEvent -> notify(event, account)
+
             is ChatMessageEncryptedFileHeaderEvent -> notify(event, account)
+
             is ReactionEvent -> notify(event, account)
+
             is TextNoteEvent -> notify(event, account)
+
             is CommentEvent -> notify(event, account)
+
+            is PictureEvent,
+            is VideoNormalEvent,
+            is VideoShortEvent,
+            is VideoHorizontalEvent,
+            is VideoVerticalEvent,
+            is ChannelMessageEvent,
+            is PollEvent,
+            is GitPatchEvent,
+            is GitIssueEvent,
+            is HighlightEvent,
+            is LongTextNoteEvent,
+            is WikiNoteEvent,
+            -> notifyMention(event, account)
+
             is LiveChessGameAcceptEvent -> notifyChessEvent(event, account, R.string.app_notification_chess_challenge_accepted)
+
             is LiveChessMoveEvent -> notifyChessEvent(event, account, R.string.app_notification_chess_your_turn)
             // WelcomeEvent is dispatched directly from processMarmotWelcomeFlow
             // (no `p` tag, so tag-based matching doesn't work).
@@ -774,9 +808,15 @@ class EventNotificationConsumer(
     }
 
     private suspend fun notifyMention(
-        event: TextNoteEvent,
+        event: Event,
         account: Account,
     ) {
+        // old event being re-broadcast
+        if (event.createdAt < TimeUtils.fifteenMinutesAgo()) return
+
+        // don't notify for our own events
+        if (event.pubKey == account.signer.pubKey) return
+
         val note = LocalCache.getNoteIfExists(event.id) ?: return
 
         val author = LocalCache.getOrCreateUser(event.pubKey)
