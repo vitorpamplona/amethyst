@@ -89,6 +89,7 @@ class EventNotificationConsumer(
 ) {
     companion object {
         private const val WAKELOCK_TIMEOUT_MS = 10 * 60 * 1000L // 10 minutes
+        private const val WAKEUP_WINDOW_MS = 30_000L
     }
 
     /**
@@ -162,7 +163,7 @@ class EventNotificationConsumer(
             }
 
             is WakeUpEvent -> {
-                wakeUpFor(event, LocalCache.getOrCreateNote(event.id), account)
+                wakeUpFor(event, account)
                 return
             }
         }
@@ -185,40 +186,68 @@ class EventNotificationConsumer(
 
     suspend fun wakeUpFor(
         event: WakeUpEvent,
-        note: Note,
         account: Account,
     ) {
+        // A WakeUp's whole purpose is the events it references. If it carries
+        // none, there's nothing to fetch — skip the 30s subscription window.
+        val referencedTags = event.events().distinctBy { it.eventId }
+        if (referencedTags.isEmpty()) {
+            Log.d(TAG) { "WakeUp ${event.id} has no referenced events — skipping" }
+            return
+        }
+
+        // Per spec, p-tags on a WakeUp are the authors of the referenced
+        // events; those are whose metadata we need to render the notification.
+        // Fall back to e-tag author hints and finally to the WakeUp signer.
+        val referencedNotes = referencedTags.map { LocalCache.getOrCreateNote(it.eventId) }
+        val authorCandidates =
+            (event.authorKeys() + referencedTags.mapNotNull { it.author })
+                .distinct()
+                .ifEmpty { listOf(event.pubKey) }
+                .map { LocalCache.getOrCreateUser(it) }
+
         coroutineScope {
             // keeps the relay connection active for 30 seconds.
             launch {
                 try {
-                    withTimeout(30_000L) {
+                    withTimeout(WAKEUP_WINDOW_MS) {
                         Amethyst.instance.relayProxyClientConnector.relayServices
                             .collect()
                     }
                 } catch (_: TimeoutCancellationException) {
+                    Log.d(TAG) { "WakeUp ${event.id} — ${WAKEUP_WINDOW_MS}ms relay window elapsed" }
                 }
             }
 
-            // keeps the subscription to download this event active for 30 seconds.
+            // keeps subscriptions active for 30 seconds so EventFinder can pull
+            // the referenced events from relays and UserFinder can resolve the
+            // referenced authors' metadata.
             launch {
                 val accountState = ScreenAuthAccount(account)
-                val eventState = EventFinderQueryState(note, account)
-                val authorState = UserFinderQueryState(note.author ?: LocalCache.getOrCreateUser(event.pubKey), account)
+                val eventStates = referencedNotes.map { EventFinderQueryState(it, account) }
+                val authorStates = authorCandidates.map { UserFinderQueryState(it, account) }
 
                 try {
                     Amethyst.instance.authCoordinator.subscribe(accountState)
-                    Amethyst.instance.sources.eventFinder
-                        .subscribe(eventState)
-                    Amethyst.instance.sources.userFinder
-                        .subscribe(authorState)
-                    delay(30_000)
+                    eventStates.forEach {
+                        Amethyst.instance.sources.eventFinder
+                            .subscribe(it)
+                    }
+                    authorStates.forEach {
+                        Amethyst.instance.sources.userFinder
+                            .subscribe(it)
+                    }
+                    delay(WAKEUP_WINDOW_MS)
                 } finally {
                     Amethyst.instance.authCoordinator.unsubscribe(accountState)
-                    Amethyst.instance.sources.eventFinder
-                        .unsubscribe(eventState)
-                    Amethyst.instance.sources.userFinder
-                        .unsubscribe(authorState)
+                    eventStates.forEach {
+                        Amethyst.instance.sources.eventFinder
+                            .unsubscribe(it)
+                    }
+                    authorStates.forEach {
+                        Amethyst.instance.sources.userFinder
+                            .unsubscribe(it)
+                    }
                 }
             }
         }
