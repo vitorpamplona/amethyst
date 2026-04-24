@@ -89,7 +89,10 @@ test_10_concurrent_commits() {
 
   sleep 10
   local b_name
-  b_name=$(wn_b --json groups show "$mls_gid" 2>/dev/null | jq -r '(.result // .) | .name // empty')
+  # whitenoise-rs ≥ v0.2.x wraps the group payload one level deeper as
+  # `{"result": {"group": {…name…}}}`; the older shape was a bare group
+  # object under `.result`. Accept both.
+  b_name=$(wn_b --json groups show "$mls_gid" 2>/dev/null | jq -r '(.result // .) | (.group // .) | .name // empty')
   local a_name
   a_name=$(amy_field '.name' marmot group show "$gid" 2>/dev/null || echo "")
 
