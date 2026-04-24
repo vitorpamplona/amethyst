@@ -306,35 +306,39 @@ private fun ConversationCard(
                 .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Unread indicator
-        if (item.hasUnread) {
-            Box(
-                modifier =
-                    Modifier
-                        .size(8.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary),
-            )
-            Spacer(Modifier.width(6.dp))
-        } else {
-            Spacer(Modifier.width(14.dp))
-        }
-
-        // Avatar
+        // Avatar — starts flush with the header's 12dp padding. Unread state is
+        // signalled by a small primary-coloured dot overlaid on the avatar's
+        // bottom-right corner (Slack / iMessage-style), not an inline indent
+        // that would push the whole card to the right of the header label.
         val firstUser = item.users.firstOrNull()
-        if (firstUser != null) {
-            UserAvatar(
-                userHex = firstUser.pubkeyHex,
-                pictureUrl = firstUser.profilePicture(),
-                size = 40.dp,
-            )
-        } else if (item.isGroup) {
-            Icon(
-                MaterialSymbols.Group,
-                contentDescription = "Group",
-                modifier = Modifier.size(40.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+        Box {
+            if (firstUser != null) {
+                UserAvatar(
+                    userHex = firstUser.pubkeyHex,
+                    pictureUrl = firstUser.profilePicture(),
+                    size = 40.dp,
+                )
+            } else if (item.isGroup) {
+                Icon(
+                    MaterialSymbols.Group,
+                    contentDescription = "Group",
+                    modifier = Modifier.size(40.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            if (item.hasUnread) {
+                Box(
+                    modifier =
+                        Modifier
+                            .align(Alignment.BottomEnd)
+                            .size(10.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceContainer)
+                            .padding(1.5.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary),
+                )
+            }
         }
 
         Spacer(Modifier.width(10.dp))

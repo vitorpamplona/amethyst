@@ -53,6 +53,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.desktop.service.drafts.DesktopDraftStore
 import com.vitorpamplona.amethyst.desktop.service.drafts.DraftEntry
 import kotlinx.coroutines.launch
@@ -94,13 +95,10 @@ fun DraftsScreen(
             }
         }
 
-        Spacer(Modifier.height(16.dp))
-
         if (drafts.isEmpty()) {
-            Text(
-                "No drafts yet. Click \"New Draft\" to start writing.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            EmptyState(
+                title = "No drafts yet",
+                description = "Click \"New Draft\" to start writing.",
             )
         } else {
             LazyColumn(
