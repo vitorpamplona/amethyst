@@ -73,7 +73,7 @@ fun RelayConfigTab(
             modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(top = 8.dp),
+                .padding(horizontal = 12.dp, vertical = 8.dp),
     ) {
         // 1. Connected Relays (collapsed by default to show other sections)
         CollapsibleSection(

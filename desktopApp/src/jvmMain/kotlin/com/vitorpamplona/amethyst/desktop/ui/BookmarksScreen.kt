@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.desktop.ui
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -303,6 +304,7 @@ fun BookmarksScreen(
             else -> {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(horizontal = 12.dp),
                 ) {
                     items(currentEvents, key = { it.id }) { event ->
                         Column(

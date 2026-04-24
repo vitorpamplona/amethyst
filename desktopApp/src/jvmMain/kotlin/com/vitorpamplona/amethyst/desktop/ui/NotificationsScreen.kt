@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.desktop.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -256,6 +257,7 @@ fun NotificationsScreen(
             )
         } else {
             LazyColumn(
+                contentPadding = PaddingValues(horizontal = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 items(notifications.distinctBy { it.event.id }, key = { it.event.id }) { notification ->
