@@ -92,55 +92,6 @@ class DesktopAccountStorage(
         writeMetadata(metadata.copy(activeNpub = npub))
     }
 
-    // --- Migration from single-account files ---
-
-    suspend fun migrateFromLegacyFiles(accountManager: AccountManager): Boolean {
-        val prefsFile = File(amethystDir, "last_account.txt")
-        val bunkerFile = File(amethystDir, "bunker_uri.txt")
-
-        if (!prefsFile.exists() && !bunkerFile.exists()) return false
-        if (getAccountsFile().exists()) return false // already migrated
-
-        val npub =
-            prefsFile
-                .takeIf { it.exists() }
-                ?.readText()
-                ?.trim()
-                ?.takeIf { it.isNotEmpty() }
-                ?: return false
-
-        val bunkerUri =
-            bunkerFile
-                .takeIf { it.exists() }
-                ?.readText()
-                ?.trim()
-                ?.takeIf { it.isNotEmpty() }
-
-        val signerType =
-            if (bunkerUri != null) {
-                SignerType.Remote(bunkerUri)
-            } else {
-                val hasPrivKey = secureStorage.hasPrivateKey(npub)
-                if (hasPrivKey) SignerType.Internal else SignerType.ViewOnly
-            }
-
-        val info = AccountInfo(npub = npub, signerType = signerType)
-        val metadata = AccountMetadata(accounts = listOf(AccountInfoDto.from(info)), activeNpub = npub)
-        writeMetadata(metadata)
-
-        // Verify migration by reading back
-        val verified = readMetadata()
-        if (verified.accounts.any { it.npub == npub }) {
-            // Migration verified — rename old files
-            prefsFile.renameTo(File(amethystDir, "last_account.txt.bak"))
-            bunkerFile.takeIf { it.exists() }?.renameTo(File(amethystDir, "bunker_uri.txt.bak"))
-            Log.d("DesktopAccountStorage", "Migrated legacy account: $npub")
-            return true
-        }
-
-        return false
-    }
-
     // --- Encrypted file I/O ---
 
     private suspend fun readMetadata(): AccountMetadata {

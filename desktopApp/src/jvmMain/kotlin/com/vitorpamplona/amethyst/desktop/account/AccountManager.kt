@@ -713,8 +713,7 @@ class AccountManager internal constructor(
         disconnectNip46Client()
     }
 
-    suspend fun migrateAndLoadAccounts() {
-        accountStorage.migrateFromLegacyFiles(this)
+    suspend fun refreshAccountListOnStartup() {
         refreshAccountList()
     }
 

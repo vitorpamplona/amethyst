@@ -663,8 +663,8 @@ fun App(
         subscriptionsCoordinator.start()
 
         scope.launch(Dispatchers.IO) {
-            // Migrate legacy single-account files and load account list
-            accountManager.migrateAndLoadAccounts()
+            // Load account list from encrypted storage
+            accountManager.refreshAccountListOnStartup()
 
             if (accountManager.hasBunkerAccount()) {
                 // Show connecting UI while dedicated NIP-46 client connects
