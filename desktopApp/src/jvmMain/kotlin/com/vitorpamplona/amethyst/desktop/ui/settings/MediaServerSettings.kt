@@ -92,10 +92,13 @@ fun MediaServerSettings(
         }
     }
 
-    Column(modifier = modifier.fillMaxWidth().padding(16.dp)) {
+    // Parent (RelaySettingsScreen) provides the 12dp horizontal gutter, so this
+    // column no longer adds its own all-sides 16dp which was showing up as an
+    // extra frame inside the settings screen.
+    Column(modifier = modifier.fillMaxWidth()) {
         Text(
             "Media Servers (Blossom)",
-            style = MaterialTheme.typography.titleMedium,
+            style = MaterialTheme.typography.titleSmall,
         )
 
         Spacer(Modifier.height(8.dp))

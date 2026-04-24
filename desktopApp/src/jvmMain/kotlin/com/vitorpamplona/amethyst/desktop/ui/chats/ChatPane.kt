@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -718,9 +719,13 @@ private fun MessageInput(
             OutlinedTextField(
                 value = messageText,
                 onValueChange = onMessageChange,
+                // heightIn(min = 40.dp) overrides M3's 56dp mobile-touch min so the
+                // chat input sits at a desktop-sensible 40dp when empty; still grows
+                // to up to ~120dp with content via maxLines = 4.
                 modifier =
                     Modifier
                         .weight(1f)
+                        .heightIn(min = 40.dp)
                         .onPreviewKeyEvent { event ->
                             if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                             // Cmd+Enter (Mac) or Ctrl+Enter to send
@@ -732,10 +737,16 @@ private fun MessageInput(
                                 false
                             }
                         },
-                placeholder = { Text("Message... (${if (isMacOS) "\u2318" else "Ctrl"}+Enter to send)") },
+                textStyle = MaterialTheme.typography.bodyMedium,
+                placeholder = {
+                    Text(
+                        "Message... (${if (isMacOS) "\u2318" else "Ctrl"}+Enter to send)",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                },
                 singleLine = false,
                 maxLines = 4,
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(10.dp),
             )
 
             IconButton(

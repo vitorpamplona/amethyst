@@ -377,28 +377,39 @@ fun SearchScreen(
                         textFieldValue = it
                         state.updateFromText(it.text)
                     },
-                    modifier = Modifier.weight(1f).focusRequester(focusRequester),
-                    placeholder = { Text("Search notes, people, tags... or use operators") },
+                    // .height(40.dp) overrides M3's 56dp min-height (intended for
+                    // mobile touch) — desktop inputs should feel closer to Slack /
+                    // Raycast / VS Code at ~40dp.
+                    modifier = Modifier.weight(1f).height(40.dp).focusRequester(focusRequester),
+                    textStyle = MaterialTheme.typography.bodyMedium,
+                    placeholder = {
+                        Text(
+                            "Search notes, people, tags... or use operators",
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    },
                     leadingIcon = {
                         Icon(
                             MaterialSymbols.Search,
                             contentDescription = "Search",
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp),
                         )
                     },
                     trailingIcon = {
                         if (displayText.isNotEmpty()) {
-                            IconButton(onClick = { state.clearSearch() }) {
+                            IconButton(onClick = { state.clearSearch() }, modifier = Modifier.size(28.dp)) {
                                 Icon(
                                     MaterialSymbols.Clear,
                                     contentDescription = "Clear",
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(18.dp),
                                 )
                             }
                         }
                     },
                     singleLine = true,
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(10.dp),
                 )
                 if (account != null && !account.isReadOnly) {
                     IconButton(onClick = { showRelayPicker = true }) {
