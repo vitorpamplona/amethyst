@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.nestsclient.moq
 
+import com.vitorpamplona.nestsclient.moq.Varint.size
+
 /**
  * QUIC variable-length integer codec, per RFC 9000 §16.
  *

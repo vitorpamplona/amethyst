@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.quartz.marmot.mip05PushNotifications
 
+import com.vitorpamplona.quartz.marmot.mip05PushNotifications.TokenEncryption.PLATFORM_APNS
+import com.vitorpamplona.quartz.marmot.mip05PushNotifications.TokenEncryption.PLATFORM_FCM
 import com.vitorpamplona.quartz.marmot.mip05PushNotifications.tags.TokenTag
 import com.vitorpamplona.quartz.nip44Encryption.crypto.ChaCha20Poly1305
 import com.vitorpamplona.quartz.utils.RandomInstance

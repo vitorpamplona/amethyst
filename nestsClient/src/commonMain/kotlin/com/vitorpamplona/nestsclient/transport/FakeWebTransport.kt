@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.nestsclient.transport
 
+import com.vitorpamplona.nestsclient.transport.FakeWebTransport.Companion.pair
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.receiveAsFlow

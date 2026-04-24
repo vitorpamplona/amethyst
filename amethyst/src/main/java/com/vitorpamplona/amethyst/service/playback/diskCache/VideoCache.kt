@@ -28,6 +28,9 @@ import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.cache.CacheDataSource
 import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
 import androidx.media3.datasource.cache.SimpleCache
+import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCache.Companion.CACHE_SIZE_MAX_BYTES
+import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCache.Companion.CACHE_SIZE_MIN_BYTES
+import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCache.Companion.CACHE_SIZE_PERCENT
 import com.vitorpamplona.quartz.utils.Log
 import java.io.File
 
