@@ -41,6 +41,7 @@ import com.vitorpamplona.amethyst.service.call.notification.CallNotifier
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.sendChessNotification
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.sendDMNotification
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.sendReactionNotification
+import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.sendReplyNotification
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.sendZapNotification
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.ScreenAuthAccount
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
@@ -56,10 +57,12 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
+import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip21UriScheme.toNostrUri
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
@@ -176,6 +179,8 @@ class EventNotificationConsumer(
             is ChatMessageEvent -> notify(event, account)
             is ChatMessageEncryptedFileHeaderEvent -> notify(event, account)
             is ReactionEvent -> notify(event, account)
+            is TextNoteEvent -> notify(event, account)
+            is CommentEvent -> notify(event, account)
             is LiveChessGameAcceptEvent -> notifyChessEvent(event, account, R.string.app_notification_chess_challenge_accepted)
             is LiveChessMoveEvent -> notifyChessEvent(event, account, R.string.app_notification_chess_your_turn)
             // WelcomeEvent is dispatched directly from processMarmotWelcomeFlow
@@ -638,6 +643,110 @@ class EventNotificationConsumer(
 
         notificationManager()
             .sendReactionNotification(
+                event.id,
+                content,
+                title,
+                event.createdAt,
+                userPicture,
+                noteUri,
+                applicationContext,
+            )
+    }
+
+    private suspend fun notify(
+        event: TextNoteEvent,
+        account: Account,
+    ) {
+        Log.d(TAG, "New TextNote to Notify")
+
+        // old event being re-broadcast
+        if (event.createdAt < TimeUtils.fifteenMinutesAgo()) return
+
+        // don't notify for own notes
+        if (event.pubKey == account.signer.pubKey) return
+
+        // must be a reply (NIP-10) — plain mentions are not handled on this channel.
+        val replyTargetId = event.replyingTo() ?: return
+
+        // only notify when the reply targets a note authored by the current account.
+        val repliedNote = LocalCache.getNoteIfExists(replyTargetId) ?: return
+        if (repliedNote.author?.pubkeyHex != account.signer.pubKey) return
+
+        notifyReply(event, account, repliedNote.event?.content)
+    }
+
+    private suspend fun notify(
+        event: CommentEvent,
+        account: Account,
+    ) {
+        Log.d(TAG, "New NIP-22 Comment to Notify")
+
+        // old event being re-broadcast
+        if (event.createdAt < TimeUtils.fifteenMinutesAgo()) return
+
+        // don't notify for own comments
+        if (event.pubKey == account.signer.pubKey) return
+
+        // NIP-22 marks direct-reply and root authors. Notify when the current
+        // account is either (someone commenting on our post, or replying to our comment).
+        val pubKey = account.signer.pubKey
+        val isTarget = event.replyAuthorKeys().contains(pubKey) || event.rootAuthorKeys().contains(pubKey)
+        if (!isTarget) return
+
+        val parentContent =
+            event
+                .replyingTo()
+                ?.let { LocalCache.getNoteIfExists(it)?.event?.content }
+
+        notifyReply(event, account, parentContent)
+    }
+
+    private suspend fun notifyReply(
+        event: Event,
+        account: Account,
+        parentContent: String?,
+    ) {
+        val replyNote = LocalCache.getNoteIfExists(event.id) ?: return
+
+        val author = LocalCache.getOrCreateUser(event.pubKey)
+        val user = author.toBestDisplayName()
+        val userPicture = author.profilePicture()
+
+        val title = stringRes(applicationContext, R.string.app_notification_replies_channel_message, user)
+
+        val replyExcerpt =
+            event.content
+                .split("\n")
+                .firstOrNull { it.isNotBlank() }
+                ?.take(280)
+                ?: ""
+
+        val parentExcerpt =
+            parentContent
+                ?.split("\n")
+                ?.firstOrNull { it.isNotBlank() }
+                ?.take(140)
+
+        val content =
+            if (!parentExcerpt.isNullOrBlank()) {
+                replyExcerpt + "\n\n" +
+                    stringRes(
+                        applicationContext,
+                        R.string.app_notification_replies_channel_message_for,
+                        parentExcerpt,
+                    )
+            } else {
+                replyExcerpt
+            }
+
+        val accountNpub =
+            account.signer.pubKey
+                .hexToByteArray()
+                .toNpub()
+        val noteUri = replyNote.toNEvent() + ACCOUNT_QUERY_PARAM + accountNpub
+
+        notificationManager()
+            .sendReplyNotification(
                 event.id,
                 content,
                 title,

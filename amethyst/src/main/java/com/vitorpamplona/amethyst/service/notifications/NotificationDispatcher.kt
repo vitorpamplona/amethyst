@@ -28,8 +28,10 @@ import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
+import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip64Chess.challenge.accept.LiveChessGameAcceptEvent
@@ -75,6 +77,8 @@ class NotificationDispatcher(
                 PrivateDmEvent.KIND,
                 LnZapEvent.KIND,
                 ReactionEvent.KIND,
+                TextNoteEvent.KIND,
+                CommentEvent.KIND,
                 LiveChessGameAcceptEvent.KIND,
                 LiveChessMoveEvent.KIND,
                 WakeUpEvent.KIND,

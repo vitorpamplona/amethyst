@@ -48,11 +48,13 @@ object NotificationUtils {
     private var zapChannel: NotificationChannel? = null
     private var reactionChannel: NotificationChannel? = null
     private var chessChannel: NotificationChannel? = null
+    private var replyChannel: NotificationChannel? = null
 
     private const val DM_GROUP_KEY = "com.vitorpamplona.amethyst.DM_NOTIFICATION"
     private const val ZAP_GROUP_KEY = "com.vitorpamplona.amethyst.ZAP_NOTIFICATION"
     private const val REACTION_GROUP_KEY = "com.vitorpamplona.amethyst.REACTION_NOTIFICATION"
     private const val CHESS_GROUP_KEY = "com.vitorpamplona.amethyst.CHESS_NOTIFICATION"
+    private const val REPLY_GROUP_KEY = "com.vitorpamplona.amethyst.REPLY_NOTIFICATION"
 
     const val REPLY_ACTION = "com.vitorpamplona.amethyst.REPLY_ACTION"
     const val MARK_READ_ACTION = "com.vitorpamplona.amethyst.MARK_READ_ACTION"
@@ -65,6 +67,7 @@ object NotificationUtils {
     private const val ZAP_SUMMARY_ID = 0x20000
     private const val REACTION_SUMMARY_ID = 0x40000
     private const val CHESS_SUMMARY_ID = 0x30000
+    private const val REPLY_SUMMARY_ID = 0x50000
 
     fun getOrCreateDMChannel(applicationContext: Context): NotificationChannel {
         if (dmChannel != null) return dmChannel!!
@@ -150,6 +153,27 @@ object NotificationUtils {
         return chessChannel!!
     }
 
+    fun getOrCreateReplyChannel(applicationContext: Context): NotificationChannel {
+        if (replyChannel != null) return replyChannel!!
+
+        replyChannel =
+            NotificationChannel(
+                stringRes(applicationContext, R.string.app_notification_replies_channel_id),
+                stringRes(applicationContext, R.string.app_notification_replies_channel_name),
+                NotificationManager.IMPORTANCE_DEFAULT,
+            ).apply {
+                description =
+                    stringRes(applicationContext, R.string.app_notification_replies_channel_description)
+            }
+
+        val notificationManager: NotificationManager =
+            applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        notificationManager.createNotificationChannel(replyChannel!!)
+
+        return replyChannel!!
+    }
+
     suspend fun NotificationManager.sendReactionNotification(
         id: String,
         messageBody: String,
@@ -202,6 +226,34 @@ object NotificationUtils {
             category = NotificationCompat.CATEGORY_SOCIAL,
             summaryId = CHESS_SUMMARY_ID,
             summaryText = stringRes(applicationContext, R.string.app_notification_chess_summary),
+            applicationContext = applicationContext,
+        )
+    }
+
+    suspend fun NotificationManager.sendReplyNotification(
+        id: String,
+        messageBody: String,
+        messageTitle: String,
+        time: Long,
+        pictureUrl: String?,
+        uri: String,
+        applicationContext: Context,
+    ) {
+        getOrCreateReplyChannel(applicationContext)
+        val channelId = stringRes(applicationContext, R.string.app_notification_replies_channel_id)
+
+        sendNotification(
+            id = id,
+            messageBody = messageBody,
+            messageTitle = messageTitle,
+            time = time,
+            pictureUrl = pictureUrl,
+            uri = uri,
+            channelId = channelId,
+            notificationGroupKey = REPLY_GROUP_KEY,
+            category = NotificationCompat.CATEGORY_SOCIAL,
+            summaryId = REPLY_SUMMARY_ID,
+            summaryText = stringRes(applicationContext, R.string.app_notification_replies_summary),
             applicationContext = applicationContext,
         )
     }
