@@ -2517,4 +2517,5 @@
     <string name="emoji_private_badge">Private emoji</string>
     <string name="emoji_public_explainer">Public emojis are visible to everyone and appear in your reaction menu and \":\" autocomplete picker when this pack is in your emoji list.</string>
     <string name="emoji_private_explainer">Private emojis are stored encrypted on relays and visible only to you. They appear in your reaction menu and \":\" autocomplete just like public ones.</string>
+    <string name="gif">Gif</string>
 </resources>

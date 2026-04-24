@@ -259,6 +259,10 @@ fun ProfileContentTemplate(
                         .clickable(onClick = onClick),
                 loadProfilePicture = accountViewModel.settings.showProfilePictures(),
                 loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+                autoPlayGif =
+                    accountViewModel.settings.autoPlayVideosFlow
+                        .collectAsStateWithLifecycle()
+                        .value,
             )
 
             if (bestDisplayName != null) {

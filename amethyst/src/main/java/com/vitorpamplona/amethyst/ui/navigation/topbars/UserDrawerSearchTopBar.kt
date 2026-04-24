@@ -31,6 +31,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserPicture
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
@@ -87,6 +88,10 @@ private fun LoggedInUserPictureDrawer(
             contentScale = ContentScale.Crop,
             loadProfilePicture = accountViewModel.settings.showProfilePictures(),
             loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+            autoPlayGif =
+                accountViewModel.settings.autoPlayVideosFlow
+                    .collectAsStateWithLifecycle()
+                    .value,
         )
     }
 }

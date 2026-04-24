@@ -47,6 +47,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.defaults.Constants
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
@@ -162,6 +163,10 @@ fun RenderChannelData(
                     modifier = MaterialTheme.colorScheme.largeProfilePictureModifier,
                     loadProfilePicture = accountViewModel.settings.showProfilePictures(),
                     loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+                    autoPlayGif =
+                        accountViewModel.settings.autoPlayVideosFlow
+                            .collectAsStateWithLifecycle()
+                            .value,
                 )
             }
         }

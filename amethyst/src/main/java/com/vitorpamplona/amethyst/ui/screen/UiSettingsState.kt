@@ -30,6 +30,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
 @Stable
@@ -139,6 +140,15 @@ class UiSettingsState(
     fun startVideoPlayback() = startVideoPlayback.value
 
     fun autoPlayVideos() = uiSettingsFlow.automaticallyPlayVideos.value == BooleanType.ALWAYS
+
+    val autoPlayVideosFlow: StateFlow<Boolean> =
+        uiSettingsFlow.automaticallyPlayVideos
+            .map { it == BooleanType.ALWAYS }
+            .stateIn(
+                scope,
+                SharingStarted.Eagerly,
+                uiSettingsFlow.automaticallyPlayVideos.value == BooleanType.ALWAYS,
+            )
 
     fun showImages() = showImages.value
 }

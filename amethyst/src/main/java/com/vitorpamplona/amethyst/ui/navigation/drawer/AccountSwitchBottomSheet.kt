@@ -224,6 +224,10 @@ private fun AccountPicture(
         modifier = AccountPictureModifier,
         loadProfilePicture = accountViewModel.settings.showProfilePictures(),
         loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+        autoPlayGif =
+            accountViewModel.settings.autoPlayVideosFlow
+                .collectAsStateWithLifecycle()
+                .value,
     )
 }
 

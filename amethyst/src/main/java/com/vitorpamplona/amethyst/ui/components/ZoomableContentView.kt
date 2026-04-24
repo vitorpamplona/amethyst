@@ -159,14 +159,28 @@ fun ZoomableContentView(
                 modifier = mediaSizingModifier(ratio, contentScale),
                 backdrop = (content.thumbhash ?: content.blurhash)?.let { { BlurhashBackdrop(content.blurhash, content.description, content.thumbhash) } },
             ) {
-                TwoSecondController(content) { controllerVisible ->
-                    val mainImageModifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .then(boundsTrackingModifier)
-                            .clickable { dialogOpen = true }
-                    val loadedImageModifier = if (roundedCorner) MaterialTheme.colorScheme.imageModifier else Modifier.fillMaxWidth()
-                    UrlImageView(content, contentScale, mainImageModifier, loadedImageModifier, controllerVisible, accountViewModel = accountViewModel)
+                if (content.isGif()) {
+                    GifVideoView(
+                        videoUri = content.url,
+                        contentDescription = content.description,
+                        dimensions = content.dim,
+                        blurhash = content.blurhash,
+                        roundedCorner = roundedCorner,
+                        contentScale = contentScale,
+                        onDialog = { dialogOpen = true },
+                        accountViewModel = accountViewModel,
+                        thumbhash = content.thumbhash,
+                    )
+                } else {
+                    TwoSecondController(content) { controllerVisible ->
+                        val mainImageModifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .then(boundsTrackingModifier)
+                                .clickable { dialogOpen = true }
+                        val loadedImageModifier = if (roundedCorner) MaterialTheme.colorScheme.imageModifier else Modifier.fillMaxWidth()
+                        UrlImageView(content, contentScale, mainImageModifier, loadedImageModifier, controllerVisible, accountViewModel = accountViewModel)
+                    }
                 }
             }
         }
@@ -206,15 +220,31 @@ fun ZoomableContentView(
         }
 
         is MediaLocalImage -> {
-            TwoSecondController(content) { controllerVisible ->
-                val mainImageModifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .then(boundsTrackingModifier)
-                        .clickable { dialogOpen = true }
-                val loadedImageModifier = if (roundedCorner) MaterialTheme.colorScheme.imageModifier else Modifier.fillMaxWidth()
+            if (content.isGif()) {
+                content.localFile?.let {
+                    GifVideoView(
+                        videoUri = it.toUri().toString(),
+                        contentDescription = content.description,
+                        dimensions = content.dim,
+                        blurhash = content.blurhash,
+                        roundedCorner = roundedCorner,
+                        contentScale = contentScale,
+                        onDialog = { dialogOpen = true },
+                        accountViewModel = accountViewModel,
+                        thumbhash = content.thumbhash,
+                    )
+                }
+            } else {
+                TwoSecondController(content) { controllerVisible ->
+                    val mainImageModifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .then(boundsTrackingModifier)
+                            .clickable { dialogOpen = true }
+                    val loadedImageModifier = if (roundedCorner) MaterialTheme.colorScheme.imageModifier else Modifier.fillMaxWidth()
 
-                LocalImageView(content, contentScale, mainImageModifier, loadedImageModifier, controllerVisible, accountViewModel = accountViewModel)
+                    LocalImageView(content, contentScale, mainImageModifier, loadedImageModifier, controllerVisible, accountViewModel = accountViewModel)
+                }
             }
         }
 
@@ -646,6 +676,15 @@ fun ShowHash(content: MediaUrlContent) {
 
     verifiedHash?.let { HashVerificationSymbol(it) }
 }
+
+fun BaseMediaContent.isGif(): Boolean =
+    if (this is MediaUrlContent) {
+        mimeType == "image/gif" || url.endsWith(".gif", ignoreCase = true) || url.contains(".gif?", ignoreCase = true) || url.contains(".gif#", ignoreCase = true)
+    } else if (this is MediaPreloadedContent) {
+        mimeType == "image/gif" || localFile?.name?.endsWith(".gif", ignoreCase = true) == true
+    } else {
+        false
+    }
 
 @Composable
 fun WaitAndDisplay(content: @Composable (AnimatedVisibilityScope.() -> Unit)) {
