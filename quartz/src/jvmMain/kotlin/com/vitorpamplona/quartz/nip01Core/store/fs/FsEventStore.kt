@@ -20,14 +20,18 @@
  */
 package com.vitorpamplona.quartz.nip01Core.store.fs
 
+import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.isAddressable
 import com.vitorpamplona.quartz.nip01Core.core.isEphemeral
+import com.vitorpamplona.quartz.nip01Core.core.isReplaceable
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.DefaultIndexingStrategy
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.IndexingStrategy
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.TagNameValueHasher
+import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 import java.nio.file.Path
@@ -57,6 +61,7 @@ class FsEventStore(
     private val hasher: TagNameValueHasher
     private val indexer: FsIndexer
     private val slots: FsSlots
+    private val tombstones: FsTombstones
     private val planner: FsQueryPlanner
 
     init {
@@ -65,6 +70,7 @@ class FsEventStore(
         hasher = TagNameValueHasher(layout.readOrCreateSeed())
         indexer = FsIndexer(layout, hasher, indexingStrategy)
         slots = FsSlots(layout, indexer)
+        tombstones = FsTombstones(layout)
         planner = FsQueryPlanner(layout, hasher)
     }
 
@@ -74,6 +80,7 @@ class FsEventStore(
 
     override fun insert(event: Event) {
         if (event.kind.isEphemeral()) return
+        if (isBlockedByTombstone(event)) return
 
         val slot = slots.slotPathFor(event)
         val existingSlot = slot?.let { slots.readSlot(it) }
@@ -92,6 +99,7 @@ class FsEventStore(
             if (slot != null && existingSlot?.id != event.id) {
                 slots.install(slot, canonical, event, existingSlot)
             }
+            if (event is DeletionEvent) processDeletion(event, canonical)
             return
         }
 
@@ -112,9 +120,78 @@ class FsEventStore(
             if (slot != null) {
                 slots.install(slot, canonical, event, existingSlot)
             }
+            if (event is DeletionEvent) processDeletion(event, canonical)
         } catch (t: Throwable) {
             Files.deleteIfExists(tmp)
             throw t
+        }
+    }
+
+    /**
+     * NIP-09 pre-insert guard. Parity with SQLite's `reject_deleted_events`
+     * BEFORE INSERT trigger: id-scoped tombstones always block; address-
+     * scoped tombstones block when the existing cutoff is `>=` the new
+     * event's createdAt.
+     */
+    private fun isBlockedByTombstone(event: Event): Boolean {
+        if (tombstones.hasIdTombstone(event.id)) return true
+        if (event is AddressableEvent && event.kind.isAddressable()) {
+            val cutoff = tombstones.addrTombstoneCutoff(event.kind, event.pubKey, event.dTag())
+            if (cutoff != null && event.createdAt <= cutoff) return true
+        }
+        if (event.kind.isReplaceable()) {
+            val cutoff = tombstones.addrTombstoneCutoff(event.kind, event.pubKey, "")
+            if (cutoff != null && event.createdAt <= cutoff) return true
+        }
+        return false
+    }
+
+    /**
+     * Applies a kind-5 deletion's side effects: cascade-deletes each
+     * target owned by the deletion author (matching SQLite's `pubkey_
+     * owner_hash` check, which covers GiftWrap recipients), clears any
+     * slot the targets owned, and installs tombstone hardlinks so
+     * future re-inserts are blocked.
+     */
+    private fun processDeletion(
+        deletion: DeletionEvent,
+        deletionCanonical: java.nio.file.Path,
+    ) {
+        val ownerHashOfDeletion = hasher.hash(deletion.pubKey)
+
+        for (targetId in deletion.deleteEventIds()) {
+            val targetEvent = readEvent(targetId)
+            if (targetEvent != null && indexer.ownerHash(targetEvent) == ownerHashOfDeletion) {
+                indexer.unlink(targetEvent)
+                val targetSlot = slots.slotPathFor(targetEvent)
+                if (targetSlot != null && slots.readSlot(targetSlot)?.id == targetId) {
+                    slots.clear(targetSlot)
+                }
+                layout.canonical(targetId).deleteIfExists()
+            }
+            tombstones.installId(targetId, deletionCanonical)
+        }
+
+        for (addr in deletion.deleteAddresses()) {
+            // Cascade is only honoured when the address's author matches
+            // the deletion author — matching SQLite's WHERE pubkey = ?.
+            if (addr.pubKeyHex == deletion.pubKey) {
+                val slot =
+                    when {
+                        addr.kind.isReplaceable() -> layout.replaceableSlot(addr.kind, addr.pubKeyHex)
+                        addr.kind.isAddressable() -> layout.addressableSlot(addr.kind, addr.pubKeyHex, addr.dTag)
+                        else -> null
+                    }
+                if (slot != null) {
+                    val winner = slots.readSlot(slot)
+                    if (winner != null && winner.createdAt <= deletion.createdAt) {
+                        indexer.unlink(winner)
+                        layout.canonical(winner.id).deleteIfExists()
+                        slots.clear(slot)
+                    }
+                }
+            }
+            tombstones.installAddr(addr.kind, addr.pubKeyHex, addr.dTag, deletion, deletionCanonical)
         }
     }
 

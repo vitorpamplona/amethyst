@@ -47,6 +47,9 @@ internal class FsLayout(
     val idxTag: Path = idx.resolve(IDX_TAG)
     val replaceable: Path = root.resolve(REPLACEABLE_DIR)
     val addressable: Path = root.resolve(ADDRESSABLE_DIR)
+    val tombstones: Path = root.resolve(TOMBSTONES_DIR)
+    val tombstonesId: Path = tombstones.resolve(TOMB_ID)
+    val tombstonesAddr: Path = tombstones.resolve(TOMB_ADDR)
 
     fun canonical(id: HexKey): Path {
         require(id.length >= 4) { "event id must be at least 4 hex chars, got '$id'" }
@@ -104,6 +107,19 @@ internal class FsLayout(
         dTag: String,
     ): Path = addressable.resolve(kind.toString()).resolve(pubkey).resolve("${sha256Hex(dTag)}$JSON_EXT")
 
+    /** NIP-09 tombstone path keyed by target event id. */
+    fun idTombstonePath(id: HexKey): Path = tombstonesId.resolve("$id$JSON_EXT")
+
+    /**
+     * NIP-09 tombstone path keyed by address. `dTag` may be empty — used
+     * for replaceable-kind tombstones that have no d-tag.
+     */
+    fun addrTombstonePath(
+        kind: Kind,
+        pubkey: HexKey,
+        dTag: String,
+    ): Path = tombstonesAddr.resolve(kind.toString()).resolve(pubkey).resolve("${sha256Hex(dTag)}$JSON_EXT")
+
     fun ensureSkeleton() {
         Files.createDirectories(events)
         Files.createDirectories(staging)
@@ -113,6 +129,8 @@ internal class FsLayout(
         Files.createDirectories(idxTag)
         Files.createDirectories(replaceable)
         Files.createDirectories(addressable)
+        Files.createDirectories(tombstonesId)
+        Files.createDirectories(tombstonesAddr)
     }
 
     /**
@@ -144,6 +162,9 @@ internal class FsLayout(
         const val IDX_TAG = "tag"
         const val REPLACEABLE_DIR = "replaceable"
         const val ADDRESSABLE_DIR = "addressable"
+        const val TOMBSTONES_DIR = "tombstones"
+        const val TOMB_ID = "id"
+        const val TOMB_ADDR = "addr"
         const val SEED_FILE = ".seed"
         const val JSON_EXT = ".json"
 
