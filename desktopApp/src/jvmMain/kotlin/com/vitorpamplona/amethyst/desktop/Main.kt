@@ -202,14 +202,21 @@ fun main() {
     // iconImage, NOT the Window(icon=) composable parameter (which only sets
     // the in-title-bar proxy icon). Without this, a JVM launched via gradle
     // shows the generic Java coffee-cup square in Cmd+Tab. ImageIO preserves
-    // the PNG alpha channel so the dock renders the logo with transparency.
+    // the PNG alpha channel so the dock renders the logo with transparency;
+    // on macOS the logo is then wrapped in a squircle so it matches
+    // first-party dock icons.
     try {
         val bytes = Unit::class.java.getResourceAsStream("/icon.png")!!.readBytes()
-        val awtImage = javax.imageio.ImageIO.read(java.io.ByteArrayInputStream(bytes))
-        if (awtImage != null && java.awt.Taskbar.isTaskbarSupported()) {
+        val raw = javax.imageio.ImageIO.read(java.io.ByteArrayInputStream(bytes))
+        val adapted =
+            raw?.let {
+                com.vitorpamplona.amethyst.desktop.platform.PlatformAppIcon
+                    .adaptForHost(it)
+            }
+        if (adapted != null && java.awt.Taskbar.isTaskbarSupported()) {
             val taskbar = java.awt.Taskbar.getTaskbar()
             if (taskbar.isSupported(java.awt.Taskbar.Feature.ICON_IMAGE)) {
-                taskbar.iconImage = awtImage
+                taskbar.iconImage = adapted
             }
         }
     } catch (e: Exception) {
@@ -274,15 +281,21 @@ fun main() {
         // Callback set by App() for single pane navigation from MenuBar
         var navigateToScreen by remember { mutableStateOf<((DeckColumnType) -> Unit)?>(null) }
 
-        // Transparent 512x512 PNG shown in the macOS dock / Windows taskbar / GNOME
-        // & KDE task switchers while running via gradle (the packaged app uses the
-        // icon.icns / icon.ico configured in nativeDistributions).
+        // Window title-bar / taskbar thumbnail icon. On macOS the source logo
+        // is wrapped in a squircle so it matches every other dock icon; on
+        // other platforms the raw transparent logo is used as-is.
         val appIcon =
             remember {
                 val bytes = Unit::class.java.getResourceAsStream("/icon.png")!!.readBytes()
+                val raw = javax.imageio.ImageIO.read(java.io.ByteArrayInputStream(bytes))
+                val adapted =
+                    com.vitorpamplona.amethyst.desktop.platform.PlatformAppIcon
+                        .adaptForHost(raw)
+                val buf = java.io.ByteArrayOutputStream()
+                javax.imageio.ImageIO.write(adapted, "png", buf)
                 val bitmap =
                     org.jetbrains.skia.Image
-                        .makeFromEncoded(bytes)
+                        .makeFromEncoded(buf.toByteArray())
                         .toComposeImageBitmap()
                 BitmapPainter(bitmap)
             }
