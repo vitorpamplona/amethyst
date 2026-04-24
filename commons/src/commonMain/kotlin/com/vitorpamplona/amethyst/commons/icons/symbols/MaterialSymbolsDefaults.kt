@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.commons.icons.symbols
 // Single source of truth for Material Symbols visual axes. Change WEIGHT here to globally
 // re-tune line thickness (100 = Thin, 200 = ExtraLight, 300 = Light, 400 = Regular, …, 700 = Bold).
 object MaterialSymbolsDefaults {
-    const val WEIGHT: Int = 100
+    const val WEIGHT: Int = 300
     const val FILL: Float = 0f
     const val OPTICAL_SIZE: Float = 24f
     const val GRADE: Float = 0f
