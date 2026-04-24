@@ -23,7 +23,9 @@ package com.vitorpamplona.amethyst.desktop.ui
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -59,8 +61,15 @@ fun ReadingColumn(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.TopCenter,
     ) {
+        // Order matters: widthIn must come BEFORE fillMaxWidth, otherwise
+        // fillMaxWidth locks the Column to parent.width and the cap is ignored.
+        // fillMaxHeight is safe (it only constrains the other axis).
         Column(
-            modifier = modifier.fillMaxSize().widthIn(max = maxWidth),
+            modifier =
+                modifier
+                    .widthIn(max = maxWidth)
+                    .fillMaxWidth()
+                    .fillMaxHeight(),
             content = content,
         )
     }

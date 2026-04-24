@@ -47,24 +47,31 @@ private const val TEXT_MEASURER_CACHE_SIZE = 64
 /**
  * Builds the Material Symbols FontFamily and a shared TextMeasurer once for the subtree and
  * exposes them via CompositionLocal. Wrap app roots (AmethystTheme, desktop MaterialTheme) in this.
+ *
+ * The optional [weight] override lets callers pick a stroke thickness different from the
+ * library default — desktop uses per-OS weights (macOS likes the thinner SF-Symbols-ish
+ * look at 200, Windows Fluent icons sit closer to 400) while Android keeps the default.
  */
 @Composable
-fun ProvideMaterialSymbols(content: @Composable () -> Unit) {
+fun ProvideMaterialSymbols(
+    weight: Int = MaterialSymbolsDefaults.WEIGHT,
+    content: @Composable () -> Unit,
+) {
     val font =
         Font(
             resource = Res.font.material_symbols_outlined,
-            weight = FontWeight(MaterialSymbolsDefaults.WEIGHT),
+            weight = FontWeight(weight),
             variationSettings =
                 FontVariation.Settings(
-                    FontVariation.weight(MaterialSymbolsDefaults.WEIGHT),
+                    FontVariation.weight(weight),
                     FontVariation.Setting("FILL", MaterialSymbolsDefaults.FILL),
                     FontVariation.Setting("opsz", MaterialSymbolsDefaults.OPTICAL_SIZE),
                     FontVariation.Setting("GRAD", MaterialSymbolsDefaults.GRADE),
                 ),
         )
-    // Keyless remember: the Font wrapper identity changes every composition but the underlying
-    // resource is a compile-time constant, so one FontFamily for the lifetime of the subtree.
-    val fontFamily = remember { FontFamily(font) }
+    // Keyless remember is safe only when weight is stable; key on weight so a platform-
+    // preview override swap actually rebuilds the FontFamily.
+    val fontFamily = remember(weight) { FontFamily(font) }
     val textMeasurer = rememberTextMeasurer(cacheSize = TEXT_MEASURER_CACHE_SIZE)
     CompositionLocalProvider(
         LocalMaterialSymbolsFontFamily provides fontFamily,

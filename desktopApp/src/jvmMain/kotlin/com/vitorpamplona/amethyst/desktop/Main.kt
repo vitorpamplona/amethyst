@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -807,7 +808,9 @@ fun App(
         .rememberSystemDark(LocalAwtWindow.current)
 
     com.vitorpamplona.amethyst.desktop.platform.PlatformMaterialTheme(isDark = isDark) {
-        ProvideMaterialSymbols {
+        ProvideMaterialSymbols(
+            weight = com.vitorpamplona.amethyst.desktop.platform.PlatformIconWeight.current,
+        ) {
             Surface(
                 modifier = Modifier.fillMaxSize(),
                 color = MaterialTheme.colorScheme.background,
@@ -1328,8 +1331,9 @@ fun RelaySettingsScreen(
         Column(
             modifier =
                 Modifier
-                    .fillMaxSize()
                     .widthIn(max = 720.dp)
+                    .fillMaxWidth()
+                    .fillMaxHeight()
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 12.dp),
         ) {
@@ -1353,7 +1357,7 @@ fun RelaySettingsScreen(
             // Wallet Connect Section
             Text(
                 "Wallet Connect (NWC)",
-                style = MaterialTheme.typography.titleLarge,
+                style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onBackground,
             )
             Spacer(Modifier.height(8.dp))
@@ -1462,7 +1466,7 @@ fun RelaySettingsScreen(
 
             Text(
                 "Relay Settings",
-                style = MaterialTheme.typography.titleLarge,
+                style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onBackground,
             )
             Spacer(Modifier.height(8.dp))

@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -439,7 +440,13 @@ fun UserProfileScreen(
     }
 
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
-        Box(modifier = Modifier.fillMaxSize().widthIn(max = DefaultReadingWidth)) {
+        Box(
+            modifier =
+                Modifier
+                    .widthIn(max = DefaultReadingWidth)
+                    .fillMaxWidth()
+                    .fillMaxHeight(),
+        ) {
             if (connectedRelays.isEmpty()) {
                 LoadingState("Connecting to relays...")
             } else {
