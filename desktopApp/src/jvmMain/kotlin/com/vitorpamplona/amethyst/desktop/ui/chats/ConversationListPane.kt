@@ -342,7 +342,10 @@ private fun ConversationCard(
 
         Spacer(Modifier.width(10.dp))
 
-        // Name, preview, timestamp
+        // Name, preview, timestamp — vertical hierarchy: name = medium-weight
+        // primary text (titleSmall), preview = muted secondary. Prior styling had
+        // both lines at the same weight / near-same color and stacked flush,
+        // making them blur into each other.
         Column(modifier = Modifier.weight(1f)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -351,7 +354,7 @@ private fun ConversationCard(
             ) {
                 Text(
                     text = item.displayName,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -359,30 +362,34 @@ private fun ConversationCard(
                 )
 
                 if (item.lastMessageTimestamp > 0) {
+                    Spacer(Modifier.width(8.dp))
                     Text(
                         text = item.lastMessageTimestamp.toTimeAgo(withDot = false),
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                     )
                 }
             }
 
             if (item.lastMessagePreview.isNotEmpty()) {
+                Spacer(Modifier.height(2.dp))
                 Text(
                     text = item.lastMessagePreview,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
 
-            // Group indicator
+            // Group indicator — labelSmall with muted tertiary so the name line
+            // still wins the eye even when a group badge is present.
             if (item.isGroup) {
+                Spacer(Modifier.height(2.dp))
                 Text(
                     text = "Group (${item.users.size + 1})",
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                 )
             }
         }
