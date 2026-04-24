@@ -79,10 +79,12 @@ class FsEventStore(
     private val slots: FsSlots
     private val tombstones: FsTombstones
     private val planner: FsQueryPlanner
+    private val lockManager: FsLockManager
 
     init {
         layout.ensureSkeleton()
         cleanStaging()
+        lockManager = FsLockManager(root)
         hasher = TagNameValueHasher(layout.readOrCreateSeed())
         indexer = FsIndexer(layout, hasher, indexingStrategy)
         slots = FsSlots(layout, indexer)
@@ -94,7 +96,12 @@ class FsEventStore(
     // Insert
     // ------------------------------------------------------------------
 
-    override fun insert(event: Event) {
+    override fun insert(event: Event) =
+        lockManager.withWriteLock {
+            insertLocked(event)
+        }
+
+    private fun insertLocked(event: Event) {
         if (event.kind.isEphemeral()) return
         if (isAlreadyExpired(event)) return
         if (isBlockedByTombstone(event)) return
@@ -231,13 +238,14 @@ class FsEventStore(
         }
     }
 
-    override fun transaction(body: IEventStore.ITransaction.() -> Unit) {
-        val txn =
-            object : IEventStore.ITransaction {
-                override fun insert(event: Event) = this@FsEventStore.insert(event)
-            }
-        txn.body()
-    }
+    override fun transaction(body: IEventStore.ITransaction.() -> Unit) =
+        lockManager.withWriteLock {
+            val txn =
+                object : IEventStore.ITransaction {
+                    override fun insert(event: Event) = insertLocked(event)
+                }
+            txn.body()
+        }
 
     // ------------------------------------------------------------------
     // Query
@@ -304,20 +312,27 @@ class FsEventStore(
     // Delete
     // ------------------------------------------------------------------
 
-    override fun delete(filter: Filter) {
-        val ids = ArrayList<HexKey>()
-        query<Event>(filter) { ids.add(it.id) }
-        ids.forEach { delete(it) }
-    }
+    override fun delete(filter: Filter) =
+        lockManager.withWriteLock {
+            val ids = ArrayList<HexKey>()
+            query<Event>(filter) { ids.add(it.id) }
+            ids.forEach { deleteLocked(it) }
+        }
 
-    override fun delete(filters: List<Filter>) {
-        val ids = HashSet<HexKey>()
-        query<Event>(filters) { ids.add(it.id) }
-        ids.forEach { delete(it) }
-    }
+    override fun delete(filters: List<Filter>) =
+        lockManager.withWriteLock {
+            val ids = HashSet<HexKey>()
+            query<Event>(filters) { ids.add(it.id) }
+            ids.forEach { deleteLocked(it) }
+        }
 
     /** Delete an event by id. Returns 1 if a file was removed, 0 otherwise. */
-    fun delete(id: HexKey): Int {
+    fun delete(id: HexKey): Int =
+        lockManager.withWriteLock {
+            deleteLocked(id)
+        }
+
+    private fun deleteLocked(id: HexKey): Int {
         val canonical = layout.canonical(id)
         val event = readEvent(id) // need tags to know which index links to remove
         if (event != null) {
@@ -366,21 +381,83 @@ class FsEventStore(
      * filenames, and deletes any entry whose `exp < now`. Matches SQLite's
      * `expiration < unixepoch()` predicate (note: strict `<`, not `<=`).
      */
-    override fun deleteExpiredEvents() {
-        if (!Files.isDirectory(layout.idxExpiresAt)) return
-        val now = clock()
-        val toDelete = ArrayList<HexKey>()
-        Files.list(layout.idxExpiresAt).use { stream ->
-            for (entry in stream) {
-                val parsed = FsLayout.parseEntry(entry.fileName.toString()) ?: continue
-                if (parsed.first < now) toDelete.add(parsed.second)
+    override fun deleteExpiredEvents() =
+        lockManager.withWriteLock {
+            if (!Files.isDirectory(layout.idxExpiresAt)) return@withWriteLock
+            val now = clock()
+            val toDelete = ArrayList<HexKey>()
+            Files.list(layout.idxExpiresAt).use { stream ->
+                for (entry in stream) {
+                    val parsed = FsLayout.parseEntry(entry.fileName.toString()) ?: continue
+                    if (parsed.first < now) toDelete.add(parsed.second)
+                }
             }
+            toDelete.forEach { deleteLocked(it) }
         }
-        toDelete.forEach { delete(it) }
-    }
 
     override fun close() {
-        // No long-lived resources yet.
+        lockManager.close()
+    }
+
+    // ------------------------------------------------------------------
+    // Maintenance
+    // ------------------------------------------------------------------
+
+    /**
+     * Rebuild every `idx/` entry from the canonical events. Safe to run
+     * after external edits or to recover from a partial-write crash.
+     * Tombstones, replaceable / addressable slots, and the seed file are
+     * left untouched — slot-only-pinned events stay reachable, and
+     * tombstone removal is treated as a deliberate "un-forget" by the
+     * user.
+     */
+    fun scrub() =
+        lockManager.withWriteLock {
+            cleanStaging()
+            // Wipe and recreate idx/.
+            deleteRecursively(layout.idx)
+            layout.ensureSkeleton()
+
+            if (!Files.isDirectory(layout.events)) return@withWriteLock
+            Files.walk(layout.events).use { stream ->
+                for (path in stream) {
+                    if (!Files.isRegularFile(path)) continue
+                    if (!path.fileName.toString().endsWith(FsLayout.JSON_EXT)) continue
+                    val event =
+                        try {
+                            Event.fromJson(Files.readString(path))
+                        } catch (_: Exception) {
+                            continue
+                        }
+                    indexer.link(event, path)
+                }
+            }
+        }
+
+    /**
+     * Drop dangling `idx/` entries whose canonical no longer exists.
+     * Cheaper than [scrub] because it never opens an event JSON; it just
+     * stats the canonical path encoded in the index entry filename.
+     */
+    fun compact() =
+        lockManager.withWriteLock {
+            if (!Files.isDirectory(layout.idx)) return@withWriteLock
+            Files.walk(layout.idx).use { stream ->
+                for (path in stream) {
+                    if (!Files.isRegularFile(path)) continue
+                    val parsed = FsLayout.parseEntry(path.fileName.toString()) ?: continue
+                    if (!layout.canonical(parsed.second).exists()) {
+                        Files.deleteIfExists(path)
+                    }
+                }
+            }
+        }
+
+    private fun deleteRecursively(p: java.nio.file.Path) {
+        if (!Files.exists(p)) return
+        Files.walk(p).use { stream ->
+            stream.sorted(Comparator.reverseOrder()).forEach { Files.deleteIfExists(it) }
+        }
     }
 
     // ------------------------------------------------------------------
