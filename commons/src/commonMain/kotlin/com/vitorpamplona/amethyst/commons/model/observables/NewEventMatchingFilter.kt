@@ -22,18 +22,21 @@ package com.vitorpamplona.amethyst.commons.model.observables
 
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 
 /**
- * Emits each new event that matches the given Nostr filter, one at a time.
+ * Emits each new event for which [predicate] returns true, one at a time,
+ * as it is inserted into the cache. Unlike [EventListMatchingFilter] /
+ * [NoteListMatchingFilter], this does not accumulate a list — it simply
+ * calls [onNew] per matching event. Useful for reactive event-triggered
+ * pipelines like notifications.
  *
- * Unlike [EventListMatchingFilter] / [NoteListMatchingFilter], this does not
- * accumulate a list — it simply calls [onNew] per matching event as it is
- * inserted into the cache. Useful for reactive event-triggered pipelines
- * (e.g. notifications) that need per-event delivery without list overhead.
+ * The predicate has to be fast — it runs on every new cache insertion.
+ * Callers with a Nostr [com.vitorpamplona.quartz.nip01Core.relay.filters.Filter]
+ * can pass `filter::match` as the predicate and compose additional checks
+ * with `&&`.
  */
 class NewEventMatchingFilter<T : Event>(
-    private val filter: Filter,
+    private val predicate: (Event) -> Boolean,
     private val onNew: (T) -> Unit,
 ) : Observable {
     @Suppress("UNCHECKED_CAST")
@@ -41,7 +44,7 @@ class NewEventMatchingFilter<T : Event>(
         event: Event,
         note: Note,
     ) {
-        if (filter.match(event)) {
+        if (predicate(event)) {
             onNew(event as T)
         }
     }

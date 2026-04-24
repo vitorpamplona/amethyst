@@ -197,6 +197,15 @@ class CommentEvent(
 
     override fun unmarkedReplyTos() = emptyList<String>()
 
+    /**
+     * NIP-22 addresses two distinct recipients: the direct-reply author
+     * (lowercase `p` via [ReplyAuthorTag]) and the root-scope author
+     * (uppercase `P` via [RootAuthorTag]). A comment several levels deep
+     * only tags the root author with uppercase `P`, so the base-class
+     * lowercase-only default would miss them.
+     */
+    override fun notifies(userHex: HexKey): Boolean = super.notifies(userHex) || rootAuthorKeys().contains(userHex)
+
     override fun replyingTo(): HexKey? =
         tags.lastNotNullOfOrNull(ReplyEventTag::parseKey)
             ?: tags.lastNotNullOfOrNull(RootEventTag::parseKey)

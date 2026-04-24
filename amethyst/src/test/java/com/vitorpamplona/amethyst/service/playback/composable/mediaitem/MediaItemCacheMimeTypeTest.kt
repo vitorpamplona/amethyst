@@ -21,12 +21,10 @@
 package com.vitorpamplona.amethyst.service.playback.composable.mediaitem
 
 import androidx.media3.common.MimeTypes
-import androidx.media3.common.util.UnstableApi
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
-@OptIn(UnstableApi::class)
 class MediaItemCacheMimeTypeTest {
     @Test
     fun appleHlsPlaylistMimeIsNormalizedForExoPlayer() {

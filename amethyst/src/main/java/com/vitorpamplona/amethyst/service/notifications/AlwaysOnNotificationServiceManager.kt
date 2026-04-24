@@ -21,8 +21,12 @@
 package com.vitorpamplona.amethyst.service.notifications
 
 import android.content.Context
+import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.accountsCache.AccountCacheState
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
@@ -40,16 +44,27 @@ import kotlinx.coroutines.launch
  * When enabled, all layers activate. When disabled, all layers deactivate.
  * The manager watches the account's alwaysOnNotificationService setting
  * and reacts to changes in real time.
+ *
+ * While enabled, every saved writable account is kept loaded in
+ * [AccountCacheState] so GiftWraps addressed to any of them (delivered via
+ * open relay subscriptions) get unwrapped by the owning account's
+ * `newNotesPreProcessor`. Without this, wraps for non-active accounts would
+ * sit in [com.vitorpamplona.amethyst.model.LocalCache] with no subscriber
+ * able to decrypt them.
  */
 class AlwaysOnNotificationServiceManager(
     private val context: Context,
     private val scope: CoroutineScope,
+    private val accountsCache: AccountCacheState,
+    private val localPreferences: LocalPreferences,
+    private val activePubKeyProvider: () -> HexKey?,
 ) {
     companion object {
         private const val TAG = "AlwaysOnNotifManager"
     }
 
     private var watchJob: Job? = null
+    private var preloadJob: Job? = null
     private var wasEnabled = false
 
     /**
@@ -76,6 +91,8 @@ class AlwaysOnNotificationServiceManager(
     fun stop() {
         watchJob?.cancel()
         watchJob = null
+        preloadJob?.cancel()
+        preloadJob = null
     }
 
     private fun enableAllLayers() {
@@ -91,6 +108,8 @@ class AlwaysOnNotificationServiceManager(
         ServiceWatchdogManager.schedule(context)
 
         // L2 (FCM) and L4 (BOOT_COMPLETED) are always active via manifest
+
+        startMultiAccountPreload()
     }
 
     private fun disableAllLayers() {
@@ -104,5 +123,47 @@ class AlwaysOnNotificationServiceManager(
 
         // L5: Cancel watchdog alarm
         ServiceWatchdogManager.cancel(context)
+
+        stopMultiAccountPreload()
+    }
+
+    /**
+     * Preloads every saved writable account into [AccountCacheState] and keeps the set
+     * in sync by observing [LocalPreferences.accountsFlow]. New accounts added while
+     * the service is enabled (login flow) are picked up automatically.
+     *
+     * Note: the first [LocalPreferences.accountsFlow] emission is `null` (lazily
+     * populated). We still call [AccountCacheState.loadAllWritableAccounts] on every
+     * emission — its suspend call to `allSavedAccounts()` triggers flow population,
+     * and subsequent [loadAccount] calls are idempotent on already-loaded accounts.
+     */
+    private fun startMultiAccountPreload() {
+        preloadJob?.cancel()
+        preloadJob =
+            scope.launch {
+                localPreferences.accountsFlow().collect {
+                    try {
+                        accountsCache.loadAllWritableAccounts(localPreferences)
+                    } catch (e: Exception) {
+                        if (e is CancellationException) throw e
+                        Log.w(TAG, "Multi-account preload failed: ${e.message}", e)
+                    }
+                }
+            }
+    }
+
+    /**
+     * Cancels the preload collector and releases every cached account except the
+     * currently active one, so users with the setting off return to single-account
+     * memory/battery footprint.
+     */
+    private fun stopMultiAccountPreload() {
+        preloadJob?.cancel()
+        preloadJob = null
+        // remove this because we don't know which other accounts might be getting used.
+        // val active = activePubKeyProvider()
+        // if (active != null) {
+        //    accountsCache.retainOnly(setOf(active))
+        // }
     }
 }
