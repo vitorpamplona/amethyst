@@ -395,8 +395,17 @@ class AppModules(
         )
     }
 
-    // Manages always-on notification service lifecycle
-    val alwaysOnNotificationServiceManager = AlwaysOnNotificationServiceManager(appContext, applicationIOScope)
+    // Manages always-on notification service lifecycle. Preloads every saved
+    // writable account while enabled so GiftWraps for non-active accounts still
+    // get unwrapped by their owning account's newNotesPreProcessor.
+    val alwaysOnNotificationServiceManager =
+        AlwaysOnNotificationServiceManager(
+            context = appContext,
+            scope = applicationIOScope,
+            accountsCache = accountsCache,
+            localPreferences = LocalPreferences,
+            activePubKeyProvider = { sessionManager.loggedInAccount()?.pubKey },
+        )
 
     // Observes LocalCache for notification-relevant events and routes them to
     // EventNotificationConsumer. Sources: FCM, UnifiedPush, Pokey, active relay
