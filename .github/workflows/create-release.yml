@@ -174,6 +174,142 @@ jobs:
           echo '```' >> "$GITHUB_STEP_SUMMARY"
 
   # ---------------------------------------------------------------------------
+  # Amy CLI build matrix. Each leg produces a self-contained amy bundle with a
+  # minimal jlink'd JRE — no system Java required on the user's machine.
+  #
+  # amyImage task (all legs):  cli/build/amy-image/amy/ → amy-*.tar.gz
+  # jpackageDeb / jpackageRpm: cli/build/jpackage/amy_*.deb + amy-*.rpm
+  #
+  # macOS legs ship only the tarball. We deliberately avoid jpackage --type
+  # app-image on macOS because it produces an .app bundle (burying the binary
+  # at Contents/MacOS/amy) — wrong UX for a CLI.
+  #
+  # Windows is intentionally deferred — cli/ has not been validated on Windows
+  # yet (data-dir path handling, file locking on groups/<gid>.mls, line endings
+  # in identity.json).
+  #
+  # Asset naming: amy-<version>-<family>-<arch>.<ext>. See scripts/asset-name.sh.
+  # ---------------------------------------------------------------------------
+  build-cli:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: macos-13,      arch: x64,   family: macos, tasks: "amyImage" }
+          - { os: macos-14,      arch: arm64, family: macos, tasks: "amyImage" }
+          - { os: ubuntu-latest, arch: x64,   family: linux, tasks: "amyImage jpackageDeb jpackageRpm" }
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'zulu'
+          java-version: 21
+
+      - name: Resolve tag + version
+        id: ver
+        env:
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+          TEST_TAG: ${{ github.event.inputs.test_tag || '' }}
+        run: |
+          set -euo pipefail
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            TAG="${TEST_TAG:-v0.0.0-dryrun}"
+          else
+            TAG="${GITHUB_REF_NAME}"
+          fi
+          VER="${TAG#v}"
+          TOML_VER=$(grep -E '^app\s*=' gradle/libs.versions.toml | head -1 | cut -d'"' -f2)
+          # On dry-run we only require that TOML has a version; on real tag push we require exact match.
+          if [[ "${GITHUB_EVENT_NAME}" != "workflow_dispatch" ]]; then
+            if [[ "$TOML_VER" != "$VER" ]]; then
+              echo "::error::gradle/libs.versions.toml app=$TOML_VER but tag is $TAG"
+              exit 1
+            fi
+          fi
+          echo "tag=$TAG"     >> "$GITHUB_OUTPUT"
+          echo "version=$VER" >> "$GITHUB_OUTPUT"
+
+      - name: Install RPM tooling (linux only)
+        if: matrix.family == 'linux'
+        run: sudo apt-get update && sudo apt-get install -y rpm fakeroot
+
+      - name: Build amy artifacts
+        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60  # v4.0.0
+        with:
+          max_attempts: 2
+          timeout_minutes: 15
+          command: ./gradlew --no-daemon :cli:${{ matrix.tasks }}
+
+      - name: Collect + rename assets
+        run: |
+          set -euo pipefail
+          # shellcheck source=scripts/asset-name.sh
+          source scripts/asset-name.sh
+          collect_cli_assets "${{ matrix.family }}" "${{ matrix.arch }}" "${{ steps.ver.outputs.version }}" dist
+
+      - name: Enforce CLI size budget (200 MB per asset)
+        run: |
+          set -euo pipefail
+          # The plan at cli/plans/2026-04-21-cli-distribution.md §size-budget
+          # targets < 80 MB, but :commons currently leaks Compose + Skiko as
+          # transitive deps (~40 MB of unused UI jars). Budget is set to
+          # 200 MB until commons is split into core + ui modules — track that
+          # as a follow-up. Until then, this gate just catches pathological
+          # regressions (e.g. accidental :amethyst dep pulling Android libs).
+          fail=0
+          for f in dist/*; do
+            if [[ -f "$f" ]]; then
+              size=$(wc -c < "$f")
+              mb=$(( size / 1048576 ))
+              if (( size > 209715200 )); then
+                echo "::error file=$f::asset is ${mb} MB — exceeds 200 MB amy budget"
+                fail=1
+              else
+                echo "OK: $f — ${mb} MB"
+              fi
+            fi
+          done
+          [[ "$fail" == 0 ]]
+
+      - name: Classify release
+        id: classify
+        run: |
+          TAG="${{ steps.ver.outputs.tag }}"
+          if [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload to GH Release (skip on dry-run)
+        if: github.event_name != 'workflow_dispatch' || github.event.inputs.dry_run != 'true'
+        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda  # v3.0.0
+        with:
+          files: dist/*
+          tag_name: ${{ steps.ver.outputs.tag }}
+          prerelease: ${{ steps.classify.outputs.prerelease }}
+          draft: false
+          fail_on_unmatched_files: true
+          generate_release_notes: false  # Android job writes release notes (last-writer-wins race)
+
+      - name: Dry-run summary
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run == 'true'
+        run: |
+          echo "### Dry-run: amy ${{ matrix.family }}/${{ matrix.arch }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          ls -la dist >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+  # ---------------------------------------------------------------------------
   # Android build + sign + direct-upload. Logic preserved from previous workflow;
   # uses softprops/action-gh-release@v2 instead of deprecated upload-release-asset.
   # ---------------------------------------------------------------------------
