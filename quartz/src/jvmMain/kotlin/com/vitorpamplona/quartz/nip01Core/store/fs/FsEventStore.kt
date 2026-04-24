@@ -25,34 +25,45 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.isEphemeral
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
+import com.vitorpamplona.quartz.nip01Core.store.sqlite.DefaultIndexingStrategy
+import com.vitorpamplona.quartz.nip01Core.store.sqlite.IndexingStrategy
+import com.vitorpamplona.quartz.nip01Core.store.sqlite.TagNameValueHasher
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
+import java.nio.file.attribute.FileTime
+import java.util.concurrent.TimeUnit
 import kotlin.io.path.deleteIfExists
 import kotlin.io.path.exists
 import kotlin.io.path.readText
 
 /**
- * Filesystem-backed `IEventStore`. Each event is stored as a JSON file under
- * `events/<aa>/<bb>/<id>.json` where `<aa><bb>` is the first 4 hex characters
- * of the event id. Writes are atomic (tmp + rename).
+ * Filesystem-backed `IEventStore`. Each event is stored as a JSON file at
+ * `events/<aa>/<bb>/<id>.json` (atomic tmp+rename) with `mtime` set to
+ * `event.createdAt`. Hardlink indexes under `idx/` make filtered queries
+ * cheap — see [FsIndexer] and [FsQueryPlanner].
  *
- * This is the step-1 skeleton: only `insert`, `delete(id)`, and a minimal
- * `query` by event id. Indexes, tombstones, slots, FTS, vanish, expiration
- * sweep, and transactions arrive in later steps — see
- * `cli/plans/2026-04-24-file-event-store-*.md`.
+ * Step 2 scope: kind / author / owner / tag indexes; query planner with
+ * post-filter via `FilterMatcher`; `count`. Later steps: replaceable /
+ * addressable slots, NIP-09 tombstones, NIP-40 expiration, NIP-50 FTS,
+ * NIP-62 vanish, transactions, scrub.
  */
 class FsEventStore(
     val root: Path,
+    indexingStrategy: IndexingStrategy = DefaultIndexingStrategy(),
 ) : IEventStore {
-    private val eventsDir: Path = root.resolve(EVENTS_DIR)
-    private val stagingDir: Path = root.resolve(STAGING_DIR)
+    private val layout = FsLayout(root)
+    private val hasher: TagNameValueHasher
+    private val indexer: FsIndexer
+    private val planner: FsQueryPlanner
 
     init {
-        Files.createDirectories(eventsDir)
-        Files.createDirectories(stagingDir)
+        layout.ensureSkeleton()
         cleanStaging()
+        hasher = TagNameValueHasher(layout.readOrCreateSeed())
+        indexer = FsIndexer(layout, hasher, indexingStrategy)
+        planner = FsQueryPlanner(layout, hasher)
     }
 
     // ------------------------------------------------------------------
@@ -62,21 +73,23 @@ class FsEventStore(
     override fun insert(event: Event) {
         if (event.kind.isEphemeral()) return
 
-        val canonical = canonicalPath(event.id)
+        val canonical = layout.canonical(event.id)
         if (canonical.exists()) return
 
         Files.createDirectories(canonical.parent)
-        val tmp = Files.createTempFile(stagingDir, event.id, JSON_EXT)
+        val tmp = Files.createTempFile(layout.staging, event.id, FsLayout.JSON_EXT)
         try {
             Files.writeString(tmp, event.toJson())
             try {
                 Files.move(tmp, canonical, StandardCopyOption.ATOMIC_MOVE)
             } catch (_: FileAlreadyExistsException) {
-                // Racing writer installed the same id first. Canonical is
-                // immutable — this is a no-op, matching SQLite's unique
-                // constraint on event.id.
+                // A concurrent writer won the race. Canonical is immutable
+                // so the other copy is equivalent — drop our tmp and return.
                 Files.deleteIfExists(tmp)
+                return
             }
+            Files.setLastModifiedTime(canonical, FileTime.from(event.createdAt, TimeUnit.SECONDS))
+            indexer.link(event, canonical)
         } catch (t: Throwable) {
             Files.deleteIfExists(tmp)
             throw t
@@ -92,7 +105,7 @@ class FsEventStore(
     }
 
     // ------------------------------------------------------------------
-    // Query (by id only — full planner arrives in step 2)
+    // Query
     // ------------------------------------------------------------------
 
     @Suppress("UNCHECKED_CAST")
@@ -115,10 +128,18 @@ class FsEventStore(
         filter: Filter,
         onEach: (T) -> Unit,
     ) {
-        val ids = filter.ids ?: return // step-1: only id lookups are implemented
-        @Suppress("UNCHECKED_CAST")
-        ids.forEach { id ->
-            readEvent(id)?.let { onEach(it as T) }
+        val limit = filter.limit ?: Int.MAX_VALUE
+        if (limit <= 0) return
+        var emitted = 0
+        val seenIds = HashSet<HexKey>()
+        for (candidate in planner.plan(filter)) {
+            if (emitted >= limit) break
+            if (!seenIds.add(candidate.id)) continue
+            val event = readEvent(candidate.id) ?: continue
+            if (!filter.match(event)) continue
+            @Suppress("UNCHECKED_CAST")
+            onEach(event as T)
+            emitted++
         }
     }
 
@@ -149,52 +170,50 @@ class FsEventStore(
     // ------------------------------------------------------------------
 
     override fun delete(filter: Filter) {
-        val ids = filter.ids ?: return
+        val ids = ArrayList<HexKey>()
+        query<Event>(filter) { ids.add(it.id) }
         ids.forEach { delete(it) }
     }
 
-    override fun delete(filters: List<Filter>) = filters.forEach(::delete)
+    override fun delete(filters: List<Filter>) {
+        val ids = HashSet<HexKey>()
+        query<Event>(filters) { ids.add(it.id) }
+        ids.forEach { delete(it) }
+    }
 
     /** Delete an event by id. Returns 1 if a file was removed, 0 otherwise. */
-    fun delete(id: HexKey): Int = if (canonicalPath(id).deleteIfExists()) 1 else 0
+    fun delete(id: HexKey): Int {
+        val canonical = layout.canonical(id)
+        val event = readEvent(id) // need tags to know which index links to remove
+        if (event != null) indexer.unlink(event)
+        return if (canonical.deleteIfExists()) 1 else 0
+    }
 
     override fun deleteExpiredEvents() {
-        // Step-5 feature. No-op in skeleton — queries do not yet surface
-        // expired events either, so nothing observable changes.
+        // Step-5 feature.
     }
 
     override fun close() {
-        // No long-lived resources yet. The lock channel arrives in step 8.
+        // No long-lived resources yet.
     }
 
     // ------------------------------------------------------------------
     // Internals
     // ------------------------------------------------------------------
 
-    private fun canonicalPath(id: HexKey): Path {
-        require(id.length >= 4) { "event id must be at least 4 hex chars, got '$id'" }
-        return eventsDir.resolve(id.substring(0, 2)).resolve(id.substring(2, 4)).resolve("$id$JSON_EXT")
-    }
-
     private fun readEvent(id: HexKey): Event? {
-        val p = canonicalPath(id)
+        val p = layout.canonical(id)
         if (!p.exists()) return null
         return try {
             Event.fromJson(p.readText())
         } catch (_: java.nio.file.NoSuchFileException) {
-            null // file was removed between exists() and read — treat as absent
+            null
         }
     }
 
     private fun cleanStaging() {
-        Files.list(stagingDir).use { stream ->
+        Files.list(layout.staging).use { stream ->
             stream.forEach { Files.deleteIfExists(it) }
         }
-    }
-
-    companion object {
-        const val EVENTS_DIR = "events"
-        const val STAGING_DIR = ".staging"
-        const val JSON_EXT = ".json"
     }
 }
