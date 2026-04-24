@@ -592,7 +592,7 @@ fun AmethystTheme(
         colorScheme = colors,
         typography = Typography,
         shapes = Shapes,
-        content = { ProvideMaterialSymbols(content) },
+        content = { ProvideMaterialSymbols(content = content) },
     )
 
     val view = LocalView.current
