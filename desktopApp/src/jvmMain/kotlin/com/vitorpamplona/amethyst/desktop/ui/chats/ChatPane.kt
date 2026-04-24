@@ -83,11 +83,6 @@ import com.vitorpamplona.amethyst.commons.model.IAccount
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.service.upload.UploadOrchestrator
-import com.vitorpamplona.amethyst.commons.ui.chat.ChatMessageCompose
-import com.vitorpamplona.amethyst.commons.ui.chat.ChatroomHeader
-import com.vitorpamplona.amethyst.commons.ui.chat.DmBroadcastBanner
-import com.vitorpamplona.amethyst.commons.ui.chat.DmBroadcastStatus
-import com.vitorpamplona.amethyst.commons.ui.chat.GroupChatroomHeader
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.util.toTimeAgo

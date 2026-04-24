@@ -56,7 +56,6 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.IAccount
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
-import com.vitorpamplona.amethyst.commons.ui.chat.DmBroadcastStatus
 import com.vitorpamplona.amethyst.commons.viewmodels.ChatNewMessageState
 import com.vitorpamplona.amethyst.commons.viewmodels.ChatroomFeedViewModel
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
