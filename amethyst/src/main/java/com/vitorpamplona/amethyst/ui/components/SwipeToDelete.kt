@@ -34,7 +34,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxState
-import androidx.compose.material3.SwipeToDismissBoxValue.EndToStart
 import androidx.compose.material3.SwipeToDismissBoxValue.Settled
 import androidx.compose.material3.SwipeToDismissBoxValue.StartToEnd
 import androidx.compose.material3.Text
@@ -64,22 +63,6 @@ fun SwipeToDeleteContainer(
 ) {
     val dismissState =
         rememberSwipeToDismissBoxState(
-            confirmValueChange = {
-                when (it) {
-                    StartToEnd -> {
-                        onStartToEnd()
-                    }
-
-                    EndToStart -> {
-                        return@rememberSwipeToDismissBoxState false
-                    }
-
-                    Settled -> {
-                        return@rememberSwipeToDismissBoxState false
-                    }
-                }
-                return@rememberSwipeToDismissBoxState true
-            },
             positionalThreshold = { it * .40f },
         )
 
@@ -88,6 +71,7 @@ fun SwipeToDeleteContainer(
         modifier = modifier,
         backgroundContent = { DismissBackground(dismissState) },
         enableDismissFromEndToStart = false,
+        onDismiss = { if (it == StartToEnd) onStartToEnd() },
         content = content,
     )
 }
