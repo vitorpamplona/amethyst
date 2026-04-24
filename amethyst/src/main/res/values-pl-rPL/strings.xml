@@ -1616,7 +1616,7 @@
     <string name="my_lists_and_sets">Moje Listy/Zestawy</string>
     <string name="my_lists">Moje listy</string>
     <string name="people_list_label">Użytkownicy</string>
-    <string name="select_list_to_filter">Wybierz listę profili, aby filtrować aktualności</string>
+    <string name="select_list_to_filter">Wybierz opcję, aby filtrować aktualności</string>
     <string name="feed_group_feeds">Kanały</string>
     <string name="feed_group_hashtags">Hashtagi</string>
     <string name="feed_group_interest_sets">Grupy zainteresowań</string>
