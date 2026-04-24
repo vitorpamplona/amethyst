@@ -145,26 +145,32 @@ class DataDir(
     val keyPackageBundleFile = File(marmotDir, "keypackages.bundle")
 
     init {
-        root.mkdirs()
-        groupsDir.mkdirs()
+        SecureFileIO.secureMkdirs(root)
+        SecureFileIO.secureMkdirs(groupsDir)
+        // Tighten perms on any data already on disk from an older, unhardened CLI.
+        SecureFileIO.tighten(identityFile)
+        SecureFileIO.tighten(relaysFile)
+        SecureFileIO.tighten(stateFile)
+        SecureFileIO.tighten(marmotDir)
+        SecureFileIO.tighten(keyPackageBundleFile)
     }
 
     fun loadIdentityOrNull(): Identity? = if (identityFile.exists()) Json.mapper.readValue<Identity>(identityFile.readText()) else null
 
     fun saveIdentity(id: Identity) {
-        identityFile.writeText(Json.mapper.writeValueAsString(id))
+        SecureFileIO.writeTextAtomic(identityFile, Json.mapper.writeValueAsString(id))
     }
 
     fun loadRelays(): RelayConfig = if (relaysFile.exists()) Json.mapper.readValue(relaysFile.readText()) else RelayConfig()
 
     fun saveRelays(r: RelayConfig) {
-        relaysFile.writeText(Json.mapper.writeValueAsString(r))
+        SecureFileIO.writeTextAtomic(relaysFile, Json.mapper.writeValueAsString(r))
     }
 
     fun loadRunState(): RunState = if (stateFile.exists()) Json.mapper.readValue(stateFile.readText()) else RunState()
 
     fun saveRunState(s: RunState) {
-        stateFile.writeText(Json.mapper.writeValueAsString(s))
+        SecureFileIO.writeTextAtomic(stateFile, Json.mapper.writeValueAsString(s))
     }
 
     companion object {
