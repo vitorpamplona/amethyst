@@ -328,6 +328,10 @@ fun ShortCommunityHeader(
                 modifier = HeaderPictureModifier,
                 loadProfilePicture = accountViewModel.settings.showProfilePictures(),
                 loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+                autoPlayGif =
+                    accountViewModel.settings.autoPlayVideosFlow
+                        .collectAsStateWithLifecycle()
+                        .value,
             )
         }
 
@@ -378,6 +382,10 @@ fun ShortCommunityHeaderNoActions(
                 modifier = HeaderPictureModifier,
                 loadProfilePicture = accountViewModel.settings.showProfilePictures(),
                 loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+                autoPlayGif =
+                    accountViewModel.settings.autoPlayVideosFlow
+                        .collectAsStateWithLifecycle()
+                        .value,
             )
         }
 

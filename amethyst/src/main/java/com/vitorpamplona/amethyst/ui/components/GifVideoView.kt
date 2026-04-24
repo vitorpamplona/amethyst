@@ -21,44 +21,40 @@
 package com.vitorpamplona.amethyst.ui.components
 
 import android.graphics.drawable.Animatable
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.outlined.OpenInFull
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import coil3.asDrawable
 import coil3.compose.AsyncImagePainter
 import coil3.compose.SubcomposeAsyncImage
 import coil3.compose.SubcomposeAsyncImageContent
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.theme.Size75dp
+import com.vitorpamplona.amethyst.ui.theme.Font10SP
+import com.vitorpamplona.amethyst.ui.theme.SmallBorder
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
-import kotlinx.coroutines.delay
 
 @Composable
 fun GifVideoView(
@@ -73,24 +69,17 @@ fun GifVideoView(
     thumbhash: String? = null,
 ) {
     val ratio = dimensions?.aspectRatio() ?: MediaAspectRatioCache.get(videoUri)
-    val automaticallyStartPlayback = remember { mutableStateOf(accountViewModel.settings.autoPlayVideos()) }
-    val controllerVisible = remember { mutableStateOf(false) }
-
-    LaunchedEffect(controllerVisible.value, automaticallyStartPlayback.value) {
-        if (controllerVisible.value && automaticallyStartPlayback.value) {
-            delay(3000)
-            controllerVisible.value = false
-        }
-    }
-
+    val autoPlay = accountViewModel.settings.autoPlayVideos()
     val borderModifier = if (roundedCorner) MaterialTheme.colorScheme.imageModifier else Modifier
     val context = LocalContext.current
 
+    val containerModifier =
+        (if (ratio != null) borderModifier.aspectRatio(ratio) else borderModifier)
+            .fillMaxWidth()
+            .let { if (onDialog != null) it.clickable { onDialog() } else it }
+
     Box(
-        modifier =
-            (if (ratio != null) borderModifier.aspectRatio(ratio) else borderModifier)
-                .fillMaxWidth()
-                .clickable { controllerVisible.value = !controllerVisible.value },
+        modifier = containerModifier,
         contentAlignment = Alignment.Center,
     ) {
         SubcomposeAsyncImage(
@@ -104,13 +93,9 @@ fun GifVideoView(
             val successState = state as? AsyncImagePainter.State.Success
             val drawable = successState?.result?.image?.asDrawable(context.resources)
 
-            LaunchedEffect(automaticallyStartPlayback.value, drawable) {
+            LaunchedEffect(autoPlay, drawable) {
                 if (drawable is Animatable) {
-                    if (automaticallyStartPlayback.value) {
-                        drawable.start()
-                    } else {
-                        drawable.stop()
-                    }
+                    if (autoPlay) drawable.start() else drawable.stop()
                 }
             }
 
@@ -127,6 +112,11 @@ fun GifVideoView(
 
                 is AsyncImagePainter.State.Success -> {
                     SubcomposeAsyncImageContent(Modifier.fillMaxSize())
+
+                    SideEffect {
+                        val image = (state as AsyncImagePainter.State.Success).result.image
+                        MediaAspectRatioCache.add(videoUri, image.width, image.height)
+                    }
                 }
 
                 is AsyncImagePainter.State.Error -> {
@@ -137,49 +127,21 @@ fun GifVideoView(
             }
         }
 
-        // Zoom button
-        AnimatedVisibility(
-            visible = controllerVisible.value,
-            modifier = Modifier.align(Alignment.TopEnd),
-            enter = fadeIn(),
-            exit = fadeOut(),
-        ) {
-            IconButton(
-                onClick = { onDialog?.invoke() },
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.OpenInFull,
-                    contentDescription = null,
-                    tint = Color.White,
-                )
-            }
-        }
-
-        // Play/Pause button
-        AnimatedVisibility(
-            visible = controllerVisible.value || !automaticallyStartPlayback.value,
-            enter = fadeIn(),
-            exit = fadeOut(),
-        ) {
-            Box(
+        if (!autoPlay) {
+            Text(
+                text = stringResource(R.string.gif),
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                fontSize = Font10SP,
+                lineHeight = Font10SP,
                 modifier =
                     Modifier
-                        .fillMaxSize()
-                        .background(if (!automaticallyStartPlayback.value) Color.Black.copy(alpha = 0.3f) else Color.Transparent),
-                contentAlignment = Alignment.Center,
-            ) {
-                IconButton(
-                    modifier = Modifier.size(Size75dp),
-                    onClick = { automaticallyStartPlayback.value = !automaticallyStartPlayback.value },
-                ) {
-                    Icon(
-                        imageVector = if (automaticallyStartPlayback.value) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(Size75dp),
-                    )
-                }
-            }
+                        .align(Alignment.BottomStart)
+                        .padding(6.dp)
+                        .clip(SmallBorder)
+                        .background(Color.Black.copy(alpha = 0.6f))
+                        .padding(horizontal = 4.dp, vertical = 1.dp),
+            )
         }
     }
 }

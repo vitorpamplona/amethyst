@@ -209,6 +209,10 @@ private fun ChannelRoomCompose(
         hasNewMessages = (noteEvent?.createdAt ?: Long.MIN_VALUE) > lastReadTime,
         loadProfilePicture = accountViewModel.settings.showProfilePictures(),
         loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+        autoPlayGif =
+            accountViewModel.settings.autoPlayVideosFlow
+                .collectAsStateWithLifecycle()
+                .value,
         onClick = { nav.nav(routeFor(channel)) },
     )
 }
@@ -241,6 +245,10 @@ private fun ChannelRoomCompose(
         hasNewMessages = (noteEvent?.createdAt ?: Long.MIN_VALUE) > lastReadTime,
         loadProfilePicture = accountViewModel.settings.showProfilePictures(),
         loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+        autoPlayGif =
+            accountViewModel.settings.autoPlayVideosFlow
+                .collectAsStateWithLifecycle()
+                .value,
         onClick = { nav.nav(routeFor(channel)) },
     )
 }
@@ -276,6 +284,10 @@ private fun MarmotGroupRoomCompose(
         hasNewMessages = unread > 0,
         loadProfilePicture = accountViewModel.settings.showProfilePictures(),
         loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+        autoPlayGif =
+            accountViewModel.settings.autoPlayVideosFlow
+                .collectAsStateWithLifecycle()
+                .value,
         onClick = { nav.nav(Route.MarmotGroupChat(chatroom.nostrGroupId)) },
     )
 }
@@ -399,6 +411,7 @@ fun ChannelName(
     hasNewMessages: Boolean,
     loadProfilePicture: Boolean,
     loadRobohash: Boolean,
+    autoPlayGif: Boolean,
     onClick: () -> Unit,
 ) {
     ChannelName(
@@ -410,6 +423,7 @@ fun ChannelName(
                 modifier = AccountPictureModifier,
                 loadProfilePicture = loadProfilePicture,
                 loadRobohash = loadRobohash,
+                autoPlayGif = autoPlayGif,
             )
         },
         channelTitle,
