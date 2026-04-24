@@ -61,6 +61,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
@@ -623,6 +624,10 @@ fun WatchUserMetadataAndFollowsAndRenderUserProfilePicture(
             contentScale = ContentScale.Crop,
             loadProfilePicture = accountViewModel.settings.showProfilePictures(),
             loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+            autoPlayGif =
+                accountViewModel.settings.autoPlayVideosFlow
+                    .collectAsStateWithLifecycle()
+                    .value,
         )
     }
 

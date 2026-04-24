@@ -56,86 +56,105 @@ fun MyAsyncImage(
     onLoadingBackground: (@Composable () -> Unit)?,
     onError: (@Composable () -> Unit)?,
 ) {
-    val ratio = MediaAspectRatioCache.get(imageUrl)
-    val showImage = remember { mutableStateOf(accountViewModel.settings.showImages()) }
+    if (isGifUrl(imageUrl)) {
+        GifVideoView(
+            videoUri = imageUrl,
+            contentDescription = contentDescription,
+            dimensions = null,
+            blurhash = null,
+            roundedCorner = contentScale == ContentScale.Crop,
+            contentScale = contentScale,
+            onDialog = null,
+            accountViewModel = accountViewModel,
+            thumbhash = null,
+        )
+    } else {
+        val ratio = MediaAspectRatioCache.get(imageUrl)
+        val showImage = remember { mutableStateOf(accountViewModel.settings.showImages()) }
 
-    CrossfadeIfEnabled(targetState = showImage.value, contentAlignment = Alignment.Center, accountViewModel = accountViewModel) {
-        if (it) {
-            SubcomposeAsyncImage(
-                model = imageUrl,
-                contentDescription = contentDescription,
-                contentScale = contentScale,
-                modifier = mainImageModifier,
-            ) {
-                val state by painter.state.collectAsState()
-                when (state) {
-                    is AsyncImagePainter.State.Loading -> {
-                        if (ratio != null) {
-                            Box(loadedImageModifier.aspectRatio(ratio), contentAlignment = Alignment.Center) {
-                                LoadingAnimation(Size40dp, Size6dp)
-                            }
-                        } else {
-                            WaitAndDisplay {
-                                if (onLoadingBackground != null) {
-                                    Box(loadedImageModifier, contentAlignment = Alignment.Center) {
-                                        onLoadingBackground()
-                                        LoadingAnimation(Size40dp, Size6dp)
-                                    }
-                                } else {
-                                    DisplayUrlWithLoadingSymbol(imageUrl, accountViewModel.toastManager::toast)
-                                }
-                            }
-                        }
-                    }
-
-                    is AsyncImagePainter.State.Error -> {
-                        if (onError != null) {
+        CrossfadeIfEnabled(targetState = showImage.value, contentAlignment = Alignment.Center, accountViewModel = accountViewModel) {
+            if (it) {
+                SubcomposeAsyncImage(
+                    model = imageUrl,
+                    contentDescription = contentDescription,
+                    contentScale = contentScale,
+                    modifier = mainImageModifier,
+                ) {
+                    val state by painter.state.collectAsState()
+                    when (state) {
+                        is AsyncImagePainter.State.Loading -> {
                             if (ratio != null) {
                                 Box(loadedImageModifier.aspectRatio(ratio), contentAlignment = Alignment.Center) {
-                                    onError()
+                                    LoadingAnimation(Size40dp, Size6dp)
                                 }
                             } else {
-                                Box(loadedImageModifier, contentAlignment = Alignment.Center) {
-                                    onError()
+                                WaitAndDisplay {
+                                    if (onLoadingBackground != null) {
+                                        Box(loadedImageModifier, contentAlignment = Alignment.Center) {
+                                            onLoadingBackground()
+                                            LoadingAnimation(Size40dp, Size6dp)
+                                        }
+                                    } else {
+                                        DisplayUrlWithLoadingSymbol(imageUrl, accountViewModel.toastManager::toast)
+                                    }
                                 }
                             }
-                        } else {
-                            ClickableUrl(urlText = imageUrl, url = imageUrl)
                         }
-                    }
 
-                    is AsyncImagePainter.State.Success -> {
-                        SubcomposeAsyncImageContent(loadedImageModifier)
-
-                        SideEffect {
-                            val drawable = (state as AsyncImagePainter.State.Success).result.image
-                            MediaAspectRatioCache.add(imageUrl, drawable.width, drawable.height)
+                        is AsyncImagePainter.State.Error -> {
+                            if (onError != null) {
+                                if (ratio != null) {
+                                    Box(loadedImageModifier.aspectRatio(ratio), contentAlignment = Alignment.Center) {
+                                        onError()
+                                    }
+                                } else {
+                                    Box(loadedImageModifier, contentAlignment = Alignment.Center) {
+                                        onError()
+                                    }
+                                }
+                            } else {
+                                ClickableUrl(urlText = imageUrl, url = imageUrl)
+                            }
                         }
-                    }
 
-                    else -> {}
-                }
-            }
-        } else {
-            if (ratio != null) {
-                Box(loadedImageModifier.aspectRatio(ratio), contentAlignment = Alignment.Center) {
-                    IconButton(
-                        modifier = Modifier.size(Size75dp),
-                        onClick = { showImage.value = true },
-                    ) {
-                        DownloadForOfflineIcon(Size75dp, MaterialTheme.colorScheme.onBackground)
+                        is AsyncImagePainter.State.Success -> {
+                            SubcomposeAsyncImageContent(loadedImageModifier)
+
+                            SideEffect {
+                                val drawable = (state as AsyncImagePainter.State.Success).result.image
+                                MediaAspectRatioCache.add(imageUrl, drawable.width, drawable.height)
+                            }
+                        }
+
+                        else -> {}
                     }
                 }
             } else {
-                Box(loadedImageModifier.aspectRatio(16 / 9.0f), contentAlignment = Alignment.Center) {
-                    IconButton(
-                        modifier = Modifier.size(Size75dp),
-                        onClick = { showImage.value = true },
-                    ) {
-                        DownloadForOfflineIcon(Size75dp, MaterialTheme.colorScheme.onBackground)
+                if (ratio != null) {
+                    Box(loadedImageModifier.aspectRatio(ratio), contentAlignment = Alignment.Center) {
+                        IconButton(
+                            modifier = Modifier.size(Size75dp),
+                            onClick = { showImage.value = true },
+                        ) {
+                            DownloadForOfflineIcon(Size75dp, MaterialTheme.colorScheme.onBackground)
+                        }
+                    }
+                } else {
+                    Box(loadedImageModifier.aspectRatio(16 / 9.0f), contentAlignment = Alignment.Center) {
+                        IconButton(
+                            modifier = Modifier.size(Size75dp),
+                            onClick = { showImage.value = true },
+                        ) {
+                            DownloadForOfflineIcon(Size75dp, MaterialTheme.colorScheme.onBackground)
+                        }
                     }
                 }
             }
         }
     }
 }
+
+fun isGifUrl(url: String): Boolean =
+    url.endsWith(".gif", ignoreCase = true) ||
+        url.contains(".gif?", ignoreCase = true) ||
+        url.contains(".gif#", ignoreCase = true)

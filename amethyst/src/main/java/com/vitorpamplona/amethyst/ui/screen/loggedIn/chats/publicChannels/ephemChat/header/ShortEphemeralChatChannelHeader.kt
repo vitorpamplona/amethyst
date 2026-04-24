@@ -34,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
@@ -103,6 +104,10 @@ private fun DrawRelayIcon(
         modifier = HeaderPictureModifier,
         loadProfilePicture = accountViewModel.settings.showProfilePictures(),
         loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+        autoPlayGif =
+            accountViewModel.settings.autoPlayVideosFlow
+                .collectAsStateWithLifecycle()
+                .value,
     )
 }
 
