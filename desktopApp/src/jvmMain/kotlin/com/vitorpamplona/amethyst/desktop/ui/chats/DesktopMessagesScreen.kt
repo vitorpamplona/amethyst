@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.desktop.ui.chats
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -286,7 +287,13 @@ private fun SplitMessagesContent(
 
         VerticalDivider(modifier = Modifier.fillMaxHeight())
 
-        Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+        Box(
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .background(MaterialTheme.colorScheme.surface),
+        ) {
             val currentRoom = selectedRoom
             if (currentRoom != null) {
                 val feedViewModel =

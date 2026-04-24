@@ -56,6 +56,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -120,6 +121,9 @@ fun ConversationListPane(
         modifier =
             modifier
                 .fillMaxHeight()
+                // Chat-list pane reads as a secondary surface (like Messages.app,
+                // Slack, Telegram); the chat content pane to the right stays white.
+                .background(MaterialTheme.colorScheme.surfaceContainer)
                 .focusRequester(focusRequester)
                 .focusable()
                 .onPreviewKeyEvent { event ->
@@ -284,9 +288,13 @@ private fun ConversationCard(
 ) {
     val backgroundColor =
         when {
-            isSelected -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
-            isFocused -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-            else -> MaterialTheme.colorScheme.surface
+            isSelected -> MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)
+
+            isFocused -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f)
+
+            // Transparent lets the pane's surfaceContainer show through — the
+            // list pane is the "secondary surface" in this screen.
+            else -> Color.Transparent
         }
 
     Row(
