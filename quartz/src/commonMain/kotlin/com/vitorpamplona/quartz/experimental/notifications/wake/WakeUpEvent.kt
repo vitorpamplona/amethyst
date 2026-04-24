@@ -35,7 +35,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.kinds.kind
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag.Companion.parse
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag.Companion.parseKey
-import com.vitorpamplona.quartz.nip01Core.tags.people.toPTag
+import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUsers
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.serialization.json.JsonNull.content
@@ -68,6 +68,10 @@ class WakeUpEvent(
         const val KIND = 23903
         const val ALT_DESCRIPTION = "WakeUp"
 
+        // Tags the audience of [about] (its `p` tags) as the recipients to wake up.
+        // The about event's author is NOT tagged: a WakeUp about a zap from Alice
+        // to Bob should notify Bob, not Alice. Callers can add more recipients via
+        // [initializer].
         fun build(
             about: EventHintBundle<Event>,
             createdAt: Long = TimeUtils.now(),
@@ -75,7 +79,7 @@ class WakeUpEvent(
         ) = eventTemplate(KIND, content, createdAt) {
             alt(ALT_DESCRIPTION)
             about(about)
-            notify(about.toPTag())
+            notify(about.event.tags.taggedUsers())
             kind(about.event.kind)
             initializer()
         }

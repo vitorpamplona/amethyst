@@ -923,6 +923,12 @@ object LocalCache : ILocalCache, ICacheProvider {
                     event.taggedAddresses().map { getOrCreateAddressableNote(it) }
             }
 
+            is WakeUpEvent -> {
+                // Link the referenced events so filterMissingEvents will query
+                // for them when the WakeUp note is in an EventFinder subscription.
+                event.eventIds().mapNotNull { checkGetOrCreateNote(it) }
+            }
+
             is ChannelMessageEvent -> {
                 event.tagsWithoutCitations().filter { it != event.channelId() }.mapNotNull { checkGetOrCreateNote(it) }
             }
