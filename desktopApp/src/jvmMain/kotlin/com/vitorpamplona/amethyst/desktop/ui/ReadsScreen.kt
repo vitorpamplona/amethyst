@@ -286,13 +286,14 @@ fun ReadsScreen(
     }
 
     ReadingColumn {
+        val sidePadding = readingHorizontalPadding()
         // Header — Messages-style: tabs left, refresh right. The selected tab
         // (Following / Global) acts as the screen title, so no separate label.
         Row(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                    .padding(horizontal = sidePadding, vertical = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -357,7 +358,7 @@ fun ReadsScreen(
 
             else -> {
                 LazyColumn(
-                    contentPadding = PaddingValues(horizontal = 12.dp),
+                    contentPadding = PaddingValues(horizontal = sidePadding),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     items(events, key = { it.id }) { event ->

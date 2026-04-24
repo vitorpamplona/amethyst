@@ -546,8 +546,9 @@ fun FeedScreen(
 
                 is FeedState.Loaded -> {
                     val loadedState by state.feed.collectAsState()
+                    val sidePadding = LocalReadingSidePadding.current
                     LazyColumn(
-                        contentPadding = PaddingValues(horizontal = 12.dp),
+                        contentPadding = PaddingValues(horizontal = sidePadding + 12.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         items(loadedState.list, key = { it.idHex }) { note ->
@@ -649,8 +650,12 @@ private fun FeedHeader(
     onNavigateToRelays: () -> Unit = {},
     onOpenRelayPicker: () -> Unit = {},
 ) {
+    val sidePadding = LocalReadingSidePadding.current
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = sidePadding + 12.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {

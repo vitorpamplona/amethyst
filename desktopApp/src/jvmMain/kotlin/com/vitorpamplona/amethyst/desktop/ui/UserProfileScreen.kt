@@ -30,14 +30,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -439,20 +437,14 @@ fun UserProfileScreen(
         previousFirstVisibleItemScrollOffset = currentOffset
     }
 
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
-        Box(
-            modifier =
-                Modifier
-                    .widthIn(max = DefaultReadingWidth)
-                    .fillMaxWidth()
-                    .fillMaxHeight(),
-        ) {
+    ReadingColumn {
+        Box(modifier = Modifier.fillMaxSize()) {
             if (connectedRelays.isEmpty()) {
                 LoadingState("Connecting to relays...")
             } else {
                 LazyColumn(
                     state = listState,
-                    contentPadding = PaddingValues(horizontal = 12.dp),
+                    contentPadding = PaddingValues(horizontal = readingHorizontalPadding()),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.fillMaxSize(),
                 ) {
@@ -470,10 +462,11 @@ fun UserProfileScreen(
                         )
                     }
 
-                    // Header — Messages-style: compact row, titleMedium title
+                    // Header — Messages-style: compact row, titleMedium title.
+                    // Horizontal gutter already supplied by LazyColumn.contentPadding.
                     item(key = "header") {
                         Row(
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
@@ -902,8 +895,11 @@ fun UserProfileScreen(
                 }
             }
 
-            // Floating header — appears on scroll up when profile header is out of view
-            AnimatedVisibility(
+            // Floating header — appears on scroll up when profile header is out of view.
+            // Fully-qualified call to force the non-scoped overload; ReadingColumn
+            // provides a ColumnScope in the outer lambda which would otherwise win
+            // overload resolution and break the BoxScope Modifier.align call below.
+            androidx.compose.animation.AnimatedVisibility(
                 visible = showFloatingHeader,
                 enter = slideInVertically { -it },
                 exit = slideOutVertically { -it },

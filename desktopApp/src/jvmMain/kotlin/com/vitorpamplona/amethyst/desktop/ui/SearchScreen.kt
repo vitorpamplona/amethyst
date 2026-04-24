@@ -32,14 +32,12 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -292,16 +290,10 @@ fun SearchScreen(
         focusRequester.requestFocus()
     }
 
-    androidx.compose.foundation.layout.Box(
-        modifier =
-            androidx.compose.ui.Modifier
-                .fillMaxSize(),
-        contentAlignment = androidx.compose.ui.Alignment.TopCenter,
-    ) {
+    ReadingColumn {
         Column(
             modifier =
                 modifier
-                    .widthIn(max = DefaultReadingWidth)
                     .fillMaxWidth()
                     .fillMaxHeight()
                     .onPreviewKeyEvent { event ->
@@ -342,12 +334,13 @@ fun SearchScreen(
             )
 
             // Title row
+            val sidePadding = readingHorizontalPadding()
             Row(
                 modifier =
                     Modifier
                         .fillMaxWidth()
                         .heightIn(min = 48.dp)
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                        .padding(horizontal = sidePadding, vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -384,7 +377,7 @@ fun SearchScreen(
                     textStyle = MaterialTheme.typography.bodyMedium,
                     placeholder = {
                         Text(
-                            "Search notes, people, tags... or use operators",
+                            "Search people, tags, notes…",
                             style = MaterialTheme.typography.bodyMedium,
                         )
                     },
@@ -548,7 +541,7 @@ private fun SearchEmptyState(
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(horizontal = 12.dp),
+        contentPadding = PaddingValues(horizontal = readingHorizontalPadding()),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         // Saved searches

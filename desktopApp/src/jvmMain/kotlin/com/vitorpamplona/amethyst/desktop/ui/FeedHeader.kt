@@ -55,7 +55,10 @@ fun FeedHeader(
     modifier: Modifier = Modifier,
 ) {
     Row(
-        modifier = modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(horizontal = readingHorizontalPadding(), vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {

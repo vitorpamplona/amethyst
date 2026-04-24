@@ -32,7 +32,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -1324,18 +1323,17 @@ fun RelaySettingsScreen(
         accountManager.loadNwcConnection()
     }
 
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.TopCenter,
-    ) {
+    com.vitorpamplona.amethyst.desktop.ui.ReadingColumn {
+        val sidePadding =
+            com.vitorpamplona.amethyst.desktop.ui
+                .readingHorizontalPadding()
         Column(
             modifier =
                 Modifier
-                    .widthIn(max = 720.dp)
                     .fillMaxWidth()
                     .fillMaxHeight()
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 12.dp),
+                    .padding(horizontal = sidePadding),
         ) {
             Row(
                 modifier =

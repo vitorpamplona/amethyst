@@ -73,12 +73,15 @@ fun MyHighlightsScreen(
     var deleteTarget by remember { mutableStateOf<HighlightData?>(null) }
 
     com.vitorpamplona.amethyst.desktop.ui.ReadingColumn {
+        val sidePadding =
+            com.vitorpamplona.amethyst.desktop.ui
+                .readingHorizontalPadding()
         Row(
             modifier =
                 Modifier
                     .fillMaxWidth()
                     .heightIn(min = 48.dp)
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                    .padding(horizontal = sidePadding, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
@@ -95,7 +98,7 @@ fun MyHighlightsScreen(
             )
         } else {
             LazyColumn(
-                contentPadding = PaddingValues(horizontal = 12.dp),
+                contentPadding = PaddingValues(horizontal = sidePadding),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 allHighlights.forEach { (addressTag, highlights) ->

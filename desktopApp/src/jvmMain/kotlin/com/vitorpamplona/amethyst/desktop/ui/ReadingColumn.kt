@@ -20,15 +20,13 @@
  */
 package com.vitorpamplona.amethyst.desktop.ui
 
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -42,35 +40,50 @@ import androidx.compose.ui.unit.dp
 val DefaultReadingWidth: Dp = 720.dp
 
 /**
- * A top-level content scaffold that caps width and centers its column on wide
- * displays. Each feed / list / profile screen wraps its contents in this so
- * cards maintain a consistent proportion across the whole app.
+ * Side padding the current screen should apply to its scrollable list /
+ * headers to keep content centered at [DefaultReadingWidth] within the
+ * window. `0.dp` outside of a [ReadingColumn].
+ *
+ * Screens use this to widen the gutter on wide displays (`horizontal =
+ * readingSidePadding + 12.dp`) while keeping the scrollable area itself at
+ * full window width — so the mouse wheel scrolls the feed wherever it
+ * hovers, not only inside the 720 dp column.
+ */
+val LocalReadingSidePadding = compositionLocalOf { 0.dp }
+
+/**
+ * Convenience: reads the current reading-column side padding and adds the
+ * standard 12.dp screen-edge gutter. Use this inside composable bodies when
+ * applying horizontal padding to header rows or `contentPadding` on
+ * LazyColumns so items stay centered at [DefaultReadingWidth] while the
+ * scrollable surface still spans the full window width.
+ */
+@Composable
+fun readingHorizontalPadding(): Dp = LocalReadingSidePadding.current + 12.dp
+
+/**
+ * Top-level scaffold for single-pane content screens. Measures the window
+ * width and computes the side padding that centers a [maxWidth]-wide column
+ * within it. The actual content (header + LazyColumn) fills the window — the
+ * centering is done via [LocalReadingSidePadding] applied to inner modifiers
+ * (`horizontal` padding on a header Row, `contentPadding` on a LazyColumn).
+ * This keeps scroll events live across the full window, not just the center
+ * column.
  *
  * Not used by:
  * - Messages (two-pane layout with its own sizing)
  * - Article Reader (has its own narrower reading-width logic)
- * - Editor / Chess / Relay Dashboard (rely on full width for tools / boards)
+ * - Editor / Chess / Relay Dashboard (tools that want full width)
  */
 @Composable
 fun ReadingColumn(
-    modifier: Modifier = Modifier,
     maxWidth: Dp = DefaultReadingWidth,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.TopCenter,
-    ) {
-        // Order matters: widthIn must come BEFORE fillMaxWidth, otherwise
-        // fillMaxWidth locks the Column to parent.width and the cap is ignored.
-        // fillMaxHeight is safe (it only constrains the other axis).
-        Column(
-            modifier =
-                modifier
-                    .widthIn(max = maxWidth)
-                    .fillMaxWidth()
-                    .fillMaxHeight(),
-            content = content,
-        )
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val sidePadding = ((this.maxWidth - maxWidth) / 2).coerceAtLeast(0.dp)
+        CompositionLocalProvider(LocalReadingSidePadding provides sidePadding) {
+            Column(modifier = Modifier.fillMaxSize(), content = content)
+        }
     }
 }

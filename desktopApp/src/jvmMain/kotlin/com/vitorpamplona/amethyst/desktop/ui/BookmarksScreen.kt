@@ -249,13 +249,14 @@ fun BookmarksScreen(
     val currentBookmarkIds = if (selectedTab == BookmarkTab.PUBLIC) publicBookmarkIds else privateBookmarkIds
 
     ReadingColumn {
+        val sidePadding = readingHorizontalPadding()
         // Header with tabs
         Row(
             modifier =
                 Modifier
                     .fillMaxWidth()
                     .heightIn(min = 48.dp)
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                    .padding(horizontal = sidePadding, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
@@ -306,7 +307,7 @@ fun BookmarksScreen(
             else -> {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 12.dp),
+                    contentPadding = PaddingValues(horizontal = sidePadding),
                 ) {
                     items(currentEvents, key = { it.id }) { event ->
                         Column(

@@ -67,12 +67,13 @@ fun DraftsScreen(
     var deleteTarget by remember { mutableStateOf<DraftEntry?>(null) }
 
     ReadingColumn {
+        val sidePadding = readingHorizontalPadding()
         Row(
             modifier =
                 Modifier
                     .fillMaxWidth()
                     .heightIn(min = 48.dp)
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                    .padding(horizontal = sidePadding, vertical = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -103,7 +104,7 @@ fun DraftsScreen(
             )
         } else {
             LazyColumn(
-                contentPadding = PaddingValues(horizontal = 12.dp),
+                contentPadding = PaddingValues(horizontal = sidePadding),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 items(drafts, key = { it.slug }) { entry ->

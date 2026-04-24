@@ -256,7 +256,7 @@ fun NotificationsScreen(
             )
         } else {
             LazyColumn(
-                contentPadding = PaddingValues(horizontal = 12.dp),
+                contentPadding = PaddingValues(horizontal = readingHorizontalPadding()),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 items(notifications.distinctBy { it.event.id }, key = { it.event.id }) { notification ->

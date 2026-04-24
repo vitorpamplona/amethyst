@@ -199,9 +199,10 @@ fun ThreadScreen(
 
     Box(modifier = Modifier.fillMaxSize()) {
         ReadingColumn {
+            val sidePadding = readingHorizontalPadding()
             // Header — Messages-style: compact row with back + titleMedium
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = sidePadding, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 IconButton(onClick = onBack, modifier = Modifier.size(32.dp)) {
@@ -240,7 +241,7 @@ fun ThreadScreen(
 
                 else -> {
                     LazyColumn(
-                        contentPadding = PaddingValues(horizontal = 12.dp),
+                        contentPadding = PaddingValues(horizontal = sidePadding),
                         verticalArrangement = Arrangement.spacedBy(0.dp),
                     ) {
                         // Root note
