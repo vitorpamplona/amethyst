@@ -90,10 +90,6 @@ class EventNotificationConsumer(
     companion object {
         private const val WAKELOCK_TIMEOUT_MS = 10 * 60 * 1000L // 10 minutes
         private const val WAKEUP_WINDOW_MS = 30_000L
-
-        // Upper bound on referenced events we'll chase per WakeUp. Guards against
-        // a malicious sender opening hundreds of subscriptions per wake-up.
-        private const val MAX_WAKEUP_REFS = 16
     }
 
     /**
@@ -194,11 +190,7 @@ class EventNotificationConsumer(
     ) {
         // A WakeUp's whole purpose is the events it references. If it carries
         // none, there's nothing to fetch — skip the 30s subscription window.
-        val referencedTags =
-            event
-                .events()
-                .distinctBy { it.eventId }
-                .take(MAX_WAKEUP_REFS)
+        val referencedTags = event.events().distinctBy { it.eventId }
         if (referencedTags.isEmpty()) {
             Log.d(TAG) { "WakeUp ${event.id} has no referenced events — skipping" }
             return
@@ -208,13 +200,10 @@ class EventNotificationConsumer(
         // events; those are whose metadata we need to render the notification.
         // Fall back to e-tag author hints and finally to the WakeUp signer.
         val referencedNotes = referencedTags.map { LocalCache.getOrCreateNote(it.eventId) }
-        val authorKeys =
+        val authorCandidates =
             (event.authorKeys() + referencedTags.mapNotNull { it.author })
                 .distinct()
                 .ifEmpty { listOf(event.pubKey) }
-        val authorCandidates =
-            authorKeys
-                .take(MAX_WAKEUP_REFS)
                 .map { LocalCache.getOrCreateUser(it) }
 
         coroutineScope {
