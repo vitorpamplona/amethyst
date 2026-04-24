@@ -98,10 +98,8 @@ fun LongFormCard(
     val publishedAt = event.publishedAt() ?: event.createdAt
 
     Card(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onClick),
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
         colors =
             CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surface,
