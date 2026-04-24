@@ -77,26 +77,59 @@ object PlatformColorScheme {
             outlineVariant = Color(0xFF3A3A3A),
         )
 
-    private fun macOSLight(accent: Color) =
-        lightColorScheme(
-            primary = accent,
-            onPrimary = onAccent(accent),
-            secondary = accent,
-            tertiary = accent,
-            background = Color(0xFFECECEC),
+    private fun macOSLight(accent: Color): ColorScheme {
+        // Apple's accent palette includes Yellow (#F8BA00) and Graphite (#8C8C8C)
+        // which have terrible contrast on any light surface. Darken high-luminance
+        // accents so the primary color stays readable without disabling the user's
+        // preference — the hue is preserved, just pulled toward a usable lightness.
+        val readable = darkenForLight(accent)
+        return lightColorScheme(
+            primary = readable,
+            onPrimary = onAccent(readable),
+            secondary = readable,
+            tertiary = readable,
+            // Apple's light-mode main content background is near-white (#F5F5F7 /
+            // Apple's secondarySystemBackgroundColor); the #ECECEC gray is only
+            // used behind the title bar chrome — which we map to surfaceContainer.
+            background = Color(0xFFF5F5F7),
             onBackground = Color(0xFF1A1A1A),
             surface = Color(0xFFFFFFFF),
             onSurface = Color(0xFF1A1A1A),
-            surfaceVariant = Color(0xFFF2F2F2),
+            surfaceVariant = Color(0xFFECECEC),
             onSurfaceVariant = Color(0xFF555555),
-            surfaceContainer = Color(0xFFF6F6F6),
-            surfaceContainerHigh = Color(0xFFEDEDED),
-            surfaceContainerHighest = Color(0xFFE5E5E5),
-            surfaceContainerLow = Color(0xFFFAFAFA),
+            surfaceContainer = Color(0xFFECECEC),
+            surfaceContainerHigh = Color(0xFFE5E5E5),
+            surfaceContainerHighest = Color(0xFFDDDDDD),
+            surfaceContainerLow = Color(0xFFF0F0F0),
             surfaceContainerLowest = Color(0xFFFFFFFF),
             outline = Color(0xFFB0B0B0),
             outlineVariant = Color(0xFFD8D8D8),
         )
+    }
+
+    /**
+     * Scales an accent color toward black until its relative luminance is at
+     * most [maxLuminance]. Preserves hue (all RGB channels scale by the same
+     * factor). Only applied on light surfaces — on dark surfaces the raw accent
+     * already has good contrast.
+     *
+     * 0.38 was picked empirically: it keeps a saturated blue visible without
+     * darkening it, while pulling yellow/graphite down to a readable amber/gray.
+     */
+    private fun darkenForLight(
+        c: Color,
+        maxLuminance: Float = 0.38f,
+    ): Color {
+        val lum = 0.2126f * c.red + 0.7152f * c.green + 0.0722f * c.blue
+        if (lum <= maxLuminance) return c
+        val scale = maxLuminance / lum
+        return Color(
+            red = (c.red * scale).coerceIn(0f, 1f),
+            green = (c.green * scale).coerceIn(0f, 1f),
+            blue = (c.blue * scale).coerceIn(0f, 1f),
+            alpha = c.alpha,
+        )
+    }
 
     // ── GNOME (libadwaita) ────────────────────────────────────────────────────
 

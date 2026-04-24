@@ -61,6 +61,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.BitmapPainter
+import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyShortcut
 import androidx.compose.ui.unit.dp
@@ -252,10 +254,24 @@ fun main() {
         // Callback set by App() for single pane navigation from MenuBar
         var navigateToScreen by remember { mutableStateOf<((DeckColumnType) -> Unit)?>(null) }
 
+        // Transparent 512x512 PNG shown in the macOS dock / Windows taskbar / GNOME
+        // & KDE task switchers while running via gradle (the packaged app uses the
+        // icon.icns / icon.ico configured in nativeDistributions).
+        val appIcon =
+            remember {
+                val bytes = Unit::class.java.getResourceAsStream("/icon.png")!!.readBytes()
+                val bitmap =
+                    org.jetbrains.skia.Image
+                        .makeFromEncoded(bytes)
+                        .toComposeImageBitmap()
+                BitmapPainter(bitmap)
+            }
+
         Window(
             onCloseRequest = ::exitApplication,
             state = windowState,
             title = "Amethyst",
+            icon = appIcon,
         ) {
             // macOS: transparent + full-window-content title bar so the deck/sidebar
             // shows through, with traffic lights still drawn on top. No-op elsewhere.
