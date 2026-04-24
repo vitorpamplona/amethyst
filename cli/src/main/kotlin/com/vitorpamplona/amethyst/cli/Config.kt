@@ -21,6 +21,9 @@
 package com.vitorpamplona.amethyst.cli
 
 import com.fasterxml.jackson.module.kotlin.readValue
+import com.vitorpamplona.amethyst.cli.secrets.IdentityFile
+import com.vitorpamplona.amethyst.cli.secrets.IdentitySecret
+import com.vitorpamplona.amethyst.cli.secrets.SecretStore
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
@@ -78,6 +81,24 @@ data class Identity(
                 nsec = null,
                 npub = pubHex.hexToByteArray().toNpub(),
             )
+
+        /**
+         * Rebuild an in-memory identity after a load. Accepts the public
+         * parts that live on disk and a private key resolved from the
+         * backend (or null for read-only accounts). Re-derives `nsec` so
+         * callers that print it (e.g. `amy init`) keep working.
+         */
+        fun fromDisk(
+            pubKeyHex: String,
+            npub: String,
+            privKeyHex: String?,
+        ): Identity =
+            Identity(
+                privKeyHex = privKeyHex,
+                pubKeyHex = pubKeyHex,
+                nsec = privKeyHex?.hexToByteArray()?.toNsec(),
+                npub = npub,
+            )
     }
 }
 
@@ -133,9 +154,14 @@ data class RunState(
 /**
  * Root of the on-disk layout. Any absolute path chosen by `--data-dir` (or
  * `$AMETHYST_CLI_DATA`) — defaults to `./amy`.
+ *
+ * [secrets] is the [SecretStore] that mediates private-key persistence.
+ * Owning it here keeps the call sites that already thread [DataDir] from
+ * having to learn about a second parameter.
  */
 class DataDir(
     val root: File,
+    val secrets: SecretStore,
 ) {
     val identityFile = File(root, "identity.json")
     val relaysFile = File(root, "relays.json")
@@ -155,10 +181,55 @@ class DataDir(
         SecureFileIO.tighten(keyPackageBundleFile)
     }
 
-    fun loadIdentityOrNull(): Identity? = if (identityFile.exists()) Json.mapper.readValue<Identity>(identityFile.readText()) else null
+    /**
+     * Read the on-disk metadata without touching any backend. Safe to use
+     * for "does an identity exist?" / "what's the npub?" checks that must
+     * not pop a keychain prompt or ask for a passphrase.
+     */
+    fun loadIdentityFileOrNull(): IdentityFile? = if (identityFile.exists()) Json.mapper.readValue(identityFile.readText()) else null
 
+    fun identityExists(): Boolean = identityFile.exists()
+
+    /**
+     * Load the identity from disk. Resolves the private key through the
+     * configured [SecretStore] (prompting for a passphrase if needed) and
+     * auto-migrates pre-secret-store files that still carry `privKeyHex`/
+     * `nsec` at the top level — the migrated content is written back via
+     * [saveIdentity] on the next explicit save, not eagerly on load.
+     */
+    fun loadIdentityOrNull(): Identity? {
+        val file = loadIdentityFileOrNull() ?: return null
+        val privHex: String? =
+            when {
+                file.secret != null -> secrets.resolve(file.secret)
+                file.privKeyHex != null -> file.privKeyHex
+                file.nsec != null -> file.nsec.bechToBytes().toHexKey()
+                else -> null // read-only
+            }
+        return Identity.fromDisk(pubKeyHex = file.pubKeyHex, npub = file.npub, privKeyHex = privHex)
+    }
+
+    /**
+     * Persist [id]. When [id] carries a private key, [SecretStore.store] is
+     * called to push it to the selected backend (keychain / ncryptsec /
+     * plaintext); only the resulting [IdentitySecret] reference is written
+     * to disk. Read-only identities persist `secret: null`.
+     */
     fun saveIdentity(id: Identity) {
-        SecureFileIO.writeTextAtomic(identityFile, Json.mapper.writeValueAsString(id))
+        val secret: IdentitySecret? = id.privKeyHex?.let { secrets.store(id.pubKeyHex, it) }
+        val file = IdentityFile(pubKeyHex = id.pubKeyHex, npub = id.npub, secret = secret)
+        SecureFileIO.writeTextAtomic(identityFile, Json.mapper.writeValueAsString(file))
+    }
+
+    /** Remove the identity file and any backend-held secret. */
+    fun deleteIdentity() {
+        if (identityFile.exists()) {
+            runCatching {
+                val file = Json.mapper.readValue<IdentityFile>(identityFile.readText())
+                file.secret?.let { secrets.delete(it) }
+            }
+            identityFile.delete()
+        }
     }
 
     fun loadRelays(): RelayConfig = if (relaysFile.exists()) Json.mapper.readValue(relaysFile.readText()) else RelayConfig()
@@ -174,10 +245,13 @@ class DataDir(
     }
 
     companion object {
-        fun resolve(flag: String?): DataDir {
+        fun resolve(
+            flag: String?,
+            secrets: SecretStore,
+        ): DataDir {
             val envPath = System.getenv("AMETHYST_CLI_DATA")
             val path = flag ?: envPath ?: "./amy"
-            return DataDir(File(path).absoluteFile)
+            return DataDir(File(path).absoluteFile, secrets)
         }
     }
 }
