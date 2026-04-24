@@ -1117,19 +1117,6 @@ fun MainContent(
     ) {
         Box(Modifier.fillMaxSize()) {
             Column(Modifier.fillMaxSize()) {
-                // macOS: reserve a title bar strip so deck/sidebar content doesn't
-                // underlap the traffic lights. The strip is colored to match the
-                // sidebar so the whole top edge reads as one continuous toolbar.
-                if (!isImmersive &&
-                    com.vitorpamplona.amethyst.desktop.platform.PlatformInfo.isMacOS
-                ) {
-                    Box(
-                        Modifier
-                            .fillMaxWidth()
-                            .height(com.vitorpamplona.amethyst.desktop.platform.titleBarInsetTop)
-                            .background(MaterialTheme.colorScheme.surfaceContainer),
-                    )
-                }
                 Row(Modifier.fillMaxSize().weight(1f)) {
                     when (layoutMode) {
                         LayoutMode.SINGLE_PANE -> {

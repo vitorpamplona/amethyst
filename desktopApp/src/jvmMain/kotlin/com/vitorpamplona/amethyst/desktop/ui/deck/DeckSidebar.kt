@@ -43,6 +43,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.tor.TorServiceStatus
 import com.vitorpamplona.amethyst.commons.ui.components.BunkerHeartbeatIndicator
+import com.vitorpamplona.amethyst.desktop.platform.titleBarInsetTop
 import com.vitorpamplona.amethyst.desktop.ui.tor.TorStatusIndicator
 
 @Composable
@@ -60,7 +61,7 @@ fun DeckSidebar(
                 .width(56.dp)
                 .fillMaxHeight()
                 .background(MaterialTheme.colorScheme.surfaceContainer)
-                .padding(vertical = 8.dp),
+                .padding(top = 8.dp + titleBarInsetTop, bottom = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Top,
     ) {
