@@ -25,6 +25,8 @@ import java.awt.Color
 import java.awt.RenderingHints
 import java.awt.geom.RoundRectangle2D
 import java.awt.image.BufferedImage
+import java.awt.image.ConvolveOp
+import java.awt.image.Kernel
 
 /**
  * Adapts a transparent source logo to the host OS's app-icon conventions.
@@ -74,10 +76,45 @@ object PlatformAppIcon {
         val squircleMargin = (canvas - squircleSize) / 2
         // Apple's reference corner radius on the 824-box is ~185px (≈22.45%).
         val cornerDiameter = (squircleSize * 0.4490f)
-        // Mark padding inside the squircle: 10% of the squircle size.
-        val markPadding = (squircleSize * 0.10f).toInt()
+        // Mark padding inside the squircle: 7.5% each side (~85% fill) so the
+        // mark reads at roughly the same visual weight as first-party dock icons.
+        val markPadding = (squircleSize * 0.075f).toInt()
         val markOrigin = squircleMargin + markPadding
         val markSize = squircleSize - 2 * markPadding
+        // Drop shadow under the squircle — Apple's dock icons include a subtle
+        // shadow baked into the PNG; the dock doesn't add one at render time.
+        val shadowOffset = 8
+        val shadowBlur = 18
+
+        val squircle =
+            RoundRectangle2D.Float(
+                squircleMargin.toFloat(),
+                squircleMargin.toFloat(),
+                squircleSize.toFloat(),
+                squircleSize.toFloat(),
+                cornerDiameter,
+                cornerDiameter,
+            )
+
+        // Rasterize the shadow onto its own layer so the blur doesn't leak
+        // into the white squircle or the mark.
+        val shadowLayer = BufferedImage(canvas, canvas, BufferedImage.TYPE_INT_ARGB)
+        shadowLayer.createGraphics().apply {
+            setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+            color = Color(0, 0, 0, 72) // ~28% black
+            val shadowShape =
+                RoundRectangle2D.Float(
+                    squircleMargin.toFloat(),
+                    (squircleMargin + shadowOffset).toFloat(),
+                    squircleSize.toFloat(),
+                    squircleSize.toFloat(),
+                    cornerDiameter,
+                    cornerDiameter,
+                )
+            fill(shadowShape)
+            dispose()
+        }
+        val blurredShadow = gaussianBlur(shadowLayer, shadowBlur)
 
         val out = BufferedImage(canvas, canvas, BufferedImage.TYPE_INT_ARGB)
         val g = out.createGraphics()
@@ -86,26 +123,44 @@ object PlatformAppIcon {
             g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC)
             g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY)
 
-            val squircle =
-                RoundRectangle2D.Float(
-                    squircleMargin.toFloat(),
-                    squircleMargin.toFloat(),
-                    squircleSize.toFloat(),
-                    squircleSize.toFloat(),
-                    cornerDiameter,
-                    cornerDiameter,
-                )
-            g.composite = AlphaComposite.Src
+            // Shadow first, then the white squircle on top, then the mark.
+            g.composite = AlphaComposite.SrcOver
+            g.drawImage(blurredShadow, 0, 0, null)
+
             g.color = Color(0xFFFFFF)
             g.fill(squircle)
 
-            // Composite the source logo on top, scaled into the padded area.
-            g.composite = AlphaComposite.SrcOver
             g.clip = squircle
             g.drawImage(source, markOrigin, markOrigin, markSize, markSize, null)
         } finally {
             g.dispose()
         }
         return out
+    }
+
+    /**
+     * Separable Gaussian blur via [ConvolveOp]. Splits the 2D kernel into two
+     * 1D passes (horizontal then vertical) — O(N) per pixel instead of O(N²)
+     * for a radius-N blur, which keeps startup snappy even at 1024x1024.
+     */
+    private fun gaussianBlur(
+        src: BufferedImage,
+        radius: Int,
+    ): BufferedImage {
+        if (radius < 1) return src
+        val size = radius * 2 + 1
+        val sigma = radius / 2f
+        val kernel = FloatArray(size)
+        var sum = 0f
+        for (i in 0 until size) {
+            val x = (i - radius).toFloat()
+            kernel[i] = kotlin.math.exp(-(x * x) / (2f * sigma * sigma))
+            sum += kernel[i]
+        }
+        for (i in 0 until size) kernel[i] /= sum
+
+        val horiz = ConvolveOp(Kernel(size, 1, kernel), ConvolveOp.EDGE_NO_OP, null)
+        val vert = ConvolveOp(Kernel(1, size, kernel), ConvolveOp.EDGE_NO_OP, null)
+        return vert.filter(horiz.filter(src, null), null)
     }
 }

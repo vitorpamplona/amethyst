@@ -74,11 +74,12 @@ fun MyHighlightsScreen(
     Column(modifier = Modifier.fillMaxSize()) {
         Text(
             "Highlights",
-            style = MaterialTheme.typography.headlineMedium,
+            style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
         )
 
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(8.dp))
 
         if (allHighlights.isEmpty()) {
             EmptyState(

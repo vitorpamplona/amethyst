@@ -294,7 +294,10 @@ fun ReadsScreen(
     Column(modifier = Modifier.fillMaxSize()) {
         // Header — wraps on narrow columns
         FlowRow(
-            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
@@ -305,7 +308,7 @@ fun ReadsScreen(
                 ) {
                     Text(
                         "Reads",
-                        style = MaterialTheme.typography.headlineMedium,
+                        style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onBackground,
                     )
 
