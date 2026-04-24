@@ -119,6 +119,7 @@ val Size22dp = 22.dp
 val Size23dp = 23.dp
 val Size24dp = 24.dp
 val Size25dp = 25.dp
+val Size27dp = 27.dp
 val Size30dp = 30.dp
 val Size34dp = 34.dp
 val Size35dp = 35.dp

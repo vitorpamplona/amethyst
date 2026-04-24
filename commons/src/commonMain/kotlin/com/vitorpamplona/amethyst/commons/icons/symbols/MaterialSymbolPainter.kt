@@ -66,20 +66,22 @@ private class MaterialSymbolPainter(
     override fun DrawScope.onDraw() {
         val sizePx = size.minDimension
         val fontSize = with(density) { sizePx.toSp() }
-        // TextStyle omits color; we override at draw time so TextMeasurer's cache hits across tints.
+        // Bake the tint into the measured style. drawText(color = ...) override is unreliable
+        // across Compose versions when the measured style has Color.Unspecified — falls back to
+        // Color.Black and produces black-on-black icons.
         val layout =
             textMeasurer.measure(
                 text = symbol.glyph,
-                style = TextStyle(fontFamily = fontFamily, fontSize = fontSize),
+                style = TextStyle(fontFamily = fontFamily, fontSize = fontSize, color = tint),
             )
         val tx = (size.width - layout.size.width) / 2f
         val ty = (size.height - layout.size.height) / 2f
         if (symbol.autoMirror && rtl) {
             scale(scaleX = -1f, scaleY = 1f, pivot = Offset(size.width / 2f, size.height / 2f)) {
-                translate(tx, ty) { drawText(layout, color = tint) }
+                translate(tx, ty) { drawText(layout) }
             }
         } else {
-            translate(tx, ty) { drawText(layout, color = tint) }
+            translate(tx, ty) { drawText(layout) }
         }
     }
 }

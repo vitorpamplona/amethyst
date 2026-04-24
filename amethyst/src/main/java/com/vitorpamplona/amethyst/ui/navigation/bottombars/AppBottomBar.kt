@@ -51,8 +51,8 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Size0dp
 import com.vitorpamplona.amethyst.ui.theme.Size10Modifier
-import com.vitorpamplona.amethyst.ui.theme.Size20dp
-import com.vitorpamplona.amethyst.ui.theme.Size23dp
+import com.vitorpamplona.amethyst.ui.theme.Size24dp
+import com.vitorpamplona.amethyst.ui.theme.Size27dp
 
 @Composable
 fun AppBottomBar(
@@ -141,8 +141,8 @@ private fun NotifiableIcon(
     destination: Route,
     accountViewModel: AccountViewModel,
 ) {
-    Box(Modifier.size(Size23dp)) {
-        val iconSizeModifier = Modifier.size(Size20dp)
+    Box(Modifier.size(Size27dp)) {
+        val iconSizeModifier = Modifier.size(Size24dp)
         val description = stringRes(def.labelRes)
         Icon(
             symbol = def.icon,
