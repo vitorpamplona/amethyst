@@ -124,4 +124,52 @@ internal class FsTombstones(
     ) {
         Files.deleteIfExists(layout.addrTombstonePath(kind, pubkey, dTag))
     }
+
+    // ------------------------------------------------------------------
+    // NIP-62 vanish tombstones (one per owner; latest wins)
+    // ------------------------------------------------------------------
+
+    /** Vanish cutoff for the given owner, or null if no tombstone. */
+    fun vanishCutoff(ownerHash: Long): Long? {
+        val path = layout.vanishTombstonePath(ownerHash)
+        if (!path.exists()) return null
+        return try {
+            Event.fromJson(path.readText()).createdAt
+        } catch (_: java.nio.file.NoSuchFileException) {
+            null
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    /**
+     * Install a vanish tombstone, atomically replacing any existing one
+     * with a strictly older `createdAt`. Returns true when this call
+     * actually installed a new (or stronger) tombstone — the caller
+     * should run the cascade only when this is true.
+     */
+    fun installVanish(
+        ownerHash: Long,
+        vanishEvent: Event,
+        canonical: Path,
+    ): Boolean {
+        val path = layout.vanishTombstonePath(ownerHash)
+        val existing = vanishCutoff(ownerHash)
+        if (existing != null && existing >= vanishEvent.createdAt) return false
+
+        Files.createDirectories(path.parent)
+        val tmp = path.resolveSibling("${path.fileName}.tmp.${UUID.randomUUID()}")
+        try {
+            Files.createLink(tmp, canonical)
+            Files.move(tmp, path, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+        } catch (t: Throwable) {
+            Files.deleteIfExists(tmp)
+            throw t
+        }
+        return true
+    }
+
+    fun clearVanish(ownerHash: Long) {
+        Files.deleteIfExists(layout.vanishTombstonePath(ownerHash))
+    }
 }

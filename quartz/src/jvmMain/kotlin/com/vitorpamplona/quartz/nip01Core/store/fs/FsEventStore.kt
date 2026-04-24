@@ -27,12 +27,14 @@ import com.vitorpamplona.quartz.nip01Core.core.isAddressable
 import com.vitorpamplona.quartz.nip01Core.core.isEphemeral
 import com.vitorpamplona.quartz.nip01Core.core.isReplaceable
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.DefaultIndexingStrategy
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.IndexingStrategy
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.TagNameValueHasher
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip40Expiration.expiration
+import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
@@ -63,6 +65,13 @@ class FsEventStore(
      * NIP-40 expiration deterministically. Defaults to `TimeUtils.now()`.
      */
     private val clock: () -> Long = { TimeUtils.now() },
+    /**
+     * Optional relay URL the store is acting on behalf of. Used by
+     * NIP-62 [RequestToVanishEvent.shouldVanishFrom] scoping. When
+     * `null`, only "ALL_RELAYS" vanish requests cascade — matches
+     * `SQLiteEventStore`'s relay arg semantics.
+     */
+    private val relay: NormalizedRelayUrl? = null,
 ) : IEventStore {
     private val layout = FsLayout(root)
     private val hasher: TagNameValueHasher
@@ -108,6 +117,7 @@ class FsEventStore(
                 slots.install(slot, canonical, event, existingSlot)
             }
             if (event is DeletionEvent) processDeletion(event, canonical)
+            if (event is RequestToVanishEvent) processVanish(event, canonical)
             return
         }
 
@@ -129,6 +139,7 @@ class FsEventStore(
                 slots.install(slot, canonical, event, existingSlot)
             }
             if (event is DeletionEvent) processDeletion(event, canonical)
+            if (event is RequestToVanishEvent) processVanish(event, canonical)
         } catch (t: Throwable) {
             Files.deleteIfExists(tmp)
             throw t
@@ -163,6 +174,11 @@ class FsEventStore(
             val cutoff = tombstones.addrTombstoneCutoff(event.kind, event.pubKey, "")
             if (cutoff != null && event.createdAt <= cutoff) return true
         }
+        // NIP-62: any event whose owner has an active vanish request with
+        // createdAt >= event.createdAt is rejected. Owner is the recipient
+        // for GiftWrap, matching SQLite's `pubkey_owner_hash`.
+        val vanishCutoff = tombstones.vanishCutoff(indexer.ownerHash(event))
+        if (vanishCutoff != null && event.createdAt <= vanishCutoff) return true
         return false
     }
 
@@ -313,6 +329,36 @@ class FsEventStore(
             }
         }
         return if (canonical.deleteIfExists()) 1 else 0
+    }
+
+    /**
+     * NIP-62 right-to-vanish processing. When the kind-62 event scopes
+     * to this store's relay (or "ALL_RELAYS"), install/replace the
+     * vanish tombstone keyed by owner hash and cascade-delete every
+     * event from that owner with `createdAt < vanish.createdAt`. Mirrors
+     * SQLite's `delete_events_on_event_vanish` AFTER-INSERT trigger.
+     */
+    private fun processVanish(
+        event: RequestToVanishEvent,
+        canonical: java.nio.file.Path,
+    ) {
+        if (!event.shouldVanishFrom(relay)) return
+        val ownerHash = hasher.hash(event.pubKey)
+        if (!tombstones.installVanish(ownerHash, event, canonical)) return
+
+        // Cascade: walk idx/owner/<ownerHex>/, delete every event whose
+        // ts < vanish.createdAt. The vanish event's own ts equals
+        // vanish.createdAt so it survives.
+        val ownerDir = layout.idxOwner.resolve(FsLayout.hashHex(ownerHash))
+        if (!Files.isDirectory(ownerDir)) return
+        val toDelete = ArrayList<HexKey>()
+        Files.list(ownerDir).use { stream ->
+            for (entry in stream) {
+                val parsed = FsLayout.parseEntry(entry.fileName.toString()) ?: continue
+                if (parsed.first < event.createdAt) toDelete.add(parsed.second)
+            }
+        }
+        toDelete.forEach { delete(it) }
     }
 
     /**

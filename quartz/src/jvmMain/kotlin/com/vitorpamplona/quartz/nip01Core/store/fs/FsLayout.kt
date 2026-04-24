@@ -51,6 +51,7 @@ internal class FsLayout(
     val tombstones: Path = root.resolve(TOMBSTONES_DIR)
     val tombstonesId: Path = tombstones.resolve(TOMB_ID)
     val tombstonesAddr: Path = tombstones.resolve(TOMB_ADDR)
+    val tombstonesVanish: Path = tombstones.resolve(TOMB_VANISH)
 
     fun canonical(id: HexKey): Path {
         require(id.length >= 4) { "event id must be at least 4 hex chars, got '$id'" }
@@ -127,6 +128,9 @@ internal class FsLayout(
         dTag: String,
     ): Path = tombstonesAddr.resolve(kind.toString()).resolve(pubkey).resolve("${sha256Hex(dTag)}$JSON_EXT")
 
+    /** NIP-62 vanish tombstone keyed by owner hash (matches `pubkey_owner_hash`). */
+    fun vanishTombstonePath(ownerHash: Long): Path = tombstonesVanish.resolve("${hashHex(ownerHash)}$JSON_EXT")
+
     fun ensureSkeleton() {
         Files.createDirectories(events)
         Files.createDirectories(staging)
@@ -139,6 +143,7 @@ internal class FsLayout(
         Files.createDirectories(addressable)
         Files.createDirectories(tombstonesId)
         Files.createDirectories(tombstonesAddr)
+        Files.createDirectories(tombstonesVanish)
     }
 
     /**
@@ -174,6 +179,7 @@ internal class FsLayout(
         const val TOMBSTONES_DIR = "tombstones"
         const val TOMB_ID = "id"
         const val TOMB_ADDR = "addr"
+        const val TOMB_VANISH = "vanish"
         const val SEED_FILE = ".seed"
         const val JSON_EXT = ".json"
 
