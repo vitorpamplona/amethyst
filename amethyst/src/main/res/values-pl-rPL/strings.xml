@@ -771,6 +771,13 @@
     <string name="app_notification_chess_challenge_accepted">%1$s zaakceptował Twoją ofertę</string>
     <string name="app_notification_chess_your_turn">%1$s wykonał ruch — teraz Twoja kolej</string>
     <string name="app_notification_chess_summary">Aktualizacje szachów</string>
+    <string name="app_notification_replies_channel_name">Odpowiedzi</string>
+    <string name="app_notification_replies_channel_description">Powiadamia Cię, gdy ktoś zareaguje na twój post</string>
+    <string name="app_notification_replies_channel_message">%1$s odpowiedział</string>
+    <string name="app_notification_replies_channel_message_for">na: %1$s</string>
+    <string name="app_notification_replies_summary">Nowe odpowiedzi</string>
+    <string name="app_notification_mentions_channel_name">Wzmianki</string>
+    <string name="app_notification_mentions_channel_description">Powiadamia Cię, gdy ktoś wspomni o Tobie lub zacytuje Cię w poście</string>
     <!-- Call notifications and UI -->
     <string name="app_notification_calls_channel_name">Połączenia przychodzące</string>
     <string name="app_notification_calls_channel_description">Powiadomienia o przychodzących połączeniach głosowych i wideo</string>
