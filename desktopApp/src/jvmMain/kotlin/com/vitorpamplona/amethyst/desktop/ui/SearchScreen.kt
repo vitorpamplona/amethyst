@@ -358,9 +358,10 @@ fun SearchScreen(
 
             Spacer(Modifier.height(16.dp))
 
-            // Search bar with advanced toggle
+            // Search bar with advanced toggle — honors the reading width cap so it
+            // stays centered with the rest of the screen's content on wide windows.
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = sidePadding),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
@@ -370,10 +371,12 @@ fun SearchScreen(
                         textFieldValue = it
                         state.updateFromText(it.text)
                     },
-                    // .height(40.dp) overrides M3's 56dp min-height (intended for
+                    // .height(44.dp) overrides M3's 56dp min-height (intended for
                     // mobile touch) — desktop inputs should feel closer to Slack /
-                    // Raycast / VS Code at ~40dp.
-                    modifier = Modifier.weight(1f).height(40.dp).focusRequester(focusRequester),
+                    // Raycast / VS Code. 44dp (not 40) keeps the bodyMedium
+                    // placeholder from clipping vertically inside M3's built-in
+                    // content padding.
+                    modifier = Modifier.weight(1f).height(44.dp).focusRequester(focusRequester),
                     textStyle = MaterialTheme.typography.bodyMedium,
                     placeholder = {
                         Text(

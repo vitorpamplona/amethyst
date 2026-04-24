@@ -165,11 +165,14 @@ fun NoteCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
-            // Header + text area — clickable to navigate to thread
+            // Header + text area — clickable to navigate to thread. Clip BEFORE
+            // clickable so the ripple/hover fill is rounded, not a hard rectangle.
             Column(
                 modifier =
                     if (onClick != null) {
-                        Modifier.clickable { onClick() }
+                        Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable { onClick() }
                     } else {
                         Modifier
                     },
@@ -179,12 +182,15 @@ fun NoteCard(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    // Author with avatar
+                    // Author with avatar — stadium-shaped hover to match the
+                    // avatar+name chip's visual shape.
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier =
                             if (onAuthorClick != null) {
-                                Modifier.clickable { onAuthorClick(note.pubKeyHex) }
+                                Modifier
+                                    .clip(RoundedCornerShape(100.dp))
+                                    .clickable { onAuthorClick(note.pubKeyHex) }
                             } else {
                                 Modifier
                             },

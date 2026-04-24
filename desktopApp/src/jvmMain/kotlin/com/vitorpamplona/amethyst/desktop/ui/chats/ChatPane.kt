@@ -63,6 +63,7 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draganddrop.DragAndDropEvent
 import androidx.compose.ui.draganddrop.DragAndDropTarget
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.isCtrlPressed
@@ -560,35 +561,36 @@ private fun MessageWithReactions(
                             }
                         }
 
-                        // AddReaction icon on hover
-                        if (showIcon) {
-                            Box {
-                                IconButton(
-                                    onClick = { showPicker = !showPicker },
-                                    modifier = Modifier.size(20.dp),
-                                ) {
-                                    Icon(
-                                        symbol = MaterialSymbols.AddReaction,
-                                        contentDescription = "React",
-                                        modifier = Modifier.size(14.dp),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
+                        // AddReaction icon: always laid out to reserve space (so hover
+                        // doesn't reflow the detail row and shift the whole list);
+                        // alpha fades in/out based on hover.
+                        Box(modifier = Modifier.alpha(if (showIcon) 1f else 0f)) {
+                            IconButton(
+                                onClick = { showPicker = !showPicker },
+                                enabled = showIcon,
+                                modifier = Modifier.size(20.dp),
+                            ) {
+                                Icon(
+                                    symbol = MaterialSymbols.AddReaction,
+                                    contentDescription = "React",
+                                    modifier = Modifier.size(14.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
 
-                                if (showPicker) {
-                                    Popup(
-                                        alignment = Alignment.TopCenter,
-                                        offset = IntOffset(0, -44),
-                                        onDismissRequest = { showPicker = false },
-                                        properties = PopupProperties(focusable = true),
-                                    ) {
-                                        ReactionBar(
-                                            onReaction = { emoji ->
-                                                onReaction(emoji)
-                                                showPicker = false
-                                            },
-                                        )
-                                    }
+                            if (showPicker) {
+                                Popup(
+                                    alignment = Alignment.TopCenter,
+                                    offset = IntOffset(0, -44),
+                                    onDismissRequest = { showPicker = false },
+                                    properties = PopupProperties(focusable = true),
+                                ) {
+                                    ReactionBar(
+                                        onReaction = { emoji ->
+                                            onReaction(emoji)
+                                            showPicker = false
+                                        },
+                                    )
                                 }
                             }
                         }
@@ -719,13 +721,14 @@ private fun MessageInput(
             OutlinedTextField(
                 value = messageText,
                 onValueChange = onMessageChange,
-                // heightIn(min = 40.dp) overrides M3's 56dp mobile-touch min so the
-                // chat input sits at a desktop-sensible 40dp when empty; still grows
-                // to up to ~120dp with content via maxLines = 4.
+                // heightIn(min = 44.dp) overrides M3's 56dp mobile-touch min so the
+                // chat input sits at a desktop-sensible ~44dp when empty; still grows
+                // to up to ~120dp with content via maxLines = 4. 44 (not 40) keeps the
+                // bodyMedium placeholder from clipping inside M3's internal padding.
                 modifier =
                     Modifier
                         .weight(1f)
-                        .heightIn(min = 40.dp)
+                        .heightIn(min = 44.dp)
                         .onPreviewKeyEvent { event ->
                             if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                             // Cmd+Enter (Mac) or Ctrl+Enter to send
