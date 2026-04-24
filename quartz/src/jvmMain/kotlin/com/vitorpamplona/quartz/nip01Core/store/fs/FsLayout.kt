@@ -26,6 +26,7 @@ import java.nio.ByteBuffer
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
+import java.security.MessageDigest
 import java.security.SecureRandom
 import kotlin.io.path.exists
 
@@ -44,6 +45,8 @@ internal class FsLayout(
     val idxAuthor: Path = idx.resolve(IDX_AUTHOR)
     val idxOwner: Path = idx.resolve(IDX_OWNER)
     val idxTag: Path = idx.resolve(IDX_TAG)
+    val replaceable: Path = root.resolve(REPLACEABLE_DIR)
+    val addressable: Path = root.resolve(ADDRESSABLE_DIR)
 
     fun canonical(id: HexKey): Path {
         require(id.length >= 4) { "event id must be at least 4 hex chars, got '$id'" }
@@ -88,6 +91,19 @@ internal class FsLayout(
 
     fun authorDir(pubkey: HexKey): Path = idxAuthor.resolve(pubkey)
 
+    /** Slot path for a replaceable event (kinds 0, 3, 10000-19999). */
+    fun replaceableSlot(
+        kind: Kind,
+        pubkey: HexKey,
+    ): Path = replaceable.resolve(kind.toString()).resolve("$pubkey$JSON_EXT")
+
+    /** Slot path for an addressable event (kinds 30000-39999). */
+    fun addressableSlot(
+        kind: Kind,
+        pubkey: HexKey,
+        dTag: String,
+    ): Path = addressable.resolve(kind.toString()).resolve(pubkey).resolve("${sha256Hex(dTag)}$JSON_EXT")
+
     fun ensureSkeleton() {
         Files.createDirectories(events)
         Files.createDirectories(staging)
@@ -95,6 +111,8 @@ internal class FsLayout(
         Files.createDirectories(idxAuthor)
         Files.createDirectories(idxOwner)
         Files.createDirectories(idxTag)
+        Files.createDirectories(replaceable)
+        Files.createDirectories(addressable)
     }
 
     /**
@@ -124,8 +142,25 @@ internal class FsLayout(
         const val IDX_AUTHOR = "author"
         const val IDX_OWNER = "owner"
         const val IDX_TAG = "tag"
+        const val REPLACEABLE_DIR = "replaceable"
+        const val ADDRESSABLE_DIR = "addressable"
         const val SEED_FILE = ".seed"
         const val JSON_EXT = ".json"
+
+        /** Lowercase hex SHA-256 of the given UTF-8 string. Used for d-tag slots. */
+        fun sha256Hex(s: String): String {
+            val md = MessageDigest.getInstance("SHA-256")
+            val bytes = md.digest(s.encodeToByteArray())
+            val sb = StringBuilder(bytes.size * 2)
+            for (b in bytes) {
+                val v = b.toInt() and 0xff
+                sb.append(HEX[v ushr 4])
+                sb.append(HEX[v and 0x0f])
+            }
+            return sb.toString()
+        }
+
+        private val HEX = "0123456789abcdef".toCharArray()
 
         /** zero-padded to 10 digits so lex order == chronological order through year 2286. */
         fun tsPad(ts: Long): String = ts.toString().padStart(TS_PAD_WIDTH, '0')

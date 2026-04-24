@@ -56,6 +56,7 @@ class FsEventStore(
     private val layout = FsLayout(root)
     private val hasher: TagNameValueHasher
     private val indexer: FsIndexer
+    private val slots: FsSlots
     private val planner: FsQueryPlanner
 
     init {
@@ -63,6 +64,7 @@ class FsEventStore(
         cleanStaging()
         hasher = TagNameValueHasher(layout.readOrCreateSeed())
         indexer = FsIndexer(layout, hasher, indexingStrategy)
+        slots = FsSlots(layout, indexer)
         planner = FsQueryPlanner(layout, hasher)
     }
 
@@ -73,8 +75,25 @@ class FsEventStore(
     override fun insert(event: Event) {
         if (event.kind.isEphemeral()) return
 
+        val slot = slots.slotPathFor(event)
+        val existingSlot = slot?.let { slots.readSlot(it) }
+        if (existingSlot != null && existingSlot.createdAt >= event.createdAt) {
+            // Newer or equal-timestamp version already owns this slot.
+            // Matches ReplaceableModule / AddressableModule blocking
+            // behaviour in SQLite.
+            return
+        }
+
         val canonical = layout.canonical(event.id)
-        if (canonical.exists()) return
+        if (canonical.exists()) {
+            // Same id already written. If this event is a replaceable /
+            // addressable whose slot points somewhere else, still install
+            // the slot so the winner is consistent.
+            if (slot != null && existingSlot?.id != event.id) {
+                slots.install(slot, canonical, event, existingSlot)
+            }
+            return
+        }
 
         Files.createDirectories(canonical.parent)
         val tmp = Files.createTempFile(layout.staging, event.id, FsLayout.JSON_EXT)
@@ -90,6 +109,9 @@ class FsEventStore(
             }
             Files.setLastModifiedTime(canonical, FileTime.from(event.createdAt, TimeUnit.SECONDS))
             indexer.link(event, canonical)
+            if (slot != null) {
+                slots.install(slot, canonical, event, existingSlot)
+            }
         } catch (t: Throwable) {
             Files.deleteIfExists(tmp)
             throw t
@@ -185,7 +207,14 @@ class FsEventStore(
     fun delete(id: HexKey): Int {
         val canonical = layout.canonical(id)
         val event = readEvent(id) // need tags to know which index links to remove
-        if (event != null) indexer.unlink(event)
+        if (event != null) {
+            indexer.unlink(event)
+            val slot = slots.slotPathFor(event)
+            if (slot != null) {
+                val winner = slots.readSlot(slot)
+                if (winner?.id == id) slots.clear(slot)
+            }
+        }
         return if (canonical.deleteIfExists()) 1 else 0
     }
 
