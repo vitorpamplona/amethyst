@@ -51,38 +51,47 @@ object PlatformAppIcon {
         }
 
     /**
-     * Renders [source] inside a 1024x1024 white squircle with padding around
-     * the mark. Matches Apple's HIG macOS app icon template (Big Sur+).
+     * Renders [source] inside a white squircle following Apple's macOS app icon
+     * template (Big Sur+). The squircle fills ~80.5% of the canvas width
+     * (824/1024 per Apple's HIG) — the rest is transparent margin, matching
+     * the size at which first-party dock icons render so ours doesn't appear
+     * oversized next to them.
      *
      * Implementation notes:
      * - Apple's "squircle" is a superellipse, not a standard rounded rectangle;
      *   Java2D doesn't ship a superellipse primitive, so [RoundRectangle2D]
-     *   with a 22.5% corner radius is the practical approximation used by most
-     *   third-party tooling. At dock-icon sizes the difference is invisible.
-     * - 10% padding on each side keeps the mark from touching the squircle
-     *   corners, matching Apple's template content area (824/1024 ≈ 80%).
+     *   with a ~22.37% corner radius (185/824) is the practical approximation
+     *   used by most third-party tooling. At dock-icon sizes the difference
+     *   is invisible.
+     * - The mark is padded ~10% inside the squircle so it doesn't touch the
+     *   rounded corners.
      */
     private fun macOsSquircle(source: BufferedImage): BufferedImage {
-        val size = 1024
-        val cornerDiameter = (size * 0.45f) // diameter = 2 * radius; radius = 22.5%
-        val padding = (size * 0.10f).toInt()
-        val innerSize = size - 2 * padding
+        val canvas = 1024
+        // Apple's reference template: 824x824 squircle centered in a 1024x1024
+        // canvas (100px transparent margin each side).
+        val squircleSize = 824
+        val squircleMargin = (canvas - squircleSize) / 2
+        // Apple's reference corner radius on the 824-box is ~185px (≈22.45%).
+        val cornerDiameter = (squircleSize * 0.4490f)
+        // Mark padding inside the squircle: 10% of the squircle size.
+        val markPadding = (squircleSize * 0.10f).toInt()
+        val markOrigin = squircleMargin + markPadding
+        val markSize = squircleSize - 2 * markPadding
 
-        val out = BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB)
+        val out = BufferedImage(canvas, canvas, BufferedImage.TYPE_INT_ARGB)
         val g = out.createGraphics()
         try {
             g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
             g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC)
             g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY)
 
-            // Paint the squircle background in white. Clip must be set BEFORE
-            // the fill so the fill respects the rounded corners.
             val squircle =
                 RoundRectangle2D.Float(
-                    0f,
-                    0f,
-                    size.toFloat(),
-                    size.toFloat(),
+                    squircleMargin.toFloat(),
+                    squircleMargin.toFloat(),
+                    squircleSize.toFloat(),
+                    squircleSize.toFloat(),
                     cornerDiameter,
                     cornerDiameter,
                 )
@@ -92,8 +101,8 @@ object PlatformAppIcon {
 
             // Composite the source logo on top, scaled into the padded area.
             g.composite = AlphaComposite.SrcOver
-            g.clip = squircle // keep the logo within the squircle on overhang
-            g.drawImage(source, padding, padding, innerSize, innerSize, null)
+            g.clip = squircle
+            g.drawImage(source, markOrigin, markOrigin, markSize, markSize, null)
         } finally {
             g.dispose()
         }
