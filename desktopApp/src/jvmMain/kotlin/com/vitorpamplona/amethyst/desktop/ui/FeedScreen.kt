@@ -489,7 +489,7 @@ fun FeedScreen(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        Column(modifier = Modifier.fillMaxSize()) {
+        ReadingColumn {
             // Header with compose button
             FeedHeader(
                 feedMode = feedMode,

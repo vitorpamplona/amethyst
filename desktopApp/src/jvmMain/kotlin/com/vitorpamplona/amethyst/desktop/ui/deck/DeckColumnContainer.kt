@@ -460,6 +460,7 @@ internal fun OverlayContent(
                 nwcConnection = nwcConnection,
                 subscriptionsCoordinator = subscriptionsCoordinator,
                 onBack = onBack,
+                canGoBack = true,
                 onCompose = onShowComposeDialog,
                 onNavigateToProfile = onNavigateToProfile,
                 onNavigateToThread = onNavigateToThread,

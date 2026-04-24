@@ -29,7 +29,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -1319,213 +1321,232 @@ fun RelaySettingsScreen(
         accountManager.loadNwcConnection()
     }
 
-    Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.TopCenter,
     ) {
-        Text(
-            "Settings",
-            style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.onBackground,
-        )
-
-        Spacer(Modifier.height(24.dp))
-
-        // Wallet Connect Section
-        Text(
-            "Wallet Connect (NWC)",
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onBackground,
-        )
-        Spacer(Modifier.height(8.dp))
-
-        Text(
-            "Connect a Lightning wallet to enable zaps. Get a connection string from Alby, Mutiny, or other NWC-compatible wallets.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-
-        Spacer(Modifier.height(12.dp))
-
-        if (nwcConnection != null) {
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .widthIn(max = 720.dp)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 12.dp),
+        ) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 48.dp)
+                        .padding(vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Column {
-                    Text(
-                        "Wallet Connected",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                    Text(
-                        "Relay: ${nwcConnection!!.relayUri.url}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                OutlinedButton(
-                    onClick = { accountManager.clearNwcConnection() },
-                    colors =
-                        ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.error,
-                        ),
+                Text(
+                    "Settings",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onBackground,
+                )
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            // Wallet Connect Section
+            Text(
+                "Wallet Connect (NWC)",
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onBackground,
+            )
+            Spacer(Modifier.height(8.dp))
+
+            Text(
+                "Connect a Lightning wallet to enable zaps. Get a connection string from Alby, Mutiny, or other NWC-compatible wallets.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            Spacer(Modifier.height(12.dp))
+
+            if (nwcConnection != null) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("Disconnect")
+                    Column {
+                        Text(
+                            "Wallet Connected",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                        Text(
+                            "Relay: ${nwcConnection!!.relayUri.url}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    OutlinedButton(
+                        onClick = { accountManager.clearNwcConnection() },
+                        colors =
+                            ButtonDefaults.outlinedButtonColors(
+                                contentColor = MaterialTheme.colorScheme.error,
+                            ),
+                    ) {
+                        Text("Disconnect")
+                    }
+                }
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    OutlinedTextField(
+                        value = nwcInput,
+                        onValueChange = {
+                            nwcInput = it
+                            nwcError = null
+                        },
+                        label = { Text("NWC Connection String") },
+                        placeholder = { Text("nostr+walletconnect://...") },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        isError = nwcError != null,
+                        supportingText = nwcError?.let { { Text(it, color = MaterialTheme.colorScheme.error) } },
+                    )
+                    Button(
+                        onClick = {
+                            val result = accountManager.setNwcConnection(nwcInput)
+                            result.fold(
+                                onSuccess = { nwcInput = "" },
+                                onFailure = { nwcError = it.message ?: "Invalid connection string" },
+                            )
+                        },
+                        enabled = nwcInput.isNotBlank(),
+                    ) {
+                        Text("Connect")
+                    }
                 }
             }
-        } else {
+
+            Spacer(Modifier.height(24.dp))
+            HorizontalDivider()
+            Spacer(Modifier.height(24.dp))
+
+            // Media Server Settings
+            MediaServerSettings(
+                initialServers = DesktopPreferences.blossomServers,
+                onServersChanged = { DesktopPreferences.blossomServers = it },
+            )
+            Spacer(Modifier.height(24.dp))
+            HorizontalDivider()
+            Spacer(Modifier.height(24.dp))
+
+            // Tor Settings
+            com.vitorpamplona.amethyst.desktop.ui.tor.TorSettingsSection(
+                torStatus = torStatus,
+                currentSettings = torSettings,
+                onSettingsChanged = onTorSettingsChanged,
+            )
+            Spacer(Modifier.height(24.dp))
+            HorizontalDivider()
+            Spacer(Modifier.height(24.dp))
+
+            // Developer Settings Section (only in debug mode)
+            if (DebugConfig.isDebugMode) {
+                com.vitorpamplona.amethyst.desktop.ui
+                    .DevSettingsSection(account = account)
+                Spacer(Modifier.height(24.dp))
+                HorizontalDivider()
+                Spacer(Modifier.height(24.dp))
+            }
+
+            Text(
+                "Relay Settings",
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onBackground,
+            )
+            Spacer(Modifier.height(8.dp))
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(
+                    "${connectedRelays.size} of ${relayStatuses.size} relays connected",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                IconButton(onClick = { relayManager.connect() }) {
+                    Icon(
+                        MaterialSymbols.Refresh,
+                        contentDescription = "Reconnect",
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 OutlinedTextField(
-                    value = nwcInput,
-                    onValueChange = {
-                        nwcInput = it
-                        nwcError = null
-                    },
-                    label = { Text("NWC Connection String") },
-                    placeholder = { Text("nostr+walletconnect://...") },
+                    value = newRelayUrl,
+                    onValueChange = { newRelayUrl = it },
+                    label = { Text("Add relay") },
+                    placeholder = { Text("wss://relay.example.com") },
                     modifier = Modifier.weight(1f),
                     singleLine = true,
-                    isError = nwcError != null,
-                    supportingText = nwcError?.let { { Text(it, color = MaterialTheme.colorScheme.error) } },
                 )
                 Button(
                     onClick = {
-                        val result = accountManager.setNwcConnection(nwcInput)
-                        result.fold(
-                            onSuccess = { nwcInput = "" },
-                            onFailure = { nwcError = it.message ?: "Invalid connection string" },
-                        )
+                        if (newRelayUrl.isNotBlank()) {
+                            relayManager.addRelay(newRelayUrl)
+                            newRelayUrl = ""
+                        }
                     },
-                    enabled = nwcInput.isNotBlank(),
+                    enabled = newRelayUrl.isNotBlank(),
                 ) {
-                    Text("Connect")
+                    Text("Add")
                 }
             }
-        }
 
-        Spacer(Modifier.height(24.dp))
-        HorizontalDivider()
-        Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(16.dp))
 
-        // Media Server Settings
-        MediaServerSettings(
-            initialServers = DesktopPreferences.blossomServers,
-            onServersChanged = { DesktopPreferences.blossomServers = it },
-        )
-        Spacer(Modifier.height(24.dp))
-        HorizontalDivider()
-        Spacer(Modifier.height(24.dp))
-
-        // Tor Settings
-        com.vitorpamplona.amethyst.desktop.ui.tor.TorSettingsSection(
-            torStatus = torStatus,
-            currentSettings = torSettings,
-            onSettingsChanged = onTorSettingsChanged,
-        )
-        Spacer(Modifier.height(24.dp))
-        HorizontalDivider()
-        Spacer(Modifier.height(24.dp))
-
-        // Developer Settings Section (only in debug mode)
-        if (DebugConfig.isDebugMode) {
-            com.vitorpamplona.amethyst.desktop.ui
-                .DevSettingsSection(account = account)
-            Spacer(Modifier.height(24.dp))
-            HorizontalDivider()
-            Spacer(Modifier.height(24.dp))
-        }
-
-        Text(
-            "Relay Settings",
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onBackground,
-        )
-        Spacer(Modifier.height(8.dp))
-
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Text(
-                "${connectedRelays.size} of ${relayStatuses.size} relays connected",
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            IconButton(onClick = { relayManager.connect() }) {
-                Icon(
-                    MaterialSymbols.Refresh,
-                    contentDescription = "Reconnect",
-                    tint = MaterialTheme.colorScheme.primary,
-                )
-            }
-        }
-
-        Spacer(Modifier.height(16.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            OutlinedTextField(
-                value = newRelayUrl,
-                onValueChange = { newRelayUrl = it },
-                label = { Text("Add relay") },
-                placeholder = { Text("wss://relay.example.com") },
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.weight(1f),
-                singleLine = true,
-            )
-            Button(
-                onClick = {
-                    if (newRelayUrl.isNotBlank()) {
-                        relayManager.addRelay(newRelayUrl)
-                        newRelayUrl = ""
-                    }
-                },
-                enabled = newRelayUrl.isNotBlank(),
             ) {
-                Text("Add")
+                items(relayStatuses.values.toList(), key = { it.url.url }) { status ->
+                    RelayStatusCard(
+                        status = status,
+                        onRemove = { relayManager.removeRelay(status.url) },
+                    )
+                }
             }
-        }
 
-        Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(16.dp))
 
-        LazyColumn(
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.weight(1f),
-        ) {
-            items(relayStatuses.values.toList(), key = { it.url.url }) { status ->
-                RelayStatusCard(
-                    status = status,
-                    onRemove = { relayManager.removeRelay(status.url) },
-                )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = { relayManager.addDefaultRelays() }) {
+                    Text("Reset to Defaults")
+                }
             }
-        }
 
-        Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(16.dp))
 
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = { relayManager.addDefaultRelays() }) {
-                Text("Reset to Defaults")
+            val logoutScope = rememberCoroutineScope()
+            OutlinedButton(
+                onClick = { logoutScope.launch { accountManager.logout(deleteKey = true) } },
+                colors =
+                    ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error,
+                    ),
+            ) {
+                Text("Logout")
             }
-        }
-
-        Spacer(Modifier.height(16.dp))
-
-        val logoutScope = rememberCoroutineScope()
-        OutlinedButton(
-            onClick = { logoutScope.launch { accountManager.logout(deleteKey = true) } },
-            colors =
-                ButtonDefaults.outlinedButtonColors(
-                    contentColor = MaterialTheme.colorScheme.error,
-                ),
-        ) {
-            Text("Logout")
         }
     }
 }

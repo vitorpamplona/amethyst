@@ -198,7 +198,7 @@ fun ThreadScreen(
     val replyNotes = threadNotes.filter { it.idHex != noteId }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        Column(modifier = Modifier.fillMaxSize()) {
+        ReadingColumn {
             // Header — Messages-style: compact row with back + titleMedium
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),

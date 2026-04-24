@@ -34,9 +34,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -289,227 +291,236 @@ fun SearchScreen(
         focusRequester.requestFocus()
     }
 
-    Column(
+    androidx.compose.foundation.layout.Box(
         modifier =
-            modifier
-                .fillMaxSize()
-                .onPreviewKeyEvent { event ->
-                    if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
-                    when (event.key) {
-                        Key.Escape -> {
-                            if (panelExpanded) {
-                                state.togglePanel()
-                            } else if (displayText.isNotEmpty()) {
-                                state.clearSearch()
-                            }
-                            true
-                        }
-
-                        else -> {
-                            false
-                        }
-                    }
-                },
+            androidx.compose.ui.Modifier
+                .fillMaxSize(),
+        contentAlignment = androidx.compose.ui.Alignment.TopCenter,
     ) {
-        // Progress bar at very top
-        AnimatedVisibility(
-            visible = isSearching,
-            enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
-            exit = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut(),
-        ) {
-            LinearProgressIndicator(
-                modifier = Modifier.fillMaxWidth(),
-                color = MaterialTheme.colorScheme.primary,
-                trackColor = MaterialTheme.colorScheme.surfaceVariant,
-            )
-        }
-
-        // Relay status banner
-        SearchSyncBanner(
-            relayStates = relayStates,
-            isSearching = isSearching,
-        )
-
-        // Title row
-        Row(
+        Column(
             modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                "Search",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onBackground,
-            )
-            Text(
-                "${localCache.userCount()} users cached",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+                modifier
+                    .fillMaxSize()
+                    .widthIn(max = DefaultReadingWidth)
+                    .onPreviewKeyEvent { event ->
+                        if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                        when (event.key) {
+                            Key.Escape -> {
+                                if (panelExpanded) {
+                                    state.togglePanel()
+                                } else if (displayText.isNotEmpty()) {
+                                    state.clearSearch()
+                                }
+                                true
+                            }
 
-        Spacer(Modifier.height(16.dp))
-
-        // Search bar with advanced toggle
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            else -> {
+                                false
+                            }
+                        }
+                    },
         ) {
-            OutlinedTextField(
-                value = textFieldValue,
-                onValueChange = {
-                    textFieldValue = it
-                    state.updateFromText(it.text)
-                },
-                modifier = Modifier.weight(1f).focusRequester(focusRequester),
-                placeholder = { Text("Search notes, people, tags... or use operators") },
-                leadingIcon = {
+            // Progress bar at very top
+            AnimatedVisibility(
+                visible = isSearching,
+                enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
+                exit = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut(),
+            ) {
+                LinearProgressIndicator(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                )
+            }
+
+            // Relay status banner
+            SearchSyncBanner(
+                relayStates = relayStates,
+                isSearching = isSearching,
+            )
+
+            // Title row
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 48.dp)
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    "Search",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onBackground,
+                )
+                Text(
+                    "${localCache.userCount()} users cached",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            // Search bar with advanced toggle
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                OutlinedTextField(
+                    value = textFieldValue,
+                    onValueChange = {
+                        textFieldValue = it
+                        state.updateFromText(it.text)
+                    },
+                    modifier = Modifier.weight(1f).focusRequester(focusRequester),
+                    placeholder = { Text("Search notes, people, tags... or use operators") },
+                    leadingIcon = {
+                        Icon(
+                            MaterialSymbols.Search,
+                            contentDescription = "Search",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    },
+                    trailingIcon = {
+                        if (displayText.isNotEmpty()) {
+                            IconButton(onClick = { state.clearSearch() }) {
+                                Icon(
+                                    MaterialSymbols.Clear,
+                                    contentDescription = "Clear",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    },
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                )
+                if (account != null && !account.isReadOnly) {
+                    IconButton(onClick = { showRelayPicker = true }) {
+                        Icon(
+                            MaterialSymbols.Dns,
+                            contentDescription = "Search Relays",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                IconButton(onClick = { state.togglePanel() }) {
                     Icon(
-                        MaterialSymbols.Search,
-                        contentDescription = "Search",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        MaterialSymbols.Tune,
+                        contentDescription = "Advanced Search",
+                        tint =
+                            if (panelExpanded) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
                     )
-                },
-                trailingIcon = {
-                    if (displayText.isNotEmpty()) {
-                        IconButton(onClick = { state.clearSearch() }) {
-                            Icon(
-                                MaterialSymbols.Clear,
-                                contentDescription = "Clear",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
+                }
+            }
+
+            // Search relay picker dialog
+            if (showRelayPicker && account != null) {
+                val pickerRelays =
+                    remember {
+                        mutableStateListOf<com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl>().also {
+                            it.addAll(searchRelays)
                         }
                     }
-                },
-                singleLine = true,
-                shape = RoundedCornerShape(12.dp),
-            )
-            if (account != null && !account.isReadOnly) {
-                IconButton(onClick = { showRelayPicker = true }) {
-                    Icon(
-                        MaterialSymbols.Dns,
-                        contentDescription = "Search Relays",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-            IconButton(onClick = { state.togglePanel() }) {
-                Icon(
-                    MaterialSymbols.Tune,
-                    contentDescription = "Advanced Search",
-                    tint =
-                        if (panelExpanded) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
+                AlertDialog(
+                    onDismissRequest = { showRelayPicker = false },
+                    title = { Text("Search Relays") },
+                    text = {
+                        SearchRelayEditor(
+                            localRelays = pickerRelays,
+                            signer = account.signer,
+                            onPublish = { event ->
+                                relayManager.broadcastToAll(event)
+                                accountRelays?.consumePublishedEvent(event)
+                                accountRelays?.setSearchRelays(pickerRelays.toSet())
+                            },
+                        )
+                    },
+                    confirmButton = {
+                        TextButton(onClick = { showRelayPicker = false }) {
+                            Text("Close")
+                        }
+                    },
                 )
             }
-        }
 
-        // Search relay picker dialog
-        if (showRelayPicker && account != null) {
-            val pickerRelays =
-                remember {
-                    mutableStateListOf<com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl>().also {
-                        it.addAll(searchRelays)
+            // Expandable advanced panel
+            AnimatedVisibility(
+                visible = panelExpanded,
+                enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
+                exit = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut(),
+            ) {
+                AdvancedSearchPanel(
+                    query = query,
+                    onKindsChanged = { state.updateKinds(it) },
+                    onPseudoKindsChanged = { state.updatePseudoKinds(it) },
+                    onAuthorAdded = { state.addAuthor(it) },
+                    onAuthorRemoved = { state.removeAuthor(it) },
+                    onDateRangeChanged = { since, until -> state.updateDateRange(since, until) },
+                    onHashtagAdded = { state.addHashtag(it) },
+                    onHashtagRemoved = { state.removeHashtag(it) },
+                    onExcludeAdded = { state.addExcludeTerm(it) },
+                    onExcludeRemoved = { state.removeExcludeTerm(it) },
+                    onLanguageChanged = { state.updateLanguage(it) },
+                    onClear = { state.clearSearch() },
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            // Results
+            val hasAnyResults =
+                bech32Results.isNotEmpty() || peopleResults.isNotEmpty() || noteResults.isNotEmpty()
+
+            if (bech32Results.isNotEmpty()) {
+                // Show bech32 results (exact lookup)
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        "Direct lookup",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(vertical = 4.dp),
+                    )
+                    bech32Results.forEach { result ->
+                        SearchResultCard(
+                            result = result,
+                            onNavigateToProfile = onNavigateToProfile,
+                            onNavigateToThread = onNavigateToThread,
+                            onNavigateToHashtag = onNavigateToHashtag,
+                        )
                     }
                 }
-            AlertDialog(
-                onDismissRequest = { showRelayPicker = false },
-                title = { Text("Search Relays") },
-                text = {
-                    SearchRelayEditor(
-                        localRelays = pickerRelays,
-                        signer = account.signer,
-                        onPublish = { event ->
-                            relayManager.broadcastToAll(event)
-                            accountRelays?.consumePublishedEvent(event)
-                            accountRelays?.setSearchRelays(pickerRelays.toSet())
-                        },
-                    )
-                },
-                confirmButton = {
-                    TextButton(onClick = { showRelayPicker = false }) {
-                        Text("Close")
-                    }
-                },
-            )
-        }
-
-        // Expandable advanced panel
-        AnimatedVisibility(
-            visible = panelExpanded,
-            enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
-            exit = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut(),
-        ) {
-            AdvancedSearchPanel(
-                query = query,
-                onKindsChanged = { state.updateKinds(it) },
-                onPseudoKindsChanged = { state.updatePseudoKinds(it) },
-                onAuthorAdded = { state.addAuthor(it) },
-                onAuthorRemoved = { state.removeAuthor(it) },
-                onDateRangeChanged = { since, until -> state.updateDateRange(since, until) },
-                onHashtagAdded = { state.addHashtag(it) },
-                onHashtagRemoved = { state.removeHashtag(it) },
-                onExcludeAdded = { state.addExcludeTerm(it) },
-                onExcludeRemoved = { state.removeExcludeTerm(it) },
-                onLanguageChanged = { state.updateLanguage(it) },
-                onClear = { state.clearSearch() },
-                modifier = Modifier.padding(top = 8.dp),
-            )
-        }
-
-        Spacer(Modifier.height(16.dp))
-
-        // Results
-        val hasAnyResults =
-            bech32Results.isNotEmpty() || peopleResults.isNotEmpty() || noteResults.isNotEmpty()
-
-        if (bech32Results.isNotEmpty()) {
-            // Show bech32 results (exact lookup)
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            } else if (hasAnyResults) {
+                SearchResultsList(
+                    state = state,
+                    onNavigateToProfile = onNavigateToProfile,
+                    onNavigateToThread = onNavigateToThread,
+                    localCache = localCache,
+                )
+            } else if (!debouncedQuery.isEmpty && !isSearching) {
                 Text(
-                    "Direct lookup",
-                    style = MaterialTheme.typography.labelMedium,
+                    "No results found. Try broader terms or fewer filters.",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(vertical = 4.dp),
+                    style = MaterialTheme.typography.bodyMedium,
                 )
-                bech32Results.forEach { result ->
-                    SearchResultCard(
-                        result = result,
-                        onNavigateToProfile = onNavigateToProfile,
-                        onNavigateToThread = onNavigateToThread,
-                        onNavigateToHashtag = onNavigateToHashtag,
-                    )
-                }
+            } else if (!isSearching) {
+                // Empty state: show history + saved searches + operator hints
+                SearchEmptyState(
+                    historyItems = historyItems,
+                    savedSearches = savedSearches,
+                    onLoadQuery = { query -> state.updateFromText(QuerySerializer.serialize(query)) },
+                    onDeleteSaved = { id -> SearchHistoryStore.deleteSavedSearch(id) },
+                    onClearHistory = { SearchHistoryStore.clearHistory() },
+                )
             }
-        } else if (hasAnyResults) {
-            SearchResultsList(
-                state = state,
-                onNavigateToProfile = onNavigateToProfile,
-                onNavigateToThread = onNavigateToThread,
-                localCache = localCache,
-            )
-        } else if (!debouncedQuery.isEmpty && !isSearching) {
-            Text(
-                "No results found. Try broader terms or fewer filters.",
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        } else if (!isSearching) {
-            // Empty state: show history + saved searches + operator hints
-            SearchEmptyState(
-                historyItems = historyItems,
-                savedSearches = savedSearches,
-                onLoadQuery = { query -> state.updateFromText(QuerySerializer.serialize(query)) },
-                onDeleteSaved = { id -> SearchHistoryStore.deleteSavedSearch(id) },
-                onClearHistory = { SearchHistoryStore.clearHistory() },
-            )
         }
     }
 }

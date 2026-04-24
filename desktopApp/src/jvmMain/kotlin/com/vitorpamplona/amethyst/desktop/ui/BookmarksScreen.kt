@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -247,12 +248,13 @@ fun BookmarksScreen(
     val currentEvents = if (selectedTab == BookmarkTab.PUBLIC) publicEvents else privateEvents
     val currentBookmarkIds = if (selectedTab == BookmarkTab.PUBLIC) publicBookmarkIds else privateBookmarkIds
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    ReadingColumn {
         // Header with tabs
         Row(
             modifier =
                 Modifier
                     .fillMaxWidth()
+                    .heightIn(min = 48.dp)
                     .padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
