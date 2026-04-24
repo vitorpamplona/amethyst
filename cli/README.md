@@ -40,7 +40,7 @@ What every caller — user, script, agent, CI — can rely on:
 - **Data-dir is the whole world.** All state (identity, relays, MLS
   epochs, message archives, run cursors) lives under `--data-dir PATH`.
   Delete to reset; copy to move; `AMETHYST_CLI_DATA` env var overrides
-  the default `./amethyst-cli-data`.
+  the default `./amy`.
 
 The rationale behind each of these lives in
 [DEVELOPMENT.md](./DEVELOPMENT.md). Breaking any of them is a breaking
@@ -152,7 +152,7 @@ itself crashed".
 
 ### Global flags
 
-- `--data-dir PATH` — defaults to `./amethyst-cli-data` or
+- `--data-dir PATH` — defaults to `./amy` or
   `$AMETHYST_CLI_DATA`. Always an absolute path after resolution.
 - `--help` / `-h` — usage summary.
 
@@ -189,13 +189,14 @@ events.
 
 ```
 <data-dir>/
-├── identity.json         # nsec/npub/hex — the account
-├── relays.json           # nip65 / inbox / key_package buckets
-├── state.json            # sync cursors (giftWrapSince, groupSince)
-├── keypackages.bundle    # MLS KeyPackage bundles (NostrSignerInternal)
-└── groups/
-    ├── <gid>.mls         # MLS group state per group
-    └── <gid>.log         # decrypted inner events (one JSON per line)
+├── identity.json             # nsec/npub/hex — the account
+├── relays.json               # nip65 / inbox / key_package buckets
+├── state.json                # sync cursors (giftWrapSince, groupSince)
+└── marmot/
+    ├── keypackages.bundle    # MLS KeyPackage bundles (NostrSignerInternal)
+    └── groups/
+        ├── <gid>.mls         # MLS group state per group
+        └── <gid>.log         # decrypted inner events (one JSON per line)
 ```
 
 All files are plain JSON or framed binary — human-inspectable, easy to
