@@ -491,25 +491,28 @@ fun UserProfileScreen(
                                 )
                             }
 
-                            // Edit button for own profile
+                            // Edit button for own profile — compact IconButton to match
+                            // the action-icon pattern every other screen's header uses.
                             if (isOwnProfile && account.isReadOnly == false) {
-                                OutlinedButton(
+                                IconButton(
                                     onClick = {
                                         editingDisplayName = displayName ?: ""
                                         showEditDialog = true
                                     },
+                                    modifier = Modifier.size(32.dp),
                                 ) {
                                     Icon(
                                         MaterialSymbols.Edit,
-                                        contentDescription = "Edit profile",
-                                        modifier = Modifier.size(18.dp),
+                                        contentDescription = "Edit Profile",
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(20.dp),
                                     )
-                                    Spacer(Modifier.width(8.dp))
-                                    Text("Edit Profile")
                                 }
                             }
 
-                            // Follow/Unfollow button for other profiles
+                            // Follow/Unfollow button for other profiles — compact to
+                            // match the header row height (32dp); primary-coloured
+                            // text button so the affordance is still legible.
                             if (account != null && !account.isReadOnly && pubKeyHex != account.pubKeyHex) {
                                 Column(horizontalAlignment = Alignment.End) {
                                     Button(
@@ -536,6 +539,8 @@ fun UserProfileScreen(
                                             }
                                         },
                                         enabled = contactListLoaded && followState.state.value !is com.vitorpamplona.amethyst.commons.state.LoadingState.Loading,
+                                        modifier = Modifier.height(32.dp),
+                                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
                                     ) {
                                         val state = followState.state.collectAsState().value
                                         val isFollowing = (state as? com.vitorpamplona.amethyst.commons.state.LoadingState.Success)?.data?.isFollowing ?: false
