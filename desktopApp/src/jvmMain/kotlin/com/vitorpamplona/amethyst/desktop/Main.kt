@@ -196,6 +196,26 @@ fun main() {
         System.setProperty("apple.awt.application.appearance", "system")
     }
 
+    // Set the dock / taskbar icon image before any window is shown.
+    //
+    // On macOS the Cmd+Tab app switcher and the dock use the Taskbar API's
+    // iconImage, NOT the Window(icon=) composable parameter (which only sets
+    // the in-title-bar proxy icon). Without this, a JVM launched via gradle
+    // shows the generic Java coffee-cup square in Cmd+Tab. ImageIO preserves
+    // the PNG alpha channel so the dock renders the logo with transparency.
+    try {
+        val bytes = Unit::class.java.getResourceAsStream("/icon.png")!!.readBytes()
+        val awtImage = javax.imageio.ImageIO.read(java.io.ByteArrayInputStream(bytes))
+        if (awtImage != null && java.awt.Taskbar.isTaskbarSupported()) {
+            val taskbar = java.awt.Taskbar.getTaskbar()
+            if (taskbar.isSupported(java.awt.Taskbar.Feature.ICON_IMAGE)) {
+                taskbar.iconImage = awtImage
+            }
+        }
+    } catch (e: Exception) {
+        Log.w("Main") { "Failed to set dock icon: ${e.message}" }
+    }
+
     Log.minLevel = LogLevel.DEBUG
     DesktopImageLoaderSetup.setup()
     Runtime.getRuntime().addShutdownHook(
