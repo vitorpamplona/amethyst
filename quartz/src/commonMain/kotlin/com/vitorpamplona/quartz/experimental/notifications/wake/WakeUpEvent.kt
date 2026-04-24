@@ -61,6 +61,23 @@ class WakeUpEvent(
 
     fun kinds() = tags.kinds()
 
+    /**
+     * A WakeUpEvent's `p` tags point to the authors of the referenced subject
+     * events (see [authorKeys]), **not** to the account the wake-up should be
+     * delivered to. Example: Bob reacts to Alice's note, a WakeUpEvent about
+     * Bob's reaction p-tags Bob — but it's Alice's device that needs to wake
+     * up to process the reaction.
+     *
+     * WakeUpEvents reach this device through transport-level routing (push,
+     * relay subscription). By the time one lands in [LocalCache], it is
+     * already "for us" — so every logged-in signing account is a valid
+     * recipient to kick the relay wakeup on behalf of. Returning true here
+     * means the dispatcher invokes [com.vitorpamplona.quartz.experimental.
+     * notifications.wake.WakeUpEvent]-handling for each logged-in account,
+     * which is fine because keeping relay connections alive is idempotent.
+     */
+    override fun notifies(userHex: HexKey): Boolean = true
+
     companion object {
         const val KIND = 23903
         const val ALT_DESCRIPTION = "WakeUp"
