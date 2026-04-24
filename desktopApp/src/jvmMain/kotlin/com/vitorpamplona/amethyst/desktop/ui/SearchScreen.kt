@@ -49,7 +49,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -365,47 +364,80 @@ fun SearchScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                OutlinedTextField(
+                // Compact desktop search field. M3's OutlinedTextField has a hard
+                // ~32dp vertical contentPadding baked in, so forcing .height(40dp)
+                // clipped the placeholder. BasicTextField + DecorationBox lets us
+                // override contentPadding to 8dp vertical so the field can sit at
+                // a true 40dp tall without clipping the bodyMedium line-height.
+                val searchInteraction =
+                    remember {
+                        androidx.compose.foundation.interaction
+                            .MutableInteractionSource()
+                    }
+                androidx.compose.foundation.text.BasicTextField(
                     value = textFieldValue,
                     onValueChange = {
                         textFieldValue = it
                         state.updateFromText(it.text)
                     },
-                    // .height(44.dp) overrides M3's 56dp min-height (intended for
-                    // mobile touch) — desktop inputs should feel closer to Slack /
-                    // Raycast / VS Code. 44dp (not 40) keeps the bodyMedium
-                    // placeholder from clipping vertically inside M3's built-in
-                    // content padding.
-                    modifier = Modifier.weight(1f).height(44.dp).focusRequester(focusRequester),
-                    textStyle = MaterialTheme.typography.bodyMedium,
-                    placeholder = {
-                        Text(
-                            "Search people, tags, notes…",
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                    },
-                    leadingIcon = {
-                        Icon(
-                            MaterialSymbols.Search,
-                            contentDescription = "Search",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(18.dp),
-                        )
-                    },
-                    trailingIcon = {
-                        if (displayText.isNotEmpty()) {
-                            IconButton(onClick = { state.clearSearch() }, modifier = Modifier.size(28.dp)) {
+                    modifier = Modifier.weight(1f).height(40.dp).focusRequester(focusRequester),
+                    textStyle =
+                        MaterialTheme.typography.bodyMedium
+                            .copy(color = MaterialTheme.colorScheme.onSurface),
+                    cursorBrush =
+                        androidx.compose.ui.graphics
+                            .SolidColor(MaterialTheme.colorScheme.primary),
+                    singleLine = true,
+                    interactionSource = searchInteraction,
+                    decorationBox = { innerTextField ->
+                        androidx.compose.material3.OutlinedTextFieldDefaults.DecorationBox(
+                            value = textFieldValue.text,
+                            innerTextField = innerTextField,
+                            enabled = true,
+                            singleLine = true,
+                            visualTransformation = androidx.compose.ui.text.input.VisualTransformation.None,
+                            interactionSource = searchInteraction,
+                            placeholder = {
+                                Text(
+                                    "Search people, tags, notes…",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                )
+                            },
+                            leadingIcon = {
                                 Icon(
-                                    MaterialSymbols.Clear,
-                                    contentDescription = "Clear",
+                                    MaterialSymbols.Search,
+                                    contentDescription = "Search",
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(18.dp),
                                 )
-                            }
-                        }
+                            },
+                            trailingIcon = {
+                                if (displayText.isNotEmpty()) {
+                                    IconButton(onClick = { state.clearSearch() }, modifier = Modifier.size(28.dp)) {
+                                        Icon(
+                                            MaterialSymbols.Clear,
+                                            contentDescription = "Clear",
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.size(18.dp),
+                                        )
+                                    }
+                                }
+                            },
+                            contentPadding =
+                                androidx.compose.foundation.layout.PaddingValues(
+                                    horizontal = 12.dp,
+                                    vertical = 8.dp,
+                                ),
+                            container = {
+                                androidx.compose.material3.OutlinedTextFieldDefaults.Container(
+                                    enabled = true,
+                                    isError = false,
+                                    interactionSource = searchInteraction,
+                                    shape = RoundedCornerShape(10.dp),
+                                )
+                            },
+                        )
                     },
-                    singleLine = true,
-                    shape = RoundedCornerShape(10.dp),
                 )
                 if (account != null && !account.isReadOnly) {
                     IconButton(onClick = { showRelayPicker = true }) {

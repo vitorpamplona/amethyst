@@ -43,7 +43,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
@@ -718,17 +717,22 @@ private fun MessageInput(
                 )
             }
 
-            OutlinedTextField(
+            // BasicTextField + DecorationBox with custom contentPadding lets the
+            // field sit at a compact ~40dp minimum on desktop (M3's default
+            // OutlinedTextField has ~32dp vertical contentPadding baked in, which
+            // would clip the bodyMedium placeholder at any height below ~52dp).
+            val messageInteraction =
+                remember {
+                    androidx.compose.foundation.interaction
+                        .MutableInteractionSource()
+                }
+            androidx.compose.foundation.text.BasicTextField(
                 value = messageText,
                 onValueChange = onMessageChange,
-                // heightIn(min = 44.dp) overrides M3's 56dp mobile-touch min so the
-                // chat input sits at a desktop-sensible ~44dp when empty; still grows
-                // to up to ~120dp with content via maxLines = 4. 44 (not 40) keeps the
-                // bodyMedium placeholder from clipping inside M3's internal padding.
                 modifier =
                     Modifier
                         .weight(1f)
-                        .heightIn(min = 44.dp)
+                        .heightIn(min = 40.dp)
                         .onPreviewKeyEvent { event ->
                             if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                             // Cmd+Enter (Mac) or Ctrl+Enter to send
@@ -740,16 +744,43 @@ private fun MessageInput(
                                 false
                             }
                         },
-                textStyle = MaterialTheme.typography.bodyMedium,
-                placeholder = {
-                    Text(
-                        "Message... (${if (isMacOS) "\u2318" else "Ctrl"}+Enter to send)",
-                        style = MaterialTheme.typography.bodyMedium,
+                textStyle =
+                    MaterialTheme.typography.bodyMedium
+                        .copy(color = MaterialTheme.colorScheme.onSurface),
+                cursorBrush =
+                    androidx.compose.ui.graphics
+                        .SolidColor(MaterialTheme.colorScheme.primary),
+                maxLines = 4,
+                interactionSource = messageInteraction,
+                decorationBox = { innerTextField ->
+                    androidx.compose.material3.OutlinedTextFieldDefaults.DecorationBox(
+                        value = messageText,
+                        innerTextField = innerTextField,
+                        enabled = true,
+                        singleLine = false,
+                        visualTransformation = androidx.compose.ui.text.input.VisualTransformation.None,
+                        interactionSource = messageInteraction,
+                        placeholder = {
+                            Text(
+                                "Message\u2026 (${if (isMacOS) "\u2318" else "Ctrl"}+Enter to send)",
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                        },
+                        contentPadding =
+                            androidx.compose.foundation.layout.PaddingValues(
+                                horizontal = 12.dp,
+                                vertical = 8.dp,
+                            ),
+                        container = {
+                            androidx.compose.material3.OutlinedTextFieldDefaults.Container(
+                                enabled = true,
+                                isError = false,
+                                interactionSource = messageInteraction,
+                                shape = RoundedCornerShape(10.dp),
+                            )
+                        },
                     )
                 },
-                singleLine = false,
-                maxLines = 4,
-                shape = RoundedCornerShape(10.dp),
             )
 
             IconButton(
