@@ -76,9 +76,9 @@ object PlatformAppIcon {
         val squircleMargin = (canvas - squircleSize) / 2
         // Apple's reference corner radius on the 824-box is ~185px (≈22.45%).
         val cornerDiameter = (squircleSize * 0.4490f)
-        // Mark padding inside the squircle: 7.5% each side (~85% fill) so the
+        // Mark padding inside the squircle: 5% each side (~90% fill) so the
         // mark reads at roughly the same visual weight as first-party dock icons.
-        val markPadding = (squircleSize * 0.075f).toInt()
+        val markPadding = (squircleSize * 0.05f).toInt()
         val markOrigin = squircleMargin + markPadding
         val markSize = squircleSize - 2 * markPadding
         // Drop shadow under the squircle — Apple's dock icons include a subtle
