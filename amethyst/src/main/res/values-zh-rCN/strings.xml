@@ -998,6 +998,12 @@
     <string name="account_settings">账户设置</string>
     <string name="app_settings">应用程序设置</string>
     <string name="danger_zone">危险区</string>
+    <string name="reset_marmot_state">重置 Marmot 状态</string>
+    <string name="reset_marmot_confirm_title">重置 Marmot 状态吗？</string>
+    <string name="reset_marmot_confirm_body">这将永久删除此设备上每个Marmot群聊、消息历史和当前账户此设备上的 MLS 密钥。 在下次提交之前，对端用户不会收到通知，也可能仍然会在群里看到你。 此操作无法撤销。下次应用同步时将发布一个新的密钥包。</string>
+    <string name="reset_marmot_confirm_action">重置</string>
+    <string name="reset_marmot_success">Marmot 状态重置。</string>
+    <string name="reset_marmot_failure">重置 Marmot 状态失败: %1$s</string>
     <string name="connectivity_type_always">始终</string>
     <string name="connectivity_type_wifi_only">仅限 WiFi</string>
     <string name="connectivity_type_unmetered_wifi_only">未计量的 WiFi</string>
