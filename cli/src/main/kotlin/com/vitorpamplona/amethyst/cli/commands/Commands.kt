@@ -86,13 +86,8 @@ object Commands {
         tail: Array<String>,
     ): Int = ProfileCommands.dispatch(dataDir, tail)
 
-    suspend fun post(
+    suspend fun notes(
         dataDir: DataDir,
         tail: Array<String>,
-    ): Int = PostCommand.run(dataDir, tail)
-
-    suspend fun feed(
-        dataDir: DataDir,
-        tail: Array<String>,
-    ): Int = FeedCommand.run(dataDir, tail)
+    ): Int = NotesCommands.dispatch(dataDir, tail)
 }

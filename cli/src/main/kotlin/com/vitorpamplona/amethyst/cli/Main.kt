@@ -135,12 +135,8 @@ private suspend fun dispatch(argv: Array<String>): Int {
             Commands.profile(dataDir, tail)
         }
 
-        "post" -> {
-            Commands.post(dataDir, tail)
-        }
-
-        "feed" -> {
-            Commands.feed(dataDir, tail)
+        "notes" -> {
+            Commands.notes(dataDir, tail)
         }
 
         else -> {
@@ -223,12 +219,13 @@ private fun printUsage() {
         |               [--timeout SECS]
         |
         |Notes (NIP-10 kind:1):
-        |  post TEXT [--relay URL]                     publish a kind:1 short text note
+        |  notes post TEXT [--relay URL]               publish a kind:1 short text note
         |                                              (--relay accepts comma-separated extras)
-        |  feed [--author USER]                        fetch kind:1 notes
-        |       [--following]                          (default: own; --author: one user;
-        |       [--limit N] [--since TS] [--until TS]   --following: every contact-list pubkey)
-        |       [--timeout SECS]
+        |  notes feed [--author USER]                  fetch kind:1 notes
+        |             [--following]                    (default: own; --author: one user;
+        |             [--limit N]                       --following: every contact-list pubkey)
+        |             [--since TS] [--until TS]
+        |             [--timeout SECS]
         |
         |Direct messages (NIP-17):
         |  dm send RECIPIENT TEXT                     send a gift-wrapped DM
