@@ -68,6 +68,10 @@ class WakeUpEvent(
         const val KIND = 23903
         const val ALT_DESCRIPTION = "WakeUp"
 
+        // p-tags on a WakeUp identify the AUTHORS of the referenced events —
+        // the people whose events are the subject of the wake-up and who should
+        // come online to handle new activity on them. Callers can add extra
+        // e/p tags via [initializer] when waking up about multiple events.
         fun build(
             about: EventHintBundle<Event>,
             createdAt: Long = TimeUtils.now(),
