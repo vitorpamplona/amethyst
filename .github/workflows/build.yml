@@ -31,14 +31,26 @@ jobs:
       - name: Linter (gradle)
         run: ./gradlew spotlessCheck
 
-  test:
+  test-and-build:
     needs: lint
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            desktop-task: packageDeb
+            desktop-artifact-name: Desktop Linux DEB
+            desktop-artifact-path: desktopApp/build/compose/binaries/main/deb/*.deb
+          - os: macos-latest
+            desktop-task: packageDmg
+            desktop-artifact-name: Desktop macOS DMG
+            desktop-artifact-path: desktopApp/build/compose/binaries/main/dmg/*.dmg
+          - os: windows-latest
+            desktop-task: packageMsi
+            desktop-artifact-name: Desktop Windows MSI
+            desktop-artifact-path: desktopApp/build/compose/binaries/main/msi/*.msi
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
+    timeout-minutes: 60
     defaults:
       run:
         shell: bash
@@ -53,12 +65,12 @@ jobs:
           java-version: 21
           cache: gradle
 
-      - name: Test (gradle)
-        run: ./gradlew test --no-daemon
+      - name: Test + Build Desktop (gradle)
+        run: ./gradlew test :desktopApp:${{ matrix.desktop-task }} --no-daemon
 
-      - name: Stop Gradle Daemon
-        if: always()
-        run: ./gradlew --stop
+      - name: Build Android APKs (gradle)
+        if: matrix.os == 'ubuntu-latest'
+        run: ./gradlew assembleDebug assembleBenchmark --no-daemon
 
       - name: Android Test Report
         uses: asadmansr/android-test-report-action@v1.2.0
@@ -71,100 +83,43 @@ jobs:
           name: Test Reports
           path: amethyst/build/reports
 
-  build-android:
-    needs: test
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Set up JDK 21
-        uses: actions/setup-java@v5
+      - name: Upload Desktop Distribution
+        uses: actions/upload-artifact@v7
         with:
-          distribution: 'zulu'
-          java-version: 21
-          cache: gradle
-
-      - name: Build APK (gradle)
-        run: ./gradlew assembleDebug
+          name: ${{ matrix.desktop-artifact-name }}
+          path: ${{ matrix.desktop-artifact-path }}
 
       - name: Upload Play APK
         uses: actions/upload-artifact@v7
+        if: matrix.os == 'ubuntu-latest'
         with:
           name: Play Debug APK
           path: amethyst/build/outputs/apk/play/debug/amethyst-play-universal-debug.apk
 
       - name: Upload FDroid APK
         uses: actions/upload-artifact@v7
+        if: matrix.os == 'ubuntu-latest'
         with:
           name: FDroid Debug APK
           path: amethyst/build/outputs/apk/fdroid/debug/amethyst-fdroid-universal-debug.apk
 
-      - name: Build Benchmark APK (gradle)
-        run: ./gradlew assembleBenchmark
-
       - name: Upload Play APK Benchmark
         uses: actions/upload-artifact@v7
+        if: matrix.os == 'ubuntu-latest'
         with:
           name: Play Benchmark APK
           path: amethyst/build/outputs/apk/play/benchmark/amethyst-play-universal-benchmark.apk
 
       - name: Upload FDroid APK Benchmark
         uses: actions/upload-artifact@v7
+        if: matrix.os == 'ubuntu-latest'
         with:
           name: FDroid Benchmark APK
           path: amethyst/build/outputs/apk/fdroid/benchmark/amethyst-fdroid-universal-benchmark.apk
 
       - name: Upload Compose Reports
         uses: actions/upload-artifact@v7
+        if: matrix.os == 'ubuntu-latest'
         with:
           name: Compose Reports
           path: amethyst/build/compose_compiler
-
-  build-desktop:
-    needs: test
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-            task: packageDeb
-            artifact-name: Desktop Linux DEB
-            artifact-path: desktopApp/build/compose/binaries/main/deb/*.deb
-          - os: macos-latest
-            task: packageDmg
-            artifact-name: Desktop macOS DMG
-            artifact-path: desktopApp/build/compose/binaries/main/dmg/*.dmg
-          - os: windows-latest
-            task: packageMsi
-            artifact-name: Desktop Windows MSI
-            artifact-path: desktopApp/build/compose/binaries/main/msi/*.msi
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
-    defaults:
-      run:
-        shell: bash
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Set up JDK 21
-        uses: actions/setup-java@v5
-        with:
-          distribution: 'zulu'
-          java-version: 21
-          cache: gradle
-
-      - name: Build Desktop Distribution
-        run: ./gradlew :desktopApp:${{ matrix.task }}
-
-      - name: Stop Gradle Daemon
-        if: always()
-        run: ./gradlew --stop
-
-      - name: Upload Desktop Distribution
-        uses: actions/upload-artifact@v7
-        with:
-          name: ${{ matrix.artifact-name }}
-          path: ${{ matrix.artifact-path }}
