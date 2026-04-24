@@ -80,4 +80,19 @@ object Commands {
         dataDir: DataDir,
         tail: Array<String>,
     ): Int = DmCommands.dispatch(dataDir, tail)
+
+    suspend fun profile(
+        dataDir: DataDir,
+        tail: Array<String>,
+    ): Int = ProfileCommands.dispatch(dataDir, tail)
+
+    suspend fun post(
+        dataDir: DataDir,
+        tail: Array<String>,
+    ): Int = PostCommand.run(dataDir, tail)
+
+    suspend fun feed(
+        dataDir: DataDir,
+        tail: Array<String>,
+    ): Int = FeedCommand.run(dataDir, tail)
 }

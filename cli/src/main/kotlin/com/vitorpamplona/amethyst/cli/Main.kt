@@ -131,6 +131,18 @@ private suspend fun dispatch(argv: Array<String>): Int {
             Commands.dm(dataDir, tail)
         }
 
+        "profile" -> {
+            Commands.profile(dataDir, tail)
+        }
+
+        "post" -> {
+            Commands.post(dataDir, tail)
+        }
+
+        "feed" -> {
+            Commands.feed(dataDir, tail)
+        }
+
         else -> {
             System.err.println("unknown subcommand: $head")
             printUsage()
@@ -196,6 +208,27 @@ private fun printUsage() {
         |  relay add URL [--type T]      T=nip65|inbox|key_package|all (default all)
         |  relay list                    print configured relays
         |  relay publish-lists           publish kind:10002 + kind:10050
+        |
+        |Profile (NIP-01 kind:0):
+        |  profile show [USER] [--timeout SECS]       fetch latest kind:0 metadata
+        |                                              (USER: npub|nprofile|hex|name@domain)
+        |  profile edit [--name NAME]                  patch kind:0; unset flags keep prior values,
+        |               [--display-name N]             blank values delete the field
+        |               [--about TEXT]
+        |               [--picture URL] [--banner URL]
+        |               [--website URL] [--nip05 ID]
+        |               [--lud16 X] [--lud06 X]
+        |               [--pronouns P]
+        |               [--twitter H] [--mastodon H] [--github H]
+        |               [--timeout SECS]
+        |
+        |Notes (NIP-10 kind:1):
+        |  post TEXT [--relay URL]                     publish a kind:1 short text note
+        |                                              (--relay accepts comma-separated extras)
+        |  feed [--author USER]                        fetch kind:1 notes
+        |       [--following]                          (default: own; --author: one user;
+        |       [--limit N] [--since TS] [--until TS]   --following: every contact-list pubkey)
+        |       [--timeout SECS]
         |
         |Direct messages (NIP-17):
         |  dm send RECIPIENT TEXT                     send a gift-wrapped DM
