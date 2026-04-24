@@ -20,11 +20,12 @@
  */
 package com.vitorpamplona.amethyst.commons.icons.symbols
 
-import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.scale
@@ -66,32 +67,32 @@ fun Icon(
             Modifier
         }
 
-    Canvas(
+    Box(
         modifier =
             modifier
                 .defaultMinSize(IconDefaultSize, IconDefaultSize)
-                .then(semanticsModifier),
-    ) {
-        val sizePx = size.minDimension
-        val fontSize = with(density) { sizePx.toSp() }
-        val layout =
-            textMeasurer.measure(
-                text = symbol.glyph,
-                style =
-                    TextStyle(
-                        fontFamily = fontFamily,
-                        fontSize = fontSize,
-                        color = tint,
-                    ),
-            )
-        val tx = (size.width - layout.size.width) / 2f
-        val ty = (size.height - layout.size.height) / 2f
-        if (mirror) {
-            scale(scaleX = -1f, scaleY = 1f, pivot = Offset(size.width / 2f, size.height / 2f)) {
-                translate(tx, ty) { drawText(layout) }
-            }
-        } else {
-            translate(tx, ty) { drawText(layout) }
-        }
-    }
+                .drawBehind {
+                    val sizePx = size.minDimension
+                    val fontSize = with(density) { sizePx.toSp() }
+                    val layout =
+                        textMeasurer.measure(
+                            text = symbol.glyph,
+                            style =
+                                TextStyle(
+                                    fontFamily = fontFamily,
+                                    fontSize = fontSize,
+                                    color = tint,
+                                ),
+                        )
+                    val tx = (size.width - layout.size.width) / 2f
+                    val ty = (size.height - layout.size.height) / 2f
+                    if (mirror) {
+                        scale(scaleX = -1f, scaleY = 1f, pivot = Offset(size.width / 2f, size.height / 2f)) {
+                            translate(tx, ty) { drawText(layout) }
+                        }
+                    } else {
+                        translate(tx, ty) { drawText(layout) }
+                    }
+                }.then(semanticsModifier),
+    )
 }
