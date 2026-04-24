@@ -132,7 +132,7 @@ data class RunState(
 
 /**
  * Root of the on-disk layout. Any absolute path chosen by `--data-dir` (or
- * `$AMETHYST_CLI_DATA`) — defaults to `./amethyst-cli-data`.
+ * `$AMETHYST_CLI_DATA`) — defaults to `./amy`.
  */
 class DataDir(
     val root: File,
@@ -140,8 +140,9 @@ class DataDir(
     val identityFile = File(root, "identity.json")
     val relaysFile = File(root, "relays.json")
     val stateFile = File(root, "state.json")
-    val groupsDir = File(root, "groups")
-    val keyPackageBundleFile = File(root, "keypackages.bundle")
+    val marmotDir = File(root, "marmot")
+    val groupsDir = File(marmotDir, "groups")
+    val keyPackageBundleFile = File(marmotDir, "keypackages.bundle")
 
     init {
         root.mkdirs()
@@ -169,7 +170,7 @@ class DataDir(
     companion object {
         fun resolve(flag: String?): DataDir {
             val envPath = System.getenv("AMETHYST_CLI_DATA")
-            val path = flag ?: envPath ?: "./amethyst-cli-data"
+            val path = flag ?: envPath ?: "./amy"
             return DataDir(File(path).absoluteFile)
         }
     }
