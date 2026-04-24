@@ -160,9 +160,10 @@ class AlwaysOnNotificationServiceManager(
     private fun stopMultiAccountPreload() {
         preloadJob?.cancel()
         preloadJob = null
-        val active = activePubKeyProvider()
-        if (active != null) {
-            accountsCache.retainOnly(setOf(active))
-        }
+        // remove this because we don't know which other accounts might be getting used.
+        // val active = activePubKeyProvider()
+        // if (active != null) {
+        //    accountsCache.retainOnly(setOf(active))
+        // }
     }
 }
