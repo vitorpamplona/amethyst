@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.desktop.account
 
 import com.vitorpamplona.amethyst.commons.keystorage.SecureKeyStorage
+import com.vitorpamplona.amethyst.commons.model.account.SignerType
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip19Bech32.toNpub

@@ -670,7 +670,7 @@ fun App(
             val result = accountManager.loadSavedAccount()
             if (result.isSuccess) {
                 val current = accountManager.currentAccount()
-                if (current?.signerType is com.vitorpamplona.amethyst.desktop.account.SignerType.Remote) {
+                if (current?.signerType is com.vitorpamplona.amethyst.commons.model.account.SignerType.Remote) {
                     accountManager.startHeartbeat(scope)
                 }
             } else if (accountManager.hasBunkerAccount()) {
@@ -702,7 +702,7 @@ fun App(
                         onLoginSuccess = {
                             // Start heartbeat if bunker account
                             val current = accountManager.currentAccount()
-                            if (current?.signerType is com.vitorpamplona.amethyst.desktop.account.SignerType.Remote) {
+                            if (current?.signerType is com.vitorpamplona.amethyst.commons.model.account.SignerType.Remote) {
                                 accountManager.startHeartbeat(scope)
                             }
                         },

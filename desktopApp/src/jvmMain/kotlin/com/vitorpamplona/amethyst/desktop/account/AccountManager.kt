@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.commons.domain.nip46.NostrConnectLoginUseCase
 import com.vitorpamplona.amethyst.commons.domain.nip46.SignerConnectionState
 import com.vitorpamplona.amethyst.commons.keystorage.SecureKeyStorage
 import com.vitorpamplona.amethyst.commons.keystorage.SecureStorageException
+import com.vitorpamplona.amethyst.commons.model.account.SignerType
 import com.vitorpamplona.amethyst.desktop.network.DesktopHttpClient
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
@@ -64,14 +65,6 @@ import kotlinx.coroutines.withTimeout
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.attribute.PosixFilePermission
-
-sealed class SignerType {
-    data object Internal : SignerType()
-
-    data class Remote(
-        val bunkerUri: String,
-    ) : SignerType()
-}
 
 sealed class AccountState {
     data object LoggedOut : AccountState()
