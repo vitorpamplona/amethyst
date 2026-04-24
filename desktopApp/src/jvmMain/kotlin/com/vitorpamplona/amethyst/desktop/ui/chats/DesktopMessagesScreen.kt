@@ -33,7 +33,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -381,12 +380,15 @@ private fun EmptyConversationState() {
 
 /**
  * Draggable vertical divider between the conversation list pane and the chat
- * pane. 12dp wide hit area; cursor flips to the horizontal resize arrow on
- * hover.
+ * pane. The hit area is split in half horizontally: the left half takes the
+ * conversation list's surfaceContainer fill, the right half takes the chat
+ * pane's surface fill, so the divider reads as a continuation of the two panes
+ * instead of a single contrasting stripe. Cursor flips to the horizontal
+ * resize arrow on hover.
  */
 @Composable
 private fun MessagesDraggableDivider(onDrag: (Float) -> Unit) {
-    Box(
+    Row(
         modifier =
             Modifier
                 .width(12.dp)
@@ -398,8 +400,20 @@ private fun MessagesDraggableDivider(onDrag: (Float) -> Unit) {
                         onDrag(dragAmount.x)
                     }
                 },
-        contentAlignment = Alignment.Center,
     ) {
-        VerticalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+        Box(
+            modifier =
+                Modifier
+                    .width(6.dp)
+                    .fillMaxHeight()
+                    .background(MaterialTheme.colorScheme.surfaceContainer),
+        )
+        Box(
+            modifier =
+                Modifier
+                    .width(6.dp)
+                    .fillMaxHeight()
+                    .background(MaterialTheme.colorScheme.surface),
+        )
     }
 }
