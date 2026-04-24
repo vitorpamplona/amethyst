@@ -31,9 +31,15 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
  * accumulate a list — it simply calls [onNew] per matching event as it is
  * inserted into the cache. Useful for reactive event-triggered pipelines
  * (e.g. notifications) that need per-event delivery without list overhead.
+ *
+ * The optional [predicate] runs after the protocol [filter] matches; use it
+ * for checks the Nostr [Filter] grammar can't express (e.g. rolling age
+ * cutoffs, arbitrary tag shapes, derived content fields). The predicate has
+ * to be fast — it runs on every new cache insertion.
  */
 class NewEventMatchingFilter<T : Event>(
     private val filter: Filter,
+    private val predicate: (Event) -> Boolean = { true },
     private val onNew: (T) -> Unit,
 ) : Observable {
     @Suppress("UNCHECKED_CAST")
@@ -41,7 +47,7 @@ class NewEventMatchingFilter<T : Event>(
         event: Event,
         note: Note,
     ) {
-        if (filter.match(event)) {
+        if (filter.match(event) && predicate(event)) {
             onNew(event as T)
         }
     }

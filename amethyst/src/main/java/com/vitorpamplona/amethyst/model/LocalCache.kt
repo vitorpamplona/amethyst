@@ -386,11 +386,18 @@ object LocalCache : ILocalCache, ICacheProvider {
      * Emits each new event that matches the filter, one at a time, as it is
      * inserted into the cache. Unlike [observeEvents], this does not accumulate
      * a list — useful for per-event reactive pipelines like notifications.
+     *
+     * The optional [predicate] runs after the Nostr [Filter] matches and lets
+     * callers reject events on fields the Filter grammar can't express (e.g.
+     * a rolling `createdAt` window that drifts as wall-clock time advances).
      */
-    fun <T : Event> observeNewEvents(filter: Filter): Flow<T> =
+    fun <T : Event> observeNewEvents(
+        filter: Filter,
+        predicate: (Event) -> Boolean = { true },
+    ): Flow<T> =
         callbackFlow {
             val newFilter =
-                NewEventMatchingFilter<T>(filter) {
+                NewEventMatchingFilter<T>(filter, predicate) {
                     trySend(it)
                 }
 

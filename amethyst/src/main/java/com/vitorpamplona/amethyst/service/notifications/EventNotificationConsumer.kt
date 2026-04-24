@@ -172,6 +172,9 @@ class EventNotificationConsumer(
         account: Account,
     ) {
         // Calls and wake-ups are high-priority and always notify, even when MainActivity is visible.
+        // They have their own freshness rules (CallManager.MAX_EVENT_AGE_SECONDS = 20s) and
+        // author-identity semantics (caller pubkey is the other party), so they bypass the
+        // shared gates below.
         when (event) {
             is CallOfferEvent -> {
                 notifyIncomingCall(event, account)
@@ -186,6 +189,14 @@ class EventNotificationConsumer(
 
         // Everything else is suppressed while the user is actively on the home screen.
         if (MainActivity.isResumed) return
+
+        // Shared per-account gate: don't push-notify events this account authored.
+        // Applied here (not at the observer) because in a multi-account session
+        // account A's outgoing event legitimately becomes account B's incoming
+        // notification on the same device. The observer already enforces the
+        // 15-min rolling age window, so individual notify() methods don't need
+        // to repeat either check.
+        if (event.pubKey == account.signer.pubKey) return
 
         when (event) {
             is PrivateDmEvent -> notify(event, account)
@@ -270,50 +281,42 @@ class EventNotificationConsumer(
         account: Account,
     ) {
         Log.d(TAG, "New ChatMessage File to Notify")
-        if (
-            // old event being re-broadcasted
-            event.createdAt > TimeUtils.fifteenMinutesAgo() &&
-            // don't display if it comes from me.
-            event.pubKey != account.signer.pubKey
-        ) { // from the user
-            Log.d(TAG, "Notifying")
-            val chatroomList = LocalCache.getOrCreateChatroomList(account.signer.pubKey)
-            val chatNote = LocalCache.getNoteIfExists(event.id) ?: return
-            val chatRoom = event.chatroomKey(account.signer.pubKey)
+        // Age + self-author gates run centrally in dispatchForAccount.
+        val chatroomList = LocalCache.getOrCreateChatroomList(account.signer.pubKey)
+        val chatNote = LocalCache.getNoteIfExists(event.id) ?: return
+        val chatRoom = event.chatroomKey(account.signer.pubKey)
 
-            val followingKeySet = account.followingKeySet()
+        val followingKeySet = account.followingKeySet()
 
-            val isKnownRoom =
-                (
-                    chatroomList.rooms.get(chatRoom)?.senderIntersects(followingKeySet) == true || chatroomList.hasSentMessagesTo(chatRoom)
-                )
+        val isKnownRoom =
+            chatroomList.rooms.get(chatRoom)?.senderIntersects(followingKeySet) == true ||
+                chatroomList.hasSentMessagesTo(chatRoom)
 
-            if (isKnownRoom) {
-                val content = chatNote.event?.content ?: ""
-                val user = chatNote.author?.toBestDisplayName() ?: ""
-                val userPicture = chatNote.author?.profilePicture()
-                val accountNpub =
-                    account.signer.pubKey
-                        .hexToByteArray()
-                        .toNpub()
-                val chatroomMembers = chatRoom.users.joinToString(",")
-                val noteUri = chatNote.toNEvent() + ACCOUNT_QUERY_PARAM + accountNpub
+        if (!isKnownRoom) return
 
-                notificationManager()
-                    .sendDMNotification(
-                        event.id,
-                        content,
-                        user,
-                        event.createdAt,
-                        userPicture,
-                        noteUri,
-                        applicationContext,
-                        accountNpub = accountNpub,
-                        accountPictureUrl = account.userProfile().profilePicture(),
-                        chatroomMembers = chatroomMembers,
-                    )
-            }
-        }
+        val content = chatNote.event?.content ?: ""
+        val user = chatNote.author?.toBestDisplayName() ?: ""
+        val userPicture = chatNote.author?.profilePicture()
+        val accountNpub =
+            account.signer.pubKey
+                .hexToByteArray()
+                .toNpub()
+        val chatroomMembers = chatRoom.users.joinToString(",")
+        val noteUri = chatNote.toNEvent() + ACCOUNT_QUERY_PARAM + accountNpub
+
+        notificationManager()
+            .sendDMNotification(
+                event.id,
+                content,
+                user,
+                event.createdAt,
+                userPicture,
+                noteUri,
+                applicationContext,
+                accountNpub = accountNpub,
+                accountPictureUrl = account.userProfile().profilePicture(),
+                chatroomMembers = chatroomMembers,
+            )
     }
 
     private suspend fun notify(
@@ -321,47 +324,42 @@ class EventNotificationConsumer(
         account: Account,
     ) {
         Log.d(TAG, "New ChatMessage to Notify")
-        if (
-            // old event being re-broadcasted
-            event.createdAt > TimeUtils.fifteenMinutesAgo() &&
-            // don't display if it comes from me.
-            event.pubKey != account.signer.pubKey
-        ) { // from the user
-            Log.d(TAG, "Notifying")
-            val chatroomList = LocalCache.getOrCreateChatroomList(account.signer.pubKey)
-            val chatNote = LocalCache.getNoteIfExists(event.id) ?: return
-            val chatRoom = event.chatroomKey(account.signer.pubKey)
+        // Age + self-author gates run centrally in dispatchForAccount.
+        val chatroomList = LocalCache.getOrCreateChatroomList(account.signer.pubKey)
+        val chatNote = LocalCache.getNoteIfExists(event.id) ?: return
+        val chatRoom = event.chatroomKey(account.signer.pubKey)
 
-            val followingKeySet = account.followingKeySet()
+        val followingKeySet = account.followingKeySet()
 
-            val isKnownRoom = chatroomList.rooms.get(chatRoom)?.senderIntersects(followingKeySet) == true || chatroomList.hasSentMessagesTo(chatRoom)
+        val isKnownRoom =
+            chatroomList.rooms.get(chatRoom)?.senderIntersects(followingKeySet) == true ||
+                chatroomList.hasSentMessagesTo(chatRoom)
 
-            if (isKnownRoom) {
-                val content = chatNote.event?.content ?: ""
-                val user = chatNote.author?.toBestDisplayName() ?: ""
-                val userPicture = chatNote.author?.profilePicture()
-                val accountNpub =
-                    account.signer.pubKey
-                        .hexToByteArray()
-                        .toNpub()
-                val chatroomMembers = chatRoom.users.joinToString(",")
-                val noteUri = chatNote.toNEvent() + ACCOUNT_QUERY_PARAM + accountNpub
+        if (!isKnownRoom) return
 
-                notificationManager()
-                    .sendDMNotification(
-                        id = event.id,
-                        messageBody = content,
-                        senderName = user,
-                        time = event.createdAt,
-                        pictureUrl = userPicture,
-                        uri = noteUri,
-                        applicationContext = applicationContext,
-                        accountNpub = accountNpub,
-                        accountPictureUrl = account.userProfile().profilePicture(),
-                        chatroomMembers = chatroomMembers,
-                    )
-            }
-        }
+        val content = chatNote.event?.content ?: ""
+        val user = chatNote.author?.toBestDisplayName() ?: ""
+        val userPicture = chatNote.author?.profilePicture()
+        val accountNpub =
+            account.signer.pubKey
+                .hexToByteArray()
+                .toNpub()
+        val chatroomMembers = chatRoom.users.joinToString(",")
+        val noteUri = chatNote.toNEvent() + ACCOUNT_QUERY_PARAM + accountNpub
+
+        notificationManager()
+            .sendDMNotification(
+                id = event.id,
+                messageBody = content,
+                senderName = user,
+                time = event.createdAt,
+                pictureUrl = userPicture,
+                uri = noteUri,
+                applicationContext = applicationContext,
+                accountNpub = accountNpub,
+                accountPictureUrl = account.userProfile().profilePicture(),
+                chatroomMembers = chatroomMembers,
+            )
     }
 
     private suspend fun notify(
@@ -369,47 +367,48 @@ class EventNotificationConsumer(
         account: Account,
     ) {
         Log.d(TAG, "New Nip-04 DM to Notify")
-        // old event being re-broadcast
-        if (event.createdAt < TimeUtils.fifteenMinutesAgo()) return
+        // Age + self-author gates run centrally in dispatchForAccount. The
+        // dispatchForAccount self-check (event.pubKey != account.signer.pubKey)
+        // also covers the "don't notify myself about DMs I sent" case that
+        // was previously implicit via the recipient match below.
+        if (account.signer.pubKey != event.verifiedRecipientPubKey()) return
 
-        if (account.signer.pubKey == event.verifiedRecipientPubKey()) {
-            val note = LocalCache.getNoteIfExists(event.id) ?: return
-            val chatroomList = LocalCache.getOrCreateChatroomList(account.signer.pubKey)
+        val note = LocalCache.getNoteIfExists(event.id) ?: return
+        val chatroomList = LocalCache.getOrCreateChatroomList(account.signer.pubKey)
 
-            val followingKeySet = account.followingKeySet()
+        val followingKeySet = account.followingKeySet()
 
-            val chatRoom = event.chatroomKey(account.signer.pubKey)
+        val chatRoom = event.chatroomKey(account.signer.pubKey)
 
-            val isKnownRoom = chatroomList.rooms.get(chatRoom)?.senderIntersects(followingKeySet) == true || chatroomList.hasSentMessagesTo(chatRoom)
+        val isKnownRoom =
+            chatroomList.rooms.get(chatRoom)?.senderIntersects(followingKeySet) == true ||
+                chatroomList.hasSentMessagesTo(chatRoom)
 
-            if (isKnownRoom) {
-                note.author?.let {
-                    decryptContent(note, account.signer)?.let { content ->
-                        val user = note.author?.toBestDisplayName() ?: ""
-                        val userPicture = note.author?.profilePicture()
-                        val accountNpub =
-                            account.signer.pubKey
-                                .hexToByteArray()
-                                .toNpub()
-                        val noteUri = note.toNEvent() + ACCOUNT_QUERY_PARAM + accountNpub
+        if (!isKnownRoom) return
 
-                        notificationManager()
-                            .sendDMNotification(
-                                id = event.id,
-                                messageBody = content,
-                                senderName = user,
-                                time = event.createdAt,
-                                pictureUrl = userPicture,
-                                uri = noteUri,
-                                applicationContext = applicationContext,
-                                accountNpub = accountNpub,
-                                accountPictureUrl = account.userProfile().profilePicture(),
-                                chatroomMembers = null,
-                            )
-                    }
-                }
-            }
-        }
+        val author = note.author ?: return
+        val content = decryptContent(note, account.signer) ?: return
+        val user = author.toBestDisplayName()
+        val userPicture = author.profilePicture()
+        val accountNpub =
+            account.signer.pubKey
+                .hexToByteArray()
+                .toNpub()
+        val noteUri = note.toNEvent() + ACCOUNT_QUERY_PARAM + accountNpub
+
+        notificationManager()
+            .sendDMNotification(
+                id = event.id,
+                messageBody = content,
+                senderName = user,
+                time = event.createdAt,
+                pictureUrl = userPicture,
+                uri = noteUri,
+                applicationContext = applicationContext,
+                accountNpub = accountNpub,
+                accountPictureUrl = account.userProfile().profilePicture(),
+                chatroomMembers = null,
+            )
     }
 
     /**
@@ -501,13 +500,10 @@ class EventNotificationConsumer(
         Log.d(TAG) { "Notify Start ${event.toNostrUri()}" }
         LocalCache.getNoteIfExists(event.id) ?: return
 
-        Log.d(TAG, "Notify Not Notified Yet")
-
-        // old event being re-broadcast
-        if (event.createdAt < TimeUtils.fifteenMinutesAgo()) return
-
-        Log.d(TAG, "Notify Not an old event")
-
+        // Age + self-author gates run centrally in dispatchForAccount. For zaps
+        // the self-check is effectively a no-op (receipts are signed by the LN
+        // service, not the zapper) but the uniform rule is cheap and keeps the
+        // downstream invariants simple.
         val noteZapRequest = event.zapRequest?.id?.let { LocalCache.checkGetOrCreateNote(it) } ?: return
         val noteZapped = event.zappedPost().firstOrNull()?.let { LocalCache.checkGetOrCreateNote(it) } ?: return
 
@@ -622,14 +618,9 @@ class EventNotificationConsumer(
     ) {
         Log.d(TAG, "New Reaction to Notify")
 
-        // old event being re-broadcast
-        if (event.createdAt < TimeUtils.fifteenMinutesAgo()) return
-
-        // don't notify for own reactions
-        if (event.pubKey == account.signer.pubKey) return
-
-        // only notify if the reaction is for the current user
-        if (!event.isTaggedUser(account.signer.pubKey)) return
+        // Age + self-author gates run centrally in dispatchForAccount.
+        // p-tag match already enforced by consumeFromCache; no redundant
+        // isTaggedUser re-check needed.
 
         val reactedPostId = event.originalPost().firstOrNull() ?: return
         val reactedNote = LocalCache.checkGetOrCreateNote(reactedPostId)
@@ -694,12 +685,7 @@ class EventNotificationConsumer(
         account: Account,
     ) {
         Log.d(TAG, "New TextNote to Notify")
-
-        // old event being re-broadcast
-        if (event.createdAt < TimeUtils.fifteenMinutesAgo()) return
-
-        // don't notify for own notes
-        if (event.pubKey == account.signer.pubKey) return
+        // Age + self-author gates run centrally in dispatchForAccount.
 
         val replyTargetId = event.replyingTo()
 
@@ -721,12 +707,7 @@ class EventNotificationConsumer(
         account: Account,
     ) {
         Log.d(TAG, "New NIP-22 Comment to Notify")
-
-        // old event being re-broadcast
-        if (event.createdAt < TimeUtils.fifteenMinutesAgo()) return
-
-        // don't notify for own comments
-        if (event.pubKey == account.signer.pubKey) return
+        // Age + self-author gates run centrally in dispatchForAccount.
 
         // NIP-22 marks direct-reply and root authors. Notify when the current
         // account is either (someone commenting on our post, or replying to our comment).
@@ -811,12 +792,7 @@ class EventNotificationConsumer(
         event: Event,
         account: Account,
     ) {
-        // old event being re-broadcast
-        if (event.createdAt < TimeUtils.fifteenMinutesAgo()) return
-
-        // don't notify for our own events
-        if (event.pubKey == account.signer.pubKey) return
-
+        // Age + self-author gates run centrally in dispatchForAccount.
         val note = LocalCache.getNoteIfExists(event.id) ?: return
 
         val author = LocalCache.getOrCreateUser(event.pubKey)
@@ -855,33 +831,29 @@ class EventNotificationConsumer(
         account: Account,
         contentStringRes: Int,
     ) {
-        if (
-            event.createdAt > TimeUtils.fifteenMinutesAgo() &&
-            event.pubKey != account.signer.pubKey
-        ) {
-            val author = LocalCache.getOrCreateUser(event.pubKey)
-            val user = author.toBestDisplayName()
-            val userPicture = author.profilePicture()
-            val title = stringRes(applicationContext, R.string.app_notification_chess_channel_name)
-            val content = stringRes(applicationContext, contentStringRes, user)
-            val noteUri =
-                "notifications$ACCOUNT_QUERY_PARAM" +
-                    account.signer.pubKey
-                        .hexToByteArray()
-                        .toNpub() +
-                    SCROLL_TO_QUERY_PARAM + event.id
+        // Age + self-author gates run centrally in dispatchForAccount.
+        val author = LocalCache.getOrCreateUser(event.pubKey)
+        val user = author.toBestDisplayName()
+        val userPicture = author.profilePicture()
+        val title = stringRes(applicationContext, R.string.app_notification_chess_channel_name)
+        val content = stringRes(applicationContext, contentStringRes, user)
+        val noteUri =
+            "notifications$ACCOUNT_QUERY_PARAM" +
+                account.signer.pubKey
+                    .hexToByteArray()
+                    .toNpub() +
+                SCROLL_TO_QUERY_PARAM + event.id
 
-            notificationManager()
-                .sendChessNotification(
-                    event.id,
-                    content,
-                    title,
-                    event.createdAt,
-                    userPicture,
-                    noteUri,
-                    applicationContext,
-                )
-        }
+        notificationManager()
+            .sendChessNotification(
+                event.id,
+                content,
+                title,
+                event.createdAt,
+                userPicture,
+                noteUri,
+                applicationContext,
+            )
     }
 
     private suspend fun notifyIncomingCall(

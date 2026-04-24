@@ -170,8 +170,20 @@ class NotificationDispatcher(
 
                         Log.d(TAG) { "Observing notifications for ${pubkeys.size} account(s)." }
 
+                        // Rolling-window age cutoff that matches each downstream
+                        // notify() method's existing 15-min freshness rule. The
+                        // Nostr Filter's `since` is a fixed value captured at
+                        // dispatcher start; this predicate re-evaluates per event
+                        // so we keep pruning re-broadcasts as time advances.
+                        // Applied account-agnostically — calls use 20s downstream
+                        // (see CallManager.MAX_EVENT_AGE_SECONDS), which is strictly
+                        // stricter than 15 min, so they still pass.
+                        val freshnessPredicate: (Event) -> Boolean = { event ->
+                            event.createdAt >= TimeUtils.fifteenMinutesAgo()
+                        }
+
                         LocalCache
-                            .observeNewEvents<Event>(filter)
+                            .observeNewEvents<Event>(filter, freshnessPredicate)
                             .collect { event ->
                                 try {
                                     consumer.consumeFromCache(event)
