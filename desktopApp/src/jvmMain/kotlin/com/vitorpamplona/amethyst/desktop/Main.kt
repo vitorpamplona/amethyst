@@ -71,6 +71,7 @@ import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.icons.symbols.ProvideMaterialSymbols
 import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.unwrapAndUnsealOrNull
 import com.vitorpamplona.amethyst.desktop.account.AccountManager
 import com.vitorpamplona.amethyst.desktop.account.AccountState
@@ -740,148 +741,150 @@ fun App(
     MaterialTheme(
         colorScheme = darkColorScheme(),
     ) {
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.background,
-        ) {
-            when (accountState) {
-                is AccountState.LoggedOut -> {
-                    LoginScreen(
-                        accountManager = accountManager,
-                        onLoginSuccess = {
-                            // Start heartbeat if bunker account
-                            val current = accountManager.currentAccount()
-                            if (current?.signerType is com.vitorpamplona.amethyst.desktop.account.SignerType.Remote) {
-                                accountManager.startHeartbeat(scope)
-                            }
-                        },
-                    )
-                }
-
-                is AccountState.ConnectingRelays -> {
-                    val relays by relayManager.relayStatuses.collectAsState()
-                    ConnectingRelaysScreen(
-                        subtitle = "Restoring remote signer session",
-                        relayStatuses = relays,
-                    )
-                }
-
-                is AccountState.LoggedIn -> {
-                    val account = accountState as AccountState.LoggedIn
-                    val nwcConnection by accountManager.nwcConnection.collectAsState()
-
-                    // Load NWC connection on first composition
-                    LaunchedEffect(Unit) {
-                        accountManager.loadNwcConnection()
-                    }
-
-                    val currentTorStatus = torManager.status.collectAsState().value
-                    androidx.compose.runtime.CompositionLocalProvider(
-                        com.vitorpamplona.amethyst.desktop.ui.tor.LocalTorState provides
-                            com.vitorpamplona.amethyst.desktop.ui.tor.TorState(
-                                status = currentTorStatus,
-                                settings = torSettings,
-                                onSettingsChanged = { newSettings ->
-                                    torSettings = newSettings
-                                    com.vitorpamplona.amethyst.desktop.tor.DesktopTorPreferences
-                                        .save(newSettings)
-                                    torTypeFlow.value = newSettings.torType
-                                    externalPortFlow.value = newSettings.externalSocksPort
-                                    // Rebuild app to apply Tor changes
-                                    onRestartApp()
-                                },
-                            ),
-                    ) {
-                        MainContent(
-                            layoutMode = layoutMode,
-                            deckState = deckState,
-                            workspaceManager = workspaceManager,
-                            singlePaneState = singlePaneState,
-                            pinnedNavBarState = pinnedNavBarState,
-                            relayManager = relayManager,
-                            localCache = localCache,
+        ProvideMaterialSymbols {
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = MaterialTheme.colorScheme.background,
+            ) {
+                when (accountState) {
+                    is AccountState.LoggedOut -> {
+                        LoginScreen(
                             accountManager = accountManager,
-                            account = account,
-                            nwcConnection = nwcConnection,
-                            subscriptionsCoordinator = subscriptionsCoordinator,
-                            nip11Fetcher = nip11Fetcher,
-                            appScope = scope,
-                            torStatus = currentTorStatus,
-                            onShowComposeDialog = onShowComposeDialog,
-                            onShowReplyDialog = onShowReplyDialog,
-                            onShowAppDrawer = onShowAppDrawer,
-                        )
-                    }
-
-                    // Compose dialog
-                    if (showComposeDialog) {
-                        ComposeNoteDialog(
-                            onDismiss = onDismissComposeDialog,
-                            relayManager = relayManager,
-                            account = account,
-                            replyTo = replyToNote,
-                        )
-                    }
-
-                    // App Drawer overlay
-                    if (showAppDrawer) {
-                        val openColumns by deckState.columns.collectAsState()
-                        AppDrawer(
-                            openColumnTypes =
-                                if (layoutMode == LayoutMode.DECK) {
-                                    openColumns.map { it.type.typeKey() }.toSet()
-                                } else {
-                                    emptySet()
-                                },
-                            pinnedNavBarState = pinnedNavBarState,
-                            workspaceManager = workspaceManager,
-                            onSwitchWorkspace = { ws ->
-                                // Switch layout mode to match workspace
-                                onLayoutModeChange(ws.layoutMode)
-                                // Load columns or single pane screen
-                                when (ws.layoutMode) {
-                                    LayoutMode.DECK -> {
-                                        deckState.loadFromWorkspace(ws.columns)
-                                    }
-
-                                    LayoutMode.SINGLE_PANE -> {
-                                        // Load nav bar from workspace + navigate to first screen
-                                        pinnedNavBarState.loadFromWorkspace()
-                                        val firstKey =
-                                            ws.singlePaneScreens.firstOrNull() ?: "home"
-                                        val type = DeckState.parseColumnTypeFromKey(firstKey)
-                                        if (type != null) singlePaneState.navigate(type)
-                                    }
+                            onLoginSuccess = {
+                                // Start heartbeat if bunker account
+                                val current = accountManager.currentAccount()
+                                if (current?.signerType is com.vitorpamplona.amethyst.desktop.account.SignerType.Remote) {
+                                    accountManager.startHeartbeat(scope)
                                 }
                             },
-                            onSelectScreen = { type ->
-                                when (layoutMode) {
-                                    LayoutMode.DECK -> {
-                                        if (deckState.hasColumnOfType(type)) {
-                                            deckState.focusExistingColumn(type)
-                                        } else {
-                                            deckState.addColumn(type)
+                        )
+                    }
+
+                    is AccountState.ConnectingRelays -> {
+                        val relays by relayManager.relayStatuses.collectAsState()
+                        ConnectingRelaysScreen(
+                            subtitle = "Restoring remote signer session",
+                            relayStatuses = relays,
+                        )
+                    }
+
+                    is AccountState.LoggedIn -> {
+                        val account = accountState as AccountState.LoggedIn
+                        val nwcConnection by accountManager.nwcConnection.collectAsState()
+
+                        // Load NWC connection on first composition
+                        LaunchedEffect(Unit) {
+                            accountManager.loadNwcConnection()
+                        }
+
+                        val currentTorStatus = torManager.status.collectAsState().value
+                        androidx.compose.runtime.CompositionLocalProvider(
+                            com.vitorpamplona.amethyst.desktop.ui.tor.LocalTorState provides
+                                com.vitorpamplona.amethyst.desktop.ui.tor.TorState(
+                                    status = currentTorStatus,
+                                    settings = torSettings,
+                                    onSettingsChanged = { newSettings ->
+                                        torSettings = newSettings
+                                        com.vitorpamplona.amethyst.desktop.tor.DesktopTorPreferences
+                                            .save(newSettings)
+                                        torTypeFlow.value = newSettings.torType
+                                        externalPortFlow.value = newSettings.externalSocksPort
+                                        // Rebuild app to apply Tor changes
+                                        onRestartApp()
+                                    },
+                                ),
+                        ) {
+                            MainContent(
+                                layoutMode = layoutMode,
+                                deckState = deckState,
+                                workspaceManager = workspaceManager,
+                                singlePaneState = singlePaneState,
+                                pinnedNavBarState = pinnedNavBarState,
+                                relayManager = relayManager,
+                                localCache = localCache,
+                                accountManager = accountManager,
+                                account = account,
+                                nwcConnection = nwcConnection,
+                                subscriptionsCoordinator = subscriptionsCoordinator,
+                                nip11Fetcher = nip11Fetcher,
+                                appScope = scope,
+                                torStatus = currentTorStatus,
+                                onShowComposeDialog = onShowComposeDialog,
+                                onShowReplyDialog = onShowReplyDialog,
+                                onShowAppDrawer = onShowAppDrawer,
+                            )
+                        }
+
+                        // Compose dialog
+                        if (showComposeDialog) {
+                            ComposeNoteDialog(
+                                onDismiss = onDismissComposeDialog,
+                                relayManager = relayManager,
+                                account = account,
+                                replyTo = replyToNote,
+                            )
+                        }
+
+                        // App Drawer overlay
+                        if (showAppDrawer) {
+                            val openColumns by deckState.columns.collectAsState()
+                            AppDrawer(
+                                openColumnTypes =
+                                    if (layoutMode == LayoutMode.DECK) {
+                                        openColumns.map { it.type.typeKey() }.toSet()
+                                    } else {
+                                        emptySet()
+                                    },
+                                pinnedNavBarState = pinnedNavBarState,
+                                workspaceManager = workspaceManager,
+                                onSwitchWorkspace = { ws ->
+                                    // Switch layout mode to match workspace
+                                    onLayoutModeChange(ws.layoutMode)
+                                    // Load columns or single pane screen
+                                    when (ws.layoutMode) {
+                                        LayoutMode.DECK -> {
+                                            deckState.loadFromWorkspace(ws.columns)
+                                        }
+
+                                        LayoutMode.SINGLE_PANE -> {
+                                            // Load nav bar from workspace + navigate to first screen
+                                            pinnedNavBarState.loadFromWorkspace()
+                                            val firstKey =
+                                                ws.singlePaneScreens.firstOrNull() ?: "home"
+                                            val type = DeckState.parseColumnTypeFromKey(firstKey)
+                                            if (type != null) singlePaneState.navigate(type)
                                         }
                                     }
+                                },
+                                onSelectScreen = { type ->
+                                    when (layoutMode) {
+                                        LayoutMode.DECK -> {
+                                            if (deckState.hasColumnOfType(type)) {
+                                                deckState.focusExistingColumn(type)
+                                            } else {
+                                                deckState.addColumn(type)
+                                            }
+                                        }
 
-                                    LayoutMode.SINGLE_PANE -> {
-                                        singlePaneState.navigate(type)
+                                        LayoutMode.SINGLE_PANE -> {
+                                            singlePaneState.navigate(type)
+                                        }
                                     }
-                                }
-                            },
-                            onDismiss = onDismissAppDrawer,
-                        )
+                                },
+                                onDismiss = onDismissAppDrawer,
+                            )
+                        }
                     }
                 }
-            }
 
-            // Force logout dialog overlay
-            val forceLogoutReason by accountManager.forceLogoutReason.collectAsState()
-            forceLogoutReason?.let { reason ->
-                ForceLogoutDialog(
-                    reason = reason,
-                    onDismiss = { accountManager.clearForceLogoutReason() },
-                )
+                // Force logout dialog overlay
+                val forceLogoutReason by accountManager.forceLogoutReason.collectAsState()
+                forceLogoutReason?.let { reason ->
+                    ForceLogoutDialog(
+                        reason = reason,
+                        onDismiss = { accountManager.clearForceLogoutReason() },
+                    )
+                }
             }
         }
     }

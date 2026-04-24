@@ -23,57 +23,63 @@ package com.vitorpamplona.amethyst.commons.icons.symbols
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.LayoutDirection
 
 @Composable
 fun rememberMaterialSymbolPainter(
     symbol: MaterialSymbol,
     tint: Color = LocalContentColor.current,
-    weight: Int = MaterialSymbolsDefaults.WEIGHT,
 ): Painter {
-    val fontFamily = rememberMaterialSymbolsFontFamily(weight)
-    val textMeasurer = rememberTextMeasurer()
+    val fontFamily = materialSymbolsFontFamily()
+    val textMeasurer = materialSymbolsTextMeasurer()
     val density = LocalDensity.current
-    return remember(symbol, fontFamily, tint, density) {
-        MaterialSymbolPainter(symbol, fontFamily, tint, textMeasurer, density)
+    val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    return remember(symbol, fontFamily, textMeasurer, density, tint, rtl) {
+        MaterialSymbolPainter(symbol, fontFamily, textMeasurer, density, tint, rtl)
     }
 }
 
 private class MaterialSymbolPainter(
     private val symbol: MaterialSymbol,
     private val fontFamily: FontFamily,
-    private val tint: Color,
     private val textMeasurer: TextMeasurer,
     private val density: Density,
+    private val tint: Color,
+    private val rtl: Boolean,
 ) : Painter() {
     override val intrinsicSize: Size = Size.Unspecified
 
     override fun DrawScope.onDraw() {
         val sizePx = size.minDimension
         val fontSize = with(density) { sizePx.toSp() }
+        // TextStyle omits color; we override at draw time so TextMeasurer's cache hits across tints.
         val layout =
             textMeasurer.measure(
                 text = symbol.glyph,
-                style =
-                    TextStyle(
-                        fontFamily = fontFamily,
-                        fontSize = fontSize,
-                        color = tint,
-                    ),
+                style = TextStyle(fontFamily = fontFamily, fontSize = fontSize),
             )
         val tx = (size.width - layout.size.width) / 2f
         val ty = (size.height - layout.size.height) / 2f
-        translate(tx, ty) { drawText(layout) }
+        if (symbol.autoMirror && rtl) {
+            scale(scaleX = -1f, scaleY = 1f, pivot = Offset(size.width / 2f, size.height / 2f)) {
+                translate(tx, ty) { drawText(layout, color = tint) }
+            }
+        } else {
+            translate(tx, ty) { drawText(layout, color = tint) }
+        }
     }
 }
