@@ -45,6 +45,27 @@ open class Event(
      */
     open fun isContentEncoded() = false
 
+    /**
+     * Returns true when this event is intended to notify [userHex].
+     *
+     * The default uses the lowercase `p` tag as the notification channel,
+     * which is the convention for most kinds that address a single recipient
+     * or a set of mentions (NIP-01 mentions, NIP-04/17 DMs, NIP-25 reactions,
+     * NIP-28 chat messages, NIP-34 git issues/patches, NIP-57 zap receipts,
+     * NIP-68 pictures, NIP-71 videos, NIP-84 highlights, NIP-AC calls, chess,
+     * WakeUps, wiki/long-form/poll mentions).
+     *
+     * Subclasses override when the NIP defines additional notification tags
+     * — e.g. NIP-22 comments use uppercase `P` for the root author in
+     * addition to lowercase `p` for the direct-reply author.
+     */
+    open fun notifies(userHex: HexKey): Boolean {
+        for (tag in tags) {
+            if (tag.size >= 2 && tag[0] == "p" && tag[1] == userHex) return true
+        }
+        return false
+    }
+
     fun toJson(): String = OptimizedJsonMapper.toJson(this)
 
     companion object {

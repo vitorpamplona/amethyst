@@ -55,13 +55,13 @@ import com.vitorpamplona.quartz.experimental.notifications.wake.WakeUpEvent
 import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
-import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
+import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip21UriScheme.toNostrUri
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
@@ -146,15 +146,15 @@ class EventNotificationConsumer(
 
             if (!notificationManager().areNotificationsEnabled()) return@withWakeLock
 
-            val taggedNpubs =
-                event
-                    .taggedUserIds()
-                    .mapTo(mutableSetOf()) { LocalCache.getOrCreateUser(it).pubkeyNpub() }
-            if (taggedNpubs.isEmpty()) return@withWakeLock
-
+            // Ask the event which of our signing accounts it's notifying.
+            // Each kind declares its own notification semantics in
+            // [Event.notifies] (lowercase `p` by default, NIP-22 also checks
+            // uppercase `P`, etc.), so we don't hard-code tag names here.
             LocalPreferences.allSavedAccounts().forEach { savedAccount ->
                 if (!savedAccount.hasPrivKey && !savedAccount.loggedInWithExternalSigner) return@forEach
-                if (savedAccount.npub !in taggedNpubs) return@forEach
+
+                val accountHex = npubToHexOrNull(savedAccount.npub) ?: return@forEach
+                if (!event.notifies(accountHex)) return@forEach
 
                 val accountSettings = LocalPreferences.loadAccountConfigFromEncryptedStorage(savedAccount.npub) ?: return@forEach
                 try {
@@ -166,6 +166,11 @@ class EventNotificationConsumer(
                 }
             }
         }
+
+    private fun npubToHexOrNull(npub: String): String? =
+        runCatching { npub.bechToBytes("npub").toHexKey() }
+            .onFailure { Log.d(TAG) { "Skipping non-decodable npub $npub: ${it.message}" } }
+            .getOrNull()
 
     private suspend fun dispatchForAccount(
         event: Event,
@@ -513,79 +518,44 @@ class EventNotificationConsumer(
 
         Log.d(TAG, "Notify Amount Bigger than 10")
 
-        if (event.isTaggedUser(account.signer.pubKey)) {
-            val amount = showAmount(event.amount)
+        // Zap routing (recipient == account) is enforced by the dispatcher
+        // predicate + consumeFromCache via Event.notifies; no re-check here.
+        val amount = showAmount(event.amount)
 
-            Log.d(TAG) { "Notify Amount $amount" }
+        Log.d(TAG) { "Notify Amount $amount" }
 
-            (noteZapRequest.event as? LnZapRequestEvent)?.let { event ->
-                decryptZapContentAuthor(event, account.signer)?.let { decryptedEvent ->
-                    Log.d(TAG) { "Notify Decrypted if Private Zap ${event.id}" }
+        (noteZapRequest.event as? LnZapRequestEvent)?.let { event ->
+            decryptZapContentAuthor(event, account.signer)?.let { decryptedEvent ->
+                Log.d(TAG) { "Notify Decrypted if Private Zap ${event.id}" }
 
-                    val author = LocalCache.getOrCreateUser(decryptedEvent.pubKey)
-                    val senderInfo = Pair(author, decryptedEvent.content.ifBlank { null })
+                val author = LocalCache.getOrCreateUser(decryptedEvent.pubKey)
+                val senderInfo = Pair(author, decryptedEvent.content.ifBlank { null })
 
-                    if (noteZapped.event?.content != null) {
-                        decryptContent(noteZapped, account.signer)?.let { decrypted ->
-                            Log.d(TAG, "Notify Decrypted if Private Note")
+                if (noteZapped.event?.content != null) {
+                    decryptContent(noteZapped, account.signer)?.let { decrypted ->
+                        Log.d(TAG, "Notify Decrypted if Private Note")
 
-                            val zappedContent = decrypted.split("\n")[0]
-
-                            val user = senderInfo.first.toBestDisplayName()
-                            var title = stringRes(applicationContext, R.string.app_notification_zaps_channel_message, amount)
-                            senderInfo.second?.ifBlank { null }?.let { title += " ($it)" }
-
-                            var content =
-                                stringRes(
-                                    applicationContext,
-                                    R.string.app_notification_zaps_channel_message_from,
-                                    user,
-                                )
-                            zappedContent.let {
-                                content +=
-                                    " " +
-                                    stringRes(
-                                        applicationContext,
-                                        R.string.app_notification_zaps_channel_message_for,
-                                        zappedContent,
-                                    )
-                            }
-                            val userPicture = senderInfo.first.profilePicture()
-                            val noteUri =
-                                "notifications$ACCOUNT_QUERY_PARAM" +
-                                    account.signer.pubKey
-                                        .hexToByteArray()
-                                        .toNpub() +
-                                    SCROLL_TO_QUERY_PARAM + event.id
-
-                            Log.d(TAG) { "Notify ${event.id} $content $title $noteUri" }
-
-                            notificationManager()
-                                .sendZapNotification(
-                                    event.id,
-                                    content,
-                                    title,
-                                    event.createdAt,
-                                    userPicture,
-                                    noteUri,
-                                    applicationContext,
-                                )
-                        }
-                    } else {
-                        // doesn't have a base note to refer to.
-                        Log.d(TAG, "Notify Zapped note not available")
+                        val zappedContent = decrypted.split("\n")[0]
 
                         val user = senderInfo.first.toBestDisplayName()
                         var title = stringRes(applicationContext, R.string.app_notification_zaps_channel_message, amount)
                         senderInfo.second?.ifBlank { null }?.let { title += " ($it)" }
 
-                        val content =
+                        var content =
                             stringRes(
                                 applicationContext,
                                 R.string.app_notification_zaps_channel_message_from,
                                 user,
                             )
-
+                        zappedContent.let {
+                            content +=
+                                " " +
+                                stringRes(
+                                    applicationContext,
+                                    R.string.app_notification_zaps_channel_message_for,
+                                    zappedContent,
+                                )
+                        }
                         val userPicture = senderInfo.first.profilePicture()
                         val noteUri =
                             "notifications$ACCOUNT_QUERY_PARAM" +
@@ -594,7 +564,7 @@ class EventNotificationConsumer(
                                     .toNpub() +
                                 SCROLL_TO_QUERY_PARAM + event.id
 
-                        Log.d(TAG) { "Notify ${event.id} $title $noteUri" }
+                        Log.d(TAG) { "Notify ${event.id} $content $title $noteUri" }
 
                         notificationManager()
                             .sendZapNotification(
@@ -607,6 +577,41 @@ class EventNotificationConsumer(
                                 applicationContext,
                             )
                     }
+                } else {
+                    // doesn't have a base note to refer to.
+                    Log.d(TAG, "Notify Zapped note not available")
+
+                    val user = senderInfo.first.toBestDisplayName()
+                    var title = stringRes(applicationContext, R.string.app_notification_zaps_channel_message, amount)
+                    senderInfo.second?.ifBlank { null }?.let { title += " ($it)" }
+
+                    val content =
+                        stringRes(
+                            applicationContext,
+                            R.string.app_notification_zaps_channel_message_from,
+                            user,
+                        )
+
+                    val userPicture = senderInfo.first.profilePicture()
+                    val noteUri =
+                        "notifications$ACCOUNT_QUERY_PARAM" +
+                            account.signer.pubKey
+                                .hexToByteArray()
+                                .toNpub() +
+                            SCROLL_TO_QUERY_PARAM + event.id
+
+                    Log.d(TAG) { "Notify ${event.id} $title $noteUri" }
+
+                    notificationManager()
+                        .sendZapNotification(
+                            event.id,
+                            content,
+                            title,
+                            event.createdAt,
+                            userPicture,
+                            noteUri,
+                            applicationContext,
+                        )
                 }
             }
         }

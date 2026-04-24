@@ -170,13 +170,15 @@ class NotificationDispatcher(
                         //   matches the downstream per-channel policy. Calls
                         //   use a stricter 20s check in notifyIncomingCall so
                         //   they still pass through.
-                        // - any `p` tag matching one of our accounts — narrows
-                        //   to events consumeFromCache would route anyway.
+                        // - event.notifies(pubkey) for any of our accounts —
+                        //   each kind decides which tag(s) name its recipients
+                        //   (lowercase `p` by default, plus uppercase `P` for
+                        //   NIP-22 root authors, etc.).
                         val predicate = { event: Event ->
                             event.kind in NOTIFICATION_KINDS &&
                                 event.createdAt >= dispatcherSince &&
                                 event.createdAt >= TimeUtils.fifteenMinutesAgo() &&
-                                event.tags.any { it.size > 1 && it[0] == "p" && it[1] in pubkeys }
+                                pubkeys.any { event.notifies(it) }
                         }
 
                         LocalCache
