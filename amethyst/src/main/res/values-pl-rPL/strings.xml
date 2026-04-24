@@ -778,6 +778,8 @@
     <string name="app_notification_replies_summary">Nowe odpowiedzi</string>
     <string name="app_notification_mentions_channel_name">Wzmianki</string>
     <string name="app_notification_mentions_channel_description">Powiadamia Cię, gdy ktoś wspomni o Tobie lub zacytuje Cię w poście</string>
+    <string name="app_notification_mentions_channel_message">%1$s wspomniał o Tobie</string>
+    <string name="app_notification_mentions_summary">Nowe wzmianki</string>
     <!-- Call notifications and UI -->
     <string name="app_notification_calls_channel_name">Połączenia przychodzące</string>
     <string name="app_notification_calls_channel_description">Powiadomienia o przychodzących połączeniach głosowych i wideo</string>
@@ -1000,6 +1002,12 @@
     <string name="account_settings">Ustawienia konta</string>
     <string name="app_settings">Ustawienia aplikacji</string>
     <string name="danger_zone">Niebezpieczna strefa</string>
+    <string name="reset_marmot_state">Zresetuj stan marmota</string>
+    <string name="reset_marmot_confirm_title">Zresetować stan Marmota?</string>
+    <string name="reset_marmot_confirm_body">Spowoduje to trwałe usunięcie każdego czatu grupowego Marmot, historii wiadomości i klucza MLS na tym urządzeniu dla bieżącego konta. Uczestnicy nie będą powiadamiani i mogą widzieć Cię w grupach do czasu następnej aktualizacji. Tej operacji nie można cofnąć. Nowy pakiet kluczowy zostanie opublikowany przy następnej synchronizacji aplikacji.</string>
+    <string name="reset_marmot_confirm_action">Zresetuj</string>
+    <string name="reset_marmot_success">Reset stanu Marmota.</string>
+    <string name="reset_marmot_failure">Nie można zresetować stanu Marmota: %1$s</string>
     <string name="connectivity_type_always">Zawsze</string>
     <string name="connectivity_type_wifi_only">Tylko WiFi</string>
     <string name="connectivity_type_unmetered_wifi_only">Nielimitowany Wi-Fi</string>
