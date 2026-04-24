@@ -91,6 +91,13 @@ compose.desktop {
 
         jvmArgs += "-Xmx2g"
 
+        // Forward platform-preview overrides from the gradle invocation to the
+        // launched app's JVM so `./gradlew :desktopApp:run -Damethyst.platform=GNOME`
+        // works in addition to the env-var form (`AMETHYST_PLATFORM=GNOME`).
+        listOf("amethyst.platform", "amethyst.appearance", "amethyst.accent").forEach { key ->
+            System.getProperty(key)?.let { jvmArgs += "-D$key=$it" }
+        }
+
         nativeDistributions {
             appResourcesRootDir.set(project.layout.projectDirectory.dir("src/jvmMain/appResources"))
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb, TargetFormat.Rpm)

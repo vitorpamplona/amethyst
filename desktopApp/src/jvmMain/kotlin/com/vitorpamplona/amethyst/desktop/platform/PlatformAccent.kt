@@ -38,14 +38,41 @@ import com.vitorpamplona.quartz.utils.Log
  * identity and looks intentional rather than broken.
  */
 object PlatformAccent {
-    fun systemAccent(): Color =
-        when (PlatformInfo.current) {
+    /**
+     * Resolves the OS accent color, with an override hook for testing:
+     * `-Damethyst.accent=#3584E4` (system property) or `AMETHYST_ACCENT=blue`
+     * (env var). Accepted: `#RRGGBB`, `RRGGBB`, or any libadwaita accent name
+     * (blue, teal, green, yellow, orange, red, pink, purple, slate).
+     */
+    fun systemAccent(): Color {
+        forcedAccent()?.let { return it }
+        return when (PlatformInfo.current) {
             Platform.MACOS -> macOSAccent()
             Platform.GNOME -> gnomeAccent()
             Platform.KDE -> kdeAccent()
             Platform.WINDOWS -> windowsAccent()
             else -> DefaultPrimary
         } ?: DefaultPrimary
+    }
+
+    private fun forcedAccent(): Color? {
+        val raw =
+            System.getProperty("amethyst.accent")
+                ?: System.getenv("AMETHYST_ACCENT")
+                ?: return null
+        val trimmed = raw.trim()
+        // Hex (#RRGGBB or RRGGBB) — long form for clarity
+        val hex = trimmed.removePrefix("#")
+        if (hex.length == 6 && hex.all { it.isDigit() || it in 'a'..'f' || it in 'A'..'F' }) {
+            val v = hex.toLongOrNull(16) ?: return null
+            return Color(
+                red = ((v shr 16) and 0xFFL).toInt(),
+                green = ((v shr 8) and 0xFFL).toInt(),
+                blue = (v and 0xFFL).toInt(),
+            )
+        }
+        return gnomeAccents[trimmed.lowercase()]
+    }
 
     // macOS named accent colors (NSColor controlAccentColor variants).
     // Index matches AppleAccentColor defaults value; -1 = Multicolor (use highlight).

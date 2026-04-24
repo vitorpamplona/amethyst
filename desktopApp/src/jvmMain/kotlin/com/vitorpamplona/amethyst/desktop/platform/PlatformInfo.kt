@@ -39,13 +39,34 @@ enum class Platform {
 }
 
 object PlatformInfo {
-    val current: Platform by lazy { detect() }
+    /**
+     * The detected (or overridden) UI platform — drives all per-OS theming.
+     *
+     * Override for testing on a single machine via `-Damethyst.platform=GNOME`
+     * (system property) or `AMETHYST_PLATFORM=GNOME` (env var). Accepted values
+     * are the [Platform] enum names, case-insensitive: MACOS, WINDOWS, GNOME,
+     * KDE, LINUX_OTHER, UNKNOWN.
+     */
+    val current: Platform by lazy { override() ?: detect() }
+
+    /** The actual host OS, ignoring any override. Useful for shell-out helpers
+     * that should always hit the real underlying system (e.g. accent detection
+     * falling back to the Mac's value when the override platform's CLI is absent). */
+    val host: Platform by lazy { detect() }
 
     val isMacOS: Boolean get() = current == Platform.MACOS
     val isWindows: Boolean get() = current == Platform.WINDOWS
     val isGnome: Boolean get() = current == Platform.GNOME
     val isKde: Boolean get() = current == Platform.KDE
     val isLinux: Boolean get() = current.isLinux
+
+    private fun override(): Platform? {
+        val raw =
+            System.getProperty("amethyst.platform")
+                ?: System.getenv("AMETHYST_PLATFORM")
+                ?: return null
+        return runCatching { Platform.valueOf(raw.uppercase()) }.getOrNull()
+    }
 
     private fun detect(): Platform {
         val osName = System.getProperty("os.name", "").lowercase()

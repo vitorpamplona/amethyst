@@ -41,14 +41,38 @@ import java.awt.event.WindowFocusListener
  * system theme see Amethyst follow within a second of bringing the window forward.
  */
 object PlatformAppearance {
-    fun isSystemDark(): Boolean =
-        when (PlatformInfo.current) {
+    /**
+     * Resolves the OS dark/light preference, with an override hook for testing
+     * on a single machine: `-Damethyst.appearance=light|dark` (system property)
+     * or `AMETHYST_APPEARANCE=light|dark` (env var).
+     *
+     * When the platform is overridden but appearance isn't, this calls the
+     * override platform's detection routine. On a Mac forced to GNOME the
+     * `gsettings` shell-out won't exist and it falls through to the GNOME
+     * default (dark) — pass `AMETHYST_APPEARANCE=light` to flip it.
+     */
+    fun isSystemDark(): Boolean {
+        forcedAppearance()?.let { return it }
+        return when (PlatformInfo.current) {
             Platform.MACOS -> isMacOSDark()
             Platform.GNOME -> isGnomeDark()
             Platform.KDE -> isKdeDark()
             Platform.WINDOWS -> isWindowsDark()
             else -> true
         }
+    }
+
+    private fun forcedAppearance(): Boolean? {
+        val raw =
+            System.getProperty("amethyst.appearance")
+                ?: System.getenv("AMETHYST_APPEARANCE")
+                ?: return null
+        return when (raw.lowercase()) {
+            "dark" -> true
+            "light" -> false
+            else -> null
+        }
+    }
 
     private fun isMacOSDark(): Boolean {
         val out = exec("defaults", "read", "-g", "AppleInterfaceStyle") ?: return false
