@@ -26,8 +26,10 @@ import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip19Bech32.toNsec
+import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
+import io.mockk.slot
 import kotlinx.coroutines.test.runTest
 import java.io.File
 import kotlin.io.path.createTempDirectory
@@ -45,9 +47,22 @@ class AccountManagerKeyLoginTest {
     private lateinit var tempDir: File
     private lateinit var manager: AccountManager
 
+    private val keyStore = mutableMapOf<String, String>()
+
     @BeforeTest
     fun setup() {
+        keyStore.clear()
         storage = mockk(relaxed = true)
+
+        // Wire up key store so DesktopAccountStorage encryption works
+        val keySlot = slot<String>()
+        val valueSlot = slot<String>()
+        coEvery { storage.getPrivateKey(capture(keySlot)) } answers { keyStore[keySlot.captured] }
+        coEvery { storage.savePrivateKey(capture(keySlot), capture(valueSlot)) } answers {
+            keyStore[keySlot.captured] = valueSlot.captured
+        }
+        coEvery { storage.hasPrivateKey(any()) } answers { keyStore.containsKey(firstArg()) }
+
         tempDir = createTempDirectory("acctmgr-key-test").toFile()
         manager = AccountManager(storage, tempDir)
     }

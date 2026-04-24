@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.commons.domain.nip46.NostrConnectLoginUseCase
 import com.vitorpamplona.amethyst.commons.domain.nip46.SignerConnectionState
 import com.vitorpamplona.amethyst.commons.keystorage.SecureKeyStorage
 import com.vitorpamplona.amethyst.commons.keystorage.SecureStorageException
+import com.vitorpamplona.amethyst.commons.model.account.AccountInfo
 import com.vitorpamplona.amethyst.commons.model.account.SignerType
 import com.vitorpamplona.amethyst.desktop.network.DesktopHttpClient
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
@@ -50,6 +51,9 @@ import com.vitorpamplona.quartz.nip19Bech32.toNsec
 import com.vitorpamplona.quartz.nip46RemoteSigner.signer.NostrSignerRemote
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -92,6 +96,11 @@ class AccountManager internal constructor(
             return AccountManager(storage)
         }
 
+        fun createWithStorage(
+            secureStorage: SecureKeyStorage,
+            homeDir: File = File(System.getProperty("user.home")),
+        ): AccountManager = AccountManager(secureStorage, homeDir)
+
         internal const val HEARTBEAT_INTERVAL_MS = 60_000L
         internal const val MAX_CONSECUTIVE_FAILURES = 3
         internal const val BUNKER_EPHEMERAL_KEY_ALIAS = "bunker_ephemeral"
@@ -102,6 +111,13 @@ class AccountManager internal constructor(
     private val amethystDir: File by lazy {
         File(homeDir, ".amethyst")
     }
+
+    val accountStorage: DesktopAccountStorage by lazy {
+        DesktopAccountStorage(secureStorage, homeDir)
+    }
+
+    private val _allAccounts = MutableStateFlow<ImmutableList<AccountInfo>>(persistentListOf())
+    val allAccounts: StateFlow<ImmutableList<AccountInfo>> = _allAccounts.asStateFlow()
 
     private val _accountState = MutableStateFlow<AccountState>(AccountState.LoggedOut)
     val accountState: StateFlow<AccountState> = _accountState.asStateFlow()
@@ -421,6 +437,11 @@ class AccountManager internal constructor(
         saveLastNpub(npub)
         secureStorage.savePrivateKey(BUNKER_EPHEMERAL_KEY_ALIAS, ephemeralPrivKeyHex)
         saveBunkerUri(bunkerUri)
+
+        // Also save to multi-account storage
+        val info = AccountInfo(npub = npub, signerType = SignerType.Remote(bunkerUri))
+        addAccountToStorage(info)
+        accountStorage.setCurrentAccount(npub)
     }
 
     fun hasBunkerAccount(): Boolean = getBunkerFile().exists()
@@ -448,6 +469,12 @@ class AccountManager internal constructor(
 
             secureStorage.savePrivateKey(current.npub, privKeyHex)
             saveLastNpub(current.npub)
+
+            // Also save to multi-account storage
+            val info = AccountInfo(npub = current.npub, signerType = current.signerType)
+            addAccountToStorage(info)
+            accountStorage.setCurrentAccount(current.npub)
+
             Result.success(Unit)
         } catch (e: SecureStorageException) {
             Result.failure(e)
@@ -595,6 +622,97 @@ class AccountManager internal constructor(
     fun stopHeartbeat() {
         heartbeatJob?.cancel()
         heartbeatJob = null
+    }
+
+    // --- Multi-account management ---
+
+    suspend fun refreshAccountList() {
+        _allAccounts.value = accountStorage.loadAccounts().toImmutableList()
+    }
+
+    suspend fun addAccountToStorage(info: AccountInfo) {
+        accountStorage.saveAccount(info)
+        refreshAccountList()
+    }
+
+    suspend fun removeAccountFromStorage(npub: String) {
+        val current = currentAccount()
+        accountStorage.deleteAccount(npub)
+
+        // Clean up keys
+        try {
+            secureStorage.deletePrivateKey(npub)
+        } catch (_: SecureStorageException) {
+        }
+
+        refreshAccountList()
+
+        // If we removed the active account, load the next one or log out
+        if (current?.npub == npub) {
+            val next = accountStorage.currentAccount()
+            if (next != null) {
+                loadSavedAccount()
+            } else {
+                logout(deleteKey = false)
+            }
+        }
+    }
+
+    /**
+     * Switch to a different account.
+     * Critical: loads new account BEFORE cancelling old state to prevent
+     * unrecoverable partial failure.
+     */
+    suspend fun switchAccount(targetNpub: String): Result<AccountState.LoggedIn> {
+        val accounts = accountStorage.loadAccounts()
+        val target =
+            accounts.find { it.npub == targetNpub }
+                ?: return Result.failure(Exception("Account not found: $targetNpub"))
+
+        // Phase 1: load + validate new account BEFORE touching current state
+        val sType = target.signerType
+        val newState =
+            when (sType) {
+                is SignerType.Internal -> loadInternalAccount(target.npub)
+                is SignerType.Remote -> loadBunkerAccount(sType.bunkerUri, target.npub)
+                is SignerType.ViewOnly -> loadViewOnlyAccount(target.npub)
+            }
+
+        if (newState.isFailure) return newState
+
+        // Phase 2: transition succeeded — update storage and cleanup
+        accountStorage.setCurrentAccount(targetNpub)
+
+        // Reload NWC for the new account
+        loadNwcConnection()
+
+        return newState
+    }
+
+    private fun loadViewOnlyAccount(npub: String): Result<AccountState.LoggedIn> {
+        val pubKeyHex =
+            decodePublicKeyAsHexOrNull(npub)
+                ?: return Result.failure(Exception("Invalid npub: $npub"))
+
+        val keyPair = KeyPair(pubKey = pubKeyHex.hexToByteArray())
+        val signer = NostrSignerInternal(keyPair)
+
+        val state =
+            AccountState.LoggedIn(
+                signer = signer,
+                pubKeyHex = pubKeyHex,
+                npub = npub,
+                nsec = null,
+                isReadOnly = true,
+                signerType = SignerType.ViewOnly,
+            )
+        _accountState.value = state
+        return Result.success(state)
+    }
+
+    suspend fun migrateAndLoadAccounts() {
+        accountStorage.migrateFromLegacyFiles(this)
+        refreshAccountList()
     }
 
     // --- Accessors ---
