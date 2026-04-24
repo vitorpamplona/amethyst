@@ -78,7 +78,7 @@ class AccountManagerNip46IsolationTest {
                 ephemeralKeyPair.pubKey.toNpub(),
             )
             coEvery {
-                storage.getPrivateKey(AccountManager.BUNKER_EPHEMERAL_KEY_ALIAS)
+                storage.getPrivateKey(AccountManager.LEGACY_BUNKER_EPHEMERAL_KEY_ALIAS)
             } returns ephemeralKeyPair.privKey!!.toHexKey()
 
             val result = manager.loadSavedAccount()
@@ -139,7 +139,7 @@ class AccountManagerNip46IsolationTest {
                 ephemeralKeyPair.pubKey.toNpub(),
             )
             coEvery {
-                storage.getPrivateKey(AccountManager.BUNKER_EPHEMERAL_KEY_ALIAS)
+                storage.getPrivateKey(AccountManager.LEGACY_BUNKER_EPHEMERAL_KEY_ALIAS)
             } returns ephemeralKeyPair.privKey!!.toHexKey()
 
             manager.loadSavedAccount()
@@ -167,7 +167,7 @@ class AccountManagerNip46IsolationTest {
             }
 
             coEvery {
-                storage.getPrivateKey(AccountManager.BUNKER_EPHEMERAL_KEY_ALIAS)
+                storage.getPrivateKey(AccountManager.LEGACY_BUNKER_EPHEMERAL_KEY_ALIAS)
             } returns ephemeralKeyPair.privKey!!.toHexKey()
 
             // First load

@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.commons.model.account.SignerType
 import com.vitorpamplona.quartz.utils.Log
 import java.io.File
 import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 import java.nio.file.attribute.PosixFilePermission
 import java.security.SecureRandom
 import java.util.Base64
@@ -165,7 +166,7 @@ class DesktopAccountStorage(
         val file = getAccountsFile()
         val temp = File(amethystDir, "${ACCOUNTS_FILE}.tmp")
         temp.writeBytes(encrypted)
-        temp.renameTo(file)
+        Files.move(temp.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING)
 
         setFilePermissions(file)
     }
@@ -253,7 +254,7 @@ internal data class AccountInfoDto(
             npub = npub,
             signerType =
                 when (signerKind) {
-                    "remote" -> SignerType.Remote(bunkerUri ?: "")
+                    "remote" -> if (bunkerUri.isNullOrEmpty()) SignerType.Internal else SignerType.Remote(bunkerUri)
                     "viewonly" -> SignerType.ViewOnly
                     else -> SignerType.Internal
                 },

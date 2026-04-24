@@ -198,7 +198,6 @@ fun main() {
         val workspaceManager = remember { WorkspaceManager(deckScope).also { it.load() } }
         val accountManager = remember { AccountManager.create() }
         val accountState by accountManager.accountState.collectAsState()
-        val allAccounts by accountManager.allAccounts.collectAsState()
         var showAppDrawer by remember { mutableStateOf(false) }
 
         // Tor state at Window level — survives key() app rebuild

@@ -109,7 +109,7 @@ class AccountManagerLoadAccountTest {
                 "bunker://$validHex?relay=wss://r.com",
             )
             coEvery {
-                storage.getPrivateKey(AccountManager.BUNKER_EPHEMERAL_KEY_ALIAS)
+                storage.getPrivateKey(AccountManager.LEGACY_BUNKER_EPHEMERAL_KEY_ALIAS)
             } returns null
 
             val result = manager.loadSavedAccount()
@@ -130,7 +130,7 @@ class AccountManagerLoadAccountTest {
                 "bunker://$validHex?relay=wss://r.com",
             )
             coEvery {
-                storage.getPrivateKey(AccountManager.BUNKER_EPHEMERAL_KEY_ALIAS)
+                storage.getPrivateKey(AccountManager.LEGACY_BUNKER_EPHEMERAL_KEY_ALIAS)
             } returns ephemeralPrivKeyHex
 
             val result = manager.loadSavedAccount()
