@@ -181,9 +181,10 @@ fun SinglePaneLayout(
         }
 
         Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
-            Box(
-                modifier = Modifier.fillMaxSize().padding(if (isImmersive) 0.dp else 12.dp),
-            ) {
+            // Content extends to the window edges; individual screens add their
+            // own internal padding where appropriate (Messages uses full-bleed
+            // panes to match native two-column chat apps).
+            Box(modifier = Modifier.fillMaxSize()) {
                 // Always keep RootContent composed so state (e.g. search results) survives navigation
                 RootContent(
                     columnType = currentColumnType,
