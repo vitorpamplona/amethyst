@@ -61,6 +61,7 @@ import com.halilibo.richtext.ui.resolveDefaults
 import com.patrykandpatrick.vico.compose.common.VicoTheme
 import com.patrykandpatrick.vico.compose.common.VicoTheme.CandlestickCartesianLayerColors
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.icons.symbols.ProvideMaterialSymbols
 import com.vitorpamplona.amethyst.model.ThemeType
 
 private val DarkColorPalette =
@@ -591,7 +592,7 @@ fun AmethystTheme(
         colorScheme = colors,
         typography = Typography,
         shapes = Shapes,
-        content = content,
+        content = { ProvideMaterialSymbols(content) },
     )
 
     val view = LocalView.current
