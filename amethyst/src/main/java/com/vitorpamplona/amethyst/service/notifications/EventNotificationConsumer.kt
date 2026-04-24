@@ -204,16 +204,17 @@ class EventNotificationConsumer(
             return
         }
 
-        // The referenced event's author is who the user will see in the final
-        // notification ("Alice zapped you"). The WakeUp's own pubKey is typically
-        // a push bot and not useful. Fall back to it only when the `e` tag omits
-        // the author hint.
+        // Per spec, p-tags on a WakeUp are the authors of the referenced
+        // events; those are whose metadata we need to render the notification.
+        // Fall back to e-tag author hints and finally to the WakeUp signer.
         val referencedNotes = referencedTags.map { LocalCache.getOrCreateNote(it.eventId) }
-        val authorCandidates =
-            referencedTags
-                .mapNotNull { it.author }
+        val authorKeys =
+            (event.authorKeys() + referencedTags.mapNotNull { it.author })
                 .distinct()
                 .ifEmpty { listOf(event.pubKey) }
+        val authorCandidates =
+            authorKeys
+                .take(MAX_WAKEUP_REFS)
                 .map { LocalCache.getOrCreateUser(it) }
 
         coroutineScope {
