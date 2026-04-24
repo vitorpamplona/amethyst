@@ -62,8 +62,8 @@ val DefaultReactionRowItems =
         ReactionRowItem(ReactionRowAction.Boost),
         ReactionRowItem(ReactionRowAction.Like),
         ReactionRowItem(ReactionRowAction.Zap),
+        ReactionRowItem(ReactionRowAction.Pay, enabled = false, showCounter = false),
         ReactionRowItem(ReactionRowAction.Share, showCounter = false),
-        ReactionRowItem(ReactionRowAction.Pay, showCounter = false),
     )
 
 @Serializable
