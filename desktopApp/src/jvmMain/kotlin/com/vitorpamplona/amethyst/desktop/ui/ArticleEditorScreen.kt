@@ -29,12 +29,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -63,6 +66,8 @@ import com.vitorpamplona.amethyst.commons.compose.editor.MarkdownEditorState
 import com.vitorpamplona.amethyst.commons.compose.editor.MarkdownToolbar
 import com.vitorpamplona.amethyst.commons.compose.editor.MetadataPanel
 import com.vitorpamplona.amethyst.commons.compose.markdown.RenderMarkdown
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip23LongContent.LongFormPublishAction
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
@@ -227,24 +232,41 @@ fun ArticleEditorScreen(
                     }
                 },
     ) {
-        // Top bar
+        // Header — Messages-style: back + titleMedium on left, actions on right
         Row(
-            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            OutlinedButton(onClick = onBack) {
-                Text("Back")
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onBack, modifier = Modifier.size(32.dp)) {
+                    Icon(
+                        MaterialSymbols.AutoMirrored.ArrowBack,
+                        contentDescription = "Back",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    "Article",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onBackground,
+                )
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 saveMessage?.let {
                     Text(
                         it,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.align(Alignment.CenterVertically),
                     )
                 }
+                // Save/Publish stay as text buttons — they're primary destructive
+                // actions, not affordances you'd reduce to an icon.
                 OutlinedButton(onClick = { saveDraft() }) {
                     Text("Save")
                 }

@@ -404,24 +404,25 @@ fun ArticleReaderScreen(
                     }
                 },
     ) {
-        // Top bar: back + bookmark placeholder
+        // Header — Messages-style: compact row, titleMedium title
         Row(
-            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onBack) {
+                IconButton(onClick = onBack, modifier = Modifier.size(32.dp)) {
                     Icon(
                         MaterialSymbols.AutoMirrored.ArrowBack,
                         contentDescription = "Back",
-                        modifier = Modifier.size(24.dp),
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp),
                     )
                 }
                 Spacer(Modifier.width(8.dp))
                 Text(
                     "Article",
-                    style = MaterialTheme.typography.headlineMedium,
+                    style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onBackground,
                 )
                 if (zoomLevel != 1.0f) {

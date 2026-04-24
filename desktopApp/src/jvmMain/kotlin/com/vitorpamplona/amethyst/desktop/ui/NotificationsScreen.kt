@@ -56,7 +56,6 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.rememberMaterialSymbolPa
 import com.vitorpamplona.amethyst.commons.state.EventCollectionState
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
-import com.vitorpamplona.amethyst.commons.ui.feed.FeedHeader
 import com.vitorpamplona.amethyst.commons.util.toTimeAgo
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache

@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -38,7 +39,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -179,42 +179,49 @@ fun ChessScreen(
     var showNewGameDialog by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // Header
+        // Header — Messages-style: compact row, titleMedium title, icon-only actions
         Row(
-            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (selectedGameId != null) {
-                    IconButton(onClick = { viewModel.selectGame(null) }) {
-                        Icon(MaterialSymbols.AutoMirrored.ArrowBack, "Back to list")
+                    IconButton(onClick = { viewModel.selectGame(null) }, modifier = Modifier.size(32.dp)) {
+                        Icon(
+                            MaterialSymbols.AutoMirrored.ArrowBack,
+                            contentDescription = "Back to list",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp),
+                        )
                     }
                     Spacer(Modifier.width(8.dp))
                 }
                 Text(
                     if (selectedGameId != null) "Live Game" else "Chess",
-                    style = MaterialTheme.typography.headlineMedium,
+                    style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onBackground,
                 )
             }
 
             if (selectedGameId == null) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    // Refresh button
-                    IconButton(onClick = { viewModel.forceRefresh() }) {
-                        Icon(MaterialSymbols.Refresh, "Refresh")
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = { viewModel.forceRefresh() }, modifier = Modifier.size(32.dp)) {
+                        Icon(
+                            MaterialSymbols.Refresh,
+                            contentDescription = "Refresh",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp),
+                        )
                     }
-
-                    // New Game button
                     if (!account.isReadOnly) {
-                        Button(onClick = { showNewGameDialog = true }) {
-                            Icon(MaterialSymbols.Add, "New Game")
-                            Spacer(Modifier.width(8.dp))
-                            Text("New Game")
+                        IconButton(onClick = { showNewGameDialog = true }, modifier = Modifier.size(32.dp)) {
+                            Icon(
+                                MaterialSymbols.Add,
+                                contentDescription = "New Game",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp),
+                            )
                         }
                     }
                 }

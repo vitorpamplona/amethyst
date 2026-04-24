@@ -458,21 +458,26 @@ fun UserProfileScreen(
                     )
                 }
 
-                // Header with back button
+                // Header — Messages-style: compact row, titleMedium title
                 item(key = "header") {
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            IconButton(onClick = onBack) {
-                                Icon(MaterialSymbols.AutoMirrored.ArrowBack, "Back")
+                            IconButton(onClick = onBack, modifier = Modifier.size(32.dp)) {
+                                Icon(
+                                    MaterialSymbols.AutoMirrored.ArrowBack,
+                                    contentDescription = "Back",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp),
+                                )
                             }
                             Spacer(Modifier.width(8.dp))
                             Text(
                                 "Profile",
-                                style = MaterialTheme.typography.headlineMedium,
+                                style = MaterialTheme.typography.titleMedium,
                             )
                         }
 
