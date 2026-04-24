@@ -45,6 +45,7 @@ internal class FsLayout(
     val idxAuthor: Path = idx.resolve(IDX_AUTHOR)
     val idxOwner: Path = idx.resolve(IDX_OWNER)
     val idxTag: Path = idx.resolve(IDX_TAG)
+    val idxExpiresAt: Path = idx.resolve(IDX_EXPIRES_AT)
     val replaceable: Path = root.resolve(REPLACEABLE_DIR)
     val addressable: Path = root.resolve(ADDRESSABLE_DIR)
     val tombstones: Path = root.resolve(TOMBSTONES_DIR)
@@ -80,6 +81,12 @@ internal class FsLayout(
         ts: Long,
         id: HexKey,
     ): Path = idxTag.resolve(name).resolve(hashHex(valueHash)).resolve(entryName(ts, id))
+
+    /** NIP-40 expiration index entry. `exp` is unix seconds, padded for sort order. */
+    fun expirationEntry(
+        exp: Long,
+        id: HexKey,
+    ): Path = idxExpiresAt.resolve(entryName(exp, id))
 
     /** Directory that holds every indexed value for a tag name. */
     fun tagDir(name: String): Path = idxTag.resolve(name)
@@ -127,6 +134,7 @@ internal class FsLayout(
         Files.createDirectories(idxAuthor)
         Files.createDirectories(idxOwner)
         Files.createDirectories(idxTag)
+        Files.createDirectories(idxExpiresAt)
         Files.createDirectories(replaceable)
         Files.createDirectories(addressable)
         Files.createDirectories(tombstonesId)
@@ -160,6 +168,7 @@ internal class FsLayout(
         const val IDX_AUTHOR = "author"
         const val IDX_OWNER = "owner"
         const val IDX_TAG = "tag"
+        const val IDX_EXPIRES_AT = "expires_at"
         const val REPLACEABLE_DIR = "replaceable"
         const val ADDRESSABLE_DIR = "addressable"
         const val TOMBSTONES_DIR = "tombstones"

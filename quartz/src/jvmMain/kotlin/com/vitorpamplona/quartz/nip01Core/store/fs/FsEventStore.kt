@@ -32,6 +32,8 @@ import com.vitorpamplona.quartz.nip01Core.store.sqlite.DefaultIndexingStrategy
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.IndexingStrategy
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.TagNameValueHasher
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip40Expiration.expiration
+import com.vitorpamplona.quartz.utils.TimeUtils
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 import java.nio.file.Path
@@ -56,6 +58,11 @@ import kotlin.io.path.readText
 class FsEventStore(
     val root: Path,
     indexingStrategy: IndexingStrategy = DefaultIndexingStrategy(),
+    /**
+     * Source of "now" in unix seconds. Injectable so tests can drive
+     * NIP-40 expiration deterministically. Defaults to `TimeUtils.now()`.
+     */
+    private val clock: () -> Long = { TimeUtils.now() },
 ) : IEventStore {
     private val layout = FsLayout(root)
     private val hasher: TagNameValueHasher
@@ -80,6 +87,7 @@ class FsEventStore(
 
     override fun insert(event: Event) {
         if (event.kind.isEphemeral()) return
+        if (isAlreadyExpired(event)) return
         if (isBlockedByTombstone(event)) return
 
         val slot = slots.slotPathFor(event)
@@ -125,6 +133,18 @@ class FsEventStore(
             Files.deleteIfExists(tmp)
             throw t
         }
+    }
+
+    /**
+     * NIP-40 pre-insert guard. Parity with SQLite's `reject_expired_events`
+     * trigger: an event whose expiration tag is `<= now` is rejected
+     * outright. The `<= 0` clause matches the SQLite check that ignores
+     * non-positive expiration values.
+     */
+    private fun isAlreadyExpired(event: Event): Boolean {
+        val exp = event.expiration() ?: return false
+        if (exp <= 0) return false
+        return exp <= clock()
     }
 
     /**
@@ -295,8 +315,22 @@ class FsEventStore(
         return if (canonical.deleteIfExists()) 1 else 0
     }
 
+    /**
+     * Sweep expired events. Walks `idx/expires_at/`, parses `<exp>-<id>`
+     * filenames, and deletes any entry whose `exp < now`. Matches SQLite's
+     * `expiration < unixepoch()` predicate (note: strict `<`, not `<=`).
+     */
     override fun deleteExpiredEvents() {
-        // Step-5 feature.
+        if (!Files.isDirectory(layout.idxExpiresAt)) return
+        val now = clock()
+        val toDelete = ArrayList<HexKey>()
+        Files.list(layout.idxExpiresAt).use { stream ->
+            for (entry in stream) {
+                val parsed = FsLayout.parseEntry(entry.fileName.toString()) ?: continue
+                if (parsed.first < now) toDelete.add(parsed.second)
+            }
+        }
+        toDelete.forEach { delete(it) }
     }
 
     override fun close() {

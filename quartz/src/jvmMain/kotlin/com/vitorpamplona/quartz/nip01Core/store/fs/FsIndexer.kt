@@ -24,6 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.DefaultIndexingStrategy
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.IndexingStrategy
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.TagNameValueHasher
+import com.vitorpamplona.quartz.nip40Expiration.expiration
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
@@ -61,6 +62,10 @@ internal class FsIndexer(
             if (!indexingStrategy.shouldIndex(event.kind, tag)) continue
             val h = hasher.hash(tag[0], tag[1])
             out.add(layout.tagEntry(tag[0], h, event.createdAt, event.id))
+        }
+        val exp = event.expiration()
+        if (exp != null && exp > 0) {
+            out.add(layout.expirationEntry(exp, event.id))
         }
         return out
     }
