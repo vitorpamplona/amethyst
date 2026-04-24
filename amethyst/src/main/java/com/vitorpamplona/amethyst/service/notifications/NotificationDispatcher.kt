@@ -21,16 +21,19 @@
 package com.vitorpamplona.amethyst.service.notifications
 
 import android.content.Context
+import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.quartz.experimental.notifications.wake.WakeUpEvent
 import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
+import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
@@ -50,9 +53,14 @@ import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallOfferEvent
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 /**
@@ -121,20 +129,65 @@ class NotificationDispatcher(
     fun start() {
         if (job?.isActive == true) return
         Log.d(TAG, "Starting notification dispatcher")
+
+        // Only fire on events created after the dispatcher starts — equivalent
+        // to the relay protocol's `limit: 0` subscription semantics, so we
+        // don't retrigger on historical re-broadcasts of events the user has
+        // already seen. Captured once and shared across filter rebuilds
+        // triggered by account changes.
+        val dispatcherSince = TimeUtils.now()
+
         job =
             scope.launch {
-                LocalCache
-                    .observeNewEvents<Event>(Filter(kinds = NOTIFICATION_KINDS))
-                    .collect { event ->
-                        try {
-                            consumer.consumeFromCache(event)
-                        } catch (e: Exception) {
-                            if (e is CancellationException) throw e
-                            Log.e(TAG, "Failed to dispatch notification for ${event.kind} ${event.id}", e)
+                // Ensure the saved-accounts StateFlow is primed from disk.
+                // accountsFlow() exposes the backing MutableStateFlow which
+                // starts as null and only populates on the first suspend read.
+                LocalPreferences.allSavedAccounts()
+
+                LocalPreferences
+                    .accountsFlow()
+                    .filterNotNull()
+                    .map { accounts ->
+                        accounts
+                            .filter { it.hasPrivKey || it.loggedInWithExternalSigner }
+                            .mapNotNullTo(mutableSetOf()) { npubToHexOrNull(it.npub) }
+                    }.distinctUntilChanged()
+                    .collectLatest { pubkeys ->
+                        if (pubkeys.isEmpty()) {
+                            Log.d(TAG) { "No notifiable accounts; observer idle." }
+                            return@collectLatest
                         }
+
+                        val filter =
+                            Filter(
+                                kinds = NOTIFICATION_KINDS,
+                                // Only route events that p-tag one of our accounts.
+                                // consumeFromCache still routes by `p` tag, so the
+                                // filter narrows exactly the same set it would accept.
+                                tags = mapOf("p" to pubkeys.toList()),
+                                since = dispatcherSince,
+                            )
+
+                        Log.d(TAG) { "Observing notifications for ${pubkeys.size} account(s)." }
+
+                        LocalCache
+                            .observeNewEvents<Event>(filter)
+                            .collect { event ->
+                                try {
+                                    consumer.consumeFromCache(event)
+                                } catch (e: Exception) {
+                                    if (e is CancellationException) throw e
+                                    Log.e(TAG, "Failed to dispatch notification for ${event.kind} ${event.id}", e)
+                                }
+                            }
                     }
             }
     }
+
+    private fun npubToHexOrNull(npub: String): String? =
+        runCatching { npub.bechToBytes("npub").toHexKey() }
+            .onFailure { Log.d(TAG) { "Skipping non-decodable npub $npub: ${it.message}" } }
+            .getOrNull()
 
     fun stop() {
         job?.cancel()
