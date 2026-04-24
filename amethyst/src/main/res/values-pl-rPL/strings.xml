@@ -49,6 +49,7 @@
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">Używasz klucza publicznego, a klucze publiczne są tylko do odczytu. Zaloguj się za pomocą klucza prywatnego, aby zwiększyć liczbę postów</string>
     <string name="login_with_a_private_key_to_like_posts">Używasz klucza publicznego, a klucze publiczne są tylko do odczytu. Zaloguj się za pomocą klucza prywatnego, aby polubić posty</string>
     <string name="no_zap_amount_setup_long_press_to_change">Nie ustawiono kwoty zap-a. Naciśnij i przytrzymaj, aby zmienić</string>
+    <string name="chat_zap_amount_suffix">przesłał %1$s satoszy</string>
     <string name="chat_zap_anonymous">Anonimowo</string>
     <string name="chat_raid_is_raiding">prowadzi nalot</string>
     <string name="chat_clip_created_a_clip">stworzył klip</string>
@@ -338,6 +339,7 @@
     <string name="drawer_accounts">Konta</string>
     <string name="drawer_section_navigate">Nawigacja</string>
     <string name="drawer_section_you">Ty</string>
+    <string name="drawer_section_feeds">Kanały</string>
     <string name="drawer_section_create">Utwórz</string>
     <string name="drawer_section_system">System</string>
     <string name="account_switch_select_account">Wybierz Konto</string>
@@ -1353,6 +1355,7 @@
     <string name="new_exclusive_geo_note">Nowy GEO-ekskluzywny Wpis</string>
     <string name="new_long_form_post">Nowy artykuł</string>
     <string name="new_poll">Nowa ankieta</string>
+    <string name="new_zap_poll">Nowa ankieta</string>
     <string name="new_regular_poll">Nowa standardowa ankieta</string>
     <string name="new_picture">Nowe zdjęcie</string>
     <string name="new_short_video">Nowy krótki filmik</string>
@@ -1820,6 +1823,7 @@
     <string name="kind_follow_packs">Pakiety subskrybentów</string>
     <string name="kind_reposts_16">Udostępnienia (16)</string>
     <string name="kind_geohash_follows">Obserwacja geohashów</string>
+    <string name="kind_gift_wraps">GiftWraps</string>
     <string name="kind_git_issue">Problem z Git</string>
     <string name="kind_git_patch">Łatka Git</string>
     <string name="kind_git_repo">Repozytorium Git</string>
@@ -2239,4 +2243,5 @@
     <string name="emoji_private_badge">Prywatna emotikona</string>
     <string name="emoji_public_explainer">Publiczne emotikony są widoczne dla wszystkich i pojawiają się w menu odezw oraz w oknie podpowiedzi \":\", jeśli ten pakiet znajduje się na liście emotikonów.</string>
     <string name="emoji_private_explainer">Prywatne emotikony są przechowywane zaszyfrowane na transmiterach i widoczne tylko dla Ciebie. Znajdują się w menu odzewów oraz w autouzupełnianiu po wpisaniu znaku „:” – tak samo jak emotikony publiczne.</string>
+    <string name="gif">Gif</string>
 </resources>
