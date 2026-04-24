@@ -24,6 +24,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -34,7 +35,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -156,27 +156,16 @@ fun NoteCard(
             400.dp
         }
 
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        colors =
-            CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface,
-            ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-    ) {
+    // Whole-card hover/ripple: pass onClick to M3 Card so the click-surface is
+    // the entire card (M3 handles shape clipping for us). Action buttons inside
+    // the NoteActionsRow have their own clickables that consume the click before
+    // it reaches the Card's handler, so tapping an action still fires only that
+    // action.
+    val cardColors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    val cardElevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    val cardBody: @Composable ColumnScope.() -> Unit = {
         Column(modifier = Modifier.padding(12.dp)) {
-            // Header + text area — clickable to navigate to thread. Clip BEFORE
-            // clickable so the ripple/hover fill is rounded, not a hard rectangle.
-            Column(
-                modifier =
-                    if (onClick != null) {
-                        Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .clickable { onClick() }
-                    } else {
-                        Modifier
-                    },
-            ) {
+            Column {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -312,20 +301,24 @@ fun NoteCard(
                     }
                 }
             }
-
-            Spacer(Modifier.height(8.dp))
-
-            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
-
-            Spacer(Modifier.height(4.dp))
-
-            // Event ID (truncated)
-            Text(
-                text = "ID: ${note.id.take(12)}...",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-            )
         }
+    }
+
+    if (onClick != null) {
+        Card(
+            onClick = onClick,
+            modifier = modifier.fillMaxWidth(),
+            colors = cardColors,
+            elevation = cardElevation,
+            content = cardBody,
+        )
+    } else {
+        Card(
+            modifier = modifier.fillMaxWidth(),
+            colors = cardColors,
+            elevation = cardElevation,
+            content = cardBody,
+        )
     }
 }
 
