@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.cli
 
 import com.vitorpamplona.amethyst.cli.commands.Commands
+import com.vitorpamplona.amethyst.cli.secrets.SecretStore
 import kotlinx.coroutines.runBlocking
 import kotlin.system.exitProcess
 
@@ -70,35 +71,31 @@ private suspend fun dispatch(argv: Array<String>): Int {
         return 0
     }
 
-    // Pull --data-dir out of argv before subcommand parsing so subcommands see
+    // Pull global flags out of argv before subcommand parsing so subcommands see
     // only their own args.
     val filteredArgs = mutableListOf<String>()
     var dataDirFlag: String? = null
+    var secretBackendFlag: String? = null
+    var passphraseFileFlag: String? = null
     var i = 0
     while (i < argv.size) {
-        when (val a = argv[i]) {
-            "--data-dir" -> {
-                dataDirFlag = argv.getOrNull(i + 1)
-                i += 2
-            }
-
-            else -> {
-                if (a.startsWith("--data-dir=")) {
-                    dataDirFlag = a.removePrefix("--data-dir=")
-                    i++
-                } else {
-                    filteredArgs.add(a)
-                    i++
-                }
-            }
+        val a = argv[i]
+        val (matched, consumed) = extractGlobalFlag(a, argv, i)
+        when (matched) {
+            GlobalFlag.DATA_DIR -> dataDirFlag = consumed.value
+            GlobalFlag.SECRET_BACKEND -> secretBackendFlag = consumed.value
+            GlobalFlag.PASSPHRASE_FILE -> passphraseFileFlag = consumed.value
+            null -> filteredArgs.add(a)
         }
+        i += consumed.tokensConsumed
     }
     if (filteredArgs.isEmpty()) {
         printUsage()
         return 2
     }
 
-    val dataDir = DataDir.resolve(dataDirFlag)
+    val secrets = SecretStore.from(backendFlag = secretBackendFlag, passphraseFile = passphraseFileFlag)
+    val dataDir = DataDir.resolve(dataDirFlag, secrets)
     val head = filteredArgs[0]
     val tail = filteredArgs.drop(1).toTypedArray()
 
@@ -190,13 +187,59 @@ private suspend fun marmotDispatch(
     }
 }
 
+private enum class GlobalFlag(
+    val long: String,
+) {
+    DATA_DIR("--data-dir"),
+    SECRET_BACKEND("--secret-backend"),
+    PASSPHRASE_FILE("--passphrase-file"),
+}
+
+private data class ConsumedFlag(
+    val value: String?,
+    val tokensConsumed: Int,
+)
+
+/**
+ * Match a single argv token against the global-flag whitelist. Returns
+ * `(matchedFlag, parsed)` — when [matchedFlag] is null the token is a
+ * subcommand/positional that the caller should forward untouched.
+ */
+private fun extractGlobalFlag(
+    token: String,
+    argv: Array<String>,
+    idx: Int,
+): Pair<GlobalFlag?, ConsumedFlag> {
+    for (flag in GlobalFlag.values()) {
+        if (token == flag.long) {
+            return flag to ConsumedFlag(argv.getOrNull(idx + 1), 2)
+        }
+        val prefix = "${flag.long}="
+        if (token.startsWith(prefix)) {
+            return flag to ConsumedFlag(token.removePrefix(prefix), 1)
+        }
+    }
+    return null to ConsumedFlag(null, 1)
+}
+
 private fun printUsage() {
     System.err.println(
         """
         |amy — Amethyst command-line interface
         |
         |Usage:
-        |  amy [--data-dir PATH] <cmd> [args...]
+        |  amy [--data-dir PATH]
+        |      [--secret-backend auto|keychain|ncryptsec|plaintext]
+        |      [--passphrase-file PATH]
+        |      <cmd> [args...]
+        |
+        |Private-key storage:
+        |  Default (`auto`) uses the OS keychain when one is available
+        |  (macOS `security`, or Linux `secret-tool` on a session D-Bus)
+        |  and falls back to a NIP-49 ncryptsec blob otherwise. For the
+        |  ncryptsec backend the passphrase is taken from --passphrase-file,
+        |  then ${'$'}AMY_PASSPHRASE, then a TTY prompt. `plaintext` writes the
+        |  private key directly into identity.json (still 0600) — dev only.
         |
         |Identity:
         |  init [--nsec NSEC]           create or import a bare identity (no defaults published)

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.cli.stores
 
+import com.vitorpamplona.amethyst.cli.SecureFileIO
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageBundleStore
 import com.vitorpamplona.quartz.marmot.mls.group.MarmotMessageStore
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupStateStore
@@ -37,13 +38,18 @@ private fun File.deleteOrWarn(tag: String) {
  * document that implementations MUST encrypt at rest, but this CLI is a
  * throwaway interop driver running against scratch keys and local scratch
  * state. Do not point it at real account material.
+ *
+ * Writes go through [SecureFileIO] so files land with owner-only filesystem
+ * permissions and overwrites are atomic. That blocks other OS users; it does
+ * not block another app running as the same user — that still requires
+ * encryption at rest.
  */
 
 class FileMlsGroupStateStore(
     private val dir: File,
 ) : MlsGroupStateStore {
     init {
-        dir.mkdirs()
+        SecureFileIO.secureMkdirs(dir)
     }
 
     private fun stateFile(id: String) = File(dir, "$id.state")
@@ -54,7 +60,7 @@ class FileMlsGroupStateStore(
         nostrGroupId: String,
         state: ByteArray,
     ) {
-        stateFile(nostrGroupId).writeBytes(state)
+        SecureFileIO.writeBytesAtomic(stateFile(nostrGroupId), state)
     }
 
     override suspend fun load(nostrGroupId: String): ByteArray? = stateFile(nostrGroupId).takeIf { it.exists() }?.readBytes()
@@ -76,8 +82,7 @@ class FileMlsGroupStateStore(
     ) {
         // Layout: [u32 count][(u32 len, bytes) …] — tiny framing so readers
         // can recover independent byte arrays without TLS plumbing.
-        val f = retainedFile(nostrGroupId)
-        f.outputStream().use { out ->
+        SecureFileIO.writeAtomic(retainedFile(nostrGroupId)) { out ->
             val buf = java.nio.ByteBuffer.allocate(4)
             buf.putInt(retainedSecrets.size)
             out.write(buf.array())
@@ -112,8 +117,7 @@ class FileKeyPackageBundleStore(
     private val file: File,
 ) : KeyPackageBundleStore {
     override suspend fun save(snapshot: ByteArray) {
-        file.parentFile?.mkdirs()
-        file.writeBytes(snapshot)
+        SecureFileIO.writeBytesAtomic(file, snapshot)
     }
 
     override suspend fun load(): ByteArray? = file.takeIf { it.exists() }?.readBytes()
@@ -127,7 +131,7 @@ class FileMarmotMessageStore(
     private val dir: File,
 ) : MarmotMessageStore {
     init {
-        dir.mkdirs()
+        SecureFileIO.secureMkdirs(dir)
     }
 
     private fun file(id: String) = File(dir, "$id.messages")
@@ -138,7 +142,7 @@ class FileMarmotMessageStore(
     ) {
         // Each line is one inner event JSON. The store doc tolerates duplicates
         // so we don't bother deduping here — readers can do it.
-        file(nostrGroupId).appendText(innerEventJson.replace("\n", " ") + "\n")
+        SecureFileIO.appendText(file(nostrGroupId), innerEventJson.replace("\n", " ") + "\n")
     }
 
     override suspend fun loadMessages(nostrGroupId: String): List<String> = file(nostrGroupId).takeIf { it.exists() }?.readLines()?.filter { it.isNotBlank() } ?: emptyList()
