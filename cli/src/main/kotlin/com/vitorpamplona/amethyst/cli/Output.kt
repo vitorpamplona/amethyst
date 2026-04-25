@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.cli
 
+import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import java.time.Instant
@@ -81,23 +82,39 @@ object Output {
     private fun renderText(value: Any?): String {
         val color = Ansi.forStream(isStderr = false)
         val out = StringBuilder()
-        when (value) {
+        when (val v = unwrap(value)) {
             null -> {}
 
             is Map<*, *> -> {
-                renderMapBody(out, value, "", color)
+                renderMapBody(out, v, "", color)
             }
 
             is List<*> -> {
-                renderListBody(out, value, "", color)
+                renderListBody(out, v, "", color)
             }
 
             else -> {
-                out.append(value.toString()).append('\n')
+                out.append(v.toString()).append('\n')
             }
         }
         return out.toString().trimEnd('\n')
     }
+
+    /**
+     * Convert any embedded Jackson [JsonNode] into plain Java types
+     * (`LinkedHashMap` / `ArrayList` / boxed primitives) so the generic
+     * renderer can descend into it. Plain Maps / Lists / scalars are
+     * returned unchanged. Walks recursively because callers commonly
+     * mix a JsonNode subtree into a hand-built Map (e.g. profile show
+     * stuffing the parsed kind:0 content under a `metadata` key).
+     */
+    private fun unwrap(value: Any?): Any? =
+        when (value) {
+            is JsonNode -> mapper.convertValue(value, Any::class.java)
+            is Map<*, *> -> value.mapValues { (_, v) -> unwrap(v) }
+            is List<*> -> value.map { unwrap(it) }
+            else -> value
+        }
 
     private fun renderMapBody(
         out: StringBuilder,
