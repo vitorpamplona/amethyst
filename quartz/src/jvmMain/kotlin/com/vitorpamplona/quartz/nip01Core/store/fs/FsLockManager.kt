@@ -20,38 +20,44 @@
  */
 package com.vitorpamplona.quartz.nip01Core.store.fs
 
+import java.io.IOException
 import java.nio.channels.FileChannel
 import java.nio.channels.FileLock
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
+import java.util.concurrent.locks.ReentrantLock
 
 /**
  * Cross-process write serialisation for the file-backed event store.
  *
- * Acquires an exclusive `flock(2)` on `.lock` while the body runs, so a
- * second `amy` invocation against the same directory blocks until the
- * first releases. Re-entrant for the calling thread — nested
- * `withWriteLock` calls (e.g. transaction body that calls insert) reuse
- * the existing lock instead of self-deadlocking.
+ * Two layers of mutual exclusion:
  *
- * Readers do not take this lock. The store's atomic-rename writes mean
- * readers see either the pre- or post-mutation state, never a torn
- * file. Stale `idx/` entries that point at a just-unlinked canonical
- * are tolerated by the query loop's `NoSuchFileException` handling.
+ *  - [inProcessLock] — a `ReentrantLock` serialising threads within this
+ *    JVM. Reentrant on the same thread, so nested
+ *    `withWriteLock` calls (e.g. a transaction body that calls insert)
+ *    reuse the lock instead of self-deadlocking.
+ *
+ *  - [FileChannel.lock] on `.lock` — a POSIX/Windows advisory file lock
+ *    serialising this JVM against other JVMs pointed at the same store.
+ *    Acquired once on first entry, released once on last exit (tracked
+ *    via the reentrant hold count).
+ *
+ * Readers do not take either lock. The store's atomic-rename writes
+ * mean readers see either the pre- or post-mutation state, never a
+ * torn file. Stale `idx/` entries that point at a just-unlinked
+ * canonical are tolerated by the query loop's `NoSuchFileException`
+ * handling.
  */
 internal class FsLockManager(
     root: Path,
 ) : AutoCloseable {
     private val lockPath: Path = root.resolve(LOCK_FILE)
-    private val mu = Any()
+    private val inProcessLock = ReentrantLock()
 
-    /** Per-thread re-entry depth. Allows nested `withWriteLock` calls. */
-    private val depth = ThreadLocal.withInitial { 0 }
-
-    /** Active channel + lock when depth > 0 (any thread). Held by whoever owns the lock. */
+    /** Held only while this JVM owns the file lock (depth ≥ 1). Guarded by [inProcessLock]. */
     private var channel: FileChannel? = null
-    private var lock: FileLock? = null
+    private var fileLock: FileLock? = null
 
     init {
         try {
@@ -62,58 +68,55 @@ internal class FsLockManager(
     }
 
     fun <T> withWriteLock(body: () -> T): T {
-        // Re-entrant on the same thread: just run.
-        if (depth.get() > 0) {
-            depth.set(depth.get() + 1)
+        inProcessLock.lock()
+        try {
+            // Only the outermost re-entry actually touches the file lock.
+            if (inProcessLock.holdCount == 1) {
+                val ch = FileChannel.open(lockPath, StandardOpenOption.READ, StandardOpenOption.WRITE)
+                val l =
+                    try {
+                        ch.lock() // exclusive, blocking
+                    } catch (t: Throwable) {
+                        ch.close()
+                        throw t
+                    }
+                channel = ch
+                fileLock = l
+            }
             try {
                 return body()
             } finally {
-                depth.set(depth.get() - 1)
-            }
-        }
-
-        // Cross-thread + cross-process serialisation.
-        synchronized(mu) {
-            val ch = FileChannel.open(lockPath, StandardOpenOption.READ, StandardOpenOption.WRITE)
-            val l = ch.lock() // exclusive, blocking
-            channel = ch
-            lock = l
-            depth.set(1)
-            try {
-                return body()
-            } finally {
-                depth.set(0)
-                try {
-                    l.release()
-                } catch (_: Throwable) {
-                    // ignore
+                if (inProcessLock.holdCount == 1) {
+                    releaseFileLock()
                 }
-                try {
-                    ch.close()
-                } catch (_: Throwable) {
-                    // ignore
-                }
-                channel = null
-                lock = null
             }
+        } finally {
+            inProcessLock.unlock()
         }
     }
 
     override fun close() {
-        synchronized(mu) {
-            try {
-                lock?.release()
-            } catch (_: Throwable) {
-                // ignore
-            }
-            try {
-                channel?.close()
-            } catch (_: Throwable) {
-                // ignore
-            }
-            channel = null
-            lock = null
+        inProcessLock.lock()
+        try {
+            releaseFileLock()
+        } finally {
+            inProcessLock.unlock()
         }
+    }
+
+    private fun releaseFileLock() {
+        try {
+            fileLock?.release()
+        } catch (_: IOException) {
+            // best-effort during unwind
+        }
+        try {
+            channel?.close()
+        } catch (_: IOException) {
+            // best-effort during unwind
+        }
+        fileLock = null
+        channel = null
     }
 
     companion object {

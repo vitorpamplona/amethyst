@@ -93,9 +93,9 @@ internal class FsSlots(
         if (!slot.exists()) return null
         return try {
             Event.fromJson(slot.readText())
-        } catch (_: java.nio.file.NoSuchFileException) {
+        } catch (_: java.io.IOException) {
             null
-        } catch (_: Exception) {
+        } catch (_: com.fasterxml.jackson.core.JacksonException) {
             null
         }
     }

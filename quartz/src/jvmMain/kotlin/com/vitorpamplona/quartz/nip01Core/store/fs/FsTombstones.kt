@@ -70,9 +70,9 @@ internal class FsTombstones(
         if (!path.exists()) return null
         return try {
             Event.fromJson(path.readText()).createdAt
-        } catch (_: java.nio.file.NoSuchFileException) {
+        } catch (_: java.io.IOException) {
             null
-        } catch (_: Exception) {
+        } catch (_: com.fasterxml.jackson.core.JacksonException) {
             null
         }
     }
@@ -135,9 +135,9 @@ internal class FsTombstones(
         if (!path.exists()) return null
         return try {
             Event.fromJson(path.readText()).createdAt
-        } catch (_: java.nio.file.NoSuchFileException) {
+        } catch (_: java.io.IOException) {
             null
-        } catch (_: Exception) {
+        } catch (_: com.fasterxml.jackson.core.JacksonException) {
             null
         }
     }

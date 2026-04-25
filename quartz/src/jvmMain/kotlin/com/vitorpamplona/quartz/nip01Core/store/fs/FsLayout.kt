@@ -27,7 +27,7 @@ import com.vitorpamplona.quartz.utils.sha256.sha256
 import java.nio.ByteBuffer
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.StandardCopyOption
+import java.nio.file.StandardOpenOption
 import java.security.SecureRandom
 import kotlin.io.path.exists
 
@@ -162,15 +162,29 @@ internal class FsLayout(
      * Read the seed salt (creates it on first call). The seed is
      * write-once — reopening an existing store must return the same Long
      * or every previously-written index entry becomes unreachable.
+     *
+     * Concurrent first-open: two processes opening the same fresh
+     * directory simultaneously must not both write-then-use their own
+     * random seed. We use `CREATE_NEW` so exactly one process creates
+     * the file; any loser catches `FileAlreadyExistsException` and
+     * falls through to read the winner's bytes.
      */
     fun readOrCreateSeed(): Long {
         val f = root.resolve(SEED_FILE)
         if (!f.exists()) {
             val bytes = ByteArray(8)
             SecureRandom().nextBytes(bytes)
-            val tmp = Files.createTempFile(root, ".seed-", ".tmp")
-            Files.write(tmp, bytes)
-            Files.move(tmp, f, StandardCopyOption.ATOMIC_MOVE)
+            try {
+                Files
+                    .newByteChannel(
+                        f,
+                        setOf(StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE),
+                    ).use { ch ->
+                        ch.write(ByteBuffer.wrap(bytes))
+                    }
+            } catch (_: java.nio.file.FileAlreadyExistsException) {
+                // Another process won the race; fall through to read theirs.
+            }
         }
         val bytes = Files.readAllBytes(f)
         require(bytes.size == 8) { "$SEED_FILE must be exactly 8 bytes, got ${bytes.size}" }

@@ -429,7 +429,9 @@ open class FsEventStore(
                     val event =
                         try {
                             Event.fromJson(Files.readString(path))
-                        } catch (_: Exception) {
+                        } catch (_: java.io.IOException) {
+                            continue
+                        } catch (_: com.fasterxml.jackson.core.JacksonException) {
                             continue
                         }
                     indexer.link(event, path)
