@@ -552,6 +552,155 @@ class MarmotMipBehaviorTest {
         }
 
     // ----------------------------------------------------------------------
+    // RFC 9420 §7.2 / §12.4.2 required_capabilities enforcement
+    // ----------------------------------------------------------------------
+
+    /**
+     * Round-trip: the `required_capabilities` extension Marmot installs on
+     * every fresh group decodes back to its declared (extensions, proposals,
+     * credentials) triple.
+     */
+    @Test
+    fun findRequiredCapabilities_decodesMarmotExtensionInstalledByCreate() {
+        val alice = MlsGroup.create(aliceId.hexToByteArray())
+        val req =
+            MlsGroup.findRequiredCapabilities(alice.extensions)
+                ?: error("required_capabilities must be present after create()")
+        assertEquals(listOf(0xF2EE), req.extensions, "MarmotGroupData (0xF2EE) must be required")
+        assertEquals(listOf(0x000A), req.proposals, "SelfRemove (0x000A) must be required")
+        assertEquals(listOf(0x0001), req.credentials, "Basic credential must be required")
+    }
+
+    /**
+     * `requireCapabilitiesMeetRequirements` must throw when ANY required
+     * type is missing — extension OR proposal OR credential — and the
+     * error must name the missing types so an interop debugger can
+     * diagnose without grepping.
+     */
+    @Test
+    fun requireCapabilitiesMeetRequirements_rejectsMissingExtension() {
+        val req =
+            MlsGroup.Companion.RequiredCapabilities(
+                extensions = listOf(0xF2EE),
+                proposals = listOf(0x000A),
+                credentials = listOf(0x0001),
+            )
+        // Missing 0xF2EE.
+        val caps =
+            com.vitorpamplona.quartz.marmot.mls.tree.Capabilities(
+                extensions = emptyList(),
+                proposals = listOf(0x000A),
+                credentials = listOf(0x0001),
+            )
+        val ex =
+            assertFailsWith<IllegalStateException> {
+                MlsGroup.requireCapabilitiesMeetRequirements(caps, req, "test")
+            }
+        assertTrue(
+            ex.message!!.contains("extensions=[62190]") || ex.message!!.contains("0xF2EE"),
+            "error must name the missing extension type: ${ex.message}",
+        )
+    }
+
+    @Test
+    fun requireCapabilitiesMeetRequirements_rejectsMissingProposal() {
+        val req =
+            MlsGroup.Companion.RequiredCapabilities(
+                extensions = emptyList(),
+                proposals = listOf(0x000A),
+                credentials = emptyList(),
+            )
+        val caps =
+            com.vitorpamplona.quartz.marmot.mls.tree.Capabilities(
+                extensions = emptyList(),
+                proposals = emptyList(),
+                credentials = listOf(0x0001),
+            )
+        assertFailsWith<IllegalStateException> {
+            MlsGroup.requireCapabilitiesMeetRequirements(caps, req, "test")
+        }
+    }
+
+    @Test
+    fun requireCapabilitiesMeetRequirements_passesWhenCapsAreSuperset() {
+        val req =
+            MlsGroup.Companion.RequiredCapabilities(
+                extensions = listOf(0xF2EE),
+                proposals = listOf(0x000A),
+                credentials = listOf(0x0001),
+            )
+        val caps =
+            com.vitorpamplona.quartz.marmot.mls.tree.Capabilities(
+                extensions = listOf(0xF2EE, 0x1234),
+                proposals = listOf(0x000A, 0x000B),
+                credentials = listOf(0x0001, 0x0002),
+            )
+        // Should not throw.
+        MlsGroup.requireCapabilitiesMeetRequirements(caps, req, "test")
+    }
+
+    /**
+     * End-to-end gate: `addMember` MUST reject a KeyPackage whose leaf
+     * doesn't advertise the group's `required_capabilities`. We tamper the
+     * KP's leaf capabilities to drop SelfRemove, then re-encode and re-sign
+     * to keep the KP signature valid (RFC 9420 §10.1) so the rejection is
+     * coming from the capability gate and not the signature check.
+     */
+    @Test
+    fun addMember_rejectsKeyPackageMissingRequiredProposal() =
+        runBlocking<Unit> {
+            // Setup: standard Marmot group (required_capabilities lists
+            // SelfRemove + MarmotGroupData + Basic).
+            val manager = createGroupManager()
+            manager.createGroup(groupId, aliceId.hexToByteArray())
+
+            // Bob's KP, but with SelfRemove stripped from his leaf
+            // capabilities. He's still announcing himself as a Marmot peer
+            // — just lying about supporting SelfRemove.
+            val tampered = createKeyPackageWithoutSelfRemove(bobId)
+
+            assertFailsWith<IllegalStateException> {
+                manager.addMember(groupId, tampered.toTlsBytes())
+            }
+        }
+
+    /**
+     * Build a KeyPackage whose leaf [Capabilities] does NOT list 0x000A
+     * (SelfRemove), then re-sign so the KP's outer signature still
+     * validates. Useful for testing the §7.2 gate in isolation.
+     */
+    private fun createKeyPackageWithoutSelfRemove(identity: String): com.vitorpamplona.quartz.marmot.mls.messages.MlsKeyPackage {
+        val tempGroup = MlsGroup.create(identity.hexToByteArray())
+        val bundle = tempGroup.createKeyPackage(identity.hexToByteArray(), ByteArray(0))
+        val original = bundle.keyPackage
+        val originalLeaf = original.leafNode
+
+        // Strip SelfRemove (0x000A) from the leaf's advertised proposals.
+        val tamperedCaps =
+            originalLeaf.capabilities.copy(
+                proposals = originalLeaf.capabilities.proposals.filter { it != 0x000A },
+            )
+        // Re-build the leaf node and re-sign its TBS so the leaf signature
+        // still verifies (otherwise we'd hit the LeafNode signature check
+        // before the capability gate fires).
+        val tamperedLeaf =
+            originalLeaf.copy(capabilities = tamperedCaps).let { lf ->
+                val tbs = lf.encodeTbs()
+                val sig =
+                    com.vitorpamplona.quartz.marmot.mls.crypto.MlsCryptoProvider
+                        .signWithLabel(bundle.signaturePrivateKey, "LeafNodeTBS", tbs)
+                lf.copy(signature = sig)
+            }
+        // Re-sign the KeyPackage TBS over the new leaf.
+        val unsigned = original.copy(leafNode = tamperedLeaf, signature = ByteArray(0))
+        return unsigned.copy(
+            signature =
+                com.vitorpamplona.quartz.marmot.mls.crypto.MlsCryptoProvider
+                    .signWithLabel(bundle.signaturePrivateKey, "KeyPackageTBS", unsigned.encodeTbs()),
+        )
+    }
+
+    // ----------------------------------------------------------------------
     // RFC 9420 §5.3 psk_secret derivation
     // ----------------------------------------------------------------------
 

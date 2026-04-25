@@ -2053,6 +2053,16 @@ class MlsGroup private constructor(
             "KeyPackage does not support ciphersuite 0x0001"
         }
 
+        // RFC 9420 §12.4.2: an Add proposal MUST be rejected if the new
+        // member's leaf capabilities don't advertise every type listed in
+        // the group's `required_capabilities` extension. Without this gate
+        // a non-conformant member silently joins, and any subsequent commit
+        // that touches their leaf is rejected by peers that DO enforce the
+        // requirement — splitting the group on the next epoch.
+        findRequiredCapabilities(groupContext.extensions)?.let { req ->
+            requireCapabilitiesMeetRequirements(caps, req, "Add KeyPackage leaf")
+        }
+
         return tree.addLeaf(leafNode)
     }
 
@@ -2546,6 +2556,67 @@ class MlsGroup private constructor(
         }
 
         /**
+         * Parsed view of the RFC 9420 §7.2 `required_capabilities` extension.
+         *
+         * The on-wire struct is three `uint16<V>` vectors —
+         * `extensions / proposals / credentials` — that name the types every
+         * member of the group MUST advertise in their leaf [Capabilities].
+         */
+        internal data class RequiredCapabilities(
+            val extensions: List<Int>,
+            val proposals: List<Int>,
+            val credentials: List<Int>,
+        )
+
+        /**
+         * Decode the `required_capabilities` extension from the GroupContext
+         * extension list, or `null` if the group hasn't installed one (some
+         * peers may omit it; treat missing as "no restriction").
+         */
+        internal fun findRequiredCapabilities(extensions: List<Extension>): RequiredCapabilities? {
+            val ext = extensions.find { it.extensionType == REQUIRED_CAPABILITIES_EXTENSION_TYPE } ?: return null
+            val r = TlsReader(ext.extensionData)
+
+            fun readUint16List(data: ByteArray): List<Int> {
+                val rr = TlsReader(data)
+                val list = mutableListOf<Int>()
+                while (rr.hasRemaining) list.add(rr.readUint16())
+                return list
+            }
+            val exts = readUint16List(r.readOpaqueVarInt())
+            val props = readUint16List(r.readOpaqueVarInt())
+            val creds = readUint16List(r.readOpaqueVarInt())
+            return RequiredCapabilities(exts, props, creds)
+        }
+
+        /**
+         * RFC 9420 §7.2 + §12.4.2: every member's leaf [Capabilities] MUST
+         * advertise every type listed in the group's `required_capabilities`
+         * extension. Adding a member whose KeyPackage doesn't meet the
+         * requirement leaves the group in a non-conformant state where
+         * peers that DO enforce the requirement will reject any commit that
+         * touches that leaf.
+         *
+         * Throws [IllegalStateException] with a precise diff so debugging
+         * an interop break against another implementation is one log line.
+         */
+        internal fun requireCapabilitiesMeetRequirements(
+            caps: Capabilities,
+            req: RequiredCapabilities,
+            who: String,
+        ) {
+            val missingExts = req.extensions.filter { it !in caps.extensions }
+            val missingProps = req.proposals.filter { it !in caps.proposals }
+            val missingCreds = req.credentials.filter { it !in caps.credentials }
+            if (missingExts.isNotEmpty() || missingProps.isNotEmpty() || missingCreds.isNotEmpty()) {
+                throw IllegalStateException(
+                    "$who capabilities don't meet required_capabilities: " +
+                        "missing extensions=$missingExts proposals=$missingProps credentials=$missingCreds",
+                )
+            }
+        }
+
+        /**
          * Default MLS leaf Capabilities that advertise support for Marmot's
          * required extensions and proposals so new members can join a group
          * whose `required_capabilities` lists them.
@@ -2732,6 +2803,26 @@ class MlsGroup private constructor(
             // the signed context, silently diverging their key schedule.
             require(tree.treeHash().contentEquals(groupContext.treeHash)) {
                 "GroupInfo tree_hash does not match ratchet_tree extension"
+            }
+
+            // RFC 9420 §7.2 + §12.4.3.1: a joiner MUST refuse to join a
+            // group whose `required_capabilities` lists types the joiner's
+            // own KeyPackage doesn't advertise — peers that DO enforce the
+            // requirement would reject every commit the joiner produces
+            // anyway. Catching this at join time turns a silent "your
+            // commits get dropped forever" into an actionable error.
+            findRequiredCapabilities(groupContext.extensions)?.let { req ->
+                val myLeaf = tree.getLeaf(myLeafIndex)
+                requireNotNull(myLeaf) { "Joiner's leaf is blank after tree reconstruction" }
+                requireCapabilitiesMeetRequirements(myLeaf.capabilities, req, "Joiner KeyPackage")
+                // Mirror the same check across every existing member —
+                // if a peer's leaf doesn't meet the group's stated
+                // requirements, the GroupInfo signer mis-installed the
+                // requirement set and the group is incoherent.
+                for (i in 0 until tree.leafCount) {
+                    val leaf = tree.getLeaf(i) ?: continue
+                    requireCapabilitiesMeetRequirements(leaf.capabilities, req, "Member leaf $i")
+                }
             }
 
             // Derive epoch secrets directly from memberSecret (RFC 9420 Section 8.3)
