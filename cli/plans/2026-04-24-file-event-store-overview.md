@@ -51,29 +51,36 @@ files may be created or deleted by the user between runs.
    `events/`. `amy store scrub` does this.
 4. **`events/` is the source of truth.** If a file is there, it is
    part of the store. If it is gone, it is gone — tombstones aside.
-5. **No business logic.** This is a `commons/` module that the CLI
-   imports. No Nostr-protocol decisions live in `cli/`.
+5. **No business logic.** Lives next to the SQLite reference store
+   in `quartz/`, sibling pattern. No Nostr-protocol decisions live
+   in `cli/`.
 
 ---
 
 ## Module placement
 
-Source: `commons/src/jvmMain/kotlin/com/vitorpamplona/commons/store/fs/`
+Source: `quartz/src/jvmMain/kotlin/com/vitorpamplona/quartz/nip01Core/store/fs/`
 
+- Sibling to the existing
+  `quartz/src/commonMain/kotlin/.../nip01Core/store/sqlite/` reference
+  implementation. The plan originally proposed `commons/` but the
+  shipped placement is `quartz/jvmMain/`, where every other event-
+  store concern already lives — and quartz already has a `jvmTest`
+  source set so we get JVM-specific tests for free.
 - JVM-only (uses `java.nio.file`, `FileChannel.lock`, `Files.createLink`).
 - Consumed by `cli/`. Android keeps `SQLiteEventStore`. Desktop can
   opt in later if useful.
-- Tests under `commons/src/jvmTest/.../store/fs/`.
-
-Not in `quartz/` because `quartz/` is protocol-only (no storage).
-Not in `cli/` because it contains reusable logic.
+- Tests under `quartz/src/jvmTest/.../store/fs/`.
 
 ---
 
 ## Directory layout
 
-Root: configurable, defaults to `$AMY_HOME/events/` (where `$AMY_HOME`
-is `~/.amy` by default).
+Root: configurable. The CLI uses `<data-dir>/events-store/` (where
+`<data-dir>` is `--data-dir PATH`, `$AMETHYST_CLI_DATA`, or `./amy`).
+The plan originally said `events/`; the actual `DataDir.eventsDir`
+field is `events-store/` to leave the bare name `events/` available
+for the canonical-events subdirectory inside the store.
 
 ```
 <root>/

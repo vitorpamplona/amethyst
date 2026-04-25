@@ -399,10 +399,10 @@ reads. O(size of idx trees).
 
 ### Location
 
-`commons/src/jvmTest/kotlin/com/vitorpamplona/commons/store/fs/`
-
-Uses JUnit4 (matches rest of the project). Temp-dir fixture creates
-a fresh store per test.
+`quartz/src/jvmTest/kotlin/com/vitorpamplona/quartz/nip01Core/store/fs/`
+(sibling to the SQLite reference tests). Uses kotlin.test (matches
+the rest of the quartz `jvmTest` source set). Temp-dir fixture
+creates a fresh store per test.
 
 ### Test categories
 

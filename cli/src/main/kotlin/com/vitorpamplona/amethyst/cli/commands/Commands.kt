@@ -90,4 +90,9 @@ object Commands {
         dataDir: DataDir,
         tail: Array<String>,
     ): Int = NotesCommands.dispatch(dataDir, tail)
+
+    suspend fun store(
+        dataDir: DataDir,
+        tail: Array<String>,
+    ): Int = StoreCommands.dispatch(dataDir, tail)
 }
