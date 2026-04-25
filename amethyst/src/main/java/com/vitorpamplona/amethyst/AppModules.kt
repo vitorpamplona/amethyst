@@ -440,7 +440,9 @@ class AppModules(
     // thumbnail disk cache for profile pictures
     val thumbnailDiskCache: ThumbnailDiskCache by lazy {
         Log.d("AppModules", "ThumbnailDiskCache Init")
-        ThumbnailDiskCache(appContext.safeCacheDir().resolve("profile_thumbnails"))
+        // One-shot reclaim of the v1 cache dir, which held squashed thumbnails.
+        appContext.safeCacheDir().resolve("profile_thumbnails").deleteRecursively()
+        ThumbnailDiskCache(appContext.safeCacheDir().resolve("profile_thumbnails_v2"))
     }
 
     // crash report storage

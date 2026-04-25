@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.service.images
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Matrix
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.sha256.sha256
@@ -111,9 +112,29 @@ class ThumbnailDiskCache(
                 }
             val decoded = BitmapFactory.decodeFile(path, decodeOptions) ?: return false
 
-            // Scale to exact target size and write atomically
-            val scaled = Bitmap.createScaledBitmap(decoded, targetSize, targetSize, true)
-            if (scaled !== decoded) decoded.recycle()
+            // Fuse center-crop + scale into one allocation; matches CircleShape + ContentScale.Crop.
+            val side = minOf(decoded.width, decoded.height)
+            val scaled =
+                if (decoded.width == targetSize && decoded.height == targetSize) {
+                    decoded
+                } else {
+                    // try/finally ensures decoded is recycled even if createBitmap throws.
+                    try {
+                        val scale = targetSize.toFloat() / side
+                        val matrix = Matrix().apply { setScale(scale, scale) }
+                        Bitmap.createBitmap(
+                            decoded,
+                            (decoded.width - side) / 2,
+                            (decoded.height - side) / 2,
+                            side,
+                            side,
+                            matrix,
+                            true,
+                        )
+                    } finally {
+                        decoded.recycle()
+                    }
+                }
 
             val tempFile = File(cacheDir, "$key.tmp")
             tempFile.outputStream().use { out ->
