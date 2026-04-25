@@ -157,6 +157,17 @@ data class RetryPacket(
         if (originalPacketBytes.size < 16) return false
         val withoutTag = originalPacketBytes.copyOfRange(0, originalPacketBytes.size - 16)
         val expected = computeIntegrityTag(withoutTag, originalDestinationConnectionId)
-        return expected.contentEquals(retryIntegrityTag)
+        return constantTimeEquals(expected, retryIntegrityTag)
     }
+}
+
+/** Constant-time byte-array equality so timing differences can't leak tag bits. */
+private fun constantTimeEquals(
+    a: ByteArray,
+    b: ByteArray,
+): Boolean {
+    if (a.size != b.size) return false
+    var diff = 0
+    for (i in a.indices) diff = diff or (a[i].toInt() xor b[i].toInt())
+    return diff == 0
 }

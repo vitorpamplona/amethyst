@@ -24,6 +24,8 @@ import com.vitorpamplona.quic.frame.ConnectionCloseFrame
 import com.vitorpamplona.quic.frame.CryptoFrame
 import com.vitorpamplona.quic.frame.DatagramFrame
 import com.vitorpamplona.quic.frame.Frame
+import com.vitorpamplona.quic.frame.MaxDataFrame
+import com.vitorpamplona.quic.frame.MaxStreamDataFrame
 import com.vitorpamplona.quic.frame.StreamFrame
 import com.vitorpamplona.quic.frame.encodeFrames
 import com.vitorpamplona.quic.packet.LongHeaderPacket
@@ -212,6 +214,11 @@ private fun buildApplicationPacket(
 
     state.ackTracker.buildAckFrame(nowMillis, conn.config.ackDelayExponent.toInt())?.let { frames += it }
 
+    // Re-credit the peer's send window when our receive offset has advanced
+    // beyond half the previously-advertised limit. Emits MAX_STREAM_DATA per
+    // stream and MAX_DATA at the connection level.
+    appendFlowControlUpdates(conn, frames)
+
     // Pending datagrams
     while (conn.pendingDatagramsLocked().isNotEmpty()) {
         val payload = conn.pendingDatagramsLocked().removeFirst()
@@ -219,11 +226,16 @@ private fun buildApplicationPacket(
         if (frames.size >= 16) break
     }
 
-    // Drain stream send buffers — round-robin keeping packet under MTU.
+    // Drain stream send buffers — round-robin keeping packet under MTU and
+    // honoring per-stream + connection-level send credit (RFC 9000 §4).
     var packetBudget = 1100
     for ((id, stream) in conn.streamsLocked()) {
         if (packetBudget <= 64) break
-        val chunk = stream.send.takeChunk(maxBytes = packetBudget - 32) ?: continue
+        // Per-stream credit: how many more bytes is the peer willing to receive on this stream?
+        val streamRemaining = (stream.sendCredit - stream.send.sentOffset).coerceAtLeast(0L)
+        if (streamRemaining <= 0L && !stream.send.finPending) continue
+        val maxBytes = minOf(packetBudget - 32, streamRemaining.coerceAtMost(Int.MAX_VALUE.toLong()).toInt())
+        val chunk = stream.send.takeChunk(maxBytes = maxBytes) ?: continue
         if (chunk.data.isNotEmpty() || chunk.fin) {
             frames += StreamFrame(streamId = id, offset = chunk.offset, data = chunk.data, fin = chunk.fin, explicitLength = true)
             packetBudget -= chunk.data.size + 32
@@ -242,4 +254,37 @@ private fun buildApplicationPacket(
         proto.hpKey,
         largestAckedInSpace = -1L,
     )
+}
+
+/**
+ * Append MAX_STREAM_DATA / MAX_DATA frames re-crediting the peer when our
+ * receive cursor has advanced past half the previously-advertised window.
+ *
+ * Caller must hold [QuicConnection.lock].
+ */
+private fun appendFlowControlUpdates(
+    conn: QuicConnection,
+    frames: MutableList<Frame>,
+) {
+    val cfg = conn.config
+    var totalRecvAdvanced = 0L
+    for ((id, stream) in conn.streamsLocked()) {
+        val rcv = stream.receive.contiguousEnd()
+        if (rcv == 0L) continue
+        // Re-credit when consumed > half the advertised window.
+        val window = cfg.initialMaxStreamDataBidiRemote.coerceAtLeast(cfg.initialMaxStreamDataUni)
+        if (rcv >= stream.receiveLimit - window / 2) {
+            val newLimit = rcv + window
+            if (newLimit > stream.receiveLimit) {
+                stream.receiveLimit = newLimit
+                frames += MaxStreamDataFrame(id, newLimit)
+            }
+        }
+        totalRecvAdvanced += rcv
+    }
+    // Connection-level credit: when sum of contiguousEnd across all streams
+    // exceeds half the connection-level limit, re-grant.
+    if (totalRecvAdvanced > 0L && totalRecvAdvanced >= cfg.initialMaxData / 2) {
+        frames += MaxDataFrame(totalRecvAdvanced + cfg.initialMaxData)
+    }
 }

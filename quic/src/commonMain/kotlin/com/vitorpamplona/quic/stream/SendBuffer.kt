@@ -37,7 +37,15 @@ package com.vitorpamplona.quic.stream
  * same send buffer that retains until ACK).
  */
 class SendBuffer {
-    private var pending: ByteArray = ByteArray(0)
+    /**
+     * Pending unsent chunks plus the offset within the head chunk. This avoids
+     * the previous O(N) copyOf-per-enqueue: each enqueue is O(1), each
+     * takeChunk peels at most one head chunk. Memory bounded by the sum of
+     * outstanding writes.
+     */
+    private val chunks: ArrayDeque<ByteArray> = ArrayDeque()
+    private var headOffset: Int = 0
+    private var pendingBytes: Int = 0
     private var sentEnd: Long = 0L
     var nextOffset: Long = 0L
         private set
@@ -46,14 +54,15 @@ class SendBuffer {
     var finSent: Boolean = false
         private set
 
-    val readableBytes: Int get() = pending.size
+    val readableBytes: Int get() = pendingBytes
+
+    /** Bytes already handed out via [takeChunk]; equal to the next offset to assign. */
+    val sentOffset: Long get() = sentEnd
 
     fun enqueue(bytes: ByteArray) {
         if (bytes.isEmpty()) return
-        val combined = ByteArray(pending.size + bytes.size)
-        pending.copyInto(combined, 0)
-        bytes.copyInto(combined, pending.size)
-        pending = combined
+        chunks.addLast(bytes)
+        pendingBytes += bytes.size
         nextOffset += bytes.size
     }
 
@@ -64,13 +73,30 @@ class SendBuffer {
 
     /** Take up to [maxBytes] bytes off the head of the buffer at the current send offset. */
     fun takeChunk(maxBytes: Int): Chunk? {
-        if (pending.isEmpty() && !(finPending && !finSent)) return null
-        val take = minOf(pending.size, maxBytes.coerceAtLeast(0))
-        val data = pending.copyOfRange(0, take)
-        pending = pending.copyOfRange(take, pending.size)
+        if (pendingBytes == 0 && !(finPending && !finSent)) return null
+        val cap = maxBytes.coerceAtLeast(0)
+        if (cap == 0 && pendingBytes > 0) return null
+        val data: ByteArray
+        if (pendingBytes == 0) {
+            data = ByteArray(0)
+        } else {
+            val head = chunks.first()
+            val available = head.size - headOffset
+            if (available <= cap) {
+                // Hand out the rest of the head chunk.
+                data = if (headOffset == 0) head else head.copyOfRange(headOffset, head.size)
+                chunks.removeFirst()
+                headOffset = 0
+                pendingBytes -= available
+            } else {
+                data = head.copyOfRange(headOffset, headOffset + cap)
+                headOffset += cap
+                pendingBytes -= cap
+            }
+        }
         val offset = sentEnd
-        sentEnd += take
-        val fin = finPending && pending.isEmpty()
+        sentEnd += data.size
+        val fin = finPending && pendingBytes == 0
         if (fin) finSent = true
         return Chunk(offset, data, fin)
     }

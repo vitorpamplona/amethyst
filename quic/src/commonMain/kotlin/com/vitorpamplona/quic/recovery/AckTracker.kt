@@ -84,6 +84,26 @@ class AckTracker {
 
     fun hasUnackedAckEliciting(): Boolean = ackElicitingPending
 
+    /**
+     * Drop ranges entirely below [threshold] — typically called after the peer
+     * acknowledges a packet whose number ≥ threshold, since older ranges no
+     * longer need to be advertised in our outbound ACKs. Without this the
+     * range list grows unboundedly for the lifetime of long connections.
+     */
+    fun purgeBelow(threshold: Long) {
+        if (threshold <= 0L) return
+        // ranges are descending by lo; drop the tail.
+        val it = ranges.listIterator(ranges.size)
+        while (it.hasPrevious()) {
+            val r = it.previous()
+            if (r.endInclusive < threshold) {
+                it.remove()
+            } else {
+                break
+            }
+        }
+    }
+
     fun isEmpty(): Boolean = ranges.isEmpty()
 
     fun largestReceived(): Long = if (ranges.isEmpty()) -1L else ranges[0].endInclusive

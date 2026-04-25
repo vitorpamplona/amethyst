@@ -241,6 +241,25 @@ class TlsClient(
                 handleServerFinished(msg, bodyReader, len)
             }
 
+            State.SENT_CLIENT_FINISHED -> {
+                // Post-handshake messages on Application level: the server
+                // commonly sends NewSessionTicket (we don't resume, so we
+                // ignore them safely) and may send KeyUpdate. We don't
+                // implement key rotation yet, so we silently drop. If the
+                // server ever sends a CertificateRequest post-handshake we
+                // also ignore — we don't do client auth.
+                when (type) {
+                    TlsConstants.HS_NEW_SESSION_TICKET, TlsConstants.HS_KEY_UPDATE -> {
+                        // Don't append to transcript — these are not part of the
+                        // handshake transcript (RFC 8446 §4.4.1).
+                    }
+
+                    else -> {
+                        throw QuicCodecException("unexpected post-handshake type=$type")
+                    }
+                }
+            }
+
             else -> {
                 throw QuicCodecException("unexpected handshake at state=$state type=$type")
             }

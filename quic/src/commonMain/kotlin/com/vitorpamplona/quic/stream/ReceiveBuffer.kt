@@ -69,10 +69,17 @@ class ReceiveBuffer {
             effData = data
         }
 
+        // Find the first chunk that's not strictly before the new range. The
+        // boundary is `<=` so a perfectly adjacent prior chunk (its endOffset
+        // equals our offset) is included in the merge — otherwise it would
+        // stay as a separate adjacent chunk and bufferedAhead() would
+        // overcount on perfectly-sequential receives starting at offset > 0.
         var startIdx = 0
         while (startIdx < chunks.size && chunks[startIdx].endOffset() < effOffset) startIdx++
         var endIdx = startIdx
         while (endIdx < chunks.size && chunks[endIdx].offset <= effOffset + effData.size) endIdx++
+        // Also pull in the prior chunk if it's exactly adjacent on the lower end.
+        if (startIdx > 0 && chunks[startIdx - 1].endOffset() == effOffset) startIdx -= 1
 
         if (startIdx == endIdx) {
             // No overlap — just insert.

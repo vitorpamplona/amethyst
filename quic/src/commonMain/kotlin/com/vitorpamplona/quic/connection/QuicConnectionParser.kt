@@ -141,8 +141,12 @@ private fun dispatchFrames(
     for (frame in frames) {
         when (frame) {
             is AckFrame -> {
-                // We don't currently retransmit, so we just absorb ACKs; once
-                // Phase F adds retransmission this updates the inflight tracker.
+                // We don't currently retransmit, so we just absorb ACKs. But
+                // we DO purge our own ACK tracker below the peer's largest
+                // acknowledged: the peer has confirmed receipt of those ACKs,
+                // so we don't need to keep advertising them — without this
+                // the range list grows unboundedly on long connections.
+                state.ackTracker.purgeBelow(frame.largestAcknowledged - frame.firstAckRange)
             }
 
             is CryptoFrame -> {

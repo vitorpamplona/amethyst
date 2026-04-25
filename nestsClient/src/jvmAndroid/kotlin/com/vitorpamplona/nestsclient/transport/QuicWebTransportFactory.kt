@@ -23,8 +23,11 @@ package com.vitorpamplona.nestsclient.transport
 import com.vitorpamplona.quic.connection.QuicConnection
 import com.vitorpamplona.quic.connection.QuicConnectionConfig
 import com.vitorpamplona.quic.connection.QuicConnectionDriver
+import com.vitorpamplona.quic.http3.Http3Frame
+import com.vitorpamplona.quic.http3.Http3FrameReader
 import com.vitorpamplona.quic.http3.Http3StreamType
 import com.vitorpamplona.quic.http3.buildClientWebTransportSettings
+import com.vitorpamplona.quic.qpack.QpackDecoder
 import com.vitorpamplona.quic.stream.QuicStream
 import com.vitorpamplona.quic.tls.CertificateValidator
 import com.vitorpamplona.quic.tls.JdkCertificateValidator
@@ -114,10 +117,56 @@ class QuicWebTransportFactory(
         val requestStream = conn.openBidiStream()
         val headers = buildExtendedConnectHeaders(authority, path, bearerToken)
         requestStream.send.enqueue(encodeHeadersFrame(headers))
+        driver.wakeup()
+
+        // Wait for the response HEADERS and verify :status is 2xx before
+        // declaring the WebTransport session open. Per RFC 9220 a non-2xx
+        // status means the server rejected the upgrade.
+        val responseStatus = readResponseStatus(requestStream)
+        if (responseStatus !in 200..299) {
+            driver.close()
+            throw WebTransportException(
+                kind = WebTransportException.Kind.ConnectRejected,
+                message = "WebTransport CONNECT returned :status=$responseStatus",
+            )
+        }
 
         val state = QuicWebTransportSessionState(conn, driver, requestStream.streamId)
         return QuicWebTransportSession(state)
     }
+
+    /**
+     * Drain bytes from [requestStream] through an [Http3FrameReader] until a
+     * HEADERS frame arrives, then decode the QPACK field section and pull the
+     * `:status` pseudo-header.
+     *
+     * Returns 0 if the stream closes without a HEADERS frame (the caller treats
+     * that as a connect rejection).
+     */
+    private suspend fun readResponseStatus(requestStream: QuicStream): Int {
+        val reader = Http3FrameReader()
+        val incoming = requestStream.incoming
+        try {
+            incoming.collect { chunk ->
+                reader.push(chunk)
+                while (true) {
+                    val frame = reader.next() ?: break
+                    if (frame is Http3Frame.Headers) {
+                        val pairs = QpackDecoder().decodeFieldSection(frame.qpackPayload)
+                        val status = pairs.firstOrNull { it.first == ":status" }?.second?.toIntOrNull() ?: 0
+                        throw HeadersReceived(status)
+                    }
+                }
+            }
+        } catch (e: HeadersReceived) {
+            return e.status
+        }
+        return 0
+    }
+
+    private class HeadersReceived(
+        val status: Int,
+    ) : RuntimeException()
 
     private fun splitAuthority(authority: String): Pair<String, Int> {
         val idx = authority.lastIndexOf(':')

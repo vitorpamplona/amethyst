@@ -67,6 +67,13 @@ data class TlsServerHello(
             }
             val random = r.readBytes(32)
             val sessionId = r.readTlsOpaque1()
+            // Per RFC 8446 §4.1.3, the server MUST echo the legacy_session_id
+            // the client sent. We always send empty (TLS 1.3 over QUIC, no
+            // resumption), so any non-empty echo is a downgrade attempt /
+            // misbehaving server and the handshake must abort.
+            if (sessionId.isNotEmpty()) {
+                throw QuicCodecException("ServerHello legacy_session_id_echo non-empty (${sessionId.size} bytes)")
+            }
             val cipherSuite = r.readUint16()
             r.readByte() // legacy_compression_method = 0
             val extensions = TlsExtension.decodeList(r)
