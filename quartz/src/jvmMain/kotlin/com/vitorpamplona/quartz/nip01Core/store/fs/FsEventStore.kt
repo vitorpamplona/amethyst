@@ -67,6 +67,14 @@ open class FsEventStore(
      * `SQLiteEventStore`'s relay arg semantics.
      */
     private val relay: NormalizedRelayUrl? = null,
+    /**
+     * How to render an event to JSON before writing the canonical file.
+     * Default is the compact NIP-01 form ([Event.toJson]); CLIs that
+     * surface store files to humans pass a pretty-printer instead. The
+     * stored bytes are not re-used for signature checks anyway —
+     * verification re-canonicalises — so format is purely a UX choice.
+     */
+    private val eventToJson: (Event) -> String = Event::toJson,
 ) : IEventStore {
     private val layout = FsLayout(root)
     private val hasher: TagNameValueHasher
@@ -126,7 +134,7 @@ open class FsEventStore(
         Files.createDirectories(canonical.parent)
         val tmp = Files.createTempFile(layout.staging, event.id, FsLayout.JSON_EXT)
         try {
-            Files.writeString(tmp, event.toJson())
+            Files.writeString(tmp, eventToJson(event))
             try {
                 Files.move(tmp, canonical, StandardCopyOption.ATOMIC_MOVE)
             } catch (_: FileAlreadyExistsException) {

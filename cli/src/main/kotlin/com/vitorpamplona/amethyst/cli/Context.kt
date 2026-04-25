@@ -121,9 +121,17 @@ class Context(
      * Lazy so commands that don't touch persistent event state pay zero
      * open cost (no `.lock` file, no seed allocation). Closed by
      * [close] when this Context shuts down.
+     *
+     * Files are written pretty-printed (not the compact NIP-01 canonical
+     * form) so `cat`, `jq`, `git diff` are useful out of the box —
+     * humans inspect these files. Verification always re-canonicalises,
+     * so the stored bytes never feed back into a signature check.
      */
     val store: IEventStore by lazy {
-        FsEventStore(dataDir.eventsDir.toPath())
+        FsEventStore(
+            root = dataDir.eventsDir.toPath(),
+            eventToJson = com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper::toJsonPretty,
+        )
     }
 
     /** Fully-wired manager. Call [prepare] once before use to load persisted state. */
