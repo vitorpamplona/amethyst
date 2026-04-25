@@ -711,6 +711,12 @@ class GroupEventHandler(
                     }
                 }
 
+                is GroupEventResult.ProposalStaged -> {
+                    Log.d("MarmotDbg") {
+                        "GroupEventHandler.add: ProposalStaged group=${result.groupId.take(8)}… senderLeaf=${result.senderLeafIndex}"
+                    }
+                }
+
                 is GroupEventResult.Error -> {
                     Log.w("MarmotDbg") { "GroupEventHandler.add: ERROR ${result.message}" }
                 }
