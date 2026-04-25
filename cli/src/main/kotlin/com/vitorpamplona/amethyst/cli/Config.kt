@@ -30,7 +30,10 @@ import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip19Bech32.toNsec
+import com.vitorpamplona.quartz.utils.Log
 import java.io.File
+
+private const val TAG = "Config"
 
 /**
  * Persisted identity.
@@ -184,7 +187,9 @@ class DataDir(
                 val file = Json.mapper.readValue<IdentityFile>(identityFile.readText())
                 file.secret?.let { secrets.delete(it) }
             }
-            identityFile.delete()
+            if (!identityFile.delete() && identityFile.exists()) {
+                Log.w(TAG) { "Failed to delete identity file ${identityFile.absolutePath}" }
+            }
         }
     }
 

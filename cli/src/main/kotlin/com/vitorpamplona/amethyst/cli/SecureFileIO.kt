@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.cli
 
+import com.vitorpamplona.quartz.utils.Log
 import java.io.File
 import java.io.OutputStream
 import java.nio.file.AtomicMoveNotSupportedException
@@ -153,11 +154,23 @@ object SecureFileIO {
             return
         }
         val f = path.toFile()
-        f.setReadable(false, false)
-        f.setWritable(false, false)
-        f.setExecutable(false, false)
-        f.setReadable(true, true)
-        f.setWritable(true, true)
-        if (isDir) f.setExecutable(true, true)
+        warnIfFailed(f, "setReadable(false)") { f.setReadable(false, false) }
+        warnIfFailed(f, "setWritable(false)") { f.setWritable(false, false) }
+        warnIfFailed(f, "setExecutable(false)") { f.setExecutable(false, false) }
+        warnIfFailed(f, "setReadable(true, owner)") { f.setReadable(true, true) }
+        warnIfFailed(f, "setWritable(true, owner)") { f.setWritable(true, true) }
+        if (isDir) warnIfFailed(f, "setExecutable(true, owner)") { f.setExecutable(true, true) }
     }
+
+    private inline fun warnIfFailed(
+        file: File,
+        op: String,
+        action: () -> Boolean,
+    ) {
+        if (!action()) {
+            Log.w(TAG) { "$op failed on ${file.absolutePath}" }
+        }
+    }
+
+    private const val TAG = "SecureFileIO"
 }
