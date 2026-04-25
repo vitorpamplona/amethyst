@@ -71,7 +71,8 @@ class CapsuleReader {
 
     fun push(bytes: ByteArray) {
         if (bytes.isEmpty()) return
-        if (pos > 0) {
+        // Amortized compaction (same pattern as Http3FrameReader).
+        if (pos * 2 > buf.size) {
             buf = buf.copyOfRange(pos, buf.size)
             pos = 0
         }

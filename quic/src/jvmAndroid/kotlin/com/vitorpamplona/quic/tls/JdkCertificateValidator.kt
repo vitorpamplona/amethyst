@@ -22,6 +22,8 @@ package com.vitorpamplona.quic.tls
 
 import com.vitorpamplona.quic.QuicCodecException
 import java.io.ByteArrayInputStream
+import java.net.IDN
+import java.net.InetAddress
 import java.security.KeyStore
 import java.security.Signature
 import java.security.cert.CertificateFactory
@@ -133,17 +135,40 @@ class JdkCertificateValidator(
         cert: X509Certificate,
         host: String,
     ): Boolean {
-        // SAN check — RFC 6125. Walk subject alt names and accept any DNS or IP match.
         val sans = cert.subjectAlternativeNames ?: return false
+        // Normalize host once: IDN → ASCII for DNS comparison, parsed-and-
+        // re-stringified for IP literals so v6 forms compare equal.
+        val normalizedHost = idnAscii(host)
+        val hostAsIp =
+            try {
+                InetAddress.getByName(host).hostAddress
+            } catch (_: Throwable) {
+                null
+            }
         for (entry in sans) {
             val type = entry[0] as Int
             val value = entry[1].toString()
             // GeneralName type 2 = dNSName, type 7 = iPAddress.
-            if (type == 2 && dnsMatches(value, host)) return true
-            if (type == 7 && value.equals(host, ignoreCase = true)) return true
+            if (type == 2 && dnsMatches(idnAscii(value), normalizedHost)) return true
+            if (type == 7 && hostAsIp != null) {
+                val sanIp =
+                    try {
+                        InetAddress.getByName(value).hostAddress
+                    } catch (_: Throwable) {
+                        null
+                    }
+                if (sanIp != null && sanIp.equals(hostAsIp, ignoreCase = true)) return true
+            }
         }
         return false
     }
+
+    private fun idnAscii(name: String): String =
+        try {
+            IDN.toASCII(name).lowercase()
+        } catch (_: Throwable) {
+            name.lowercase()
+        }
 
     private fun dnsMatches(
         pattern: String,
@@ -156,7 +181,13 @@ class JdkCertificateValidator(
         val lhost = host.lowercase()
         if (!lhost.endsWith(suffix)) return false
         val prefix = lhost.substring(0, lhost.length - suffix.length)
-        return prefix.isNotEmpty() && '.' !in prefix
+        if (prefix.isEmpty() || '.' in prefix) return false
+        // RFC 6125 §6.4.3 — disallow wildcards in the public-suffix label.
+        // Heuristic: require ≥ 2 dots in the suffix (e.g. *.example.com is OK,
+        // *.com is not). Conservative; doesn't consult the actual PSL but
+        // matches what most browsers do for non-PSL-aware certs.
+        val suffixDots = suffix.count { it == '.' }
+        return suffixDots >= 2
     }
 
     companion object {

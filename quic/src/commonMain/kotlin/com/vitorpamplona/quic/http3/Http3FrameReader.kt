@@ -43,8 +43,10 @@ class Http3FrameReader {
 
     fun push(bytes: ByteArray) {
         if (bytes.isEmpty()) return
-        // Compact + grow.
-        if (pos > 0) {
+        // Amortized compaction: only shift bytes down when the consumed
+        // prefix is at least half the buffer. Otherwise we'd do O(N) memcpy
+        // on every chunk → O(N²) total over a long stream.
+        if (pos * 2 > buf.size) {
             buf = buf.copyOfRange(pos, buf.size)
             pos = 0
         }

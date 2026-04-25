@@ -29,6 +29,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Owns the UDP socket and runs the read + send loops for a [QuicConnection].
@@ -86,6 +87,12 @@ class QuicConnectionDriver(
     }
 
     private suspend fun sendLoop() {
+        // PTO budget: how long the loop will sleep before waking itself to
+        // check for retransmission opportunities. RFC 9002 §6.2 — initial
+        // PTO is roughly 3 × (smoothed RTT + max_ack_delay). We don't track
+        // RTT yet, so use a conservative fixed value that doubles on each
+        // consecutive timeout (Exponential backoff caps after ~6 timeouts).
+        var ptoMillis = 1_000L
         while (connection.status != QuicConnection.Status.CLOSED) {
             connection.lock.withLock {
                 while (true) {
@@ -93,8 +100,22 @@ class QuicConnectionDriver(
                     socket.send(out)
                 }
             }
-            // Suspend until the next wakeup — no busy polling.
-            sendWakeup.receive()
+            // Suspend until either: a wakeup arrives, or the PTO timer expires.
+            // The PTO wake ensures a single lost ClientHello doesn't wedge
+            // the connection forever — eventually the loop wakes, the writer
+            // re-emits Initial CRYPTO that's still in the send buffer (since
+            // we don't free it until ACK), and the handshake retries.
+            val woke =
+                withTimeoutOrNull(ptoMillis) {
+                    sendWakeup.receive()
+                    Unit
+                }
+            ptoMillis =
+                if (woke == null) {
+                    (ptoMillis * 2).coerceAtMost(60_000L)
+                } else {
+                    1_000L
+                }
         }
     }
 

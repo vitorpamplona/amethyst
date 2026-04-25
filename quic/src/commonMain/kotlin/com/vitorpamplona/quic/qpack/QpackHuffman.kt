@@ -292,26 +292,49 @@ object QpackHuffman {
             intArrayOf(0x3fffffff, 30),
         )
 
+    /**
+     * Lookup tables grouped by code length. `byLength[L]` is a HashMap from
+     * `code` (an Int up to 30 bits) to `symbol` (0..255) for all symbols
+     * whose Huffman code is exactly L bits long. Lengths used in the table
+     * range from 5 to 30. We omit the EOS (length 30, code 0x3FFFFFFF) since
+     * it must never appear in valid input.
+     */
+    private val byLength: Array<HashMap<Int, Int>> = buildLookupByLength()
+
+    /** Sorted ascending list of distinct code lengths actually used by the table. */
+    private val lengths: IntArray = byLength.indices.filter { byLength[it].isNotEmpty() }.toIntArray()
+
+    private fun buildLookupByLength(): Array<HashMap<Int, Int>> {
+        val out = Array(31) { HashMap<Int, Int>() }
+        for (sym in 0..255) {
+            val code = table[sym][0]
+            val len = table[sym][1]
+            out[len][code] = sym
+        }
+        return out
+    }
+
     /** Decode a Huffman-encoded byte sequence into a UTF-8 string. */
     fun decode(encoded: ByteArray): ByteArray {
-        val result = ArrayList<Byte>()
+        val result = ArrayList<Byte>(encoded.size * 2) // rough upper bound
         var bitBuf = 0L
         var bitsAvailable = 0
         var i = 0
         while (i < encoded.size || bitsAvailable >= 5) {
-            // Pull more bits
+            // Pull more bits.
             while (bitsAvailable < 32 && i < encoded.size) {
                 bitBuf = (bitBuf shl 8) or (encoded[i].toLong() and 0xFF)
                 bitsAvailable += 8
                 i++
             }
-            // Try matching the longest code we can
+            // Try matching at each used code length, ascending. The first
+            // match wins (Huffman is a prefix code, so this is unambiguous).
             var matched = false
-            for (sym in 0..255) {
-                val (code, len) = Pair(table[sym][0], table[sym][1])
-                if (len > bitsAvailable) continue
-                val candidate = (bitBuf ushr (bitsAvailable - len)) and ((1L shl len) - 1)
-                if (candidate.toInt() == code) {
+            for (len in lengths) {
+                if (len > bitsAvailable) break
+                val candidate = ((bitBuf ushr (bitsAvailable - len)) and ((1L shl len) - 1)).toInt()
+                val sym = byLength[len][candidate]
+                if (sym != null) {
                     result.add(sym.toByte())
                     bitsAvailable -= len
                     bitBuf = bitBuf and ((1L shl bitsAvailable) - 1)
