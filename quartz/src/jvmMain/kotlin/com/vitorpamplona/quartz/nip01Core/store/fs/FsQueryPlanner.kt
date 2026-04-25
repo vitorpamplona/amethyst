@@ -115,65 +115,83 @@ internal class FsQueryPlanner(
         }
 
     /**
-     * NIP-50 driver. Tokenises the search string, walks each
-     * `idx/fts/<token>/` listing, and intersects them by id (AND across
-     * tokens — matching SQLite FTS5 default semantics). Output is sorted
-     * by `createdAt` DESC.
+     * NIP-50 driver. Tokenises the search string, then streams candidates
+     * DESC by `createdAt` from the SMALLEST token's listing and confirms
+     * each one against every other token's dir via a single `exists()`
+     * probe per (candidate, token). Works because every FTS hardlink for
+     * a given event shares the same `<padded_ts>-<id>` filename — so we
+     * can stat-check membership without materialising other tokens'
+     * listings.
+     *
+     * Memory: O(smallest_token_size) for the driver's sorted filenames;
+     * we never build a `HashMap<HexKey, ...>` for the popular tokens.
+     * AND semantics across tokens match SQLite FTS5 default `MATCH`.
      */
     private fun ftsDriver(search: String): Sequence<Candidate> =
         sequence {
             val tokens = FsSearchTokenizer.tokenize(search)
             if (tokens.isEmpty()) return@sequence
-            // Materialise each token's listing, then intersect by id.
-            val perToken =
+
+            // Count each token dir so the smallest drives the walk.
+            // Counting reads filenames only, not event JSON — cheap.
+            val sizes =
                 tokens.map { token ->
-                    val map = HashMap<HexKey, Long>()
                     val dir = layout.ftsTokenDir(token)
-                    if (Files.isDirectory(dir)) {
-                        Files.list(dir).use { stream ->
-                            for (entry in stream) {
-                                val parsed = FsLayout.parseEntry(entry.fileName.toString()) ?: continue
-                                map[parsed.second] = parsed.first
-                            }
+                    val size =
+                        if (Files.isDirectory(dir)) {
+                            Files.list(dir).use { it.count() }
+                        } else {
+                            0L
                         }
-                    }
-                    map
+                    TokenInfo(dir, size)
                 }
-            if (perToken.any { it.isEmpty() }) return@sequence
-            // Start from the smallest set, intersect successively.
-            val sorted = perToken.sortedBy { it.size }
-            var acc = sorted[0]
-            for (i in 1 until sorted.size) {
-                val next = sorted[i]
-                val merged = HashMap<HexKey, Long>(acc.size)
-                for ((id, ts) in acc) {
-                    if (next.containsKey(id)) merged[id] = ts
+            if (sizes.any { it.size == 0L }) return@sequence
+            val sorted = sizes.sortedBy { it.size }
+            val probeDirs = sorted.drop(1).map { it.dir }
+
+            walkDir(sorted[0].dir).forEach { candidate ->
+                val name = FsLayout.entryName(candidate.createdAt, candidate.id)
+                if (probeDirs.all { Files.exists(it.resolve(name)) }) {
+                    yield(candidate)
                 }
-                acc = merged
-                if (acc.isEmpty()) return@sequence
             }
-            acc.entries
-                .map { Candidate(it.value, it.key) }
-                .sortedByDescending { it.createdAt }
-                .forEach { yield(it) }
         }
+
+    private class TokenInfo(
+        val dir: Path,
+        val size: Long,
+    )
 
     // ---- index directory walker --------------------------------------
 
+    /**
+     * Yields the contents of [dir] as `Candidate`s in `createdAt` DESC
+     * order. Relies on the `<padded_ts>-<id>` filename convention: lex-
+     * reverse sort of filenames == chronological DESC, so we sort name
+     * strings (cheap) instead of `Candidate` objects (bigger).
+     */
     private fun walkDir(dir: Path): Sequence<Candidate> =
         sequence {
             if (!Files.isDirectory(dir)) return@sequence
-            val entries = Files.list(dir).use { it.toList() }
-            entries
-                .asSequence()
-                .mapNotNull { FsLayout.parseEntry(it.fileName.toString()) }
-                .map { Candidate(it.first, it.second) }
-                .sortedByDescending { it.createdAt }
-                .forEach { yield(it) }
+            val sortedNames =
+                Files.list(dir).use { stream ->
+                    stream.map { it.fileName.toString() }.sorted(Comparator.reverseOrder()).toList()
+                }
+            for (name in sortedNames) {
+                val parsed = FsLayout.parseEntry(name) ?: continue
+                yield(Candidate(parsed.first, parsed.second))
+            }
         }
 
-    // ---- k-way-ish merge (materialised; step-8 can turn into a heap) -
+    // ---- k-way merge via max-heap on head createdAt ------------------
 
+    /**
+     * Lazy k-way merge of pre-sorted (DESC) candidate streams, deduped
+     * by id. Memory is O(streams) — one head per input stream plus the
+     * seen-id set. `limit` in the caller short-circuits naturally
+     * because we yield one candidate per heap pop; we never materialise
+     * the full result.
+     */
     private fun mergeDesc(streams: List<Sequence<Candidate>>): Sequence<Candidate> =
         sequence {
             if (streams.isEmpty()) return@sequence
@@ -182,12 +200,27 @@ internal class FsQueryPlanner(
                 streams[0].forEach { if (seen.add(it.id)) yield(it) }
                 return@sequence
             }
-            val merged = ArrayList<Candidate>()
-            streams.forEach { s -> s.forEach { merged.add(it) } }
-            merged.sortByDescending { it.createdAt }
+            val heap = java.util.PriorityQueue(compareByDescending<Head> { it.top.createdAt })
+            for (s in streams) {
+                val it = s.iterator()
+                if (it.hasNext()) heap.offer(Head(it, it.next()))
+            }
             val seen = HashSet<HexKey>()
-            merged.forEach { if (seen.add(it.id)) yield(it) }
+            while (heap.isNotEmpty()) {
+                val h = heap.poll()
+                if (seen.add(h.top.id)) yield(h.top)
+                if (h.it.hasNext()) {
+                    h.top = h.it.next()
+                    heap.offer(h)
+                }
+            }
         }
+
+    /** Stream head for the k-way merge. */
+    private class Head(
+        val it: Iterator<Candidate>,
+        var top: Candidate,
+    )
 
     // ---- helpers ------------------------------------------------------
 
