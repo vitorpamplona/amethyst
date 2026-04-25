@@ -219,10 +219,14 @@ class QuicWebTransportSession(
 
     override fun incomingUniStreams(): Flow<WebTransportReadStream> =
         flow {
-            while (state.isOpen) {
-                val s = state.pollIncomingPeerStream()
-                if (s != null) emit(QuicReadStreamAdapter(s))
-                kotlinx.coroutines.delay(10)
+            // Surface only unidirectional WT streams whose prefix bytes
+            // (0x54 + quarter session id) have been stripped. The H3 control
+            // stream and QPACK encoder/decoder streams are drained internally
+            // by the demux and never reach here.
+            state.incomingStrippedStreams.collect { stripped ->
+                if (stripped.isUnidirectional) {
+                    emit(StrippedWtReadStreamAdapter(stripped))
+                }
             }
         }
 
@@ -269,4 +273,11 @@ private class QuicReadStreamAdapter(
     private val stream: QuicStream,
 ) : WebTransportReadStream {
     override fun incoming(): Flow<ByteArray> = stream.incoming
+}
+
+/** Adapter for a WT peer-initiated uni stream whose prefix has been stripped. */
+private class StrippedWtReadStreamAdapter(
+    private val stripped: com.vitorpamplona.quic.webtransport.StrippedWtStream,
+) : WebTransportReadStream {
+    override fun incoming(): Flow<ByteArray> = stripped.data
 }

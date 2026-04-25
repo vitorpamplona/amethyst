@@ -102,6 +102,21 @@ class QuicConnection(
     private val streams = mutableMapOf<Long, QuicStream>()
     private var nextLocalBidiIndex: Long = 0L
     private var nextLocalUniIndex: Long = 0L
+
+    /**
+     * The connection-level receive limit we've currently advertised to the
+     * peer. Tracks the high-water mark of the most recent MAX_DATA frame we
+     * sent. The writer only emits a new MAX_DATA when the new value exceeds
+     * this — prevents spamming the peer with redundant updates.
+     */
+    internal var advertisedMaxData: Long = config.initialMaxData
+
+    /**
+     * Round-robin starting index for the writer's stream-drain iteration.
+     * Without rotation, streams created earlier always drain first under MTU
+     * pressure, starving later streams indefinitely.
+     */
+    internal var streamRoundRobinStart: Int = 0
     private val pendingDatagrams = ArrayDeque<ByteArray>()
     private val incomingDatagrams = ArrayDeque<ByteArray>()
     private var sendConnectionFlowCredit: Long = 0L
@@ -293,7 +308,15 @@ class QuicConnection(
             }
         val stream = QuicStream(id, direction)
         stream.sendCredit = 0L
-        stream.receiveLimit = config.initialMaxStreamDataBidiRemote
+        // Pick the local receive-limit appropriate for the stream's direction
+        // — peer-bidi → we advertised initialMaxStreamDataBidiRemote;
+        // peer-uni → we advertised initialMaxStreamDataUni.
+        stream.receiveLimit =
+            when (StreamId.kindOf(id)) {
+                StreamId.Kind.SERVER_UNI, StreamId.Kind.CLIENT_UNI -> config.initialMaxStreamDataUni
+                StreamId.Kind.SERVER_BIDI -> config.initialMaxStreamDataBidiRemote
+                StreamId.Kind.CLIENT_BIDI -> config.initialMaxStreamDataBidiLocal
+            }
         streams[id] = stream
         newPeerStreams.addLast(stream)
         return stream

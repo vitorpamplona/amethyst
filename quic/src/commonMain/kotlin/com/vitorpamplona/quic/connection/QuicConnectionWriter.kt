@@ -257,20 +257,26 @@ private fun buildApplicationPacket(
         if (frames.size >= 16) break
     }
 
-    // Drain stream send buffers — round-robin keeping packet under MTU and
-    // honoring per-stream + connection-level send credit (RFC 9000 §4).
+    // Drain stream send buffers — round-robin starting from a rotating index
+    // so streams created earlier don't starve streams created later under MTU
+    // pressure. Honors per-stream send credit (RFC 9000 §4).
     var packetBudget = 1100
-    for ((id, stream) in conn.streamsLocked()) {
-        if (packetBudget <= 64) break
-        // Per-stream credit: how many more bytes is the peer willing to receive on this stream?
-        val streamRemaining = (stream.sendCredit - stream.send.sentOffset).coerceAtLeast(0L)
-        if (streamRemaining <= 0L && !stream.send.finPending) continue
-        val maxBytes = minOf(packetBudget - 32, streamRemaining.coerceAtMost(Int.MAX_VALUE.toLong()).toInt())
-        val chunk = stream.send.takeChunk(maxBytes = maxBytes) ?: continue
-        if (chunk.data.isNotEmpty() || chunk.fin) {
-            frames += StreamFrame(streamId = id, offset = chunk.offset, data = chunk.data, fin = chunk.fin, explicitLength = true)
-            packetBudget -= chunk.data.size + 32
+    val streamsList = conn.streamsLocked().entries.toList()
+    if (streamsList.isNotEmpty()) {
+        val start = conn.streamRoundRobinStart % streamsList.size
+        for (i in streamsList.indices) {
+            if (packetBudget <= 64) break
+            val (id, stream) = streamsList[(start + i) % streamsList.size]
+            val streamRemaining = (stream.sendCredit - stream.send.sentOffset).coerceAtLeast(0L)
+            if (streamRemaining <= 0L && !stream.send.finPending) continue
+            val maxBytes = minOf(packetBudget - 32, streamRemaining.coerceAtMost(Int.MAX_VALUE.toLong()).toInt())
+            val chunk = stream.send.takeChunk(maxBytes = maxBytes) ?: continue
+            if (chunk.data.isNotEmpty() || chunk.fin) {
+                frames += StreamFrame(streamId = id, offset = chunk.offset, data = chunk.data, fin = chunk.fin, explicitLength = true)
+                packetBudget -= chunk.data.size + 32
+            }
         }
+        conn.streamRoundRobinStart = (start + 1) % streamsList.size
     }
 
     if (frames.isEmpty()) return null
@@ -302,8 +308,20 @@ private fun appendFlowControlUpdates(
     for ((id, stream) in conn.streamsLocked()) {
         val rcv = stream.receive.contiguousEnd()
         if (rcv == 0L) continue
+        // Pick the per-direction window matching the stream kind so a
+        // uni-only deployment with bidi=0 doesn't accidentally use the bidi
+        // window and vice versa.
+        val window =
+            when (
+                com.vitorpamplona.quic.stream.StreamId
+                    .kindOf(id)
+            ) {
+                com.vitorpamplona.quic.stream.StreamId.Kind.SERVER_UNI -> cfg.initialMaxStreamDataUni
+                com.vitorpamplona.quic.stream.StreamId.Kind.SERVER_BIDI -> cfg.initialMaxStreamDataBidiRemote
+                com.vitorpamplona.quic.stream.StreamId.Kind.CLIENT_BIDI -> cfg.initialMaxStreamDataBidiLocal
+                com.vitorpamplona.quic.stream.StreamId.Kind.CLIENT_UNI -> cfg.initialMaxStreamDataUni
+            }
         // Re-credit when consumed > half the advertised window.
-        val window = cfg.initialMaxStreamDataBidiRemote.coerceAtLeast(cfg.initialMaxStreamDataUni)
         if (rcv >= stream.receiveLimit - window / 2) {
             val newLimit = rcv + window
             if (newLimit > stream.receiveLimit) {
@@ -313,9 +331,14 @@ private fun appendFlowControlUpdates(
         }
         totalRecvAdvanced += rcv
     }
-    // Connection-level credit: when sum of contiguousEnd across all streams
-    // exceeds half the connection-level limit, re-grant.
-    if (totalRecvAdvanced > 0L && totalRecvAdvanced >= cfg.initialMaxData / 2) {
-        frames += MaxDataFrame(totalRecvAdvanced + cfg.initialMaxData)
+    // Connection-level: only re-grant when the new total would exceed our
+    // currently-advertised limit. Without this we'd emit a fresh MaxDataFrame
+    // on every outbound packet once the threshold was crossed.
+    if (totalRecvAdvanced > 0L && totalRecvAdvanced + cfg.initialMaxData / 2 >= conn.advertisedMaxData) {
+        val newLimit = totalRecvAdvanced + cfg.initialMaxData
+        if (newLimit > conn.advertisedMaxData) {
+            conn.advertisedMaxData = newLimit
+            frames += MaxDataFrame(newLimit)
+        }
     }
 }

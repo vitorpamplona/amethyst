@@ -83,8 +83,17 @@ class SendBuffer {
             val head = chunks.first()
             val available = head.size - headOffset
             if (available <= cap) {
-                // Hand out the rest of the head chunk.
-                data = if (headOffset == 0) head else head.copyOfRange(headOffset, head.size)
+                // Hand out the rest of the head chunk. Always copy: the caller's
+                // ByteArray (passed to enqueue) MUST stay opaque to the rest of
+                // the stack, since downstream encoders eventually pass it to
+                // AEAD.seal which assumes immutability for the duration of the
+                // encryption call.
+                data =
+                    if (headOffset == 0 && head.size == available) {
+                        head.copyOf()
+                    } else {
+                        head.copyOfRange(headOffset, head.size)
+                    }
                 chunks.removeFirst()
                 headOffset = 0
                 pendingBytes -= available

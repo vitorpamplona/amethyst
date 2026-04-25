@@ -53,3 +53,74 @@ fun encodeCloseSessionCapsule(
     body.writeBytes(reason.encodeToByteArray())
     return encodeCapsule(WtCapsuleType.WT_CLOSE_SESSION, body.toByteArray())
 }
+
+/** Parsed WT_CLOSE_SESSION capsule. */
+data class WtCloseSession(
+    val errorCode: Int,
+    val reason: String,
+)
+
+/**
+ * Stateful capsule reader. Capsules on the WT CONNECT bidi stream are
+ * `(varint type)(varint length)(body)`. Feed bytes via [push]; drain
+ * complete capsules via [next].
+ */
+class CapsuleReader {
+    private var buf: ByteArray = ByteArray(0)
+    private var pos: Int = 0
+
+    fun push(bytes: ByteArray) {
+        if (bytes.isEmpty()) return
+        if (pos > 0) {
+            buf = buf.copyOfRange(pos, buf.size)
+            pos = 0
+        }
+        val combined = ByteArray(buf.size + bytes.size)
+        buf.copyInto(combined, 0)
+        bytes.copyInto(combined, buf.size)
+        buf = combined
+    }
+
+    /**
+     * Pop the next complete capsule, or null if the buffer doesn't contain
+     * one yet. Returns either a [WtCloseSession] or a raw `(type, body)`
+     * pair for unknown capsule types.
+     */
+    fun next(): Any? {
+        val typeRes =
+            com.vitorpamplona.quic.Varint
+                .decode(buf, pos) ?: return null
+        val typeEnd = pos + typeRes.bytesConsumed
+        val lenRes =
+            com.vitorpamplona.quic.Varint
+                .decode(buf, typeEnd) ?: return null
+        val bodyStart = typeEnd + lenRes.bytesConsumed
+        val len = lenRes.value
+        if (len < 0 || len > Int.MAX_VALUE.toLong()) {
+            throw com.vitorpamplona.quic.QuicCodecException("capsule length out of range: $len")
+        }
+        val bodyEnd = bodyStart + len.toInt()
+        if (bodyEnd > buf.size) return null
+        val body = buf.copyOfRange(bodyStart, bodyEnd)
+        pos = bodyEnd
+        return when (typeRes.value) {
+            WtCapsuleType.WT_CLOSE_SESSION -> {
+                if (body.size < 4) {
+                    WtCloseSession(0, "")
+                } else {
+                    val errorCode =
+                        ((body[0].toInt() and 0xFF) shl 24) or
+                            ((body[1].toInt() and 0xFF) shl 16) or
+                            ((body[2].toInt() and 0xFF) shl 8) or
+                            (body[3].toInt() and 0xFF)
+                    val reason = body.copyOfRange(4, body.size).decodeToString()
+                    WtCloseSession(errorCode, reason)
+                }
+            }
+
+            else -> {
+                typeRes.value to body
+            }
+        }
+    }
+}

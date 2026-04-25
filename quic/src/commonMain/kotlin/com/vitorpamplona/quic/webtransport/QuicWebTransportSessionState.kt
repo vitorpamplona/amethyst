@@ -23,6 +23,11 @@ package com.vitorpamplona.quic.webtransport
 import com.vitorpamplona.quic.connection.QuicConnection
 import com.vitorpamplona.quic.connection.QuicConnectionDriver
 import com.vitorpamplona.quic.stream.QuicStream
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.launch
 
 /**
  * Container that bundles a [QuicConnection], its [QuicConnectionDriver], and
@@ -36,10 +41,41 @@ class QuicWebTransportSessionState(
     val connection: QuicConnection,
     val driver: QuicConnectionDriver,
     val connectStreamId: Long,
+    /**
+     * Scope used to spawn the peer-stream demux. Defaults to a SupervisorJob
+     * so a single misbehaving stream doesn't tear down the session.
+     */
+    private val scope: CoroutineScope =
+        CoroutineScope(SupervisorJob() + Dispatchers.IO),
 ) {
     /** True until [close] is called or the underlying QUIC connection terminates. */
     val isOpen: Boolean
         get() = connection.status == QuicConnection.Status.CONNECTED
+
+    private val demux: WtPeerStreamDemux = WtPeerStreamDemux(connectStreamId, scope)
+
+    init {
+        // Spawn the dispatcher that routes peer-initiated streams through the
+        // demux. Without this, the server's CONTROL stream (carrying SETTINGS)
+        // would be handed to the application, which would interpret SETTINGS
+        // bytes as MoQ frames and break framing.
+        scope.launch {
+            while (connection.status != QuicConnection.Status.CLOSED) {
+                val s = connection.pollIncomingPeerStream()
+                if (s != null) {
+                    demux.process(s)
+                } else {
+                    kotlinx.coroutines.delay(5)
+                }
+            }
+        }
+    }
+
+    /** Server SETTINGS once received on the H3 control stream; null until then. */
+    val peerSettings get() = demux.peerSettings
+
+    /** Flow of peer-initiated WT streams whose framing prefix has been stripped. */
+    val incomingStrippedStreams: Flow<StrippedWtStream> get() = demux.incomingStrippedStreams
 
     /** Open a new client-initiated bidirectional WebTransport stream. */
     suspend fun openBidiStream(): QuicStream {
@@ -72,6 +108,14 @@ class QuicWebTransportSessionState(
         return decoded.payload
     }
 
+    /**
+     * @deprecated Use [incomingStrippedStreams] which yields streams whose
+     * framing prefix (CONTROL/QPACK/WT type bytes + quarter session id) has
+     * already been stripped. Direct callers of this would receive raw peer
+     * streams including the server's CONTROL stream, with SETTINGS bytes
+     * interpreted as application data.
+     */
+    @Deprecated("Use incomingStrippedStreams instead", ReplaceWith("incomingStrippedStreams"))
     suspend fun pollIncomingPeerStream(): QuicStream? = connection.pollIncomingPeerStream()
 
     suspend fun close(

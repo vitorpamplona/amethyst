@@ -43,7 +43,11 @@ actual class UdpSocket private constructor(
     private val remote: InetSocketAddress,
 ) {
     private val closed = AtomicBoolean(false)
-    private val readBuf = ByteBuffer.allocate(MAX_DATAGRAM_SIZE)
+
+    // Sized to typical Ethernet MTU + a bit; QUIC tops out at ~1500 in practice
+    // and any larger inbound frame is dropped as malformed anyway. The previous
+    // 64 KiB buffer was wasteful per connection.
+    private val readBuf = ByteBuffer.allocate(2048)
 
     actual val localPort: Int
         get() = (channel.localAddress as InetSocketAddress).port
@@ -59,14 +63,14 @@ actual class UdpSocket private constructor(
         withContext(Dispatchers.IO) {
             if (closed.get()) return@withContext null
             try {
-                synchronized(readBuf) {
-                    readBuf.clear()
-                    channel.receive(readBuf) ?: return@withContext null
-                    readBuf.flip()
-                    val out = ByteArray(readBuf.remaining())
-                    readBuf.get(out)
-                    out
-                }
+                // No synchronized — only the read loop touches readBuf, by
+                // contract. The previous synchronized block was pointless.
+                readBuf.clear()
+                channel.receive(readBuf) ?: return@withContext null
+                readBuf.flip()
+                val out = ByteArray(readBuf.remaining())
+                readBuf.get(out)
+                out
             } catch (_: ClosedChannelException) {
                 null
             }
@@ -83,8 +87,6 @@ actual class UdpSocket private constructor(
     }
 
     actual companion object {
-        private const val MAX_DATAGRAM_SIZE: Int = 65535
-
         actual suspend fun connect(
             host: String,
             port: Int,
