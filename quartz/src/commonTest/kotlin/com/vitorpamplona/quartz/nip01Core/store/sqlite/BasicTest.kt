@@ -201,6 +201,25 @@ class BasicTest : BaseDBTest() {
         }
 
     @Test
+    fun testSchemaRecreateIsIdempotent() =
+        forEachDB { db ->
+            // The v1->v2 upgrade in SQLiteEventStore.onUpgrade does
+            // modules.reversed().forEach { it.drop(db) } then
+            // modules.forEach { it.create(db) }. Pre-fix, FullTextSearchModule
+            // left dummy_fts3/4/5 tables behind on first probe, so the
+            // second create() would throw "already exists".
+            db.store.modules
+                .reversed()
+                .forEach { it.drop(db.store.connection) }
+            db.store.modules.forEach { it.create(db.store.connection) }
+
+            // After re-creation the store is still usable.
+            val note = signer.sign(TextNoteEvent.build("test1"))
+            db.store.insertEvent(note)
+            db.store.assertQuery(note, Filter(ids = listOf(note.id)))
+        }
+
+    @Test
     fun hashCodeTest() =
         forEachDB { db ->
             val note1 =

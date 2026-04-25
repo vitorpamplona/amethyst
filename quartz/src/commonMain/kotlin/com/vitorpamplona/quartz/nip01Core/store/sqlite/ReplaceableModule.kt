@@ -32,10 +32,13 @@ class ReplaceableModule : IModule {
             """.trimIndent(),
         )
 
-        // deletes older addressables when inserting new ones
-        // if a newer addressable is inserted the unique index
-        // above will be triggered. Delete cascade will take
-        // care of the event_tags table
+        // deletes older replaceables when inserting new ones.
+        // Per NIP-01, the "older" version of a replaceable is the one
+        // with the smaller created_at, OR with equal created_at and
+        // a lexicographically larger id (lowest id wins).
+        // If a newer replaceable is inserted the unique index above
+        // will be triggered. Delete cascade will take care of the
+        // event_tags table.
         db.execSQL(
             """
             CREATE TRIGGER delete_older_replaceable_event
@@ -43,12 +46,14 @@ class ReplaceableModule : IModule {
             FOR EACH ROW
             WHEN (NEW.kind IN (0, 3)) OR (NEW.kind >= 10000 AND NEW.kind < 20000)
             BEGIN
-                -- Delete older records if this is the newest
                 DELETE FROM event_headers
                 WHERE
                     event_headers.kind = NEW.kind AND
                     event_headers.pubkey = NEW.pubkey AND
-                    event_headers.created_at < NEW.created_at;
+                    (
+                        event_headers.created_at < NEW.created_at OR
+                        (event_headers.created_at = NEW.created_at AND event_headers.id > NEW.id)
+                    );
             END;
             """.trimIndent(),
         )

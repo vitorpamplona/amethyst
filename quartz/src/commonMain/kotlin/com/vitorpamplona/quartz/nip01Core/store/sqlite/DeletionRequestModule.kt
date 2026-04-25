@@ -87,7 +87,7 @@ class DeletionRequestModule(
             val idValues = event.deleteEventIds()
             val addresses = event.deleteAddresses()
 
-            deleteSQL(event.pubKey, idValues, addresses, hasher(db)).forEach { delete ->
+            deleteSQL(event.pubKey, event.createdAt, idValues, addresses, hasher(db)).forEach { delete ->
                 db.execSQL(delete.sql, delete.args)
             }
         }
@@ -97,10 +97,14 @@ class DeletionRequestModule(
      * Creates a Delete statement that correctly deletes by id,
      * by address and by replaceable (no d-tag) using each index
      * appropriately, including GiftWraps where the owner is the
-     * p-tag (via event_header.pubkey_owner_hash)
+     * p-tag (via event_header.pubkey_owner_hash).
+     *
+     * Per NIP-09, address-based deletes (a-tag) MUST only remove
+     * events with `created_at <= deletion.created_at`.
      */
     fun deleteSQL(
         pubkey: HexKey,
+        createdAt: Long,
         idValues: List<String>,
         addresses: List<Address>,
         hasher: com.vitorpamplona.quartz.nip01Core.store.sqlite.TagNameValueHasher,
@@ -156,9 +160,10 @@ class DeletionRequestModule(
                     WHERE (
                         $addressableParams
                     ) AND
-                        kind >= 30000 AND kind < 40000
+                        kind >= 30000 AND kind < 40000 AND
+                        +created_at <= ?
                     """.trimIndent(),
-                    addressableValues.toTypedArray(),
+                    (addressableValues + createdAt).toTypedArray(),
                 )
             } else {
                 null
@@ -172,9 +177,10 @@ class DeletionRequestModule(
                     WHERE
                         kind IN ($replaceableKindsParam) AND
                         pubkey = ? AND
-                        ((kind in (0,3)) OR (kind >= 10000 AND kind < 20000))
+                        ((kind in (0,3)) OR (kind >= 10000 AND kind < 20000)) AND
+                        created_at <= ?
                     """.trimIndent(),
-                    replaceableKindsValues.plus(pubkey).toTypedArray(),
+                    (replaceableKindsValues.plus(pubkey) + createdAt).toTypedArray(),
                 )
             } else {
                 null

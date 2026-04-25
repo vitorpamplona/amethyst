@@ -108,11 +108,15 @@ class SQLiteEventStore(
 
         val currentVersion = getUserVersion(db)
         if (currentVersion == 0) {
-            onCreate(db)
-            setUserVersion(db, DATABASE_VERSION)
+            db.transaction {
+                onCreate(this)
+                setUserVersion(this, DATABASE_VERSION)
+            }
         } else if (currentVersion < DATABASE_VERSION) {
-            onUpgrade(db, currentVersion, DATABASE_VERSION)
-            setUserVersion(db, DATABASE_VERSION)
+            db.transaction {
+                onUpgrade(this, currentVersion, DATABASE_VERSION)
+                setUserVersion(this, DATABASE_VERSION)
+            }
         }
 
         return db
@@ -160,16 +164,16 @@ class SQLiteEventStore(
     }
 
     suspend fun vacuum() {
-        // 1. ANALYZE: Collects statistics about tables and indices
-        // to help the query planner optimize queries.
+        // VACUUM: Rebuilds the database file, reclaiming unused space
+        // and reducing fragmentation.
         withContext(Dispatchers.IO) {
             connection.execSQL("VACUUM")
         }
     }
 
     suspend fun analyse() {
-        // 2. VACUUM: Rebuilds the database file, reclaiming unused space
-        // and reducing fragmentation.
+        // ANALYZE: Collects statistics about tables and indices
+        // to help the query planner optimize queries.
         withContext(Dispatchers.IO) {
             connection.execSQL("ANALYZE")
         }

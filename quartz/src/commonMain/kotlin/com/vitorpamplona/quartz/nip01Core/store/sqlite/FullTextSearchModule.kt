@@ -31,7 +31,7 @@ class FullTextSearchModule : IModule {
     val contentName = "content"
 
     override fun create(db: SQLiteConnection) {
-        val ftsVersion = FullTextSearchModule().versionFinder(db)
+        val ftsVersion = versionFinder(db)
         db.execSQL(
             """
                     CREATE VIRTUAL TABLE $tableName
@@ -77,19 +77,34 @@ class FullTextSearchModule : IModule {
         }
     }
 
-    fun versionFinder(db: SQLiteConnection): Int =
-        try {
+    fun versionFinder(db: SQLiteConnection): Int {
+        // Defensive cleanup in case a previous probe left these behind
+        // (e.g. a partial create() during an upgrade) — without this,
+        // the next CREATE VIRTUAL TABLE would fail with "already exists".
+        db.execSQL("DROP TABLE IF EXISTS dummy_fts5")
+        db.execSQL("DROP TABLE IF EXISTS dummy_fts4")
+        db.execSQL("DROP TABLE IF EXISTS dummy_fts3")
+
+        val (table, version) =
             try {
-                db.execSQL("CREATE VIRTUAL TABLE dummy_fts5 USING fts5(dummy)")
-                5
+                try {
+                    db.execSQL("CREATE VIRTUAL TABLE dummy_fts5 USING fts5(dummy)")
+                    "dummy_fts5" to 5
+                } catch (e: SQLiteException) {
+                    db.execSQL("CREATE VIRTUAL TABLE dummy_fts4 USING fts4(dummy)")
+                    "dummy_fts4" to 4
+                }
             } catch (e: SQLiteException) {
-                db.execSQL("CREATE VIRTUAL TABLE dummy_fts4 USING fts4(dummy)")
-                4
+                db.execSQL("CREATE VIRTUAL TABLE dummy_fts3 USING fts3(dummy)")
+                "dummy_fts3" to 3
             }
-        } catch (e: SQLiteException) {
-            db.execSQL("CREATE VIRTUAL TABLE dummy_fts3 USING fts3(dummy)")
-            3
-        }
+
+        // We only needed the table to probe FTS support — drop it now so
+        // re-running create() on an already-probed DB stays idempotent.
+        db.execSQL("DROP TABLE $table")
+
+        return version
+    }
 
     override fun deleteAll(db: SQLiteConnection) {
         db.execSQL("DELETE FROM event_fts")
