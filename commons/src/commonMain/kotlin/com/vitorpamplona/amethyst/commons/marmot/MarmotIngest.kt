@@ -61,6 +61,17 @@ sealed class MarmotIngestResult {
         val inner: GroupEventResult.CommitProcessed,
     ) : MarmotIngestResult()
 
+    /**
+     * A kind:445 carried a standalone Proposal (currently only `SelfRemove`)
+     * which was staged in the group's pending pool. The group epoch did
+     * not advance — a later Commit referencing this proposal will pick
+     * it up.
+     */
+    data class ProposalStaged(
+        val groupId: HexKey,
+        val senderLeafIndex: Int,
+    ) : MarmotIngestResult()
+
     /** A kind:445 whose outer layer we couldn't decrypt (pre-join epoch, etc). Debug-only. */
     data class UndecryptableOuter(
         val groupId: HexKey,
@@ -136,6 +147,10 @@ private suspend fun MarmotManager.ingestGroupEvent(ge: GroupEvent): MarmotIngest
 
         is GroupEventResult.CommitProcessed -> {
             MarmotIngestResult.Commit(result)
+        }
+
+        is GroupEventResult.ProposalStaged -> {
+            MarmotIngestResult.ProposalStaged(result.groupId, result.senderLeafIndex)
         }
 
         is GroupEventResult.Duplicate,

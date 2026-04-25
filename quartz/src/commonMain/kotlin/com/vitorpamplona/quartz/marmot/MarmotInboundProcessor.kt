@@ -95,6 +95,17 @@ sealed class GroupEventResult {
     ) : GroupEventResult()
 
     /**
+     * A standalone Proposal (currently only `SelfRemove`) was decoded,
+     * verified, and staged in the group's pending-proposals pool. The
+     * group epoch did not advance — the proposal is dormant until a
+     * subsequent Commit references it by hash.
+     */
+    data class ProposalStaged(
+        val groupId: HexKey,
+        val senderLeafIndex: Int,
+    ) : GroupEventResult()
+
+    /**
      * The event could not be processed.
      */
     data class Error(
@@ -474,7 +485,25 @@ class MarmotInboundProcessor(
             }
 
             ContentType.PROPOSAL -> {
-                GroupEventResult.Error(groupId, "Standalone proposals not yet supported")
+                // wn/openmls publishes SelfRemove as a standalone PublicMessage
+                // proposal — admins fold it into their next commit. Stage it
+                // locally so a subsequent commit's `ProposalRef` can resolve;
+                // without this every other member silently dropped the
+                // proposal and the admin's commit then failed with "Commit
+                // references unknown proposal" (marmot-interop test 15).
+                val group =
+                    groupManager.getGroup(groupId)
+                        ?: return GroupEventResult.Error(groupId, "Group not found")
+                try {
+                    group.receivePublicMessageProposal(pubMsg)
+                    GroupEventResult.ProposalStaged(groupId, pubMsg.sender.leafIndex)
+                } catch (e: Exception) {
+                    GroupEventResult.Error(
+                        groupId,
+                        "Failed to stage standalone proposal: ${e.message}",
+                        e,
+                    )
+                }
             }
 
             ContentType.APPLICATION -> {
