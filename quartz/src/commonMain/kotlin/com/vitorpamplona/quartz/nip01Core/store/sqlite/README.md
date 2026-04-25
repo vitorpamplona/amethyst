@@ -14,11 +14,13 @@ consistency can be sacrificed, but a database that will never crash and never go
   - Forces unique constraint by kind, pubkey
   - Old versions are removed when newer versions arrive.
   - Old versions are blocked if newer versions exist.
+  - Same `created_at`: NIP-01 lexical-id tiebreaker (lowest id wins).
 
 - **Addressable Events**:
     - Forces unique constraint by kind, pubkey, d-tag
     - Old versions are removed when newer versions arrive.
     - Old versions are blocked if newer versions exist.
+    - Same `created_at`: NIP-01 lexical-id tiebreaker (lowest id wins).
 
 - **Ephemeral Events**
   - Ephemeral events never stored.
@@ -29,8 +31,9 @@ consistency can be sacrificed, but a database that will never crash and never go
 
 - **NIP-09 Deletion Events**
   - Deletes by event id
-  - Deletes by address until the `created_at`
+  - Deletes by address up to and including the deletion's `created_at` (newer versions are kept).
   - Blocks deleted events from being re-inserted.
+  - Only the original author's deletions take effect; cross-author kind-5s are stored but inert.
   - GiftWraps are deleted by p-tag
 
 - **NIP-62 Right to Vanish**
