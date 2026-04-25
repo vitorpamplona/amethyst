@@ -89,6 +89,16 @@ jobs:
           java-version: 21
           cache: gradle
 
+      - name: Android Lint (gradle)
+        run: ./gradlew :amethyst:lintFdroidBenchmark :amethyst:lintPlayBenchmark --no-daemon
+
+      - name: Upload Android Lint Reports
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: Android Lint Reports
+          path: amethyst/build/reports/lint-results-*.html
+
       - name: Test + Build Android (gradle)
         run: ./gradlew test assembleBenchmark --no-daemon
 
