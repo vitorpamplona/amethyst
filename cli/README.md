@@ -48,6 +48,60 @@ change to Amy's public API.
 
 ---
 
+## Local event store — the source of truth
+
+Every Nostr event Amy observes is verified (NIP-01 id + signature
+check) and persisted to a file-backed store at
+`<data-dir>/events-store/`. That includes:
+
+- events received from any relay subscription (`amy feed`, `amy dm
+  list`, `amy keypackage publish`, group sync, …),
+- events Amy generates and publishes itself,
+- inner events unwrapped from NIP-59 gift wraps.
+
+Malformed events are dropped before reaching command code. Persistence
+is best-effort — if the store fails (full disk, permissions), the
+relay subscription still works, but the event is not cached.
+
+The store is the authoritative cache of everything Amy has seen:
+profile metadata, relay lists (NIP-65 and NIP-02), gift wraps, group
+events, follow lists, etc. Commands that need any of these should read
+from the store first and only fall back to a relay fetch on miss.
+Three convenience helpers exist on `Context`:
+
+```kotlin
+ctx.profileOf(pubKey)   // latest kind:0 (NIP-01)
+ctx.relaysOf(pubKey)    // latest kind:10002 (NIP-65)
+ctx.contactsOf(pubKey)  // latest kind:3 (NIP-02)
+```
+
+The store implements every feature of the Quartz SQLite store —
+NIP-01 replaceable / addressable uniqueness, NIP-09 deletion
+tombstones, NIP-40 expiration, NIP-50 search, NIP-62 right-to-vanish,
+NIP-91 multi-tag AND. See `cli/plans/2026-04-24-file-event-store-*.md`
+for the design and `quartz/.../store/fs/FsEventStore.kt` for the
+implementation. The on-disk layout is plain JSON files under shard
+directories, intentionally inspectable with `ls`, `cat`, `jq`,
+`grep`, `find`, `rsync`, and `git`.
+
+To manage the store directly:
+
+```sh
+# raw inspection
+find $AMY_HOME/events-store/events -name '*.json' | head
+jq . $AMY_HOME/events-store/replaceable/0/<pubkey>.json
+
+# delete a specific event (tombstone NOT installed — see below)
+rm $AMY_HOME/events-store/events/<aa>/<bb>/<id>.json
+```
+
+Deleting an event file is treated as a deliberate "I never saw this"
+by Amy. The store tolerates external edits: dangling index entries are
+skipped at query time and can be cleaned up with `compact()` /
+`scrub()` from the API.
+
+---
+
 ## Install
 
 Until Amy ships as a signed native binary (see

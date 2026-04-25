@@ -31,6 +31,8 @@ import com.vitorpamplona.quartz.marmot.MarmotFilters
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.crypto.verify
+import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndConfirmDetailed
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
@@ -41,7 +43,9 @@ import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSoc
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.fs.FsEventStore
+import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
+import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import kotlinx.coroutines.selects.select
@@ -60,6 +64,24 @@ import okhttp3.OkHttpClient
  *    process-incoming, etc).
  *
  * Closing flushes run-state to disk and disconnects the client.
+ *
+ * # Source of truth — [store]
+ *
+ * Every Nostr event Amy observes — whether received from a relay
+ * subscription, unwrapped from a NIP-59 gift wrap, or generated locally
+ * before publish — is verified (NIP-01 signature + id check via
+ * [Event.verify]) and persisted to the file-backed [IEventStore] at
+ * `<data-dir>/events-store/`. Malformed events are dropped before
+ * reaching command code.
+ *
+ * This makes [store] the authoritative cache of everything Amy has ever
+ * seen: profile metadata, relay lists, contact lists, gift wraps,
+ * group events, etc. Persistence is best-effort — an I/O failure on
+ * the store does not break the relay subscription.
+ *
+ * Reads should prefer the local store via the helpers below
+ * ([profileOf], [relaysOf], [contactsOf]) and only fall back to a
+ * relay [drain] on cache miss.
  */
 class Context(
     val dataDir: DataDir,
@@ -168,6 +190,10 @@ class Context(
         relayList: Set<NormalizedRelayUrl>,
         timeoutSecs: Long = 15,
     ): Map<NormalizedRelayUrl, Boolean> {
+        // Persist locally before broadcasting. The store is the source of
+        // truth — even if every relay rejects, we want our own outbound
+        // event in the local cache.
+        verifyAndStore(event)
         if (relayList.isEmpty()) return emptyMap()
         return client.publishAndConfirmDetailed(event, relayList, timeoutSecs)
     }
@@ -226,7 +252,9 @@ class Context(
             withTimeoutOrNull(timeoutMs) {
                 while (remaining.isNotEmpty()) {
                     select {
-                        eventChannel.onReceive { collected.add(it) }
+                        eventChannel.onReceive { pair ->
+                            if (verifyAndStore(pair.second)) collected.add(pair)
+                        }
                         doneChannel.onReceive { r -> remaining.remove(r) }
                     }
                 }
@@ -234,7 +262,8 @@ class Context(
                 while (true) {
                     val r = eventChannel.tryReceive()
                     if (!r.isSuccess) break
-                    collected.add(r.getOrThrow())
+                    val pair = r.getOrThrow()
+                    if (verifyAndStore(pair.second)) collected.add(pair)
                 }
             }
         } finally {
@@ -244,6 +273,65 @@ class Context(
         }
         return collected
     }
+
+    /**
+     * Verify [event]'s NIP-01 id+signature and, if valid, persist it
+     * to [store]. Returns `true` when the event was accepted (and
+     * therefore should be surfaced to callers). Persistence failures
+     * (I/O errors, full disk) are logged but do not propagate.
+     *
+     * Every event-arrival path in the CLI funnels through this method
+     * so that [store] is the authoritative cache of what Amy has seen.
+     */
+    fun verifyAndStore(event: Event): Boolean {
+        if (!event.verify()) {
+            System.err.println("[cli] dropped event ${event.id.take(8)} kind=${event.kind} — bad signature")
+            return false
+        }
+        try {
+            store.insert(event)
+        } catch (t: Throwable) {
+            System.err.println("[cli] store insert failed for ${event.id.take(8)}: ${t.message}")
+        }
+        return true
+    }
+
+    // ------------------------------------------------------------------
+    // Cache-first reads from [store]
+    // ------------------------------------------------------------------
+
+    /**
+     * Latest known kind:0 metadata for [pubKey], read from the local
+     * store. Returns null if Amy has never observed a profile for
+     * this user. Callers that need a network fetch on miss should fall
+     * back to [drain] explicitly — this helper never hits the network.
+     */
+    fun profileOf(pubKey: HexKey): MetadataEvent? =
+        store
+            .query<Event>(
+                Filter(authors = listOf(pubKey), kinds = listOf(MetadataEvent.KIND), limit = 1),
+            ).firstOrNull() as? MetadataEvent
+
+    /**
+     * Latest known kind:10002 advertised relay list (NIP-65) for
+     * [pubKey]. `null` when Amy has never seen one.
+     */
+    fun relaysOf(pubKey: HexKey): AdvertisedRelayListEvent? =
+        store
+            .query<Event>(
+                Filter(authors = listOf(pubKey), kinds = listOf(AdvertisedRelayListEvent.KIND), limit = 1),
+            ).firstOrNull() as? AdvertisedRelayListEvent
+
+    /**
+     * Latest known kind:3 contact list (NIP-02) for [pubKey], or
+     * `null` if Amy has never observed one. Useful for follow-graph
+     * lookups without re-hitting relays.
+     */
+    fun contactsOf(pubKey: HexKey): ContactListEvent? =
+        store
+            .query<Event>(
+                Filter(authors = listOf(pubKey), kinds = listOf(ContactListEvent.KIND), limit = 1),
+            ).firstOrNull() as? ContactListEvent
 
     /**
      * Pull down everything needed to bring local Marmot state current:
