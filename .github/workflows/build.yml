@@ -66,7 +66,7 @@ jobs:
           cache: gradle
 
       - name: Test + Build Desktop (gradle)
-        run: ./gradlew :quartz:test :commons:test :nestsClient:test :cli:test :desktopApp:test :desktopApp:${{ matrix.desktop-task }} --no-daemon
+        run: ./gradlew :quartz:jvmTest :commons:jvmTest :nestsClient:jvmTest :cli:test :desktopApp:test :desktopApp:${{ matrix.desktop-task }} --no-daemon
 
       - name: Upload Desktop Distribution
         uses: actions/upload-artifact@v7
