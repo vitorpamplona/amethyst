@@ -552,6 +552,83 @@ class MarmotMipBehaviorTest {
         }
 
     // ----------------------------------------------------------------------
+    // RFC 9420 §7.9 parent_hash chain validation on Welcome
+    // ----------------------------------------------------------------------
+
+    /**
+     * A freshly-created single-member tree has no COMMIT-source leaves
+     * (the seed leaf is KEY_PACKAGE source) and no parents — the
+     * static-tree validator must accept it as trivially valid.
+     */
+    @Test
+    fun verifyTreeParentHashesForJoin_acceptsSingleMemberTree() {
+        val alice = MlsGroup.create(aliceId.hexToByteArray())
+        val tree =
+            com.vitorpamplona.quartz.marmot.mls.tree.RatchetTree
+                .decodeTls(
+                    com.vitorpamplona.quartz.marmot.mls.codec
+                        .TlsReader(alice.exportTreeBytes()),
+                )
+        assertNull(MlsGroup.verifyTreeParentHashesForJoin(tree))
+    }
+
+    /**
+     * Tampering a COMMIT-source leaf's parent_hash produces a clear
+     * rejection from the validator. This is the exact attack a
+     * misconfigured GroupInfo signer (or a malicious one) could mount —
+     * the tree_hash check would still pass, but parent_hash chain
+     * validation must catch it.
+     */
+    @Test
+    fun verifyTreeParentHashesForJoin_rejectsTamperedLeafParentHash() =
+        runBlocking<Unit> {
+            // Build a 3-member group so we have at least one
+            // COMMIT-source leaf with a real parent_hash chain.
+            val manager = createGroupManager()
+            manager.createGroup(groupId, aliceId.hexToByteArray())
+            manager.addMember(groupId, createStandaloneKeyPackage(bobId).keyPackage.toTlsBytes())
+            // Trigger a self-update on Alice so her leaf becomes
+            // COMMIT-source with a non-empty parent_hash chain. (Using
+            // updateGroupExtensions as a stand-in to force a commit
+            // that touches the path.)
+            val seed = MarmotGroupData(nostrGroupId = groupId, adminPubkeys = listOf(aliceId))
+            manager.updateGroupExtensions(groupId, listOf(seed.toExtension()))
+
+            val alice = manager.getGroup(groupId)!!
+            val originalTree =
+                com.vitorpamplona.quartz.marmot.mls.tree.RatchetTree
+                    .decodeTls(
+                        com.vitorpamplona.quartz.marmot.mls.codec
+                            .TlsReader(alice.exportTreeBytes()),
+                    )
+
+            // Sanity: the original tree validates.
+            assertNull(MlsGroup.verifyTreeParentHashesForJoin(originalTree))
+
+            // Find the first COMMIT-source leaf and tamper its parent_hash.
+            var tamperedLeafIdx = -1
+            for (i in 0 until originalTree.leafCount) {
+                val leaf = originalTree.getLeaf(i) ?: continue
+                if (leaf.leafNodeSource ==
+                    com.vitorpamplona.quartz.marmot.mls.tree.LeafNodeSource.COMMIT
+                ) {
+                    val tampered = leaf.copy(parentHash = ByteArray(32) { 0x99.toByte() })
+                    originalTree.setLeaf(i, tampered)
+                    tamperedLeafIdx = i
+                    break
+                }
+            }
+            assertTrue(tamperedLeafIdx >= 0, "test setup must produce a COMMIT-source leaf")
+
+            val reason = MlsGroup.verifyTreeParentHashesForJoin(originalTree)
+            assertNotNull(reason)
+            assertTrue(
+                reason.contains("leaf $tamperedLeafIdx parent_hash mismatch"),
+                "rejection message must name the tampered leaf: $reason",
+            )
+        }
+
+    // ----------------------------------------------------------------------
     // RFC 9420 §7.2 / §12.4.2 required_capabilities enforcement
     // ----------------------------------------------------------------------
 

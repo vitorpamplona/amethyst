@@ -153,6 +153,18 @@ class MlsGroup private constructor(
      */
     internal fun pendingProposalsSnapshot(): List<PendingProposal> = pendingProposals.toList()
 
+    /**
+     * Encode the current ratchet tree the same way it's serialized into
+     * the GroupInfo's `ratchet_tree` extension on a Welcome — a freshly-
+     * decoded copy is what a joiner sees, so this is the right input for
+     * exercising [verifyTreeParentHashesForJoin] in tests.
+     */
+    internal fun exportTreeBytes(): ByteArray {
+        val w = TlsWriter()
+        tree.encodeTls(w)
+        return w.toByteArray()
+    }
+
     // --- Marmot admin helpers (MIP-01 / MIP-03) ---
 
     /** Raw BasicCredential identity bytes of the member at the given leaf, or null. */
@@ -1441,50 +1453,65 @@ class MlsGroup private constructor(
             val commonAncestorNode =
                 if (commonAncestorUnfilteredIdx >= 0) unfilteredDirectPath[commonAncestorUnfilteredIdx] else -1
             val commonAncestorFilteredIdx = filteredDp.indexOf(commonAncestorNode)
-            if (commonAncestorFilteredIdx >= 0 && commonAncestorFilteredIdx < updatePath.nodes.size) {
-                val pathNode = updatePath.nodes[commonAncestorFilteredIdx]
-                val copathNodeIdx = filteredCp[commonAncestorFilteredIdx]
-                val resolution =
-                    tree.resolution(copathNodeIdx).filterNot { resNode ->
-                        BinaryTree.isLeaf(resNode) &&
-                            BinaryTree.nodeToLeaf(resNode) in newLeavesInCommit
-                    }
 
-                // Find which encrypted secret corresponds to our position
-                val myNodeIdx = BinaryTree.leafToNode(myLeafIndex)
-                val myResIdx = resolution.indexOf(myNodeIdx)
-
-                if (myResIdx >= 0 && myResIdx < pathNode.encryptedPathSecret.size) {
-                    val ct = pathNode.encryptedPathSecret[myResIdx]
-                    val pathSecret =
-                        MlsCryptoProvider.decryptWithLabel(
-                            encryptionPrivateKey,
-                            "UpdatePathNode",
-                            pathDecContextBytes,
-                            ct.kemOutput,
-                            ct.ciphertext,
-                        )
-
-                    // Derive remaining path secrets from common ancestor up to root,
-                    // then one more step to reach the `commit_secret` (RFC 9420 §9.2:
-                    // commit_secret = DeriveSecret(root_path_secret, "path")). Openmls
-                    // advances one step past the root; quartz was stopping at the root
-                    // and diverging — that's what caused `ConfirmationTagMismatch` on
-                    // every cross-impl commit.
-                    //
-                    // Step count is measured against the UNFILTERED direct
-                    // path — the path_secret chain advances one KDF step per
-                    // level regardless of whether that level emits a
-                    // UpdatePath node, so filtering changes which nodes carry
-                    // ciphertext but not the number of KDF steps.
-                    val stepsToRoot = unfilteredDirectPath.size - commonAncestorUnfilteredIdx - 1
-                    var currentSecret = pathSecret
-                    repeat(stepsToRoot) {
-                        currentSecret = MlsCryptoProvider.deriveSecret(currentSecret, "path")
-                    }
-                    commitSecret = MlsCryptoProvider.deriveSecret(currentSecret, "path")
-                }
+            // RFC 9420 §7.6: every existing member that survives the commit
+            // MUST be able to decrypt the path_secret at the common ancestor
+            // — otherwise the sender's tree shape doesn't match ours and
+            // we'd silently advance the epoch with `commit_secret = 0`,
+            // diverging from the sender's key schedule. The confirmation_tag
+            // check below catches that downstream and rolls back, but the
+            // mismatch surfaces as a generic "ConfirmationTagMismatch"
+            // instead of pointing at the real cause. Hard-fail here with a
+            // specific error so an interop break is immediately diagnosable.
+            check(commonAncestorFilteredIdx in 0 until updatePath.nodes.size) {
+                "UpdatePath has no node at the common ancestor of leaves $senderLeafIndex / $myLeafIndex " +
+                    "(filtered_dp_idx=$commonAncestorFilteredIdx, update_path_nodes=${updatePath.nodes.size})"
             }
+            val pathNode = updatePath.nodes[commonAncestorFilteredIdx]
+            val copathNodeIdx = filteredCp[commonAncestorFilteredIdx]
+            val resolution =
+                tree.resolution(copathNodeIdx).filterNot { resNode ->
+                    BinaryTree.isLeaf(resNode) &&
+                        BinaryTree.nodeToLeaf(resNode) in newLeavesInCommit
+                }
+
+            // Find which encrypted secret corresponds to our position
+            val myNodeIdx = BinaryTree.leafToNode(myLeafIndex)
+            val myResIdx = resolution.indexOf(myNodeIdx)
+            check(myResIdx in 0 until pathNode.encryptedPathSecret.size) {
+                "UpdatePath at common ancestor carries no ciphertext for us " +
+                    "(my_leaf=$myLeafIndex, my_node=$myNodeIdx, resolution=$resolution, " +
+                    "encrypted_path_secrets=${pathNode.encryptedPathSecret.size})"
+            }
+
+            val ct = pathNode.encryptedPathSecret[myResIdx]
+            val pathSecret =
+                MlsCryptoProvider.decryptWithLabel(
+                    encryptionPrivateKey,
+                    "UpdatePathNode",
+                    pathDecContextBytes,
+                    ct.kemOutput,
+                    ct.ciphertext,
+                )
+
+            // Derive remaining path secrets from common ancestor up to root,
+            // then one more step to reach the `commit_secret` (RFC 9420 §9.2:
+            // commit_secret = DeriveSecret(root_path_secret, "path")). Openmls
+            // advances one step past the root; quartz was stopping at the root
+            // and diverging — that's what caused `ConfirmationTagMismatch` on
+            // every cross-impl commit.
+            //
+            // Step count is measured against the UNFILTERED direct
+            // path — the path_secret chain advances one KDF step per
+            // level regardless of whether that level emits a
+            // UpdatePath node, so filtering changes which nodes carry
+            // ciphertext but not the number of KDF steps.
+            val stepsToRoot = unfilteredDirectPath.size - commonAncestorUnfilteredIdx - 1
+            var currentSecret = pathSecret
+            repeat(stepsToRoot) {
+                currentSecret = MlsCryptoProvider.deriveSecret(currentSecret, "path")
+            }
+            commitSecret = MlsCryptoProvider.deriveSecret(currentSecret, "path")
         }
 
         // Update transcript hashes (RFC 9420 Section 8.2)
@@ -1861,13 +1888,7 @@ class MlsGroup private constructor(
         encryptionKey: ByteArray,
         parentHash: ByteArray,
         originalSiblingTreeHash: ByteArray,
-    ): ByteArray {
-        val w = TlsWriter()
-        w.putOpaqueVarInt(encryptionKey)
-        w.putOpaqueVarInt(parentHash)
-        w.putOpaqueVarInt(originalSiblingTreeHash)
-        return w.toByteArray()
-    }
+    ): ByteArray = Companion.encodeParentHashInput(encryptionKey, parentHash, originalSiblingTreeHash)
 
     private fun capturePreUpdateSiblingHashes(senderLeafIndex: Int): Map<Int, ByteArray> {
         val directPath = BinaryTree.directPath(senderLeafIndex, tree.leafCount)
@@ -2617,6 +2638,127 @@ class MlsGroup private constructor(
         }
 
         /**
+         * RFC 9420 §7.9.2 ParentHashInput TLS encoding:
+         *
+         * ```
+         * struct {
+         *     HPKEPublicKey encryption_key;
+         *     opaque parent_hash<V>;
+         *     opaque original_sibling_tree_hash<V>;
+         * } ParentHashInput;
+         * ```
+         */
+        internal fun encodeParentHashInput(
+            encryptionKey: ByteArray,
+            parentHash: ByteArray,
+            originalSiblingTreeHash: ByteArray,
+        ): ByteArray {
+            val w = TlsWriter()
+            w.putOpaqueVarInt(encryptionKey)
+            w.putOpaqueVarInt(parentHash)
+            w.putOpaqueVarInt(originalSiblingTreeHash)
+            return w.toByteArray()
+        }
+
+        /**
+         * RFC 9420 §7.9 parent_hash chain verification for a STATIC tree —
+         * specifically, the ratchet_tree extension a joiner reconstructs
+         * from a Welcome's GroupInfo. Without this, a malicious or
+         * misconfigured GroupInfo signer could ship a tree whose stored
+         * parent_hash values are inconsistent with the actual tree shape;
+         * peers that DO validate would reject every commit produced from
+         * this tree, but the joiner wouldn't notice until the next epoch
+         * silently rolled back.
+         *
+         * For each leaf with `source == COMMIT` (the only source that
+         * carries a parent_hash payload), recompute the parent_hash chain
+         * top-down on the leaf's filtered direct path and verify the
+         * leaf's stored parent_hash matches what the chain produces.
+         *
+         * Returns `null` on success, or a human-readable failure reason.
+         * Skips KEY_PACKAGE and UPDATE leaves — those don't carry a
+         * meaningful parent_hash on the wire.
+         */
+        internal fun verifyTreeParentHashesForJoin(tree: RatchetTree): String? {
+            if (tree.leafCount == 0) return null
+            val nodeCount = BinaryTree.nodeCount(tree.leafCount)
+            for (leafIdx in 0 until tree.leafCount) {
+                val leaf = tree.getLeaf(leafIdx) ?: continue
+                if (leaf.leafNodeSource != LeafNodeSource.COMMIT) continue
+                val expected = computeStaticLeafParentHash(tree, leafIdx, nodeCount)
+                val stored = leaf.parentHash ?: ByteArray(0)
+                if (!stored.contentEquals(expected)) {
+                    return "leaf $leafIdx parent_hash mismatch (stored=${stored.size}B, expected=${expected.size}B)"
+                }
+            }
+            return null
+        }
+
+        /**
+         * Top-down recomputation of the parent_hash that a COMMIT-source
+         * leaf at [leafIdx] should carry, given the current tree shape.
+         * Mirrors [computeSenderParentHashes] but uses
+         * [RatchetTree.treeHashNode] for sibling tree hashes (no
+         * pre-update / post-update distinction in static validation).
+         */
+        private fun computeStaticLeafParentHash(
+            tree: RatchetTree,
+            leafIdx: Int,
+            nodeCount: Int,
+        ): ByteArray {
+            val (filteredDp, _) = tree.filteredDirectPath(leafIdx)
+            if (filteredDp.isEmpty()) return ByteArray(0)
+
+            // Walk top-down from root, propagating the expected parent_hash.
+            val hashes = mutableMapOf<Int, ByteArray>()
+            hashes[filteredDp.last()] = ByteArray(0)
+            for (i in filteredDp.size - 2 downTo 0) {
+                val xIdx = filteredDp[i]
+                val parentIdx = filteredDp[i + 1]
+                val parentNode = tree.getNode(parentIdx)
+                if (parentNode !is com.vitorpamplona.quartz.marmot.mls.tree.TreeNode.Parent) {
+                    hashes[xIdx] = ByteArray(0)
+                    continue
+                }
+                // x's sibling under parent — parent has children left/right;
+                // sibling is whichever isn't x's ancestor.
+                val left = BinaryTree.left(parentIdx)
+                val right = BinaryTree.right(parentIdx)
+                val siblingIdx = if (xIdx == left) right else left
+                val siblingTreeHash = tree.treeHashNode(siblingIdx)
+                hashes[xIdx] =
+                    MlsCryptoProvider.hash(
+                        encodeParentHashInput(
+                            encryptionKey = parentNode.parentNode.encryptionKey,
+                            parentHash = hashes[parentIdx] ?: ByteArray(0),
+                            originalSiblingTreeHash = siblingTreeHash,
+                        ),
+                    )
+            }
+
+            // The leaf's expected parent_hash is the chain value AT the
+            // immediate parent (filteredDp[0]) — same convention as the
+            // committer-side computation in [computeSenderParentHashes].
+            val immediateParentIdx = filteredDp.first()
+            val immediateParent = tree.getNode(immediateParentIdx)
+            if (immediateParent !is com.vitorpamplona.quartz.marmot.mls.tree.TreeNode.Parent) {
+                return ByteArray(0)
+            }
+            // Sibling of the leaf's node at the immediate parent.
+            val leafNodeIdx = BinaryTree.leafToNode(leafIdx)
+            val left = BinaryTree.left(immediateParentIdx)
+            val right = BinaryTree.right(immediateParentIdx)
+            val leafSiblingIdx = if (leafNodeIdx == left) right else left
+            return MlsCryptoProvider.hash(
+                encodeParentHashInput(
+                    encryptionKey = immediateParent.parentNode.encryptionKey,
+                    parentHash = hashes[immediateParentIdx] ?: ByteArray(0),
+                    originalSiblingTreeHash = tree.treeHashNode(leafSiblingIdx),
+                ),
+            )
+        }
+
+        /**
          * Default MLS leaf Capabilities that advertise support for Marmot's
          * required extensions and proposals so new members can join a group
          * whose `required_capabilities` lists them.
@@ -2803,6 +2945,18 @@ class MlsGroup private constructor(
             // the signed context, silently diverging their key schedule.
             require(tree.treeHash().contentEquals(groupContext.treeHash)) {
                 "GroupInfo tree_hash does not match ratchet_tree extension"
+            }
+
+            // RFC 9420 §7.9 parent_hash integrity. The tree_hash check
+            // above only proves the wire bytes match what the GroupInfo
+            // signer signed — it does NOT validate that the stored
+            // parent_hash values are consistent with the tree shape.
+            // Without this, every COMMIT-source leaf could carry a
+            // forged parent_hash and the group would accept it; every
+            // commit produced from this tree would then be rejected by
+            // peers that DO validate, splitting on the next epoch.
+            verifyTreeParentHashesForJoin(tree)?.let { reason ->
+                throw IllegalStateException("GroupInfo ratchet_tree fails parent_hash validation: $reason")
             }
 
             // RFC 9420 §7.2 + §12.4.3.1: a joiner MUST refuse to join a
