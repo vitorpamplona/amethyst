@@ -48,10 +48,12 @@ import kotlin.io.path.readText
  *   Tnew  = incoming event.createdAt
  *   Told  = current slot winner's createdAt (if any)
  *
- *   Tnew > Told             → atomically install new slot, evict old
- *   Tnew <= Told            → reject the insert entirely
- *   no existing slot        → install new slot
- *   not replaceable/addr.   → no-op (kinds that don't have slot semantics)
+ *   Tnew > Told                         → atomically install new slot, evict old
+ *   Tnew == Told && id_new < id_old     → install new (NIP-01 lexical id tiebreaker)
+ *   Tnew == Told && id_new >= id_old    → reject the insert entirely
+ *   Tnew < Told                         → reject the insert entirely
+ *   no existing slot                    → install new slot
+ *   not replaceable/addr.               → no-op (kinds that don't have slot semantics)
  *
  * Eviction deletes the old canonical file and all its index hardlinks.
  */
@@ -76,17 +78,17 @@ internal class FsSlots(
         }
 
     /**
-     * Pre-insert check. Returns the *existing* winner if it blocks the
-     * insert (i.e. its createdAt is >= incoming.createdAt). Returns null
-     * when insertion may proceed — possibly with an evictable older winner,
-     * which the caller looks up separately via [readSlot].
+     * Pre-insert check. Returns true when the existing slot winner
+     * outranks the incoming event. NIP-01 ranking is `(createdAt DESC, id ASC)` —
+     * later timestamp wins, and on a tie the lexicographically smaller id wins.
      */
     fun shouldBlock(
         event: Event,
         slot: Path,
     ): Boolean {
         val existing = readSlot(slot) ?: return false
-        return existing.createdAt >= event.createdAt
+        return existing.createdAt > event.createdAt ||
+            (existing.createdAt == event.createdAt && existing.id <= event.id)
     }
 
     fun readSlot(slot: Path): Event? {

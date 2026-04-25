@@ -231,6 +231,58 @@ class FsParityTest {
         assertParity(Filter(authors = listOf(signer.pubKey), kinds = listOf(LongTextNoteEvent.KIND)))
     }
 
+    @Test
+    fun `replaceable same-createdAt lexical id tiebreaker parity`() {
+        // Two kind-0 events with identical createdAt produce different ids
+        // because their content differs. NIP-01 says the lexically smaller
+        // id wins on a tie. Both stores must agree, regardless of insertion
+        // order.
+        val a =
+            signer.sign<Event>(
+                createdAt = 100,
+                kind = 0,
+                tags = emptyArray(),
+                content = "{\"name\":\"a\"}",
+            )
+        val b =
+            signer.sign<Event>(
+                createdAt = 100,
+                kind = 0,
+                tags = emptyArray(),
+                content = "{\"name\":\"b\"}",
+            )
+
+        insertBoth(a)
+        insertBoth(b)
+
+        assertParity(
+            Filter(authors = listOf(signer.pubKey), kinds = listOf(0)),
+            "loser-then-winner: lexically smaller id should win",
+        )
+        assertParity(
+            Filter(ids = listOf(a.id, b.id)),
+            "the loser must not survive in the by-id query",
+        )
+    }
+
+    @Test
+    fun `addressable same-createdAt lexical id tiebreaker parity`() {
+        val a = article("tie", "version a", 100)
+        val b = article("tie", "version b", 100)
+
+        insertBoth(a)
+        insertBoth(b)
+
+        assertParity(
+            Filter(
+                authors = listOf(signer.pubKey),
+                kinds = listOf(LongTextNoteEvent.KIND),
+                tags = mapOf("d" to listOf("tie")),
+            ),
+        )
+        assertParity(Filter(ids = listOf(a.id, b.id)))
+    }
+
     // ------------------------------------------------------------------
     // Deletion (NIP-09)
     // ------------------------------------------------------------------

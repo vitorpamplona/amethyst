@@ -102,15 +102,35 @@ class FsSlotsTest {
     }
 
     @Test
-    fun `equal timestamp replaceable is rejected`() {
+    fun `equal timestamp replaceable resolves by lexical id (NIP-01)`() {
         val a = metadata("a", 100)
         val b = metadata("b", 100)
-        store.insert(a)
-        store.insert(b)
+        // NIP-01 tiebreaker: when createdAt ties, the lexically smaller
+        // id wins, regardless of insertion order.
+        val (winner, loser) = if (a.id < b.id) a to b else b to a
+
+        // Loser inserted first, then winner — winner must replace.
+        store.insert(loser)
+        store.insert(winner)
 
         val got = store.query<MetadataEvent>(Filter(authors = listOf(signer.pubKey), kinds = listOf(MetadataEvent.KIND)))
         assertEquals(1, got.size)
-        assertEquals(a.id, got.single().id)
+        assertEquals(winner.id, got.single().id)
+    }
+
+    @Test
+    fun `equal timestamp replaceable rejects higher id when winner already present`() {
+        val a = metadata("a", 100)
+        val b = metadata("b", 100)
+        val (winner, loser) = if (a.id < b.id) a to b else b to a
+
+        // Winner inserted first — loser must NOT take the slot.
+        store.insert(winner)
+        store.insert(loser)
+
+        val got = store.query<MetadataEvent>(Filter(authors = listOf(signer.pubKey), kinds = listOf(MetadataEvent.KIND)))
+        assertEquals(1, got.size)
+        assertEquals(winner.id, got.single().id)
     }
 
     @Test

@@ -67,12 +67,19 @@ class FsDeletionTest {
         slug: String,
         body: String,
         ts: Long,
+        signer: NostrSignerSync = this.signer,
     ) = signer.sign<LongTextNoteEvent>(
         createdAt = ts,
         kind = LongTextNoteEvent.KIND,
         tags = arrayOf(arrayOf("d", slug)),
         content = body,
     )
+
+    private fun otherArticle(
+        slug: String,
+        body: String,
+        ts: Long,
+    ) = article(slug, body, ts, signer = otherSigner)
 
     // ------------------------------------------------------------------
     // Delete by id
@@ -106,7 +113,7 @@ class FsDeletionTest {
     }
 
     @Test
-    fun `deletion by non-author does not cascade but still installs id tombstone`() {
+    fun `deletion by non-author neither cascades nor blocks legitimate re-insertion`() {
         // other signer authors a note
         val theirs = note("not yours", 10, signer = otherSigner)
         store.insert(theirs)
@@ -118,12 +125,15 @@ class FsDeletionTest {
         // Cascade did NOT run — not our author.
         assertEquals(listOf(theirs.id), store.query<TextNoteEvent>(Filter(ids = listOf(theirs.id))).map { it.id })
 
-        // But a tombstone is installed for the id, blocking future re-inserts.
-        // Re-inserting the note is effectively a no-op because it already
-        // exists. Instead we delete then try to re-insert.
+        // The id tombstone *is* installed (so it can fire if and when a
+        // future event with that id is owned by the deletion's author),
+        // but when the legitimate owner deletes the local copy and the
+        // event re-arrives from another relay, the tombstone must NOT
+        // block it — only same-author deletions can block re-insertion.
+        // Matches SQLite's `event_tags.pubkey_hash = NEW.pubkey_owner_hash`.
         store.delete(theirs.id)
         store.insert(theirs)
-        assertEquals(emptyList(), store.query<TextNoteEvent>(Filter(ids = listOf(theirs.id))).map { it.id })
+        assertEquals(listOf(theirs.id), store.query<TextNoteEvent>(Filter(ids = listOf(theirs.id))).map { it.id })
     }
 
     // ------------------------------------------------------------------
@@ -257,6 +267,31 @@ class FsDeletionTest {
     // ------------------------------------------------------------------
     // Tombstone files use hardlinks to the kind-5 canonical
     // ------------------------------------------------------------------
+
+    @Test
+    fun `non-author address deletion does not block legitimate addressable inserts`() {
+        // `otherSigner` (call them Bob) authors an addressable; the
+        // default `signer` (a stranger relative to Bob) then publishes a
+        // kind-5 with an `a` tag pointing at Bob's address. NIP-09 says
+        // only the address owner may delete it, so the stranger's event
+        // must NOT install an address tombstone — otherwise Bob couldn't
+        // publish a new version at the same address. Matches SQLite's
+        // `event_tags.pubkey_hash = NEW.pubkey_owner_hash` guard.
+        val v1 = otherArticle("shared", "v1", 10)
+        store.insert(v1)
+        assertEquals(listOf(v1.id), store.query<LongTextNoteEvent>(Filter(ids = listOf(v1.id))).map { it.id })
+
+        val strangerDel =
+            signer.sign<DeletionEvent>(DeletionEvent.build(listOf(v1), createdAt = 20))
+        store.insert(strangerDel)
+
+        // Bob can still publish a newer version at the same address. Since
+        // the stranger's deletion was non-authoritative, no addr tombstone
+        // exists to block.
+        val v2 = otherArticle("shared", "v2", 30)
+        store.insert(v2)
+        assertEquals(listOf(v2.id), store.query<LongTextNoteEvent>(Filter(ids = listOf(v2.id))).map { it.id })
+    }
 
     @Test
     fun `id tombstone is a hardlink to the kind-5 event`() {

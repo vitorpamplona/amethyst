@@ -170,6 +170,23 @@ class FsEventStoreTest {
     }
 
     @Test
+    fun `delete with empty filter is safe`() {
+        val a = signer.sign<TextNoteEvent>(TextNoteEvent.build("a", createdAt = 1))
+        val b = signer.sign<TextNoteEvent>(TextNoteEvent.build("b", createdAt = 2))
+        store.insert(a)
+        store.insert(b)
+
+        // Empty filter: query returns everything, but delete must NOT
+        // wipe the store. Same safe-by-default contract as SQLiteEventStore.
+        assertEquals(2, store.count(Filter()))
+        store.delete(Filter())
+        assertEquals(2, store.count(Filter()))
+
+        store.delete(listOf(Filter(), Filter()))
+        assertEquals(2, store.count(Filter()))
+    }
+
+    @Test
     fun `staging dir is cleared on init`() {
         val staging = root.resolve(".staging")
         val leftover = Files.createTempFile(staging, "crash-", ".json")
