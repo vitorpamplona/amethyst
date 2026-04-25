@@ -62,7 +62,7 @@ internal class FsIndexer(
         for (tag in event.tags) {
             if (!indexingStrategy.shouldIndex(event.kind, tag)) continue
             val h = hasher.hash(tag[0], tag[1])
-            out.add(layout.tagEntry(tag[0], h, event.createdAt, event.id))
+            out.add(layout.tagEntry(tag[0], tag[1], h, event.createdAt, event.id))
         }
         val exp = event.expiration()
         if (exp != null && exp > 0) {

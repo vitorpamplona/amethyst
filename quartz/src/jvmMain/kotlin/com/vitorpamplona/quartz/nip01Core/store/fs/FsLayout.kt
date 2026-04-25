@@ -78,12 +78,25 @@ internal class FsLayout(
         id: HexKey,
     ): Path = idxOwner.resolve(hashHex(ownerHash)).resolve(entryName(ts, id))
 
+    /**
+     * Tag-value index entry path. The directory name is the raw tag
+     * value when it's filesystem-safe (alphanumeric ASCII, no path
+     * separators or shell-hostile chars, ≤180 bytes); otherwise it's
+     * `_h_<hash>` so emojis, URLs, free text, and overly long values
+     * still round-trip without breaking on case-insensitive filesystems
+     * or running into the 255-byte path-component limit.
+     *
+     * Common cases — pubkey p-tags, event e-tags, ASCII hashtags, kind
+     * numbers, geohashes — keep their raw values, so `ls idx/tag/p/
+     * <pubkey>/` works directly.
+     */
     fun tagEntry(
         name: String,
+        value: String,
         valueHash: Long,
         ts: Long,
         id: HexKey,
-    ): Path = idxTag.resolve(name).resolve(hashHex(valueHash)).resolve(entryName(ts, id))
+    ): Path = idxTag.resolve(name).resolve(tagValueDirName(value, valueHash)).resolve(entryName(ts, id))
 
     /** NIP-40 expiration index entry. `exp` is unix seconds, padded for sort order. */
     fun expirationEntry(
@@ -103,11 +116,15 @@ internal class FsLayout(
     /** Directory that holds every indexed value for a tag name. */
     fun tagDir(name: String): Path = idxTag.resolve(name)
 
-    /** Directory that holds every entry for a specific (tag name, value hash). */
+    /**
+     * Directory that holds every entry for a specific (tag name, value).
+     * Uses the same raw-when-safe / hashed-otherwise rule as [tagEntry].
+     */
     fun tagValueDir(
         name: String,
+        value: String,
         valueHash: Long,
-    ): Path = idxTag.resolve(name).resolve(hashHex(valueHash))
+    ): Path = idxTag.resolve(name).resolve(tagValueDirName(value, valueHash))
 
     fun kindDir(kind: Kind): Path = idxKind.resolve(kind.toString())
 
@@ -219,6 +236,63 @@ internal class FsLayout(
          * the rest of the codebase on every KMP target.
          */
         fun sha256Hex(s: String): String = Hex.encode(sha256(s.encodeToByteArray()))
+
+        /**
+         * Sentinel prefix for hashed tag-value directory names. No
+         * filesystem-safe raw value can begin with this prefix
+         * ([isFsSafeTagValue] excludes it), so raw and hashed directory
+         * names are guaranteed disjoint.
+         */
+        const val HASH_PREFIX = "_h_"
+
+        /** Max raw tag-value length before we hash. 180 leaves headroom for the inner `<ts>-<id>` filename inside the 255-byte path-component cap on ext4 / NTFS / APFS. */
+        const val TAG_VALUE_RAW_MAX_LEN = 180
+
+        /**
+         * Pick a directory name for an indexed tag value. Returns the
+         * raw value when [isFsSafeTagValue] passes; otherwise
+         * `HASH_PREFIX + hashHex(murmur)`. Both forms live in the same
+         * parent dir — they cannot collide because no raw value starts
+         * with `_h_`.
+         */
+        fun tagValueDirName(
+            value: String,
+            valueHash: Long,
+        ): String =
+            if (isFsSafeTagValue(value)) {
+                value
+            } else {
+                HASH_PREFIX + hashHex(valueHash)
+            }
+
+        /**
+         * Tag value safe to use as a filesystem directory name across
+         * Linux / macOS / Windows. Constraints:
+         *
+         *  - length 1..[TAG_VALUE_RAW_MAX_LEN] bytes,
+         *  - every char in printable ASCII (`0x21..0x7E`),
+         *  - none of `/ \ : * ? " < > |` (Windows + path separators),
+         *  - doesn't start with `.` (dotfiles, Windows reserved names),
+         *  - doesn't start with the [HASH_PREFIX] sentinel,
+         *  - doesn't end with `.` or space (Windows truncates these).
+         *
+         * Catches the common cases (pubkeys, event ids, ASCII hashtags,
+         * geohashes, kind numbers) while pushing emoji, URLs, free text
+         * and overly long values through the hash bucket.
+         */
+        fun isFsSafeTagValue(value: String): Boolean {
+            if (value.isEmpty() || value.length > TAG_VALUE_RAW_MAX_LEN) return false
+            if (value.startsWith('.') || value.startsWith(HASH_PREFIX)) return false
+            val last = value.last()
+            if (last == '.' || last == ' ') return false
+            for (ch in value) {
+                if (ch.code !in 0x21..0x7E) return false
+                if (ch in UNSAFE_TAG_VALUE_CHARS) return false
+            }
+            return true
+        }
+
+        private val UNSAFE_TAG_VALUE_CHARS = setOf('/', '\\', ':', '*', '?', '"', '<', '>', '|')
 
         /** zero-padded to 10 digits so lex order == chronological order through year 2286. */
         fun tsPad(ts: Long): String = ts.toString().padStart(TS_PAD_WIDTH, '0')

@@ -75,7 +75,7 @@ internal class FsQueryPlanner(
         }
 
         firstTagKey(filter)?.let { (name, values) ->
-            return mergeDesc(values.map { v -> walkDir(layout.tagValueDir(name, hasher.hash(name, v))) })
+            return mergeDesc(values.map { v -> walkDir(layout.tagValueDir(name, v, hasher.hash(name, v))) })
         }
 
         filter.kinds?.let { kinds ->

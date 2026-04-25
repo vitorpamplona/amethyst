@@ -66,7 +66,7 @@ streams and asserts query results agree.
 │   ├── kind/<kind>/<ts>-<id>                      # hardlink → events/.../<id>.json
 │   ├── author/<pubkey>/<ts>-<id>                  # hardlink
 │   ├── owner/<owner_hex>/<ts>-<id>                # hardlink; recipient for GiftWrap
-│   ├── tag/<name>/<murmur_hex>/<ts>-<id>          # hardlink; single-letter tag names only
+│   ├── tag/<name>/<value-or-_h_hash>/<ts>-<id>    # hardlink; single-letter tag names only
 │   ├── expires_at/<exp>-<id>                      # hardlink; for NIP-40 sweep
 │   └── fts/<token>/<ts>-<id>                      # hardlink; for NIP-50 search
 │
@@ -89,11 +89,21 @@ streams and asserts query results agree.
 - **Index entry filenames**: `<padded_ts>-<id>` where `<padded_ts>`
   is the event's `created_at` left-padded to 10 digits. Lexicographic
   sort of a directory listing == chronological sort.
-- **Hashes**:
-  - `sha256Hex(d-tag)` — collision-resistant, used wherever the path
-    IS the uniqueness constraint (addressable slots, address tombstones).
-  - `hashHex(murmurLong)` — 16 hex chars, used for tag-value indexes
-    where occasional collisions are caught by the post-filter.
+- **Hashes** (only when needed):
+  - `sha256Hex(d-tag)` — collision-resistant, always used wherever the
+    path IS the uniqueness constraint (addressable slots, address
+    tombstones).
+  - `idx/tag/<name>/<value-or-_h_hash>/` — for the tag indexes the
+    directory name is the **raw tag value** when filesystem-safe
+    (printable ASCII, no path separators or shell-hostile chars,
+    ≤180 bytes). Otherwise it falls back to `_h_<hashHex(murmurLong)>`
+    (16 hex chars after the sentinel). Pubkey p-tags, hex e-tags,
+    ASCII hashtags, kind numbers, and geohashes all keep their raw
+    values — `ls idx/tag/p/<your_pubkey>/` works directly. Emojis,
+    URLs, free-form `alt` text, and `:`-bearing `a`-tags route through
+    the `_h_` bucket so the filesystem stays portable.
+  - `hashHex(murmurLong)` — 16 hex chars, used for owner-hash dirs
+    and (after the `_h_` prefix) the hash bucket inside tag indexes.
 - **mtime**: every canonical write does
   `Files.setLastModifiedTime(canonical, FileTime.from(event.createdAt, SECONDS))`
   so `ls -t`, `find -newermt`, `rsync -a` all behave naturally.

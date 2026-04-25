@@ -203,6 +203,110 @@ class FsQueryTest {
         assertEquals(listOf(both.id), got.map { it.id })
     }
 
+    // ------------------------------------------------------------------
+    // Tag-value directory naming: raw when fs-safe, _h_<hash> otherwise.
+    // ------------------------------------------------------------------
+
+    @Test
+    fun `safe ASCII tag values get raw directory names`() {
+        val e =
+            signerA.sign<Event>(
+                createdAt = 10,
+                kind = 1,
+                tags = arrayOf(arrayOf("t", "nostr")),
+                content = "x",
+            )
+        store.insert(e)
+        // The raw value is the directory name — directly inspectable.
+        val rawDir = root.resolve("idx/tag/t/nostr")
+        assertTrue(rawDir.exists(), "ASCII-safe tag should land in idx/tag/t/nostr/")
+        assertEquals(1, rawDir.listDirectoryEntries().size)
+    }
+
+    @Test
+    fun `pubkey p-tag uses raw 64-hex directory name`() {
+        // The motivating case: notifications. p-tags pointing at a
+        // pubkey land under idx/tag/p/<pubkey>/ — no hash, directly
+        // ls-able.
+        val target = signerB.pubKey
+        val e =
+            signerA.sign<Event>(
+                createdAt = 5,
+                kind = 1,
+                tags = arrayOf(arrayOf("p", target)),
+                content = "@you",
+            )
+        store.insert(e)
+        val pDir = root.resolve("idx/tag/p/$target")
+        assertTrue(pDir.exists(), "p-tag pubkey should be ls-able directly: idx/tag/p/$target/")
+        assertEquals(1, pDir.listDirectoryEntries().size)
+    }
+
+    @Test
+    fun `tag value with emoji falls back to hashed directory name`() {
+        val e =
+            signerA.sign<Event>(
+                createdAt = 10,
+                kind = 1,
+                tags = arrayOf(arrayOf("t", "🔥")),
+                content = "x",
+            )
+        store.insert(e)
+        // Exactly one entry under t/ and it must be in the _h_ hash
+        // bucket — emoji is not fs-safe.
+        val tDir = root.resolve("idx/tag/t")
+        val entries = tDir.listDirectoryEntries().map { it.fileName.toString() }
+        assertEquals(1, entries.size, "expected one bucket dir, got: $entries")
+        assertTrue(entries.single().startsWith("_h_"), "emoji tag must hash; got '${entries.single()}'")
+    }
+
+    @Test
+    fun `tag value containing a slash falls back to hashed directory name`() {
+        val e =
+            signerA.sign<Event>(
+                createdAt = 10,
+                kind = 1,
+                tags = arrayOf(arrayOf("r", "https://example.com/page")),
+                content = "x",
+            )
+        store.insert(e)
+        val rDir = root.resolve("idx/tag/r")
+        val entries = rDir.listDirectoryEntries().map { it.fileName.toString() }
+        assertEquals(1, entries.size, "expected one bucket dir, got: $entries")
+        assertTrue(entries.single().startsWith("_h_"), "URL tag must hash; got '${entries.single()}'")
+    }
+
+    @Test
+    fun `query round-trips for both raw and hashed values`() {
+        // Each query must use the same naming rule as the writer or it
+        // walks a directory that doesn't exist. Insert both a raw-safe
+        // and a hash-required tag and verify they're both findable.
+        val safe =
+            signerA.sign<Event>(
+                createdAt = 1,
+                kind = 1,
+                tags = arrayOf(arrayOf("t", "nostr")),
+                content = "safe",
+            )
+        val unsafe =
+            signerA.sign<Event>(
+                createdAt = 2,
+                kind = 1,
+                tags = arrayOf(arrayOf("t", "🔥")),
+                content = "unsafe",
+            )
+        store.insert(safe)
+        store.insert(unsafe)
+        assertEquals(
+            listOf(safe.id),
+            store.query<Event>(Filter(tags = mapOf("t" to listOf("nostr")))).map { it.id },
+        )
+        assertEquals(
+            listOf(unsafe.id),
+            store.query<Event>(Filter(tags = mapOf("t" to listOf("🔥")))).map { it.id },
+        )
+    }
+
     @Test
     fun `non-single-letter tags are not reverse-indexed`() {
         // SQLite parity: DefaultIndexingStrategy only indexes single-letter
