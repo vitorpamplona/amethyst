@@ -145,6 +145,14 @@ class MlsGroup private constructor(
      */
     fun isLocalMember(): Boolean = myLeafIndex < tree.leafCount && tree.getLeaf(myLeafIndex) != null
 
+    /**
+     * Read-only snapshot of the staged-proposal pool. Exposed at module
+     * scope so tests can inspect what `proposeAdd` / `proposeRemove` /
+     * `buildSelfRemoveProposalMessage` etc. actually stage (notably the
+     * `authenticatedContentBytes` we capture for ProposalRef matching).
+     */
+    internal fun pendingProposalsSnapshot(): List<PendingProposal> = pendingProposals.toList()
+
     // --- Marmot admin helpers (MIP-01 / MIP-03) ---
 
     /** Raw BasicCredential identity bytes of the member at the given leaf, or null. */
@@ -1236,27 +1244,20 @@ class MlsGroup private constructor(
             }
         }
 
-        // Apply proposals (resolve references from pending pool).
-        // Matches the committer's order: apply non-Add proposals first, then Adds,
-        // so leaves freed by Remove are available for Add reuse (RFC 9420 §12.4.2).
-        // Also track the post-Add leaf indices so the UpdatePath resolution filter
-        // can exclude them (mirrors the encryption-side exclusion).
-        val resolvedProposals = mutableListOf<Proposal>()
-        val inlineAdds = mutableListOf<Proposal.Add>()
-        val referenceAddSenders = mutableListOf<Pair<Proposal.Add, Int>>()
+        // Resolve proposal references against our pending pool BEFORE
+        // applying anything, so MIP-03 authorization can run on a static
+        // snapshot of (proposal, original-sender-leaf) pairs and so the
+        // depletion guard can simulate the post-commit tree shape from the
+        // pre-commit state.
+        val resolvedPending = mutableListOf<PendingProposal>()
         for (proposalOrRef in commit.proposals) {
             when (proposalOrRef) {
                 is ProposalOrRef.Inline -> {
-                    if (proposalOrRef.proposal is Proposal.Add) {
-                        inlineAdds.add(proposalOrRef.proposal)
-                    } else {
-                        applyProposal(proposalOrRef.proposal, senderLeafIndex)
-                    }
-                    resolvedProposals.add(proposalOrRef.proposal)
+                    // Inline proposals are authored by the committer.
+                    resolvedPending.add(PendingProposal(proposalOrRef.proposal, senderLeafIndex))
                 }
 
                 is ProposalOrRef.Reference -> {
-                    // Resolve proposal by reference hash from pending proposals (RFC 9420 §12.4.2)
                     val refHash = proposalOrRef.proposalRef
                     val resolved =
                         pendingProposals.find { pending ->
@@ -1264,12 +1265,11 @@ class MlsGroup private constructor(
                             // AuthenticatedContent that delivered the proposal,
                             // not just the bare Proposal struct. For inbound
                             // proposals (e.g. C's standalone SelfRemove) we
-                            // captured those bytes at receive time. For local
-                            // proposals (which we always inline in our own
-                            // commits, never reference) we fall back to the
-                            // bare-proposal hash — keeps existing flows
-                            // working without needing an AC reconstruction
-                            // round-trip on the send side.
+                            // captured those bytes at receive time. Locally-
+                            // proposed entries that have been published as a
+                            // standalone PublicMessage also carry their AC
+                            // bytes; the bare-proposal fallback below covers
+                            // legacy local entries that pre-date that capture.
                             val refValue = pending.authenticatedContentBytes ?: pending.proposal.toTlsBytes()
                             val hash = MlsCryptoProvider.refHash("MLS 1.0 Proposal Reference", refValue)
                             hash.contentEquals(refHash)
@@ -1277,14 +1277,49 @@ class MlsGroup private constructor(
                     requireNotNull(resolved) {
                         "Commit references unknown proposal (ref not found in pending proposals)"
                     }
-                    if (resolved.proposal is Proposal.Add) {
-                        referenceAddSenders.add(resolved.proposal to resolved.senderLeafIndex)
-                    } else {
-                        applyProposal(resolved.proposal, resolved.senderLeafIndex)
-                    }
-                    resolvedProposals.add(resolved.proposal)
+                    resolvedPending.add(resolved)
                 }
             }
+        }
+
+        // MIP-03 authorization & admin-depletion gates on inbound commits
+        // (mirror what `commit()` enforces locally — without these a peer
+        // could send us a non-admin GCE rename, a non-admin Remove, or a
+        // commit that empties `admin_pubkeys` and we'd silently apply it).
+        // External commits get a pass: the sender doesn't have a leaf yet,
+        // so the admin lookup is moot, and an external joiner can't include
+        // arbitrary proposals — only Add/Remove/PSK/ExternalInit per
+        // RFC 9420 §12.4.3.2.
+        if (!isExternalCommit) {
+            enforceAuthorizedProposalSet(resolvedPending, committerLeafIndex = senderLeafIndex)
+            enforceNoAdminDepletion(resolvedPending)
+        }
+
+        // Apply the resolved proposals. Matches the committer's order: apply
+        // non-Add proposals first, then Adds, so leaves freed by Remove are
+        // available for Add reuse (RFC 9420 §12.4.2). Also track the
+        // post-Add leaf indices so the UpdatePath resolution filter can
+        // exclude them (mirrors the encryption-side exclusion).
+        //
+        // `resolvedPending[i].senderLeafIndex` is already the correct
+        // author for both inline (committer) and reference (original
+        // proposer) entries, since we stamped inline entries with
+        // `senderLeafIndex` when building the snapshot above.
+        val resolvedProposals = mutableListOf<Proposal>()
+        val inlineAdds = mutableListOf<Proposal.Add>()
+        val referenceAddSenders = mutableListOf<Pair<Proposal.Add, Int>>()
+        for ((idx, pending) in resolvedPending.withIndex()) {
+            val isInline = commit.proposals[idx] is ProposalOrRef.Inline
+            if (pending.proposal is Proposal.Add) {
+                if (isInline) {
+                    inlineAdds.add(pending.proposal)
+                } else {
+                    referenceAddSenders.add(pending.proposal to pending.senderLeafIndex)
+                }
+            } else {
+                applyProposal(pending.proposal, pending.senderLeafIndex)
+            }
+            resolvedProposals.add(pending.proposal)
         }
         val newLeavesInCommit = mutableSetOf<Int>()
         for (add in inlineAdds) {
@@ -1602,24 +1637,115 @@ class MlsGroup private constructor(
     /**
      * Compute the PSK secret from PSK proposals (RFC 9420 Section 8.4).
      *
-     * psk_secret is derived by chaining Extract calls over all PSK values.
-     * If no PSK proposals, returns zeros (default PSK secret).
+     * Derive `psk_secret` per RFC 9420 §5.3.
+     *
+     * For a list of `n` proposed PSKs, the `i`-th step is:
+     *
+     * ```
+     * psk_extracted_i = HKDF.Extract(salt = 0, ikm = psk_i)
+     * psk_input_i     = ExpandWithLabel(psk_extracted_i, "derived psk",
+     *                                   PSKLabel(psk_id_i, i, n), Nh)
+     * psk_secret_i    = HKDF.Extract(salt = psk_secret_{i-1}, ikm = psk_input_i)
+     * ```
+     *
+     * The `PSKLabel` carries the full `PreSharedKeyID` (psktype, type-
+     * specific fields, psk_nonce) plus the `index, count` pair — without
+     * those, every member that resolves the PSK list in a different order
+     * (or with a different total count) would derive a different
+     * `psk_secret` and the post-commit confirmation_tag would silently
+     * mismatch.
+     *
+     * The previous implementation HKDF-Extracted the bare PSK value with
+     * the running pskSecret as salt and ignored psktype / psk_nonce
+     * entirely — non-conformant with §5.3 and incompatible with any peer
+     * that follows the spec. Returns zeros when no PSK proposals are
+     * present (the `default_psk_secret` per §8.1).
      */
-    private fun computePskSecret(proposals: List<Proposal>): ByteArray {
+    internal fun computePskSecret(proposals: List<Proposal>): ByteArray {
         val pskProposals = proposals.filterIsInstance<Proposal.Psk>()
         if (pskProposals.isEmpty()) {
             return ByteArray(MlsCryptoProvider.HASH_OUTPUT_LENGTH)
         }
 
-        // Chain: psk_secret = Extract(Extract(...Extract(0, psk_1), psk_2)..., psk_n)
-        var pskSecret = ByteArray(MlsCryptoProvider.HASH_OUTPUT_LENGTH)
-        for (pskProposal in pskProposals) {
+        val zero = ByteArray(MlsCryptoProvider.HASH_OUTPUT_LENGTH)
+        val count = pskProposals.size
+        var pskSecret = zero
+        for ((index, p) in pskProposals.withIndex()) {
             val pskValue =
-                pskStore[pskProposal.pskId.toHexKey()]
-                    ?: throw IllegalStateException("PSK not found in store: ${pskProposal.pskId.toHexKey()}")
-            pskSecret = MlsCryptoProvider.hkdfExtract(pskSecret, pskValue)
+                pskStore[p.pskId.toHexKey()]
+                    ?: throw IllegalStateException("PSK not found in store: ${p.pskId.toHexKey()}")
+            val pskExtracted = MlsCryptoProvider.hkdfExtract(zero, pskValue)
+            val pskLabel = buildPskLabel(p, index, count)
+            val pskInput =
+                MlsCryptoProvider.expandWithLabel(
+                    secret = pskExtracted,
+                    label = "derived psk",
+                    context = pskLabel,
+                    length = MlsCryptoProvider.HASH_OUTPUT_LENGTH,
+                )
+            pskSecret = MlsCryptoProvider.hkdfExtract(pskSecret, pskInput)
         }
         return pskSecret
+    }
+
+    /**
+     * Encode the `PSKLabel` struct used as the `context` argument to
+     * ExpandWithLabel during `psk_secret` derivation (RFC 9420 §5.3):
+     *
+     * ```
+     * struct {
+     *     PreSharedKeyID id;
+     *     uint16 index;
+     *     uint16 count;
+     * } PSKLabel;
+     *
+     * struct {
+     *     PSKType psktype;
+     *     select (PreSharedKeyID.psktype) {
+     *         case external:    opaque psk_id<V>;
+     *         case resumption:  ResumptionPSKUsage usage;
+     *                           opaque psk_group_id<V>;
+     *                           uint64 psk_epoch;
+     *     };
+     *     opaque psk_nonce<V>;
+     * } PreSharedKeyID;
+     * ```
+     *
+     * Resumption PSK (`psktype == 2`) carries `usage / psk_group_id /
+     * psk_epoch` fields that aren't representable on `Proposal.Psk` today —
+     * the on-wire schema there is just `(pskType, pskId, pskNonce)`. Reject
+     * loudly until the proposal type is widened, rather than silently
+     * encoding a broken PSKLabel that would diverge from peers.
+     */
+    private fun buildPskLabel(
+        psk: Proposal.Psk,
+        index: Int,
+        count: Int,
+    ): ByteArray {
+        val w = TlsWriter()
+        // PreSharedKeyID
+        w.putUint8(psk.pskType)
+        when (psk.pskType) {
+            PSK_TYPE_EXTERNAL -> {
+                w.putOpaqueVarInt(psk.pskId)
+            }
+
+            PSK_TYPE_RESUMPTION -> {
+                throw IllegalStateException(
+                    "Resumption PSKs are not supported yet — Proposal.Psk lacks " +
+                        "(usage, psk_group_id, psk_epoch) per RFC 9420 §5.3.",
+                )
+            }
+
+            else -> {
+                throw IllegalStateException("Unknown PSKType ${psk.pskType}")
+            }
+        }
+        w.putOpaqueVarInt(psk.pskNonce)
+        // PSKLabel tail
+        w.putUint16(index)
+        w.putUint16(count)
+        return w.toByteArray()
     }
 
     /**
@@ -1931,36 +2057,46 @@ class MlsGroup private constructor(
     }
 
     /**
-     * MIP-03 authorization gate for local commits.
+     * MIP-03 authorization gate.
      *
      * Once the group has at least one admin configured in `admin_pubkeys`,
      * non-admin senders may only issue:
      *   - a single self-Update proposal, or
-     *   - one-or-more SelfRemove proposals authored by this member
+     *   - one-or-more SelfRemove proposals authored by the committer.
      *
      * Admins may commit any proposal type. Before any admin is configured
      * (group bootstrap) the check is relaxed, mirroring the bootstrap policy
      * in [MlsGroupManager.updateGroupExtensions].
+     *
+     * [committerLeafIndex] is the leaf that signed the commit — `myLeafIndex`
+     * for our own outbound commits, `pubMsg.sender.leafIndex` for inbound
+     * commits. The "self-only" rule is checked against the committer; when
+     * the committer is an admin the rule is skipped entirely so admin-folded
+     * inbound proposals (e.g. another member's `SelfRemove` referenced by
+     * an admin's GCE commit) are accepted.
      */
-    private fun enforceAuthorizedProposalSet(proposals: List<PendingProposal>) {
+    internal fun enforceAuthorizedProposalSet(
+        proposals: List<PendingProposal>,
+        committerLeafIndex: Int = myLeafIndex,
+    ) {
         if (proposals.isEmpty()) return
         val marmot = currentMarmotData()
         val adminsConfigured = marmot != null && marmot.adminPubkeys.isNotEmpty()
-        if (!adminsConfigured || isLocalAdmin()) return
+        if (!adminsConfigured || isLeafAdmin(committerLeafIndex)) return
 
         val allSelfRemove =
-            proposals.all { it.proposal is Proposal.SelfRemove && it.senderLeafIndex == myLeafIndex }
+            proposals.all { it.proposal is Proposal.SelfRemove && it.senderLeafIndex == committerLeafIndex }
         if (allSelfRemove) return
 
         val singleSelfUpdate =
             proposals.size == 1 &&
                 proposals[0].proposal is Proposal.Update &&
-                proposals[0].senderLeafIndex == myLeafIndex
+                proposals[0].senderLeafIndex == committerLeafIndex
         if (singleSelfUpdate) return
 
         throw IllegalStateException(
             "MIP-03: non-admin members may only commit a single self-Update or SelfRemove-only " +
-                "proposals; got ${proposals.map { it.proposal::class.simpleName }}",
+                "proposals; got ${proposals.map { it.proposal::class.simpleName }} from leaf $committerLeafIndex",
         )
     }
 
@@ -1973,7 +2109,7 @@ class MlsGroup private constructor(
      * once the group has a configured admin set — it does not kick in during
      * bootstrap before any admin is named.
      */
-    private fun enforceNoAdminDepletion(proposals: List<PendingProposal>) {
+    internal fun enforceNoAdminDepletion(proposals: List<PendingProposal>) {
         val currentAdmins = currentMarmotData()?.adminPubkeys?.toSet().orEmpty()
         if (currentAdmins.isEmpty()) return // Bootstrap: no admins yet, nothing to deplete.
 
@@ -2178,6 +2314,10 @@ class MlsGroup private constructor(
         // (0x0001 is application_id — using it here makes Welcomes
         // unreadable to OpenMLS/MDK/whitenoise.)
         private const val RATCHET_TREE_EXTENSION_TYPE = 0x0002
+
+        // RFC 9420 §5.3 PSKType registry.
+        private const val PSK_TYPE_EXTERNAL = 1
+        private const val PSK_TYPE_RESUMPTION = 2
 
         /**
          * Build the FramedContentTBS bytes for a member-sender commit
@@ -3091,6 +3231,34 @@ class MlsGroup private constructor(
                 confirmationTag = null,
                 membershipTag = membershipTag,
             )
+
+        // Stage the proposal in our own pending pool with the encoded
+        // AuthenticatedContent (RFC 9420 §6.1: wire_format ‖ FramedContent ‖
+        // FramedContentAuthData) so a subsequent inbound commit that folds
+        // this SelfRemove in by ProposalRef can resolve the hash per §5.2.
+        // Today's `leaveGroup` caller drops the group state immediately
+        // after this returns and never sees that commit, but a future
+        // caller that keeps the group around (to confirm the removal,
+        // log the closing epoch, etc.) needs the entry here. The AC
+        // bytes are bit-identical to what a peer reconstructs in
+        // [receivePublicMessageProposal].
+        val acWriter = TlsWriter()
+        acWriter.putUint16(WireFormat.PUBLIC_MESSAGE.value)
+        acWriter.putOpaqueVarInt(ctx.groupId)
+        acWriter.putUint64(ctx.epoch)
+        encodeSender(acWriter, Sender(SenderType.MEMBER, myLeafIndex))
+        acWriter.putOpaqueVarInt(ByteArray(0)) // authenticated_data
+        acWriter.putUint8(ContentType.PROPOSAL.value)
+        acWriter.putBytes(proposalBytes)
+        acWriter.putOpaqueVarInt(signature) // FramedContentAuthData (PROPOSAL: signature only)
+        pendingProposals.add(
+            PendingProposal(
+                proposal = proposal,
+                senderLeafIndex = myLeafIndex,
+                authenticatedContentBytes = acWriter.toByteArray(),
+            ),
+        )
+
         return MlsMessage.fromPublicMessage(publicMessage).toTlsBytes() to preCommitExporterSecret
     }
 

@@ -368,6 +368,162 @@ class MarmotMipBehaviorTest {
         }
 
     // ----------------------------------------------------------------------
+    // MIP-03 inbound authorization gates
+    // ----------------------------------------------------------------------
+    //
+    // The local-commit path has always run the authorization-set + admin-
+    // depletion guards (see `commit_adminDepletionGuardRejectsEmptyingAdminList`
+    // above). The inbound counterpart was missing — `processCommitInner`
+    // didn't call them, so a peer could send a commit our local code would
+    // never have produced and we'd accept it. These tests exercise the
+    // refactored guard functions directly with a `committerLeafIndex`
+    // parameter, which is the shape `processCommitInner` calls them in.
+
+    @Test
+    fun enforceAuthorizedProposalSet_rejectsNonAdminCommitterRemove() =
+        runBlocking<Unit> {
+            // Group with Alice as the only configured admin.
+            val manager = createGroupManager()
+            manager.createGroup(groupId, aliceId.hexToByteArray())
+            manager.updateGroupExtensions(
+                groupId,
+                listOf(MarmotGroupData(nostrGroupId = groupId, adminPubkeys = listOf(aliceId)).toExtension()),
+            )
+            // Add Bob (non-admin) so leaf index 1 is occupied.
+            val bobBundle = createStandaloneKeyPackage(bobId)
+            manager.addMember(groupId, bobBundle.keyPackage.toTlsBytes())
+
+            val alice = manager.getGroup(groupId)!!
+            // Bob (leaf 1) is NOT an admin. Pretend he committed a Remove of
+            // himself authored by himself — `enforceAuthorizedProposalSet`
+            // must reject because Remove is admin-only.
+            val proposals =
+                listOf(
+                    com.vitorpamplona.quartz.marmot.mls.group
+                        .PendingProposal(
+                            proposal =
+                                com.vitorpamplona.quartz.marmot.mls.messages
+                                    .Proposal
+                                    .Remove(removedLeafIndex = 0),
+                            senderLeafIndex = 1,
+                        ),
+                )
+            val ex =
+                assertFailsWith<IllegalStateException> {
+                    alice.enforceAuthorizedProposalSet(proposals, committerLeafIndex = 1)
+                }
+            assertTrue(
+                ex.message!!.contains("non-admin members may only commit"),
+                "expected MIP-03 violation message, got: ${ex.message}",
+            )
+        }
+
+    @Test
+    fun enforceAuthorizedProposalSet_acceptsAdminCommitterFoldingAnotherMembersSelfRemove() =
+        runBlocking<Unit> {
+            // Mirrors marmot-interop test 15: Bob (admin) commits a
+            // SelfRemove proposal authored by Carol. Inline-as-fold flows
+            // tag the proposal with the committer's leaf index, so Bob's
+            // Remove-style fold of Carol's leaf still authenticates.
+            val manager = createGroupManager()
+            manager.createGroup(groupId, aliceId.hexToByteArray())
+            manager.updateGroupExtensions(
+                groupId,
+                listOf(MarmotGroupData(nostrGroupId = groupId, adminPubkeys = listOf(aliceId)).toExtension()),
+            )
+
+            val alice = manager.getGroup(groupId)!!
+            // Alice (leaf 0) is admin. The committer-is-admin shortcut fires
+            // before the per-proposal author check, so even a heterogeneous
+            // proposal list passes.
+            val proposals =
+                listOf(
+                    com.vitorpamplona.quartz.marmot.mls.group
+                        .PendingProposal(
+                            proposal =
+                                com.vitorpamplona.quartz.marmot.mls.messages
+                                    .Proposal
+                                    .SelfRemove(),
+                            senderLeafIndex = 99,
+                        ),
+                )
+            // Should not throw.
+            alice.enforceAuthorizedProposalSet(proposals, committerLeafIndex = 0)
+        }
+
+    @Test
+    fun enforceNoAdminDepletion_rejectsCommitThatEmptiesAdminList() =
+        runBlocking<Unit> {
+            val manager = createGroupManager()
+            manager.createGroup(groupId, aliceId.hexToByteArray())
+            manager.updateGroupExtensions(
+                groupId,
+                listOf(MarmotGroupData(nostrGroupId = groupId, adminPubkeys = listOf(aliceId)).toExtension()),
+            )
+
+            val alice = manager.getGroup(groupId)!!
+            val proposals =
+                listOf(
+                    com.vitorpamplona.quartz.marmot.mls.group
+                        .PendingProposal(
+                            proposal =
+                                com.vitorpamplona.quartz.marmot.mls.messages
+                                    .Proposal
+                                    .GroupContextExtensions(
+                                        extensions =
+                                            listOf(
+                                                MarmotGroupData(
+                                                    nostrGroupId = groupId,
+                                                    adminPubkeys = emptyList(),
+                                                ).toExtension(),
+                                            ),
+                                    ),
+                            senderLeafIndex = 0,
+                        ),
+                )
+            assertFailsWith<IllegalStateException> {
+                alice.enforceNoAdminDepletion(proposals)
+            }
+        }
+
+    // ----------------------------------------------------------------------
+    // RFC 9420 §5.2 ProposalRef hashing — local standalone proposals
+    // ----------------------------------------------------------------------
+
+    @Test
+    fun buildSelfRemoveProposalMessage_stagesPendingWithAuthenticatedContentBytes() =
+        runBlocking<Unit> {
+            // Setup: Alice creates a group where she is NOT admin (a
+            // throwaway bobId is the sole configured admin). Without that,
+            // `buildSelfRemoveProposalMessage` rejects per MIP-01.
+            val manager = createGroupManager()
+            manager.createGroup(groupId, aliceId.hexToByteArray())
+            manager.updateGroupExtensions(
+                groupId,
+                listOf(MarmotGroupData(nostrGroupId = groupId, adminPubkeys = listOf(bobId)).toExtension()),
+            )
+
+            val alice = manager.getGroup(groupId)!!
+            assertEquals(0, alice.pendingProposalsSnapshot().size)
+
+            val (_, _) = alice.buildSelfRemoveProposalMessage()
+
+            val staged = alice.pendingProposalsSnapshot()
+            assertEquals(1, staged.size, "buildSelfRemoveProposalMessage must also stage to pending pool")
+            val entry = staged.single()
+            assertIs<com.vitorpamplona.quartz.marmot.mls.messages.Proposal.SelfRemove>(entry.proposal)
+            assertEquals(alice.leafIndex, entry.senderLeafIndex)
+            // The captured AC bytes are what RFC 9420 §5.2's MakeProposalRef
+            // hashes — must be present so a peer's commit referencing this
+            // proposal by hash resolves against our pool.
+            assertNotNull(
+                entry.authenticatedContentBytes,
+                "RFC 9420 §5.2: standalone-published proposals must carry the encoded AuthenticatedContent",
+            )
+            assertTrue(entry.authenticatedContentBytes.isNotEmpty())
+        }
+
+    // ----------------------------------------------------------------------
     // MIP-03 group event h-tag shape
     // ----------------------------------------------------------------------
 
@@ -394,6 +550,131 @@ class MarmotMipBehaviorTest {
                 "h tag MUST be lowercase hex",
             )
         }
+
+    // ----------------------------------------------------------------------
+    // RFC 9420 §5.3 psk_secret derivation
+    // ----------------------------------------------------------------------
+
+    /**
+     * Empty PSK list MUST collapse to the all-zero `default_psk_secret`
+     * (RFC 9420 §8.1) — every epoch where no PSKs are proposed feeds zeros
+     * into the joiner_secret extract step.
+     */
+    @Test
+    fun computePskSecret_emptyListReturnsAllZeros() {
+        val alice = MlsGroup.create(aliceId.hexToByteArray())
+        val out = alice.computePskSecret(emptyList())
+        assertEquals(32, out.size, "psk_secret length must be Nh = 32 for SHA-256")
+        assertTrue(out.all { it == 0.toByte() }, "default_psk_secret is all zeros")
+    }
+
+    /**
+     * Single external PSK case — verify the derived `psk_secret` matches the
+     * RFC 9420 §5.3 reference computation:
+     *
+     * ```
+     * psk_extracted_0 = HKDF.Extract(salt = 0, ikm = psk_0)
+     * psk_input_0     = ExpandWithLabel(psk_extracted_0, "derived psk",
+     *                                    PSKLabel(id_0, 0, 1), 32)
+     * psk_secret_0    = HKDF.Extract(salt = 0, ikm = psk_input_0)
+     * ```
+     *
+     * The previous implementation HKDF-Extracted the bare PSK value with the
+     * running pskSecret as salt and never built a PSKLabel — its output
+     * would not match this expected value.
+     */
+    @Test
+    fun computePskSecret_singleExternalPsk_matchesSpecDerivation() {
+        val alice = MlsGroup.create(aliceId.hexToByteArray())
+        val pskId = ByteArray(16) { (it + 1).toByte() }
+        val pskNonce = ByteArray(16) { (0x80 or it).toByte() }
+        val pskValue = ByteArray(32) { (0xA0 or (it and 0x0F)).toByte() }
+        alice.registerPsk(pskId, pskValue)
+
+        val proposal =
+            com.vitorpamplona.quartz.marmot.mls.messages
+                .Proposal
+                .Psk(pskType = 1, pskId = pskId, pskNonce = pskNonce)
+
+        val actual = alice.computePskSecret(listOf(proposal))
+
+        // Reference computation per §5.3 (PSKType=1, no usage/group/epoch).
+        val zero = ByteArray(32)
+        val crypto = com.vitorpamplona.quartz.marmot.mls.crypto.MlsCryptoProvider
+        val pskExtracted = crypto.hkdfExtract(salt = zero, ikm = pskValue)
+
+        val labelWriter =
+            com.vitorpamplona.quartz.marmot.mls.codec
+                .TlsWriter()
+        labelWriter.putUint8(1) // PSKType external
+        labelWriter.putOpaqueVarInt(pskId)
+        labelWriter.putOpaqueVarInt(pskNonce)
+        labelWriter.putUint16(0) // index
+        labelWriter.putUint16(1) // count
+
+        val pskInput =
+            crypto.expandWithLabel(
+                secret = pskExtracted,
+                label = "derived psk",
+                context = labelWriter.toByteArray(),
+                length = 32,
+            )
+        val expected = crypto.hkdfExtract(salt = zero, ikm = pskInput)
+
+        assertContentEquals(expected, actual, "psk_secret must match RFC 9420 §5.3 derivation")
+    }
+
+    /**
+     * Resumption PSK (psktype = 2) carries usage/psk_group_id/psk_epoch
+     * fields that aren't representable on `Proposal.Psk` today. Encoding a
+     * PSKLabel without them would silently diverge from spec-conformant
+     * peers — we reject loudly until the proposal type is widened.
+     */
+    @Test
+    fun computePskSecret_resumptionPskRejectsUntilProposalWidened() {
+        val alice = MlsGroup.create(aliceId.hexToByteArray())
+        val pskId = ByteArray(16) { it.toByte() }
+        alice.registerPsk(pskId, ByteArray(32))
+
+        val proposal =
+            com.vitorpamplona.quartz.marmot.mls.messages
+                .Proposal
+                .Psk(pskType = 2, pskId = pskId, pskNonce = ByteArray(16))
+
+        assertFailsWith<IllegalStateException> {
+            alice.computePskSecret(listOf(proposal))
+        }
+    }
+
+    /**
+     * The `(index, count)` tail of PSKLabel ensures peers that resolve the
+     * SAME PSK in different list positions derive DIFFERENT psk_secret —
+     * the previous implementation ignored ordering entirely.
+     */
+    @Test
+    fun computePskSecret_orderingChangesOutput() {
+        val alice = MlsGroup.create(aliceId.hexToByteArray())
+        val idA = ByteArray(16) { 0x11 }
+        val idB = ByteArray(16) { 0x22 }
+        alice.registerPsk(idA, ByteArray(32) { 0x33 })
+        alice.registerPsk(idB, ByteArray(32) { 0x44 })
+
+        val pskA =
+            com.vitorpamplona.quartz.marmot.mls.messages
+                .Proposal
+                .Psk(pskType = 1, pskId = idA, pskNonce = ByteArray(8))
+        val pskB =
+            com.vitorpamplona.quartz.marmot.mls.messages
+                .Proposal
+                .Psk(pskType = 1, pskId = idB, pskNonce = ByteArray(8))
+
+        val ab = alice.computePskSecret(listOf(pskA, pskB))
+        val ba = alice.computePskSecret(listOf(pskB, pskA))
+        assertTrue(
+            !ab.contentEquals(ba),
+            "PSKLabel index/count means [A,B] and [B,A] must derive distinct psk_secret",
+        )
+    }
 
     @Test
     fun processGroupEvent_acceptsInnerEventWithMatchingPubkey() =
