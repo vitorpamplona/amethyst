@@ -1260,8 +1260,18 @@ class MlsGroup private constructor(
                     val refHash = proposalOrRef.proposalRef
                     val resolved =
                         pendingProposals.find { pending ->
-                            val proposalBytes = pending.proposal.toTlsBytes()
-                            val hash = MlsCryptoProvider.refHash("MLS 1.0 Proposal Reference", proposalBytes)
+                            // RFC 9420 §5.2: a ProposalRef hashes the encoded
+                            // AuthenticatedContent that delivered the proposal,
+                            // not just the bare Proposal struct. For inbound
+                            // proposals (e.g. C's standalone SelfRemove) we
+                            // captured those bytes at receive time. For local
+                            // proposals (which we always inline in our own
+                            // commits, never reference) we fall back to the
+                            // bare-proposal hash — keeps existing flows
+                            // working without needing an AC reconstruction
+                            // round-trip on the send side.
+                            val refValue = pending.authenticatedContentBytes ?: pending.proposal.toTlsBytes()
+                            val hash = MlsCryptoProvider.refHash("MLS 1.0 Proposal Reference", refValue)
                             hash.contentEquals(refHash)
                         }
                     requireNotNull(resolved) {
@@ -3083,11 +3093,135 @@ class MlsGroup private constructor(
             )
         return MlsMessage.fromPublicMessage(publicMessage).toTlsBytes() to preCommitExporterSecret
     }
+
+    /**
+     * Receive a standalone-proposal PublicMessage and stage it locally so a
+     * subsequent commit that references it (via `ProposalRef`) can resolve.
+     *
+     * Sent today by `wn`/openmls when a non-admin member self-removes — the
+     * member can't commit themselves out (admins reject `RequiredPathNotFound`),
+     * so they publish a `SelfRemove` proposal as a `PublicMessage` and wait
+     * for an admin to fold it into the next commit. Without this receiver
+     * side every other member silently drops the proposal, and the admin's
+     * subsequent commit then fails with "Commit references unknown proposal
+     * (ref not found in pending proposals)" — which is exactly the failure
+     * mode of marmot-interop test 15.
+     *
+     * Validation mirrors what every member-sender PublicMessage commit goes
+     * through: epoch + group_id match the current epoch, FramedContentTBS
+     * signature verifies against the sender's leaf signing key, and the
+     * membership_tag verifies against the current epoch's membership key.
+     * Anything missing or mismatched is a hard reject — the same threat
+     * model as PublicMessage commit reception.
+     */
+    fun receivePublicMessageProposal(pubMsg: PublicMessage) {
+        require(pubMsg.contentType == ContentType.PROPOSAL) {
+            "Expected PublicMessage with content_type == PROPOSAL, got ${pubMsg.contentType}"
+        }
+        require(pubMsg.epoch == groupContext.epoch) {
+            "Proposal epoch ${pubMsg.epoch} doesn't match current epoch ${groupContext.epoch}"
+        }
+        require(pubMsg.groupId.contentEquals(groupContext.groupId)) {
+            "Proposal group_id doesn't match current group"
+        }
+        require(pubMsg.sender.senderType == SenderType.MEMBER) {
+            "Standalone proposals from non-members are not accepted"
+        }
+        val senderLeafIndex = pubMsg.sender.leafIndex
+        require(senderLeafIndex in 0 until tree.leafCount) {
+            "Sender leaf index $senderLeafIndex out of range"
+        }
+        val senderLeaf =
+            requireNotNull(tree.getLeaf(senderLeafIndex)) {
+                "Sender leaf is blank at index $senderLeafIndex"
+            }
+
+        // Reconstruct FramedContentTBS exactly as the sender did in
+        // `buildSelfRemoveProposalMessage` so the signature and the
+        // membership_tag both verify against bit-identical bytes.
+        val tbsWriter = TlsWriter()
+        tbsWriter.putUint16(MlsMessage.MLS_VERSION_10)
+        tbsWriter.putUint16(WireFormat.PUBLIC_MESSAGE.value)
+        tbsWriter.putOpaqueVarInt(pubMsg.groupId)
+        tbsWriter.putUint64(pubMsg.epoch)
+        encodeSender(tbsWriter, pubMsg.sender)
+        tbsWriter.putOpaqueVarInt(pubMsg.authenticatedData)
+        tbsWriter.putUint8(ContentType.PROPOSAL.value)
+        tbsWriter.putBytes(pubMsg.content) // proposal struct, no length prefix
+        tbsWriter.putBytes(groupContext.toTlsBytes())
+        val tbs = tbsWriter.toByteArray()
+
+        require(MlsCryptoProvider.verifyWithLabel(senderLeaf.signatureKey, "FramedContentTBS", tbs, pubMsg.signature)) {
+            "Invalid FramedContentTBS signature on PublicMessage proposal from leaf $senderLeafIndex"
+        }
+
+        val membershipTag =
+            requireNotNull(pubMsg.membershipTag) {
+                "PublicMessage proposal from leaf $senderLeafIndex is missing membership_tag"
+            }
+        val tbmWriter = TlsWriter()
+        tbmWriter.putBytes(tbs)
+        tbmWriter.putOpaqueVarInt(pubMsg.signature)
+        require(verifyMembershipTag(tbmWriter.toByteArray(), membershipTag)) {
+            "Invalid membership_tag on PublicMessage proposal from leaf $senderLeafIndex"
+        }
+
+        val proposal = Proposal.decodeTls(TlsReader(pubMsg.content))
+        // SelfRemove is the only proposal type wn currently emits as a
+        // standalone PublicMessage. Other types come bundled inside a
+        // commit's `proposals` list. Defending against e.g. a standalone
+        // Add/Remove here would also work — they'd land in pendingProposals
+        // and be picked up by the next commit that references them — but we
+        // refuse anything other than SelfRemove for now to keep the receive
+        // side minimal until there's an interop reason to widen it.
+        require(proposal is Proposal.SelfRemove) {
+            "Only standalone SelfRemove proposals are accepted; got ${proposal::class.simpleName}"
+        }
+
+        // Capture the AuthenticatedContent bytes (RFC 9420 §6.1) so a
+        // subsequent commit's `ProposalRef` lookup can hash them per §5.2:
+        //
+        //   AuthenticatedContent = wire_format || FramedContent || FramedContentAuthData
+        //
+        // FramedContentAuthData for a PROPOSAL is just `signature` (no
+        // confirmation_tag). The TBS prefix (version + GroupContext) is
+        // NOT part of the AuthenticatedContent — those go into the
+        // signature input only.
+        val acWriter = TlsWriter()
+        acWriter.putUint16(WireFormat.PUBLIC_MESSAGE.value)
+        // FramedContent
+        acWriter.putOpaqueVarInt(pubMsg.groupId)
+        acWriter.putUint64(pubMsg.epoch)
+        encodeSender(acWriter, pubMsg.sender)
+        acWriter.putOpaqueVarInt(pubMsg.authenticatedData)
+        acWriter.putUint8(ContentType.PROPOSAL.value)
+        acWriter.putBytes(pubMsg.content)
+        // FramedContentAuthData (PROPOSAL: signature only)
+        acWriter.putOpaqueVarInt(pubMsg.signature)
+        val authenticatedContentBytes = acWriter.toByteArray()
+
+        pendingProposals.add(
+            PendingProposal(
+                proposal = proposal,
+                senderLeafIndex = senderLeafIndex,
+                authenticatedContentBytes = authenticatedContentBytes,
+            ),
+        )
+    }
 }
 
 data class PendingProposal(
     val proposal: Proposal,
     val senderLeafIndex: Int,
+    /**
+     * Encoded `AuthenticatedContent` bytes for the message that delivered
+     * this proposal — the input to `MakeProposalRef` per RFC 9420 §5.2.
+     * Null when the proposal was created locally and never went through
+     * the MLS framing layer; in that case the lookup falls back to the
+     * bare `proposal.toTlsBytes()` since local commits inline rather than
+     * reference our own pending proposals.
+     */
+    val authenticatedContentBytes: ByteArray? = null,
 )
 
 data class DecryptedMessage(

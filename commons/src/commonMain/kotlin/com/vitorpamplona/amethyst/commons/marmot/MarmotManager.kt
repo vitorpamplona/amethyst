@@ -113,6 +113,10 @@ class MarmotManager(
                 subscriptionManager.updateGroupSince(result.groupId, groupEvent.createdAt)
             }
 
+            is GroupEventResult.ProposalStaged -> {
+                subscriptionManager.updateGroupSince(result.groupId, groupEvent.createdAt)
+            }
+
             is GroupEventResult.CommitPending,
             is GroupEventResult.Duplicate,
             is GroupEventResult.UndecryptableOuterLayer,
