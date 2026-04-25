@@ -169,6 +169,8 @@ Run `amy --help` for the canonical list. As of today:
 | `create [--name NAME]` | Provision a full account + publish the nine Amethyst bootstrap events. |
 | `login KEY [--password X] [--private]` | Import `nsec` / `ncryptsec` / BIP-39 mnemonic / `npub` / `nprofile` / hex / NIP-05. Read-only when no secret material is supplied. |
 | `whoami` | Print the identity stored in `--data-dir`. |
+| `profile show [PUBKEY] [--refresh] [--timeout SECS]` | Print kind:0 metadata. Default reads from the local store (cache-first); `--refresh` forces a relay drain. PUBKEY accepts `npub` / `nprofile` / hex / `name@domain.tld`; omit for self. |
+| `profile edit --name X [--display-name X] …` | Build + publish a new kind:0 starting from the current cached metadata (or fetched if missing). |
 | `relay add URL [--type T]` | `T = nip65 \| inbox \| key_package \| all`. |
 | `relay list` | Dump configured relays by bucket. |
 | `relay publish-lists` | Publish kind:10002 (NIP-65) + kind:10050 (DM inbox) + kind:10051 (KeyPackage relay list). |
