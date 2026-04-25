@@ -22,11 +22,12 @@ package com.vitorpamplona.quartz.nip01Core.store.fs
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Kind
+import com.vitorpamplona.quartz.utils.Hex
+import com.vitorpamplona.quartz.utils.sha256.sha256
 import java.nio.ByteBuffer
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
-import java.security.MessageDigest
 import java.security.SecureRandom
 import kotlin.io.path.exists
 
@@ -195,20 +196,15 @@ internal class FsLayout(
         const val SEED_FILE = ".seed"
         const val JSON_EXT = ".json"
 
-        /** Lowercase hex SHA-256 of the given UTF-8 string. Used for d-tag slots. */
-        fun sha256Hex(s: String): String {
-            val md = MessageDigest.getInstance("SHA-256")
-            val bytes = md.digest(s.encodeToByteArray())
-            val sb = StringBuilder(bytes.size * 2)
-            for (b in bytes) {
-                val v = b.toInt() and 0xff
-                sb.append(HEX[v ushr 4])
-                sb.append(HEX[v and 0x0f])
-            }
-            return sb.toString()
-        }
-
-        private val HEX = "0123456789abcdef".toCharArray()
+        /**
+         * Lowercase hex SHA-256 of the given UTF-8 string. Used for
+         * addressable d-tag slots and d-tag-scoped tombstones — needs
+         * cryptographic collision resistance because the filename IS the
+         * NIP-01 `UNIQUE(kind, pubkey, d)` constraint. Reuses the shared
+         * Quartz primitives ([sha256], [Hex.encode]) so behaviour matches
+         * the rest of the codebase on every KMP target.
+         */
+        fun sha256Hex(s: String): String = Hex.encode(sha256(s.encodeToByteArray()))
 
         /** zero-padded to 10 digits so lex order == chronological order through year 2286. */
         fun tsPad(ts: Long): String = ts.toString().padStart(TS_PAD_WIDTH, '0')
