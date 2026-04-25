@@ -40,6 +40,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -82,7 +83,6 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
-import java.util.Locale
 
 @Composable
 @Preview
@@ -272,6 +272,8 @@ fun RenderLiveActivityEventInner(
         }
     }
 
+    val locale = LocalConfiguration.current.locales.get(0)
+
     participantUsers.forEach {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -288,7 +290,7 @@ fun RenderLiveActivityEventInner(
                 Text(
                     text =
                         it.replaceFirstChar {
-                            if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString()
+                            if (it.isLowerCase()) it.titlecase(locale) else it.toString()
                         },
                     color = MaterialTheme.colorScheme.placeholderText,
                     maxLines = 1,
