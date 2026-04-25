@@ -48,6 +48,74 @@ change to Amy's public API.
 
 ---
 
+## Local event store — the source of truth
+
+Every Nostr event Amy observes is verified (NIP-01 id + signature
+check) and persisted to a file-backed store at
+`<data-dir>/events-store/`. That includes:
+
+- events received from any relay subscription (`amy feed`, `amy dm
+  list`, `amy keypackage publish`, group sync, …),
+- events Amy generates and publishes itself,
+- inner events unwrapped from NIP-59 gift wraps.
+
+Malformed events are dropped before reaching command code. Persistence
+is best-effort — if the store fails (full disk, permissions), the
+relay subscription still works, but the event is not cached.
+
+The store is the authoritative cache of everything Amy has seen:
+profile metadata, relay lists (NIP-65 and NIP-02), gift wraps, group
+events, follow lists, etc. Commands that need any of these should read
+from the store first and only fall back to a relay fetch on miss.
+Three convenience helpers exist on `Context`:
+
+```kotlin
+ctx.profileOf(pubKey)            // latest kind:0    (NIP-01)
+ctx.relaysOf(pubKey)             // latest kind:10002 (NIP-65)
+ctx.contactsOf(pubKey)           // latest kind:3    (NIP-02)
+ctx.dmInboxOf(pubKey)            // latest kind:10050 (NIP-17 DM inbox)
+ctx.keyPackageRelaysOf(pubKey)   // latest kind:10051 (MIP-00 KP relays)
+ctx.cachedRelayListsOf(pubKey)   // RecipientRelayFetcher.Lists from cache
+```
+
+Commands that already read these cache-first:
+
+- `amy profile show` — `--refresh` to bypass.
+- `amy feed --following` — local kind:3 served via slot lookup; falls
+  back to a relay drain on first run.
+- `amy dm send` — recipient's kind:10050 / 10051 / 10002 served from
+  cache before falling back to `RecipientRelayFetcher`.
+- `amy marmot key-package check` and `amy marmot await key-package`
+  — same recipient-relay lookup, cache-first.
+- `amy marmot group add` — invitee relay lists served from cache.
+
+The store implements every feature of the Quartz SQLite store —
+NIP-01 replaceable / addressable uniqueness, NIP-09 deletion
+tombstones, NIP-40 expiration, NIP-50 search, NIP-62 right-to-vanish,
+NIP-91 multi-tag AND. See `cli/plans/2026-04-24-file-event-store-*.md`
+for the design and `quartz/.../store/fs/FsEventStore.kt` for the
+implementation. The on-disk layout is plain JSON files under shard
+directories, intentionally inspectable with `ls`, `cat`, `jq`,
+`grep`, `find`, `rsync`, and `git`.
+
+To manage the store directly:
+
+```sh
+# raw inspection
+find $AMY_HOME/events-store/events -name '*.json' | head
+jq . $AMY_HOME/events-store/replaceable/0/<pubkey>.json
+
+# delete a specific event (tombstone NOT installed — see below)
+rm $AMY_HOME/events-store/events/<aa>/<bb>/<id>.json
+```
+
+Deleting an event file is treated as a deliberate "I never saw this"
+by Amy. The store tolerates external edits: dangling index entries are
+skipped at query time and can be cleaned up with `compact()` /
+`scrub()` from the API.
+
+---
+
 ## Install
 
 Until Amy ships as a signed native binary (see
@@ -115,6 +183,8 @@ Run `amy --help` for the canonical list. As of today:
 | `create [--name NAME]` | Provision a full account + publish the nine Amethyst bootstrap events. |
 | `login KEY [--password X] [--private]` | Import `nsec` / `ncryptsec` / BIP-39 mnemonic / `npub` / `nprofile` / hex / NIP-05. Read-only when no secret material is supplied. |
 | `whoami` | Print the identity stored in `--data-dir`. |
+| `profile show [PUBKEY] [--refresh] [--timeout SECS]` | Print kind:0 metadata. Default reads from the local store (cache-first); `--refresh` forces a relay drain. PUBKEY accepts `npub` / `nprofile` / hex / `name@domain.tld`; omit for self. |
+| `profile edit --name X [--display-name X] …` | Build + publish a new kind:0 starting from the current cached metadata (or fetched if missing). |
 | `relay add URL [--type T]` | `T = nip65 \| inbox \| key_package \| all`. |
 | `relay list` | Dump configured relays by bucket. |
 | `relay publish-lists` | Publish kind:10002 (NIP-65) + kind:10050 (DM inbox) + kind:10051 (KeyPackage relay list). |
@@ -190,8 +260,13 @@ events.
 ```
 <data-dir>/
 ├── identity.json             # nsec/npub/hex — the account
-├── relays.json               # nip65 / inbox / key_package buckets
 ├── state.json                # sync cursors (giftWrapSince, groupSince)
+├── events-store/             # FsEventStore — every observed Nostr event
+│   ├── events/<aa>/<bb>/…    # canonical kind:0 / 3 / 10002 / 10050 / 10051 / 1 / 5 / 1059 / …
+│   ├── replaceable/<k>/…     # one slot per (kind, pubkey) for kind:0/3/10000-19999
+│   ├── addressable/…         # one slot per (kind, pubkey, d-tag) for kind:30000-39999
+│   ├── idx/                  # hardlink indexes (kind / author / owner / tag / fts / expires_at)
+│   └── tombstones/           # NIP-09 / NIP-62 enforcement
 └── marmot/
     ├── keypackages.bundle    # MLS KeyPackage bundles (NostrSignerInternal)
     └── groups/
@@ -202,6 +277,13 @@ events.
 All files are plain JSON or framed binary — human-inspectable, easy to
 diff across two data-dirs in a test run.
 
+The local relay configuration (kind:10002 / 10050 / 10051) is **not** a
+separate file — it lives in `events-store/` as signed events.
+`amy relay add` builds + signs + ingests a new relay-list event;
+`amy relay list` reads URLs straight out of the latest event for each
+kind; `amy relay publish-lists` broadcasts those events to upstream
+relays. There is no `relays.json`.
+
 ---
 
 ## Troubleshooting
@@ -211,9 +293,10 @@ diff across two data-dirs in a test run.
 - **`not_member`** — the group GID is unknown to this data-dir. Run
   `marmot group list` to confirm, or `marmot await group --name …` to
   wait for an invite to arrive.
-- **Hang on a network verb** — Amy connects to the relays in
-  `relays.json`; verify with `amy relay list`. Every network-bound
-  operation has a timeout — use `--timeout` for `await`, or wrap the
-  whole command in `timeout(1)` if you're scripting.
+- **Hang on a network verb** — Amy connects to the relays advertised
+  in your local kind:10002 / 10050 / 10051 events; inspect with
+  `amy relay list`. Every network-bound operation has a timeout — use
+  `--timeout` for `await`, or wrap the whole command in `timeout(1)`
+  if you're scripting.
 - **Nothing seems to publish** — inspect stderr; each publish prints
   per-relay `OK` / `REJECT` via the `[cli] …` traces.

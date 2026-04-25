@@ -58,6 +58,7 @@ object ProfileCommands {
         rest: Array<String>,
     ): Int {
         val args = Args(rest)
+        val refresh = args.bool("refresh")
         val timeoutSecs = args.longFlag("timeout", 8L)
         val ctx = Context.open(dataDir)
         try {
@@ -66,14 +67,33 @@ object ProfileCommands {
                 args.positionalOrNull(0)?.let { ctx.requireUserHex(it) }
                     ?: ctx.identity.pubKeyHex
             val isSelf = pubKey == ctx.identity.pubKeyHex
-            val relays = relaysForReadingProfile(ctx, isSelf)
-            val event = fetchLatestMetadata(ctx, pubKey, relays, timeoutSecs * 1000)
+
+            // Cache-first: serve from the local store unless --refresh is
+            // set. The store is the source of truth (see cli/README.md);
+            // every event drained from a relay has already been persisted
+            // here, so an offline read just works after the first sync.
+            val cached = if (!refresh) ctx.profileOf(pubKey) else null
+            val event: MetadataEvent?
+            val source: String
+            val queried: List<NormalizedRelayUrl>
+            if (cached != null) {
+                event = cached
+                source = "cache"
+                queried = emptyList()
+            } else {
+                val relays = relaysForReadingProfile(ctx, isSelf)
+                event = fetchLatestMetadata(ctx, pubKey, relays, timeoutSecs * 1000)
+                source = "relays"
+                queried = relays.toList()
+            }
+
             if (event == null) {
                 Json.writeLine(
                     mapOf(
                         "pubkey" to pubKey,
                         "found" to false,
-                        "queried_relays" to relays.map { it.url },
+                        "source" to source,
+                        "queried_relays" to queried.map { it.url },
                     ),
                 )
                 return 0
@@ -88,10 +108,11 @@ object ProfileCommands {
                 mapOf(
                     "pubkey" to pubKey,
                     "found" to true,
+                    "source" to source,
                     "event_id" to event.id,
                     "created_at" to event.createdAt,
                     "metadata" to (metadata ?: emptyMap<String, Any?>()),
-                    "queried_relays" to relays.map { it.url },
+                    "queried_relays" to queried.map { it.url },
                 ),
             )
             return 0

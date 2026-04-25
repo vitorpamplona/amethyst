@@ -28,9 +28,13 @@ import com.vitorpamplona.amethyst.commons.defaults.DefaultNIP65RelaySet
 import com.vitorpamplona.amethyst.commons.marmot.MarmotManager
 import com.vitorpamplona.amethyst.commons.marmot.ingest
 import com.vitorpamplona.quartz.marmot.MarmotFilters
+import com.vitorpamplona.quartz.marmot.RecipientRelayFetcher
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.crypto.verify
+import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndConfirmDetailed
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
@@ -39,7 +43,12 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip01Core.store.IEventStore
+import com.vitorpamplona.quartz.nip01Core.store.fs.FsEventStore
+import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
+import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
+import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import kotlinx.coroutines.selects.select
@@ -58,11 +67,28 @@ import okhttp3.OkHttpClient
  *    process-incoming, etc).
  *
  * Closing flushes run-state to disk and disconnects the client.
+ *
+ * # Source of truth — [store]
+ *
+ * Every Nostr event Amy observes — whether received from a relay
+ * subscription, unwrapped from a NIP-59 gift wrap, or generated locally
+ * before publish — is verified (NIP-01 signature + id check via
+ * [Event.verify]) and persisted to the file-backed [IEventStore] at
+ * `<data-dir>/events-store/`. Malformed events are dropped before
+ * reaching command code.
+ *
+ * This makes [store] the authoritative cache of everything Amy has ever
+ * seen: profile metadata, relay lists, contact lists, gift wraps,
+ * group events, etc. Persistence is best-effort — an I/O failure on
+ * the store does not break the relay subscription.
+ *
+ * Reads should prefer the local store via the helpers below
+ * ([profileOf], [relaysOf], [contactsOf]) and only fall back to a
+ * relay [drain] on cache miss.
  */
 class Context(
     val dataDir: DataDir,
     val identity: Identity,
-    val relays: RelayConfig,
     val state: RunState,
 ) : AutoCloseable {
     val signer = NostrSignerInternal(identity.keyPair())
@@ -89,6 +115,24 @@ class Context(
     private val mlsStore = FileMlsGroupStateStore(dataDir.groupsDir)
     private val keyPackageStore = FileKeyPackageBundleStore(dataDir.keyPackageBundleFile)
     private val messageStore = FileMarmotMessageStore(dataDir.groupsDir)
+
+    /**
+     * Filesystem-backed Nostr event store, rooted at [DataDir.eventsDir].
+     * Lazy so commands that don't touch persistent event state pay zero
+     * open cost (no `.lock` file, no seed allocation). Closed by
+     * [close] when this Context shuts down.
+     *
+     * Files are written pretty-printed (not the compact NIP-01 canonical
+     * form) so `cat`, `jq`, `git diff` are useful out of the box —
+     * humans inspect these files. Verification always re-canonicalises,
+     * so the stored bytes never feed back into a signature check.
+     */
+    val store: IEventStore by lazy {
+        FsEventStore(
+            root = dataDir.eventsDir.toPath(),
+            eventToJson = com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper::toJsonPretty,
+        )
+    }
 
     /** Fully-wired manager. Call [prepare] once before use to load persisted state. */
     val marmot: MarmotManager = MarmotManager(signer, mlsStore, messageStore, keyPackageStore)
@@ -119,13 +163,39 @@ class Context(
             .resolveUserHexOrNull(input, nip05Client)
             ?: throw IllegalArgumentException("Could not resolve user: '$input' (accepts npub, nprofile, 64-hex, or name@domain.tld)")
 
-    fun outboxRelays(): Set<NormalizedRelayUrl> = relays.normalized("nip65")
+    /**
+     * Outbox / NIP-65 write relays for this account. Read from the
+     * local kind:10002 (after `amy create` or `amy relay publish-lists`
+     * has written one); falls back to [DefaultNIP65RelaySet] when no
+     * advertised list exists yet.
+     *
+     * Returns *write*-marked URLs only — the semantic is "where I
+     * publish from", which mirrors `User.outboxRelays()` in the
+     * Android app.
+     */
+    fun outboxRelays(): Set<NormalizedRelayUrl> =
+        relaysOf(identity.pubKeyHex)?.writeRelaysNorm()?.takeIf { it.isNotEmpty() }?.toSet()
+            ?: DefaultNIP65RelaySet
 
-    fun inboxRelays(): Set<NormalizedRelayUrl> = relays.normalized("inbox")
+    /**
+     * DM inbox relays (NIP-17 kind:10050) for this account. Falls back
+     * to [DefaultDMRelayList] when no kind:10050 has been seen.
+     */
+    fun inboxRelays(): Set<NormalizedRelayUrl> =
+        dmInboxOf(identity.pubKeyHex)?.relays()?.takeIf { it.isNotEmpty() }?.toSet()
+            ?: DefaultDMRelayList.toSet()
 
-    fun keyPackageRelays(): Set<NormalizedRelayUrl> = relays.normalized("key_package")
+    /**
+     * KeyPackage relays (MIP-00 kind:10051) for this account. Falls
+     * back to [outboxRelays] when no kind:10051 has been seen — same
+     * fallback the Android app uses for KeyPackage discovery.
+     */
+    fun keyPackageRelays(): Set<NormalizedRelayUrl> =
+        keyPackageRelaysOf(identity.pubKeyHex)?.relays()?.takeIf { it.isNotEmpty() }?.toSet()
+            ?: outboxRelays()
 
-    fun anyRelays(): Set<NormalizedRelayUrl> = relays.normalized("all")
+    /** Union of all three buckets. */
+    fun anyRelays(): Set<NormalizedRelayUrl> = outboxRelays() + inboxRelays() + keyPackageRelays()
 
     /**
      * Seed relays for "look up someone we know nothing about" queries —
@@ -156,6 +226,10 @@ class Context(
         relayList: Set<NormalizedRelayUrl>,
         timeoutSecs: Long = 15,
     ): Map<NormalizedRelayUrl, Boolean> {
+        // Persist locally before broadcasting. The store is the source of
+        // truth — even if every relay rejects, we want our own outbound
+        // event in the local cache.
+        verifyAndStore(event)
         if (relayList.isEmpty()) return emptyMap()
         return client.publishAndConfirmDetailed(event, relayList, timeoutSecs)
     }
@@ -214,7 +288,9 @@ class Context(
             withTimeoutOrNull(timeoutMs) {
                 while (remaining.isNotEmpty()) {
                     select {
-                        eventChannel.onReceive { collected.add(it) }
+                        eventChannel.onReceive { pair ->
+                            if (verifyAndStore(pair.second)) collected.add(pair)
+                        }
                         doneChannel.onReceive { r -> remaining.remove(r) }
                     }
                 }
@@ -222,7 +298,8 @@ class Context(
                 while (true) {
                     val r = eventChannel.tryReceive()
                     if (!r.isSuccess) break
-                    collected.add(r.getOrThrow())
+                    val pair = r.getOrThrow()
+                    if (verifyAndStore(pair.second)) collected.add(pair)
                 }
             }
         } finally {
@@ -231,6 +308,113 @@ class Context(
             doneChannel.close()
         }
         return collected
+    }
+
+    /**
+     * Verify [event]'s NIP-01 id+signature and, if valid, persist it
+     * to [store]. Returns `true` when the event was accepted (and
+     * therefore should be surfaced to callers). Persistence failures
+     * (I/O errors, full disk) are logged but do not propagate.
+     *
+     * Every event-arrival path in the CLI funnels through this method
+     * so that [store] is the authoritative cache of what Amy has seen.
+     */
+    fun verifyAndStore(event: Event): Boolean {
+        if (!event.verify()) {
+            System.err.println("[cli] dropped event ${event.id.take(8)} kind=${event.kind} — bad signature")
+            return false
+        }
+        try {
+            store.insert(event)
+        } catch (t: Throwable) {
+            System.err.println("[cli] store insert failed for ${event.id.take(8)}: ${t.message}")
+        }
+        return true
+    }
+
+    // ------------------------------------------------------------------
+    // Cache-first reads from [store]
+    // ------------------------------------------------------------------
+
+    /**
+     * Latest known kind:0 metadata for [pubKey], read from the local
+     * store. Returns null if Amy has never observed a profile for
+     * this user. Callers that need a network fetch on miss should fall
+     * back to [drain] explicitly — this helper never hits the network.
+     */
+    fun profileOf(pubKey: HexKey): MetadataEvent? =
+        store
+            .query<Event>(
+                Filter(authors = listOf(pubKey), kinds = listOf(MetadataEvent.KIND), limit = 1),
+            ).firstOrNull() as? MetadataEvent
+
+    /**
+     * Latest known kind:10002 advertised relay list (NIP-65) for
+     * [pubKey]. `null` when Amy has never seen one.
+     */
+    fun relaysOf(pubKey: HexKey): AdvertisedRelayListEvent? =
+        store
+            .query<Event>(
+                Filter(authors = listOf(pubKey), kinds = listOf(AdvertisedRelayListEvent.KIND), limit = 1),
+            ).firstOrNull() as? AdvertisedRelayListEvent
+
+    /**
+     * Latest known kind:3 contact list (NIP-02) for [pubKey], or
+     * `null` if Amy has never observed one. Useful for follow-graph
+     * lookups without re-hitting relays.
+     */
+    fun contactsOf(pubKey: HexKey): ContactListEvent? =
+        store
+            .query<Event>(
+                Filter(authors = listOf(pubKey), kinds = listOf(ContactListEvent.KIND), limit = 1),
+            ).firstOrNull() as? ContactListEvent
+
+    /**
+     * Latest known kind:10050 chat-message (NIP-17 DM) inbox relay list
+     * for [pubKey], or `null` if Amy has never observed one. Used by
+     * `dm send` to resolve where to deliver a wrap.
+     */
+    fun dmInboxOf(pubKey: HexKey): ChatMessageRelayListEvent? =
+        store
+            .query<Event>(
+                Filter(authors = listOf(pubKey), kinds = listOf(ChatMessageRelayListEvent.KIND), limit = 1),
+            ).firstOrNull() as? ChatMessageRelayListEvent
+
+    /**
+     * Latest known kind:10051 KeyPackage relay list (MIP-00) for
+     * [pubKey], or `null` if Amy has never observed one. Used by
+     * `marmot key-package check` and `marmot await key-package` to
+     * locate where the recipient publishes their KeyPackages.
+     */
+    fun keyPackageRelaysOf(pubKey: HexKey): KeyPackageRelayListEvent? =
+        store
+            .query<Event>(
+                Filter(authors = listOf(pubKey), kinds = listOf(KeyPackageRelayListEvent.KIND), limit = 1),
+            ).firstOrNull() as? KeyPackageRelayListEvent
+
+    /**
+     * Assemble a [RecipientRelayFetcher.Lists] from the local store —
+     * the same shape callers get from [RecipientRelayFetcher.fetchRelayLists]
+     * after a network drain, but no network round-trip. Returns `null`
+     * only when the cache has *no* relay-list events at all for
+     * [pubKey] (none of kind 10050 / 10051 / 10002), so callers can
+     * trivially fall back to the network fetcher with `?:`.
+     *
+     * Stale-data caveat: replaceable events are immutable per snapshot
+     * — if the recipient has rotated their inbox since we last saw them,
+     * we'll still hand back the old list. Commands that care can drain
+     * (which re-populates the cache) or expose a `--refresh` flag.
+     */
+    fun cachedRelayListsOf(pubKey: HexKey): RecipientRelayFetcher.Lists? {
+        val dm = dmInboxOf(pubKey)
+        val kp = keyPackageRelaysOf(pubKey)
+        val nip65 = relaysOf(pubKey)
+        if (dm == null && kp == null && nip65 == null) return null
+        return RecipientRelayFetcher.Lists(
+            dmInbox = dm?.relays().orEmpty(),
+            keyPackage = kp?.relays().orEmpty(),
+            nip65 = nip65,
+        )
     }
 
     /**
@@ -387,6 +571,25 @@ class Context(
             client.close()
         } catch (_: Exception) {
         }
+        // Only close the store if it was actually opened — by-lazy
+        // otherwise allocates the lock channel just to release it.
+        if (storeIsInitialized()) {
+            try {
+                store.close()
+            } catch (_: Exception) {
+            }
+        }
+    }
+
+    private fun storeIsInitialized(): Boolean {
+        // Reflect on the lazy delegate to avoid forcing initialisation in close().
+        return try {
+            val field = javaClass.getDeclaredField("store\$delegate").apply { isAccessible = true }
+            val delegate = field.get(this) as Lazy<*>
+            delegate.isInitialized()
+        } catch (_: Throwable) {
+            false
+        }
     }
 
     companion object {
@@ -408,7 +611,6 @@ class Context(
             return Context(
                 dataDir = dataDir,
                 identity = identity,
-                relays = dataDir.loadRelays(),
                 state = dataDir.loadRunState(),
             )
         }

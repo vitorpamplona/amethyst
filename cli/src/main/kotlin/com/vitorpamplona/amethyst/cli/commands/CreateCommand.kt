@@ -25,7 +25,6 @@ import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Identity
 import com.vitorpamplona.amethyst.cli.Json
-import com.vitorpamplona.amethyst.cli.RelayConfig
 import com.vitorpamplona.amethyst.commons.account.bootstrapAccountEvents
 import com.vitorpamplona.amethyst.commons.defaults.DefaultDMRelayList
 import com.vitorpamplona.amethyst.commons.defaults.DefaultNIP65List
@@ -34,9 +33,14 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 
 /**
  * `amy create [--name NAME]` — provision a brand-new Nostr account with the
- * same defaults Amethyst uses, publish the nine bootstrap events to the
- * default NIP-65 relay set, and seed this data-dir's relay config so
- * subsequent `amy marmot …` commands immediately target the right relays.
+ * same defaults Amethyst uses and publish the nine bootstrap events to the
+ * default NIP-65 relay set.
+ *
+ * The bootstrap events include kind:10002 / 10050 / 10051, which are
+ * persisted into [Context.store] as a side effect of [Context.publish].
+ * From that point on, [Context.outboxRelays], [Context.inboxRelays], and
+ * [Context.keyPackageRelays] read straight from the local store — no
+ * separate `relays.json` is needed.
  *
  * The heavy lifting (which events to sign, with which defaults) lives in
  * `commons/.../AccountBootstrap.kt` so this command stays assembly-thin
@@ -53,10 +57,9 @@ object CreateCommand {
         val args = Args(rest)
         val name = args.flag("name")
 
-        // 1. Mint identity + seed relay config.
+        // 1. Mint identity.
         val identity = Identity.create()
         dataDir.saveIdentity(identity)
-        dataDir.saveRelays(defaultRelayConfig())
 
         // 2. Build the nine signed bootstrap events via the shared helper.
         val signer = NostrSignerSync(identity.keyPair())
@@ -64,6 +67,10 @@ object CreateCommand {
 
         // 3. Open a Context so we reuse publishAndConfirmDetailed + the
         //    NostrClient plumbing instead of reinventing a second client.
+        //    Each ctx.publish call also persists the event into the local
+        //    store via verifyAndStore — so kind:10002 / 10050 / 10051 are
+        //    immediately readable by outboxRelays() / inboxRelays() /
+        //    keyPackageRelays() without a separate config file.
         val ctx = Context.open(dataDir)
         val accepted = mutableMapOf<String, List<String>>()
         try {
@@ -94,21 +101,5 @@ object CreateCommand {
             ),
         )
         return 0
-    }
-
-    /**
-     * Mirror of what Amethyst's in-app defaults would write on disk — NIP-65
-     * outbox, DM inbox (kind:10050), and KeyPackage host relays (kind:10051).
-     * Keeping these in sync with the signed events above is load-bearing:
-     * `amy marmot key-package publish` later reads `relays.json` to decide
-     * where to publish, and if those diverge from the advertised kind:10051
-     * nobody will find the KPs.
-     */
-    private fun defaultRelayConfig(): RelayConfig {
-        val cfg = RelayConfig()
-        DefaultNIP65List.forEach { cfg.add("nip65", it.relayUrl.url) }
-        DefaultDMRelayList.forEach { cfg.add("inbox", it.url) }
-        DefaultNIP65RelaySet.forEach { cfg.add("key_package", it.url) }
-        return cfg
     }
 }

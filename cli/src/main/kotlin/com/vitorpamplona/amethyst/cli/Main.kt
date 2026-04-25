@@ -136,6 +136,10 @@ private suspend fun dispatch(argv: Array<String>): Int {
             Commands.notes(dataDir, tail)
         }
 
+        "store" -> {
+            Commands.store(dataDir, tail)
+        }
+
         else -> {
             System.err.println("unknown subcommand: $head")
             printUsage()
@@ -313,6 +317,12 @@ private fun printUsage() {
         |  marmot await epoch GID --min N
         |
         |  marmot reset [--yes]                       wipe all local MLS/KeyPackage state (destructive)
+        |
+        |Local event store (`<data-dir>/events-store/`):
+        |  store stat                                 event count, kind histogram, disk usage
+        |  store sweep-expired                        delete events past their NIP-40 expiration
+        |  store scrub                                rebuild idx/ from canonical events (after edits / crashes)
+        |  store compact                              drop dangling idx entries (canonical gone)
         """.trimMargin(),
     )
 }

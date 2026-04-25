@@ -72,12 +72,17 @@ object GroupAddMemberCommand {
                 // this the inviter can only broadcast to their own relays,
                 // which silently fails the moment the two users have
                 // disjoint relay configs.
+                //
+                // Cache-first via Context.cachedRelayListsOf — every
+                // relay list seen previously is in the local store
+                // already.
                 val recipient =
-                    RecipientRelayFetcher.fetchRelayLists(
-                        client = ctx.client,
-                        pubKey = pub,
-                        seedRelays = seed,
-                    )
+                    ctx.cachedRelayListsOf(pub)
+                        ?: RecipientRelayFetcher.fetchRelayLists(
+                            client = ctx.client,
+                            pubKey = pub,
+                            seedRelays = seed,
+                        )
 
                 // KeyPackage discovery (MIP-00): prefer the invitee's own
                 // kind:10051, then their kind:10002 write marker, then our

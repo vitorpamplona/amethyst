@@ -415,7 +415,13 @@ object DmCommands {
         allowFallback: Boolean,
     ): RelaySet {
         val seed = ctx.bootstrapRelays()
-        val lists = RecipientRelayFetcher.fetchRelayLists(ctx.client, recipient, seed)
+        // Cache-first: if Amy has previously seen the recipient's
+        // kind:10050 / 10051 / 10002 events, use the local copy and
+        // skip the network drain entirely. Falls back to the live
+        // fetcher only if the local store has nothing.
+        val lists =
+            ctx.cachedRelayListsOf(recipient)
+                ?: RecipientRelayFetcher.fetchRelayLists(ctx.client, recipient, seed)
         val dmInbox = lists.dmInbox.toSet()
         if (dmInbox.isNotEmpty()) return RelaySet(dmInbox, "kind_10050")
         if (!allowFallback) return RelaySet(emptySet(), "kind_10050")

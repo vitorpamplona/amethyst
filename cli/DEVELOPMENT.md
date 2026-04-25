@@ -43,7 +43,7 @@ cli/src/main/kotlin/com/vitorpamplona/amethyst/cli/
 ├── Main.kt                    # argv → subcommand dispatch
 ├── Args.kt                    # tiny flag parser (no framework)
 ├── Json.kt                    # single-line stdout + error printer
-├── Config.kt                  # Identity, RelayConfig, RunState, DataDir
+├── Config.kt                  # Identity, RunState, DataDir
 ├── Context.kt                 # per-run wiring: signer + NostrClient +
 │                              #   MarmotManager + publish/drain/sync helpers
 ├── stores/FileStores.kt       # File-backed MLS / KP / message stores
@@ -196,7 +196,7 @@ Amy-specific layer still needs its own coverage:
 | Argument parsing (`Args`, flag forms, `--data-dir=…` vs `--data-dir …`) | Plain JVM unit tests in `cli/src/test/kotlin/`. |
 | Error / exit-code contract (bad args → 2, await timeout → 124, runtime → 1) | Table-driven tests invoking `main(argv)` with captured stdout/stderr. |
 | JSON output shape (each command's keys and types) | Snapshot tests: run a command against a throwaway data-dir, assert the JSON matches a golden file. |
-| File layout on disk (`identity.json`, `relays.json`, `marmot/groups/*.mls`, `marmot/keypackages.bundle`) | Structural assertions after a command sequence. |
+| File layout on disk (`identity.json`, `events-store/…`, `marmot/groups/*.mls`, `marmot/keypackages.bundle`) | Structural assertions after a command sequence. |
 | Round-trip between two data-dirs on a local relay | End-to-end shell harnesses under `cli/tests/`. Each harness spins up a local `nostr-rs-relay`, bootstraps two or more fresh identities in their own `--data-dir`s, and drives a scenario via `amy` (+ `wn` for Marmot interop against whitenoise-rs). Today there are two suites: `cli/tests/marmot/` (13 MLS scenarios vs whitenoise-rs) and `cli/tests/dm/` (NIP-17 DM round-trips between two `amy` clients). |
 | Interop with other clients | Covered by `cli/tests/marmot/marmot-interop-headless.sh` (drives Amy against whitenoise-rs `wn`/`wnd`). Add new scenarios there or start a new sibling under `cli/tests/`. |
 

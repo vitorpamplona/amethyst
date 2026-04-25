@@ -25,11 +25,28 @@ import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Json
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrlOrNull
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayInfo
 import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayType
 
+/**
+ * `amy relay <add|list|publish-lists>` — manage this account's relay sets.
+ *
+ * Source of truth is the local event store (`<data-dir>/events-store/`)
+ * via Context.relaysOf / dmInboxOf / keyPackageRelaysOf. There is no
+ * `relays.json` any more — the kind:10002 / 10050 / 10051 events ARE
+ * the relay configuration.
+ *
+ *   - `relay add URL --type T`   builds + signs + ingests a new relay-
+ *                                list event for the given bucket. No
+ *                                broadcast yet — call `publish-lists`.
+ *   - `relay list`               dumps the URLs from the local store.
+ *   - `relay publish-lists`      broadcasts the three events to every
+ *                                configured relay (union).
+ */
 object RelayCommands {
     suspend fun dispatch(
         dataDir: DataDir,
@@ -46,78 +63,128 @@ object RelayCommands {
         }
     }
 
-    private fun add(
+    private suspend fun add(
         dataDir: DataDir,
         args: Args,
     ): Int {
-        val url = args.positional(0, "url")
+        val rawUrl = args.positional(0, "url")
         val type = args.flag("type", "all") ?: "all"
-        val cfg = dataDir.loadRelays()
-        val addedTo = mutableListOf<String>()
+        val normalized =
+            rawUrl.normalizeRelayUrlOrNull()
+                ?: return Json.error("bad_args", "invalid relay url: $rawUrl")
+
         val targets = if (type == "all") listOf("nip65", "inbox", "key_package") else listOf(type)
-        for (t in targets) {
-            if (cfg.add(t, url)) addedTo.add(t)
+        val ctx = Context.open(dataDir)
+        try {
+            val addedTo = mutableListOf<String>()
+            val alreadyPresent = mutableListOf<String>()
+            for (t in targets) {
+                if (addToBucket(ctx, t, normalized)) addedTo.add(t) else alreadyPresent.add(t)
+            }
+            Json.writeLine(
+                mapOf(
+                    "url" to rawUrl,
+                    "added_to" to addedTo,
+                    "already_present" to alreadyPresent,
+                ),
+            )
+            return 0
+        } finally {
+            ctx.close()
         }
-        dataDir.saveRelays(cfg)
-        Json.writeLine(
-            mapOf(
-                "url" to url,
-                "added_to" to addedTo,
-                "already_present" to (targets - addedTo.toSet()),
-            ),
-        )
-        return 0
+    }
+
+    /**
+     * Append [url] to the relay-list event for [type] (creating one if
+     * absent). Returns `true` when a new event was inserted, `false`
+     * when [url] was already present in the existing event.
+     */
+    private suspend fun addToBucket(
+        ctx: Context,
+        type: String,
+        url: NormalizedRelayUrl,
+    ): Boolean {
+        val self = ctx.identity.pubKeyHex
+        return when (type) {
+            "nip65" -> {
+                val existing = ctx.relaysOf(self)?.relays().orEmpty()
+                if (existing.any { it.relayUrl.url == url.url }) return false
+                val combined = existing + AdvertisedRelayInfo(url, AdvertisedRelayType.BOTH)
+                val event = AdvertisedRelayListEvent.create(combined, ctx.signer)
+                ctx.verifyAndStore(event)
+                true
+            }
+
+            "inbox" -> {
+                val existing = ctx.dmInboxOf(self)?.relays().orEmpty()
+                if (url in existing) return false
+                val event = ChatMessageRelayListEvent.create(existing + url, ctx.signer)
+                ctx.verifyAndStore(event)
+                true
+            }
+
+            "key_package", "keyPackage" -> {
+                val existing = ctx.keyPackageRelaysOf(self)?.relays().orEmpty()
+                if (url in existing) return false
+                val event = KeyPackageRelayListEvent.create(existing + url, ctx.signer)
+                ctx.verifyAndStore(event)
+                true
+            }
+
+            else -> {
+                throw IllegalArgumentException("unknown relay type: $type")
+            }
+        }
     }
 
     private fun list(dataDir: DataDir): Int {
-        val cfg = dataDir.loadRelays()
-        Json.writeLine(
-            mapOf(
-                "nip65" to cfg.nip65,
-                "inbox" to cfg.inbox,
-                "key_package" to cfg.keyPackage,
-            ),
-        )
-        return 0
+        val ctx = Context.open(dataDir)
+        try {
+            val self = ctx.identity.pubKeyHex
+            Json.writeLine(
+                mapOf(
+                    "nip65" to (ctx.relaysOf(self)?.relaysNorm()?.map { it.url } ?: emptyList()),
+                    "inbox" to (ctx.dmInboxOf(self)?.relays()?.map { it.url } ?: emptyList()),
+                    "key_package" to (ctx.keyPackageRelaysOf(self)?.relays()?.map { it.url } ?: emptyList()),
+                ),
+            )
+            return 0
+        } finally {
+            ctx.close()
+        }
     }
 
     private suspend fun publishLists(dataDir: DataDir): Int {
         val ctx = Context.open(dataDir)
         try {
             ctx.prepare()
-            val nip65Relays = ctx.relays.normalized("nip65").toList()
-            val inboxRelays = ctx.relays.normalized("inbox").toList()
-            // MIP-00: other clients discover our KeyPackages by querying the
-            // relays advertised in our kind:10051 event. If no key_package
-            // bucket is configured, fall back to the NIP-65 set so we always
-            // publish a non-empty list — an empty 10051 would make us
-            // undiscoverable by other Marmot clients.
-            val keyPackageRelays =
-                ctx.relays
-                    .normalized("key_package")
-                    .ifEmpty { ctx.outboxRelays() }
-                    .toList()
+            val self = ctx.identity.pubKeyHex
+            val nip65Event = ctx.relaysOf(self)
+            val inboxEvent = ctx.dmInboxOf(self)
+            val keyPackageEvent = ctx.keyPackageRelaysOf(self)
 
-            val nip65Infos = nip65Relays.map { AdvertisedRelayInfo(it, AdvertisedRelayType.BOTH) }
-            val nip65Event = AdvertisedRelayListEvent.create(nip65Infos, ctx.signer)
-            val inboxEvent = ChatMessageRelayListEvent.create(inboxRelays, ctx.signer)
-            val keyPackageListEvent = KeyPackageRelayListEvent.create(keyPackageRelays, ctx.signer)
+            if (nip65Event == null && inboxEvent == null && keyPackageEvent == null) {
+                return Json.error(
+                    "no_relays",
+                    "no relay lists in the local store; run `amy relay add` first or `amy create` to bootstrap defaults",
+                )
+            }
 
             val targets = ctx.anyRelays()
-            val nip65Result = ctx.publish(nip65Event, targets)
-            val inboxResult = ctx.publish(inboxEvent, targets)
-            val keyPackageListResult = ctx.publish(keyPackageListEvent, targets)
+            val nip65Result = nip65Event?.let { ctx.publish(it, targets) }.orEmpty()
+            val inboxResult = inboxEvent?.let { ctx.publish(it, targets) }.orEmpty()
+            val keyPackageResult = keyPackageEvent?.let { ctx.publish(it, targets) }.orEmpty()
 
             Json.writeLine(
                 mapOf(
-                    "nip65_event_id" to nip65Event.id,
-                    "inbox_event_id" to inboxEvent.id,
-                    "key_package_list_event_id" to keyPackageListEvent.id,
+                    "nip65_event_id" to nip65Event?.id,
+                    "inbox_event_id" to inboxEvent?.id,
+                    "key_package_list_event_id" to keyPackageEvent?.id,
                     "accepted_by" to
                         mapOf(
                             "nip65" to nip65Result.filterValues { it }.keys.map { it.url },
                             "inbox" to inboxResult.filterValues { it }.keys.map { it.url },
-                            "key_package_list" to keyPackageListResult.filterValues { it }.keys.map { it.url },
+                            "key_package_list" to keyPackageResult.filterValues { it }.keys.map { it.url },
                         ),
                 ),
             )
