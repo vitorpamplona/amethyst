@@ -37,25 +37,33 @@ import kotlin.system.exitProcess
  *
  * Exit codes:
  *   0 — success
- *   1 — runtime error (printed as JSON on stderr: {"error": "...", "detail": "..."})
+ *   1 — runtime error
  *   2 — invalid arguments
  *   124 — await timeout
  *
- * Every command that succeeds prints exactly one JSON object to stdout.
- * Diagnostic logs go to stderr and are safe to discard.
+ * Default output is human-readable text on stdout. Pass `--json` to
+ * switch to the machine contract: a single JSON object on stdout per
+ * successful command, JSON `{"error": "...", "detail": "..."}` on stderr
+ * for failures. The JSON shape is amy's stable public API; the text
+ * shape is not. Diagnostic logs always go to stderr.
  */
 fun main(argv: Array<String>) {
+    // Set output mode before dispatch so even argument-parsing errors
+    // honour --json.
+    if (argv.any { it == "--json" || it == "--json=true" }) {
+        Output.mode = Output.Mode.JSON
+    }
     val code =
         try {
             runBlocking { dispatch(argv) }
         } catch (e: IllegalArgumentException) {
-            Json.error("bad_args", e.message)
+            Output.error("bad_args", e.message)
             2
         } catch (e: AwaitTimeout) {
-            Json.error("timeout", e.message)
+            Output.error("timeout", e.message)
             124
         } catch (e: Exception) {
-            Json.error("runtime", "${e::class.simpleName}: ${e.message}")
+            Output.error("runtime", "${e::class.simpleName}: ${e.message}")
             1
         }
     exitProcess(code)
@@ -74,7 +82,7 @@ private suspend fun dispatch(argv: Array<String>): Int {
     // Pull global flags out of argv before subcommand parsing so subcommands see
     // only their own args.
     val filteredArgs = mutableListOf<String>()
-    var dataDirFlag: String? = null
+    var accountFlag: String? = null
     var secretBackendFlag: String? = null
     var passphraseFileFlag: String? = null
     var i = 0
@@ -82,9 +90,10 @@ private suspend fun dispatch(argv: Array<String>): Int {
         val a = argv[i]
         val (matched, consumed) = extractGlobalFlag(a, argv, i)
         when (matched) {
-            GlobalFlag.DATA_DIR -> dataDirFlag = consumed.value
+            GlobalFlag.ACCOUNT -> accountFlag = consumed.value
             GlobalFlag.SECRET_BACKEND -> secretBackendFlag = consumed.value
             GlobalFlag.PASSPHRASE_FILE -> passphraseFileFlag = consumed.value
+            GlobalFlag.JSON -> Output.mode = Output.Mode.JSON
             null -> filteredArgs.add(a)
         }
         i += consumed.tokensConsumed
@@ -94,10 +103,20 @@ private suspend fun dispatch(argv: Array<String>): Int {
         return 2
     }
 
-    val secrets = SecretStore.from(backendFlag = secretBackendFlag, passphraseFile = passphraseFileFlag)
-    val dataDir = DataDir.resolve(dataDirFlag, secrets)
     val head = filteredArgs[0]
     val tail = filteredArgs.drop(1).toTypedArray()
+
+    // `use` operates on `<root>/current` directly and must work even
+    // when account auto-pick would fail (the whole point of `use` is to
+    // resolve "multiple accounts, ambiguous" cases) — so it skips
+    // DataDir.resolve. Other commands fall through to the normal path.
+    if (head == "use") {
+        return com.vitorpamplona.amethyst.cli.commands.UseCommand
+            .run(tail)
+    }
+
+    val secrets = SecretStore.from(backendFlag = secretBackendFlag, passphraseFile = passphraseFileFlag)
+    val dataDir = DataDir.resolve(accountFlag = accountFlag, secrets = secrets)
 
     return when (head) {
         "init" -> {
@@ -189,10 +208,12 @@ private suspend fun marmotDispatch(
 
 private enum class GlobalFlag(
     val long: String,
+    val takesValue: Boolean = true,
 ) {
-    DATA_DIR("--data-dir"),
+    ACCOUNT("--account"),
     SECRET_BACKEND("--secret-backend"),
     PASSPHRASE_FILE("--passphrase-file"),
+    JSON("--json", takesValue = false),
 }
 
 private data class ConsumedFlag(
@@ -212,7 +233,11 @@ private fun extractGlobalFlag(
 ): Pair<GlobalFlag?, ConsumedFlag> {
     for (flag in GlobalFlag.values()) {
         if (token == flag.long) {
-            return flag to ConsumedFlag(argv.getOrNull(idx + 1), 2)
+            return if (flag.takesValue) {
+                flag to ConsumedFlag(argv.getOrNull(idx + 1), 2)
+            } else {
+                flag to ConsumedFlag(null, 1)
+            }
         }
         val prefix = "${flag.long}="
         if (token.startsWith(prefix)) {
@@ -228,10 +253,38 @@ private fun printUsage() {
         |amy — Amethyst command-line interface
         |
         |Usage:
-        |  amy [--data-dir PATH]
+        |  amy [--account ACCOUNT]
         |      [--secret-backend auto|keychain|ncryptsec|plaintext]
         |      [--passphrase-file PATH]
+        |      [--json]
         |      <cmd> [args...]
+        |
+        |Account selection:
+        |  All state lives under ~/.amy/. Per-account directories
+        |  ~/.amy/<account>/ hold identity, cursors, MLS state, and
+        |  aliases; every observed Nostr event lands in the shared
+        |  ~/.amy/shared/events-store/. ACCOUNT must match
+        |  [a-zA-Z0-9_-]{1,64} (no spaces, no slashes).
+        |
+        |  Resolution order:
+        |    1. --account X if given.
+        |    2. ~/.amy/current marker (set by `amy use X`).
+        |    3. Sole subdirectory of ~/.amy/ other than shared/.
+        |    4. Error — disambiguate with --account or `amy use`.
+        |
+        |  Test harnesses isolate by overriding ${'$'}HOME for the amy
+        |  subprocess (`HOME=/tmp/run.123 amy --account alice ...`).
+        |
+        |  use NAME                                  pin NAME as the active account
+        |  use --clear                                remove the pin
+        |  use                                        print current pin + available accounts
+        |
+        |Output:
+        |  Default: human-readable text on stdout.
+        |  --json:  one JSON object per success on stdout, JSON
+        |           {"error":...,"detail":...} on stderr for failures
+        |           (the stable machine-readable contract — exit codes
+        |           0 success / 1 error / 2 bad args / 124 timeout).
         |
         |Private-key storage:
         |  Default (`auto`) uses the OS keychain when one is available
@@ -243,7 +296,7 @@ private fun printUsage() {
         |
         |Identity:
         |  init [--nsec NSEC]           create or import a bare identity (no defaults published)
-        |  create [--name NAME]         provision a full Amethyst-style account + publish bootstrap events
+        |  create [--name NAME]            provision a full Amethyst-style account + publish bootstrap events
         |  login KEY [--password X]     import (nsec|ncryptsec|mnemonic|npub|nprofile|hex|nip05)
         |  whoami                       print current identity
         |

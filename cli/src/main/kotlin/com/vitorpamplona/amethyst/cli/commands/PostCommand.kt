@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.cli.commands
 import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
-import com.vitorpamplona.amethyst.cli.Json
+import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 
 /**
@@ -39,9 +39,9 @@ object PostCommand {
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
-        if (rest.isEmpty()) return Json.error("bad_args", "post <text> [--relay URL …]")
+        if (rest.isEmpty()) return Output.error("bad_args", "post <text> [--relay URL …]")
         val text = rest[0]
-        if (text.isBlank()) return Json.error("bad_args", "post text must not be blank")
+        if (text.isBlank()) return Output.error("bad_args", "post text must not be blank")
 
         val args = Args(rest.drop(1).toTypedArray())
         val extraRelays =
@@ -61,13 +61,13 @@ object PostCommand {
                 }
             val targets = (outbox + extraNormalized).toSet()
             if (targets.isEmpty()) {
-                return Json.error("no_relays", "no outbox relays configured; pass --relay or run `amy relay add`")
+                return Output.error("no_relays", "no outbox relays configured; pass --relay or run `amy relay add`")
             }
 
             val signed = ctx.signer.sign(TextNoteEvent.build(text))
             val ack = ctx.publish(signed, targets)
 
-            Json.writeLine(
+            Output.emit(
                 mapOf(
                     "event_id" to signed.id,
                     "kind" to signed.kind,

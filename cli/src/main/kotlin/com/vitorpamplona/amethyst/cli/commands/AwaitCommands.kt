@@ -25,7 +25,7 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.AwaitTimeout
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
-import com.vitorpamplona.amethyst.cli.Json
+import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.cli.commands.AwaitCommands.awaitAdmin
 import com.vitorpamplona.amethyst.cli.commands.AwaitCommands.awaitMember
 import com.vitorpamplona.quartz.marmot.RecipientRelayFetcher
@@ -43,7 +43,7 @@ object AwaitCommands {
         dataDir: DataDir,
         tail: Array<String>,
     ): Int {
-        if (tail.isEmpty()) return Json.error("bad_args", "await <key-package|group|member|admin|message|rename|epoch>")
+        if (tail.isEmpty()) return Output.error("bad_args", "await <key-package|group|member|admin|message|rename|epoch>")
         val rest = tail.drop(1).toTypedArray()
         return when (tail[0]) {
             "key-package" -> awaitKeyPackage(dataDir, rest)
@@ -53,7 +53,7 @@ object AwaitCommands {
             "message" -> awaitMessage(dataDir, rest)
             "rename" -> awaitRename(dataDir, rest)
             "epoch" -> awaitEpoch(dataDir, rest)
-            else -> Json.error("bad_args", "await ${tail[0]}")
+            else -> Output.error("bad_args", "await ${tail[0]}")
         }
     }
 
@@ -61,7 +61,7 @@ object AwaitCommands {
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
-        if (rest.isEmpty()) return Json.error("bad_args", "await key-package <npub>")
+        if (rest.isEmpty()) return Output.error("bad_args", "await key-package <npub>")
         val args = Args(rest.drop(1).toTypedArray())
         val timeoutSecs = args.longFlag("timeout", 30)
         val ctx = Context.open(dataDir)
@@ -100,7 +100,7 @@ object AwaitCommands {
                         timeoutMs = 3_000,
                     )
                 if (event is KeyPackageEvent) {
-                    Json.writeLine(
+                    Output.emit(
                         mapOf(
                             "event_id" to event.id,
                             "author" to event.pubKey,
@@ -135,7 +135,7 @@ object AwaitCommands {
                         wantedName == null || ctx.marmot.groupMetadata(gid)?.name == wantedName
                     }
                 if (match != null) {
-                    Json.writeLine(
+                    Output.emit(
                         mapOf(
                             "group_id" to match,
                             "mls_group_id" to ctx.marmot.mlsGroupIdHex(match),
@@ -193,7 +193,7 @@ object AwaitCommands {
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
-        if (rest.isEmpty()) return Json.error("bad_args", "await rename <gid> --name <name>")
+        if (rest.isEmpty()) return Output.error("bad_args", "await rename <gid> --name <name>")
         val args = Args(rest.drop(1).toTypedArray())
         val wantedName = args.requireFlag("name")
         val timeoutSecs = args.longFlag("timeout", 30)
@@ -206,7 +206,7 @@ object AwaitCommands {
                 ctx.syncIncoming(timeoutMs = 3_000)
                 val name = ctx.marmot.groupMetadata(gid)?.name
                 if (name == wantedName) {
-                    Json.writeLine(mapOf("group_id" to gid, "name" to name, "epoch" to ctx.marmot.groupEpoch(gid)))
+                    Output.emit(mapOf("group_id" to gid, "name" to name, "epoch" to ctx.marmot.groupEpoch(gid)))
                     return 0
                 }
                 delay(1_500)
@@ -221,7 +221,7 @@ object AwaitCommands {
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
-        if (rest.isEmpty()) return Json.error("bad_args", "await epoch <gid> --min N")
+        if (rest.isEmpty()) return Output.error("bad_args", "await epoch <gid> --min N")
         val args = Args(rest.drop(1).toTypedArray())
         val min = args.longFlag("min", 1)
         val timeoutSecs = args.longFlag("timeout", 30)
@@ -234,7 +234,7 @@ object AwaitCommands {
                 ctx.syncIncoming(timeoutMs = 3_000)
                 val epoch = ctx.marmot.groupEpoch(gid)
                 if (epoch != null && epoch >= min) {
-                    Json.writeLine(mapOf("group_id" to gid, "epoch" to epoch))
+                    Output.emit(mapOf("group_id" to gid, "epoch" to epoch))
                     return 0
                 }
                 delay(1_500)
@@ -249,7 +249,7 @@ object AwaitCommands {
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
-        if (rest.isEmpty()) return Json.error("bad_args", "await message <gid> --match STRING")
+        if (rest.isEmpty()) return Output.error("bad_args", "await message <gid> --match STRING")
         val args = Args(rest.drop(1).toTypedArray())
         val needle = args.requireFlag("match")
         val timeoutSecs = args.longFlag("timeout", 30)
@@ -264,13 +264,13 @@ object AwaitCommands {
                 for (line in msgs.asReversed()) {
                     val obj =
                         try {
-                            Json.mapper.readValue<Map<String, Any?>>(line)
+                            Output.mapper.readValue<Map<String, Any?>>(line)
                         } catch (_: Exception) {
                             null
                         } ?: continue
                     val content = obj["content"]?.toString() ?: continue
                     if (content.contains(needle)) {
-                        Json.writeLine(
+                        Output.emit(
                             mapOf(
                                 "group_id" to gid,
                                 "id" to obj["id"],
@@ -301,7 +301,7 @@ object AwaitCommands {
         targetIdx: Int,
         check: suspend (Context, Array<String>) -> Map<String, Any?>?,
     ): Int {
-        if (rest.size <= targetIdx) return Json.error("bad_args", usage)
+        if (rest.size <= targetIdx) return Output.error("bad_args", usage)
         val args = Args(rest.drop(targetIdx + 1).toTypedArray())
         val timeoutSecs = args.longFlag("timeout", 30)
         val ctx = Context.open(dataDir)
@@ -312,7 +312,7 @@ object AwaitCommands {
                 ctx.syncIncoming(timeoutMs = 3_000)
                 val hit = check(ctx, rest)
                 if (hit != null) {
-                    Json.writeLine(hit)
+                    Output.emit(hit)
                     return 0
                 }
                 delay(1_500)

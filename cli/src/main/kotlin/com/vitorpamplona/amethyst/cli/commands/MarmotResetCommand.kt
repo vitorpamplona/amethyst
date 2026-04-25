@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.cli.commands
 
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
-import com.vitorpamplona.amethyst.cli.Json
+import com.vitorpamplona.amethyst.cli.Output
 
 /**
  * `amy marmot reset [--yes]` — wipe all local Marmot state.
@@ -56,7 +56,7 @@ object MarmotResetCommand {
                     .sorted()
 
             if (!confirmed) {
-                Json.writeLine(
+                Output.emit(
                     mapOf(
                         "dry_run" to true,
                         "would_wipe_groups" to groupIds,
@@ -70,7 +70,7 @@ object MarmotResetCommand {
             ctx.state.giftWrapSince = null
             ctx.state.groupSince.clear()
 
-            Json.writeLine(
+            Output.emit(
                 mapOf(
                     "reset" to true,
                     "wiped_groups" to groupIds,

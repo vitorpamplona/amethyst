@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.cli.commands
 import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
-import com.vitorpamplona.amethyst.cli.Json
+import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrlOrNull
@@ -52,14 +52,14 @@ object RelayCommands {
         dataDir: DataDir,
         tail: Array<String>,
     ): Int {
-        if (tail.isEmpty()) return Json.error("bad_args", "relay <add|list|publish-lists> …")
+        if (tail.isEmpty()) return Output.error("bad_args", "relay <add|list|publish-lists> …")
         val sub = tail[0]
         val rest = tail.drop(1).toTypedArray()
         return when (sub) {
             "add" -> add(dataDir, Args(rest))
             "list" -> list(dataDir)
             "publish-lists" -> publishLists(dataDir)
-            else -> Json.error("bad_args", "relay $sub")
+            else -> Output.error("bad_args", "relay $sub")
         }
     }
 
@@ -71,7 +71,7 @@ object RelayCommands {
         val type = args.flag("type", "all") ?: "all"
         val normalized =
             rawUrl.normalizeRelayUrlOrNull()
-                ?: return Json.error("bad_args", "invalid relay url: $rawUrl")
+                ?: return Output.error("bad_args", "invalid relay url: $rawUrl")
 
         val targets = if (type == "all") listOf("nip65", "inbox", "key_package") else listOf(type)
         val ctx = Context.open(dataDir)
@@ -81,7 +81,7 @@ object RelayCommands {
             for (t in targets) {
                 if (addToBucket(ctx, t, normalized)) addedTo.add(t) else alreadyPresent.add(t)
             }
-            Json.writeLine(
+            Output.emit(
                 mapOf(
                     "url" to rawUrl,
                     "added_to" to addedTo,
@@ -141,7 +141,7 @@ object RelayCommands {
         val ctx = Context.open(dataDir)
         try {
             val self = ctx.identity.pubKeyHex
-            Json.writeLine(
+            Output.emit(
                 mapOf(
                     "nip65" to (ctx.relaysOf(self)?.relaysNorm()?.map { it.url } ?: emptyList()),
                     "inbox" to (ctx.dmInboxOf(self)?.relays()?.map { it.url } ?: emptyList()),
@@ -164,7 +164,7 @@ object RelayCommands {
             val keyPackageEvent = ctx.keyPackageRelaysOf(self)
 
             if (nip65Event == null && inboxEvent == null && keyPackageEvent == null) {
-                return Json.error(
+                return Output.error(
                     "no_relays",
                     "no relay lists in the local store; run `amy relay add` first or `amy create` to bootstrap defaults",
                 )
@@ -175,7 +175,7 @@ object RelayCommands {
             val inboxResult = inboxEvent?.let { ctx.publish(it, targets) }.orEmpty()
             val keyPackageResult = keyPackageEvent?.let { ctx.publish(it, targets) }.orEmpty()
 
-            Json.writeLine(
+            Output.emit(
                 mapOf(
                     "nip65_event_id" to nip65Event?.id,
                     "inbox_event_id" to inboxEvent?.id,

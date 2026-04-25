@@ -24,7 +24,7 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Identity
-import com.vitorpamplona.amethyst.cli.Json
+import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.commons.account.bootstrapAccountEvents
 import com.vitorpamplona.amethyst.commons.defaults.DefaultDMRelayList
 import com.vitorpamplona.amethyst.commons.defaults.DefaultNIP65List
@@ -52,7 +52,7 @@ object CreateCommand {
         rest: Array<String>,
     ): Int {
         if (dataDir.identityExists()) {
-            return Json.error("exists", "identity already exists at ${dataDir.identityFile}")
+            return Output.error("exists", "identity already exists at ${dataDir.identityFile}")
         }
         val args = Args(rest)
         val name = args.flag("name")
@@ -84,7 +84,7 @@ object CreateCommand {
             ctx.close()
         }
 
-        Json.writeLine(
+        Output.emit(
             mapOf(
                 "npub" to identity.npub,
                 "hex" to identity.pubKeyHex,

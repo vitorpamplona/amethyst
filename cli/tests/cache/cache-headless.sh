@@ -28,8 +28,10 @@ REPO_ROOT="$(cd -- "$SCRIPT_DIR/../../.." && pwd)"
 TESTS_DIR="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 STATE_DIR="$SCRIPT_DIR/state-cache-headless"
 LOG_DIR="$STATE_DIR/logs"
-A_DIR="$STATE_DIR/A"
-B_DIR="$STATE_DIR/B"
+# Per-account dirs under the same fake $HOME=$STATE_DIR — accounts A
+# and B share $STATE_DIR/.amy/shared/events-store/ (production layout).
+A_DIR="$STATE_DIR/.amy/A"
+B_DIR="$STATE_DIR/.amy/B"
 
 RUN_TS="$(date +%Y%m%d-%H%M%S)"
 LOG_FILE="$LOG_DIR/run-$RUN_TS.log"
@@ -64,7 +66,7 @@ while [[ $# -gt 0 ]]; do
   shift
 done
 
-mkdir -p "$STATE_DIR" "$LOG_DIR" "$A_DIR" "$B_DIR"
+mkdir -p "$STATE_DIR" "$LOG_DIR"
 : >"$LOG_FILE"
 : >"$RESULTS_FILE"
 
@@ -81,7 +83,7 @@ source "$TESTS_DIR/headless/helpers.sh"
 # shellcheck source=../dm/setup.sh
 source "$TESTS_DIR/dm/setup.sh"
 
-amy_b() { "$AMY_BIN" --data-dir "$B_DIR" "$@"; }
+amy_b() { HOME="$STATE_DIR" "$AMY_BIN" --account B --secret-backend plaintext --json "$@"; }
 
 # Helper: B-side amy_json. The dm headless's helpers.sh hardcodes A_DIR
 # in amy_a; we need a parallel for B without re-sourcing.
@@ -111,23 +113,24 @@ banner "Amethyst event-store cache headless ($RUN_TS)"
 preflight_dm
 start_local_relay
 
-# Identity A: full bootstrap so the store has kind:0 / 3 / 10002 / …
-ensure_identity_for A "$A_DIR"
+# Identity A: full bootstrap so the shared store has kind:0 / 3 / 10002 / …
+ensure_identity_for A
 banner "Bootstrapping A's account (publishes kind:0 + bootstrap events)"
-"$AMY_BIN" --data-dir "$A_DIR" relay add "$RELAY_URL" --type all >>"$LOG_FILE" 2>&1
-# `amy create` here would mint a *second* identity; A_DIR already has one
-# from `init`. Build the bootstrap events ourselves by publishing a
-# minimal kind:0 + the relay lists, all of which land in A's local store
-# via verifyAndStore.
-"$AMY_BIN" --data-dir "$A_DIR" relay publish-lists >>"$LOG_FILE" 2>&1
+amy_a relay add "$RELAY_URL" --type all >>"$LOG_FILE" 2>&1
+# `amy create` here would mint a *second* identity; A already exists from
+# `init`. Build the bootstrap events ourselves by publishing a minimal
+# kind:0 + the relay lists, all of which land in the shared store via
+# verifyAndStore.
+amy_a relay publish-lists >>"$LOG_FILE" 2>&1
 amy_a profile edit --name "AAA" --about "cache test subject" \
     >>"$LOG_FILE" 2>&1 \
     || fail_msg "amy_a profile edit failed"
 
-# Identity B: separate data-dir, separate cache, also pointed at the relay.
-ensure_identity_for B "$B_DIR"
-"$AMY_BIN" --data-dir "$B_DIR" relay add "$RELAY_URL" --type all >>"$LOG_FILE" 2>&1
-"$AMY_BIN" --data-dir "$B_DIR" relay publish-lists >>"$LOG_FILE" 2>&1
+# Identity B: same fake $HOME, separate per-account dir, but A and B
+# both read/write to $STATE_DIR/.amy/shared/events-store/.
+ensure_identity_for B
+amy_b relay add "$RELAY_URL" --type all >>"$LOG_FILE" 2>&1
+amy_b relay publish-lists >>"$LOG_FILE" 2>&1
 
 # ----------------------------------------------------------------------
 # 1. amy store stat reports a non-empty store after bootstrap.
@@ -191,24 +194,20 @@ else
 fi
 
 # ----------------------------------------------------------------------
-# 4. B has not seen A → first profile show is a relay miss; second is a hit.
+# 4. Shared events-store: B looks up A's profile and gets a cache hit
+#    on the first try, because A's kind:0 already landed in the shared
+#    store during A's bootstrap. (Pre-shared-store behaviour was "first
+#    lookup is a relay miss, second is a cache hit"; that test only
+#    made sense when each account had its own private cache.)
 # ----------------------------------------------------------------------
-banner "T4 — B sees A first via relay, then via cache"
-T4A=$(amy_b_json profile show "$A_NPUB")
-T4A_SRC=$(printf '%s' "$T4A" | jq -r '.source')
-T4A_NAME=$(printf '%s' "$T4A" | jq -r '.metadata.name // ""')
-assert_eq "$T4A_SRC" "relays" T4a.source "first lookup of a stranger comes from relays" \
-    && record_result T4a.source pass "first profile lookup of stranger hit relays"
-assert_eq "$T4A_NAME" "AAA" T4a.name "B should resolve A's name on first fetch" \
-    && record_result T4a.name pass "B resolved A's metadata"
-
-T4B=$(amy_b_json profile show "$A_NPUB")
-T4B_SRC=$(printf '%s' "$T4B" | jq -r '.source')
-T4B_NAME=$(printf '%s' "$T4B" | jq -r '.metadata.name // ""')
-assert_eq "$T4B_SRC" "cache" T4b.source "second lookup of the same stranger must serve from cache" \
-    && record_result T4b.source pass "second lookup served from B's cache"
-assert_eq "$T4B_NAME" "AAA" T4b.name "cached metadata must match" \
-    && record_result T4b.name pass "cached metadata identical to fresh"
+banner "T4 — B's profile lookup of A is a shared-store cache hit"
+T4=$(amy_b_json profile show "$A_NPUB")
+T4_SRC=$(printf '%s' "$T4" | jq -r '.source')
+T4_NAME=$(printf '%s' "$T4" | jq -r '.metadata.name // ""')
+assert_eq "$T4_SRC" "cache" T4.source "shared store should hand B a cached A profile immediately" \
+    && record_result T4.source pass "B saw A from the shared cache"
+assert_eq "$T4_NAME" "AAA" T4.name "A's profile metadata must be readable from B's invocation" \
+    && record_result T4.name pass "shared-cache metadata round-trips across accounts"
 
 # ----------------------------------------------------------------------
 # 5. relay list reads URLs back from the local kind:10002 / 10050 / 10051.
@@ -245,20 +244,24 @@ else
 fi
 
 # ----------------------------------------------------------------------
-# 7. Maintenance verbs work without an identity (they only need the store).
+# 7. Maintenance verbs work even when the selected account has no
+#    identity yet — they only construct the FsEventStore, never
+#    `Context.open`. We use a fresh fake $HOME so the empty store has
+#    no inherited events.
 # ----------------------------------------------------------------------
-banner "T7 — store maintenance verbs (sweep/scrub/compact) without identity"
-TMP_NO_ID=$(mktemp -d)
-T7_STAT=$(${AMY_BIN} --data-dir "$TMP_NO_ID" store stat)
-T7_SWEEP=$(${AMY_BIN} --data-dir "$TMP_NO_ID" store sweep-expired)
-T7_SCRUB=$(${AMY_BIN} --data-dir "$TMP_NO_ID" store scrub)
-T7_COMPACT=$(${AMY_BIN} --data-dir "$TMP_NO_ID" store compact)
+banner "T7 — store maintenance verbs (sweep/scrub/compact) on an empty store"
+TMP_HOME=$(mktemp -d)
+T7_AMY=(${AMY_BIN} --secret-backend plaintext --account throwaway --json store)
+T7_STAT=$(HOME="$TMP_HOME" "${T7_AMY[@]}" stat)
+T7_SWEEP=$(HOME="$TMP_HOME" "${T7_AMY[@]}" sweep-expired)
+T7_SCRUB=$(HOME="$TMP_HOME" "${T7_AMY[@]}" scrub)
+T7_COMPACT=$(HOME="$TMP_HOME" "${T7_AMY[@]}" compact)
 assert_eq "$(printf '%s' "$T7_STAT" | jq -r '.events')" "0" T7.stat.events "" \
-    && record_result T7.stat pass "stat works without identity"
+    && record_result T7.stat pass "stat works on empty store"
 assert_eq "$(printf '%s' "$T7_SWEEP" | jq -r '.swept')" "0" T7.sweep.swept "" \
-    && record_result T7.sweep pass "sweep-expired works without identity"
+    && record_result T7.sweep pass "sweep-expired works on empty store"
 assert_eq "$(printf '%s' "$T7_SCRUB" | jq -r '.ok')" "true" T7.scrub.ok "" \
-    && record_result T7.scrub pass "scrub works without identity"
+    && record_result T7.scrub pass "scrub works on empty store"
 assert_eq "$(printf '%s' "$T7_COMPACT" | jq -r '.ok')" "true" T7.compact.ok "" \
-    && record_result T7.compact pass "compact works without identity"
-rm -rf "$TMP_NO_ID"
+    && record_result T7.compact pass "compact works on empty store"
+rm -rf "$TMP_HOME"

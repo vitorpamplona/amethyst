@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.cli.commands
 
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
-import com.vitorpamplona.amethyst.cli.Json
+import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
@@ -35,7 +35,7 @@ object GroupMetadataCommands {
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
-        if (rest.size < 2) return Json.error("bad_args", "group rename <gid> <name>")
+        if (rest.size < 2) return Output.error("bad_args", "group rename <gid> <name>")
         return edit(dataDir, rest[0]) { _, cur -> cur.copy(name = rest[1]) }
     }
 
@@ -43,7 +43,7 @@ object GroupMetadataCommands {
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
-        if (rest.size < 2) return Json.error("bad_args", "group promote <gid> <npub>")
+        if (rest.size < 2) return Output.error("bad_args", "group promote <gid> <npub>")
         return edit(dataDir, rest[0]) { ctx, cur ->
             val newAdmin = ctx.requireUserHex(rest[1])
             val admins = cur.adminPubkeys.toMutableList()
@@ -56,7 +56,7 @@ object GroupMetadataCommands {
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
-        if (rest.size < 2) return Json.error("bad_args", "group demote <gid> <npub>")
+        if (rest.size < 2) return Output.error("bad_args", "group demote <gid> <npub>")
         return edit(dataDir, rest[0]) { ctx, cur ->
             val target = ctx.requireUserHex(rest[1])
             val admins = cur.adminPubkeys.filter { it != target }
@@ -74,7 +74,7 @@ object GroupMetadataCommands {
             ctx.prepare()
             val gid = ctx.resolveGroupId(rawGid)
             ctx.syncIncoming()
-            if (!ctx.marmot.isMember(gid)) return Json.error("not_member", gid)
+            if (!ctx.marmot.isMember(gid)) return Output.error("not_member", gid)
             val outboxUrls = ctx.outboxRelays().map { it.url }
             val cur =
                 ctx.marmot.groupMetadata(gid)
@@ -89,7 +89,7 @@ object GroupMetadataCommands {
             val targets = ctx.marmotGroupRelays(gid).ifEmpty { ctx.outboxRelays() }
             val ack = ctx.publish(commit.signedEvent, targets)
 
-            Json.writeLine(
+            Output.emit(
                 mapOf(
                     "group_id" to gid,
                     "name" to updated.name,

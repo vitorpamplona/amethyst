@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.cli.commands
 import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
-import com.vitorpamplona.amethyst.cli.Json
+import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -44,12 +44,12 @@ object ProfileCommands {
         dataDir: DataDir,
         tail: Array<String>,
     ): Int {
-        if (tail.isEmpty()) return Json.error("bad_args", "profile <show|edit> …")
+        if (tail.isEmpty()) return Output.error("bad_args", "profile <show|edit> …")
         val rest = tail.drop(1).toTypedArray()
         return when (tail[0]) {
             "show" -> show(dataDir, rest)
             "edit" -> edit(dataDir, rest)
-            else -> Json.error("bad_args", "profile ${tail[0]}")
+            else -> Output.error("bad_args", "profile ${tail[0]}")
         }
     }
 
@@ -88,7 +88,7 @@ object ProfileCommands {
             }
 
             if (event == null) {
-                Json.writeLine(
+                Output.emit(
                     mapOf(
                         "pubkey" to pubKey,
                         "found" to false,
@@ -100,11 +100,11 @@ object ProfileCommands {
             }
             val metadata =
                 try {
-                    Json.mapper.readTree(event.content)
+                    Output.mapper.readTree(event.content)
                 } catch (_: Exception) {
                     null
                 }
-            Json.writeLine(
+            Output.emit(
                 mapOf(
                     "pubkey" to pubKey,
                     "found" to true,
@@ -145,7 +145,7 @@ object ProfileCommands {
             listOf(name, displayName, about, picture, banner, website, nip05, lud16, lud06, pronouns, twitter, mastodon, github)
                 .any { it != null }
         if (!touched) {
-            return Json.error(
+            return Output.error(
                 "bad_args",
                 "profile edit needs at least one of " +
                     "--name --display-name --about --picture --banner --website " +
@@ -204,13 +204,13 @@ object ProfileCommands {
             val signed = ctx.signer.sign(template)
             val ack = ctx.publish(signed, targets)
 
-            Json.writeLine(
+            Output.emit(
                 mapOf(
                     "event_id" to signed.id,
                     "kind" to signed.kind,
                     "created_at" to signed.createdAt,
                     "based_on" to latest?.id,
-                    "metadata" to Json.mapper.readTree(signed.content),
+                    "metadata" to Output.mapper.readTree(signed.content),
                     "published_to" to ack.filterValues { it }.keys.map { it.url },
                     "rejected_by" to ack.filterValues { !it }.keys.map { it.url },
                 ),

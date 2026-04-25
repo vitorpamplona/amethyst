@@ -110,25 +110,32 @@ data class RunState(
 )
 
 /**
- * Root of the on-disk layout. Any absolute path chosen by `--data-dir` (or
- * `$AMETHYST_CLI_DATA`) — defaults to `./amy`.
+ * Root of the on-disk layout for one account.
  *
- * [secrets] is the [SecretStore] that mediates private-key persistence.
- * Owning it here keeps the call sites that already thread [DataDir] from
- * having to learn about a second parameter.
+ * Per-account state (identity, sync cursors, MLS material, aliases)
+ * lives at `<root>/<name>/`; the event store is shared across accounts
+ * at `<root>/shared/events-store/`. `<root>` is always `~/.amy/`
+ * (Java's `user.home` + `/.amy`); test harnesses isolate by overriding
+ * `$HOME` for the amy subprocess, exactly the pattern `git`, `gpg`,
+ * `npm` etc. use.
+ *
+ * Use [resolve] to construct one from CLI flags. [secrets] is the
+ * [SecretStore] that mediates private-key persistence. Owning it here
+ * keeps the call sites that already thread [DataDir] from having to
+ * learn about a second parameter.
  */
 class DataDir(
     val root: File,
+    val eventsDir: File,
+    val accountName: String,
     val secrets: SecretStore,
 ) {
     val identityFile = File(root, "identity.json")
     val stateFile = File(root, "state.json")
+    val aliasesFile = File(root, "aliases.json")
     val marmotDir = File(root, "marmot")
     val groupsDir = File(marmotDir, "groups")
     val keyPackageBundleFile = File(marmotDir, "keypackages.bundle")
-
-    /** Root of the file-backed Nostr event store (`FsEventStore`). */
-    val eventsDir = File(root, "events-store")
 
     init {
         SecureFileIO.secureMkdirs(root)
@@ -145,7 +152,7 @@ class DataDir(
      * for "does an identity exist?" / "what's the npub?" checks that must
      * not pop a keychain prompt or ask for a passphrase.
      */
-    fun loadIdentityFileOrNull(): IdentityFile? = if (identityFile.exists()) Json.mapper.readValue(identityFile.readText()) else null
+    fun loadIdentityFileOrNull(): IdentityFile? = if (identityFile.exists()) Output.mapper.readValue(identityFile.readText()) else null
 
     fun identityExists(): Boolean = identityFile.exists()
 
@@ -177,14 +184,14 @@ class DataDir(
     fun saveIdentity(id: Identity) {
         val secret: IdentitySecret? = id.privKeyHex?.let { secrets.store(id.pubKeyHex, it) }
         val file = IdentityFile(pubKeyHex = id.pubKeyHex, npub = id.npub, secret = secret)
-        SecureFileIO.writeTextAtomic(identityFile, Json.mapper.writeValueAsString(file))
+        SecureFileIO.writeTextAtomic(identityFile, Output.mapper.writeValueAsString(file))
     }
 
     /** Remove the identity file and any backend-held secret. */
     fun deleteIdentity() {
         if (identityFile.exists()) {
             runCatching {
-                val file = Json.mapper.readValue<IdentityFile>(identityFile.readText())
+                val file = Output.mapper.readValue<IdentityFile>(identityFile.readText())
                 file.secret?.let { secrets.delete(it) }
             }
             if (!identityFile.delete() && identityFile.exists()) {
@@ -193,20 +200,125 @@ class DataDir(
         }
     }
 
-    fun loadRunState(): RunState = if (stateFile.exists()) Json.mapper.readValue(stateFile.readText()) else RunState()
+    fun loadRunState(): RunState = if (stateFile.exists()) Output.mapper.readValue(stateFile.readText()) else RunState()
 
     fun saveRunState(s: RunState) {
-        SecureFileIO.writeTextAtomic(stateFile, Json.mapper.writeValueAsString(s))
+        SecureFileIO.writeTextAtomic(stateFile, Output.mapper.writeValueAsString(s))
     }
 
     companion object {
+        /**
+         * Per-user root under which `shared/` and `<account>/` live.
+         *
+         * Reads `$HOME` directly rather than `user.home` because JDK 21
+         * resolves the latter from `getpwuid` and ignores `$HOME`,
+         * which would break the standard `HOME=/tmp/foo amy …` test
+         * isolation pattern (the same convention `git`, `gpg`, `npm`
+         * follow). Falls back to `user.home` only when `$HOME` is unset
+         * (Windows, weird containers).
+         */
+        val DEFAULT_ROOT: File get() {
+            val home =
+                System.getenv("HOME").takeUnless { it.isNullOrBlank() }
+                    ?: System.getProperty("user.home")
+            return File(home, ".amy")
+        }
+
+        /** Marker file (one line, just the account name) written by `amy use`. */
+        const val CURRENT_MARKER_NAME = "current"
+
+        /**
+         * Account names become directory names AND alias keys, so we
+         * keep them to a portable, shell-friendly subset. `shared` is
+         * reserved for the cross-account events-store sibling, and
+         * `current` collides with the active-account marker file.
+         */
+        private val NAME_REGEX = Regex("^[a-zA-Z0-9_-]{1,64}$")
+        private const val SHARED_DIR_NAME = "shared"
+        private val RESERVED_NAMES = setOf(SHARED_DIR_NAME, CURRENT_MARKER_NAME)
+
+        fun validateName(name: String): String {
+            require(NAME_REGEX.matches(name)) {
+                "--account must match [a-zA-Z0-9_-]{1,64} (got '$name')"
+            }
+            require(name !in RESERVED_NAMES) {
+                "'$name' is reserved (cannot be used as an account name)"
+            }
+            return name
+        }
+
+        /**
+         * Build a [DataDir] from the parsed CLI flags.
+         *
+         * Resolution order:
+         *   1. `--account X` if provided.
+         *   2. `<root>/current` marker (set by `amy use X`).
+         *   3. Sole subdirectory of `<root>` other than `shared/`.
+         *   4. Error — caller must disambiguate via `--account` or `amy use`.
+         */
         fun resolve(
-            flag: String?,
+            accountFlag: String?,
             secrets: SecretStore,
         ): DataDir {
-            val envPath = System.getenv("AMETHYST_CLI_DATA")
-            val path = flag ?: envPath ?: "./amy"
-            return DataDir(File(path).absoluteFile, secrets)
+            val rootBase = DEFAULT_ROOT
+            val name = if (accountFlag != null) validateName(accountFlag) else pickAccount(rootBase)
+            val accountRoot = File(rootBase, name).absoluteFile
+            val sharedEvents = File(rootBase, "$SHARED_DIR_NAME/events-store").absoluteFile
+            return DataDir(
+                root = accountRoot,
+                eventsDir = sharedEvents,
+                accountName = name,
+                secrets = secrets,
+            )
         }
+
+        /**
+         * Auto-select an account when `--name` was not given. Honours
+         * `<root>/current` first (explicit pin from `amy use`), then
+         * falls back to "exactly one account exists". Throws
+         * [IllegalArgumentException] for the ambiguous cases so
+         * `main`'s catch-all turns them into a clean exit-2 error.
+         */
+        private fun pickAccount(rootBase: File): String {
+            val current = File(rootBase, CURRENT_MARKER_NAME)
+            if (current.isFile) {
+                val pinned = current.readText().trim()
+                require(pinned.isNotEmpty()) {
+                    "${current.absolutePath} is empty; rewrite with `amy use <name>` or pass --account"
+                }
+                require(File(rootBase, pinned).isDirectory) {
+                    "${current.absolutePath} pins '$pinned' but ${File(rootBase, pinned).absolutePath} doesn't exist; " +
+                        "rewrite with `amy use <name>` or pass --account"
+                }
+                return pinned
+            }
+            val accounts = listAccounts(rootBase)
+            return when (accounts.size) {
+                0 -> {
+                    throw IllegalArgumentException(
+                        "no account at ${rootBase.absolutePath}; create one with `amy --account <name> init`",
+                    )
+                }
+
+                1 -> {
+                    accounts.single()
+                }
+
+                else -> {
+                    throw IllegalArgumentException(
+                        "multiple accounts in ${rootBase.absolutePath} (${accounts.joinToString(", ")}); " +
+                            "pick one with --account <name> or `amy use <name>`",
+                    )
+                }
+            }
+        }
+
+        /** Subdirectories of `<root>/` that look like accounts (excludes `shared/`). */
+        fun listAccounts(rootBase: File): List<String> =
+            rootBase
+                .listFiles { f -> f.isDirectory && f.name !in RESERVED_NAMES }
+                ?.map { it.name }
+                ?.sorted()
+                .orEmpty()
     }
 }

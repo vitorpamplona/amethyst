@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.cli.commands
 import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
-import com.vitorpamplona.amethyst.cli.Json
+import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.RandomInstance
@@ -56,7 +56,7 @@ object GroupCreateCommand {
                 )
             ctx.marmot.createGroup(gid, initialMetadata = metadata)
 
-            Json.writeLine(
+            Output.emit(
                 mapOf(
                     "group_id" to gid,
                     "mls_group_id" to ctx.marmot.mlsGroupIdHex(gid),

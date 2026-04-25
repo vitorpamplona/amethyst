@@ -24,7 +24,7 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.AwaitTimeout
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
-import com.vitorpamplona.amethyst.cli.Json
+import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.filterGiftWrapsToPubkey
 import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.unwrapAndUnsealOrNull
 import com.vitorpamplona.amethyst.commons.service.upload.UploadOrchestrator
@@ -62,14 +62,14 @@ object DmCommands {
         dataDir: DataDir,
         tail: Array<String>,
     ): Int {
-        if (tail.isEmpty()) return Json.error("bad_args", "dm <send|send-file|list|await> …")
+        if (tail.isEmpty()) return Output.error("bad_args", "dm <send|send-file|list|await> …")
         val rest = tail.drop(1).toTypedArray()
         return when (tail[0]) {
             "send" -> send(dataDir, rest)
             "send-file" -> sendFile(dataDir, rest)
             "list" -> list(dataDir, rest)
             "await" -> await(dataDir, rest)
-            else -> Json.error("bad_args", "dm ${tail[0]}")
+            else -> Output.error("bad_args", "dm ${tail[0]}")
         }
     }
 
@@ -77,7 +77,7 @@ object DmCommands {
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
-        if (rest.size < 2) return Json.error("bad_args", "dm send <recipient> <text> [--allow-fallback]")
+        if (rest.size < 2) return Output.error("bad_args", "dm send <recipient> <text> [--allow-fallback]")
         val text = rest[1]
         val args = Args(rest.drop(2).toTypedArray())
         val allowFallback = args.bool("allow-fallback")
@@ -114,7 +114,7 @@ object DmCommands {
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
-        if (rest.isEmpty()) return Json.error("bad_args", USAGE_SEND_FILE)
+        if (rest.isEmpty()) return Output.error("bad_args", USAGE_SEND_FILE)
         val args = Args(rest.drop(1).toTypedArray())
         val allowFallback = args.bool("allow-fallback")
         val recipientInput = rest[0]
@@ -147,7 +147,7 @@ object DmCommands {
     ): Pair<com.vitorpamplona.quartz.nip01Core.signers.EventTemplate<ChatMessageEncryptedFileHeaderEvent>, Map<String, Any?>>? {
         val file = java.io.File(args.requireFlag("file"))
         if (!file.exists()) {
-            Json.error("bad_args", "file does not exist: ${file.absolutePath}")
+            Output.error("bad_args", "file does not exist: ${file.absolutePath}")
             return null
         }
         val server = args.requireFlag("server")
@@ -158,7 +158,7 @@ object DmCommands {
         val uploaded = orchestrator.uploadEncrypted(file, cipher, server, ctx.signer)
         val uploadedUrl =
             uploaded.blossom.url ?: run {
-                Json.error("upload_failed", "Blossom server $server returned no URL")
+                Output.error("upload_failed", "Blossom server $server returned no URL")
                 return null
             }
         val mimeType = args.flag("mime-type") ?: uploaded.metadata.mimeType
@@ -202,19 +202,19 @@ object DmCommands {
     ): Pair<com.vitorpamplona.quartz.nip01Core.signers.EventTemplate<ChatMessageEncryptedFileHeaderEvent>, Map<String, Any?>>? {
         val url =
             args.positionalOrNull(0) ?: run {
-                Json.error("bad_args", USAGE_SEND_FILE)
+                Output.error("bad_args", USAGE_SEND_FILE)
                 return null
             }
         val keyHex = args.requireFlag("key")
         val nonceHex = args.requireFlag("nonce")
         val keyBytes =
             runCatching { keyHex.hexToByteArray() }.getOrElse {
-                Json.error("bad_args", "--key must be hex (got ${keyHex.length} chars)")
+                Output.error("bad_args", "--key must be hex (got ${keyHex.length} chars)")
                 return null
             }
         val nonceBytes =
             runCatching { nonceHex.hexToByteArray() }.getOrElse {
-                Json.error("bad_args", "--nonce must be hex (got ${nonceHex.length} chars)")
+                Output.error("bad_args", "--nonce must be hex (got ${nonceHex.length} chars)")
                 return null
             }
         val mimeType = args.flag("mime-type")
@@ -227,7 +227,7 @@ object DmCommands {
                 val match =
                     Regex("^(\\d+)x(\\d+)$").matchEntire(raw)
                         ?: run {
-                            Json.error("bad_args", "--dim must be WxH (got '$raw')")
+                            Output.error("bad_args", "--dim must be WxH (got '$raw')")
                             return null
                         }
                 com.vitorpamplona.quartz.nip94FileMetadata.tags
@@ -266,7 +266,7 @@ object DmCommands {
             val target = wrap.recipientPubKey() ?: continue
             val resolution = resolveDmRelays(ctx, target, allowFallback)
             if (resolution.relays.isEmpty()) {
-                return Json.error(
+                return Output.error(
                     "no_dm_relays",
                     "$target has no kind:10050; pass --allow-fallback to use NIP-65 read or bootstrap",
                 )
@@ -289,7 +289,7 @@ object DmCommands {
                 putAll(extra)
                 put("recipients", recipientsOut)
             }
-        Json.writeLine(out)
+        Output.emit(out)
         return 0
     }
 
@@ -313,7 +313,7 @@ object DmCommands {
                     .inboxRelays()
                     .ifEmpty { ctx.outboxRelays() }
                     .ifEmpty { ctx.bootstrapRelays() }
-            if (inbox.isEmpty()) return Json.error("no_inbox_relays", "configure relays or bootstrap defaults first")
+            if (inbox.isEmpty()) return Output.error("no_inbox_relays", "configure relays or bootstrap defaults first")
 
             val advanceCursor = peerInput == null && sinceFlag == null
             val since = sinceFlag ?: ctx.state.giftWrapSince
@@ -338,7 +338,7 @@ object DmCommands {
                 if (maxSeen != null) ctx.state.giftWrapSince = maxSeen
             }
 
-            Json.writeLine(
+            Output.emit(
                 mapOf(
                     "peer" to peerHex,
                     "messages" to out,
@@ -369,7 +369,7 @@ object DmCommands {
                     .inboxRelays()
                     .ifEmpty { ctx.outboxRelays() }
                     .ifEmpty { ctx.bootstrapRelays() }
-            if (inbox.isEmpty()) return Json.error("no_inbox_relays", "configure relays or bootstrap defaults first")
+            if (inbox.isEmpty()) return Output.error("no_inbox_relays", "configure relays or bootstrap defaults first")
 
             val deadline = System.currentTimeMillis() + timeoutSecs * 1000
             var since = ctx.state.giftWrapSince
@@ -388,7 +388,7 @@ object DmCommands {
                 // can grep for either with one --match flag.
                 val hit = messages.firstOrNull { match in it.searchText }
                 if (hit != null) {
-                    Json.writeLine(hit.toJson())
+                    Output.emit(hit.toJson())
                     return 0
                 }
                 val maxSeen = messages.maxOfOrNull { it.createdAt }

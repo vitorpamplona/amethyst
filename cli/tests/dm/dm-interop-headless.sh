@@ -15,8 +15,10 @@ REPO_ROOT="$(cd -- "$SCRIPT_DIR/../../.." && pwd)"
 TESTS_DIR="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 STATE_DIR="$SCRIPT_DIR/state-dm-headless"
 LOG_DIR="$STATE_DIR/logs"
-A_DIR="$STATE_DIR/A"
-D_DIR="$STATE_DIR/D"
+# Per-account dirs under the same fake $HOME=$STATE_DIR so amy treats
+# this as one user with two accounts (production layout).
+A_DIR="$STATE_DIR/.amy/A"
+D_DIR="$STATE_DIR/.amy/D"
 
 RUN_TS="$(date +%Y%m%d-%H%M%S)"
 LOG_FILE="$LOG_DIR/run-$RUN_TS.log"
@@ -57,7 +59,7 @@ while [[ $# -gt 0 ]]; do
   shift
 done
 
-mkdir -p "$STATE_DIR" "$LOG_DIR" "$A_DIR" "$D_DIR"
+mkdir -p "$STATE_DIR" "$LOG_DIR"
 : >"$LOG_FILE"
 : >"$RESULTS_FILE"
 
@@ -94,8 +96,8 @@ trap 'exit 129' HUP
 banner "Amethyst NIP-17 DM headless interop ($RUN_TS)"
 preflight_dm
 start_local_relay
-ensure_identity_for A "$A_DIR"
-ensure_identity_for D "$D_DIR"
+ensure_identity_for A
+ensure_identity_for D
 configure_relays_dm
 
 test_01_dm_text_round_trip

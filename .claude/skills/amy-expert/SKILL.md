@@ -1,6 +1,6 @@
 ---
 name: amy-expert
-description: Patterns for extending `amy`, the Amethyst CLI in `cli/`. Use when adding an `amy <verb>` command, touching files under `cli/src/main/kotlin/…/cli/`, wiring a new subcommand into `Main.kt`, writing an interop test script that drives Amy, or extracting logic out of `amethyst/` into `commons/` so a CLI command can call it. Enforces the thin-assembly-layer rule (no Nostr protocol or business logic inside `cli/`), the JSON-output contract (single-line object on stdout, exit codes 0/1/2/124), and the extract-from-Android recipe. Complements `nostr-expert` (protocol in Quartz), `kotlin-multiplatform` (expect/actual for extraction), and `feed-patterns` / `account-state` / `relay-client` (where the business logic should end up). NOT for general Nostr or Kotlin work — those have their own skills.
+description: Patterns for extending `amy`, the Amethyst CLI in `cli/`. Use when adding an `amy <verb>` command, touching files under `cli/src/main/kotlin/…/cli/`, wiring a new subcommand into `Main.kt`, writing an interop test script that drives Amy, or extracting logic out of `amethyst/` into `commons/` so a CLI command can call it. Enforces the thin-assembly-layer rule (no Nostr protocol or business logic inside `cli/`), the dual-output contract (text by default, single-line JSON object on stdout under `--json`, exit codes 0/1/2/124), and the extract-from-Android recipe. Complements `nostr-expert` (protocol in Quartz), `kotlin-multiplatform` (expect/actual for extraction), and `feed-patterns` / `account-state` / `relay-client` (where the business logic should end up). NOT for general Nostr or Kotlin work — those have their own skills.
 ---
 
 # Amy CLI Expert
@@ -42,17 +42,28 @@ A `commands/*.kt` file longer than ~200 lines is a code smell.
 Either the command is doing too many things, or the logic has
 leaked in from where it should have lived.
 
-### Rule 2 — stdout JSON, stderr humans
+### Rule 2 — text by default, `--json` is the machine contract
 
-- Every success: one line, one JSON object on stdout, via
-  `Json.writeLine(mapOf(...))`.
-- Every failure: `Json.error("code", "detail")` → single-line JSON
-  on stderr, non-zero exit.
-- Exit codes: `0` success · `1` runtime · `2` bad args · `124` await
-  timeout.
-- Keys are stable, snake_case. Adding a key is safe; renaming or
-  removing one is a breaking change and needs the commit message to
-  say so.
+amy ships a dual-output contract:
+
+- **Default stdout is human-readable text.** A YAML-ish render of the
+  result map. No shape promise — the renderer can change between
+  releases.
+- **`--json` switches stdout to one JSON object, one line.** Stable
+  snake_case keys; this shape is the public API.
+- **stderr is for humans.** Progress logs, warnings, per-relay ACK
+  traces. Errors go here too — `error: <code>: <detail>` by default,
+  JSON `{"error":"…","detail":"…"}` under `--json`.
+- **Exit codes:** `0` success · `1` runtime · `2` bad args · `124`
+  await timeout.
+- Adding a `--json` key is safe; renaming or removing one is a
+  breaking change and needs the commit message to say so.
+
+Commands emit results via `Output.emit(mapOf(...))` and errors via
+`Output.error("code", "detail")`. The `Output` object (in
+`cli/src/main/kotlin/…/cli/Output.kt`) handles the text-vs-JSON
+branching automatically. Never `println(...)` user-facing output
+directly — `System.err.println(...)` is fine for progress logs only.
 
 See `references/output-conventions.md`.
 
@@ -62,16 +73,37 @@ No `readLine()`, no TTY prompts, no hidden interactive behaviour.
 Passwords, names, keys, anything — all flags. Any network wait is
 an explicit `await` verb with `--timeout`.
 
-### Rule 4 — Data-dir is the whole world
+### Rule 4 — `~/.amy/` is the whole world
 
-State is reloaded from `--data-dir PATH` on every invocation. No
-singletons, no in-process caches that survive across runs. This is
-what lets 100 parallel interop scenarios share a harness safely.
+State is reloaded from `~/.amy/` on every invocation. No singletons,
+no in-process caches that survive across runs. This is what lets 100
+parallel interop scenarios share a harness safely.
 
-Files live in well-known locations — see
-`cli/README.md § Data-dir layout`. Don't add unstructured state; if
-you need new persisted state, add it to `Config.kt` or
-`stores/FileStores.kt` with a named JSON schema.
+The layout:
+
+- `~/.amy/shared/events-store/` — one file-backed Nostr event store
+  per machine, shared across every account.
+- `~/.amy/<account>/` — per-account dir: `identity.json`,
+  `state.json`, `aliases.json`, `marmot/`.
+- `~/.amy/current` — marker file written by `amy use NAME` to pin
+  the active account.
+
+Account selection is via the global `--account NAME` flag (required
+when more than one account exists; auto-picked when exactly one
+does). `--account` cannot collide with subcommand flags, so commands
+like `marmot group create --name "Group"` or `profile edit --name "Alice"`
+keep their own `--name` parameter.
+
+Tests isolate by overriding `$HOME` for the amy subprocess
+(`HOME=$(mktemp -d) amy --account alice init`). amy reads `$HOME`
+directly (not `user.home`, which JDK 21 derives from `getpwuid` and
+ignores `$HOME`), so the same convention `git`/`gpg`/`npm`/`ssh`
+follow Just Works.
+
+If you need new persisted state, add it to `Config.kt`,
+`stores/FileStores.kt`, or a new helper (e.g. `Aliases.kt`) with a
+named JSON schema. Don't smuggle state into `~/.amy/` outside the
+documented files.
 
 ### Rule 5 — Extract before adding
 
@@ -92,9 +124,9 @@ Full checklist: `references/extraction-recipe.md`.
 ## Standard command shape
 
 Every new command follows the same shape — parse args, open Context,
-prepare, call into commons/quartz, publish or drain, emit one JSON
-line. The template is in `references/command-template.md`; copy it
-rather than re-deriving it.
+prepare, call into commons/quartz, publish or drain, emit one result
+via `Output.emit`. The template is in `references/command-template.md`;
+copy it rather than re-deriving it.
 
 Wire-up checklist:
 1. New file in `cli/commands/` with the `object` pattern.
@@ -107,34 +139,54 @@ Wire-up checklist:
 7. If the verb changes observable wire behaviour (a new event kind,
    a new relay-routing rule, a new JSON discriminator), add a case
    in the appropriate harness under `cli/tests/` — `cli/tests/marmot/`
-   for MLS flows, `cli/tests/dm/` for NIP-17, or a new sibling suite
-   if it's neither.
+   for MLS flows, `cli/tests/dm/` for NIP-17, `cli/tests/cache/` for
+   event-store behaviour, or a new sibling suite if it's none.
 
-If you change output shape: note it in the commit message, bump the
-example in `README.md`, update any interop fixtures under
-`cli/tests/`.
+If you change `--json` output shape: note it in the commit message,
+bump the example in `cli/README.md`, update any interop fixtures
+under `cli/tests/`.
 
 ## Where things live
 
 ```
 cli/
-├── README.md              # user-facing: commands, JSON contract, quick start
-├── DEVELOPMENT.md         # touch-the-code: architecture, conventions, testing
+├── README.md              # user-facing tour: install, examples, command tables
+├── DEVELOPMENT.md         # public contract, architecture, design rules,
+│                          #   event-store, relay-routing, full on-disk layout
 ├── ROADMAP.md             # parity matrix + ordered milestones
 ├── plans/                 # dated design docs (use for new subsystems)
 ├── tests/                 # end-to-end shell harnesses against a local relay
 │   ├── lib.sh             # shared logging + result tracking
 │   ├── headless/          # shared amy wrappers + assertions
 │   ├── marmot/            # MLS group-messaging interop (vs whitenoise-rs)
-│   └── dm/                # NIP-17 DM interop (two amy clients)
+│   ├── dm/                # NIP-17 DM interop (two amy clients)
+│   └── cache/             # FsEventStore behaviour vs the cache helpers
 └── src/main/kotlin/…/cli/
-    ├── Main.kt            # argv dispatch
+    ├── Main.kt            # argv dispatch, global flags
     ├── Args.kt            # flag parser
-    ├── Json.kt            # stdout/stderr JSON
-    ├── Config.kt          # Identity, RelayConfig, RunState, DataDir
+    ├── Output.kt          # text/json mode emitter + colour
+    ├── Aliases.kt         # per-account aliases.json read/write
+    ├── Config.kt          # Identity, RunState, DataDir (~/.amy layout)
     ├── Context.kt         # per-run wiring — the backbone
-    ├── stores/            # file-backed persistence
-    └── commands/          # one file per top-level verb group
+    ├── SecureFileIO.kt    # 0600/0700 atomic writes, perm tighten
+    ├── stores/            # file-backed MLS / KP / message stores
+    ├── secrets/           # SecretStore backends (keychain / ncryptsec / plaintext)
+    └── commands/          # one file (or group) per top-level verb
+        ├── UseCommand.kt          # `amy use NAME`
+        ├── InitCommands.kt        # init, whoami
+        ├── CreateCommand.kt + LoginCommand.kt
+        ├── RelayCommands.kt
+        ├── ProfileCommands.kt
+        ├── NotesCommands.kt + PostCommand.kt + FeedCommand.kt
+        ├── DmCommands.kt
+        ├── KeyPackageCommands.kt
+        ├── GroupCommands.kt + GroupCreateCommand.kt + GroupReadCommands.kt
+        │   GroupAddMemberCommand.kt + GroupMembershipCommands.kt
+        │   GroupMetadataCommands.kt
+        ├── MessageCommands.kt
+        ├── MarmotResetCommand.kt
+        ├── AwaitCommands.kt
+        └── StoreCommands.kt
 ```
 
 Shared logic consumed by Amy lives in `commons/`:
@@ -146,9 +198,10 @@ Shared logic consumed by Amy lives in `commons/`:
 ## Common mistakes to refuse
 
 - **Adding protocol logic to `cli/`.** Push back, offer to extract.
-- **Silently changing a JSON key.** Flag as breaking.
-- **Using `println` or `print`.** Use `Json.writeLine` / `Json.error`.
-  Plain `System.err.println` is fine for progress logs but never for
+- **Silently changing a `--json` key.** Flag as breaking.
+- **Using `println` or `print` for command output.** Use
+  `Output.emit(...)` / `Output.error(...)`. Plain
+  `System.err.println` is fine for progress logs but never for
   user-consumable output.
 - **`runBlocking` inside a command** — the top-level `main` already
   does that. Commands are `suspend fun`.
@@ -158,6 +211,13 @@ Shared logic consumed by Amy lives in `commons/`:
   or `resolveUserHexOrNull` in `quartz/nip05DnsIdentifiers/`.
 - **Re-inventing publish-and-confirm.** Use `Context.publish`.
 - **Re-inventing one-shot subscription.** Use `Context.drain`.
+- **Reading `user.home` directly.** Use `DataDir.DEFAULT_ROOT`, which
+  reads `$HOME` (the convention `git`/`gpg`/`npm` follow); JDK 21's
+  `user.home` is derived from `getpwuid` and ignores `$HOME`, which
+  silently breaks the test-isolation pattern.
+- **Adding a global flag that collides with subcommand flags.**
+  `--name` is reserved for subcommand use (group/profile names).
+  Account selection is `--account`.
 
 ## Plans & design docs
 
@@ -171,9 +231,10 @@ frozen.
 
 ## Cross-references
 
-- [`cli/README.md`](../../../cli/README.md)
-- [`cli/DEVELOPMENT.md`](../../../cli/DEVELOPMENT.md)
-- [`cli/ROADMAP.md`](../../../cli/ROADMAP.md)
+- [`cli/README.md`](../../../cli/README.md) — user-facing tour
+- [`cli/DEVELOPMENT.md`](../../../cli/DEVELOPMENT.md) — public
+  contract, architecture, on-disk layout
+- [`cli/ROADMAP.md`](../../../cli/ROADMAP.md) — parity matrix
 - `references/command-template.md`
 - `references/extraction-recipe.md`
 - `references/output-conventions.md`

@@ -20,23 +20,34 @@
  */
 package com.vitorpamplona.amethyst.cli
 
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
 
-object Json {
-    val mapper: ObjectMapper = jacksonObjectMapper()
-
-    fun writeLine(obj: Any) {
-        println(mapper.writeValueAsString(obj))
+/**
+ * Per-account `aliases.json` — short human-friendly names that map to
+ * npubs. Today it's only populated by `init --name X` (a self-entry so
+ * the user can refer to their own account by name); future verbs like
+ * `amy alias add bob npub1…` and recipient resolution in `dm send` will
+ * read from the same file.
+ *
+ * Shape on disk: a JSON object of `{name: npub}` pairs. We persist the
+ * npub form (not hex) so `cat aliases.json` is human-inspectable.
+ */
+object Aliases {
+    /** Read the alias map; returns empty when the file doesn't exist. */
+    fun load(dataDir: DataDir): MutableMap<String, String> {
+        val f = dataDir.aliasesFile
+        if (!f.exists()) return linkedMapOf()
+        return Output.mapper.readValue(f.readText())
     }
 
-    fun error(
-        code: String,
-        detail: String? = null,
-    ): Int {
-        val payload = mutableMapOf<String, Any>("error" to code)
-        if (detail != null) payload["detail"] = detail
-        System.err.println(mapper.writeValueAsString(payload))
-        return 1
+    /** Upsert one entry. Idempotent. */
+    fun set(
+        dataDir: DataDir,
+        name: String,
+        npub: String,
+    ) {
+        val map = load(dataDir)
+        map[name] = npub
+        SecureFileIO.writeTextAtomic(dataDir.aliasesFile, Output.mapper.writeValueAsString(map))
     }
 }
