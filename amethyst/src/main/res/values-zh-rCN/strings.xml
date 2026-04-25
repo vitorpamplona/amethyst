@@ -776,6 +776,15 @@
     <string name="app_notification_chess_challenge_accepted">%1$s 接受了您的国际象棋挑战</string>
     <string name="app_notification_chess_your_turn">%1$s 已移动 —— 轮到您了</string>
     <string name="app_notification_chess_summary">国际象棋更新</string>
+    <string name="app_notification_replies_channel_name">回复</string>
+    <string name="app_notification_replies_channel_description">当有人回复您的帖子时通知您</string>
+    <string name="app_notification_replies_channel_message">%1$s 回复了</string>
+    <string name="app_notification_replies_channel_message_for">在: %1$s</string>
+    <string name="app_notification_replies_summary">新的回复</string>
+    <string name="app_notification_mentions_channel_name">提及</string>
+    <string name="app_notification_mentions_channel_description">当某人在帖子中提到或引用你时，通知你</string>
+    <string name="app_notification_mentions_channel_message">%1$s 提到了你</string>
+    <string name="app_notification_mentions_summary">新提及</string>
     <!-- Call notifications and UI -->
     <string name="app_notification_calls_channel_name">来电</string>
     <string name="app_notification_calls_channel_description">语音和视频来电通知</string>
@@ -2237,4 +2246,5 @@
     <string name="emoji_private_badge">私密表情</string>
     <string name="emoji_public_explainer">公开表情符号对所有人可见；当此表情包位于您的表情符号列表中时，它们会显示在您的“反应”菜单及“:”自动补全选择器中。</string>
     <string name="emoji_private_explainer">私密表情符号被加密存储在中继上，只对您可见。它们就像公开表情符号一样出现在回应菜单和 \":\" 自动完成中。</string>
+    <string name="gif">Gif</string>
 </resources>
