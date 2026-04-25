@@ -216,28 +216,40 @@ class DataDir(
         /** Per-user root under which `shared/` and `<account>/` live. */
         val DEFAULT_ROOT: File get() = File(System.getProperty("user.home"), ".amy")
 
+        /** Marker file (one line, just the account name) written by `amy use`. */
+        const val CURRENT_MARKER_NAME = "current"
+
         /**
          * Account names become directory names AND alias keys, so we
          * keep them to a portable, shell-friendly subset. `shared` is
-         * reserved for the cross-account events-store sibling.
+         * reserved for the cross-account events-store sibling, and
+         * `current` collides with the active-account marker file.
          */
         private val NAME_REGEX = Regex("^[a-zA-Z0-9_-]{1,64}$")
         private const val SHARED_DIR_NAME = "shared"
+        private val RESERVED_NAMES = setOf(SHARED_DIR_NAME, CURRENT_MARKER_NAME)
 
         fun validateName(name: String): String {
             require(NAME_REGEX.matches(name)) {
                 "--name must match [a-zA-Z0-9_-]{1,64} (got '$name')"
             }
-            require(name != SHARED_DIR_NAME) {
-                "--name must not be '$SHARED_DIR_NAME' (reserved for the shared events-store)"
+            require(name !in RESERVED_NAMES) {
+                "'$name' is reserved (cannot be used as an account name)"
             }
             return name
         }
 
         /**
-         * Build a [DataDir] from the parsed CLI flags. Exactly one of
-         * `dataDirFlag` or `nameFlag` must be set; passing both is an
-         * `IllegalArgumentException` (caught by `main` as exit 2).
+         * Build a [DataDir] from the parsed CLI flags.
+         *
+         * Resolution order in account mode (when `dataDirFlag` is null):
+         *   1. `--name X` if provided.
+         *   2. `<root>/current` marker (set by `amy use X`).
+         *   3. Sole subdirectory of `<root>` other than `shared/`.
+         *   4. Error — caller must disambiguate.
+         *
+         * Passing both `dataDirFlag` and `nameFlag` is an
+         * `IllegalArgumentException` (exit 2 via `main`).
          */
         fun resolve(
             dataDirFlag: String?,
@@ -247,37 +259,75 @@ class DataDir(
             require(!(dataDirFlag != null && nameFlag != null)) {
                 "pass either --data-dir or --name, not both"
             }
-            return when {
-                dataDirFlag != null -> {
-                    val root = File(dataDirFlag).absoluteFile
-                    DataDir(
-                        root = root,
-                        eventsDir = File(root, "events-store"),
-                        accountName = null,
-                        secrets = secrets,
+            if (dataDirFlag != null) {
+                val root = File(dataDirFlag).absoluteFile
+                return DataDir(
+                    root = root,
+                    eventsDir = File(root, "events-store"),
+                    accountName = null,
+                    secrets = secrets,
+                )
+            }
+            val rootBase = DEFAULT_ROOT
+            val name = if (nameFlag != null) validateName(nameFlag) else pickAccount(rootBase)
+            val accountRoot = File(rootBase, name).absoluteFile
+            val sharedEvents = File(rootBase, "$SHARED_DIR_NAME/events-store").absoluteFile
+            return DataDir(
+                root = accountRoot,
+                eventsDir = sharedEvents,
+                accountName = name,
+                secrets = secrets,
+            )
+        }
+
+        /**
+         * Auto-select an account when neither `--name` nor `--data-dir`
+         * was given. Honours `<root>/current` first (explicit pin from
+         * `amy use`), then falls back to "exactly one account exists".
+         * Throws [IllegalArgumentException] for the ambiguous cases so
+         * `main`'s catch-all turns them into a clean exit-2 error.
+         */
+        private fun pickAccount(rootBase: File): String {
+            val current = File(rootBase, CURRENT_MARKER_NAME)
+            if (current.isFile) {
+                val pinned = current.readText().trim()
+                require(pinned.isNotEmpty()) {
+                    "${current.absolutePath} is empty; rewrite with `amy use <name>` or pass --name"
+                }
+                require(File(rootBase, pinned).isDirectory) {
+                    "${current.absolutePath} pins '$pinned' but ${File(rootBase, pinned).absolutePath} doesn't exist; " +
+                        "rewrite with `amy use <name>` or pass --name"
+                }
+                return pinned
+            }
+            val accounts = listAccounts(rootBase)
+            return when (accounts.size) {
+                0 -> {
+                    throw IllegalArgumentException(
+                        "no account at ${rootBase.absolutePath}; create one with `amy --name <name> init` " +
+                            "(or pass --data-dir <path> for a self-contained dir)",
                     )
                 }
 
-                nameFlag != null -> {
-                    val name = validateName(nameFlag)
-                    val rootBase = DEFAULT_ROOT
-                    val accountRoot = File(rootBase, name).absoluteFile
-                    val sharedEvents = File(rootBase, "$SHARED_DIR_NAME/events-store").absoluteFile
-                    DataDir(
-                        root = accountRoot,
-                        eventsDir = sharedEvents,
-                        accountName = name,
-                        secrets = secrets,
-                    )
+                1 -> {
+                    accounts.single()
                 }
 
                 else -> {
                     throw IllegalArgumentException(
-                        "missing account selector: pass --name <account> (creates ${DEFAULT_ROOT.absolutePath}/<account>/) " +
-                            "or --data-dir <path> for a self-contained dir",
+                        "multiple accounts in ${rootBase.absolutePath} (${accounts.joinToString(", ")}); " +
+                            "pick one with --name <name> or `amy use <name>`",
                     )
                 }
             }
         }
+
+        /** Subdirectories of `<root>/` that look like accounts (excludes `shared/`). */
+        fun listAccounts(rootBase: File): List<String> =
+            rootBase
+                .listFiles { f -> f.isDirectory && f.name !in RESERVED_NAMES }
+                ?.map { it.name }
+                ?.sorted()
+                .orEmpty()
     }
 }

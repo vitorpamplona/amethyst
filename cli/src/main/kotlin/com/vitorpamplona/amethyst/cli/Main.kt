@@ -105,10 +105,20 @@ private suspend fun dispatch(argv: Array<String>): Int {
         return 2
     }
 
-    val secrets = SecretStore.from(backendFlag = secretBackendFlag, passphraseFile = passphraseFileFlag)
-    val dataDir = DataDir.resolve(dataDirFlag = dataDirFlag, nameFlag = nameFlag, secrets = secrets)
     val head = filteredArgs[0]
     val tail = filteredArgs.drop(1).toTypedArray()
+
+    // `use` operates on `<root>/current` directly and must work even
+    // when account auto-pick would fail (the whole point of `use` is to
+    // resolve "multiple accounts, ambiguous" cases) — so it skips
+    // DataDir.resolve. Other commands fall through to the normal path.
+    if (head == "use") {
+        return com.vitorpamplona.amethyst.cli.commands.UseCommand
+            .run(tail)
+    }
+
+    val secrets = SecretStore.from(backendFlag = secretBackendFlag, passphraseFile = passphraseFileFlag)
+    val dataDir = DataDir.resolve(dataDirFlag = dataDirFlag, nameFlag = nameFlag, secrets = secrets)
 
     return when (head) {
         "init" -> {
@@ -256,9 +266,18 @@ private fun printUsage() {
         |Account selection:
         |  Default layout lives at ~/.amy/, with shared/events-store/ holding
         |  every observed Nostr event and ~/.amy/<account>/ holding identity,
-        |  cursors, MLS state, and aliases. Pass exactly one of --name or
-        |  --data-dir; passing both or neither is a bad-args error. ACCOUNT
-        |  must match [a-zA-Z0-9_-]{1,64} (no spaces, no slashes).
+        |  cursors, MLS state, and aliases. ACCOUNT must match
+        |  [a-zA-Z0-9_-]{1,64} (no spaces, no slashes).
+        |
+        |  Resolution order when --data-dir is not set:
+        |    1. --name X if given.
+        |    2. ~/.amy/current marker (set by `amy use X`).
+        |    3. Sole subdirectory of ~/.amy/ other than shared/.
+        |    4. Error — disambiguate with --name or `amy use`.
+        |
+        |  use NAME                                  pin NAME as the active account
+        |  use --clear                                remove the pin
+        |  use                                        print current pin + available accounts
         |
         |Output:
         |  Default: human-readable text on stdout.

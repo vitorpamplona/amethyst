@@ -79,6 +79,7 @@ object InitCommands {
         }
         Output.emit(
             mapOf(
+                "name" to dataDir.accountName,
                 "npub" to file.npub,
                 "hex" to file.pubKeyHex,
                 "data_dir" to dataDir.root.absolutePath,
