@@ -55,8 +55,26 @@ test_09_reply_react_unreact() {
     record_result "$id" fail "amy marmot message react failed"; return
   fi
 
-  # Round-trip: B should surface amy's kind:7 reaction in its messages stream.
-  if wait_for_message B "$mls_gid" "🍕" 90; then
+  # Round-trip: B should surface amy's kind:7 reaction. wn aggregates
+  # reactions onto the anchor message (`.reactions.by_emoji[<emoji>]`),
+  # not as a standalone entry whose `.content` is the emoji — so polling
+  # `messages list` for an entry whose content equals "🍕" would never
+  # match, even when the reaction was successfully decrypted. Look for
+  # the emoji under any message's `reactions.by_emoji` keys instead.
+  local deadline=$(( $(date +%s) + 90 )) saw=0
+  while [[ $(date +%s) -lt $deadline ]]; do
+    local payload
+    payload=$(wn_b_json messages list "$mls_gid" --limit 50 2>/dev/null || true)
+    if [[ -n "$payload" ]] && \
+         printf '%s' "$payload" \
+           | jq -e '(.result // .) | .[]? | (.reactions.by_emoji // {}) | keys[]?' \
+                  2>/dev/null \
+           | grep -qF '"🍕"'; then
+      saw=1; break
+    fi
+    sleep 3
+  done
+  if [[ "$saw" -eq 1 ]]; then
     record_result "$id" pass
   else
     record_result "$id" fail "B didn't receive amy's reaction"
