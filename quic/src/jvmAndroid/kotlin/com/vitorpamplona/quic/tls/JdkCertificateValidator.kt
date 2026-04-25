@@ -57,8 +57,23 @@ class JdkCertificateValidator(
                 cf.generateCertificate(ByteArrayInputStream(it)) as X509Certificate
             }
         try {
-            // RFC 8446 §4.4.2.4 — TLS 1.3 over QUIC negotiates ALPN h3.
-            trustManager.checkServerTrusted(parsed.toTypedArray(), "ECDHE_ECDSA")
+            // X509TrustManager auth-type string is the TLS key-exchange / sig-alg
+            // pair derived from the cipher suite name — for TLS 1.3 we use the
+            // leaf cert's public-key algorithm to pick the right value, since
+            // some Android trust managers (RootTrustManager, NetworkSecurityConfig)
+            // gate algorithm-specific pinning on this string.
+            val authType =
+                when (parsed[0].publicKey.algorithm) {
+                    "RSA" -> "ECDHE_RSA"
+
+                    "EC" -> "ECDHE_ECDSA"
+
+                    "EdDSA" -> "ECDHE_ECDSA"
+
+                    // RFC 8422 ext, no dedicated TLS 1.3 string
+                    else -> "ECDHE_ECDSA"
+                }
+            trustManager.checkServerTrusted(parsed.toTypedArray(), authType)
         } catch (t: Throwable) {
             throw QuicCodecException("certificate chain validation failed: ${t.message}", t)
         }

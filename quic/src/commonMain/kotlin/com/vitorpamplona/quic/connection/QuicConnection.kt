@@ -148,7 +148,7 @@ class QuicConnection(
         handshakeDoneSignal.await()
     }
 
-    /** Mark the handshake as failed (called by the driver when read loop dies during handshaking). */
+    /** Mark the handshake as failed (called when read loop dies, peer closes, or local close runs). */
     internal fun signalHandshakeFailed(cause: Throwable) {
         if (!handshakeDoneSignal.isCompleted) handshakeDoneSignal.completeExceptionally(cause)
     }
@@ -256,11 +256,27 @@ class QuicConnection(
     suspend fun close(
         errorCode: Long,
         reason: String,
-    ) = lock.withLock {
-        if (status == Status.CLOSED || status == Status.CLOSING) return@withLock
-        closeErrorCode = errorCode
-        closeReason = reason
-        status = Status.CLOSING
+    ) {
+        lock.withLock {
+            if (status == Status.CLOSED || status == Status.CLOSING) return@withLock
+            closeErrorCode = errorCode
+            closeReason = reason
+            status = Status.CLOSING
+        }
+        // If a caller is suspended on awaitHandshake() and we're tearing down
+        // before completion, fail the deferred so the caller throws instead
+        // of hanging forever.
+        if (!handshakeComplete) {
+            signalHandshakeFailed(QuicConnectionClosedException("connection closed before handshake completed: $reason"))
+        }
+    }
+
+    /** Called by the parser on inbound CONNECTION_CLOSE or by the driver on read-loop death. */
+    internal fun markClosedExternally(reason: String) {
+        if (status != Status.CLOSED) status = Status.CLOSED
+        if (!handshakeComplete) {
+            signalHandshakeFailed(QuicConnectionClosedException("connection closed externally: $reason"))
+        }
     }
 
     /**
@@ -303,3 +319,8 @@ class QuicConnection(
     /** Caller must hold [lock]. */
     internal fun streamByIdLocked(id: Long): QuicStream? = streams[id]
 }
+
+/** Connection was closed (locally or by peer) before reaching CONNECTED. */
+class QuicConnectionClosedException(
+    message: String,
+) : RuntimeException(message)

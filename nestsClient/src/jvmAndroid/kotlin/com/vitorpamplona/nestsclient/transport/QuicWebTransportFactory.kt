@@ -72,6 +72,11 @@ class QuicWebTransportFactory(
      * dev environments can pass a permissive validator explicitly.
      */
     private val certificateValidator: CertificateValidator = JdkCertificateValidator(),
+    /**
+     * Maximum time we'll suspend waiting for the server's HEADERS response on
+     * the Extended CONNECT request stream before giving up with HandshakeFailed.
+     */
+    private val connectTimeoutMillis: Long = 10_000L,
 ) : WebTransportFactory {
     override suspend fun connect(
         authority: String,
@@ -107,32 +112,56 @@ class QuicWebTransportFactory(
             )
         }
 
-        // Open the H3 control stream and push SETTINGS.
-        val controlStream = conn.openUniStream()
-        val controlBytes =
-            byteArrayOf(Http3StreamType.CONTROL.toByte()) + buildClientWebTransportSettings().encodeFrame()
-        controlStream.send.enqueue(controlBytes)
+        // Everything from here through readResponseStatus needs cleanup on
+        // any exception — wrap so a thrown SocketException / coroutine cancel
+        // doesn't leak the driver + UDP socket.
+        try {
+            // Open the H3 control stream and push SETTINGS.
+            val controlStream = conn.openUniStream()
+            val controlBytes =
+                byteArrayOf(Http3StreamType.CONTROL.toByte()) + buildClientWebTransportSettings().encodeFrame()
+            controlStream.send.enqueue(controlBytes)
 
-        // Open the Extended CONNECT request stream.
-        val requestStream = conn.openBidiStream()
-        val headers = buildExtendedConnectHeaders(authority, path, bearerToken)
-        requestStream.send.enqueue(encodeHeadersFrame(headers))
-        driver.wakeup()
+            // Open the Extended CONNECT request stream.
+            val requestStream = conn.openBidiStream()
+            val headers = buildExtendedConnectHeaders(authority, path, bearerToken)
+            requestStream.send.enqueue(encodeHeadersFrame(headers))
+            driver.wakeup()
 
-        // Wait for the response HEADERS and verify :status is 2xx before
-        // declaring the WebTransport session open. Per RFC 9220 a non-2xx
-        // status means the server rejected the upgrade.
-        val responseStatus = readResponseStatus(requestStream)
-        if (responseStatus !in 200..299) {
+            // Wait for the response HEADERS and verify :status is 2xx before
+            // declaring the WebTransport session open. Per RFC 9220 a non-2xx
+            // status means the server rejected the upgrade.
+            val responseStatus =
+                kotlinx.coroutines.withTimeoutOrNull(connectTimeoutMillis) {
+                    readResponseStatus(requestStream)
+                } ?: -1
+            if (responseStatus < 0) {
+                driver.close()
+                throw WebTransportException(
+                    kind = WebTransportException.Kind.HandshakeFailed,
+                    message = "WebTransport CONNECT response timed out after ${connectTimeoutMillis}ms",
+                )
+            }
+            if (responseStatus !in 200..299) {
+                driver.close()
+                throw WebTransportException(
+                    kind = WebTransportException.Kind.ConnectRejected,
+                    message = "WebTransport CONNECT returned :status=$responseStatus",
+                )
+            }
+
+            val state = QuicWebTransportSessionState(conn, driver, requestStream.streamId)
+            return QuicWebTransportSession(state)
+        } catch (we: WebTransportException) {
+            throw we
+        } catch (t: Throwable) {
             driver.close()
             throw WebTransportException(
-                kind = WebTransportException.Kind.ConnectRejected,
-                message = "WebTransport CONNECT returned :status=$responseStatus",
+                kind = WebTransportException.Kind.HandshakeFailed,
+                message = "WebTransport setup failed: ${t.message}",
+                cause = t,
             )
         }
-
-        val state = QuicWebTransportSessionState(conn, driver, requestStream.streamId)
-        return QuicWebTransportSession(state)
     }
 
     /**

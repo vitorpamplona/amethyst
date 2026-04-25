@@ -242,16 +242,24 @@ class TlsClient(
             }
 
             State.SENT_CLIENT_FINISHED -> {
-                // Post-handshake messages on Application level: the server
-                // commonly sends NewSessionTicket (we don't resume, so we
-                // ignore them safely) and may send KeyUpdate. We don't
-                // implement key rotation yet, so we silently drop. If the
-                // server ever sends a CertificateRequest post-handshake we
-                // also ignore — we don't do client auth.
+                // Post-handshake messages on Application level. NewSessionTicket
+                // is safe to ignore (we don't do session resumption). KeyUpdate
+                // is NOT safe to ignore — if the peer rotates keys and we keep
+                // using the old ones, subsequent AEAD opens will silently fail
+                // and the connection wedges. We don't implement RFC 9001 §6 key
+                // updates yet, so KeyUpdate must surface as a fatal error so
+                // the QUIC layer closes the connection cleanly instead of
+                // silently desynchronizing.
                 when (type) {
-                    TlsConstants.HS_NEW_SESSION_TICKET, TlsConstants.HS_KEY_UPDATE -> {
-                        // Don't append to transcript — these are not part of the
-                        // handshake transcript (RFC 8446 §4.4.1).
+                    TlsConstants.HS_NEW_SESSION_TICKET -> {
+                        // Don't append to transcript — NewSessionTicket is not
+                        // part of the handshake transcript per RFC 8446 §4.4.1.
+                    }
+
+                    TlsConstants.HS_KEY_UPDATE -> {
+                        throw QuicCodecException(
+                            "TLS KeyUpdate received but rotation not implemented; closing connection",
+                        )
                     }
 
                     else -> {

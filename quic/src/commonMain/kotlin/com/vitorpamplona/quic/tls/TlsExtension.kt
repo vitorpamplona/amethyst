@@ -46,14 +46,28 @@ class TlsExtension(
 
         /**
          * Decode an Extension list (`extensions<0..2^16-1>`) from [r] until
-         * the inner length is consumed.
+         * the inner length is consumed. The inner reads are bounded against
+         * `end` so a malicious server can't claim a small extensions block
+         * but encode an extension whose `data` length escapes past the end
+         * and into trailing bytes (e.g. compression_method on a ServerHello).
          */
         fun decodeList(r: QuicReader): List<TlsExtension> {
             val totalLen = r.readUint16()
             val end = r.position + totalLen
+            if (end > r.limit) {
+                throw com.vitorpamplona.quic.QuicCodecException(
+                    "TLS extensions length $totalLen exceeds record bounds (have ${r.limit - r.position})",
+                )
+            }
             val out = mutableListOf<TlsExtension>()
             while (r.position < end) {
-                out += decode(r)
+                val ext = decode(r)
+                if (r.position > end) {
+                    throw com.vitorpamplona.quic.QuicCodecException(
+                        "TLS extension type=${ext.type} overran extension-list end",
+                    )
+                }
+                out += ext
             }
             return out
         }

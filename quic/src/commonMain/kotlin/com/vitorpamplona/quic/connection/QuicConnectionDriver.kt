@@ -46,7 +46,7 @@ import kotlinx.coroutines.sync.withLock
 class QuicConnectionDriver(
     val connection: QuicConnection,
     private val socket: UdpSocket,
-    parentScope: CoroutineScope,
+    private val parentScope: CoroutineScope,
     private val nowMillis: () -> Long = { System.currentTimeMillis() },
 ) {
     private val job = SupervisorJob(parentScope.coroutineContext[Job])
@@ -67,13 +67,21 @@ class QuicConnectionDriver(
     }
 
     private suspend fun readLoop() {
-        while (connection.status != QuicConnection.Status.CLOSED) {
-            val datagram = socket.receive() ?: break
-            connection.lock.withLock {
-                feedDatagram(connection, datagram, nowMillis())
+        try {
+            while (connection.status != QuicConnection.Status.CLOSED) {
+                val datagram = socket.receive() ?: break
+                connection.lock.withLock {
+                    feedDatagram(connection, datagram, nowMillis())
+                }
+                // Inbound data may have produced new outbound (acks, crypto, etc.).
+                wakeup()
             }
-            // Inbound data may have produced new outbound (acks, crypto, etc.).
-            wakeup()
+        } finally {
+            // If the read loop exits while the handshake is still pending,
+            // unblock anyone awaiting the handshake — otherwise awaitHandshake()
+            // suspends forever.
+            connection.markClosedExternally("read loop exited (socket closed or peer closed)")
+            wakeup() // let the send loop notice CLOSED and exit
         }
     }
 
@@ -90,10 +98,24 @@ class QuicConnectionDriver(
         }
     }
 
-    suspend fun close() {
-        connection.close(0L, "")
-        wakeup() // let the send loop emit CONNECTION_CLOSE
-        scope.cancel()
-        socket.close()
+    /**
+     * Cleanly tear down the driver. Safe to call from inside the driver scope —
+     * the actual cancel-and-close runs on [parentScope] so the caller's coroutine
+     * (which may itself be in [scope]) doesn't get cancelled before the close
+     * completes.
+     */
+    fun close() {
+        // Drive the close on the parent scope so we don't cancel our own caller.
+        parentScope.launch {
+            try {
+                connection.close(0L, "")
+                wakeup() // let the send loop emit CONNECTION_CLOSE
+                // Give the send loop one tick to flush the close packet, then tear down.
+                kotlinx.coroutines.yield()
+            } finally {
+                scope.cancel()
+                socket.close()
+            }
+        }
     }
 }

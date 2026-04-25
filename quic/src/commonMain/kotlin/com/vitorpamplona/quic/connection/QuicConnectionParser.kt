@@ -204,7 +204,7 @@ private fun dispatchFrames(
             }
 
             is ConnectionCloseFrame -> {
-                conn.status = QuicConnection.Status.CLOSED
+                conn.markClosedExternally("peer CONNECTION_CLOSE: ${frame.reason}")
             }
 
             is HandshakeDoneFrame -> {
