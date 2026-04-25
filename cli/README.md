@@ -70,10 +70,24 @@ from the store first and only fall back to a relay fetch on miss.
 Three convenience helpers exist on `Context`:
 
 ```kotlin
-ctx.profileOf(pubKey)   // latest kind:0 (NIP-01)
-ctx.relaysOf(pubKey)    // latest kind:10002 (NIP-65)
-ctx.contactsOf(pubKey)  // latest kind:3 (NIP-02)
+ctx.profileOf(pubKey)            // latest kind:0    (NIP-01)
+ctx.relaysOf(pubKey)             // latest kind:10002 (NIP-65)
+ctx.contactsOf(pubKey)           // latest kind:3    (NIP-02)
+ctx.dmInboxOf(pubKey)            // latest kind:10050 (NIP-17 DM inbox)
+ctx.keyPackageRelaysOf(pubKey)   // latest kind:10051 (MIP-00 KP relays)
+ctx.cachedRelayListsOf(pubKey)   // RecipientRelayFetcher.Lists from cache
 ```
+
+Commands that already read these cache-first:
+
+- `amy profile show` — `--refresh` to bypass.
+- `amy feed --following` — local kind:3 served via slot lookup; falls
+  back to a relay drain on first run.
+- `amy dm send` — recipient's kind:10050 / 10051 / 10002 served from
+  cache before falling back to `RecipientRelayFetcher`.
+- `amy marmot key-package check` and `amy marmot await key-package`
+  — same recipient-relay lookup, cache-first.
+- `amy marmot group add` — invitee relay lists served from cache.
 
 The store implements every feature of the Quartz SQLite store —
 NIP-01 replaceable / addressable uniqueness, NIP-09 deletion

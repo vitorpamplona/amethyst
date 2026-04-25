@@ -77,7 +77,11 @@ object KeyPackageCommands {
             // when the target and inviter share no relays.
             val seed = ctx.bootstrapRelays()
             if (seed.isEmpty()) return Json.error("no_relays", "configure relays first")
-            val recipient = RecipientRelayFetcher.fetchRelayLists(ctx.client, targetHex, seed)
+            // Cache-first via Context.cachedRelayListsOf — replaceable
+            // events live in the local store after the first sync.
+            val recipient =
+                ctx.cachedRelayListsOf(targetHex)
+                    ?: RecipientRelayFetcher.fetchRelayLists(ctx.client, targetHex, seed)
             val relays =
                 KeyPackageFetcher.fetchRelaysFor(
                     targetKeyPackageRelays = recipient.keyPackage,

@@ -76,7 +76,13 @@ object AwaitCommands {
             // target hasn't published either list yet, fall back to the
             // bootstrap pool so the loop still has something to query.
             val seed = ctx.bootstrapRelays()
-            val lists = RecipientRelayFetcher.fetchRelayLists(ctx.client, target, seed)
+            // Cache-first: relay lists are kind:10050 / 10051 / 10002 —
+            // all replaceable, served from the local store via the slot
+            // shortcut. Falls back to a network drain only if Amy has
+            // never observed any of them for `target`.
+            val lists =
+                ctx.cachedRelayListsOf(target)
+                    ?: RecipientRelayFetcher.fetchRelayLists(ctx.client, target, seed)
             val relays =
                 KeyPackageFetcher.fetchRelaysFor(
                     targetKeyPackageRelays = lists.keyPackage,

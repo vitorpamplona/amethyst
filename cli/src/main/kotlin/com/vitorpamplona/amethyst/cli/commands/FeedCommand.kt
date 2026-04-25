@@ -155,6 +155,13 @@ object FeedCommand {
         ctx: Context,
         timeoutMs: Long,
     ): List<HexKey> {
+        // Cache-first: contact lists are kind:3 (replaceable). If we've
+        // ever seen ours, the local store has it already and reading is
+        // a slot lookup — no relay round-trip.
+        ctx.contactsOf(ctx.identity.pubKeyHex)?.let {
+            return it.verifiedFollowKeySet().toList()
+        }
+
         val relays = ctx.outboxRelays().ifEmpty { ctx.bootstrapRelays() }
         if (relays.isEmpty()) return emptyList()
         val filter =

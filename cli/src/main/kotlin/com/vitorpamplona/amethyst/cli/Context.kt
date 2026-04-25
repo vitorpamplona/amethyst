@@ -28,6 +28,8 @@ import com.vitorpamplona.amethyst.commons.defaults.DefaultNIP65RelaySet
 import com.vitorpamplona.amethyst.commons.marmot.MarmotManager
 import com.vitorpamplona.amethyst.commons.marmot.ingest
 import com.vitorpamplona.quartz.marmot.MarmotFilters
+import com.vitorpamplona.quartz.marmot.RecipientRelayFetcher
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -44,6 +46,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.fs.FsEventStore
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
+import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import kotlinx.coroutines.channels.Channel
@@ -332,6 +335,54 @@ class Context(
             .query<Event>(
                 Filter(authors = listOf(pubKey), kinds = listOf(ContactListEvent.KIND), limit = 1),
             ).firstOrNull() as? ContactListEvent
+
+    /**
+     * Latest known kind:10050 chat-message (NIP-17 DM) inbox relay list
+     * for [pubKey], or `null` if Amy has never observed one. Used by
+     * `dm send` to resolve where to deliver a wrap.
+     */
+    fun dmInboxOf(pubKey: HexKey): ChatMessageRelayListEvent? =
+        store
+            .query<Event>(
+                Filter(authors = listOf(pubKey), kinds = listOf(ChatMessageRelayListEvent.KIND), limit = 1),
+            ).firstOrNull() as? ChatMessageRelayListEvent
+
+    /**
+     * Latest known kind:10051 KeyPackage relay list (MIP-00) for
+     * [pubKey], or `null` if Amy has never observed one. Used by
+     * `marmot key-package check` and `marmot await key-package` to
+     * locate where the recipient publishes their KeyPackages.
+     */
+    fun keyPackageRelaysOf(pubKey: HexKey): KeyPackageRelayListEvent? =
+        store
+            .query<Event>(
+                Filter(authors = listOf(pubKey), kinds = listOf(KeyPackageRelayListEvent.KIND), limit = 1),
+            ).firstOrNull() as? KeyPackageRelayListEvent
+
+    /**
+     * Assemble a [RecipientRelayFetcher.Lists] from the local store —
+     * the same shape callers get from [RecipientRelayFetcher.fetchRelayLists]
+     * after a network drain, but no network round-trip. Returns `null`
+     * only when the cache has *no* relay-list events at all for
+     * [pubKey] (none of kind 10050 / 10051 / 10002), so callers can
+     * trivially fall back to the network fetcher with `?:`.
+     *
+     * Stale-data caveat: replaceable events are immutable per snapshot
+     * — if the recipient has rotated their inbox since we last saw them,
+     * we'll still hand back the old list. Commands that care can drain
+     * (which re-populates the cache) or expose a `--refresh` flag.
+     */
+    fun cachedRelayListsOf(pubKey: HexKey): RecipientRelayFetcher.Lists? {
+        val dm = dmInboxOf(pubKey)
+        val kp = keyPackageRelaysOf(pubKey)
+        val nip65 = relaysOf(pubKey)
+        if (dm == null && kp == null && nip65 == null) return null
+        return RecipientRelayFetcher.Lists(
+            dmInbox = dm?.relays().orEmpty(),
+            keyPackage = kp?.relays().orEmpty(),
+            nip65 = nip65,
+        )
+    }
 
     /**
      * Pull down everything needed to bring local Marmot state current:
