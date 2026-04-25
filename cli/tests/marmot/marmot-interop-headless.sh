@@ -39,11 +39,19 @@ AMY_BIN="$REPO_ROOT/cli/build/install/amy/bin/amy"
 # Local relay wiring — cloned + built during preflight, started on
 # $RELAY_PORT. The harness never touches the public internet for test
 # traffic; wn/wnd/amy all point at this one loopback endpoint.
+#
+# Bind to 127.0.0.2 rather than 127.0.0.1: Quartz's RelayUrlNormalizer
+# strips literal 127.0.0.1 / localhost / 192.168.* out of NIP-17 inbox
+# (kind:10050) and KeyPackage (kind:10051) relay-list events as a
+# privacy guard, which would silently leave the harness publishing to
+# Amethyst's public defaults instead of the loopback. 127.0.0.2 is
+# still pure loopback (no network traffic) but isn't on the strip list.
+RELAY_HOST="${RELAY_HOST:-127.0.0.2}"
 RELAY_REPO="${RELAY_REPO:-$STATE_DIR/nostr-rs-relay}"
 RELAY_BIN="$RELAY_REPO/target/release/nostr-rs-relay"
 RELAY_DATA="$STATE_DIR/relay"
 RELAY_PORT="${RELAY_PORT:-8080}"
-RELAY_URL="ws://127.0.0.1:$RELAY_PORT"
+RELAY_URL="ws://$RELAY_HOST:$RELAY_PORT"
 NO_BUILD=0
 
 A_NPUB=""
@@ -55,7 +63,8 @@ C_HEX=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --port)      RELAY_PORT="$2"; RELAY_URL="ws://127.0.0.1:$RELAY_PORT"; shift ;;
+    --port)      RELAY_PORT="$2"; RELAY_URL="ws://$RELAY_HOST:$RELAY_PORT"; shift ;;
+    --host)      RELAY_HOST="$2"; RELAY_URL="ws://$RELAY_HOST:$RELAY_PORT"; shift ;;
     --no-build)  NO_BUILD=1 ;;
     -h|--help)
       sed -n '3,14p' "${BASH_SOURCE[0]}" | sed 's/^# \?//'
