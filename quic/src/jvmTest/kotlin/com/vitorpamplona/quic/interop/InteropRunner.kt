@@ -28,6 +28,7 @@ import com.vitorpamplona.quic.transport.UdpSocket
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -100,8 +101,15 @@ fun main(args: Array<String>) {
                 driver.close()
             } catch (_: Throwable) {
             }
+            // Give the close-launched teardown a moment to actually run, so we
+            // don't return from runBlocking with the socket still bound.
+            kotlinx.coroutines.delay(50)
             outcome
         }
+    // Cancel the parent scope so any orphaned coroutines (e.g. driver teardown)
+    // are torn down before main() exits. Without this the JVM hangs on stray
+    // IO-dispatcher threads.
+    scope.cancel()
 
     when (outcome) {
         is InteropOutcome.Connected -> {

@@ -39,8 +39,16 @@ class QuicStream(
     val send = SendBuffer()
     val receive = ReceiveBuffer()
 
-    /** Bytes received and confirmed contiguous, exposed as a flow to the consumer. */
-    private val incomingChannel = Channel<ByteArray>(capacity = Channel.UNLIMITED)
+    /**
+     * Bytes received and confirmed contiguous, exposed as a flow to the consumer.
+     *
+     * Bounded buffer (64 chunks) — combined with the per-stream receive-limit
+     * enforced in the parser, this caps unbounded memory growth from a slow
+     * consumer. Producer (the parser) uses [trySend], dropping bytes if the
+     * channel is full; the receive-limit enforcement makes "channel full" a
+     * connection-level error long before it becomes a memory problem.
+     */
+    private val incomingChannel = Channel<ByteArray>(capacity = 64)
     val incoming: Flow<ByteArray> get() = incomingChannel.consumeAsFlow()
 
     /** Per-stream send credit (peer's MAX_STREAM_DATA value). */

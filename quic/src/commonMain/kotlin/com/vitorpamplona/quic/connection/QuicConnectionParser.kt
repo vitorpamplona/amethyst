@@ -56,8 +56,14 @@ fun feedDatagram(
         val first = datagram[offset].toInt() and 0xFF
         val isLong = (first and 0x80) != 0
         if (isLong) {
-            val consumed = feedLongHeaderPacket(conn, datagram, offset, nowMillis) ?: break
-            offset += consumed
+            // Per RFC 9001 §5.5, drop ONLY the failing packet, not subsequent
+            // coalesced ones. Use peekHeader to advance over a packet whose
+            // payload we couldn't decrypt; only break the loop on a header
+            // that's totally unparseable (then we don't know where the next
+            // packet starts).
+            val peeked = LongHeaderPacket.peekHeader(datagram, offset) ?: break
+            val consumed = feedLongHeaderPacket(conn, datagram, offset, nowMillis)
+            offset += consumed ?: peeked.totalLength
         } else {
             // Short-header — consumes the rest of the datagram.
             feedShortHeaderPacket(conn, datagram, offset, nowMillis)
@@ -170,6 +176,17 @@ private fun dispatchFrames(
             is StreamFrame -> {
                 ackEliciting = true
                 val stream = conn.getOrCreatePeerStreamLocked(frame.streamId)
+                // RFC 9000 §4.1: peer MUST NOT send beyond the limit we advertised.
+                // We don't enforce per-stream limit here yet (it'd require closing
+                // with FLOW_CONTROL_ERROR), but we DO enforce connection-level
+                // bound to prevent unbounded memory growth from a misbehaving peer.
+                val frameEnd = frame.offset + frame.data.size
+                if (frameEnd > stream.receiveLimit) {
+                    conn.markClosedExternally(
+                        "peer exceeded stream ${frame.streamId} receive limit ($frameEnd > ${stream.receiveLimit})",
+                    )
+                    return
+                }
                 stream.receive.insert(frame.offset, frame.data, frame.fin)
                 val data = stream.receive.readContiguous()
                 if (data.isNotEmpty()) {

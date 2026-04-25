@@ -61,8 +61,10 @@ data class RetryPacket(
             val r = QuicReader(bytes, 1)
             val version = r.readUint32().toInt()
             val dcidLen = r.readByte()
+            if (dcidLen !in 0..20) return null // RFC 9000 §17.2 caps CID at 20
             val dcid = ConnectionId(r.readBytes(dcidLen))
             val scidLen = r.readByte()
+            if (scidLen !in 0..20) return null
             val scid = ConnectionId(r.readBytes(scidLen))
             // Retry token consumes everything up to the last 16 bytes (tag).
             val tokenLen = bytes.size - r.position - 16

@@ -168,6 +168,13 @@ class TlsClient(
                 if (type != TlsConstants.HS_SERVER_HELLO) throw QuicCodecException("expected ServerHello, got type=$type")
                 if (level != Level.INITIAL) throw QuicCodecException("ServerHello must arrive at Initial level")
                 val sh = TlsServerHello.decodeBody(bodyReader)
+                // RFC 8446 §4.1.4: HelloRetryRequest is encoded as a ServerHello
+                // with a fixed magic random. We don't implement HRR (we only
+                // offer X25519, the only group nests + most servers accept), so
+                // any HRR is a hard failure.
+                if (sh.random.contentEquals(HELLO_RETRY_REQUEST_RANDOM)) {
+                    throw QuicCodecException("HelloRetryRequest received but not supported")
+                }
                 if (sh.negotiatedVersion != TlsConstants.VERSION_TLS_1_3) {
                     throw QuicCodecException("server did not negotiate TLS 1.3")
                 }
@@ -383,3 +390,40 @@ internal class ByteArrayBuilder {
         return msg
     }
 }
+
+/** RFC 8446 §4.1.4 — HelloRetryRequest is a ServerHello whose Random equals SHA-256("HelloRetryRequest"). */
+private val HELLO_RETRY_REQUEST_RANDOM: ByteArray =
+    byteArrayOf(
+        0xCF.toByte(),
+        0x21.toByte(),
+        0xAD.toByte(),
+        0x74.toByte(),
+        0xE5.toByte(),
+        0x9A.toByte(),
+        0x61.toByte(),
+        0x11.toByte(),
+        0xBE.toByte(),
+        0x1D.toByte(),
+        0x8C.toByte(),
+        0x02.toByte(),
+        0x1E.toByte(),
+        0x65.toByte(),
+        0xB8.toByte(),
+        0x91.toByte(),
+        0xC2.toByte(),
+        0xA2.toByte(),
+        0x11.toByte(),
+        0x16.toByte(),
+        0x7A.toByte(),
+        0xBB.toByte(),
+        0x8C.toByte(),
+        0x5E.toByte(),
+        0x07.toByte(),
+        0x9E.toByte(),
+        0x09.toByte(),
+        0xE2.toByte(),
+        0xC8.toByte(),
+        0xA8.toByte(),
+        0x33.toByte(),
+        0x9C.toByte(),
+    )

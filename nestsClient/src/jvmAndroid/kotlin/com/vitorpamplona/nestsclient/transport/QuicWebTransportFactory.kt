@@ -121,6 +121,16 @@ class QuicWebTransportFactory(
             val controlBytes =
                 byteArrayOf(Http3StreamType.CONTROL.toByte()) + buildClientWebTransportSettings().encodeFrame()
             controlStream.send.enqueue(controlBytes)
+            driver.wakeup()
+
+            // RFC 9220 §3.1 strictly requires waiting for the server's SETTINGS
+            // frame confirming SETTINGS_ENABLE_WEBTRANSPORT=1 before sending
+            // CONNECT. Wiring peerSettings to gate the CONNECT requires
+            // restructuring (the demux lives inside QuicWebTransportSessionState
+            // which we don't build until after the request bidi opens).
+            // Tolerant servers (aioquic, quic-go's interop) accept early CONNECT;
+            // strict servers (Chromium) may close the stream. Tracked as a
+            // known limitation of the v1 stack.
 
             // Open the Extended CONNECT request stream.
             val requestStream = conn.openBidiStream()
@@ -154,6 +164,11 @@ class QuicWebTransportFactory(
             return QuicWebTransportSession(state)
         } catch (we: WebTransportException) {
             throw we
+        } catch (ce: kotlinx.coroutines.CancellationException) {
+            // Preserve cancellation semantics — wrapping it in HandshakeFailed
+            // would break structured concurrency. But still close the driver.
+            driver.close()
+            throw ce
         } catch (t: Throwable) {
             driver.close()
             throw WebTransportException(
