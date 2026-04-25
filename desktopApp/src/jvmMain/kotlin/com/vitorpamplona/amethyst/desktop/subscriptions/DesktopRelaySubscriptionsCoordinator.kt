@@ -123,17 +123,40 @@ class DesktopRelaySubscriptionsCoordinator(
     ) {
         scope.launch(Dispatchers.IO) {
             try {
-                val consumed = localCache.consume(event, relay)
-                if (consumed) {
-                    _lastEventAt.value = System.currentTimeMillis()
-                    val note = localCache.getNoteIfExists(event.id) ?: return@launch
-                    eventBundler.invalidateList(note) { batch ->
-                        localCache.eventStream.emitNewNotes(batch)
-                    }
-                }
+                runConsume(localCache.consume(event, relay), event)
             } catch (e: Exception) {
                 println("Coordinator: failed to consume kind=${event.kind} id=${event.id} relay=$relay: ${e.message}")
             }
+        }
+    }
+
+    /**
+     * Test-only seam — bypasses signature verification in the cache so unit
+     * tests can pump synthetic events through the full coordinator pipeline.
+     * Production code MUST use [consumeEvent].
+     */
+    internal fun consumeEventAssumingVerified(
+        event: Event,
+        relay: NormalizedRelayUrl?,
+    ) {
+        scope.launch(Dispatchers.IO) {
+            try {
+                runConsume(localCache.consumeAssumingVerified(event, relay), event)
+            } catch (e: Exception) {
+                println("Coordinator: failed to consume kind=${event.kind} id=${event.id} relay=$relay: ${e.message}")
+            }
+        }
+    }
+
+    private suspend fun runConsume(
+        consumed: Boolean,
+        event: Event,
+    ) {
+        if (!consumed) return
+        _lastEventAt.value = System.currentTimeMillis()
+        val note = localCache.getNoteIfExists(event.id) ?: return
+        eventBundler.invalidateList(note) { batch ->
+            localCache.eventStream.emitNewNotes(batch)
         }
     }
 

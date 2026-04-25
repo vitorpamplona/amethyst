@@ -53,7 +53,7 @@ import kotlin.test.assertTrue
  * These tests use a stub INostrClient (no real relay connections) and exercise
  * the full event consumption path through DesktopRelaySubscriptionsCoordinator.
  *
- * Key invariant being tested: when coordinator.consumeEvent() is called,
+ * Key invariant being tested: when coordinator.consumeEventAssumingVerified() is called,
  * the event should flow through cache → eventStream → ViewModel.feedState.
  */
 class CoordinatorPipelineTest {
@@ -167,14 +167,14 @@ class CoordinatorPipelineTest {
                     content = "Hello from relay",
                     sig = dummySig,
                 )
-            coordinator.consumeEvent(event, relayUrl)
+            coordinator.consumeEventAssumingVerified(event, relayUrl)
 
             waitForBundler()
 
             val state = vm.feedState.feedContent.value
             assertIs<FeedState.Loaded>(
                 state,
-                "ViewModel should be Loaded after coordinator.consumeEvent()",
+                "ViewModel should be Loaded after coordinator.consumeEventAssumingVerified()",
             )
             assertTrue(
                 vm.feedState.visibleNotes().any { it.idHex == event.id },
@@ -203,7 +203,7 @@ class CoordinatorPipelineTest {
                     content = "test",
                     sig = dummySig,
                 )
-            coordinator.consumeEvent(event, relayUrl)
+            coordinator.consumeEventAssumingVerified(event, relayUrl)
             waitForBundler()
 
             assertTrue(coordinator.lastEventAt.value != null, "lastEventAt should be set after consumeEvent")
@@ -227,7 +227,7 @@ class CoordinatorPipelineTest {
                     content = "",
                     sig = dummySig,
                 )
-            coordinator.consumeEvent(contactEvent, relayUrl)
+            coordinator.consumeEventAssumingVerified(contactEvent, relayUrl)
             waitForBundler()
 
             assertTrue(
@@ -255,7 +255,7 @@ class CoordinatorPipelineTest {
                     content = "",
                     sig = dummySig,
                 )
-            coordinator.consumeEvent(contactEvent, relayUrl)
+            coordinator.consumeEventAssumingVerified(contactEvent, relayUrl)
             waitForBundler()
 
             // Step 2: Create following feed ViewModel
@@ -274,7 +274,7 @@ class CoordinatorPipelineTest {
                     content = "Note from followed user",
                     sig = dummySig,
                 )
-            coordinator.consumeEvent(textEvent, relayUrl)
+            coordinator.consumeEventAssumingVerified(textEvent, relayUrl)
             waitForBundler()
 
             val state = vm.feedState.feedContent.value
@@ -311,7 +311,7 @@ class CoordinatorPipelineTest {
                     content = "Note that won't show",
                     sig = dummySig,
                 )
-            coordinator.consumeEvent(textEvent, relayUrl)
+            coordinator.consumeEventAssumingVerified(textEvent, relayUrl)
             waitForBundler()
 
             assertIs<FeedState.Empty>(
@@ -349,8 +349,8 @@ class CoordinatorPipelineTest {
                 )
 
             // Consume same event twice (can happen with multiple relays)
-            coordinator.consumeEvent(event, relayUrl)
-            coordinator.consumeEvent(event, NormalizedRelayUrl("wss://relay2.test/"))
+            coordinator.consumeEventAssumingVerified(event, relayUrl)
+            coordinator.consumeEventAssumingVerified(event, NormalizedRelayUrl("wss://relay2.test/"))
             waitForBundler()
 
             assertTrue(

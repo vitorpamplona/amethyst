@@ -127,7 +127,7 @@ class DesktopCachePipelineTest {
         val cache = DesktopLocalCache()
         val event = textNote("note1".padEnd(64, '0'), userPubKey)
 
-        val consumed = cache.consume(event, relayUrl)
+        val consumed = cache.consumeAssumingVerified(event, relayUrl)
 
         assertTrue(consumed, "First consume should return true")
         val note = cache.getNoteIfExists("note1".padEnd(64, '0'))
@@ -140,8 +140,8 @@ class DesktopCachePipelineTest {
         val cache = DesktopLocalCache()
         val event = textNote("note1".padEnd(64, '0'), userPubKey)
 
-        cache.consume(event, relayUrl)
-        val secondConsume = cache.consume(event, relayUrl)
+        cache.consumeAssumingVerified(event, relayUrl)
+        val secondConsume = cache.consumeAssumingVerified(event, relayUrl)
 
         assertTrue(!secondConsume, "Second consume of same event should return false")
     }
@@ -151,7 +151,7 @@ class DesktopCachePipelineTest {
         val cache = DesktopLocalCache()
         val event = contactList("cl1".padEnd(64, '0'), userPubKey, listOf(followedPubKey))
 
-        cache.consume(event, relayUrl)
+        cache.consumeAssumingVerified(event, relayUrl)
 
         assertEquals(setOf(followedPubKey), cache.followedUsers.value)
     }
@@ -168,8 +168,8 @@ class DesktopCachePipelineTest {
                 createdAt = 200,
             )
 
-        cache.consume(old, relayUrl)
-        cache.consume(newer, relayUrl)
+        cache.consumeAssumingVerified(old, relayUrl)
+        cache.consumeAssumingVerified(newer, relayUrl)
 
         assertEquals(setOf(followedPubKey, unfollowedPubKey), cache.followedUsers.value)
     }
@@ -180,8 +180,8 @@ class DesktopCachePipelineTest {
         val newer = contactList("cl2".padEnd(64, '0'), userPubKey, listOf(followedPubKey, unfollowedPubKey), createdAt = 200)
         val old = contactList("cl1".padEnd(64, '0'), userPubKey, listOf(followedPubKey), createdAt = 100)
 
-        cache.consume(newer, relayUrl)
-        cache.consume(old, relayUrl)
+        cache.consumeAssumingVerified(newer, relayUrl)
+        cache.consumeAssumingVerified(old, relayUrl)
 
         assertEquals(
             setOf(followedPubKey, unfollowedPubKey),
@@ -197,8 +197,8 @@ class DesktopCachePipelineTest {
         val note = textNote(noteId, userPubKey)
         val react = reaction("react1".padEnd(64, '0'), followedPubKey, noteId)
 
-        cache.consume(note, relayUrl)
-        cache.consume(react, relayUrl)
+        cache.consumeAssumingVerified(note, relayUrl)
+        cache.consumeAssumingVerified(react, relayUrl)
 
         val cachedNote = cache.getNoteIfExists(noteId)!!
         assertTrue(cachedNote.countReactions() > 0, "Note should have reactions after consuming reaction event")
@@ -223,7 +223,7 @@ class DesktopCachePipelineTest {
             delay(50)
 
             val event = textNote("note1".padEnd(64, '0'), userPubKey)
-            cache.consume(event, relayUrl)
+            cache.consumeAssumingVerified(event, relayUrl)
             val note = cache.getNoteIfExists(event.id)!!
             cache.emitNewNotes(setOf(note))
 
@@ -244,9 +244,9 @@ class DesktopCachePipelineTest {
         val filter = DesktopGlobalFeedFilter(cache)
 
         // Add notes from different authors
-        cache.consume(textNote("n1".padEnd(64, '0'), userPubKey, createdAt = 100), relayUrl)
-        cache.consume(textNote("n2".padEnd(64, '0'), followedPubKey, createdAt = 200), relayUrl)
-        cache.consume(textNote("n3".padEnd(64, '0'), unfollowedPubKey, createdAt = 300), relayUrl)
+        cache.consumeAssumingVerified(textNote("n1".padEnd(64, '0'), userPubKey, createdAt = 100), relayUrl)
+        cache.consumeAssumingVerified(textNote("n2".padEnd(64, '0'), followedPubKey, createdAt = 200), relayUrl)
+        cache.consumeAssumingVerified(textNote("n3".padEnd(64, '0'), unfollowedPubKey, createdAt = 300), relayUrl)
 
         val feed = filter.feed()
         assertEquals(3, feed.size, "Global feed should contain all text notes")
@@ -255,10 +255,10 @@ class DesktopCachePipelineTest {
     @Test
     fun `FollowingFeedFilter only includes notes from followed users`() {
         val cache = DesktopLocalCache()
-        cache.consume(contactList("cl".padEnd(64, '0'), userPubKey, listOf(followedPubKey)), relayUrl)
+        cache.consumeAssumingVerified(contactList("cl".padEnd(64, '0'), userPubKey, listOf(followedPubKey)), relayUrl)
 
-        cache.consume(textNote("n1".padEnd(64, '0'), followedPubKey, createdAt = 100), relayUrl)
-        cache.consume(textNote("n2".padEnd(64, '0'), unfollowedPubKey, createdAt = 200), relayUrl)
+        cache.consumeAssumingVerified(textNote("n1".padEnd(64, '0'), followedPubKey, createdAt = 100), relayUrl)
+        cache.consumeAssumingVerified(textNote("n2".padEnd(64, '0'), unfollowedPubKey, createdAt = 200), relayUrl)
 
         val filter = DesktopFollowingFeedFilter(cache) { cache.followedUsers.value }
         val feed = filter.feed()
@@ -270,7 +270,7 @@ class DesktopCachePipelineTest {
     @Test
     fun `FollowingFeedFilter returns empty when no follows`() {
         val cache = DesktopLocalCache()
-        cache.consume(textNote("n1".padEnd(64, '0'), followedPubKey), relayUrl)
+        cache.consumeAssumingVerified(textNote("n1".padEnd(64, '0'), followedPubKey), relayUrl)
 
         val filter = DesktopFollowingFeedFilter(cache) { emptySet() }
         val feed = filter.feed()
@@ -281,8 +281,8 @@ class DesktopCachePipelineTest {
     @Test
     fun `ProfileFeedFilter only shows notes from target pubkey`() {
         val cache = DesktopLocalCache()
-        cache.consume(textNote("n1".padEnd(64, '0'), followedPubKey, createdAt = 100), relayUrl)
-        cache.consume(textNote("n2".padEnd(64, '0'), unfollowedPubKey, createdAt = 200), relayUrl)
+        cache.consumeAssumingVerified(textNote("n1".padEnd(64, '0'), followedPubKey, createdAt = 100), relayUrl)
+        cache.consumeAssumingVerified(textNote("n2".padEnd(64, '0'), unfollowedPubKey, createdAt = 200), relayUrl)
 
         val filter = DesktopProfileFeedFilter(followedPubKey, cache)
         val feed = filter.feed()
@@ -297,8 +297,8 @@ class DesktopCachePipelineTest {
         val rootId = "root".padEnd(64, '0')
         val replyId = "reply".padEnd(64, '0')
 
-        cache.consume(textNote(rootId, userPubKey, createdAt = 100), relayUrl)
-        cache.consume(textNote(replyId, followedPubKey, createdAt = 200, replyToId = rootId), relayUrl)
+        cache.consumeAssumingVerified(textNote(rootId, userPubKey, createdAt = 100), relayUrl)
+        cache.consumeAssumingVerified(textNote(replyId, followedPubKey, createdAt = 200, replyToId = rootId), relayUrl)
 
         val filter = DesktopThreadFilter(rootId, cache)
         val feed = filter.feed()
@@ -310,11 +310,11 @@ class DesktopCachePipelineTest {
     fun `NotificationFeedFilter shows events tagging user`() {
         val cache = DesktopLocalCache()
         val noteId = "note1".padEnd(64, '0')
-        cache.consume(textNote(noteId, userPubKey, createdAt = 100), relayUrl)
+        cache.consumeAssumingVerified(textNote(noteId, userPubKey, createdAt = 100), relayUrl)
 
         // Reaction from someone else targeting user's note
         val react = reaction("react1".padEnd(64, '0'), followedPubKey, noteId, createdAt = 200)
-        cache.consume(react, relayUrl)
+        cache.consumeAssumingVerified(react, relayUrl)
 
         val filter = DesktopNotificationFeedFilter(userPubKey, cache)
         val feed = filter.feed()
@@ -334,7 +334,7 @@ class DesktopCachePipelineTest {
     fun `ViewModel starts in Loading then transitions to Loaded after refresh`() =
         runBlocking {
             val cache = DesktopLocalCache()
-            cache.consume(textNote("n1".padEnd(64, '0'), userPubKey), relayUrl)
+            cache.consumeAssumingVerified(textNote("n1".padEnd(64, '0'), userPubKey), relayUrl)
 
             val vm = DesktopFeedViewModel(DesktopGlobalFeedFilter(cache), cache)
 
@@ -373,7 +373,7 @@ class DesktopCachePipelineTest {
 
             // Simulate relay event arriving
             val event = textNote("n1".padEnd(64, '0'), userPubKey)
-            cache.consume(event, relayUrl)
+            cache.consumeAssumingVerified(event, relayUrl)
             val note = cache.getNoteIfExists(event.id)!!
             cache.emitNewNotes(setOf(note))
 
@@ -389,7 +389,7 @@ class DesktopCachePipelineTest {
     fun `Following ViewModel only shows followed users notes via eventStream`() =
         runBlocking {
             val cache = DesktopLocalCache()
-            cache.consume(contactList("cl".padEnd(64, '0'), userPubKey, listOf(followedPubKey)), relayUrl)
+            cache.consumeAssumingVerified(contactList("cl".padEnd(64, '0'), userPubKey, listOf(followedPubKey)), relayUrl)
 
             val filter = DesktopFollowingFeedFilter(cache) { cache.followedUsers.value }
             val vm = DesktopFeedViewModel(filter, cache)
@@ -397,7 +397,7 @@ class DesktopCachePipelineTest {
 
             // Add followed user's note
             val e1 = textNote("n1".padEnd(64, '0'), followedPubKey, createdAt = 100)
-            cache.consume(e1, relayUrl)
+            cache.consumeAssumingVerified(e1, relayUrl)
             val note1 = cache.getNoteIfExists(e1.id)!!
             cache.emitNewNotes(setOf(note1))
             waitForBundler()
@@ -406,7 +406,7 @@ class DesktopCachePipelineTest {
 
             // Add unfollowed user's note
             val e2 = textNote("n2".padEnd(64, '0'), unfollowedPubKey, createdAt = 200)
-            cache.consume(e2, relayUrl)
+            cache.consumeAssumingVerified(e2, relayUrl)
             val note2 = cache.getNoteIfExists(e2.id)!!
             cache.emitNewNotes(setOf(note2))
             waitForBundler()
@@ -422,7 +422,7 @@ class DesktopCachePipelineTest {
             // No contact list consumed — followedUsers remains empty
 
             val e1 = textNote("n1".padEnd(64, '0'), followedPubKey)
-            cache.consume(e1, relayUrl)
+            cache.consumeAssumingVerified(e1, relayUrl)
 
             val filter = DesktopFollowingFeedFilter(cache) { cache.followedUsers.value }
             val vm = DesktopFeedViewModel(filter, cache)
@@ -442,8 +442,8 @@ class DesktopCachePipelineTest {
     @Test
     fun `clear resets all cache state`() {
         val cache = DesktopLocalCache()
-        cache.consume(textNote("n1".padEnd(64, '0'), userPubKey), relayUrl)
-        cache.consume(contactList("cl".padEnd(64, '0'), userPubKey, listOf(followedPubKey)), relayUrl)
+        cache.consumeAssumingVerified(textNote("n1".padEnd(64, '0'), userPubKey), relayUrl)
+        cache.consumeAssumingVerified(contactList("cl".padEnd(64, '0'), userPubKey, listOf(followedPubKey)), relayUrl)
 
         cache.clear()
 
@@ -459,9 +459,9 @@ class DesktopCachePipelineTest {
     @Test
     fun `global feed is sorted newest first`() {
         val cache = DesktopLocalCache()
-        cache.consume(textNote("old".padEnd(64, '0'), userPubKey, createdAt = 100), relayUrl)
-        cache.consume(textNote("mid".padEnd(64, '0'), userPubKey, createdAt = 200), relayUrl)
-        cache.consume(textNote("new".padEnd(64, '0'), userPubKey, createdAt = 300), relayUrl)
+        cache.consumeAssumingVerified(textNote("old".padEnd(64, '0'), userPubKey, createdAt = 100), relayUrl)
+        cache.consumeAssumingVerified(textNote("mid".padEnd(64, '0'), userPubKey, createdAt = 200), relayUrl)
+        cache.consumeAssumingVerified(textNote("new".padEnd(64, '0'), userPubKey, createdAt = 300), relayUrl)
 
         val filter = DesktopGlobalFeedFilter(cache)
         val feed = filter.feed()
@@ -487,7 +487,7 @@ class DesktopCachePipelineTest {
                 sig = dummySig,
             )
 
-        cache.consume(metadata, relayUrl)
+        cache.consumeAssumingVerified(metadata, relayUrl)
 
         val user = cache.getUserIfExists(userPubKey)
         assertTrue(user != null, "User should exist after metadata consumption")
@@ -506,12 +506,12 @@ class DesktopCachePipelineTest {
 
         // Create a text note
         val textEvent = textNote("t1".padEnd(64, '0'), userPubKey)
-        cache.consume(textEvent, relayUrl)
+        cache.consumeAssumingVerified(textEvent, relayUrl)
         val textNote = cache.getNoteIfExists(textEvent.id)!!
 
         // Create a reaction (not a text note)
         val reactEvent = reaction("r1".padEnd(64, '0'), userPubKey, "t1".padEnd(64, '0'))
-        cache.consume(reactEvent, relayUrl)
+        cache.consumeAssumingVerified(reactEvent, relayUrl)
         val reactNote = cache.getNoteIfExists(reactEvent.id)!!
 
         val filtered = filter.applyFilter(setOf(textNote, reactNote))
@@ -523,16 +523,16 @@ class DesktopCachePipelineTest {
     @Test
     fun `FollowingFeedFilter applyFilter respects follow set`() {
         val cache = DesktopLocalCache()
-        cache.consume(contactList("cl".padEnd(64, '0'), userPubKey, listOf(followedPubKey)), relayUrl)
+        cache.consumeAssumingVerified(contactList("cl".padEnd(64, '0'), userPubKey, listOf(followedPubKey)), relayUrl)
 
         val filter = DesktopFollowingFeedFilter(cache) { cache.followedUsers.value }
 
         val e1 = textNote("n1".padEnd(64, '0'), followedPubKey)
-        cache.consume(e1, relayUrl)
+        cache.consumeAssumingVerified(e1, relayUrl)
         val note1 = cache.getNoteIfExists(e1.id)!!
 
         val e2 = textNote("n2".padEnd(64, '0'), unfollowedPubKey)
-        cache.consume(e2, relayUrl)
+        cache.consumeAssumingVerified(e2, relayUrl)
         val note2 = cache.getNoteIfExists(e2.id)!!
 
         val filtered = filter.applyFilter(setOf(note1, note2))
@@ -592,7 +592,7 @@ class DesktopCachePipelineTest {
                 sig = dummySig,
             )
 
-        cache.consume(metadata, relayUrl)
+        cache.consumeAssumingVerified(metadata, relayUrl)
 
         val user = cache.getUserIfExists(userPubKey)!!
         val cached = user.metadataOrNull()
