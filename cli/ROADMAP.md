@@ -7,7 +7,8 @@ full command-line mirror of Amethyst.
 feature. Move rows between tables, adjust ordering, add non-goals.
 This is the single source of truth for "what's left".
 
-- How the CLI is used today: [README.md](./README.md)
+- What amy is + the public contract: [README.md](./README.md)
+- How to use it (examples + walkthroughs): [USAGE.md](./USAGE.md)
 - How to implement an item: [DEVELOPMENT.md](./DEVELOPMENT.md)
 - Ongoing design plans: [plans/](./plans/)
 - Shared work consumed here: [../commons/plans/](../commons/plans/)
@@ -48,13 +49,13 @@ Status legend: ✅ shipped · 📦 logic lives in `commons/`, needs a command ·
 | Marmot group create / add / rename / promote / demote / remove / leave | ✅ | `commons/marmot/` |
 | Marmot message send / list | ✅ | `commons/marmot/` |
 | `await` polling (KP / group / member / admin / message / rename / epoch) | ✅ | `AwaitCommands` |
-| NIP-01 note publish (`amy note publish TEXT`) | 🆕 | Needs a `commons/` builder wrapper. |
-| NIP-01 feed read (`amy feed home`, `amy feed hashtag #X`, `amy feed profile NPUB`) | 🆕 | Extract `FeedFilter` usage from `amethyst/ui/dal/` into `commons/` entry points. |
+| NIP-01 note publish (`amy notes post TEXT`) | ✅ | `PostCommand` — outbox via `RelayCommands` configured set. |
+| NIP-01 feed read (`amy notes feed [--following \| --author NPUB]`) | ✅ | `FeedCommand`. Hashtag / community feeds still pending. |
 | NIP-02 follow list add / remove / list | 🆕 | Logic in `amethyst/model/nip02FollowLists/`. |
 | NIP-09 event deletion | 🆕 | Builder exists in quartz. |
 | NIP-17 DMs send / list / await | ✅ | `DmCommands` — reuses Quartz `NIP17Factory` + `RecipientRelayFetcher`; filter extracted to `commons/relayClient/nip17Dm/`. Plan: [`cli/plans/2026-04-23-nip17-dm.md`](./plans/2026-04-23-nip17-dm.md). |
 | NIP-18 reposts / quotes | 🆕 | |
-| NIP-25 reactions | 🆕 | |
+| NIP-25 reactions | ✅ in groups · 🆕 elsewhere | `marmot message react` covers MLS group reactions; outer-event reactions still pending. |
 | NIP-51 lists (bookmarks, mute, follow sets) | 🆕 | `amethyst/model/nip51Lists/` |
 | NIP-57 zaps (send + verify) | 🆕 | Needs LN-URL plumbing; `amethyst/service/lnurl/`. |
 | NIP-65 outbox model queries | 🆕 | |
@@ -65,7 +66,7 @@ Status legend: ✅ shipped · 📦 logic lives in `commons/`, needs a command ·
 | Blossom uploads (NIP-B7) | 🆕 | |
 | NIP-47 Wallet Connect | 🆕 | |
 | NIP-46 bunker signer | 🆕 | Needs a signers abstraction in Amy. |
-| Profile view (`amy profile show NPUB`) | ⚠️ | Blocked on event-renderer plan in `commons/plans/`. |
+| Profile view (`amy profile show NPUB`) + edit | ✅ | `ProfileCommands`. Cache-first; `--refresh` forces a relay drain. |
 | Thread view (`amy thread show EVENT_ID`) | ⚠️ | Same. |
 | Notifications feed | 🆕 | |
 | Search (NIP-50) | 🆕 | |
@@ -82,14 +83,16 @@ move anything, re-audit — you're probably duplicating logic.
    with renderers for kinds 0 / 1 / 3 / 6 / 7 / 10002 / 10050.
    Unblocks all the 🆕 and ⚠️ read-path rows below.
    Design: `commons/plans/2026-04-21-event-renderer.md`.
-2. **`amy note publish` / `amy note show` / `amy note react`** —
-   smallest end-to-end write+read loop outside Marmot.
-3. **`amy feed home|profile|hashtag|thread`** reading through the
-   renderer.
+2. **`amy notes post` / `amy notes show` / `amy notes react`** —
+   smallest end-to-end write+read loop outside Marmot. Post + feed
+   ✅ shipped; `notes show` and outer-event `react` still pending.
+3. **`amy notes feed home|profile|hashtag|thread`** reading through the
+   renderer. `--following` and `--author NPUB` ✅; hashtag/thread
+   variants still pending.
 4. **`amy follow add|remove|list`** (NIP-02) — proves extraction of
    list-building logic from `amethyst/model/`.
-5. **`amy dm send|list`** (NIP-17) — reuses the gift-wrap path already
-   exercised by Marmot.
+5. **`amy dm send|list`** (NIP-17) — ✅ shipped. Reuses the gift-wrap
+   path also exercised by Marmot.
 6. **`amy list bookmarks|mute|pin …`** (NIP-51).
 7. **`amy zap send|verify`** (NIP-57).
 8. **Distribution** — Homebrew + Scoop + `.deb` in the same release

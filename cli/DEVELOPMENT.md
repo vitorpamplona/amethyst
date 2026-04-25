@@ -2,7 +2,8 @@
 
 How to touch the `cli/` module without breaking its public contract.
 
-- What Amy is and what's already shipped: [README.md](./README.md).
+- What Amy is and the public contract: [README.md](./README.md).
+- How to use it: [USAGE.md](./USAGE.md).
 - What to build next and in what order: [ROADMAP.md](./ROADMAP.md).
 - Plans for cross-cutting work: see this module's `plans/` folder
   and `commons/plans/` for shared-code work consumed by Amy.
@@ -46,25 +47,31 @@ cli/src/main/kotlin/com/vitorpamplona/amethyst/cli/
 ├── Main.kt                    # argv → subcommand dispatch
 ├── Args.kt                    # tiny flag parser (no framework)
 ├── Output.kt                  # text/json mode emitter (--json flag)
-├── Config.kt                  # Identity, RunState, DataDir
+├── Aliases.kt                 # per-account aliases.json read/write
+├── Config.kt                  # Identity, RunState, DataDir (~/.amy layout)
 ├── Context.kt                 # per-run wiring: signer + NostrClient +
 │                              #   MarmotManager + publish/drain/sync helpers
+├── SecureFileIO.kt            # 0600/0700 atomic writes, perm tighten
 ├── stores/FileStores.kt       # File-backed MLS / KP / message stores
+├── secrets/                   # SecretStore backends (keychain / ncryptsec / plaintext)
 └── commands/
-    ├── Commands.kt            # dispatcher
+    ├── Commands.kt            # dispatcher tables
+    ├── UseCommand.kt          # `amy use NAME` — pin active account
     ├── InitCommands.kt        # init, whoami
     ├── CreateCommand.kt       # full bootstrap (→ commons/account/)
     ├── LoginCommand.kt        # nsec/ncryptsec/mnemonic/npub/nprofile/hex/nip05
     ├── RelayCommands.kt       # add/list/publish-lists
+    ├── ProfileCommands.kt     # profile show / edit (kind:0)
+    ├── NotesCommands.kt + PostCommand.kt + FeedCommand.kt   # kind:1
+    ├── DmCommands.kt          # NIP-17 dm send / send-file / list / await
     ├── KeyPackageCommands.kt  # marmot key-package publish / check
-    ├── GroupCommands.kt       # marmot group create/list/show/…
-    ├── GroupCreateCommand.kt
-    ├── GroupReadCommands.kt
-    ├── GroupAddMemberCommand.kt
-    ├── GroupMembershipCommands.kt
-    ├── GroupMetadataCommands.kt
-    ├── MessageCommands.kt     # marmot message send / list
-    └── AwaitCommands.kt       # poll-until-condition helpers
+    ├── GroupCommands.kt + GroupCreateCommand.kt
+    │   GroupReadCommands.kt + GroupAddMemberCommand.kt
+    │   GroupMembershipCommands.kt + GroupMetadataCommands.kt
+    ├── MessageCommands.kt     # marmot message send / list / react / delete
+    ├── MarmotResetCommand.kt  # destructive wipe of MLS state
+    ├── AwaitCommands.kt       # poll-until-condition helpers
+    └── StoreCommands.kt       # store stat / sweep-expired / scrub / compact
 ```
 
 **Dependencies:** `:quartz` + `:commons` + kotlinx-coroutines + OkHttp
@@ -171,8 +178,9 @@ object NoteCommands {
 ```
 
 Wire it into `Commands.kt`, add a top-level branch in `Main.kt`'s
-`dispatch`, and extend `printUsage()`. Keep [README.md](./README.md)'s
-command table and [ROADMAP.md](./ROADMAP.md)'s parity matrix in sync.
+`dispatch`, and extend `printUsage()`. Keep the command tour in
+[USAGE.md](./USAGE.md) and the parity matrix in
+[ROADMAP.md](./ROADMAP.md) in sync.
 
 ### 4. Output-shape conventions
 
@@ -205,8 +213,7 @@ Amy-specific layer still needs its own coverage:
 | Error / exit-code contract (bad args → 2, await timeout → 124, runtime → 1) | Table-driven tests invoking `main(argv)` with captured stdout/stderr. |
 | JSON output shape (each command's keys and types under `--json`) | Snapshot tests: run a command with `--json` against a throwaway `$HOME` (`HOME=$(mktemp -d) amy --account X …`), assert the JSON matches a golden file. The default text render has no shape contract and shouldn't be snapshotted. |
 | File layout on disk (`identity.json`, `events-store/…`, `marmot/groups/*.mls`, `marmot/keypackages.bundle`) | Structural assertions after a command sequence. |
-| Round-trip between two accounts on a local relay | End-to-end shell harnesses under `cli/tests/`. Each harness spins up a local `nostr-rs-relay` and a fresh `$HOME=$STATE_DIR` so amy sees a virgin `~/.amy/`, then bootstraps multiple identities (`--account A`, `--account D`, etc.) sharing the same `~/.amy/shared/events-store/` and drives a scenario through them (+ `wn` for Marmot interop against whitenoise-rs). Today there are two suites: `cli/tests/marmot/` (MLS scenarios vs whitenoise-rs) and `cli/tests/dm/` (NIP-17 DM round-trips between two `amy` accounts). |
-| Interop with other clients | Covered by `cli/tests/marmot/marmot-interop-headless.sh` (drives Amy against whitenoise-rs `wn`/`wnd`). Add new scenarios there or start a new sibling under `cli/tests/`. |
+| Round-trip between two accounts on a local relay | End-to-end shell harnesses under `cli/tests/`: each spins up a local `nostr-rs-relay` and a fresh `$HOME=$STATE_DIR` so amy sees a virgin `~/.amy/`, then bootstraps multiple accounts (`--account A`, `--account D`, …) sharing one `~/.amy/shared/events-store/` and drives a scenario through them. Today: `cli/tests/dm/` (NIP-17 DMs between two amy accounts) and `cli/tests/marmot/` (MLS scenarios vs whitenoise-rs `wn`/`wnd`). |
 
 **What not to test here:** event signing, filter assembly, MLS
 correctness, NIP-44 encryption. Those belong in `quartz`/`commons`.
@@ -241,7 +248,7 @@ a gap — add it to [ROADMAP.md](./ROADMAP.md).
 
 - Run `./gradlew spotlessApply` before every commit.
 - Keep three things in sync: `printUsage()` in `Main.kt`, the command
-  table in [README.md](./README.md), and the parity matrix in
+  tour in [USAGE.md](./USAGE.md), and the parity matrix in
   [ROADMAP.md](./ROADMAP.md). They drift fast.
 - Never add a Gradle dependency on `:amethyst` or `:desktopApp`. If
   you need something from there, move it to `commons/` first.
