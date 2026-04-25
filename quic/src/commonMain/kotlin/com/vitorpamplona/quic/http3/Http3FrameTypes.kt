@@ -40,6 +40,7 @@ object Http3StreamType {
     const val PUSH: Long = 0x01
     const val QPACK_ENCODER: Long = 0x02
     const val QPACK_DECODER: Long = 0x03
+
     /** WebTransport unidirectional stream type. */
     const val WEBTRANSPORT_UNI_STREAM: Long = 0x54
 }

@@ -246,7 +246,10 @@ fun decodeFrames(data: ByteArray): List<Frame> {
         // We don't expect any frame type to exceed 0x40 in our minimal subset.
         val type = typeByte.toLong()
         when {
-            type == FrameType.PING -> out += PingFrame
+            type == FrameType.PING -> {
+                out += PingFrame
+            }
+
             type == FrameType.ACK -> {
                 val largest = r.readVarint()
                 val delay = r.readVarint()
@@ -260,6 +263,7 @@ fun decodeFrames(data: ByteArray): List<Frame> {
                 }
                 out += AckFrame(largest, delay, firstRange, ranges)
             }
+
             type == FrameType.ACK_ECN -> {
                 val largest = r.readVarint()
                 val delay = r.readVarint()
@@ -272,15 +276,19 @@ fun decodeFrames(data: ByteArray): List<Frame> {
                     ranges += AckRange(gap, len)
                 }
                 // skip ECN counts
-                r.readVarint(); r.readVarint(); r.readVarint()
+                r.readVarint()
+                r.readVarint()
+                r.readVarint()
                 out += AckFrame(largest, delay, firstRange, ranges)
             }
+
             type == FrameType.CRYPTO -> {
                 val offset = r.readVarint()
                 val len = r.readVarint().toInt()
                 val data2 = r.readBytes(len)
                 out += CryptoFrame(offset, data2)
             }
+
             type in FrameType.STREAM_BASE..(FrameType.STREAM_BASE or 0x07) -> {
                 val flags = (type - FrameType.STREAM_BASE)
                 val hasOff = (flags and FrameType.STREAM_OFF_BIT) != 0L
@@ -298,15 +306,37 @@ fun decodeFrames(data: ByteArray): List<Frame> {
                     }
                 out += StreamFrame(streamId, offset, payload, fin, hasLen)
             }
-            type == FrameType.MAX_DATA -> out += MaxDataFrame(r.readVarint())
-            type == FrameType.MAX_STREAM_DATA -> out += MaxStreamDataFrame(r.readVarint(), r.readVarint())
-            type == FrameType.MAX_STREAMS_BIDI -> out += MaxStreamsFrame(true, r.readVarint())
-            type == FrameType.MAX_STREAMS_UNI -> out += MaxStreamsFrame(false, r.readVarint())
-            type == FrameType.DATA_BLOCKED -> r.readVarint() // ignored
-            type == FrameType.STREAM_DATA_BLOCKED -> {
-                r.readVarint(); r.readVarint()
+
+            type == FrameType.MAX_DATA -> {
+                out += MaxDataFrame(r.readVarint())
             }
-            type == FrameType.STREAMS_BLOCKED_BIDI || type == FrameType.STREAMS_BLOCKED_UNI -> r.readVarint()
+
+            type == FrameType.MAX_STREAM_DATA -> {
+                out += MaxStreamDataFrame(r.readVarint(), r.readVarint())
+            }
+
+            type == FrameType.MAX_STREAMS_BIDI -> {
+                out += MaxStreamsFrame(true, r.readVarint())
+            }
+
+            type == FrameType.MAX_STREAMS_UNI -> {
+                out += MaxStreamsFrame(false, r.readVarint())
+            }
+
+            type == FrameType.DATA_BLOCKED -> {
+                r.readVarint()
+            }
+
+            // ignored
+            type == FrameType.STREAM_DATA_BLOCKED -> {
+                r.readVarint()
+                r.readVarint()
+            }
+
+            type == FrameType.STREAMS_BLOCKED_BIDI || type == FrameType.STREAMS_BLOCKED_UNI -> {
+                r.readVarint()
+            }
+
             type == FrameType.NEW_CONNECTION_ID -> {
                 val seq = r.readVarint()
                 val retire = r.readVarint()
@@ -315,9 +345,19 @@ fun decodeFrames(data: ByteArray): List<Frame> {
                 val token = r.readBytes(16)
                 out += NewConnectionIdFrame(seq, retire, cid, token)
             }
-            type == FrameType.RETIRE_CONNECTION_ID -> r.readVarint()
-            type == FrameType.PATH_CHALLENGE -> r.readBytes(8)
-            type == FrameType.PATH_RESPONSE -> r.readBytes(8)
+
+            type == FrameType.RETIRE_CONNECTION_ID -> {
+                r.readVarint()
+            }
+
+            type == FrameType.PATH_CHALLENGE -> {
+                r.readBytes(8)
+            }
+
+            type == FrameType.PATH_RESPONSE -> {
+                r.readBytes(8)
+            }
+
             type == FrameType.CONNECTION_CLOSE_TRANSPORT -> {
                 val err = r.readVarint()
                 val frameType2 = r.readVarint()
@@ -325,22 +365,31 @@ fun decodeFrames(data: ByteArray): List<Frame> {
                 val reason = r.readBytes(reasonLen).decodeToString()
                 out += ConnectionCloseFrame(err, frameType2, reason)
             }
+
             type == FrameType.CONNECTION_CLOSE_APP -> {
                 val err = r.readVarint()
                 val reasonLen = r.readVarint().toInt()
                 val reason = r.readBytes(reasonLen).decodeToString()
                 out += ConnectionCloseFrame(err, null, reason)
             }
-            type == FrameType.HANDSHAKE_DONE -> out += HandshakeDoneFrame()
+
+            type == FrameType.HANDSHAKE_DONE -> {
+                out += HandshakeDoneFrame()
+            }
+
             type == FrameType.DATAGRAM -> {
                 val payload = r.readBytes(r.remaining)
                 out += DatagramFrame(payload, explicitLength = false)
             }
+
             type == FrameType.DATAGRAM_LEN -> {
                 val ln = r.readVarint().toInt()
                 out += DatagramFrame(r.readBytes(ln), explicitLength = true)
             }
-            else -> throw QuicCodecException("unknown frame type 0x${type.toString(16)}")
+
+            else -> {
+                throw QuicCodecException("unknown frame type 0x${type.toString(16)}")
+            }
         }
     }
     return out

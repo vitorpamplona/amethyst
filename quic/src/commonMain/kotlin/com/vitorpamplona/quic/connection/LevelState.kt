@@ -26,7 +26,9 @@ import com.vitorpamplona.quic.stream.SendBuffer
 /** Per-encryption-level state owned by [QuicConnection]. */
 class LevelState {
     val pnSpace = PacketNumberSpaceState()
-    val ackTracker = com.vitorpamplona.quic.recovery.AckTracker()
+    val ackTracker =
+        com.vitorpamplona.quic.recovery
+            .AckTracker()
     val cryptoSend = SendBuffer()
     val cryptoReceive = ReceiveBuffer()
     var sendProtection: PacketProtection? = null

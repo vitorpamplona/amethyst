@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.quic.webtransport
 
-import com.vitorpamplona.quic.QuicReader
 import com.vitorpamplona.quic.QuicWriter
 import com.vitorpamplona.quic.Varint
 
@@ -65,6 +64,7 @@ object WtDatagram {
 object WtStreamType {
     /** Client-initiated bidirectional WT stream — followed by quarter session id. */
     const val WT_BIDI_STREAM: Long = 0x41
+
     /** Client-initiated unidirectional WT stream — preceded by HTTP/3 stream-type 0x54 + quarter session id. */
     const val WT_UNI_STREAM_PREFIX: Long = 0x54
 }

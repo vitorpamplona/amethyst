@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.quic.tls
 
-import com.vitorpamplona.quic.QuicWriter
 import com.vitorpamplona.quartz.utils.RandomInstance
+import com.vitorpamplona.quic.QuicWriter
 
 /**
  * Build a TLS 1.3 ClientHello + handshake header carrying the QUIC-required

@@ -36,8 +36,9 @@ data class TlsServerHello(
     /** The negotiated protocol version. Must be 0x0304 (TLS 1.3) per RFC 8446. */
     val negotiatedVersion: Int
         get() {
-            val ext = extensions.firstOrNull { it.type == TlsConstants.EXT_SUPPORTED_VERSIONS }
-                ?: throw QuicCodecException("server hello missing supported_versions extension")
+            val ext =
+                extensions.firstOrNull { it.type == TlsConstants.EXT_SUPPORTED_VERSIONS }
+                    ?: throw QuicCodecException("server hello missing supported_versions extension")
             // server hello carries selected_version (uint16)
             val r = QuicReader(ext.data)
             return r.readUint16()
@@ -46,8 +47,9 @@ data class TlsServerHello(
     /** The peer's X25519 public key, extracted from key_share. */
     val serverKeyShareX25519: ByteArray
         get() {
-            val ext = extensions.firstOrNull { it.type == TlsConstants.EXT_KEY_SHARE }
-                ?: throw QuicCodecException("server hello missing key_share extension")
+            val ext =
+                extensions.firstOrNull { it.type == TlsConstants.EXT_KEY_SHARE }
+                    ?: throw QuicCodecException("server hello missing key_share extension")
             val r = QuicReader(ext.data)
             val group = r.readUint16()
             if (group != TlsConstants.GROUP_X25519) {
@@ -81,12 +83,13 @@ data class TlsEncryptedExtensions(
         get() = extensions.firstOrNull { it.type == TlsConstants.EXT_QUIC_TRANSPORT_PARAMETERS }?.data
 
     val alpn: ByteArray?
-        get() = extensions.firstOrNull { it.type == TlsConstants.EXT_ALPN }?.data?.let {
-            // ALPN response carries a single protocol_name<1..2^8-1> inside protocols<3..2^16-1>
-            val r = QuicReader(it)
-            r.skip(2) // outer length
-            r.readTlsOpaque1()
-        }
+        get() =
+            extensions.firstOrNull { it.type == TlsConstants.EXT_ALPN }?.data?.let {
+                // ALPN response carries a single protocol_name<1..2^8-1> inside protocols<3..2^16-1>
+                val r = QuicReader(it)
+                r.skip(2) // outer length
+                r.readTlsOpaque1()
+            }
 
     companion object {
         fun decodeBody(r: QuicReader): TlsEncryptedExtensions = TlsEncryptedExtensions(TlsExtension.decodeList(r))

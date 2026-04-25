@@ -111,7 +111,9 @@ class TlsClient(
                 serverName = serverName,
                 x25519PublicKey = keyPair!!.publicKey,
                 quicTransportParams = transportParameters,
-                random = fixedRandom ?: com.vitorpamplona.quartz.utils.RandomInstance.bytes(32),
+                random =
+                    fixedRandom ?: com.vitorpamplona.quartz.utils.RandomInstance
+                        .bytes(32),
             )
 
         val chBytes = ch.encode()
@@ -184,6 +186,7 @@ class TlsClient(
                 )
                 state = State.WAITING_ENCRYPTED_EXTENSIONS
             }
+
             State.WAITING_ENCRYPTED_EXTENSIONS -> {
                 if (type != TlsConstants.HS_ENCRYPTED_EXTENSIONS) throw QuicCodecException("expected EncryptedExtensions, got type=$type")
                 if (level != Level.HANDSHAKE) throw QuicCodecException("EncryptedExtensions must arrive at Handshake level")
@@ -193,6 +196,7 @@ class TlsClient(
                 transcript.append(msg)
                 state = State.WAITING_CERTIFICATE_OR_FINISHED
             }
+
             State.WAITING_CERTIFICATE_OR_FINISHED -> {
                 when (type) {
                     TlsConstants.HS_CERTIFICATE -> {
@@ -201,14 +205,19 @@ class TlsClient(
                         transcript.append(msg)
                         state = State.WAITING_CERTIFICATE_VERIFY
                     }
+
                     TlsConstants.HS_FINISHED -> {
                         // PSK-only handshake skips Certificate/CertificateVerify. We never use PSK,
                         // but the state machine handles the transition for completeness.
                         handleServerFinished(msg, bodyReader, len)
                     }
-                    else -> throw QuicCodecException("unexpected handshake type after EncryptedExtensions: $type")
+
+                    else -> {
+                        throw QuicCodecException("unexpected handshake type after EncryptedExtensions: $type")
+                    }
                 }
             }
+
             State.WAITING_CERTIFICATE_VERIFY -> {
                 if (type != TlsConstants.HS_CERTIFICATE_VERIFY) throw QuicCodecException("expected CertificateVerify, got type=$type")
                 val cv = TlsCertificateVerify.decodeBody(bodyReader)
@@ -217,11 +226,15 @@ class TlsClient(
                 transcript.append(msg)
                 state = State.WAITING_SERVER_FINISHED
             }
+
             State.WAITING_SERVER_FINISHED -> {
                 if (type != TlsConstants.HS_FINISHED) throw QuicCodecException("expected Finished, got type=$type")
                 handleServerFinished(msg, bodyReader, len)
             }
-            else -> throw QuicCodecException("unexpected handshake at state=$state type=$type")
+
+            else -> {
+                throw QuicCodecException("unexpected handshake at state=$state type=$type")
+            }
         }
     }
 

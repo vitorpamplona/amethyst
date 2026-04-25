@@ -20,25 +20,10 @@
  */
 package com.vitorpamplona.quic.connection
 
-import com.vitorpamplona.quic.QuicWriter
 import com.vitorpamplona.quic.crypto.Aes128Gcm
 import com.vitorpamplona.quic.crypto.AesEcbHeaderProtection
 import com.vitorpamplona.quic.crypto.InitialSecrets
 import com.vitorpamplona.quic.crypto.PlatformAesOneBlock
-import com.vitorpamplona.quic.frame.ConnectionCloseFrame
-import com.vitorpamplona.quic.frame.CryptoFrame
-import com.vitorpamplona.quic.frame.DatagramFrame
-import com.vitorpamplona.quic.frame.Frame
-import com.vitorpamplona.quic.frame.PingFrame
-import com.vitorpamplona.quic.frame.StreamFrame
-import com.vitorpamplona.quic.frame.decodeFrames
-import com.vitorpamplona.quic.frame.encodeFrames
-import com.vitorpamplona.quic.packet.LongHeaderPacket
-import com.vitorpamplona.quic.packet.LongHeaderPlaintextPacket
-import com.vitorpamplona.quic.packet.LongHeaderType
-import com.vitorpamplona.quic.packet.QuicVersion
-import com.vitorpamplona.quic.packet.ShortHeaderPacket
-import com.vitorpamplona.quic.packet.ShortHeaderPlaintextPacket
 import com.vitorpamplona.quic.stream.QuicStream
 import com.vitorpamplona.quic.stream.StreamId
 import com.vitorpamplona.quic.tls.TlsClient
@@ -71,7 +56,11 @@ class QuicConnection(
     val serverName: String,
     val config: QuicConnectionConfig,
     val tlsCertificateValidator: com.vitorpamplona.quic.tls.CertificateValidator? = null,
-    val nowMillis: () -> Long = { kotlin.time.Clock.System.now().toEpochMilliseconds() },
+    val nowMillis: () -> Long = {
+        kotlin.time.Clock.System
+            .now()
+            .toEpochMilliseconds()
+    },
     val alpnList: List<ByteArray> = listOf(TlsConstants.ALPN_H3),
 ) {
     val sourceConnectionId: ConnectionId = ConnectionId.random(8)
@@ -187,10 +176,13 @@ class QuicConnection(
         for ((id, stream) in streams) {
             stream.sendCredit =
                 when (StreamId.kindOf(id)) {
-                    StreamId.Kind.CLIENT_BIDI, StreamId.Kind.SERVER_BIDI ->
+                    StreamId.Kind.CLIENT_BIDI, StreamId.Kind.SERVER_BIDI -> {
                         if (StreamId.isClientInitiated(id)) tp.initialMaxStreamDataBidiRemote ?: 0L else tp.initialMaxStreamDataBidiLocal ?: 0L
-                    StreamId.Kind.CLIENT_UNI, StreamId.Kind.SERVER_UNI ->
+                    }
+
+                    StreamId.Kind.CLIENT_UNI, StreamId.Kind.SERVER_UNI -> {
                         tp.initialMaxStreamDataUni ?: 0L
+                    }
                 }
         }
     }

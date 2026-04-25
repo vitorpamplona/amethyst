@@ -39,11 +39,26 @@ package com.vitorpamplona.quic.crypto
 object InitialSecrets {
     val V1_INITIAL_SALT: ByteArray =
         byteArrayOf(
-            0x38.toByte(), 0x76.toByte(), 0x2c.toByte(), 0xf7.toByte(),
-            0xf5.toByte(), 0x59.toByte(), 0x34.toByte(), 0xb3.toByte(),
-            0x4d.toByte(), 0x17.toByte(), 0x9a.toByte(), 0xe6.toByte(),
-            0xa4.toByte(), 0xc8.toByte(), 0x0c.toByte(), 0xad.toByte(),
-            0xcc.toByte(), 0xbb.toByte(), 0x7f.toByte(), 0x0a.toByte(),
+            0x38.toByte(),
+            0x76.toByte(),
+            0x2c.toByte(),
+            0xf7.toByte(),
+            0xf5.toByte(),
+            0x59.toByte(),
+            0x34.toByte(),
+            0xb3.toByte(),
+            0x4d.toByte(),
+            0x17.toByte(),
+            0x9a.toByte(),
+            0xe6.toByte(),
+            0xa4.toByte(),
+            0xc8.toByte(),
+            0x0c.toByte(),
+            0xad.toByte(),
+            0xcc.toByte(),
+            0xbb.toByte(),
+            0x7f.toByte(),
+            0x0a.toByte(),
         )
 
     /**

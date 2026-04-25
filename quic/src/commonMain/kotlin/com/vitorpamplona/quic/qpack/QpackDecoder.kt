@@ -63,6 +63,7 @@ class QpackDecoder {
                     val entry = QpackStaticTable.entries[r.value.toInt()]
                     out += entry
                 }
+
                 (first and 0x40) != 0 -> {
                     // Literal Field Line With Name Reference: 0|1|N|T|index(4)
                     val isStatic = (first and 0x10) != 0
@@ -74,6 +75,7 @@ class QpackDecoder {
                     pos += valueLen
                     out += name to value
                 }
+
                 (first and 0x20) != 0 -> {
                     // Literal Field Line With Literal Name: 0|0|1|N|H|len(3)
                     val nameH = (first and 0x08) != 0
@@ -87,6 +89,7 @@ class QpackDecoder {
                     pos += valueLen
                     out += name to value
                 }
+
                 else -> {
                     // Indexed Field Line With Post-Base Index — uses dynamic table; reject.
                     throw QuicCodecException("QPACK post-base indexed field line unsupported")

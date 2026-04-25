@@ -34,8 +34,7 @@ enum class LongHeaderType(
     ;
 
     companion object {
-        fun fromTypeBits(bits: Int): LongHeaderType =
-            entries.firstOrNull { it.code == bits } ?: error("unknown long-header type bits: $bits")
+        fun fromTypeBits(bits: Int): LongHeaderType = entries.firstOrNull { it.code == bits } ?: error("unknown long-header type bits: $bits")
     }
 }
 

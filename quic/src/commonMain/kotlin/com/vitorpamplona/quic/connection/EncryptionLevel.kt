@@ -32,9 +32,10 @@ class PacketProtection(
 )
 
 /** All four encryption levels we ever see in a QUIC client connection. */
-enum class EncryptionLevel(val space: PacketNumberSpace) {
+enum class EncryptionLevel(
+    val space: PacketNumberSpace,
+) {
     INITIAL(PacketNumberSpace.INITIAL),
     HANDSHAKE(PacketNumberSpace.HANDSHAKE),
     APPLICATION(PacketNumberSpace.APPLICATION),
-    ;
 }

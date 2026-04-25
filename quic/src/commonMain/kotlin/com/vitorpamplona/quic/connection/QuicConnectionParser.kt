@@ -143,6 +143,7 @@ private fun dispatchFrames(
                 // We don't currently retransmit, so we just absorb ACKs; once
                 // Phase F adds retransmission this updates the inflight tracker.
             }
+
             is CryptoFrame -> {
                 ackEliciting = true
                 state.cryptoReceive.insert(frame.offset, frame.data)
@@ -160,6 +161,7 @@ private fun dispatchFrames(
                     drainTlsOutbound(conn)
                 }
             }
+
             is StreamFrame -> {
                 ackEliciting = true
                 val stream = conn.getOrCreatePeerStream(frame.streamId)
@@ -172,33 +174,42 @@ private fun dispatchFrames(
                     stream.closeIncoming()
                 }
             }
+
             is DatagramFrame -> {
                 ackEliciting = true
                 conn.incomingDatagramsBuffer().addLast(frame.data)
             }
+
             is MaxDataFrame -> {
                 // Updates connection-level send credit; left to the orchestrator.
             }
+
             is MaxStreamDataFrame -> {
                 conn.streamById(frame.streamId)?.let {
                     if (frame.maxStreamData > it.sendCredit) it.sendCredit = frame.maxStreamData
                 }
             }
+
             is MaxStreamsFrame -> {
                 // Tracking left for a later phase.
             }
+
             is NewConnectionIdFrame -> {
                 // We don't support migration; ignore.
             }
+
             is ConnectionCloseFrame -> {
                 conn.status = QuicConnection.Status.CLOSED
             }
+
             is HandshakeDoneFrame -> {
                 conn.status = QuicConnection.Status.CONNECTED
             }
+
             is PingFrame -> {
                 ackEliciting = true
             }
+
             else -> {
                 // PADDING + DATA_BLOCKED + STREAM_DATA_BLOCKED + STREAMS_BLOCKED
                 // are non-eliciting / cleared during decode.

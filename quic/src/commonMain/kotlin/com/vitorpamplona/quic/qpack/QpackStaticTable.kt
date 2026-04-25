@@ -133,12 +133,14 @@ object QpackStaticTable {
     /** Build a quick lookup of name → first index for encoder name-reference selection. */
     val nameToIndex: Map<String, Int> =
         entries.foldIndexed(mutableMapOf()) { idx, acc, (name, _) ->
-            acc.putIfAbsent(name, idx); acc
+            acc.putIfAbsent(name, idx)
+            acc
         }
 
     /** Look up name+value → index, or null if no exact match. */
     val pairToIndex: Map<Pair<String, String>, Int> =
         entries.foldIndexed(mutableMapOf()) { idx, acc, pair ->
-            acc.putIfAbsent(pair, idx); acc
+            acc.putIfAbsent(pair, idx)
+            acc
         }
 }

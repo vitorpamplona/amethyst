@@ -127,7 +127,9 @@ object ShortHeaderPacket {
         return ParseResult(
             packet =
                 ShortHeaderPlaintextPacket(
-                    dcid = com.vitorpamplona.quic.connection.ConnectionId(bytes.copyOfRange(offset + 1, offset + 1 + dcidLen)),
+                    dcid =
+                        com.vitorpamplona.quic.connection
+                            .ConnectionId(bytes.copyOfRange(offset + 1, offset + 1 + dcidLen)),
                     packetNumber = fullPn,
                     payload = plaintext,
                     keyPhase = (packet[0].toInt() and 0x04) != 0,

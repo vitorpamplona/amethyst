@@ -23,7 +23,6 @@ package com.vitorpamplona.quic.packet
 import com.vitorpamplona.quic.QuicCodecException
 import com.vitorpamplona.quic.QuicReader
 import com.vitorpamplona.quic.QuicWriter
-import com.vitorpamplona.quic.Varint
 import com.vitorpamplona.quic.connection.ConnectionId
 import com.vitorpamplona.quic.crypto.Aead
 import com.vitorpamplona.quic.crypto.HeaderProtection
@@ -74,10 +73,11 @@ object LongHeaderPacket {
         hpKey: ByteArray,
         largestAckedInSpace: Long,
     ): ByteArray {
-        val pnLen = com.vitorpamplona.quic.connection.PacketNumberSpaceState.encodeLength(
-            plain.packetNumber,
-            largestAckedInSpace,
-        )
+        val pnLen =
+            com.vitorpamplona.quic.connection.PacketNumberSpaceState.encodeLength(
+                plain.packetNumber,
+                largestAckedInSpace,
+            )
         require(pnLen in 1..4)
 
         // Build the unprotected header
@@ -161,9 +161,6 @@ object LongHeaderPacket {
             }
         val length = r.readVarint().toInt()
         val pnOffset = r.position
-        if (pnOffset + length > offset + bytes.size - packetStart + bytes.size /* room check */) {
-            // length sanity
-        }
         if (pnOffset + length > bytes.size) return null
         // Sample for HP starts at pnOffset + 4.
         val sampleStart = pnOffset + 4
@@ -191,11 +188,12 @@ object LongHeaderPacket {
         for (i in 0 until pnLen) {
             truncatedPn = (truncatedPn shl 8) or (packet[localPnOffset + i].toInt() and 0xFF).toLong()
         }
-        val fullPn = com.vitorpamplona.quic.connection.PacketNumberSpaceState.decodePacketNumber(
-            largestReceived = largestReceivedInSpace,
-            truncatedPn = truncatedPn,
-            pnLen = pnLen,
-        )
+        val fullPn =
+            com.vitorpamplona.quic.connection.PacketNumberSpaceState.decodePacketNumber(
+                largestReceived = largestReceivedInSpace,
+                truncatedPn = truncatedPn,
+                pnLen = pnLen,
+            )
 
         val aadEnd = localPnOffset + pnLen
         val aad = packet.copyOfRange(0, aadEnd)

@@ -24,7 +24,8 @@ package com.vitorpamplona.quic.tls
  * TLS 1.3 protocol constants from RFC 8446 + RFC 9001 (TLS-over-QUIC binding).
  */
 object TlsConstants {
-    // ── Record / handshake message types ──────────────────────────────────────
+    // Record / handshake message types
+
     /** TLS 1.3 over QUIC uses `legacy_version = 0x0303` ("TLS 1.2") on the wire. */
     const val LEGACY_VERSION_TLS_1_2: Int = 0x0303
     const val VERSION_TLS_1_3: Int = 0x0304
@@ -55,6 +56,7 @@ object TlsConstants {
     const val EXT_SUPPORTED_VERSIONS: Int = 43
     const val EXT_PSK_KEY_EXCHANGE_MODES: Int = 45
     const val EXT_KEY_SHARE: Int = 51
+
     /** RFC 9001 §8.2 — the QUIC TLS extension carrying transport parameters. */
     const val EXT_QUIC_TRANSPORT_PARAMETERS: Int = 0x39
 
