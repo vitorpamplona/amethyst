@@ -67,6 +67,18 @@ class WtPeerStreamDemux(
     var peerSettings: Http3Settings? = null
         private set
 
+    /**
+     * Server-sent GOAWAY stream id (RFC 9114 §5.2). The server is signalling
+     * "I won't accept any new request streams >= this id"; for WebTransport we
+     * treat it as the session entering drain — existing streams may continue
+     * but the application should not open new ones.
+     *
+     * Stays null until a GOAWAY arrives on the CONTROL stream.
+     */
+    @Volatile
+    var peerGoawayStreamId: Long? = null
+        private set
+
     val incomingStrippedStreams: Flow<StrippedWtStream> = readyStreams.consumeAsFlow()
 
     /**
@@ -174,12 +186,24 @@ class WtPeerStreamDemux(
         while (true) {
             val frame = reader.next() ?: return
             when (frame) {
-                is Http3Frame.Settings -> peerSettings = frame.settings
+                is Http3Frame.Settings -> {
+                    peerSettings = frame.settings
+                }
 
-                is Http3Frame.Goaway -> Unit
+                is Http3Frame.Goaway -> {
+                    // GOAWAY body is a single varint Stream ID. Decode it so
+                    // applications can observe drain state via
+                    // [peerGoawayStreamId]. Malformed bodies are dropped — RFC
+                    // 9114 §7.2.6 says servers SHOULD send a single varint
+                    // but we don't kill the connection over a parse error here.
+                    val res = Varint.decode(frame.body, 0)
+                    if (res != null) peerGoawayStreamId = res.value
+                }
 
                 // no new requests; we don't enforce yet
-                else -> Unit
+                else -> {
+                    Unit
+                }
             }
         }
     }

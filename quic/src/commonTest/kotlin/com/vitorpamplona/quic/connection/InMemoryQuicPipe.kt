@@ -58,8 +58,13 @@ import com.vitorpamplona.quic.tls.TlsConstants
 class InMemoryQuicPipe(
     val client: QuicConnection,
     val initialDcid: ByteArray,
+    /**
+     * Optional pre-configured TLS server. Tests that need to advertise non-empty
+     * QUIC transport parameters (e.g. to exercise MAX_STREAMS routing) build
+     * their own [InProcessTlsServer] and pass it here.
+     */
+    private val tlsServer: InProcessTlsServer = InProcessTlsServer(),
 ) {
-    private val tlsServer = InProcessTlsServer()
     private val initial = InitialSecrets.derive(initialDcid)
     private val hp = AesEcbHeaderProtection(PlatformAesOneBlock)
 

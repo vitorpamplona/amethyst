@@ -43,3 +43,5 @@ actual val PlatformChaCha20Block: ChaCha20BlockEncrypt =
     ChaCha20BlockEncrypt { key, nonce, counter, plaintext ->
         ChaCha20Core.chaCha20Xor(plaintext, key, nonce, counter)
     }
+
+actual fun bestAes128GcmAead(key: ByteArray): Aead = JcaAesGcmAead(key)

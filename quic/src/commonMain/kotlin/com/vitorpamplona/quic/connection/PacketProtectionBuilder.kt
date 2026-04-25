@@ -21,10 +21,10 @@
 package com.vitorpamplona.quic.connection
 
 import com.vitorpamplona.quic.crypto.Aead
-import com.vitorpamplona.quic.crypto.Aes128Gcm
 import com.vitorpamplona.quic.crypto.AesEcbHeaderProtection
 import com.vitorpamplona.quic.crypto.HeaderProtection
 import com.vitorpamplona.quic.crypto.PlatformAesOneBlock
+import com.vitorpamplona.quic.crypto.bestAes128GcmAead
 import com.vitorpamplona.quic.tls.TlsConstants
 import com.vitorpamplona.quic.tls.deriveQuicKeys
 
@@ -40,42 +40,39 @@ fun packetProtectionFromSecret(
     cipherSuite: Int,
     secret: ByteArray,
 ): PacketProtection {
-    val (aead, keyLen, ivLen, hpLen, hp) =
-        when (cipherSuite) {
-            TlsConstants.CIPHER_TLS_AES_128_GCM_SHA256 -> {
-                ProtectionParams(
-                    aead = Aes128Gcm,
-                    keyLen = 16,
-                    ivLen = 12,
-                    hpLen = 16,
-                    hp = AesEcbHeaderProtection(PlatformAesOneBlock),
-                )
-            }
-
-            TlsConstants.CIPHER_TLS_CHACHA20_POLY1305_SHA256 -> {
-                ProtectionParams(
-                    aead = com.vitorpamplona.quic.crypto.ChaCha20Poly1305Aead,
-                    keyLen = 32,
-                    ivLen = 12,
-                    hpLen = 32,
-                    hp =
-                        com.vitorpamplona.quic.crypto
-                            .ChaCha20HeaderProtection(com.vitorpamplona.quic.crypto.PlatformChaCha20Block),
-                )
-            }
-
-            else -> {
-                error("unsupported cipher suite 0x${cipherSuite.toString(16)}")
-            }
+    val keyLen: Int
+    val ivLen: Int
+    val hpLen: Int
+    val hp: HeaderProtection
+    when (cipherSuite) {
+        TlsConstants.CIPHER_TLS_AES_128_GCM_SHA256 -> {
+            keyLen = 16
+            ivLen = 12
+            hpLen = 16
+            hp = AesEcbHeaderProtection(PlatformAesOneBlock)
         }
+
+        TlsConstants.CIPHER_TLS_CHACHA20_POLY1305_SHA256 -> {
+            keyLen = 32
+            ivLen = 12
+            hpLen = 32
+            hp =
+                com.vitorpamplona.quic.crypto
+                    .ChaCha20HeaderProtection(com.vitorpamplona.quic.crypto.PlatformChaCha20Block)
+        }
+
+        else -> {
+            error("unsupported cipher suite 0x${cipherSuite.toString(16)}")
+        }
+    }
     val keys = deriveQuicKeys(secret, keyLen, ivLen, hpLen)
+    // For AES-128-GCM, prefer the platform's cached-cipher implementation
+    // which avoids `Cipher.getInstance` per-packet (audit-1, audit-3 finding).
+    val aead: Aead =
+        when (cipherSuite) {
+            TlsConstants.CIPHER_TLS_AES_128_GCM_SHA256 -> bestAes128GcmAead(keys.key)
+            TlsConstants.CIPHER_TLS_CHACHA20_POLY1305_SHA256 -> com.vitorpamplona.quic.crypto.ChaCha20Poly1305Aead
+            else -> error("unreachable")
+        }
     return PacketProtection(aead, keys.key, keys.iv, hp, keys.hp)
 }
-
-private data class ProtectionParams(
-    val aead: Aead,
-    val keyLen: Int,
-    val ivLen: Int,
-    val hpLen: Int,
-    val hp: HeaderProtection,
-)

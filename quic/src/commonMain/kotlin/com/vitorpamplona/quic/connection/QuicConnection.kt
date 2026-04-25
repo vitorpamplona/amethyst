@@ -20,16 +20,18 @@
  */
 package com.vitorpamplona.quic.connection
 
-import com.vitorpamplona.quic.crypto.Aes128Gcm
 import com.vitorpamplona.quic.crypto.AesEcbHeaderProtection
 import com.vitorpamplona.quic.crypto.InitialSecrets
 import com.vitorpamplona.quic.crypto.PlatformAesOneBlock
+import com.vitorpamplona.quic.crypto.bestAes128GcmAead
 import com.vitorpamplona.quic.stream.QuicStream
 import com.vitorpamplona.quic.stream.StreamId
 import com.vitorpamplona.quic.tls.TlsClient
 import com.vitorpamplona.quic.tls.TlsConstants
 import com.vitorpamplona.quic.tls.TlsSecretsListener
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -104,6 +106,18 @@ class QuicConnection(
     private var nextLocalUniIndex: Long = 0L
 
     /**
+     * Peer-advertised concurrent bidirectional stream cap. Initialised from
+     * [TransportParameters.initialMaxStreamsBidi] when peer params arrive,
+     * then bumped by inbound MAX_STREAMS frames (RFC 9000 §19.11). Must not
+     * decrease — a smaller MAX_STREAMS than current is silently dropped.
+     *
+     * [openBidiStream] consults this cap; opening past it would violate the
+     * peer's flow control and trigger STREAM_LIMIT_ERROR on their side.
+     */
+    internal var peerMaxStreamsBidi: Long = 0L
+    internal var peerMaxStreamsUni: Long = 0L
+
+    /**
      * The connection-level receive limit we've currently advertised to the
      * peer. Tracks the high-water mark of the most recent MAX_DATA frame we
      * sent. The writer only emits a new MAX_DATA when the new value exceeds
@@ -124,6 +138,32 @@ class QuicConnection(
 
     /** Streams the peer has opened that we haven't surfaced yet. */
     private val newPeerStreams = ArrayDeque<QuicStream>()
+
+    /**
+     * Conflated signal that wakes [awaitIncomingPeerStream] callers whenever a
+     * peer-initiated stream is appended to [newPeerStreams]. Conflated because
+     * a single wake is enough to trigger a queue-drain — duplicate signals
+     * collapse into one, which is the correct semantics for "something is
+     * available, come look".
+     */
+    private val peerStreamSignal = Channel<Unit>(Channel.CONFLATED)
+
+    /**
+     * Same conflated-signal pattern for inbound datagrams. Wakes
+     * [awaitIncomingDatagram] callers when a new datagram is appended to
+     * [incomingDatagrams].
+     */
+    private val incomingDatagramSignal = Channel<Unit>(Channel.CONFLATED)
+
+    /**
+     * Closed-state signal that wakes any suspended `await*` caller when the
+     * connection terminates. Distinct from the per-resource signal channels
+     * because a closed connection should unblock everyone, not just the next
+     * resource arrival. Closing the channel (vs sending a value) is the
+     * idiomatic "this stream is done" — `select` clauses on `onReceive` see
+     * a [ClosedReceiveChannelException] which we map to null.
+     */
+    private val closedSignal = Channel<Unit>(Channel.CONFLATED)
 
     private val tlsListener =
         object : TlsSecretsListener {
@@ -180,8 +220,13 @@ class QuicConnection(
         // Install Initial keys based on the random destination CID we just generated.
         val proto = InitialSecrets.derive(destinationConnectionId.bytes)
         val hp = AesEcbHeaderProtection(PlatformAesOneBlock)
-        initial.sendProtection = PacketProtection(Aes128Gcm, proto.clientKey, proto.clientIv, hp, proto.clientHp)
-        initial.receiveProtection = PacketProtection(Aes128Gcm, proto.serverKey, proto.serverIv, hp, proto.serverHp)
+        // Initial packets always use AES-128-GCM (RFC 9001 §5). Use the
+        // platform's cached-cipher implementation so per-packet seal/open
+        // doesn't pay for `Cipher.getInstance`.
+        initial.sendProtection =
+            PacketProtection(bestAes128GcmAead(proto.clientKey), proto.clientKey, proto.clientIv, hp, proto.clientHp)
+        initial.receiveProtection =
+            PacketProtection(bestAes128GcmAead(proto.serverKey), proto.serverKey, proto.serverIv, hp, proto.serverHp)
     }
 
     /** Begin the handshake — emits ClientHello into Initial CRYPTO. */
@@ -213,6 +258,8 @@ class QuicConnection(
         val tp = TransportParameters.decode(raw)
         peerTransportParameters = tp
         sendConnectionFlowCredit = tp.initialMaxData ?: 0L
+        peerMaxStreamsBidi = tp.initialMaxStreamsBidi ?: 0L
+        peerMaxStreamsUni = tp.initialMaxStreamsUni ?: 0L
         // Update each open stream's send credit per direction.
         for ((id, stream) in streams) {
             stream.sendCredit =
@@ -237,9 +284,22 @@ class QuicConnection(
      */
     val lock: Mutex = Mutex()
 
-    /** Allocate a new client-initiated bidirectional stream. Locked. */
+    /**
+     * Allocate a new client-initiated bidirectional stream. Locked.
+     *
+     * Throws [QuicStreamLimitException] if the peer has not granted enough
+     * bidirectional stream credit yet. Use [peerMaxStreamsBidiSnapshot] to
+     * check capacity proactively if the caller wants to back-pressure rather
+     * than throw.
+     */
     suspend fun openBidiStream(): QuicStream =
         lock.withLock {
+            if (nextLocalBidiIndex >= peerMaxStreamsBidi) {
+                throw QuicStreamLimitException(
+                    "peer-granted bidi stream cap reached " +
+                        "(used=$nextLocalBidiIndex limit=$peerMaxStreamsBidi)",
+                )
+            }
             val id = StreamId.build(StreamId.Kind.CLIENT_BIDI, nextLocalBidiIndex++)
             val stream = QuicStream(id, QuicStream.Direction.BIDIRECTIONAL)
             stream.sendCredit = peerTransportParameters?.initialMaxStreamDataBidiRemote ?: config.initialMaxStreamDataBidiRemote
@@ -251,6 +311,12 @@ class QuicConnection(
     /** Allocate a new client-initiated unidirectional (write-only) stream. Locked. */
     suspend fun openUniStream(): QuicStream =
         lock.withLock {
+            if (nextLocalUniIndex >= peerMaxStreamsUni) {
+                throw QuicStreamLimitException(
+                    "peer-granted uni stream cap reached " +
+                        "(used=$nextLocalUniIndex limit=$peerMaxStreamsUni)",
+                )
+            }
             val id = StreamId.build(StreamId.Kind.CLIENT_UNI, nextLocalUniIndex++)
             val stream = QuicStream(id, QuicStream.Direction.UNIDIRECTIONAL_LOCAL_TO_REMOTE)
             stream.sendCredit = peerTransportParameters?.initialMaxStreamDataUni ?: config.initialMaxStreamDataUni
@@ -259,13 +325,69 @@ class QuicConnection(
             stream
         }
 
+    /** Snapshot of peer-granted bidi cap. Reads do not need the lock — long writes are atomic on every supported platform. */
+    fun peerMaxStreamsBidiSnapshot(): Long = peerMaxStreamsBidi
+
+    /** Snapshot of peer-granted uni cap. */
+    fun peerMaxStreamsUniSnapshot(): Long = peerMaxStreamsUni
+
     suspend fun pollIncomingPeerStream(): QuicStream? = lock.withLock { newPeerStreams.removeFirstOrNull() }
+
+    /**
+     * Suspends until a peer-initiated stream is queued OR the connection
+     * closes. Returns null on close. Replaces the older `pollIncomingPeerStream
+     * + delay(5)` busy-loop — this version wakes within microseconds of the
+     * parser appending a stream and parks the coroutine the rest of the time.
+     */
+    suspend fun awaitIncomingPeerStream(): QuicStream? {
+        while (true) {
+            lock.withLock { newPeerStreams.removeFirstOrNull() }?.let { return it }
+            if (status == Status.CLOSED) return null
+            // select between "wakeup" and "closed" so neither path can hang.
+            val keepWaiting =
+                select<Boolean> {
+                    peerStreamSignal.onReceiveCatching { result ->
+                        // Conflated channel: if it's closed (shouldn't happen
+                        // here, but be defensive) bail out.
+                        result.isSuccess
+                    }
+                    closedSignal.onReceiveCatching { false }
+                }
+            if (!keepWaiting) {
+                // After a close-wake, drain one more time to surface any
+                // streams added between the last drain and the close.
+                lock.withLock { newPeerStreams.removeFirstOrNull() }?.let { return it }
+                return null
+            }
+        }
+    }
 
     suspend fun streamById(id: Long): QuicStream? = lock.withLock { streams[id] }
 
     suspend fun queueDatagram(payload: ByteArray) = lock.withLock { pendingDatagrams.addLast(payload) }
 
     suspend fun pollIncomingDatagram(): ByteArray? = lock.withLock { incomingDatagrams.removeFirstOrNull() }
+
+    /**
+     * Suspending counterpart of [pollIncomingDatagram]. Returns null only when
+     * the connection has been closed and no more datagrams remain. Same
+     * select-based wakeup pattern as [awaitIncomingPeerStream].
+     */
+    suspend fun awaitIncomingDatagram(): ByteArray? {
+        while (true) {
+            lock.withLock { incomingDatagrams.removeFirstOrNull() }?.let { return it }
+            if (status == Status.CLOSED) return null
+            val keepWaiting =
+                select<Boolean> {
+                    incomingDatagramSignal.onReceiveCatching { result -> result.isSuccess }
+                    closedSignal.onReceiveCatching { false }
+                }
+            if (!keepWaiting) {
+                lock.withLock { incomingDatagrams.removeFirstOrNull() }?.let { return it }
+                return null
+            }
+        }
+    }
 
     /** Initiate a graceful close. */
     suspend fun close(
@@ -284,6 +406,7 @@ class QuicConnection(
         if (!handshakeComplete) {
             signalHandshakeFailed(QuicConnectionClosedException("connection closed before handshake completed: $reason"))
         }
+        closedSignal.close()
     }
 
     /** Called by the parser on inbound CONNECTION_CLOSE or by the driver on read-loop death. */
@@ -292,6 +415,7 @@ class QuicConnection(
         if (!handshakeComplete) {
             signalHandshakeFailed(QuicConnectionClosedException("connection closed externally: $reason"))
         }
+        closedSignal.close()
     }
 
     /**
@@ -319,7 +443,18 @@ class QuicConnection(
             }
         streams[id] = stream
         newPeerStreams.addLast(stream)
+        // Wake any awaitIncomingPeerStream caller. trySend on a CONFLATED
+        // channel can never fail in steady state.
+        peerStreamSignal.trySend(Unit)
         return stream
+    }
+
+    /**
+     * Caller (parser, holding lock) appended a datagram to [incomingDatagrams].
+     * Fires the wakeup signal so awaitIncomingDatagram unblocks promptly.
+     */
+    internal fun signalIncomingDatagram() {
+        incomingDatagramSignal.trySend(Unit)
     }
 
     /** Returns the level state for [level]. */
@@ -345,5 +480,10 @@ class QuicConnection(
 
 /** Connection was closed (locally or by peer) before reaching CONNECTED. */
 class QuicConnectionClosedException(
+    message: String,
+) : RuntimeException(message)
+
+/** Caller tried to open a stream beyond the peer's MAX_STREAMS allowance. */
+class QuicStreamLimitException(
     message: String,
 ) : RuntimeException(message)

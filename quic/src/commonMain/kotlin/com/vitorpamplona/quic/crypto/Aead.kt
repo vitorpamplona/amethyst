@@ -23,8 +23,17 @@ package com.vitorpamplona.quic.crypto
 import com.vitorpamplona.quartz.nip44Encryption.crypto.ChaCha20Poly1305
 import com.vitorpamplona.quartz.utils.ciphers.AESGCM
 
-/** AEAD selector, parameterised by TLS cipher-suite identifier. */
-sealed class Aead {
+/**
+ * AEAD selector, parameterised by TLS cipher-suite identifier.
+ *
+ * Implementations may be stateless singletons (the historical pattern;
+ * `Aes128Gcm` and `ChaCha20Poly1305Aead` below) or stateful instances that
+ * cache the underlying cipher / key spec across calls (the JVM-only
+ * `JcaAesGcmAead` does this for the AES-GCM hot path). The `key` parameter
+ * is included in seal/open for the singleton pattern; cached instances may
+ * ignore it and use their bound key.
+ */
+abstract class Aead {
     abstract val keyLength: Int
     abstract val nonceLength: Int
     abstract val tagLength: Int

@@ -25,3 +25,12 @@ expect val PlatformAesOneBlock: AesOneBlockEncrypt
 
 /** Platform-provided ChaCha20 keystream block encryptor (RFC 8439 IETF variant). */
 expect val PlatformChaCha20Block: ChaCha20BlockEncrypt
+
+/**
+ * Build the platform's preferred AES-128-GCM AEAD for a fixed [key]. JVM
+ * targets return a [JcaAesGcmAead]-style instance with the JCA Cipher and
+ * SecretKeySpec cached so per-packet seal/open avoids the costly
+ * `Cipher.getInstance` lookup. Other targets may return [Aes128Gcm] (the
+ * stateless singleton) — correct, just not the fast path.
+ */
+expect fun bestAes128GcmAead(key: ByteArray): Aead

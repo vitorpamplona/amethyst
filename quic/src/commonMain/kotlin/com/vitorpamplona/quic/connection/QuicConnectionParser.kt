@@ -200,6 +200,7 @@ private fun dispatchFrames(
             is DatagramFrame -> {
                 ackEliciting = true
                 conn.incomingDatagramsLocked().addLast(frame.data)
+                conn.signalIncomingDatagram()
             }
 
             is MaxDataFrame -> {
@@ -213,7 +214,18 @@ private fun dispatchFrames(
             }
 
             is MaxStreamsFrame -> {
-                // Tracking left for a later phase.
+                // RFC 9000 §19.11: MAX_STREAMS only ever raises the cap.
+                // Frames with values smaller than the current cap are ignored.
+                // Bidi vs uni is signaled via the frame's `bidi` flag.
+                if (frame.bidi) {
+                    if (frame.maxStreams > conn.peerMaxStreamsBidi) {
+                        conn.peerMaxStreamsBidi = frame.maxStreams
+                    }
+                } else {
+                    if (frame.maxStreams > conn.peerMaxStreamsUni) {
+                        conn.peerMaxStreamsUni = frame.maxStreams
+                    }
+                }
             }
 
             is NewConnectionIdFrame -> {

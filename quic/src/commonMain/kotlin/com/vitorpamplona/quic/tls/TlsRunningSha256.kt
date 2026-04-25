@@ -21,32 +21,21 @@
 package com.vitorpamplona.quic.tls
 
 /**
- * Running SHA-256 over the concatenated handshake messages, per RFC 8446 §4.4.1.
+ * Incremental SHA-256 with snapshot-without-consume.
  *
- * The transcript order is:
- *   ClientHello
- *   ServerHello
- *   EncryptedExtensions
- *   Certificate
- *   CertificateVerify
- *   server Finished
- *   client Finished
+ * Used by [TlsTranscriptHash] to avoid re-hashing every accumulated message
+ * on each snapshot. RFC 8446's key schedule samples the transcript at three
+ * points (handshake keys, application keys, Finished verification) — each of
+ * which would otherwise re-walk every prior handshake byte. Cloning the
+ * digest is O(state size) ≈ a few hundred bytes, vs. O(transcript size) for
+ * the re-hash approach.
  *
- * Each message is appended with its 4-byte handshake header included.
- *
- * Backed by an incremental [TlsRunningSha256] (JCA `MessageDigest` on JVM).
- * Each [snapshot] clones the running state and finalises the clone, so
- * subsequent [append] calls keep extending the same hash. Earlier versions
- * accumulated raw bytes and re-hashed on every snapshot — O(n²) across the
- * three+ snapshots a TLS 1.3 handshake takes.
+ * The contract: [update] feeds bytes; [snapshot] returns the SHA-256 of
+ * everything fed so far without invalidating the running state, so further
+ * [update] calls continue from the same position.
  */
-class TlsTranscriptHash {
-    private val running = TlsRunningSha256()
+expect class TlsRunningSha256() {
+    fun update(bytes: ByteArray)
 
-    fun append(messageBytes: ByteArray) {
-        running.update(messageBytes)
-    }
-
-    /** Snapshot the current transcript hash (32 bytes). */
-    fun snapshot(): ByteArray = running.snapshot()
+    fun snapshot(): ByteArray
 }

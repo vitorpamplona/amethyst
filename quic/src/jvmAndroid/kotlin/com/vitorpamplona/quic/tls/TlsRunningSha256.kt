@@ -20,33 +20,28 @@
  */
 package com.vitorpamplona.quic.tls
 
-/**
- * Running SHA-256 over the concatenated handshake messages, per RFC 8446 §4.4.1.
- *
- * The transcript order is:
- *   ClientHello
- *   ServerHello
- *   EncryptedExtensions
- *   Certificate
- *   CertificateVerify
- *   server Finished
- *   client Finished
- *
- * Each message is appended with its 4-byte handshake header included.
- *
- * Backed by an incremental [TlsRunningSha256] (JCA `MessageDigest` on JVM).
- * Each [snapshot] clones the running state and finalises the clone, so
- * subsequent [append] calls keep extending the same hash. Earlier versions
- * accumulated raw bytes and re-hashed on every snapshot — O(n²) across the
- * three+ snapshots a TLS 1.3 handshake takes.
- */
-class TlsTranscriptHash {
-    private val running = TlsRunningSha256()
+import java.security.MessageDigest
 
-    fun append(messageBytes: ByteArray) {
-        running.update(messageBytes)
+/**
+ * JCA-backed incremental SHA-256. `MessageDigest.clone()` is supported by all
+ * stock JDK SHA-256 providers and produces an independent digest object — we
+ * use that to take a snapshot without disturbing the running state.
+ *
+ * Single-thread per instance: the TlsClient state machine is the sole caller,
+ * driven by the QUIC connection's lock, so no synchronization is needed.
+ */
+actual class TlsRunningSha256 actual constructor() {
+    private val digest: MessageDigest = MessageDigest.getInstance("SHA-256")
+
+    actual fun update(bytes: ByteArray) {
+        digest.update(bytes)
     }
 
-    /** Snapshot the current transcript hash (32 bytes). */
-    fun snapshot(): ByteArray = running.snapshot()
+    actual fun snapshot(): ByteArray {
+        // Cloning the digest is the only way to read the current hash without
+        // ending the running state — `digest.digest()` finalizes and resets,
+        // which would silently corrupt subsequent updates.
+        val clone = digest.clone() as MessageDigest
+        return clone.digest()
+    }
 }

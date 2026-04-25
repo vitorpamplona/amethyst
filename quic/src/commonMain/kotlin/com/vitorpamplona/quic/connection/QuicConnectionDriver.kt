@@ -27,6 +27,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
@@ -54,10 +55,16 @@ class QuicConnectionDriver(
     private val scope = CoroutineScope(parentScope.coroutineContext + job + Dispatchers.IO)
     private val sendWakeup = Channel<Unit>(Channel.CONFLATED)
 
+    // Track the read + send loop jobs so close() can join them cleanly
+    // (waiting for the in-flight datagram to finish flushing) instead of
+    // racing them with scope.cancel().
+    private var readJob: Job? = null
+    private var sendJob: Job? = null
+
     fun start() {
         connection.start()
-        scope.launch { readLoop() }
-        scope.launch { sendLoop() }
+        readJob = scope.launch { readLoop() }
+        sendJob = scope.launch { sendLoop() }
         // Initial nudge so the ClientHello goes out immediately.
         sendWakeup.trySend(Unit)
     }
@@ -120,23 +127,70 @@ class QuicConnectionDriver(
     }
 
     /**
-     * Cleanly tear down the driver. Safe to call from inside the driver scope —
-     * the actual cancel-and-close runs on [parentScope] so the caller's coroutine
-     * (which may itself be in [scope]) doesn't get cancelled before the close
-     * completes.
+     * Cleanly tear down the driver. Runs on [parentScope] so the caller (which
+     * may itself live inside the driver's [scope]) isn't cancelled before its
+     * own teardown completes.
+     *
+     * Sequence:
+     *  1. Mark the connection CLOSING so the writer starts emitting
+     *     CONNECTION_CLOSE on the next drain.
+     *  2. Wake the send loop and wait up to [CLOSE_FLUSH_TIMEOUT_MILLIS] for it
+     *     to flush that packet — yield() alone is not enough because the send
+     *     loop may be parked on Channel.receive on a different IO worker
+     *     thread; only an explicit join+wakeup sequence guarantees the close
+     *     bytes hit the socket.
+     *  3. Force the loops out of their `while (status != CLOSED)` guards by
+     *     transitioning to CLOSED, then cancel the scope and close the socket.
+     *
+     * The earlier yield()-based version raced: scope.cancel() could fire
+     * while sendLoop was mid-`socket.send()`, occasionally producing partial
+     * datagrams or skipping the CONNECTION_CLOSE entirely.
      */
     fun close() {
-        // Drive the close on the parent scope so we don't cancel our own caller.
         parentScope.launch {
-            try {
-                connection.close(0L, "")
-                wakeup() // let the send loop emit CONNECTION_CLOSE
-                // Give the send loop one tick to flush the close packet, then tear down.
-                kotlinx.coroutines.yield()
-            } finally {
-                scope.cancel()
-                socket.close()
+            connection.close(0L, "")
+            wakeup()
+            val send = sendJob
+            // Bounded wait for the send loop to flush CONNECTION_CLOSE. We
+            // don't want to hang forever if the writer is wedged — the timeout
+            // is the upper bound on how long close() can block.
+            withTimeoutOrNull(CLOSE_FLUSH_TIMEOUT_MILLIS) {
+                // Spin until the writer has actually drained the queued close
+                // (queues are empty AND the send loop has cycled at least
+                // once). Easiest proxy: write was attempted and there's
+                // nothing more to send. We approximate by giving the loop a
+                // chance to drain by sleeping briefly. This is the one place
+                // a short sleep is acceptable because we're racing a flush.
+                while (true) {
+                    val drained =
+                        connection.lock.withLock {
+                            // No more pending datagrams or stream bytes? Then
+                            // CONNECTION_CLOSE has either been sent or there
+                            // was nothing to send.
+                            connection.pendingDatagramsLocked().isEmpty()
+                        }
+                    if (drained) break
+                    kotlinx.coroutines.delay(1)
+                }
             }
+            // Now flip to CLOSED so both loops exit their while-guards.
+            connection.markClosedExternally("driver close requested")
+            wakeup()
+            // Wait for both loops to actually exit — joinAll won't return
+            // until the in-flight socket.send() (if any) completes.
+            withTimeoutOrNull(CLOSE_FLUSH_TIMEOUT_MILLIS) {
+                listOfNotNull(readJob, send).joinAll()
+            }
+            // Final teardown. By now both jobs have either exited cleanly or
+            // exceeded the timeout — cancel guarantees they're done before we
+            // close the socket.
+            scope.cancel()
+            socket.close()
         }
+    }
+
+    companion object {
+        /** Upper bound on close() flush wait. Each phase (drain + join) gets up to this much. */
+        private const val CLOSE_FLUSH_TIMEOUT_MILLIS = 250L
     }
 }
