@@ -271,7 +271,7 @@ test_14_wn_removes_a() {
   local deadline=$(( $(date +%s) + 120 )) removed=0
   while [[ $(date +%s) -lt $deadline ]]; do
     local show rc
-    show=$("$AMY_BIN" --data-dir "$A_DIR" --secret-backend plaintext \
+    show=$("$AMY_BIN" --data-dir "$A_DIR" --secret-backend plaintext --json \
               marmot group show "$a_gid" 2>&1)
     rc=$?
     printf '%s\n' "$show" >>"$LOG_FILE"

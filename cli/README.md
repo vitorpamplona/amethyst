@@ -27,13 +27,18 @@ Amy exists for three audiences at once:
 
 What every caller — user, script, agent, CI — can rely on:
 
-- **stdout is JSON. One line. One object.** Stable snake_case keys.
-  Pipe it into `jq`, parse it from Python, hand it to an agent.
+- **Default stdout is human-readable text.** A YAML-ish render of the
+  underlying result map. Friendly at a terminal; no shape promises.
+- **`--json` is the machine contract. One line. One object.** Stable
+  snake_case keys. Pipe it into `jq`, parse it from Python, hand it
+  to an agent. Pass `--json` anywhere before the subcommand:
+  `amy --json whoami`, `amy --data-dir ./alice --json marmot group list`.
 - **stderr is for humans.** Progress, warnings, per-relay ACK traces.
-  Safe to discard.
+  Safe to discard. Errors land here too: `error: <code>: <detail>` by
+  default, or JSON `{"error":"…","detail":"…"}` under `--json`.
 - **Exit codes are the real signal.**
   - `0` — success
-  - `1` — runtime error (JSON `{"error":"…","detail":"…"}` on stderr)
+  - `1` — runtime error
   - `2` — bad arguments
   - `124` — `await` timed out
 - **No interactive prompts, ever.** Passwords, names, keys — all flags.
@@ -42,9 +47,9 @@ What every caller — user, script, agent, CI — can rely on:
   Delete to reset; copy to move; `AMETHYST_CLI_DATA` env var overrides
   the default `./amy`.
 
-The rationale behind each of these lives in
-[DEVELOPMENT.md](./DEVELOPMENT.md). Breaking any of them is a breaking
-change to Amy's public API.
+Only the `--json` shape and the exit codes are public API. The default
+text format is allowed to change between releases. The rationale lives
+in [DEVELOPMENT.md](./DEVELOPMENT.md).
 
 ---
 
@@ -159,10 +164,11 @@ amy --data-dir ./bob marmot await group --name "Test Group" --timeout 60
 amy --data-dir ./bob marmot message list <GID>
 ```
 
-Compose with `jq` to chain commands:
+Compose with `jq` to chain commands — pass `--json` so stdout switches
+from the default human-readable text to the parseable single-line JSON:
 
 ```bash
-GID=$(amy --data-dir ./alice marmot group create --name "Test" | jq -r .group_id)
+GID=$(amy --data-dir ./alice --json marmot group create --name "Test" | jq -r .group_id)
 ```
 
 For an interop-test script template, see

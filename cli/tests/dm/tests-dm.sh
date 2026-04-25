@@ -13,10 +13,12 @@
 #   dm-06   cursor advance (subsequent no-flag `dm list` is empty)
 
 # Wrap amy_json around either data-dir so the per-test code stays tight.
+# `--json` opts into amy's machine-readable contract; assertions below
+# parse with jq.
 amy_json_for() {
   local dir="$1"; shift
   local out
-  if ! out=$("$AMY_BIN" --data-dir "$dir" "$@" 2>>"$LOG_FILE"); then
+  if ! out=$("$AMY_BIN" --data-dir "$dir" --json "$@" 2>>"$LOG_FILE"); then
     fail_msg "amy --data-dir $dir $*: exit $? (see $LOG_FILE)"
     printf '%s\n' "$out" >>"$LOG_FILE"
     return 1
@@ -91,7 +93,7 @@ test_03_dm_send_rejects_no_inbox() {
   # Generate a throwaway identity but do NOT publish its kind:10050.
   local tmpdir; tmpdir=$(mktemp -d "${STATE_DIR}/ghost.XXXXXX")
   local ghost_out ghost_npub
-  ghost_out=$("$AMY_BIN" --data-dir "$tmpdir" --secret-backend plaintext init) || {
+  ghost_out=$("$AMY_BIN" --data-dir "$tmpdir" --secret-backend plaintext --json init) || {
     record_result "$id" fail "ghost init failed"; rm -rf "$tmpdir"; return
   }
   ghost_npub=$(printf '%s' "$ghost_out" | jq -r '.npub')
@@ -99,7 +101,7 @@ test_03_dm_send_rejects_no_inbox() {
 
   # A sends without --allow-fallback; amy should refuse.
   local raw rc
-  raw=$("$AMY_BIN" --data-dir "$A_DIR" dm send "$ghost_npub" "should be rejected" 2>&1)
+  raw=$("$AMY_BIN" --data-dir "$A_DIR" --json dm send "$ghost_npub" "should be rejected" 2>&1)
   rc=$?
   rm -rf "$tmpdir"
   if [[ "$rc" -ne 0 ]] && printf '%s' "$raw" | grep -q '"error":"no_dm_relays"'; then
@@ -121,7 +123,7 @@ test_04_dm_send_allow_fallback() {
   # publish should succeed even though the ghost has no 10050.
   local tmpdir; tmpdir=$(mktemp -d "${STATE_DIR}/ghost.XXXXXX")
   local ghost_out ghost_npub
-  ghost_out=$("$AMY_BIN" --data-dir "$tmpdir" --secret-backend plaintext init) || {
+  ghost_out=$("$AMY_BIN" --data-dir "$tmpdir" --secret-backend plaintext --json init) || {
     record_result "$id" fail "ghost init failed"; rm -rf "$tmpdir"; return
   }
   ghost_npub=$(printf '%s' "$ghost_out" | jq -r '.npub')

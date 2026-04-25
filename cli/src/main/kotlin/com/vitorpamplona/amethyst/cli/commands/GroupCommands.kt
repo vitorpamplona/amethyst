@@ -21,14 +21,14 @@
 package com.vitorpamplona.amethyst.cli.commands
 
 import com.vitorpamplona.amethyst.cli.DataDir
-import com.vitorpamplona.amethyst.cli.Json
+import com.vitorpamplona.amethyst.cli.Output
 
 object GroupCommands {
     suspend fun dispatch(
         dataDir: DataDir,
         tail: Array<String>,
     ): Int {
-        if (tail.isEmpty()) return Json.error("bad_args", "group <create|list|show|…>")
+        if (tail.isEmpty()) return Output.error("bad_args", "group <create|list|show|…>")
         val rest = tail.drop(1).toTypedArray()
         return when (tail[0]) {
             "create" -> GroupCreateCommand.run(dataDir, rest)
@@ -42,7 +42,7 @@ object GroupCommands {
             "demote" -> GroupMetadataCommands.demote(dataDir, rest)
             "remove" -> GroupMembershipCommands.remove(dataDir, rest)
             "leave" -> GroupMembershipCommands.leave(dataDir, rest)
-            else -> Json.error("bad_args", "group ${tail[0]}")
+            else -> Output.error("bad_args", "group ${tail[0]}")
         }
     }
 }

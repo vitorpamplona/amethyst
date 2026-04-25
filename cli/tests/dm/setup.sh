@@ -75,15 +75,15 @@ preflight_dm() {
 # `--secret-backend=plaintext` keeps these throwaway interop runs headless —
 # the default `auto` would try the OS keychain (not available in CI) and then
 # ask for a NIP-49 passphrase. Plaintext still writes 0600-owner-only.
-amy_a() { "$AMY_BIN" --data-dir "$A_DIR" --secret-backend plaintext "$@"; }
-amy_d() { "$AMY_BIN" --data-dir "$D_DIR" --secret-backend plaintext "$@"; }
+amy_a() { "$AMY_BIN" --data-dir "$A_DIR" --secret-backend plaintext --json "$@"; }
+amy_d() { "$AMY_BIN" --data-dir "$D_DIR" --secret-backend plaintext --json "$@"; }
 
 # --- identity bootstrap ------------------------------------------------------
 ensure_identity_for() {
   local who="$1" dir="$2"
   step "initialising Identity $who (amy at $dir)"
   local out
-  out=$("$AMY_BIN" --data-dir "$dir" --secret-backend plaintext init) || {
+  out=$("$AMY_BIN" --data-dir "$dir" --secret-backend plaintext --json init) || {
     fail_msg "amy init failed for $who: $out"; exit 1
   }
   local npub hex

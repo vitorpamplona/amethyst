@@ -81,7 +81,7 @@ source "$TESTS_DIR/headless/helpers.sh"
 # shellcheck source=../dm/setup.sh
 source "$TESTS_DIR/dm/setup.sh"
 
-amy_b() { "$AMY_BIN" --data-dir "$B_DIR" "$@"; }
+amy_b() { "$AMY_BIN" --data-dir "$B_DIR" --json "$@"; }
 
 # Helper: B-side amy_json. The dm headless's helpers.sh hardcodes A_DIR
 # in amy_a; we need a parallel for B without re-sourcing.
@@ -249,10 +249,10 @@ fi
 # ----------------------------------------------------------------------
 banner "T7 — store maintenance verbs (sweep/scrub/compact) without identity"
 TMP_NO_ID=$(mktemp -d)
-T7_STAT=$(${AMY_BIN} --data-dir "$TMP_NO_ID" store stat)
-T7_SWEEP=$(${AMY_BIN} --data-dir "$TMP_NO_ID" store sweep-expired)
-T7_SCRUB=$(${AMY_BIN} --data-dir "$TMP_NO_ID" store scrub)
-T7_COMPACT=$(${AMY_BIN} --data-dir "$TMP_NO_ID" store compact)
+T7_STAT=$(${AMY_BIN} --data-dir "$TMP_NO_ID" --json store stat)
+T7_SWEEP=$(${AMY_BIN} --data-dir "$TMP_NO_ID" --json store sweep-expired)
+T7_SCRUB=$(${AMY_BIN} --data-dir "$TMP_NO_ID" --json store scrub)
+T7_COMPACT=$(${AMY_BIN} --data-dir "$TMP_NO_ID" --json store compact)
 assert_eq "$(printf '%s' "$T7_STAT" | jq -r '.events')" "0" T7.stat.events "" \
     && record_result T7.stat pass "stat works without identity"
 assert_eq "$(printf '%s' "$T7_SWEEP" | jq -r '.swept')" "0" T7.sweep.swept "" \

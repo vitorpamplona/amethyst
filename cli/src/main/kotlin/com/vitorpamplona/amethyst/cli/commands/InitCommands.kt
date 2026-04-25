@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.cli.commands
 import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Identity
-import com.vitorpamplona.amethyst.cli.Json
+import com.vitorpamplona.amethyst.cli.Output
 
 object InitCommands {
     suspend fun init(
@@ -34,7 +34,7 @@ object InitCommands {
         // would trigger a keychain prompt / passphrase dialog even though the
         // caller clearly already has the identity set up.
         dataDir.loadIdentityFileOrNull()?.let { existing ->
-            Json.writeLine(
+            Output.emit(
                 mapOf(
                     "npub" to existing.npub,
                     "hex" to existing.pubKeyHex,
@@ -48,7 +48,7 @@ object InitCommands {
         val nsec = args.flag("nsec")
         val created = if (nsec != null) Identity.fromNsec(nsec) else Identity.create()
         dataDir.saveIdentity(created)
-        Json.writeLine(
+        Output.emit(
             mapOf(
                 "npub" to created.npub,
                 "hex" to created.pubKeyHex,
@@ -65,9 +65,9 @@ object InitCommands {
         // or ask for a NIP-49 passphrase just to echo the npub.
         val file = dataDir.loadIdentityFileOrNull()
         if (file == null) {
-            return Json.error("no_identity", "No identity at ${dataDir.identityFile}. Run `init` first.")
+            return Output.error("no_identity", "No identity at ${dataDir.identityFile}. Run `init` first.")
         }
-        Json.writeLine(
+        Output.emit(
             mapOf(
                 "npub" to file.npub,
                 "hex" to file.pubKeyHex,

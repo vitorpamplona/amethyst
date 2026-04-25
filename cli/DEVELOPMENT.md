@@ -16,13 +16,13 @@ or encryption in here, stop — that code belongs in `quartz/` or
 
 ## Design principles
 
-1. **Non-interactive.** One verb = one JSON object on stdout = one
-   exit code. No REPL, no daemon, no prompts. Any network wait is an
+1. **Non-interactive.** One verb = one result on stdout = one exit
+   code. No REPL, no daemon, no prompts. Any network wait is an
    explicit `await` verb with a `--timeout`.
 2. **Thin command layer.** Each file in `commands/` parses args,
-   calls into `commons/` or `quartz/`, and prints JSON. A file longer
-   than ~200 lines is a code smell — the logic is living in the wrong
-   module.
+   calls into `commons/` or `quartz/`, and emits a result map via
+   `Output.emit(...)`. A file longer than ~200 lines is a code smell
+   — the logic is living in the wrong module.
 3. **Everything persistent is on-disk.** No in-memory caches that
    survive between invocations. Every run reloads cursors, MLS state,
    identity, and relay config. This is what makes Amy safe to run
@@ -30,9 +30,12 @@ or encryption in here, stop — that code belongs in `quartz/` or
 4. **Shared defaults.** When Amethyst picks a default relay, kind, or
    tag — Amy calls the same helper. No hand-rolled duplicates. If the
    helper doesn't exist yet, extract it to `commons/` first.
-5. **JSON is the public API.** Output-shape changes are breaking
-   changes. Version them explicitly in commit messages; update interop
-   fixtures.
+5. **The `--json` output shape is the public API.** Default stdout is
+   human-readable text (a YAML-ish render of the result map by way of
+   `Output.kt`'s default formatter) — that text shape can change
+   freely without warning. The `--json` shape cannot: changes to
+   keys, types, or nesting are breaking changes. Version them
+   explicitly in commit messages; update interop fixtures.
 
 ---
 
@@ -42,7 +45,7 @@ or encryption in here, stop — that code belongs in `quartz/` or
 cli/src/main/kotlin/com/vitorpamplona/amethyst/cli/
 ├── Main.kt                    # argv → subcommand dispatch
 ├── Args.kt                    # tiny flag parser (no framework)
-├── Json.kt                    # single-line stdout + error printer
+├── Output.kt                  # text/json mode emitter (--json flag)
 ├── Config.kt                  # Identity, RunState, DataDir
 ├── Context.kt                 # per-run wiring: signer + NostrClient +
 │                              #   MarmotManager + publish/drain/sync helpers
@@ -77,7 +80,7 @@ try {
     ctx.syncIncoming()          // pull new gift-wraps + group events
     // ...call into commons/ or quartz/ to build an event...
     val ack = ctx.publish(event, targets)
-    Json.writeLine(mapOf(...))
+    Output.emit(mapOf(...))
 } finally {
     ctx.close()                 // flush RunState, disconnect
 }
@@ -136,15 +139,15 @@ package com.vitorpamplona.amethyst.cli.commands
 import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
-import com.vitorpamplona.amethyst.cli.Json
+import com.vitorpamplona.amethyst.cli.Output
 
 object NoteCommands {
     suspend fun dispatch(dataDir: DataDir, tail: Array<String>): Int {
-        if (tail.isEmpty()) return Json.error("bad_args", "note <publish|read|…>")
+        if (tail.isEmpty()) return Output.error("bad_args", "note <publish|read|…>")
         val rest = tail.drop(1).toTypedArray()
         return when (tail[0]) {
             "publish" -> publish(dataDir, rest)
-            else -> Json.error("bad_args", "note ${tail[0]}")
+            else -> Output.error("bad_args", "note ${tail[0]}")
         }
     }
 
@@ -156,7 +159,7 @@ object NoteCommands {
             ctx.prepare()
             val event = com.vitorpamplona.amethyst.commons.note.buildTextNote(ctx.signer, text)
             val ack = ctx.publish(event, ctx.outboxRelays())
-            Json.writeLine(mapOf(
+            Output.emit(mapOf(
                 "event_id" to event.id,
                 "kind" to event.kind,
                 "published_to" to ack.filterValues { it }.keys.map { it.url },
@@ -173,6 +176,11 @@ command table and [ROADMAP.md](./ROADMAP.md)'s parity matrix in sync.
 
 ### 4. Output-shape conventions
 
+The result map you pass to `Output.emit(...)` IS the `--json` shape —
+treat its keys and types as the public API. The default text render
+is derived from the same map by `Output.kt` and intentionally has no
+contract.
+
 - Top-level object always.
 - Stable snake_case keys.
 - Event IDs as hex strings (not npub-style).
@@ -180,8 +188,8 @@ command table and [ROADMAP.md](./ROADMAP.md)'s parity matrix in sync.
   primary subject (`"npub":…`).
 - Relay URLs as strings, normalized, never objects.
 - Lists of events under a plural key (`"messages"`, `"members"`).
-- Errors via `Json.error("code","detail")` — single lower_snake code,
-  free-form detail.
+- Errors via `Output.error("code","detail")` — single lower_snake
+  code, free-form detail.
 
 ---
 
@@ -195,7 +203,7 @@ Amy-specific layer still needs its own coverage:
 |---|---|
 | Argument parsing (`Args`, flag forms, `--data-dir=…` vs `--data-dir …`) | Plain JVM unit tests in `cli/src/test/kotlin/`. |
 | Error / exit-code contract (bad args → 2, await timeout → 124, runtime → 1) | Table-driven tests invoking `main(argv)` with captured stdout/stderr. |
-| JSON output shape (each command's keys and types) | Snapshot tests: run a command against a throwaway data-dir, assert the JSON matches a golden file. |
+| JSON output shape (each command's keys and types under `--json`) | Snapshot tests: run a command with `--json` against a throwaway data-dir, assert the JSON matches a golden file. The default text render has no shape contract and shouldn't be snapshotted. |
 | File layout on disk (`identity.json`, `events-store/…`, `marmot/groups/*.mls`, `marmot/keypackages.bundle`) | Structural assertions after a command sequence. |
 | Round-trip between two data-dirs on a local relay | End-to-end shell harnesses under `cli/tests/`. Each harness spins up a local `nostr-rs-relay`, bootstraps two or more fresh identities in their own `--data-dir`s, and drives a scenario via `amy` (+ `wn` for Marmot interop against whitenoise-rs). Today there are two suites: `cli/tests/marmot/` (13 MLS scenarios vs whitenoise-rs) and `cli/tests/dm/` (NIP-17 DM round-trips between two `amy` clients). |
 | Interop with other clients | Covered by `cli/tests/marmot/marmot-interop-headless.sh` (drives Amy against whitenoise-rs `wn`/`wnd`). Add new scenarios there or start a new sibling under `cli/tests/`. |

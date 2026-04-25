@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.cli.commands
 
 import com.vitorpamplona.amethyst.cli.DataDir
-import com.vitorpamplona.amethyst.cli.Json
+import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
 import com.vitorpamplona.quartz.nip01Core.store.fs.FsEventStore
 import java.io.IOException
@@ -51,21 +51,21 @@ object StoreCommands {
         dataDir: DataDir,
         tail: Array<String>,
     ): Int {
-        if (tail.isEmpty()) return Json.error("bad_args", "store <stat|sweep-expired|scrub|compact>")
+        if (tail.isEmpty()) return Output.error("bad_args", "store <stat|sweep-expired|scrub|compact>")
         val rest = tail.drop(1).toTypedArray()
         return when (tail[0]) {
             "stat" -> stat(dataDir)
             "sweep-expired" -> sweepExpired(dataDir)
             "scrub" -> scrub(dataDir)
             "compact" -> compact(dataDir)
-            else -> Json.error("bad_args", "store ${tail[0]}")
+            else -> Output.error("bad_args", "store ${tail[0]}")
         }
     }
 
     private fun stat(dataDir: DataDir): Int {
         val storeRoot = dataDir.eventsDir.toPath()
         if (!storeRoot.exists()) {
-            Json.writeLine(
+            Output.emit(
                 mapOf(
                     "events" to 0,
                     "by_kind" to emptyMap<String, Long>(),
@@ -119,7 +119,7 @@ object StoreCommands {
 
         val diskBytes = walkSize(storeRoot)
 
-        Json.writeLine(
+        Output.emit(
             mapOf(
                 "events" to count,
                 "by_kind" to byKind,
@@ -138,7 +138,7 @@ object StoreCommands {
             val before = countEntries(expiresAtDir)
             store.deleteExpiredEvents()
             val after = countEntries(expiresAtDir)
-            Json.writeLine(
+            Output.emit(
                 mapOf(
                     "swept" to (before - after).coerceAtLeast(0L),
                     "remaining" to after,
@@ -150,14 +150,14 @@ object StoreCommands {
     private fun scrub(dataDir: DataDir): Int =
         withStore(dataDir) { store ->
             store.scrub()
-            Json.writeLine(mapOf("ok" to true))
+            Output.emit(mapOf("ok" to true))
             0
         }
 
     private fun compact(dataDir: DataDir): Int =
         withStore(dataDir) { store ->
             store.compact()
-            Json.writeLine(mapOf("ok" to true))
+            Output.emit(mapOf("ok" to true))
             0
         }
 

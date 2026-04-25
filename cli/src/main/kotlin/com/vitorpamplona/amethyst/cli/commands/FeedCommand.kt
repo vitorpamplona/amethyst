@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.cli.commands
 import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
-import com.vitorpamplona.amethyst.cli.Json
+import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -53,10 +53,10 @@ object FeedCommand {
         val author = args.flag("author")
         val following = args.bool("following")
         if (author != null && following) {
-            return Json.error("bad_args", "feed: pass either --author or --following, not both")
+            return Output.error("bad_args", "feed: pass either --author or --following, not both")
         }
         val limit = args.intFlag("limit", 50)
-        if (limit <= 0) return Json.error("bad_args", "feed: --limit must be > 0")
+        if (limit <= 0) return Output.error("bad_args", "feed: --limit must be > 0")
         val since = args.flag("since")?.toLongOrNull()
         val until = args.flag("until")?.toLongOrNull()
         val timeoutSecs = args.longFlag("timeout", 8L)
@@ -73,7 +73,7 @@ object FeedCommand {
                 }
 
             if (authors.isEmpty()) {
-                Json.writeLine(
+                Output.emit(
                     mapOf(
                         "mode" to mode,
                         "authors" to emptyList<String>(),
@@ -85,7 +85,7 @@ object FeedCommand {
 
             val relays = relaysForReadingFeed(ctx, mode)
             if (relays.isEmpty()) {
-                return Json.error("no_relays", "no relays available; run `amy relay add` first")
+                return Output.error("no_relays", "no relays available; run `amy relay add` first")
             }
 
             val filter =
@@ -121,7 +121,7 @@ object FeedCommand {
                         )
                     }.toList()
 
-            Json.writeLine(
+            Output.emit(
                 mapOf(
                     "mode" to mode,
                     "authors" to authors,

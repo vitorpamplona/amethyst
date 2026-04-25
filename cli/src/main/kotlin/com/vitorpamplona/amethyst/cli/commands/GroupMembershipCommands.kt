@@ -22,30 +22,30 @@ package com.vitorpamplona.amethyst.cli.commands
 
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
-import com.vitorpamplona.amethyst.cli.Json
+import com.vitorpamplona.amethyst.cli.Output
 
 object GroupMembershipCommands {
     suspend fun remove(
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
-        if (rest.size < 2) return Json.error("bad_args", "group remove <gid> <npub>")
+        if (rest.size < 2) return Output.error("bad_args", "group remove <gid> <npub>")
         val ctx = Context.open(dataDir)
         try {
             ctx.prepare()
             val gid = ctx.resolveGroupId(rest[0])
             val target = ctx.requireUserHex(rest[1])
             ctx.syncIncoming()
-            if (!ctx.marmot.isMember(gid)) return Json.error("not_member", gid)
+            if (!ctx.marmot.isMember(gid)) return Output.error("not_member", gid)
 
             val leafIndex =
                 ctx.marmot.leafIndexOf(gid, target)
-                    ?: return Json.error("not_in_group", target)
+                    ?: return Output.error("not_in_group", target)
 
             val outbound = ctx.marmot.removeMember(nostrGroupId = gid, targetLeafIndex = leafIndex)
             val targets = ctx.marmotGroupRelays(gid).ifEmpty { ctx.outboxRelays() }
             val ack = ctx.publish(outbound.signedEvent, targets)
-            Json.writeLine(
+            Output.emit(
                 mapOf(
                     "group_id" to gid,
                     "removed" to target,
@@ -65,12 +65,12 @@ object GroupMembershipCommands {
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
-        if (rest.isEmpty()) return Json.error("bad_args", "group leave <gid>")
+        if (rest.isEmpty()) return Output.error("bad_args", "group leave <gid>")
         val ctx = Context.open(dataDir)
         try {
             ctx.prepare()
             val gid = ctx.resolveGroupId(rest[0])
-            if (!ctx.marmot.isMember(gid)) return Json.error("not_member", gid)
+            if (!ctx.marmot.isMember(gid)) return Output.error("not_member", gid)
 
             val targets = ctx.marmotGroupRelays(gid).ifEmpty { ctx.outboxRelays() }
 
@@ -102,7 +102,7 @@ object GroupMembershipCommands {
 
             val outbound = ctx.marmot.leaveGroup(gid)
             val ack = ctx.publish(outbound.signedEvent, targets)
-            Json.writeLine(
+            Output.emit(
                 mapOf(
                     "group_id" to gid,
                     "self_demote_event_id" to demoteEventId,

@@ -6,7 +6,9 @@
 # `--secret-backend=plaintext` keeps these throwaway interop runs headless —
 # the default `auto` would try the OS keychain (not available in CI) and then
 # ask for a NIP-49 passphrase. Plaintext still writes 0600-owner-only.
-amy_a() { "$AMY_BIN" --data-dir "$A_DIR" --secret-backend plaintext "$@"; }
+# `--json` opts into amy's machine-readable output (the harness parses it
+# with jq); the default human-text output is for terminal use.
+amy_a() { "$AMY_BIN" --data-dir "$A_DIR" --secret-backend plaintext --json "$@"; }
 
 # Run amy, log stderr, surface JSON on stdout, remember last result.
 amy_json() {

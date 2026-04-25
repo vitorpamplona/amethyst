@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.cli.commands
 import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Identity
-import com.vitorpamplona.amethyst.cli.Json
+import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Client
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.OkHttpNip05Fetcher
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.resolveUserHexOrNull
@@ -50,10 +50,10 @@ object LoginCommand {
         rest: Array<String>,
     ): Int {
         if (rest.isEmpty()) {
-            return Json.error("bad_args", "login <nsec|ncryptsec|mnemonic|npub|nprofile|hex|nip05> [--password X]")
+            return Output.error("bad_args", "login <nsec|ncryptsec|mnemonic|npub|nprofile|hex|nip05> [--password X]")
         }
         if (dataDir.identityExists()) {
-            return Json.error("exists", "identity already exists at ${dataDir.identityFile}; use a fresh --data-dir or delete it first")
+            return Output.error("exists", "identity already exists at ${dataDir.identityFile}; use a fresh --data-dir or delete it first")
         }
 
         val key = rest[0].trim()
@@ -61,13 +61,13 @@ object LoginCommand {
 
         val identity =
             resolveIdentity(key, args)
-                ?: return Json.error(
+                ?: return Output.error(
                     "bad_key",
                     "could not parse '$key' as any supported identifier",
                 )
 
         dataDir.saveIdentity(identity)
-        Json.writeLine(
+        Output.emit(
             mapOf(
                 "npub" to identity.npub,
                 "hex" to identity.pubKeyHex,

@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.cli.commands
 
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
-import com.vitorpamplona.amethyst.cli.Json
+import com.vitorpamplona.amethyst.cli.Output
 
 /**
  * Read-only queries. None of these publish; they all sync-then-report.
@@ -44,7 +44,7 @@ object GroupReadCommands {
                         "epoch" to ctx.marmot.groupEpoch(id),
                     )
                 }
-            Json.writeLine(mapOf("groups" to items))
+            Output.emit(mapOf("groups" to items))
             return 0
         } finally {
             ctx.close()
@@ -55,19 +55,19 @@ object GroupReadCommands {
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
-        if (rest.isEmpty()) return Json.error("bad_args", "group show <group_id>")
+        if (rest.isEmpty()) return Output.error("bad_args", "group show <group_id>")
         val ctx = Context.open(dataDir)
         try {
             ctx.prepare()
             val gid = ctx.resolveGroupId(rest[0])
             ctx.syncIncoming()
-            if (!ctx.marmot.isMember(gid)) return Json.error("not_member", gid)
+            if (!ctx.marmot.isMember(gid)) return Output.error("not_member", gid)
             val meta = ctx.marmot.groupMetadata(gid)
             val members =
                 ctx.marmot.memberPubkeys(gid).map {
                     mapOf("pubkey" to it.pubkey, "leaf_index" to it.leafIndex)
                 }
-            Json.writeLine(
+            Output.emit(
                 mapOf(
                     "group_id" to gid,
                     "mls_group_id" to ctx.marmot.mlsGroupIdHex(gid),
@@ -90,18 +90,18 @@ object GroupReadCommands {
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
-        if (rest.isEmpty()) return Json.error("bad_args", "group members <group_id>")
+        if (rest.isEmpty()) return Output.error("bad_args", "group members <group_id>")
         val ctx = Context.open(dataDir)
         try {
             ctx.prepare()
             val gid = ctx.resolveGroupId(rest[0])
             ctx.syncIncoming()
-            if (!ctx.marmot.isMember(gid)) return Json.error("not_member", gid)
+            if (!ctx.marmot.isMember(gid)) return Output.error("not_member", gid)
             val members =
                 ctx.marmot.memberPubkeys(gid).map {
                     mapOf("pubkey" to it.pubkey, "leaf_index" to it.leafIndex)
                 }
-            Json.writeLine(mapOf("group_id" to gid, "members" to members))
+            Output.emit(mapOf("group_id" to gid, "members" to members))
             return 0
         } finally {
             ctx.close()
@@ -112,15 +112,15 @@ object GroupReadCommands {
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
-        if (rest.isEmpty()) return Json.error("bad_args", "group admins <group_id>")
+        if (rest.isEmpty()) return Output.error("bad_args", "group admins <group_id>")
         val ctx = Context.open(dataDir)
         try {
             ctx.prepare()
             val gid = ctx.resolveGroupId(rest[0])
             ctx.syncIncoming()
-            if (!ctx.marmot.isMember(gid)) return Json.error("not_member", gid)
+            if (!ctx.marmot.isMember(gid)) return Output.error("not_member", gid)
             val m = ctx.marmot.groupMetadata(gid)
-            Json.writeLine(mapOf("group_id" to gid, "admins" to (m?.adminPubkeys ?: emptyList())))
+            Output.emit(mapOf("group_id" to gid, "admins" to (m?.adminPubkeys ?: emptyList())))
             return 0
         } finally {
             ctx.close()

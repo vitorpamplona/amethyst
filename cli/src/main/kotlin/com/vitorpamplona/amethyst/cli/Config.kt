@@ -145,7 +145,7 @@ class DataDir(
      * for "does an identity exist?" / "what's the npub?" checks that must
      * not pop a keychain prompt or ask for a passphrase.
      */
-    fun loadIdentityFileOrNull(): IdentityFile? = if (identityFile.exists()) Json.mapper.readValue(identityFile.readText()) else null
+    fun loadIdentityFileOrNull(): IdentityFile? = if (identityFile.exists()) Output.mapper.readValue(identityFile.readText()) else null
 
     fun identityExists(): Boolean = identityFile.exists()
 
@@ -177,14 +177,14 @@ class DataDir(
     fun saveIdentity(id: Identity) {
         val secret: IdentitySecret? = id.privKeyHex?.let { secrets.store(id.pubKeyHex, it) }
         val file = IdentityFile(pubKeyHex = id.pubKeyHex, npub = id.npub, secret = secret)
-        SecureFileIO.writeTextAtomic(identityFile, Json.mapper.writeValueAsString(file))
+        SecureFileIO.writeTextAtomic(identityFile, Output.mapper.writeValueAsString(file))
     }
 
     /** Remove the identity file and any backend-held secret. */
     fun deleteIdentity() {
         if (identityFile.exists()) {
             runCatching {
-                val file = Json.mapper.readValue<IdentityFile>(identityFile.readText())
+                val file = Output.mapper.readValue<IdentityFile>(identityFile.readText())
                 file.secret?.let { secrets.delete(it) }
             }
             if (!identityFile.delete() && identityFile.exists()) {
@@ -193,10 +193,10 @@ class DataDir(
         }
     }
 
-    fun loadRunState(): RunState = if (stateFile.exists()) Json.mapper.readValue(stateFile.readText()) else RunState()
+    fun loadRunState(): RunState = if (stateFile.exists()) Output.mapper.readValue(stateFile.readText()) else RunState()
 
     fun saveRunState(s: RunState) {
-        SecureFileIO.writeTextAtomic(stateFile, Json.mapper.writeValueAsString(s))
+        SecureFileIO.writeTextAtomic(stateFile, Output.mapper.writeValueAsString(s))
     }
 
     companion object {

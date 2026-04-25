@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.cli.commands
 
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
-import com.vitorpamplona.amethyst.cli.Json
+import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.commons.defaults.DefaultDMRelayList
 import com.vitorpamplona.quartz.marmot.RecipientRelayFetcher
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageFetcher
@@ -45,13 +45,13 @@ object GroupAddMemberCommand {
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
-        if (rest.size < 2) return Json.error("bad_args", "group add <group_id> <npub> [<npub> ...]")
+        if (rest.size < 2) return Output.error("bad_args", "group add <group_id> <npub> [<npub> ...]")
         val ctx = Context.open(dataDir)
         try {
             ctx.prepare()
             val gid = ctx.resolveGroupId(rest[0])
             ctx.syncIncoming()
-            if (!ctx.marmot.isMember(gid)) return Json.error("not_member", gid)
+            if (!ctx.marmot.isMember(gid)) return Output.error("not_member", gid)
 
             // Accept any identifier the UI would: npub1…, nprofile1…, 64-hex,
             // NIP-05 (name@domain). Resolution fires NIP-05 HTTP fetches in parallel
@@ -160,7 +160,7 @@ object GroupAddMemberCommand {
                 )
             }
 
-            Json.writeLine(
+            Output.emit(
                 mapOf(
                     "group_id" to gid,
                     "epoch" to ctx.marmot.groupEpoch(gid),

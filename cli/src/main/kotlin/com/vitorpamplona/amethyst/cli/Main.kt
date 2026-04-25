@@ -37,25 +37,33 @@ import kotlin.system.exitProcess
  *
  * Exit codes:
  *   0 — success
- *   1 — runtime error (printed as JSON on stderr: {"error": "...", "detail": "..."})
+ *   1 — runtime error
  *   2 — invalid arguments
  *   124 — await timeout
  *
- * Every command that succeeds prints exactly one JSON object to stdout.
- * Diagnostic logs go to stderr and are safe to discard.
+ * Default output is human-readable text on stdout. Pass `--json` to
+ * switch to the machine contract: a single JSON object on stdout per
+ * successful command, JSON `{"error": "...", "detail": "..."}` on stderr
+ * for failures. The JSON shape is amy's stable public API; the text
+ * shape is not. Diagnostic logs always go to stderr.
  */
 fun main(argv: Array<String>) {
+    // Set output mode before dispatch so even argument-parsing errors
+    // honour --json.
+    if (argv.any { it == "--json" || it == "--json=true" }) {
+        Output.mode = Output.Mode.JSON
+    }
     val code =
         try {
             runBlocking { dispatch(argv) }
         } catch (e: IllegalArgumentException) {
-            Json.error("bad_args", e.message)
+            Output.error("bad_args", e.message)
             2
         } catch (e: AwaitTimeout) {
-            Json.error("timeout", e.message)
+            Output.error("timeout", e.message)
             124
         } catch (e: Exception) {
-            Json.error("runtime", "${e::class.simpleName}: ${e.message}")
+            Output.error("runtime", "${e::class.simpleName}: ${e.message}")
             1
         }
     exitProcess(code)
@@ -85,6 +93,7 @@ private suspend fun dispatch(argv: Array<String>): Int {
             GlobalFlag.DATA_DIR -> dataDirFlag = consumed.value
             GlobalFlag.SECRET_BACKEND -> secretBackendFlag = consumed.value
             GlobalFlag.PASSPHRASE_FILE -> passphraseFileFlag = consumed.value
+            GlobalFlag.JSON -> Output.mode = Output.Mode.JSON
             null -> filteredArgs.add(a)
         }
         i += consumed.tokensConsumed
@@ -189,10 +198,12 @@ private suspend fun marmotDispatch(
 
 private enum class GlobalFlag(
     val long: String,
+    val takesValue: Boolean = true,
 ) {
     DATA_DIR("--data-dir"),
     SECRET_BACKEND("--secret-backend"),
     PASSPHRASE_FILE("--passphrase-file"),
+    JSON("--json", takesValue = false),
 }
 
 private data class ConsumedFlag(
@@ -212,7 +223,11 @@ private fun extractGlobalFlag(
 ): Pair<GlobalFlag?, ConsumedFlag> {
     for (flag in GlobalFlag.values()) {
         if (token == flag.long) {
-            return flag to ConsumedFlag(argv.getOrNull(idx + 1), 2)
+            return if (flag.takesValue) {
+                flag to ConsumedFlag(argv.getOrNull(idx + 1), 2)
+            } else {
+                flag to ConsumedFlag(null, 1)
+            }
         }
         val prefix = "${flag.long}="
         if (token.startsWith(prefix)) {
@@ -231,7 +246,15 @@ private fun printUsage() {
         |  amy [--data-dir PATH]
         |      [--secret-backend auto|keychain|ncryptsec|plaintext]
         |      [--passphrase-file PATH]
+        |      [--json]
         |      <cmd> [args...]
+        |
+        |Output:
+        |  Default: human-readable text on stdout.
+        |  --json:  one JSON object per success on stdout, JSON
+        |           {"error":...,"detail":...} on stderr for failures
+        |           (the stable machine-readable contract — exit codes
+        |           0 success / 1 error / 2 bad args / 124 timeout).
         |
         |Private-key storage:
         |  Default (`auto`) uses the OS keychain when one is available
