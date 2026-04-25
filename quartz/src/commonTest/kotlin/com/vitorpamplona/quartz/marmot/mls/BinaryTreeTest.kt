@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.marmot.mls
 import com.vitorpamplona.quartz.marmot.mls.tree.BinaryTree
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFails
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -159,5 +160,122 @@ class BinaryTreeTest {
         assertEquals(listOf(0, 1, 2, 3), BinaryTree.subtreeLeaves(3, 4))
         // Subtree of leaf 0 is just [0]
         assertEquals(listOf(0), BinaryTree.subtreeLeaves(0, 4))
+    }
+
+    // ----- Non-power-of-2 tree shapes ----------------------------------------
+    //
+    // RFC 9420 Appendix C only worked example is the 4-leaf tree, but every
+    // group with ≠ a power-of-2 members exercises the parentInRange branch in
+    // BinaryTree.parent. Those branches were entirely uncovered before, and a
+    // bug there (infinite recursion / infinite loop in directPath) is what
+    // OOM'd amy when wn removed her in marmot-interop test 14.
+
+    @Test
+    fun testRoot_nonPowerOfTwo() {
+        // root = (1 << ceil(log2(n))) - 1
+        assertEquals(3, BinaryTree.root(3)) // ceil(log2(3))=2, 2^2-1 = 3
+        assertEquals(7, BinaryTree.root(5)) // ceil(log2(5))=3, 2^3-1 = 7
+        assertEquals(7, BinaryTree.root(6))
+        assertEquals(7, BinaryTree.root(7))
+        assertEquals(15, BinaryTree.root(9))
+    }
+
+    @Test
+    fun testDirectPath3Leaves() {
+        // 3 leaves, n=5, root=3:
+        //          3
+        //         / \
+        //        1   4
+        //       / \   \
+        //      0   2   (leaf 2 sits at node 4; node 5 doesn't exist)
+        // Node 4 is a leaf node here because the tree is not full — its
+        // "parent slot" 5 would be ≥ nodeCount and is collapsed away by
+        // parentInRange.
+        assertEquals(listOf(1, 3), BinaryTree.directPath(0, 3))
+        assertEquals(listOf(1, 3), BinaryTree.directPath(1, 3))
+        assertEquals(listOf(3), BinaryTree.directPath(2, 3))
+    }
+
+    @Test
+    fun testDirectPath5Leaves() {
+        // 5 leaves, n=9, root=7:
+        //              7
+        //           /     \
+        //          3       8 ← leaf 4 collapsed up
+        //         / \
+        //        1   5
+        //       / \ / \
+        //      0  2 4  6
+        assertEquals(listOf(1, 3, 7), BinaryTree.directPath(0, 5))
+        assertEquals(listOf(1, 3, 7), BinaryTree.directPath(1, 5))
+        assertEquals(listOf(5, 3, 7), BinaryTree.directPath(2, 5))
+        assertEquals(listOf(5, 3, 7), BinaryTree.directPath(3, 5))
+        assertEquals(listOf(7), BinaryTree.directPath(4, 5))
+    }
+
+    @Test
+    fun testDirectPathTerminatesForAllLeafCountsUpTo32() {
+        // Property: every valid leaf in any tree size 1..32 has a directPath
+        // that ends at root(leafCount) and has length == log2-ish. We don't
+        // assert exact lengths — we just want to catch any future regression
+        // where some (leafCount, leafIndex) triggers the parent() infinite
+        // loop. Each call is wrapped in a generous timeout via the kotlin
+        // test runner (default test timeout is fine: a non-terminating call
+        // would OOM long before any test deadline).
+        for (leafCount in 1..32) {
+            val rootIdx = BinaryTree.root(leafCount)
+            for (leafIndex in 0 until leafCount) {
+                val dp = BinaryTree.directPath(leafIndex, leafCount)
+                if (leafCount == 1) {
+                    assertTrue(dp.isEmpty(), "leafCount=1 has no path")
+                } else {
+                    assertEquals(rootIdx, dp.last(), "directPath($leafIndex, $leafCount) should end at root")
+                    // copath must align with the directPath one-for-one
+                    assertEquals(dp.size, BinaryTree.copath(leafIndex, leafCount).size)
+                }
+            }
+        }
+    }
+
+    // ----- Out-of-range inputs -----------------------------------------------
+    //
+    // Marmot-interop test 14 fails with a Java OOM because amy calls
+    // `BinaryTree.directPath(myLeafIndex, tree.leafCount)` with `myLeafIndex
+    // == tree.leafCount` (her own leaf was just removed and the tree shrank
+    // past it). `parent()` then walks node indices ≥ nodeCount forever and
+    // the result list explodes.
+    //
+    // These tests pin down that boundary so the failure becomes a clean
+    // IllegalArgumentException instead of an OOM, AND so the MLS code path
+    // that hits it has a deterministic regression.
+
+    @Test
+    fun testDirectPathRejectsOutOfRangeLeafIndex() {
+        // leafIndex == leafCount — the exact shape the post-Remove path hits.
+        assertFails { BinaryTree.directPath(2, 2) }
+        // leafIndex > leafCount.
+        assertFails { BinaryTree.directPath(5, 3) }
+    }
+
+    @Test
+    fun testDirectPathRejectsNegativeLeafIndex() {
+        assertFails { BinaryTree.directPath(-1, 4) }
+    }
+
+    @Test
+    fun testCopathRejectsOutOfRangeLeafIndex() {
+        assertFails { BinaryTree.copath(2, 2) }
+        assertFails { BinaryTree.copath(-1, 4) }
+    }
+
+    @Test
+    fun testParentRejectsRootOrAbove() {
+        // The root has no parent. Asking anyway is the symptom of a tree
+        // accounting bug — surface it loudly instead of looping.
+        val n = BinaryTree.nodeCount(4)
+        assertFails { BinaryTree.parent(BinaryTree.root(4), n) }
+        // Index strictly above nodeCount also has no defined parent.
+        assertFails { BinaryTree.parent(n, n) }
+        assertFails { BinaryTree.parent(n + 5, n) }
     }
 }

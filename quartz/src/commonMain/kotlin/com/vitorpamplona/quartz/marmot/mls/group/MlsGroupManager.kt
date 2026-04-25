@@ -158,9 +158,18 @@ class MlsGroupManager(
     fun activeGroupIds(): Set<HexKey> = groups.keys.toSet()
 
     /**
-     * Check if we are a member of the given group.
+     * Check if we are a (live) member of the given group.
+     *
+     * After processing a commit that removes us, the group entry stays in
+     * [groups] so callers can still inspect the post-Remove tree, but our
+     * own leaf has been set to null and the leaf count may have shrunk
+     * past `myLeafIndex`. Either condition means we cannot encrypt any
+     * more messages, propose anything, or decrypt future epochs — i.e.
+     * we are functionally not a member, and surface as such here so
+     * callers (`amy marmot group show`, the inbound processor) get a
+     * clean `not_member` answer instead of a misleading `true`.
      */
-    fun isMember(nostrGroupId: HexKey): Boolean = groups.containsKey(nostrGroupId)
+    fun isMember(nostrGroupId: HexKey): Boolean = groups[nostrGroupId]?.isLocalMember() ?: false
 
     // --- Group Creation ---
 

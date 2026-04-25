@@ -133,6 +133,18 @@ class MlsGroup private constructor(
     val leafIndex: Int get() = myLeafIndex
     val extensions: List<com.vitorpamplona.quartz.marmot.mls.tree.Extension> get() = groupContext.extensions
 
+    /**
+     * True while our own leaf is still live in the tree.
+     *
+     * After `processCommit` applies a Remove proposal that targets us, the
+     * group is intentionally kept in the manager so callers can inspect the
+     * final tree state — but our leaf is null and `leafCount` may have
+     * shrunk past `myLeafIndex`. Either condition means we can't propose,
+     * commit, encrypt, or decrypt any further; surface that here so callers
+     * get a clean answer instead of poking at private tree internals.
+     */
+    fun isLocalMember(): Boolean = myLeafIndex < tree.leafCount && tree.getLeaf(myLeafIndex) != null
+
     // --- Marmot admin helpers (MIP-01 / MIP-03) ---
 
     /** Raw BasicCredential identity bytes of the member at the given leaf, or null. */
@@ -1270,6 +1282,26 @@ class MlsGroup private constructor(
         }
         for ((add, _) in referenceAddSenders) {
             newLeavesInCommit.add(applyProposalAdd(add))
+        }
+
+        // If the proposals just removed *us*, there is no path-decrypt to do
+        // and no confirmation_tag to verify against our (now bogus) commit
+        // secret — we have no valid leaf and our copy of `commit_secret`
+        // would be all-zeros, so the keyschedule would diverge from every
+        // remaining member's. Without this short-circuit, the path-decrypt
+        // block calls `BinaryTree.directPath(myLeafIndex, tree.leafCount)`
+        // with an out-of-range index and OOMs the JVM (interop test 14).
+        //
+        // The proposals have already mutated the tree; preserve those
+        // mutations on return so the outer state machine knows we are out
+        // of the group. `pendingProposals` are cleared because they were
+        // tied to the previous epoch.
+        val removedSelf =
+            myLeafIndex >= tree.leafCount || tree.getLeaf(myLeafIndex) == null
+        if (removedSelf) {
+            pendingProposals.clear()
+            sentKeys.clear()
+            return
         }
 
         // Process UpdatePath

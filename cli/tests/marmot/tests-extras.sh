@@ -240,12 +240,24 @@ test_14_wn_removes_a() {
 
   # Amy should observe that she's no longer a member. `group show` returns
   # a not_member error as soon as the Remove commit is applied locally.
+  #
+  # The amy CLI contract puts error JSON on stderr (README: "stdout is
+  # JSON … stderr is for humans"), but stderr is interleaved with debug
+  # logs from `Log.d(…)` calls in quartz, so feeding the captured stream
+  # straight into `jq` fails to parse. Capture stderr alongside stdout
+  # via `2>&1` and grep for the `"error":"not_member"` literal — that
+  # signature is unambiguous (the debug log lines never produce JSON).
+  # Also tee the per-iteration capture into $LOG_FILE so post-mortem
+  # logs include each polling sync's `[cli] ingest …` trace, mirroring
+  # what amy_json normally writes when stderr isn't being captured.
   local deadline=$(( $(date +%s) + 120 )) removed=0
   while [[ $(date +%s) -lt $deadline ]]; do
     local show rc
-    show=$(amy_json marmot group show "$a_gid" 2>&1)
+    show=$("$AMY_BIN" --data-dir "$A_DIR" --secret-backend plaintext \
+              marmot group show "$a_gid" 2>&1)
     rc=$?
-    if [[ $rc -ne 0 ]] && printf '%s' "$show" | jq -e '.error == "not_member"' >/dev/null 2>&1; then
+    printf '%s\n' "$show" >>"$LOG_FILE"
+    if [[ $rc -ne 0 ]] && printf '%s' "$show" | grep -qE '"error":[[:space:]]*"not_member"'; then
       removed=1; break
     fi
     sleep 3
