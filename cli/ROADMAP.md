@@ -7,9 +7,8 @@ full command-line mirror of Amethyst.
 feature. Move rows between tables, adjust ordering, add non-goals.
 This is the single source of truth for "what's left".
 
-- What amy is + the public contract: [README.md](./README.md)
-- How to use it (examples + walkthroughs): [USAGE.md](./USAGE.md)
-- How to implement an item: [DEVELOPMENT.md](./DEVELOPMENT.md)
+- What amy is + how to use it: [README.md](./README.md)
+- The public contract + how to extend amy: [DEVELOPMENT.md](./DEVELOPMENT.md)
 - Ongoing design plans: [plans/](./plans/)
 - Shared work consumed here: [../commons/plans/](../commons/plans/)
 

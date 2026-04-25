@@ -11,7 +11,7 @@ package com.vitorpamplona.amethyst.cli.commands
 import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
-import com.vitorpamplona.amethyst.cli.Json
+import com.vitorpamplona.amethyst.cli.Output
 
 object NotePublishCommand {
     suspend fun run(dataDir: DataDir, rest: Array<String>): Int {
@@ -26,7 +26,7 @@ object NotePublishCommand {
                 .buildTextNote(ctx.signer, text)
             val ack = ctx.publish(event, ctx.outboxRelays())
 
-            Json.writeLine(mapOf(
+            Output.emit(mapOf(
                 "event_id"      to event.id,
                 "kind"          to event.kind,
                 "published_to"  to ack.filterValues { it }.keys.map { it.url },
@@ -40,6 +40,10 @@ object NotePublishCommand {
 }
 ```
 
+`Output.emit(...)` handles the text-vs-JSON mode automatically. The
+result map IS the `--json` shape; the human-readable text default is
+derived from the same map by `Output.kt`'s renderer.
+
 ## Multi-verb group
 
 When a feature has several verbs (`note publish`, `note show`,
@@ -48,13 +52,13 @@ When a feature has several verbs (`note publish`, `note show`,
 ```kotlin
 object NoteCommands {
     suspend fun dispatch(dataDir: DataDir, tail: Array<String>): Int {
-        if (tail.isEmpty()) return Json.error("bad_args", "note <publish|show|react>")
+        if (tail.isEmpty()) return Output.error("bad_args", "note <publish|show|react>")
         val rest = tail.drop(1).toTypedArray()
         return when (tail[0]) {
             "publish" -> NotePublishCommand.run(dataDir, rest)
             "show"    -> NoteShowCommand.run(dataDir, rest)
             "react"   -> NoteReactCommand.run(dataDir, rest)
-            else      -> Json.error("bad_args", "note ${tail[0]}")
+            else      -> Output.error("bad_args", "note ${tail[0]}")
         }
     }
 }
@@ -85,13 +89,17 @@ For every new command:
 
 - No `runBlocking` in a command body — `main()` already does it.
 - No `println` / `print` for command output — use
-  `Json.writeLine(...)`. `System.err.println(...)` is fine for
-  progress logs (they're already disposable).
+  `Output.emit(...)` / `Output.error(...)`. `System.err.println(...)`
+  is fine for progress logs (they're already disposable).
 - No swallowing errors — let exceptions bubble; `main()` translates
-  them to `{"error":...}` + exit code.
+  them to `error: …` (text mode) / `{"error":…}` (JSON mode) plus the
+  right exit code.
 - No holding a connection open across invocations — every run opens
   a fresh `Context` and closes it in `finally`.
 - No blocking reads for user input — take a flag.
+- No global flags that collide with subcommand flags. `--name` is
+  reserved for subcommand use (group/profile name); the global
+  account selector is `--account`.
 
 ## Output-shape rules
 
