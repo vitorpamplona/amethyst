@@ -42,7 +42,7 @@ class UiSettingsFlow(
     val featureSet: MutableStateFlow<FeatureSetType> = MutableStateFlow(FeatureSetType.SIMPLIFIED),
     val gallerySet: MutableStateFlow<ProfileGalleryType> = MutableStateFlow(ProfileGalleryType.CLASSIC),
     val automaticallyProposeAiImprovements: MutableStateFlow<BooleanType> = MutableStateFlow(BooleanType.ALWAYS),
-    val showBroadcaster: MutableStateFlow<BooleanType> = MutableStateFlow(BooleanType.ALWAYS),
+    val useTrackedBroadcasts: MutableStateFlow<BooleanType> = MutableStateFlow(BooleanType.ALWAYS),
     val bottomBarItems: MutableStateFlow<List<NavBarItem>> = MutableStateFlow(DefaultBottomBarItems),
 ) {
     val listOfFlows: List<Flow<Any?>> =
@@ -60,7 +60,7 @@ class UiSettingsFlow(
             featureSet,
             gallerySet,
             automaticallyProposeAiImprovements,
-            showBroadcaster,
+            useTrackedBroadcasts,
             bottomBarItems,
         )
 
@@ -102,7 +102,7 @@ class UiSettingsFlow(
             featureSet.value,
             gallerySet.value,
             automaticallyProposeAiImprovements.value,
-            showBroadcaster.value,
+            useTrackedBroadcasts.value,
             bottomBarItems.value,
         )
 
@@ -161,8 +161,8 @@ class UiSettingsFlow(
             automaticallyProposeAiImprovements.tryEmit(torSettings.automaticallyProposeAiImprovements)
             any = true
         }
-        if (showBroadcaster.value != torSettings.showBroadcaster) {
-            showBroadcaster.tryEmit(torSettings.showBroadcaster)
+        if (useTrackedBroadcasts.value != torSettings.useTrackedBroadcasts) {
+            useTrackedBroadcasts.tryEmit(torSettings.useTrackedBroadcasts)
             any = true
         }
         if (bottomBarItems.value != torSettings.bottomBarItems) {
@@ -201,7 +201,7 @@ class UiSettingsFlow(
                 MutableStateFlow(uiSettings.featureSet),
                 MutableStateFlow(uiSettings.gallerySet),
                 MutableStateFlow(uiSettings.automaticallyProposeAiImprovements),
-                MutableStateFlow(uiSettings.showBroadcaster),
+                MutableStateFlow(uiSettings.useTrackedBroadcasts),
                 MutableStateFlow(uiSettings.bottomBarItems),
             )
     }

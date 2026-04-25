@@ -326,7 +326,7 @@ class LongFormPostViewModel :
         val version = draftTag.current
         cancel()
 
-        if (accountViewModel.settings.showBroadcaster()) {
+        if (accountViewModel.settings.useTrackedBroadcasts()) {
             val (event, relays, extras) = accountViewModel.account.createPostEvent(template, emptyList())
             accountViewModel.viewModelScope.launch(Dispatchers.IO) {
                 accountViewModel.broadcastTracker.trackBroadcast(

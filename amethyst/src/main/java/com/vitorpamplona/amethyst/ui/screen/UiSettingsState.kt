@@ -131,7 +131,7 @@ class UiSettingsState(
 
     fun isCompleteUIMode() = uiSettingsFlow.featureSet.value == FeatureSetType.COMPLETE
 
-    fun showBroadcaster() = uiSettingsFlow.showBroadcaster.value == BooleanType.ALWAYS
+    fun useTrackedBroadcasts() = uiSettingsFlow.useTrackedBroadcasts.value == BooleanType.ALWAYS
 
     fun isImmersiveScrollingActive() = uiSettingsFlow.automaticallyHideNavigationBars.value == BooleanType.ALWAYS
 

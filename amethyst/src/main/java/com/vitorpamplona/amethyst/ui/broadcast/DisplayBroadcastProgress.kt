@@ -37,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.model.BooleanType
 import com.vitorpamplona.amethyst.service.broadcast.BroadcastEvent
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -49,12 +50,14 @@ import kotlinx.coroutines.delay
  * - CompletedBroadcastIndicator: Shows completed broadcast for tap-to-view (auto-dismisses after 10s)
  * - BroadcastDetailsSheet: Shows detailed relay status on tap
  *
- * Visibility is controlled by the dedicated "Show Broadcaster" UI setting.
+ * Hidden when the "Tracked broadcasts" UI setting is off.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DisplayBroadcastProgress(accountViewModel: AccountViewModel) {
-    if (!accountViewModel.settings.showBroadcaster()) return
+    val useTrackedBroadcasts by accountViewModel.settings.uiSettingsFlow.useTrackedBroadcasts
+        .collectAsStateWithLifecycle()
+    if (useTrackedBroadcasts != BooleanType.ALWAYS) return
 
     val activeBroadcasts by accountViewModel.broadcastTracker.activeBroadcasts.collectAsStateWithLifecycle()
 

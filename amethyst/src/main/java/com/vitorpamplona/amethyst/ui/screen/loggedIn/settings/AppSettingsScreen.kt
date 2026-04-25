@@ -54,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.BooleanType
 import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.ProfileGalleryType
@@ -133,7 +134,7 @@ fun SettingsScreen(
         FeatureSetChoice(sharedPrefs)
         GalleryChoice(sharedPrefs)
         AiWritingHelpChoice(sharedPrefs)
-        ShowBroadcasterChoice(sharedPrefs)
+        TrackedBroadcastsChoice(sharedPrefs)
         PushNotificationSettingsRow(sharedPrefs)
         if (accountViewModel != null) {
             AlwaysOnNotificationServiceChoice(accountViewModel)
@@ -423,22 +424,22 @@ fun AiWritingHelpChoice(sharedPrefs: UiSettingsFlow) {
 }
 
 @Composable
-fun ShowBroadcasterChoice(sharedPrefs: UiSettingsFlow) {
-    val showBroadcasterIndex by sharedPrefs.showBroadcaster.collectAsState()
+fun TrackedBroadcastsChoice(sharedPrefs: UiSettingsFlow) {
+    val useTrackedBroadcastsIndex by sharedPrefs.useTrackedBroadcasts.collectAsState()
 
     val booleanItems =
         persistentListOf(
-            TitleExplainer(stringRes(ConnectivityType.ALWAYS.resourceId)),
-            TitleExplainer(stringRes(ConnectivityType.NEVER.resourceId)),
+            TitleExplainer(stringRes(BooleanType.ALWAYS.reourceId)),
+            TitleExplainer(stringRes(BooleanType.NEVER.reourceId)),
         )
 
     SettingsRow(
-        R.string.show_broadcaster_setting_title,
-        R.string.show_broadcaster_setting_description,
+        R.string.tracked_broadcasts_setting_title,
+        R.string.tracked_broadcasts_setting_description,
         booleanItems,
-        showBroadcasterIndex.screenCode,
+        useTrackedBroadcastsIndex.screenCode,
     ) {
-        sharedPrefs.showBroadcaster.tryEmit(parseBooleanType(it))
+        sharedPrefs.useTrackedBroadcasts.tryEmit(parseBooleanType(it))
     }
 }
 
