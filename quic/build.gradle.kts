@@ -26,6 +26,9 @@ plugins {
 }
 
 kotlin {
+    compilerOptions {
+        freeCompilerArgs.add("-Xexpect-actual-classes")
+    }
     jvm {
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_21)
