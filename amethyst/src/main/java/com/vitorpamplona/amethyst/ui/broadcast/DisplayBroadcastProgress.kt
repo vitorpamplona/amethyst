@@ -49,13 +49,12 @@ import kotlinx.coroutines.delay
  * - CompletedBroadcastIndicator: Shows completed broadcast for tap-to-view (auto-dismisses after 10s)
  * - BroadcastDetailsSheet: Shows detailed relay status on tap
  *
- * Only shown when FeatureSetType.COMPLETE is enabled.
+ * Visibility is controlled by the dedicated "Show Broadcaster" UI setting.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DisplayBroadcastProgress(accountViewModel: AccountViewModel) {
-    // Only show in COMPLETE UI mode
-    if (!accountViewModel.settings.isCompleteUIMode()) return
+    if (!accountViewModel.settings.showBroadcaster()) return
 
     val activeBroadcasts by accountViewModel.broadcastTracker.activeBroadcasts.collectAsStateWithLifecycle()
 

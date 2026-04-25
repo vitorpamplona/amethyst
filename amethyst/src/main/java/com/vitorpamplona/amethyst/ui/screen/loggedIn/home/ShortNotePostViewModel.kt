@@ -833,7 +833,7 @@ open class ShortNotePostViewModel :
 
         if (anonymous) {
             accountViewModel.account.signAnonymouslyAndBroadcast(template, extraNotesToBroadcast)
-        } else if (accountViewModel.settings.isCompleteUIMode()) {
+        } else if (accountViewModel.settings.showBroadcaster()) {
             // Tracked broadcasting with progress feedback (non-blocking)
             val (event, relays, extras) = accountViewModel.account.createPostEvent(template, extraNotesToBroadcast)
 

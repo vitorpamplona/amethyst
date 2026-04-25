@@ -413,7 +413,7 @@ class AccountViewModel(
             if (currentReactions.isNotEmpty()) {
                 account.delete(currentReactions)
             } else {
-                if (settings.isCompleteUIMode() && note.event !is NIP17Group) {
+                if (settings.showBroadcaster() && note.event !is NIP17Group) {
                     // Tracked broadcasting with progress feedback
                     account.createReactionEvent(note, reaction)?.let { (event, relays) ->
                         broadcastTracker.trackBroadcast(
@@ -842,7 +842,7 @@ class AccountViewModel(
     }
 
     fun boost(note: Note) {
-        if (settings.isCompleteUIMode()) {
+        if (settings.showBroadcaster()) {
             // Tracked broadcasting with progress feedback
             launchSigner {
                 account.createBoostEvent(note)?.let { (event, relays) ->
@@ -887,7 +887,7 @@ class AccountViewModel(
     fun pinnedNotes(user: User): Note = LocalCache.getOrCreateAddressableNote(PinListEvent.createPinAddress(user.pubkeyHex))
 
     fun addPin(note: Note) {
-        if (settings.isCompleteUIMode()) {
+        if (settings.showBroadcaster()) {
             launchSigner {
                 account.createAddPinEvent(note)?.let { (event, relays) ->
                     broadcastTracker.trackBroadcast(
@@ -904,7 +904,7 @@ class AccountViewModel(
     }
 
     fun removePin(note: Note) {
-        if (settings.isCompleteUIMode()) {
+        if (settings.showBroadcaster()) {
             launchSigner {
                 account.createRemovePinEvent(note)?.let { (event, relays) ->
                     broadcastTracker.trackBroadcast(
@@ -925,7 +925,7 @@ class AccountViewModel(
     }
 
     fun addPrivateBookmark(note: Note) {
-        if (settings.isCompleteUIMode()) {
+        if (settings.showBroadcaster()) {
             launchSigner {
                 account.createAddBookmarkEvent(note, true)?.let { (event, relays) ->
                     broadcastTracker.trackBroadcast(
@@ -942,7 +942,7 @@ class AccountViewModel(
     }
 
     fun addPublicBookmark(note: Note) {
-        if (settings.isCompleteUIMode()) {
+        if (settings.showBroadcaster()) {
             launchSigner {
                 account.createAddBookmarkEvent(note, false)?.let { (event, relays) ->
                     broadcastTracker.trackBroadcast(
@@ -959,7 +959,7 @@ class AccountViewModel(
     }
 
     fun removePrivateBookmark(note: Note) {
-        if (settings.isCompleteUIMode()) {
+        if (settings.showBroadcaster()) {
             launchSigner {
                 account.createRemoveBookmarkEvent(note, true)?.let { (event, relays) ->
                     broadcastTracker.trackBroadcast(
@@ -977,7 +977,7 @@ class AccountViewModel(
     }
 
     fun removePublicBookmark(note: Note) {
-        if (settings.isCompleteUIMode()) {
+        if (settings.showBroadcaster()) {
             launchSigner {
                 account.createRemoveBookmarkEvent(note, false)?.let { (event, relays) ->
                     broadcastTracker.trackBroadcast(

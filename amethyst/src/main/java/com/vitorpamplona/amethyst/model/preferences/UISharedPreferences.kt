@@ -106,6 +106,7 @@ class UiSharedPreferences(
         val UI_FEATURE_SET = stringPreferencesKey("ui.feature_set")
         val UI_GALLERY_SET = stringPreferencesKey("ui.gallery_set")
         val UI_PROPOSE_AI_IMPROVEMENTS = stringPreferencesKey("ui.propose_ai_improvements")
+        val UI_SHOW_BROADCASTER = stringPreferencesKey("ui.show_broadcaster")
         val UI_BOTTOM_BAR_ITEMS = stringPreferencesKey("ui.bottom_bar_items")
 
         suspend fun uiPreferences(context: Context): UiSettings? =
@@ -127,6 +128,7 @@ class UiSharedPreferences(
                     featureSet = preferences[UI_FEATURE_SET]?.let { FeatureSetType.valueOf(it) } ?: FeatureSetType.SIMPLIFIED,
                     gallerySet = preferences[UI_GALLERY_SET]?.let { ProfileGalleryType.valueOf(it) } ?: ProfileGalleryType.CLASSIC,
                     automaticallyProposeAiImprovements = preferences[UI_PROPOSE_AI_IMPROVEMENTS]?.let { BooleanType.valueOf(it) } ?: BooleanType.ALWAYS,
+                    showBroadcaster = preferences[UI_SHOW_BROADCASTER]?.let { BooleanType.valueOf(it) } ?: BooleanType.ALWAYS,
                     bottomBarItems = preferences[UI_BOTTOM_BAR_ITEMS]?.let { decodeBottomBarItems(it) } ?: DefaultBottomBarItems,
                 )
             } catch (e: Exception) {
@@ -165,6 +167,7 @@ class UiSharedPreferences(
                     preferences[UI_FEATURE_SET] = sharedSettings.featureSet.name
                     preferences[UI_GALLERY_SET] = sharedSettings.gallerySet.name
                     preferences[UI_PROPOSE_AI_IMPROVEMENTS] = sharedSettings.automaticallyProposeAiImprovements.name
+                    preferences[UI_SHOW_BROADCASTER] = sharedSettings.showBroadcaster.name
                     preferences[UI_BOTTOM_BAR_ITEMS] = sharedSettings.bottomBarItems.joinToString(",") { it.name }
                 }
             } catch (e: Exception) {

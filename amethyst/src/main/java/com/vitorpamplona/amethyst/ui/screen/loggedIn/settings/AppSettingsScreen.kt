@@ -133,6 +133,7 @@ fun SettingsScreen(
         FeatureSetChoice(sharedPrefs)
         GalleryChoice(sharedPrefs)
         AiWritingHelpChoice(sharedPrefs)
+        ShowBroadcasterChoice(sharedPrefs)
         PushNotificationSettingsRow(sharedPrefs)
         if (accountViewModel != null) {
             AlwaysOnNotificationServiceChoice(accountViewModel)
@@ -418,6 +419,26 @@ fun AiWritingHelpChoice(sharedPrefs: UiSettingsFlow) {
         aiIndex.screenCode,
     ) {
         sharedPrefs.automaticallyProposeAiImprovements.tryEmit(parseBooleanType(it))
+    }
+}
+
+@Composable
+fun ShowBroadcasterChoice(sharedPrefs: UiSettingsFlow) {
+    val showBroadcasterIndex by sharedPrefs.showBroadcaster.collectAsState()
+
+    val booleanItems =
+        persistentListOf(
+            TitleExplainer(stringRes(ConnectivityType.ALWAYS.resourceId)),
+            TitleExplainer(stringRes(ConnectivityType.NEVER.resourceId)),
+        )
+
+    SettingsRow(
+        R.string.show_broadcaster_setting_title,
+        R.string.show_broadcaster_setting_description,
+        booleanItems,
+        showBroadcasterIndex.screenCode,
+    ) {
+        sharedPrefs.showBroadcaster.tryEmit(parseBooleanType(it))
     }
 }
 
