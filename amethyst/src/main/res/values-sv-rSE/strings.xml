@@ -2225,4 +2225,20 @@
     <string name="emoji_private_badge">Privat emoji</string>
     <string name="emoji_public_explainer">Offentliga emojis är synliga för alla och visas i din reaktionsmeny och i \":\"-autokompletteringen när detta paket finns i din emoji-lista.</string>
     <string name="emoji_private_explainer">Privata emojis lagras krypterade på relän och är endast synliga för dig. De visas i din reaktionsmeny och i autokomplettering med \":\" precis som offentliga.</string>
+    <string name="app_notification_mentions_channel_description">Meddelar dig när någon nämner eller citerar dig i ett inlägg</string>
+    <string name="app_notification_mentions_channel_message">%1$s nämnde dig</string>
+    <string name="app_notification_mentions_channel_name">Omnämnanden</string>
+    <string name="app_notification_mentions_summary">Nya omnämnanden</string>
+    <string name="app_notification_replies_channel_description">Meddelar dig när någon svarar på ditt inlägg</string>
+    <string name="app_notification_replies_channel_message">%1$s svarade</string>
+    <string name="app_notification_replies_channel_message_for">på: %1$s</string>
+    <string name="app_notification_replies_channel_name">Svar</string>
+    <string name="app_notification_replies_summary">Nya svar</string>
+    <string name="gif">Gif</string>
+    <string name="reset_marmot_confirm_action">Återställ</string>
+    <string name="reset_marmot_confirm_body">Detta tar permanent bort alla Marmot-gruppchattar, meddelandehistorik och MLS-nycklar på den här enheten för det aktuella kontot. Deltagare meddelas inte och kan fortfarande se dig i grupper tills de bekräftar nästa gång. Detta går inte att ångra. Ett nytt KeyPackage publiceras nästa gång appen synkroniseras.</string>
+    <string name="reset_marmot_confirm_title">Återställa Marmot-tillstånd?</string>
+    <string name="reset_marmot_failure">Kunde inte återställa Marmot-tillstånd: %1$s</string>
+    <string name="reset_marmot_state">Återställ Marmot-tillstånd</string>
+    <string name="reset_marmot_success">Marmot-tillstånd återställt.</string>
 </resources>

@@ -2226,4 +2226,20 @@
     <string name="emoji_private_badge">Soukromé emoji</string>
     <string name="emoji_public_explainer">Veřejná emoji jsou viditelná pro všechny a objeví se ve vaší nabídce reakcí a v automatickém doplňování \":\", když je tento balíček ve vašem seznamu emoji.</string>
     <string name="emoji_private_explainer">Soukromá emoji jsou šifrovaně uložena na relayích a viditelná pouze pro vás. Objeví se ve vaší nabídce reakcí a v automatickém doplňování \":\" stejně jako veřejná.</string>
+    <string name="app_notification_mentions_channel_description">Upozorní vás, když vás někdo zmíní nebo cituje v příspěvku</string>
+    <string name="app_notification_mentions_channel_message">%1$s vás zmínil(a)</string>
+    <string name="app_notification_mentions_channel_name">Zmínky</string>
+    <string name="app_notification_mentions_summary">Nové zmínky</string>
+    <string name="app_notification_replies_channel_description">Upozorní vás, když někdo odpoví na váš příspěvek</string>
+    <string name="app_notification_replies_channel_message">%1$s odpověděl(a)</string>
+    <string name="app_notification_replies_channel_message_for">k: %1$s</string>
+    <string name="app_notification_replies_channel_name">Odpovědi</string>
+    <string name="app_notification_replies_summary">Nové odpovědi</string>
+    <string name="gif">Gif</string>
+    <string name="reset_marmot_confirm_action">Resetovat</string>
+    <string name="reset_marmot_confirm_body">Tímto trvale odstraníte všechny skupinové chaty Marmot, historii zpráv a MLS klíče v tomto zařízení pro aktuální účet. Ostatní uživatelé nebudou upozorněni a stále vás mohou vidět ve skupinách až do jejich dalšího potvrzení. Tuto akci nelze vrátit zpět. Nový KeyPackage bude publikován při příští synchronizaci aplikace.</string>
+    <string name="reset_marmot_confirm_title">Resetovat stav Marmot?</string>
+    <string name="reset_marmot_failure">Nepodařilo se resetovat stav Marmot: %1$s</string>
+    <string name="reset_marmot_state">Resetovat stav Marmot</string>
+    <string name="reset_marmot_success">Stav Marmot byl resetován.</string>
 </resources>
