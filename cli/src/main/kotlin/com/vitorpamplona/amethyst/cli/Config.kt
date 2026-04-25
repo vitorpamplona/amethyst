@@ -239,7 +239,7 @@ class DataDir(
 
         fun validateName(name: String): String {
             require(NAME_REGEX.matches(name)) {
-                "--name must match [a-zA-Z0-9_-]{1,64} (got '$name')"
+                "--account must match [a-zA-Z0-9_-]{1,64} (got '$name')"
             }
             require(name !in RESERVED_NAMES) {
                 "'$name' is reserved (cannot be used as an account name)"
@@ -251,17 +251,17 @@ class DataDir(
          * Build a [DataDir] from the parsed CLI flags.
          *
          * Resolution order:
-         *   1. `--name X` if provided.
+         *   1. `--account X` if provided.
          *   2. `<root>/current` marker (set by `amy use X`).
          *   3. Sole subdirectory of `<root>` other than `shared/`.
-         *   4. Error — caller must disambiguate via `--name` or `amy use`.
+         *   4. Error — caller must disambiguate via `--account` or `amy use`.
          */
         fun resolve(
-            nameFlag: String?,
+            accountFlag: String?,
             secrets: SecretStore,
         ): DataDir {
             val rootBase = DEFAULT_ROOT
-            val name = if (nameFlag != null) validateName(nameFlag) else pickAccount(rootBase)
+            val name = if (accountFlag != null) validateName(accountFlag) else pickAccount(rootBase)
             val accountRoot = File(rootBase, name).absoluteFile
             val sharedEvents = File(rootBase, "$SHARED_DIR_NAME/events-store").absoluteFile
             return DataDir(
@@ -284,11 +284,11 @@ class DataDir(
             if (current.isFile) {
                 val pinned = current.readText().trim()
                 require(pinned.isNotEmpty()) {
-                    "${current.absolutePath} is empty; rewrite with `amy use <name>` or pass --name"
+                    "${current.absolutePath} is empty; rewrite with `amy use <name>` or pass --account"
                 }
                 require(File(rootBase, pinned).isDirectory) {
                     "${current.absolutePath} pins '$pinned' but ${File(rootBase, pinned).absolutePath} doesn't exist; " +
-                        "rewrite with `amy use <name>` or pass --name"
+                        "rewrite with `amy use <name>` or pass --account"
                 }
                 return pinned
             }
@@ -296,7 +296,7 @@ class DataDir(
             return when (accounts.size) {
                 0 -> {
                     throw IllegalArgumentException(
-                        "no account at ${rootBase.absolutePath}; create one with `amy --name <name> init`",
+                        "no account at ${rootBase.absolutePath}; create one with `amy --account <name> init`",
                     )
                 }
 
@@ -307,7 +307,7 @@ class DataDir(
                 else -> {
                     throw IllegalArgumentException(
                         "multiple accounts in ${rootBase.absolutePath} (${accounts.joinToString(", ")}); " +
-                            "pick one with --name <name> or `amy use <name>`",
+                            "pick one with --account <name> or `amy use <name>`",
                     )
                 }
             }

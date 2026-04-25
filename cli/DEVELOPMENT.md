@@ -201,11 +201,11 @@ Amy-specific layer still needs its own coverage:
 
 | Layer | Test approach |
 |---|---|
-| Argument parsing (`Args`, flag forms, `--name=…` vs `--name …`) | Plain JVM unit tests in `cli/src/test/kotlin/`. |
+| Argument parsing (`Args`, flag forms, `--account=…` vs `--account …`) | Plain JVM unit tests in `cli/src/test/kotlin/`. |
 | Error / exit-code contract (bad args → 2, await timeout → 124, runtime → 1) | Table-driven tests invoking `main(argv)` with captured stdout/stderr. |
-| JSON output shape (each command's keys and types under `--json`) | Snapshot tests: run a command with `--json` against a throwaway `$HOME` (`HOME=$(mktemp -d) amy --name X …`), assert the JSON matches a golden file. The default text render has no shape contract and shouldn't be snapshotted. |
+| JSON output shape (each command's keys and types under `--json`) | Snapshot tests: run a command with `--json` against a throwaway `$HOME` (`HOME=$(mktemp -d) amy --account X …`), assert the JSON matches a golden file. The default text render has no shape contract and shouldn't be snapshotted. |
 | File layout on disk (`identity.json`, `events-store/…`, `marmot/groups/*.mls`, `marmot/keypackages.bundle`) | Structural assertions after a command sequence. |
-| Round-trip between two accounts on a local relay | End-to-end shell harnesses under `cli/tests/`. Each harness spins up a local `nostr-rs-relay` and a fresh `$HOME=$STATE_DIR` so amy sees a virgin `~/.amy/`, then bootstraps multiple identities (`--name A`, `--name D`, etc.) sharing the same `~/.amy/shared/events-store/` and drives a scenario through them (+ `wn` for Marmot interop against whitenoise-rs). Today there are two suites: `cli/tests/marmot/` (MLS scenarios vs whitenoise-rs) and `cli/tests/dm/` (NIP-17 DM round-trips between two `amy` accounts). |
+| Round-trip between two accounts on a local relay | End-to-end shell harnesses under `cli/tests/`. Each harness spins up a local `nostr-rs-relay` and a fresh `$HOME=$STATE_DIR` so amy sees a virgin `~/.amy/`, then bootstraps multiple identities (`--account A`, `--account D`, etc.) sharing the same `~/.amy/shared/events-store/` and drives a scenario through them (+ `wn` for Marmot interop against whitenoise-rs). Today there are two suites: `cli/tests/marmot/` (MLS scenarios vs whitenoise-rs) and `cli/tests/dm/` (NIP-17 DM round-trips between two `amy` accounts). |
 | Interop with other clients | Covered by `cli/tests/marmot/marmot-interop-headless.sh` (drives Amy against whitenoise-rs `wn`/`wnd`). Add new scenarios there or start a new sibling under `cli/tests/`. |
 
 **What not to test here:** event signing, filter assembly, MLS
@@ -224,12 +224,12 @@ At the byte-banging level, a minimal round-trip looks like:
 set -euo pipefail
 export HOME=$(mktemp -d)   # virgin ~/.amy/ for the duration of this script
 
-amy --name alice create
-amy --name bob   create
+amy --account alice create
+amy --account bob   create
 
 # ... the scenario under test ...
 
-amy --name bob marmot await message "$GID" --match "hello" --timeout 60
+amy --account bob marmot await message "$GID" --match "hello" --timeout 60
 ```
 
 If an Amethyst scenario cannot be scripted through Amy yet, that's

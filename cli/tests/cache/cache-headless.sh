@@ -83,7 +83,7 @@ source "$TESTS_DIR/headless/helpers.sh"
 # shellcheck source=../dm/setup.sh
 source "$TESTS_DIR/dm/setup.sh"
 
-amy_b() { HOME="$STATE_DIR" "$AMY_BIN" --name B --secret-backend plaintext --json "$@"; }
+amy_b() { HOME="$STATE_DIR" "$AMY_BIN" --account B --secret-backend plaintext --json "$@"; }
 
 # Helper: B-side amy_json. The dm headless's helpers.sh hardcodes A_DIR
 # in amy_a; we need a parallel for B without re-sourcing.
@@ -251,7 +251,7 @@ fi
 # ----------------------------------------------------------------------
 banner "T7 — store maintenance verbs (sweep/scrub/compact) on an empty store"
 TMP_HOME=$(mktemp -d)
-T7_AMY=(${AMY_BIN} --secret-backend plaintext --name throwaway --json store)
+T7_AMY=(${AMY_BIN} --secret-backend plaintext --account throwaway --json store)
 T7_STAT=$(HOME="$TMP_HOME" "${T7_AMY[@]}" stat)
 T7_SWEEP=$(HOME="$TMP_HOME" "${T7_AMY[@]}" sweep-expired)
 T7_SCRUB=$(HOME="$TMP_HOME" "${T7_AMY[@]}" scrub)

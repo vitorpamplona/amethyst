@@ -32,7 +32,7 @@ What every caller — user, script, agent, CI — can rely on:
 - **`--json` is the machine contract. One line. One object.** Stable
   snake_case keys. Pipe it into `jq`, parse it from Python, hand it
   to an agent. Pass `--json` anywhere before the subcommand:
-  `amy --json whoami`, `amy --name alice --json marmot group list`.
+  `amy --json whoami`, `amy --account alice --json marmot group list`.
 - **stderr is for humans.** Progress, warnings, per-relay ACK traces.
   Safe to discard. Errors land here too: `error: <code>: <detail>` by
   default, or JSON `{"error":"…","detail":"…"}` under `--json`.
@@ -47,7 +47,7 @@ What every caller — user, script, agent, CI — can rely on:
   observed Nostr event lands in `~/.amy/shared/events-store/` (one
   cache for every account on the machine). Delete to reset; copy to
   move. Tests isolate by overriding `$HOME` for the amy subprocess
-  (`HOME=/tmp/run.123 amy --name alice …`) — same convention `git`,
+  (`HOME=/tmp/run.123 amy --account alice …`) — same convention `git`,
   `gpg`, and `npm` use.
 
 Only the `--json` shape and the exit codes are public API. The default
@@ -153,19 +153,19 @@ The `installDist` tree under `cli/build/install/amy/` is self-contained
 # 1. Create the alice account (~/.amy/alice/) with a full Amethyst-style
 #    bootstrap: keypair, default NIP-65 / inbox / key-package relays,
 #    nine bootstrap events.
-amy --name alice create
+amy --account alice create
 
 # 2. Publish a fresh MLS KeyPackage so others can invite you.
-amy --name alice marmot key-package publish
+amy --account alice marmot key-package publish
 
 # 3. Create a group, invite someone, send a message.
-amy --name alice marmot group create --name "Test Group"
-amy --name alice marmot group add <GID> npub1...bob
-amy --name alice marmot message send <GID> "hello"
+amy --account alice marmot group create --name "Test Group"
+amy --account alice marmot group add <GID> npub1...bob
+amy --account alice marmot message send <GID> "hello"
 
 # 4. On the receiving side, in ~/.amy/bob/.
-amy --name bob marmot await group --name "Test Group" --timeout 60
-amy --name bob marmot message list <GID>
+amy --account bob marmot await group --name "Test Group" --timeout 60
+amy --account bob marmot message list <GID>
 ```
 
 With one account you can drop the flag (auto-pick); with several, pin
@@ -174,7 +174,7 @@ with `jq` by adding `--json` to switch stdout from human text to a
 parseable single-line JSON object:
 
 ```bash
-GID=$(amy --name alice --json marmot group create --name "Test" | jq -r .group_id)
+GID=$(amy --account alice --json marmot group create --name "Test" | jq -r .group_id)
 ```
 
 For an interop-test script template, see
@@ -235,7 +235,7 @@ itself crashed".
 
 ### Global flags
 
-- `--name ACCOUNT` — pick which account under `~/.amy/<account>/` to
+- `--account ACCOUNT` — pick which account under `~/.amy/<account>/` to
   operate on. Required only when more than one account exists; with a
   single account amy auto-picks. Override with `amy use NAME` to
   pin one as the default. ACCOUNT must match `[a-zA-Z0-9_-]{1,64}`.
@@ -292,7 +292,7 @@ events.
 │       ├── addressable/…                # one slot per (kind, pubkey, d-tag) for kind:30000-39999
 │       ├── idx/                         # hardlink indexes (kind / author / owner / tag / fts / expires_at)
 │       └── tombstones/                  # NIP-09 / NIP-62 enforcement
-├── alice/                               # one dir per account (e.g. created by `amy --name alice init`)
+├── alice/                               # one dir per account (e.g. created by `amy --account alice init`)
 │   ├── identity.json                    # nsec/npub/hex — the account
 │   ├── state.json                       # sync cursors (giftWrapSince, groupSince)
 │   ├── aliases.json                     # local name → npub map (init writes a self-entry)
@@ -321,10 +321,10 @@ those events to upstream relays. There is no `relays.json`.
 ## Troubleshooting
 
 - **`no identity`** — run `init`, `create`, or `login` first, or pass a
-  different `--name`.
+  different `--account`.
 - **`no account at ~/.amy`** — there's no account dir yet; create one
-  with `amy --name <name> init`.
-- **`multiple accounts in ~/.amy (...)`** — disambiguate with `--name`
+  with `amy --account <name> init`.
+- **`multiple accounts in ~/.amy (...)`** — disambiguate with `--account`
   on the next call, or pin a default via `amy use NAME`.
 - **`not_member`** — the group GID is unknown to this account. Run
   `marmot group list` to confirm, or `marmot await group --name …` to

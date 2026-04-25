@@ -82,7 +82,7 @@ private suspend fun dispatch(argv: Array<String>): Int {
     // Pull global flags out of argv before subcommand parsing so subcommands see
     // only their own args.
     val filteredArgs = mutableListOf<String>()
-    var nameFlag: String? = null
+    var accountFlag: String? = null
     var secretBackendFlag: String? = null
     var passphraseFileFlag: String? = null
     var i = 0
@@ -90,7 +90,7 @@ private suspend fun dispatch(argv: Array<String>): Int {
         val a = argv[i]
         val (matched, consumed) = extractGlobalFlag(a, argv, i)
         when (matched) {
-            GlobalFlag.NAME -> nameFlag = consumed.value
+            GlobalFlag.ACCOUNT -> accountFlag = consumed.value
             GlobalFlag.SECRET_BACKEND -> secretBackendFlag = consumed.value
             GlobalFlag.PASSPHRASE_FILE -> passphraseFileFlag = consumed.value
             GlobalFlag.JSON -> Output.mode = Output.Mode.JSON
@@ -116,7 +116,7 @@ private suspend fun dispatch(argv: Array<String>): Int {
     }
 
     val secrets = SecretStore.from(backendFlag = secretBackendFlag, passphraseFile = passphraseFileFlag)
-    val dataDir = DataDir.resolve(nameFlag = nameFlag, secrets = secrets)
+    val dataDir = DataDir.resolve(accountFlag = accountFlag, secrets = secrets)
 
     return when (head) {
         "init" -> {
@@ -210,7 +210,7 @@ private enum class GlobalFlag(
     val long: String,
     val takesValue: Boolean = true,
 ) {
-    NAME("--name"),
+    ACCOUNT("--account"),
     SECRET_BACKEND("--secret-backend"),
     PASSPHRASE_FILE("--passphrase-file"),
     JSON("--json", takesValue = false),
@@ -253,7 +253,7 @@ private fun printUsage() {
         |amy — Amethyst command-line interface
         |
         |Usage:
-        |  amy [--name ACCOUNT]
+        |  amy [--account ACCOUNT]
         |      [--secret-backend auto|keychain|ncryptsec|plaintext]
         |      [--passphrase-file PATH]
         |      [--json]
@@ -267,13 +267,13 @@ private fun printUsage() {
         |  [a-zA-Z0-9_-]{1,64} (no spaces, no slashes).
         |
         |  Resolution order:
-        |    1. --name X if given.
+        |    1. --account X if given.
         |    2. ~/.amy/current marker (set by `amy use X`).
         |    3. Sole subdirectory of ~/.amy/ other than shared/.
-        |    4. Error — disambiguate with --name or `amy use`.
+        |    4. Error — disambiguate with --account or `amy use`.
         |
         |  Test harnesses isolate by overriding ${'$'}HOME for the amy
-        |  subprocess (`HOME=/tmp/run.123 amy --name alice ...`).
+        |  subprocess (`HOME=/tmp/run.123 amy --account alice ...`).
         |
         |  use NAME                                  pin NAME as the active account
         |  use --clear                                remove the pin
@@ -296,7 +296,7 @@ private fun printUsage() {
         |
         |Identity:
         |  init [--nsec NSEC]           create or import a bare identity (no defaults published)
-        |  create [--name NAME]         provision a full Amethyst-style account + publish bootstrap events
+        |  create [--name NAME]            provision a full Amethyst-style account + publish bootstrap events
         |  login KEY [--password X]     import (nsec|ncryptsec|mnemonic|npub|nprofile|hex|nip05)
         |  whoami                       print current identity
         |

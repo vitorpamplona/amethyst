@@ -14,7 +14,7 @@
 #
 # `--json` opts into amy's machine-readable output (the harness parses it
 # with jq); the default human-text output is for terminal use.
-amy_a() { HOME="$STATE_DIR" "$AMY_BIN" --name alice --secret-backend plaintext --json "$@"; }
+amy_a() { HOME="$STATE_DIR" "$AMY_BIN" --account A --secret-backend plaintext --json "$@"; }
 
 # Run amy, log stderr, surface JSON on stdout, remember last result.
 amy_json() {

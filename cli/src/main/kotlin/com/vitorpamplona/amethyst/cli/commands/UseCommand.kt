@@ -74,7 +74,7 @@ object UseCommand {
         if (!accountDir.isDirectory) {
             return Output.error(
                 "no_account",
-                "${accountDir.absolutePath} doesn't exist; create it with `amy --name $name init`",
+                "${accountDir.absolutePath} doesn't exist; create it with `amy --account $name init`",
             )
         }
         SecureFileIO.secureMkdirs(rootBase)

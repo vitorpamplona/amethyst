@@ -13,14 +13,14 @@
 #   dm-06   cursor advance (subsequent no-flag `dm list` is empty)
 
 # Wrap amy_json around either account so the per-test code stays tight.
-# Both share $HOME=$STATE_DIR (set by the harness); --name picks the
+# Both share $HOME=$STATE_DIR (set by the harness); --account picks the
 # account inside it. `--json` opts into amy's machine-readable contract;
 # assertions below parse with jq.
 amy_json_for() {
   local account="$1"; shift
   local out
-  if ! out=$(HOME="$STATE_DIR" "$AMY_BIN" --name "$account" --secret-backend plaintext --json "$@" 2>>"$LOG_FILE"); then
-    fail_msg "amy --name $account $*: exit $? (see $LOG_FILE)"
+  if ! out=$(HOME="$STATE_DIR" "$AMY_BIN" --account "$account" --secret-backend plaintext --json "$@" 2>>"$LOG_FILE"); then
+    fail_msg "amy --account $account $*: exit $? (see $LOG_FILE)"
     printf '%s\n' "$out" >>"$LOG_FILE"
     return 1
   fi
@@ -96,7 +96,7 @@ test_03_dm_send_rejects_no_inbox() {
   # test's main STATE_DIR with a third account.
   local ghost_home; ghost_home=$(mktemp -d "${STATE_DIR}/ghost-home.XXXXXX")
   local ghost_out ghost_npub
-  ghost_out=$(HOME="$ghost_home" "$AMY_BIN" --name ghost --secret-backend plaintext --json init) || {
+  ghost_out=$(HOME="$ghost_home" "$AMY_BIN" --account ghost --secret-backend plaintext --json init) || {
     record_result "$id" fail "ghost init failed"; rm -rf "$ghost_home"; return
   }
   ghost_npub=$(printf '%s' "$ghost_out" | jq -r '.npub')
@@ -104,7 +104,7 @@ test_03_dm_send_rejects_no_inbox() {
 
   # A sends without --allow-fallback; amy should refuse.
   local raw rc
-  raw=$(HOME="$STATE_DIR" "$AMY_BIN" --name A --secret-backend plaintext --json dm send "$ghost_npub" "should be rejected" 2>&1)
+  raw=$(HOME="$STATE_DIR" "$AMY_BIN" --account A --secret-backend plaintext --json dm send "$ghost_npub" "should be rejected" 2>&1)
   rc=$?
   rm -rf "$ghost_home"
   if [[ "$rc" -ne 0 ]] && printf '%s' "$raw" | grep -q '"error":"no_dm_relays"'; then
@@ -126,7 +126,7 @@ test_04_dm_send_allow_fallback() {
   # publish should succeed even though the ghost has no 10050.
   local ghost_home; ghost_home=$(mktemp -d "${STATE_DIR}/ghost-home.XXXXXX")
   local ghost_out ghost_npub
-  ghost_out=$(HOME="$ghost_home" "$AMY_BIN" --name ghost --secret-backend plaintext --json init) || {
+  ghost_out=$(HOME="$ghost_home" "$AMY_BIN" --account ghost --secret-backend plaintext --json init) || {
     record_result "$id" fail "ghost init failed"; rm -rf "$ghost_home"; return
   }
   ghost_npub=$(printf '%s' "$ghost_out" | jq -r '.npub')
