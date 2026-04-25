@@ -260,8 +260,13 @@ events.
 ```
 <data-dir>/
 ├── identity.json             # nsec/npub/hex — the account
-├── relays.json               # nip65 / inbox / key_package buckets
 ├── state.json                # sync cursors (giftWrapSince, groupSince)
+├── events-store/             # FsEventStore — every observed Nostr event
+│   ├── events/<aa>/<bb>/…    # canonical kind:0 / 3 / 10002 / 10050 / 10051 / 1 / 5 / 1059 / …
+│   ├── replaceable/<k>/…     # one slot per (kind, pubkey) for kind:0/3/10000-19999
+│   ├── addressable/…         # one slot per (kind, pubkey, d-tag) for kind:30000-39999
+│   ├── idx/                  # hardlink indexes (kind / author / owner / tag / fts / expires_at)
+│   └── tombstones/           # NIP-09 / NIP-62 enforcement
 └── marmot/
     ├── keypackages.bundle    # MLS KeyPackage bundles (NostrSignerInternal)
     └── groups/
@@ -272,6 +277,13 @@ events.
 All files are plain JSON or framed binary — human-inspectable, easy to
 diff across two data-dirs in a test run.
 
+The local relay configuration (kind:10002 / 10050 / 10051) is **not** a
+separate file — it lives in `events-store/` as signed events.
+`amy relay add` builds + signs + ingests a new relay-list event;
+`amy relay list` reads URLs straight out of the latest event for each
+kind; `amy relay publish-lists` broadcasts those events to upstream
+relays. There is no `relays.json`.
+
 ---
 
 ## Troubleshooting
@@ -281,9 +293,10 @@ diff across two data-dirs in a test run.
 - **`not_member`** — the group GID is unknown to this data-dir. Run
   `marmot group list` to confirm, or `marmot await group --name …` to
   wait for an invite to arrive.
-- **Hang on a network verb** — Amy connects to the relays in
-  `relays.json`; verify with `amy relay list`. Every network-bound
-  operation has a timeout — use `--timeout` for `await`, or wrap the
-  whole command in `timeout(1)` if you're scripting.
+- **Hang on a network verb** — Amy connects to the relays advertised
+  in your local kind:10002 / 10050 / 10051 events; inspect with
+  `amy relay list`. Every network-bound operation has a timeout — use
+  `--timeout` for `await`, or wrap the whole command in `timeout(1)`
+  if you're scripting.
 - **Nothing seems to publish** — inspect stderr; each publish prints
   per-relay `OK` / `REJECT` via the `[cli] …` traces.

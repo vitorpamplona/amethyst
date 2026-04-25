@@ -89,7 +89,6 @@ import okhttp3.OkHttpClient
 class Context(
     val dataDir: DataDir,
     val identity: Identity,
-    val relays: RelayConfig,
     val state: RunState,
 ) : AutoCloseable {
     val signer = NostrSignerInternal(identity.keyPair())
@@ -156,13 +155,39 @@ class Context(
             .resolveUserHexOrNull(input, nip05Client)
             ?: throw IllegalArgumentException("Could not resolve user: '$input' (accepts npub, nprofile, 64-hex, or name@domain.tld)")
 
-    fun outboxRelays(): Set<NormalizedRelayUrl> = relays.normalized("nip65")
+    /**
+     * Outbox / NIP-65 write relays for this account. Read from the
+     * local kind:10002 (after `amy create` or `amy relay publish-lists`
+     * has written one); falls back to [DefaultNIP65RelaySet] when no
+     * advertised list exists yet.
+     *
+     * Returns *write*-marked URLs only — the semantic is "where I
+     * publish from", which mirrors `User.outboxRelays()` in the
+     * Android app.
+     */
+    fun outboxRelays(): Set<NormalizedRelayUrl> =
+        relaysOf(identity.pubKeyHex)?.writeRelaysNorm()?.takeIf { it.isNotEmpty() }?.toSet()
+            ?: DefaultNIP65RelaySet
 
-    fun inboxRelays(): Set<NormalizedRelayUrl> = relays.normalized("inbox")
+    /**
+     * DM inbox relays (NIP-17 kind:10050) for this account. Falls back
+     * to [DefaultDMRelayList] when no kind:10050 has been seen.
+     */
+    fun inboxRelays(): Set<NormalizedRelayUrl> =
+        dmInboxOf(identity.pubKeyHex)?.relays()?.takeIf { it.isNotEmpty() }?.toSet()
+            ?: DefaultDMRelayList.toSet()
 
-    fun keyPackageRelays(): Set<NormalizedRelayUrl> = relays.normalized("key_package")
+    /**
+     * KeyPackage relays (MIP-00 kind:10051) for this account. Falls
+     * back to [outboxRelays] when no kind:10051 has been seen — same
+     * fallback the Android app uses for KeyPackage discovery.
+     */
+    fun keyPackageRelays(): Set<NormalizedRelayUrl> =
+        keyPackageRelaysOf(identity.pubKeyHex)?.relays()?.takeIf { it.isNotEmpty() }?.toSet()
+            ?: outboxRelays()
 
-    fun anyRelays(): Set<NormalizedRelayUrl> = relays.normalized("all")
+    /** Union of all three buckets. */
+    fun anyRelays(): Set<NormalizedRelayUrl> = outboxRelays() + inboxRelays() + keyPackageRelays()
 
     /**
      * Seed relays for "look up someone we know nothing about" queries —
@@ -578,7 +603,6 @@ class Context(
             return Context(
                 dataDir = dataDir,
                 identity = identity,
-                relays = dataDir.loadRelays(),
                 state = dataDir.loadRunState(),
             )
         }

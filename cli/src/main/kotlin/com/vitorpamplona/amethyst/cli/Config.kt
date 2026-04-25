@@ -24,8 +24,6 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip19Bech32.toNsec
@@ -81,49 +79,6 @@ data class Identity(
     }
 }
 
-/**
- * On-disk relay configuration, bucketed by purpose (mirrors `wn relays add --type`).
- *
- *  - `nip65`: advertised read/write (kind:10002)
- *  - `inbox`: DM inbox / gift-wrap delivery (kind:10050)
- *  - `keyPackage`: where this account's KeyPackages (kind:30443) live
- */
-data class RelayConfig(
-    val nip65: MutableList<String> = mutableListOf(),
-    val inbox: MutableList<String> = mutableListOf(),
-    val keyPackage: MutableList<String> = mutableListOf(),
-) {
-    fun all(): Set<String> = (nip65 + inbox + keyPackage).toSet()
-
-    fun add(
-        type: String,
-        url: String,
-    ): Boolean {
-        val list =
-            when (type) {
-                "nip65" -> nip65
-                "inbox" -> inbox
-                "key_package", "keyPackage" -> keyPackage
-                else -> throw IllegalArgumentException("unknown relay type: $type")
-            }
-        if (list.contains(url)) return false
-        list.add(url)
-        return true
-    }
-
-    fun normalized(kind: String): Set<NormalizedRelayUrl> {
-        val src =
-            when (kind) {
-                "nip65" -> nip65
-                "inbox" -> inbox
-                "key_package" -> keyPackage
-                "all" -> all().toList()
-                else -> throw IllegalArgumentException("unknown relay selector: $kind")
-            }
-        return src.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }.toSet()
-    }
-}
-
 /** Opaque per-run state (subscription cursors, etc). Stored alongside identity. */
 data class RunState(
     var giftWrapSince: Long? = null,
@@ -138,7 +93,6 @@ class DataDir(
     val root: File,
 ) {
     val identityFile = File(root, "identity.json")
-    val relaysFile = File(root, "relays.json")
     val stateFile = File(root, "state.json")
     val marmotDir = File(root, "marmot")
     val groupsDir = File(marmotDir, "groups")
@@ -156,12 +110,6 @@ class DataDir(
 
     fun saveIdentity(id: Identity) {
         identityFile.writeText(Json.mapper.writeValueAsString(id))
-    }
-
-    fun loadRelays(): RelayConfig = if (relaysFile.exists()) Json.mapper.readValue(relaysFile.readText()) else RelayConfig()
-
-    fun saveRelays(r: RelayConfig) {
-        relaysFile.writeText(Json.mapper.writeValueAsString(r))
     }
 
     fun loadRunState(): RunState = if (stateFile.exists()) Json.mapper.readValue(stateFile.readText()) else RunState()
