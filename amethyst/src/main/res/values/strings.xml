@@ -2469,6 +2469,8 @@
     <string name="ai_writing_help">AI Writing Help</string>
     <string name="ai_writing_setting_title">Propose text improvements</string>
     <string name="ai_writing_setting_description">Uses an on-device AI model to propose text corrections and tone changes.</string>
+    <string name="tracked_broadcasts_setting_title">Tracked broadcasts</string>
+    <string name="tracked_broadcasts_setting_description">Use the tracked broadcaster when sending events. Shows live progress and per-relay status while broadcasting.</string>
     <string name="ai_writing_use_this">Use This</string>
     <string name="ai_writing_dismiss">Dismiss</string>
     <string name="ai_tone_correct">Correct</string>

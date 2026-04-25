@@ -413,7 +413,7 @@ class AccountViewModel(
             if (currentReactions.isNotEmpty()) {
                 account.delete(currentReactions)
             } else {
-                if (settings.isCompleteUIMode() && note.event !is NIP17Group) {
+                if (settings.useTrackedBroadcasts() && note.event !is NIP17Group) {
                     // Tracked broadcasting with progress feedback
                     account.createReactionEvent(note, reaction)?.let { (event, relays) ->
                         broadcastTracker.trackBroadcast(
@@ -841,24 +841,12 @@ class AccountViewModel(
         }
     }
 
-    fun boost(note: Note) {
-        if (settings.isCompleteUIMode()) {
-            // Tracked broadcasting with progress feedback
-            launchSigner {
-                account.createBoostEvent(note)?.let { (event, relays) ->
-                    broadcastTracker.trackBroadcast(
-                        event = event,
-                        relays = relays,
-                        client = account.client,
-                    )
-                    account.consumeBoostEvent(event)
-                }
-            }
-        } else {
-            // Fire-and-forget (original behavior)
-            launchSigner { account.boost(note) }
-        }
-    }
+    fun boost(note: Note) =
+        launchTrackedOrDirect(
+            createTracked = { account.createBoostEvent(note) },
+            consumeTracked = account::consumeBoostEvent,
+            direct = { account.boost(note) },
+        )
 
     fun removeEmojiPack(emojiPack: Note) = launchSigner { account.removeEmojiPack(emojiPack) }
 
@@ -886,112 +874,51 @@ class AccountViewModel(
 
     fun pinnedNotes(user: User): Note = LocalCache.getOrCreateAddressableNote(PinListEvent.createPinAddress(user.pubkeyHex))
 
-    fun addPin(note: Note) {
-        if (settings.isCompleteUIMode()) {
-            launchSigner {
-                account.createAddPinEvent(note)?.let { (event, relays) ->
-                    broadcastTracker.trackBroadcast(
-                        event = event,
-                        relays = relays,
-                        client = account.client,
-                    )
-                    account.consumePinEvent(event)
-                }
-            }
-        } else {
-            launchSigner { account.addPin(note) }
-        }
-    }
+    fun addPin(note: Note) =
+        launchTrackedOrDirect(
+            createTracked = { account.createAddPinEvent(note) },
+            consumeTracked = account::consumePinEvent,
+            direct = { account.addPin(note) },
+        )
 
-    fun removePin(note: Note) {
-        if (settings.isCompleteUIMode()) {
-            launchSigner {
-                account.createRemovePinEvent(note)?.let { (event, relays) ->
-                    broadcastTracker.trackBroadcast(
-                        event = event,
-                        relays = relays,
-                        client = account.client,
-                    )
-                    account.consumePinEvent(event)
-                }
-            }
-        } else {
-            launchSigner { account.removePin(note) }
-        }
-    }
+    fun removePin(note: Note) =
+        launchTrackedOrDirect(
+            createTracked = { account.createRemovePinEvent(note) },
+            consumeTracked = account::consumePinEvent,
+            direct = { account.removePin(note) },
+        )
 
     fun removeDeletedPins(deletedNotes: Set<Note>) {
         launchSigner { account.removeDeletedPins(deletedNotes) }
     }
 
-    fun addPrivateBookmark(note: Note) {
-        if (settings.isCompleteUIMode()) {
-            launchSigner {
-                account.createAddBookmarkEvent(note, true)?.let { (event, relays) ->
-                    broadcastTracker.trackBroadcast(
-                        event = event,
-                        relays = relays,
-                        client = account.client,
-                    )
-                    account.consumeBookmarkEvent(event)
-                }
-            }
-        } else {
-            launchSigner { account.addBookmark(note, true) }
-        }
-    }
+    fun addPrivateBookmark(note: Note) =
+        launchTrackedOrDirect(
+            createTracked = { account.createAddBookmarkEvent(note, true) },
+            consumeTracked = account::consumeBookmarkEvent,
+            direct = { account.addBookmark(note, true) },
+        )
 
-    fun addPublicBookmark(note: Note) {
-        if (settings.isCompleteUIMode()) {
-            launchSigner {
-                account.createAddBookmarkEvent(note, false)?.let { (event, relays) ->
-                    broadcastTracker.trackBroadcast(
-                        event = event,
-                        relays = relays,
-                        client = account.client,
-                    )
-                    account.consumeBookmarkEvent(event)
-                }
-            }
-        } else {
-            launchSigner { account.addBookmark(note, false) }
-        }
-    }
+    fun addPublicBookmark(note: Note) =
+        launchTrackedOrDirect(
+            createTracked = { account.createAddBookmarkEvent(note, false) },
+            consumeTracked = account::consumeBookmarkEvent,
+            direct = { account.addBookmark(note, false) },
+        )
 
-    fun removePrivateBookmark(note: Note) {
-        if (settings.isCompleteUIMode()) {
-            launchSigner {
-                account.createRemoveBookmarkEvent(note, true)?.let { (event, relays) ->
-                    broadcastTracker.trackBroadcast(
-                        event = event,
-                        relays = relays,
-                        client = account.client,
-                    )
+    fun removePrivateBookmark(note: Note) =
+        launchTrackedOrDirect(
+            createTracked = { account.createRemoveBookmarkEvent(note, true) },
+            consumeTracked = account::consumeBookmarkEvent,
+            direct = { account.removeBookmark(note, true) },
+        )
 
-                    account.consumeBookmarkEvent(event)
-                }
-            }
-        } else {
-            launchSigner { account.removeBookmark(note, true) }
-        }
-    }
-
-    fun removePublicBookmark(note: Note) {
-        if (settings.isCompleteUIMode()) {
-            launchSigner {
-                account.createRemoveBookmarkEvent(note, false)?.let { (event, relays) ->
-                    broadcastTracker.trackBroadcast(
-                        event = event,
-                        relays = relays,
-                        client = account.client,
-                    )
-                    account.consumeBookmarkEvent(event)
-                }
-            }
-        } else {
-            launchSigner { account.removeBookmark(note, false) }
-        }
-    }
+    fun removePublicBookmark(note: Note) =
+        launchTrackedOrDirect(
+            createTracked = { account.createRemoveBookmarkEvent(note, false) },
+            consumeTracked = account::consumeBookmarkEvent,
+            direct = { account.removeBookmark(note, false) },
+        )
 
     fun removeDeletedBookmarks(
         deletedEventIds: Set<String>,
@@ -1033,6 +960,29 @@ class AccountViewModel(
         onReady: (String) -> Unit,
     ) = launchSigner {
         account.decryptContent(note)?.let { onReady(it) }
+    }
+
+    /**
+     * Runs an action that has both a tracked and a direct broadcast variant,
+     * picking the path the user selected via the "Tracked broadcasts" setting.
+     */
+    inline fun launchTrackedOrDirect(
+        crossinline createTracked: suspend () -> Pair<Event, Set<NormalizedRelayUrl>>?,
+        crossinline consumeTracked: (Event) -> Unit,
+        crossinline direct: suspend () -> Unit,
+    ) = launchSigner {
+        if (settings.useTrackedBroadcasts()) {
+            createTracked()?.let { (event, relays) ->
+                broadcastTracker.trackBroadcast(
+                    event = event,
+                    relays = relays,
+                    client = account.client,
+                )
+                consumeTracked(event)
+            }
+        } else {
+            direct()
+        }
     }
 
     inline fun launchSigner(crossinline action: suspend () -> Unit) {

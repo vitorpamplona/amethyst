@@ -42,6 +42,7 @@ class UiSettingsFlow(
     val featureSet: MutableStateFlow<FeatureSetType> = MutableStateFlow(FeatureSetType.SIMPLIFIED),
     val gallerySet: MutableStateFlow<ProfileGalleryType> = MutableStateFlow(ProfileGalleryType.CLASSIC),
     val automaticallyProposeAiImprovements: MutableStateFlow<BooleanType> = MutableStateFlow(BooleanType.ALWAYS),
+    val useTrackedBroadcasts: MutableStateFlow<BooleanType> = MutableStateFlow(BooleanType.ALWAYS),
     val bottomBarItems: MutableStateFlow<List<NavBarItem>> = MutableStateFlow(DefaultBottomBarItems),
 ) {
     val listOfFlows: List<Flow<Any?>> =
@@ -59,6 +60,7 @@ class UiSettingsFlow(
             featureSet,
             gallerySet,
             automaticallyProposeAiImprovements,
+            useTrackedBroadcasts,
             bottomBarItems,
         )
 
@@ -80,7 +82,8 @@ class UiSettingsFlow(
                 flows[10] as FeatureSetType,
                 flows[11] as ProfileGalleryType,
                 flows[12] as BooleanType,
-                flows[13] as List<NavBarItem>,
+                flows[13] as BooleanType,
+                flows[14] as List<NavBarItem>,
             )
         }
 
@@ -99,6 +102,7 @@ class UiSettingsFlow(
             featureSet.value,
             gallerySet.value,
             automaticallyProposeAiImprovements.value,
+            useTrackedBroadcasts.value,
             bottomBarItems.value,
         )
 
@@ -157,6 +161,10 @@ class UiSettingsFlow(
             automaticallyProposeAiImprovements.tryEmit(torSettings.automaticallyProposeAiImprovements)
             any = true
         }
+        if (useTrackedBroadcasts.value != torSettings.useTrackedBroadcasts) {
+            useTrackedBroadcasts.tryEmit(torSettings.useTrackedBroadcasts)
+            any = true
+        }
         if (bottomBarItems.value != torSettings.bottomBarItems) {
             bottomBarItems.tryEmit(torSettings.bottomBarItems)
             any = true
@@ -193,6 +201,7 @@ class UiSettingsFlow(
                 MutableStateFlow(uiSettings.featureSet),
                 MutableStateFlow(uiSettings.gallerySet),
                 MutableStateFlow(uiSettings.automaticallyProposeAiImprovements),
+                MutableStateFlow(uiSettings.useTrackedBroadcasts),
                 MutableStateFlow(uiSettings.bottomBarItems),
             )
     }

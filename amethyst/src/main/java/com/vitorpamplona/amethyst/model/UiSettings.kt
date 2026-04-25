@@ -42,6 +42,7 @@ data class UiSettings(
     val featureSet: FeatureSetType = FeatureSetType.SIMPLIFIED,
     val gallerySet: ProfileGalleryType = ProfileGalleryType.CLASSIC,
     val automaticallyProposeAiImprovements: BooleanType = BooleanType.ALWAYS,
+    val useTrackedBroadcasts: BooleanType = BooleanType.ALWAYS,
     val bottomBarItems: List<NavBarItem> = DefaultBottomBarItems,
 )
 

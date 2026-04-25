@@ -106,12 +106,15 @@ class UiSharedPreferences(
         val UI_FEATURE_SET = stringPreferencesKey("ui.feature_set")
         val UI_GALLERY_SET = stringPreferencesKey("ui.gallery_set")
         val UI_PROPOSE_AI_IMPROVEMENTS = stringPreferencesKey("ui.propose_ai_improvements")
+        val UI_USE_TRACKED_BROADCASTS = stringPreferencesKey("ui.use_tracked_broadcasts")
         val UI_BOTTOM_BAR_ITEMS = stringPreferencesKey("ui.bottom_bar_items")
 
         suspend fun uiPreferences(context: Context): UiSettings? =
             try {
                 // Get the preference flow and take the first value.
                 val preferences = context.sharedPreferencesDataStore.data.first()
+
+                val featureSet = preferences[UI_FEATURE_SET]?.let { FeatureSetType.valueOf(it) } ?: FeatureSetType.SIMPLIFIED
 
                 UiSettings(
                     theme = preferences[UI_THEME]?.let { ThemeType.valueOf(it) } ?: ThemeType.SYSTEM,
@@ -124,9 +127,12 @@ class UiSharedPreferences(
                     automaticallyShowProfilePictures = preferences[UI_SHOW_PROFILE_PICTURES]?.let { ConnectivityType.valueOf(it) } ?: ConnectivityType.ALWAYS,
                     dontShowPushNotificationSelector = preferences[UI_DONT_SHOW_PUSH_NOTIFICATION_SELECTOR] ?: false,
                     dontAskForNotificationPermissions = preferences[UI_DONT_ASK_FOR_NOTIFICATION_PERMISSIONS] ?: false,
-                    featureSet = preferences[UI_FEATURE_SET]?.let { FeatureSetType.valueOf(it) } ?: FeatureSetType.SIMPLIFIED,
+                    featureSet = featureSet,
                     gallerySet = preferences[UI_GALLERY_SET]?.let { ProfileGalleryType.valueOf(it) } ?: ProfileGalleryType.CLASSIC,
                     automaticallyProposeAiImprovements = preferences[UI_PROPOSE_AI_IMPROVEMENTS]?.let { BooleanType.valueOf(it) } ?: BooleanType.ALWAYS,
+                    useTrackedBroadcasts =
+                        preferences[UI_USE_TRACKED_BROADCASTS]?.let { BooleanType.valueOf(it) }
+                            ?: if (featureSet == FeatureSetType.COMPLETE) BooleanType.ALWAYS else BooleanType.NEVER,
                     bottomBarItems = preferences[UI_BOTTOM_BAR_ITEMS]?.let { decodeBottomBarItems(it) } ?: DefaultBottomBarItems,
                 )
             } catch (e: Exception) {
@@ -165,6 +171,7 @@ class UiSharedPreferences(
                     preferences[UI_FEATURE_SET] = sharedSettings.featureSet.name
                     preferences[UI_GALLERY_SET] = sharedSettings.gallerySet.name
                     preferences[UI_PROPOSE_AI_IMPROVEMENTS] = sharedSettings.automaticallyProposeAiImprovements.name
+                    preferences[UI_USE_TRACKED_BROADCASTS] = sharedSettings.useTrackedBroadcasts.name
                     preferences[UI_BOTTOM_BAR_ITEMS] = sharedSettings.bottomBarItems.joinToString(",") { it.name }
                 }
             } catch (e: Exception) {
