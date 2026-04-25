@@ -21,6 +21,8 @@
 package com.vitorpamplona.quartz.nip01Core.store.fs
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.isAddressable
+import com.vitorpamplona.quartz.nip01Core.core.isReplaceable
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.TagNameValueHasher
 import java.nio.file.Files
@@ -59,6 +61,12 @@ internal class FsQueryPlanner(
             return idsDriver(ids)
         }
 
+        // Slot shortcut: for replaceable/addressable kinds with authors
+        // pinned (and d-tag for addressable), the filesystem already holds
+        // the winning event at a deterministic path. One stat + one read
+        // per (kind, pubkey[, d]) triple — no directory walk, no sort.
+        slotShortcut(filter)?.let { return it }
+
         // NIP-50 search drives by FTS first when present so the AND
         // intersection of token sets is the smallest possible candidate
         // pool. All other predicates are post-filtered via Filter.match.
@@ -79,6 +87,77 @@ internal class FsQueryPlanner(
         }
 
         return allKindsDriver()
+    }
+
+    /**
+     * Direct-slot driver for replaceable / addressable queries. Returns
+     * null when the filter doesn't fit the shortcut, so the caller can
+     * fall through to the generic directory walk. Applies when:
+     *
+     *   - `authors` is set,
+     *   - `kinds` is set and every kind is either replaceable or
+     *     addressable (not a mix with non-unique kinds),
+     *   - for addressable kinds, a `d`-tag filter is supplied,
+     *   - no `search` clause (FTS wouldn't benefit from this).
+     *
+     * The biggest win is for `profileOf` / `relaysOf` / `contactsOf`
+     * style reads (`Filter(authors=[pk], kinds=[0])` etc.) — those go
+     * from "list `idx/kind/0/` and sort" to "one `exists()` + one
+     * `readText`", even against a store with millions of kind-0 events.
+     */
+    private fun slotShortcut(filter: Filter): Sequence<Candidate>? {
+        val kinds = filter.kinds?.takeIf { it.isNotEmpty() } ?: return null
+        val authors = filter.authors?.takeIf { it.isNotEmpty() } ?: return null
+        if (!filter.search.isNullOrBlank()) return null
+
+        val allReplaceable = kinds.all { it.isReplaceable() }
+        val allAddressable = kinds.all { it.isAddressable() }
+        if (!allReplaceable && !allAddressable) return null
+
+        val dTags: List<String>? =
+            if (allAddressable) {
+                (filter.tagsAll?.get("d") ?: filter.tags?.get("d"))?.takeIf { it.isNotEmpty() }
+                    ?: return null // addressable without d-tag → can't resolve a slot
+            } else {
+                null
+            }
+
+        return sequence {
+            val found = ArrayList<Candidate>(kinds.size * authors.size)
+            for (kind in kinds) {
+                for (pk in authors) {
+                    if (allReplaceable) {
+                        readSlot(layout.replaceableSlot(kind, pk))?.let(found::add)
+                    } else {
+                        for (d in dTags!!) {
+                            readSlot(layout.addressableSlot(kind, pk, d))?.let(found::add)
+                        }
+                    }
+                }
+            }
+            found.sortByDescending { it.createdAt }
+            yieldAll(found)
+        }
+    }
+
+    /**
+     * Read a slot file into a `Candidate`. Parses enough of the JSON to
+     * extract `id` and `createdAt`. Returns null for missing slots or
+     * unreadable files — stale/corrupt slots are dropped silently, same
+     * behaviour as the directory walkers.
+     */
+    private fun readSlot(path: Path): Candidate? {
+        if (!Files.exists(path)) return null
+        return try {
+            val event =
+                com.vitorpamplona.quartz.nip01Core.core.Event
+                    .fromJson(Files.readString(path))
+            Candidate(event.createdAt, event.id)
+        } catch (_: java.io.IOException) {
+            null
+        } catch (_: com.fasterxml.jackson.core.JacksonException) {
+            null
+        }
     }
 
     // ---- drivers ------------------------------------------------------

@@ -162,6 +162,51 @@ class FsSlotsTest {
     }
 
     @Test
+    fun `slot shortcut serves replaceable queries even when idx is wiped`() {
+        // Belt-and-suspenders for the planner shortcut: a query pinned to
+        // (kinds=[0], authors=[pk]) must hit the slot directly without
+        // touching idx/. Wipe idx/ to prove the shortcut isn't relying on
+        // it.
+        val v = metadata("p", 100)
+        store.insert(v)
+        java.nio.file.Files
+            .walk(root.resolve("idx"))
+            .use { s ->
+                s.sorted(Comparator.reverseOrder()).forEach {
+                    java.nio.file.Files
+                        .deleteIfExists(it)
+                }
+            }
+
+        val got = store.query<MetadataEvent>(Filter(authors = listOf(signer.pubKey), kinds = listOf(MetadataEvent.KIND)))
+        assertEquals(listOf(v.id), got.map { it.id }, "slot shortcut should serve from replaceable/, not idx/")
+    }
+
+    @Test
+    fun `slot shortcut serves addressable queries when d-tag supplied`() {
+        val v = article("intro", "v", 10)
+        store.insert(v)
+        java.nio.file.Files
+            .walk(root.resolve("idx"))
+            .use { s ->
+                s.sorted(Comparator.reverseOrder()).forEach {
+                    java.nio.file.Files
+                        .deleteIfExists(it)
+                }
+            }
+
+        val got =
+            store.query<LongTextNoteEvent>(
+                Filter(
+                    authors = listOf(signer.pubKey),
+                    kinds = listOf(LongTextNoteEvent.KIND),
+                    tags = mapOf("d" to listOf("intro")),
+                ),
+            )
+        assertEquals(listOf(v.id), got.map { it.id })
+    }
+
+    @Test
     fun `delete of current replaceable winner clears the slot`() {
         val v = metadata("only", 100)
         store.insert(v)
