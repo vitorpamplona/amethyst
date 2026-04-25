@@ -57,14 +57,9 @@ import kotlin.io.path.readText
  * addressable slots, NIP-09 tombstones, NIP-40 expiration, NIP-50 FTS,
  * NIP-62 vanish, transactions, scrub.
  */
-class FsEventStore(
+open class FsEventStore(
     val root: Path,
     indexingStrategy: IndexingStrategy = DefaultIndexingStrategy(),
-    /**
-     * Source of "now" in unix seconds. Injectable so tests can drive
-     * NIP-40 expiration deterministically. Defaults to `TimeUtils.now()`.
-     */
-    private val clock: () -> Long = { TimeUtils.now() },
     /**
      * Optional relay URL the store is acting on behalf of. Used by
      * NIP-62 [RequestToVanishEvent.shouldVanishFrom] scoping. When
@@ -154,6 +149,14 @@ class FsEventStore(
     }
 
     /**
+     * Source of "now" in unix seconds. Defaults to [TimeUtils.now]; tests
+     * override this via a subclass so NIP-40 expiration behaviour (insert
+     * guard and periodic sweep) can be driven deterministically without
+     * waiting on the wall clock or patching a global time source.
+     */
+    protected open fun now(): Long = TimeUtils.now()
+
+    /**
      * NIP-40 pre-insert guard. Parity with SQLite's `reject_expired_events`
      * trigger: an event whose expiration tag is `<= now` is rejected
      * outright. The `<= 0` clause matches the SQLite check that ignores
@@ -162,7 +165,7 @@ class FsEventStore(
     private fun isAlreadyExpired(event: Event): Boolean {
         val exp = event.expiration() ?: return false
         if (exp <= 0) return false
-        return exp <= clock()
+        return exp <= now()
     }
 
     /**
@@ -384,7 +387,7 @@ class FsEventStore(
     override fun deleteExpiredEvents() =
         lockManager.withWriteLock {
             if (!Files.isDirectory(layout.idxExpiresAt)) return@withWriteLock
-            val now = clock()
+            val now = now()
             val toDelete = ArrayList<HexKey>()
             Files.list(layout.idxExpiresAt).use { stream ->
                 for (entry in stream) {

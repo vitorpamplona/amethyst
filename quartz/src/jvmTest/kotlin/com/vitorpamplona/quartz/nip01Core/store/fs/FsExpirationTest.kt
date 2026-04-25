@@ -40,13 +40,24 @@ class FsExpirationTest {
     private lateinit var root: Path
     private var clockNow: Long = 1_000_000
 
-    private lateinit var store: FsEventStore
+    /**
+     * Test subclass overriding the `now()` seam so we can drive NIP-40
+     * expiration at exact timestamps — no wall-clock sleeps, no flakes.
+     */
+    private class ClockedStore(
+        root: Path,
+        private val source: () -> Long,
+    ) : FsEventStore(root) {
+        override fun now(): Long = source()
+    }
+
+    private lateinit var store: ClockedStore
 
     @BeforeTest
     fun setup() {
         Secp256k1Instance
         root = Files.createTempDirectory("fs-exp-")
-        store = FsEventStore(root, clock = { clockNow })
+        store = ClockedStore(root) { clockNow }
     }
 
     @AfterTest

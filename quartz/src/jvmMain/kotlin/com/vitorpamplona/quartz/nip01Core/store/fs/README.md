@@ -130,8 +130,6 @@ val store = FsEventStore(
     root = Path.of(System.getProperty("user.home"), ".amy", "events-store"),
     // optional NIP-62 relay scoping; null = only ALL_RELAYS vanish requests cascade
     relay = null,
-    // optional clock for tests
-    clock = { com.vitorpamplona.quartz.utils.TimeUtils.now() },
 )
 ```
 
@@ -139,6 +137,11 @@ The directory is created on first use. The `.seed` file (8 random
 bytes) is generated atomically on first open and read on every
 subsequent open — it salts every tag / owner hash, so it must persist
 or every previously-written index entry becomes unreachable.
+
+`FsEventStore` is `open` and exposes a `protected open fun now(): Long
+= TimeUtils.now()`. Tests override it with a subclass to drive NIP-40
+expiration at exact timestamps without relying on the wall clock; see
+`FsExpirationTest.ClockedStore`.
 
 ### Insert
 
