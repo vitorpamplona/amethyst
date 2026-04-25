@@ -69,21 +69,24 @@ preflight_dm() {
 }
 
 # --- amy identity wrappers ---------------------------------------------------
-# Two identities: A (sender) and D (recipient). We reuse A_DIR for parity
-# with the existing harness files; D_DIR is new.
+# Two identities: A (sender) and D (recipient), both inside the same
+# $STATE_DIR/.amy tree. They share $STATE_DIR/.amy/shared/events-store/
+# — the same code path real users hit with multiple accounts. The
+# enclosing harness sets STATE_DIR to a fresh tempdir per run, so amy
+# sees a virgin home each time.
 #
 # `--secret-backend=plaintext` keeps these throwaway interop runs headless —
 # the default `auto` would try the OS keychain (not available in CI) and then
 # ask for a NIP-49 passphrase. Plaintext still writes 0600-owner-only.
-amy_a() { "$AMY_BIN" --data-dir "$A_DIR" --secret-backend plaintext --json "$@"; }
-amy_d() { "$AMY_BIN" --data-dir "$D_DIR" --secret-backend plaintext --json "$@"; }
+amy_a() { HOME="$STATE_DIR" "$AMY_BIN" --name A --secret-backend plaintext --json "$@"; }
+amy_d() { HOME="$STATE_DIR" "$AMY_BIN" --name D --secret-backend plaintext --json "$@"; }
 
 # --- identity bootstrap ------------------------------------------------------
 ensure_identity_for() {
-  local who="$1" dir="$2"
-  step "initialising Identity $who (amy at $dir)"
+  local who="$1"
+  step "initialising Identity $who (amy at \$HOME=$STATE_DIR --name $who)"
   local out
-  out=$("$AMY_BIN" --data-dir "$dir" --secret-backend plaintext --json init) || {
+  out=$(HOME="$STATE_DIR" "$AMY_BIN" --name "$who" --secret-backend plaintext --json init) || {
     fail_msg "amy init failed for $who: $out"; exit 1
   }
   local npub hex
@@ -103,8 +106,8 @@ ensure_identity_for() {
 # so the DM strict-relay routing has something to resolve to.
 configure_relays_dm() {
   banner "Configuring relays → $RELAY_URL"
-  "$AMY_BIN" --data-dir "$A_DIR" relay add "$RELAY_URL" --type all >/dev/null
-  "$AMY_BIN" --data-dir "$D_DIR" relay add "$RELAY_URL" --type all >/dev/null
+  amy_a relay add "$RELAY_URL" --type all >/dev/null
+  amy_d relay add "$RELAY_URL" --type all >/dev/null
 
   step "publishing A's NIP-65 + kind:10050 lists"
   amy_a relay publish-lists >>"$LOG_FILE" 2>&1 \

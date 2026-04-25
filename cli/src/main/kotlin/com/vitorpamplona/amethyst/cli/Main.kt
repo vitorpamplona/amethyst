@@ -82,7 +82,6 @@ private suspend fun dispatch(argv: Array<String>): Int {
     // Pull global flags out of argv before subcommand parsing so subcommands see
     // only their own args.
     val filteredArgs = mutableListOf<String>()
-    var dataDirFlag: String? = null
     var nameFlag: String? = null
     var secretBackendFlag: String? = null
     var passphraseFileFlag: String? = null
@@ -91,7 +90,6 @@ private suspend fun dispatch(argv: Array<String>): Int {
         val a = argv[i]
         val (matched, consumed) = extractGlobalFlag(a, argv, i)
         when (matched) {
-            GlobalFlag.DATA_DIR -> dataDirFlag = consumed.value
             GlobalFlag.NAME -> nameFlag = consumed.value
             GlobalFlag.SECRET_BACKEND -> secretBackendFlag = consumed.value
             GlobalFlag.PASSPHRASE_FILE -> passphraseFileFlag = consumed.value
@@ -118,7 +116,7 @@ private suspend fun dispatch(argv: Array<String>): Int {
     }
 
     val secrets = SecretStore.from(backendFlag = secretBackendFlag, passphraseFile = passphraseFileFlag)
-    val dataDir = DataDir.resolve(dataDirFlag = dataDirFlag, nameFlag = nameFlag, secrets = secrets)
+    val dataDir = DataDir.resolve(nameFlag = nameFlag, secrets = secrets)
 
     return when (head) {
         "init" -> {
@@ -212,7 +210,6 @@ private enum class GlobalFlag(
     val long: String,
     val takesValue: Boolean = true,
 ) {
-    DATA_DIR("--data-dir"),
     NAME("--name"),
     SECRET_BACKEND("--secret-backend"),
     PASSPHRASE_FILE("--passphrase-file"),
@@ -256,24 +253,27 @@ private fun printUsage() {
         |amy — Amethyst command-line interface
         |
         |Usage:
-        |  amy [--name ACCOUNT]                  (canonical: per-account dir under ~/.amy/)
-        |      [--data-dir PATH]                 (escape hatch: self-contained dir at PATH)
+        |  amy [--name ACCOUNT]
         |      [--secret-backend auto|keychain|ncryptsec|plaintext]
         |      [--passphrase-file PATH]
         |      [--json]
         |      <cmd> [args...]
         |
         |Account selection:
-        |  Default layout lives at ~/.amy/, with shared/events-store/ holding
-        |  every observed Nostr event and ~/.amy/<account>/ holding identity,
-        |  cursors, MLS state, and aliases. ACCOUNT must match
+        |  All state lives under ~/.amy/. Per-account directories
+        |  ~/.amy/<account>/ hold identity, cursors, MLS state, and
+        |  aliases; every observed Nostr event lands in the shared
+        |  ~/.amy/shared/events-store/. ACCOUNT must match
         |  [a-zA-Z0-9_-]{1,64} (no spaces, no slashes).
         |
-        |  Resolution order when --data-dir is not set:
+        |  Resolution order:
         |    1. --name X if given.
         |    2. ~/.amy/current marker (set by `amy use X`).
         |    3. Sole subdirectory of ~/.amy/ other than shared/.
         |    4. Error — disambiguate with --name or `amy use`.
+        |
+        |  Test harnesses isolate by overriding ${'$'}HOME for the amy
+        |  subprocess (`HOME=/tmp/run.123 amy --name alice ...`).
         |
         |  use NAME                                  pin NAME as the active account
         |  use --clear                                remove the pin

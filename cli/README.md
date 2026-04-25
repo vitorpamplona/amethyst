@@ -32,7 +32,7 @@ What every caller — user, script, agent, CI — can rely on:
 - **`--json` is the machine contract. One line. One object.** Stable
   snake_case keys. Pipe it into `jq`, parse it from Python, hand it
   to an agent. Pass `--json` anywhere before the subcommand:
-  `amy --json whoami`, `amy --data-dir ./alice --json marmot group list`.
+  `amy --json whoami`, `amy --name alice --json marmot group list`.
 - **stderr is for humans.** Progress, warnings, per-relay ACK traces.
   Safe to discard. Errors land here too: `error: <code>: <detail>` by
   default, or JSON `{"error":"…","detail":"…"}` under `--json`.
@@ -42,10 +42,13 @@ What every caller — user, script, agent, CI — can rely on:
   - `2` — bad arguments
   - `124` — `await` timed out
 - **No interactive prompts, ever.** Passwords, names, keys — all flags.
-- **Data-dir is the whole world.** All state (identity, relays, MLS
-  epochs, message archives, run cursors) lives under `--data-dir PATH`.
-  Delete to reset; copy to move; `AMETHYST_CLI_DATA` env var overrides
-  the default `./amy`.
+- **`~/.amy/` is the whole world.** Per-account dirs hold identity,
+  cursors, MLS state, and aliases at `~/.amy/<account>/`; every
+  observed Nostr event lands in `~/.amy/shared/events-store/` (one
+  cache for every account on the machine). Delete to reset; copy to
+  move. Tests isolate by overriding `$HOME` for the amy subprocess
+  (`HOME=/tmp/run.123 amy --name alice …`) — same convention `git`,
+  `gpg`, and `npm` use.
 
 Only the `--json` shape and the exit codes are public API. The default
 text format is allowed to change between releases. The rationale lives
@@ -57,7 +60,8 @@ in [DEVELOPMENT.md](./DEVELOPMENT.md).
 
 Every Nostr event Amy observes is verified (NIP-01 id + signature
 check) and persisted to a file-backed store at
-`<data-dir>/events-store/`. That includes:
+`~/.amy/shared/events-store/` (one store per machine, shared across
+every account in `~/.amy/`). That includes:
 
 - events received from any relay subscription (`amy feed`, `amy dm
   list`, `amy keypackage publish`, group sync, …),
@@ -107,11 +111,11 @@ To manage the store directly:
 
 ```sh
 # raw inspection
-find $AMY_HOME/events-store/events -name '*.json' | head
-jq . $AMY_HOME/events-store/replaceable/0/<pubkey>.json
+find ~/.amy/shared/events-store/events -name '*.json' | head
+jq . ~/.amy/shared/events-store/replaceable/0/<pubkey>.json
 
 # delete a specific event (tombstone NOT installed — see below)
-rm $AMY_HOME/events-store/events/<aa>/<bb>/<id>.json
+rm ~/.amy/shared/events-store/events/<aa>/<bb>/<id>.json
 ```
 
 Deleting an event file is treated as a deliberate "I never saw this"
@@ -146,29 +150,31 @@ The `installDist` tree under `cli/build/install/amy/` is self-contained
 ## Quick start
 
 ```bash
-# 1. Create a data-dir with a full Amethyst-style account.
-#    Generates a keypair, seeds default NIP-65 / inbox / key-package
-#    relays, and publishes the nine bootstrap events.
-amy --data-dir ./alice create --name "Alice"
+# 1. Create the alice account (~/.amy/alice/) with a full Amethyst-style
+#    bootstrap: keypair, default NIP-65 / inbox / key-package relays,
+#    nine bootstrap events.
+amy --name alice create
 
 # 2. Publish a fresh MLS KeyPackage so others can invite you.
-amy --data-dir ./alice marmot key-package publish
+amy --name alice marmot key-package publish
 
 # 3. Create a group, invite someone, send a message.
-amy --data-dir ./alice marmot group create --name "Test Group"
-amy --data-dir ./alice marmot group add <GID> npub1...bob
-amy --data-dir ./alice marmot message send <GID> "hello"
+amy --name alice marmot group create --name "Test Group"
+amy --name alice marmot group add <GID> npub1...bob
+amy --name alice marmot message send <GID> "hello"
 
-# 4. On the receiving side — poll until Bob sees the invite.
-amy --data-dir ./bob marmot await group --name "Test Group" --timeout 60
-amy --data-dir ./bob marmot message list <GID>
+# 4. On the receiving side, in ~/.amy/bob/.
+amy --name bob marmot await group --name "Test Group" --timeout 60
+amy --name bob marmot message list <GID>
 ```
 
-Compose with `jq` to chain commands — pass `--json` so stdout switches
-from the default human-readable text to the parseable single-line JSON:
+With one account you can drop the flag (auto-pick); with several, pin
+one with `amy use alice` and the same commands work flagless. Compose
+with `jq` by adding `--json` to switch stdout from human text to a
+parseable single-line JSON object:
 
 ```bash
-GID=$(amy --data-dir ./alice --json marmot group create --name "Test" | jq -r .group_id)
+GID=$(amy --name alice --json marmot group create --name "Test" | jq -r .group_id)
 ```
 
 For an interop-test script template, see
@@ -188,7 +194,8 @@ Run `amy --help` for the canonical list. As of today:
 | `init [--nsec NSEC]` | Create or import a bare identity. Does not publish anything. |
 | `create [--name NAME]` | Provision a full account + publish the nine Amethyst bootstrap events. |
 | `login KEY [--password X] [--private]` | Import `nsec` / `ncryptsec` / BIP-39 mnemonic / `npub` / `nprofile` / hex / NIP-05. Read-only when no secret material is supplied. |
-| `whoami` | Print the identity stored in `--data-dir`. |
+| `whoami` | Print the active account's name + npub. |
+| `use NAME` | Pin NAME as the active account (`~/.amy/current`). `use --clear` removes the pin; `use` prints the pin and the available accounts. |
 | `profile show [PUBKEY] [--refresh] [--timeout SECS]` | Print kind:0 metadata. Default reads from the local store (cache-first); `--refresh` forces a relay drain. PUBKEY accepts `npub` / `nprofile` / hex / `name@domain.tld`; omit for self. |
 | `profile edit --name X [--display-name X] …` | Build + publish a new kind:0 starting from the current cached metadata (or fetched if missing). |
 | `relay add URL [--type T]` | `T = nip65 \| inbox \| key_package \| all`. |
@@ -228,9 +235,21 @@ itself crashed".
 
 ### Global flags
 
-- `--data-dir PATH` — defaults to `./amy` or
-  `$AMETHYST_CLI_DATA`. Always an absolute path after resolution.
+- `--name ACCOUNT` — pick which account under `~/.amy/<account>/` to
+  operate on. Required only when more than one account exists; with a
+  single account amy auto-picks. Override with `amy use NAME` to
+  pin one as the default. ACCOUNT must match `[a-zA-Z0-9_-]{1,64}`.
+- `--json` — switch stdout to the machine-readable contract.
+- `--secret-backend auto|keychain|ncryptsec|plaintext` — where to
+  persist the private key.
+- `--passphrase-file PATH` — passphrase for the `ncryptsec` backend.
 - `--help` / `-h` — usage summary.
+
+### Account-management verbs
+
+- `amy use NAME` — pin NAME as the active account (`~/.amy/current`).
+- `amy use --clear` — remove the pin.
+- `amy use` — print the current pin and the list of available accounts.
 
 ---
 
@@ -261,42 +280,53 @@ events.
 
 ---
 
-## Data-dir layout
+## On-disk layout
 
 ```
-<data-dir>/
-├── identity.json             # nsec/npub/hex — the account
-├── state.json                # sync cursors (giftWrapSince, groupSince)
-├── events-store/             # FsEventStore — every observed Nostr event
-│   ├── events/<aa>/<bb>/…    # canonical kind:0 / 3 / 10002 / 10050 / 10051 / 1 / 5 / 1059 / …
-│   ├── replaceable/<k>/…     # one slot per (kind, pubkey) for kind:0/3/10000-19999
-│   ├── addressable/…         # one slot per (kind, pubkey, d-tag) for kind:30000-39999
-│   ├── idx/                  # hardlink indexes (kind / author / owner / tag / fts / expires_at)
-│   └── tombstones/           # NIP-09 / NIP-62 enforcement
-└── marmot/
-    ├── keypackages.bundle    # MLS KeyPackage bundles (NostrSignerInternal)
-    └── groups/
-        ├── <gid>.mls         # MLS group state per group
-        └── <gid>.log         # decrypted inner events (one JSON per line)
+~/.amy/                                  ← root, follows $HOME
+├── current                              # marker file written by `amy use NAME`
+├── shared/
+│   └── events-store/                    # FsEventStore — every observed Nostr event
+│       ├── events/<aa>/<bb>/…           # canonical kind:0 / 3 / 10002 / 10050 / 10051 / 1 / 5 / 1059 / …
+│       ├── replaceable/<k>/…            # one slot per (kind, pubkey) for kind:0/3/10000-19999
+│       ├── addressable/…                # one slot per (kind, pubkey, d-tag) for kind:30000-39999
+│       ├── idx/                         # hardlink indexes (kind / author / owner / tag / fts / expires_at)
+│       └── tombstones/                  # NIP-09 / NIP-62 enforcement
+├── alice/                               # one dir per account (e.g. created by `amy --name alice init`)
+│   ├── identity.json                    # nsec/npub/hex — the account
+│   ├── state.json                       # sync cursors (giftWrapSince, groupSince)
+│   ├── aliases.json                     # local name → npub map (init writes a self-entry)
+│   └── marmot/
+│       ├── keypackages.bundle           # MLS KeyPackage bundles (NostrSignerInternal)
+│       └── groups/
+│           ├── <gid>.mls                # MLS group state per group
+│           └── <gid>.log                # decrypted inner events (one JSON per line)
+└── bob/ ...                             # additional accounts sit alongside
 ```
 
 All files are plain JSON or framed binary — human-inspectable, easy to
-diff across two data-dirs in a test run.
+diff across two accounts. Two accounts on the same machine share
+`~/.amy/shared/events-store/`, so a public event observed once doesn't
+get re-stored per account.
 
 The local relay configuration (kind:10002 / 10050 / 10051) is **not** a
-separate file — it lives in `events-store/` as signed events.
-`amy relay add` builds + signs + ingests a new relay-list event;
-`amy relay list` reads URLs straight out of the latest event for each
-kind; `amy relay publish-lists` broadcasts those events to upstream
-relays. There is no `relays.json`.
+separate file — it lives in the shared `events-store/` as signed events
+owned by the account that wrote them. `amy relay add` builds + signs +
+ingests a new relay-list event; `amy relay list` reads URLs straight out
+of the latest event for each kind; `amy relay publish-lists` broadcasts
+those events to upstream relays. There is no `relays.json`.
 
 ---
 
 ## Troubleshooting
 
 - **`no identity`** — run `init`, `create`, or `login` first, or pass a
-  different `--data-dir`.
-- **`not_member`** — the group GID is unknown to this data-dir. Run
+  different `--name`.
+- **`no account at ~/.amy`** — there's no account dir yet; create one
+  with `amy --name <name> init`.
+- **`multiple accounts in ~/.amy (...)`** — disambiguate with `--name`
+  on the next call, or pin a default via `amy use NAME`.
+- **`not_member`** — the group GID is unknown to this account. Run
   `marmot group list` to confirm, or `marmot await group --name …` to
   wait for an invite to arrive.
 - **Hang on a network verb** — Amy connects to the relays advertised

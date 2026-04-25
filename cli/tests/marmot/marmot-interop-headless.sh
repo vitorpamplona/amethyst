@@ -18,7 +18,10 @@ REPO_ROOT="$(cd -- "$SCRIPT_DIR/../../.." && pwd)"
 TESTS_DIR="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 STATE_DIR="$SCRIPT_DIR/state-headless"
 LOG_DIR="$STATE_DIR/logs"
-A_DIR="$STATE_DIR/A"
+# A is the amy account inside the fake $HOME=$STATE_DIR layout. B and
+# C are wnd (whitenoise) state dirs — different binary, separate
+# convention, so they stay as plain $STATE_DIR siblings.
+A_DIR="$STATE_DIR/.amy/A"
 B_DIR="$STATE_DIR/B"
 C_DIR="$STATE_DIR/C"
 B_SOCKET="$B_DIR/release/wnd.sock"
@@ -62,7 +65,7 @@ while [[ $# -gt 0 ]]; do
   shift
 done
 
-mkdir -p "$STATE_DIR" "$LOG_DIR" "$A_DIR" "$B_DIR/logs" "$C_DIR/logs"
+mkdir -p "$STATE_DIR" "$LOG_DIR" "$B_DIR/logs" "$C_DIR/logs"
 : >"$LOG_FILE"
 : >"$RESULTS_FILE"
 

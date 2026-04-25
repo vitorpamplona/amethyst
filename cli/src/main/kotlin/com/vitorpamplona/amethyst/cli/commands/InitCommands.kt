@@ -35,9 +35,9 @@ object InitCommands {
         // would trigger a keychain prompt / passphrase dialog even though the
         // caller clearly already has the identity set up.
         dataDir.loadIdentityFileOrNull()?.let { existing ->
-            // Idempotent self-alias upsert when --name was passed and the
-            // dir already exists (e.g. user re-runs `init --name alice`).
-            dataDir.accountName?.let { Aliases.set(dataDir, it, existing.npub) }
+            // Idempotent self-alias upsert when the dir already exists
+            // (e.g. user re-runs `init --name alice`).
+            Aliases.set(dataDir, dataDir.accountName, existing.npub)
             Output.emit(
                 mapOf(
                     "name" to dataDir.accountName,
@@ -53,10 +53,10 @@ object InitCommands {
         val nsec = args.flag("nsec")
         val created = if (nsec != null) Identity.fromNsec(nsec) else Identity.create()
         dataDir.saveIdentity(created)
-        // Self-alias: in account mode, record `<name> -> own npub` so the
-        // user can refer to their own account by name in scripts and (once
-        // the resolver lands) in recipient slots like `dm send`.
-        dataDir.accountName?.let { Aliases.set(dataDir, it, created.npub) }
+        // Self-alias: record `<name> -> own npub` so the user can refer
+        // to their own account by name in scripts and (once the resolver
+        // lands) in recipient slots like `dm send`.
+        Aliases.set(dataDir, dataDir.accountName, created.npub)
         Output.emit(
             mapOf(
                 "name" to dataDir.accountName,

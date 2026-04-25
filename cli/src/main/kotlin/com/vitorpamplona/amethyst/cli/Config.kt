@@ -112,28 +112,22 @@ data class RunState(
 /**
  * Root of the on-disk layout for one account.
  *
- * Two construction modes:
+ * Per-account state (identity, sync cursors, MLS material, aliases)
+ * lives at `<root>/<name>/`; the event store is shared across accounts
+ * at `<root>/shared/events-store/`. `<root>` is always `~/.amy/`
+ * (Java's `user.home` + `/.amy`); test harnesses isolate by overriding
+ * `$HOME` for the amy subprocess, exactly the pattern `git`, `gpg`,
+ * `npm` etc. use.
  *
- *  1. **Account mode** (`--name X`): the canonical layout. Per-account
- *     state (identity, sync cursors, MLS material, aliases) lives at
- *     `<root>/<name>/`; the public event store is shared across
- *     accounts at `<root>/shared/events-store/`. `<root>` defaults to
- *     `~/.amy/`.
- *  2. **Self-contained mode** (`--data-dir P`): everything — including
- *     the event store — lives under `P`. Used by the test harness and
- *     ad-hoc throw-away dirs that don't want to touch a shared root.
- *
- * Use [resolve] to construct one from CLI flags; pass exactly one of
- * `--name` or `--data-dir`.
- *
- * [secrets] is the [SecretStore] that mediates private-key persistence.
- * Owning it here keeps the call sites that already thread [DataDir] from
- * having to learn about a second parameter.
+ * Use [resolve] to construct one from CLI flags. [secrets] is the
+ * [SecretStore] that mediates private-key persistence. Owning it here
+ * keeps the call sites that already thread [DataDir] from having to
+ * learn about a second parameter.
  */
 class DataDir(
     val root: File,
     val eventsDir: File,
-    val accountName: String?,
+    val accountName: String,
     val secrets: SecretStore,
 ) {
     val identityFile = File(root, "identity.json")
@@ -213,8 +207,22 @@ class DataDir(
     }
 
     companion object {
-        /** Per-user root under which `shared/` and `<account>/` live. */
-        val DEFAULT_ROOT: File get() = File(System.getProperty("user.home"), ".amy")
+        /**
+         * Per-user root under which `shared/` and `<account>/` live.
+         *
+         * Reads `$HOME` directly rather than `user.home` because JDK 21
+         * resolves the latter from `getpwuid` and ignores `$HOME`,
+         * which would break the standard `HOME=/tmp/foo amy …` test
+         * isolation pattern (the same convention `git`, `gpg`, `npm`
+         * follow). Falls back to `user.home` only when `$HOME` is unset
+         * (Windows, weird containers).
+         */
+        val DEFAULT_ROOT: File get() {
+            val home =
+                System.getenv("HOME").takeUnless { it.isNullOrBlank() }
+                    ?: System.getProperty("user.home")
+            return File(home, ".amy")
+        }
 
         /** Marker file (one line, just the account name) written by `amy use`. */
         const val CURRENT_MARKER_NAME = "current"
@@ -242,32 +250,16 @@ class DataDir(
         /**
          * Build a [DataDir] from the parsed CLI flags.
          *
-         * Resolution order in account mode (when `dataDirFlag` is null):
+         * Resolution order:
          *   1. `--name X` if provided.
          *   2. `<root>/current` marker (set by `amy use X`).
          *   3. Sole subdirectory of `<root>` other than `shared/`.
-         *   4. Error — caller must disambiguate.
-         *
-         * Passing both `dataDirFlag` and `nameFlag` is an
-         * `IllegalArgumentException` (exit 2 via `main`).
+         *   4. Error — caller must disambiguate via `--name` or `amy use`.
          */
         fun resolve(
-            dataDirFlag: String?,
             nameFlag: String?,
             secrets: SecretStore,
         ): DataDir {
-            require(!(dataDirFlag != null && nameFlag != null)) {
-                "pass either --data-dir or --name, not both"
-            }
-            if (dataDirFlag != null) {
-                val root = File(dataDirFlag).absoluteFile
-                return DataDir(
-                    root = root,
-                    eventsDir = File(root, "events-store"),
-                    accountName = null,
-                    secrets = secrets,
-                )
-            }
             val rootBase = DEFAULT_ROOT
             val name = if (nameFlag != null) validateName(nameFlag) else pickAccount(rootBase)
             val accountRoot = File(rootBase, name).absoluteFile
@@ -281,10 +273,10 @@ class DataDir(
         }
 
         /**
-         * Auto-select an account when neither `--name` nor `--data-dir`
-         * was given. Honours `<root>/current` first (explicit pin from
-         * `amy use`), then falls back to "exactly one account exists".
-         * Throws [IllegalArgumentException] for the ambiguous cases so
+         * Auto-select an account when `--name` was not given. Honours
+         * `<root>/current` first (explicit pin from `amy use`), then
+         * falls back to "exactly one account exists". Throws
+         * [IllegalArgumentException] for the ambiguous cases so
          * `main`'s catch-all turns them into a clean exit-2 error.
          */
         private fun pickAccount(rootBase: File): String {
@@ -304,8 +296,7 @@ class DataDir(
             return when (accounts.size) {
                 0 -> {
                     throw IllegalArgumentException(
-                        "no account at ${rootBase.absolutePath}; create one with `amy --name <name> init` " +
-                            "(or pass --data-dir <path> for a self-contained dir)",
+                        "no account at ${rootBase.absolutePath}; create one with `amy --name <name> init`",
                     )
                 }
 

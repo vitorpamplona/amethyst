@@ -3,12 +3,18 @@
 # helpers.sh — thin wrappers that keep the per-test code tight.
 
 # --- amy wrapper -------------------------------------------------------------
-# `--secret-backend=plaintext` keeps these throwaway interop runs headless —
-# the default `auto` would try the OS keychain (not available in CI) and then
-# ask for a NIP-49 passphrase. Plaintext still writes 0600-owner-only.
+# Tests isolate by overriding $HOME for the amy subprocess; amy reads the
+# env var directly (not Java's `user.home`, which JDK 21 pulls from
+# /etc/passwd) and treats $HOME/.amy/ as its tree. No --data-dir flag,
+# no test-only escape hatch — production code path, fresh every run.
+#
+# `--secret-backend=plaintext` keeps these throwaway runs headless —
+# the default `auto` would try the OS keychain (not available in CI) and
+# then ask for a NIP-49 passphrase. Plaintext still writes 0600-owner-only.
+#
 # `--json` opts into amy's machine-readable output (the harness parses it
 # with jq); the default human-text output is for terminal use.
-amy_a() { "$AMY_BIN" --data-dir "$A_DIR" --secret-backend plaintext --json "$@"; }
+amy_a() { HOME="$STATE_DIR" "$AMY_BIN" --name alice --secret-backend plaintext --json "$@"; }
 
 # Run amy, log stderr, surface JSON on stdout, remember last result.
 amy_json() {
