@@ -110,8 +110,21 @@ data class RunState(
 )
 
 /**
- * Root of the on-disk layout. Any absolute path chosen by `--data-dir` (or
- * `$AMETHYST_CLI_DATA`) — defaults to `./amy`.
+ * Root of the on-disk layout for one account.
+ *
+ * Two construction modes:
+ *
+ *  1. **Account mode** (`--name X`): the canonical layout. Per-account
+ *     state (identity, sync cursors, MLS material, aliases) lives at
+ *     `<root>/<name>/`; the public event store is shared across
+ *     accounts at `<root>/shared/events-store/`. `<root>` defaults to
+ *     `~/.amy/`.
+ *  2. **Self-contained mode** (`--data-dir P`): everything — including
+ *     the event store — lives under `P`. Used by the test harness and
+ *     ad-hoc throw-away dirs that don't want to touch a shared root.
+ *
+ * Use [resolve] to construct one from CLI flags; pass exactly one of
+ * `--name` or `--data-dir`.
  *
  * [secrets] is the [SecretStore] that mediates private-key persistence.
  * Owning it here keeps the call sites that already thread [DataDir] from
@@ -119,16 +132,16 @@ data class RunState(
  */
 class DataDir(
     val root: File,
+    val eventsDir: File,
+    val accountName: String?,
     val secrets: SecretStore,
 ) {
     val identityFile = File(root, "identity.json")
     val stateFile = File(root, "state.json")
+    val aliasesFile = File(root, "aliases.json")
     val marmotDir = File(root, "marmot")
     val groupsDir = File(marmotDir, "groups")
     val keyPackageBundleFile = File(marmotDir, "keypackages.bundle")
-
-    /** Root of the file-backed Nostr event store (`FsEventStore`). */
-    val eventsDir = File(root, "events-store")
 
     init {
         SecureFileIO.secureMkdirs(root)
@@ -200,13 +213,71 @@ class DataDir(
     }
 
     companion object {
+        /** Per-user root under which `shared/` and `<account>/` live. */
+        val DEFAULT_ROOT: File get() = File(System.getProperty("user.home"), ".amy")
+
+        /**
+         * Account names become directory names AND alias keys, so we
+         * keep them to a portable, shell-friendly subset. `shared` is
+         * reserved for the cross-account events-store sibling.
+         */
+        private val NAME_REGEX = Regex("^[a-zA-Z0-9_-]{1,64}$")
+        private const val SHARED_DIR_NAME = "shared"
+
+        fun validateName(name: String): String {
+            require(NAME_REGEX.matches(name)) {
+                "--name must match [a-zA-Z0-9_-]{1,64} (got '$name')"
+            }
+            require(name != SHARED_DIR_NAME) {
+                "--name must not be '$SHARED_DIR_NAME' (reserved for the shared events-store)"
+            }
+            return name
+        }
+
+        /**
+         * Build a [DataDir] from the parsed CLI flags. Exactly one of
+         * `dataDirFlag` or `nameFlag` must be set; passing both is an
+         * `IllegalArgumentException` (caught by `main` as exit 2).
+         */
         fun resolve(
-            flag: String?,
+            dataDirFlag: String?,
+            nameFlag: String?,
             secrets: SecretStore,
         ): DataDir {
-            val envPath = System.getenv("AMETHYST_CLI_DATA")
-            val path = flag ?: envPath ?: "./amy"
-            return DataDir(File(path).absoluteFile, secrets)
+            require(!(dataDirFlag != null && nameFlag != null)) {
+                "pass either --data-dir or --name, not both"
+            }
+            return when {
+                dataDirFlag != null -> {
+                    val root = File(dataDirFlag).absoluteFile
+                    DataDir(
+                        root = root,
+                        eventsDir = File(root, "events-store"),
+                        accountName = null,
+                        secrets = secrets,
+                    )
+                }
+
+                nameFlag != null -> {
+                    val name = validateName(nameFlag)
+                    val rootBase = DEFAULT_ROOT
+                    val accountRoot = File(rootBase, name).absoluteFile
+                    val sharedEvents = File(rootBase, "$SHARED_DIR_NAME/events-store").absoluteFile
+                    DataDir(
+                        root = accountRoot,
+                        eventsDir = sharedEvents,
+                        accountName = name,
+                        secrets = secrets,
+                    )
+                }
+
+                else -> {
+                    throw IllegalArgumentException(
+                        "missing account selector: pass --name <account> (creates ${DEFAULT_ROOT.absolutePath}/<account>/) " +
+                            "or --data-dir <path> for a self-contained dir",
+                    )
+                }
+            }
         }
     }
 }

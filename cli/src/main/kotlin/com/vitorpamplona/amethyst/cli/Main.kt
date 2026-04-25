@@ -83,6 +83,7 @@ private suspend fun dispatch(argv: Array<String>): Int {
     // only their own args.
     val filteredArgs = mutableListOf<String>()
     var dataDirFlag: String? = null
+    var nameFlag: String? = null
     var secretBackendFlag: String? = null
     var passphraseFileFlag: String? = null
     var i = 0
@@ -91,6 +92,7 @@ private suspend fun dispatch(argv: Array<String>): Int {
         val (matched, consumed) = extractGlobalFlag(a, argv, i)
         when (matched) {
             GlobalFlag.DATA_DIR -> dataDirFlag = consumed.value
+            GlobalFlag.NAME -> nameFlag = consumed.value
             GlobalFlag.SECRET_BACKEND -> secretBackendFlag = consumed.value
             GlobalFlag.PASSPHRASE_FILE -> passphraseFileFlag = consumed.value
             GlobalFlag.JSON -> Output.mode = Output.Mode.JSON
@@ -104,7 +106,7 @@ private suspend fun dispatch(argv: Array<String>): Int {
     }
 
     val secrets = SecretStore.from(backendFlag = secretBackendFlag, passphraseFile = passphraseFileFlag)
-    val dataDir = DataDir.resolve(dataDirFlag, secrets)
+    val dataDir = DataDir.resolve(dataDirFlag = dataDirFlag, nameFlag = nameFlag, secrets = secrets)
     val head = filteredArgs[0]
     val tail = filteredArgs.drop(1).toTypedArray()
 
@@ -201,6 +203,7 @@ private enum class GlobalFlag(
     val takesValue: Boolean = true,
 ) {
     DATA_DIR("--data-dir"),
+    NAME("--name"),
     SECRET_BACKEND("--secret-backend"),
     PASSPHRASE_FILE("--passphrase-file"),
     JSON("--json", takesValue = false),
@@ -243,11 +246,19 @@ private fun printUsage() {
         |amy — Amethyst command-line interface
         |
         |Usage:
-        |  amy [--data-dir PATH]
+        |  amy [--name ACCOUNT]                  (canonical: per-account dir under ~/.amy/)
+        |      [--data-dir PATH]                 (escape hatch: self-contained dir at PATH)
         |      [--secret-backend auto|keychain|ncryptsec|plaintext]
         |      [--passphrase-file PATH]
         |      [--json]
         |      <cmd> [args...]
+        |
+        |Account selection:
+        |  Default layout lives at ~/.amy/, with shared/events-store/ holding
+        |  every observed Nostr event and ~/.amy/<account>/ holding identity,
+        |  cursors, MLS state, and aliases. Pass exactly one of --name or
+        |  --data-dir; passing both or neither is a bad-args error. ACCOUNT
+        |  must match [a-zA-Z0-9_-]{1,64} (no spaces, no slashes).
         |
         |Output:
         |  Default: human-readable text on stdout.
