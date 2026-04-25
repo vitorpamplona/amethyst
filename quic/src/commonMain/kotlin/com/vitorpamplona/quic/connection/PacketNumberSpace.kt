@@ -55,6 +55,15 @@ class PacketNumberSpaceState {
     /** Allocate the next outbound packet number. */
     fun allocateOutbound(): Long = nextPacketNumber++
 
+    /**
+     * Roll back the most recent allocation. Used by the writer when it has
+     * to re-build a packet (e.g. add Initial padding) using the same PN —
+     * the next call to [allocateOutbound] returns the same number again.
+     */
+    fun rewindOutboundForRebuild() {
+        if (nextPacketNumber > 0) nextPacketNumber--
+    }
+
     /** Note that an inbound packet was successfully decrypted. */
     fun observeInbound(
         packetNumber: Long,

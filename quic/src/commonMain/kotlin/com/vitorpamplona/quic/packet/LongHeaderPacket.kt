@@ -144,22 +144,27 @@ object LongHeaderPacket {
         val packetStart = offset
         val r = QuicReader(bytes, offset)
         val first = r.readByte()
-        require((first and 0x80) != 0) { "not a long-header packet" }
+        if ((first and 0x80) == 0) return null // not a long header — silently drop
         val typeBits = (first ushr 4) and 0x03
         val type = LongHeaderType.fromTypeBits(typeBits)
         val version = r.readUint32().toInt()
         val dcidLen = r.readByte()
+        if (dcidLen !in 0..20) return null // RFC 9000 §17.2 caps CID at 20 bytes
         val dcidBytes = r.readBytes(dcidLen)
         val scidLen = r.readByte()
+        if (scidLen !in 0..20) return null
         val scidBytes = r.readBytes(scidLen)
         val token =
             if (type == LongHeaderType.INITIAL) {
-                val tokenLen = r.readVarint().toInt()
-                r.readBytes(tokenLen)
+                val tokenLenRaw = r.readVarint()
+                if (tokenLenRaw < 0L || tokenLenRaw > r.remaining.toLong()) return null
+                r.readBytes(tokenLenRaw.toInt())
             } else {
                 ByteArray(0)
             }
-        val length = r.readVarint().toInt()
+        val lengthRaw = r.readVarint()
+        if (lengthRaw < 0L || lengthRaw > r.remaining.toLong()) return null
+        val length = lengthRaw.toInt()
         val pnOffset = r.position
         if (pnOffset + length > bytes.size) return null
         // Sample for HP starts at pnOffset + 4.
@@ -233,18 +238,32 @@ object LongHeaderPacket {
             val type = LongHeaderType.fromTypeBits(typeBits)
             val version = r.readUint32().toInt()
             val dcidLen = r.readByte()
+            if (dcidLen !in 0..20) return null
             val dcid = r.readBytes(dcidLen)
             val scidLen = r.readByte()
+            if (scidLen !in 0..20) return null
             val scid = r.readBytes(scidLen)
-            val tokenLen =
-                if (type == LongHeaderType.INITIAL) {
-                    r.readVarint().toInt()
-                } else {
-                    0
-                }
-            if (type == LongHeaderType.INITIAL) r.skip(tokenLen)
-            val length = r.readVarint().toInt()
-            val total = r.position - offset + length
+            // Retry packets have NO token-length, NO length, NO packet-number fields —
+            // they consist of (header)(retry_token)(16-byte integrity tag). The caller
+            // routes them via [RetryPacket.parse] separately. We surface them here only
+            // so the caller knows the total length is the rest of the input buffer.
+            if (type == LongHeaderType.RETRY) {
+                return PeekedHeader(
+                    type = type,
+                    version = version,
+                    dcid = ConnectionId(dcid),
+                    scid = ConnectionId(scid),
+                    totalLength = bytes.size - offset,
+                )
+            }
+            if (type == LongHeaderType.INITIAL) {
+                val tokenLenRaw = r.readVarint()
+                if (tokenLenRaw < 0L || tokenLenRaw > r.remaining.toLong()) return null
+                r.skip(tokenLenRaw.toInt())
+            }
+            val lengthRaw = r.readVarint()
+            if (lengthRaw < 0L || lengthRaw > r.remaining.toLong()) return null
+            val total = r.position - offset + lengthRaw.toInt()
             return PeekedHeader(type, version, ConnectionId(dcid), ConnectionId(scid), total)
         } catch (_: QuicCodecException) {
             return null

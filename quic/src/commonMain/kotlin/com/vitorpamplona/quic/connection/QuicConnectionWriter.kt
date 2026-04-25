@@ -61,32 +61,49 @@ fun drainOutbound(
         return packet
     }
 
-    val initialPkt = buildInitialPacket(conn, nowMillis)
-    if (initialPkt != null) parts += initialPkt
-
-    val handshakePkt = buildHandshakePacket(conn, nowMillis)
-    if (handshakePkt != null) parts += handshakePkt
-
+    // Drain destructive frame sources into local lists, ONCE.
+    val initialFrames = collectHandshakeLevelFrames(conn, EncryptionLevel.INITIAL, nowMillis)
+    val handshakeFrames = collectHandshakeLevelFrames(conn, EncryptionLevel.HANDSHAKE, nowMillis)
     val applicationPkt = buildApplicationPacket(conn, nowMillis)
-    if (applicationPkt != null) parts += applicationPkt
 
-    if (parts.isEmpty()) return null
+    val initialState = conn.initial
+    val handshakeState = conn.handshake
+    val initialHasContent = initialFrames != null && initialState.sendProtection != null
+    val handshakeHasContent = handshakeFrames != null && handshakeState.sendProtection != null
 
-    // Coalesce
+    // Build natural-size first.
+    val initialNatural = if (initialHasContent) buildLongHeaderFromFrames(conn, EncryptionLevel.INITIAL, initialFrames!!, padBytes = 0) else null
+    val handshakeNatural = if (handshakeHasContent) buildLongHeaderFromFrames(conn, EncryptionLevel.HANDSHAKE, handshakeFrames!!, padBytes = 0) else null
+
+    val firstPass = listOfNotNull(initialNatural, handshakeNatural, applicationPkt)
+    if (firstPass.isEmpty()) return null
+
+    // RFC 9000 §14.1: client datagrams containing Initial MUST pad to ≥ 1200,
+    // via PADDING frames inside the Initial's encryption envelope.
+    if (initialNatural != null) {
+        var natural = 0
+        for (p in firstPass) natural += p.size
+        if (natural < 1200) {
+            val deficit = 1200 - natural
+            // Rewind the Initial PN — we'll reissue with the same PN and the
+            // same captured frames plus padding.
+            initialState.pnSpace.rewindOutboundForRebuild()
+            val paddedInitial = buildLongHeaderFromFrames(conn, EncryptionLevel.INITIAL, initialFrames!!, padBytes = deficit)
+            return concat(listOfNotNull(paddedInitial, handshakeNatural, applicationPkt))
+        }
+    }
+    return concat(firstPass)
+}
+
+private fun concat(parts: List<ByteArray>): ByteArray {
     var totalLen = 0
     for (p in parts) totalLen += p.size
-    // Pad the datagram to 1200 bytes if it begins with an Initial packet (RFC 9000 §14).
-    if (initialPkt != null && totalLen < 1200) totalLen = 1200
     val out = ByteArray(totalLen)
     var pos = 0
     for (p in parts) {
         p.copyInto(out, pos)
         pos += p.size
     }
-    // Tail bytes are zero (PADDING frames in the encryption envelope of the last packet).
-    // Note: padding inside the last QUIC packet's encryption is the RFC-correct way; we instead
-    // pad the datagram with zero bytes after the last packet. Servers tolerate this for the
-    // datagram-level minimum size requirement.
     return out
 }
 
@@ -153,37 +170,51 @@ private fun buildLongHeaderPacket(
     )
 }
 
-private fun buildInitialPacket(
-    conn: QuicConnection,
-    nowMillis: Long,
-): ByteArray? = buildHandshakeLevelPacket(conn, EncryptionLevel.INITIAL, nowMillis)
-
-private fun buildHandshakePacket(
-    conn: QuicConnection,
-    nowMillis: Long,
-): ByteArray? = buildHandshakeLevelPacket(conn, EncryptionLevel.HANDSHAKE, nowMillis)
-
-private fun buildHandshakeLevelPacket(
+/**
+ * Drain ACK + CRYPTO frames for [level] into a fresh list. Destructive on
+ * the CRYPTO send buffer, but caller-controlled — call exactly once per
+ * outbound datagram. Returns null if there are no frames to send and the
+ * level has no protection installed.
+ */
+private fun collectHandshakeLevelFrames(
     conn: QuicConnection,
     level: EncryptionLevel,
     nowMillis: Long,
-): ByteArray? {
+): List<Frame>? {
     val state = conn.levelState(level)
-    val proto = state.sendProtection ?: return null
+    if (state.sendProtection == null) return null
     val frames = mutableListOf<Frame>()
-
-    // Pending ACK?
     state.ackTracker.buildAckFrame(nowMillis, conn.config.ackDelayExponent.toInt())?.let { frames += it }
-
-    // Pending CRYPTO?
     val cryptoChunk = state.cryptoSend.takeChunk(maxBytes = 1100)
     if (cryptoChunk != null && cryptoChunk.data.isNotEmpty()) {
         frames += CryptoFrame(cryptoChunk.offset, cryptoChunk.data)
     }
-
     if (frames.isEmpty()) return null
+    return frames
+}
 
-    val payload = encodeFrames(frames)
+/**
+ * Build a long-header packet from already-collected frames, with optional
+ * trailing PADDING (0x00) bytes inside the encryption envelope. RFC 9000
+ * §14.1 mandates this for client-Initial datagrams; PADDING is a one-byte
+ * frame so concatenating N zero bytes after the encoded frames yields N
+ * valid PADDING frames, all collapsed to nothing on decode.
+ */
+private fun buildLongHeaderFromFrames(
+    conn: QuicConnection,
+    level: EncryptionLevel,
+    frames: List<Frame>,
+    padBytes: Int,
+): ByteArray {
+    val state = conn.levelState(level)
+    val proto = state.sendProtection!!
+    val basePayload = encodeFrames(frames)
+    val payload =
+        if (padBytes > 0) {
+            ByteArray(basePayload.size + padBytes).also { basePayload.copyInto(it, 0) }
+        } else {
+            basePayload
+        }
     val pn = state.pnSpace.allocateOutbound()
     val type = if (level == EncryptionLevel.INITIAL) LongHeaderType.INITIAL else LongHeaderType.HANDSHAKE
     return LongHeaderPacket.build(

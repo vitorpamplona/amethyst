@@ -176,7 +176,9 @@ class QuicWriter(
 
     private fun ensure(more: Int) {
         if (pos + more > buf.size) {
-            var newSize = buf.size * 2
+            // coerce to a non-zero starting size so the doubling loop terminates
+            // even when initialCapacity was 0.
+            var newSize = (buf.size * 2).coerceAtLeast(8)
             while (newSize < pos + more) newSize *= 2
             buf = buf.copyOf(newSize)
         }
