@@ -42,12 +42,20 @@ import kotlin.io.path.readText
  *                                                    empty d for replaceables)
  *
  * Semantics:
- *   - An `id` tombstone unconditionally blocks re-insertion of the exact
- *     event id (matching SQLite's ExistsCheck on etag_hash).
+ *   - An `id` tombstone blocks re-insertion of the exact event id only
+ *     when the deletion's author matches the candidate event's owner —
+ *     matching SQLite's `event_tags.pubkey_hash = NEW.pubkey_owner_hash`
+ *     condition in `reject_deleted_events`. The id tombstone is therefore
+ *     stored unconditionally (so the check survives "deletion arrives
+ *     before its target") and authority is checked at lookup time via
+ *     [idTombstoneOwnerPubKey].
  *   - An `addr` tombstone holds the kind-5 `createdAt` as a cutoff. An
  *     insert is blocked iff `event.createdAt <= tombstone.createdAt`.
  *     Newer events at the same address may pass (matching SQLite's
- *     `created_at >= NEW.created_at` trigger condition).
+ *     `created_at >= NEW.created_at` trigger condition). Addr tombstones
+ *     are only installed when `addr.pubkey == deletion.author`, since
+ *     the address itself carries the owner identity (NIP-09: only the
+ *     original author may delete their addressable).
  *   - When multiple kind-5s target the same tombstone path, the one
  *     with the larger `createdAt` wins (strongest cutoff). Atomic
  *     rename swaps it in.
@@ -58,7 +66,25 @@ import kotlin.io.path.readText
 internal class FsTombstones(
     private val layout: FsLayout,
 ) {
-    fun hasIdTombstone(id: HexKey): Boolean = layout.idTombstonePath(id).exists()
+    /**
+     * Returns the kind-5 deletion's author pubkey for an id tombstone, or
+     * null if there is no tombstone (or it can't be parsed). The caller
+     * must compare this against the candidate event's owner pubkey to
+     * decide whether to honour the tombstone — a stranger's kind-5 with
+     * an `e`-tag pointing at someone else's event MUST NOT block that
+     * event from being (re-)inserted.
+     */
+    fun idTombstoneOwnerPubKey(id: HexKey): HexKey? {
+        val path = layout.idTombstonePath(id)
+        if (!path.exists()) return null
+        return try {
+            Event.fromJson(path.readText()).pubKey
+        } catch (_: java.io.IOException) {
+            null
+        } catch (_: com.fasterxml.jackson.core.JacksonException) {
+            null
+        }
+    }
 
     /** Returns the `createdAt` cutoff from the tombstone, or null if none exists. */
     fun addrTombstoneCutoff(

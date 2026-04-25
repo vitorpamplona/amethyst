@@ -35,10 +35,10 @@ Everything documented in [`../sqlite/README.md`](../sqlite/README.md):
 | SQLite feature | This store |
 |---|---|
 | Insert + retrieve by Nostr filter | ✓ |
-| Replaceable events (kinds 0, 3, 10000-19999) — newer wins, older blocked | ✓ via `replaceable/<kind>/<pubkey>.json` slot |
-| Addressable events (kinds 30000-39999) — `(kind,pubkey,d)` uniqueness | ✓ via `addressable/<kind>/<pubkey>/<sha256(d)>.json` slot |
+| Replaceable events (kinds 0, 3, 10000-19999) — newer wins, older blocked, NIP-01 lexical-id tiebreaker on equal `created_at` | ✓ via `replaceable/<kind>/<pubkey>.json` slot |
+| Addressable events (kinds 30000-39999) — `(kind,pubkey,d)` uniqueness, same NIP-01 tiebreaker | ✓ via `addressable/<kind>/<pubkey>/<sha256(d)>.json` slot |
 | Ephemeral events never stored | ✓ rejected pre-write |
-| NIP-09 deletions — by id, by address, gift-wrap by `p`-tag, blocks re-insert | ✓ via `tombstones/id/` and `tombstones/addr/` (each tombstone is a hardlink to the kind-5 event) |
+| NIP-09 deletions — by id, by address (up to deletion's `created_at`), gift-wrap by `p`-tag, only the original author's deletions take effect | ✓ via `tombstones/id/` and `tombstones/addr/` (each tombstone is a hardlink to the kind-5 event) |
 | NIP-40 expirations — reject expired-on-insert, periodic sweep | ✓ via `idx/expires_at/` index + `deleteExpiredEvents()` |
 | NIP-45 counts | ✓ same planner, just count results |
 | NIP-50 full-text search — content tokenisation, AND of tokens | ✓ via `idx/fts/<token>/` |

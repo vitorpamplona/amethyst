@@ -20,16 +20,19 @@
  */
 package com.vitorpamplona.quartz.nip01Core.store.sqlite
 
+import androidx.sqlite.SQLiteException
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.isTaggedHash
+import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class BasicTest : BaseDBTest() {
@@ -198,6 +201,121 @@ class BasicTest : BaseDBTest() {
             db.store.query<Event>(Filter(tags = mapOf("I" to listOf("geo:drt3n")))) { event ->
                 assertEquals(comment.toJson(), event.toJson())
             }
+        }
+
+    @Test
+    fun testDeleteWithEmptyFilterIsSafe() =
+        forEachDB { db ->
+            val note1 = signer.sign(TextNoteEvent.build("test1", createdAt = 1))
+            val note2 = signer.sign(TextNoteEvent.build("test2", createdAt = 2))
+
+            db.insert(note1)
+            db.insert(note2)
+
+            // Empty filter: query returns everything, but delete must NOT
+            // wipe the store. This asymmetry is intentional safe-by-default.
+            assertEquals(2, db.count(Filter()))
+            db.delete(Filter())
+
+            db.assertQuery(note1, Filter(ids = listOf(note1.id)))
+            db.assertQuery(note2, Filter(ids = listOf(note2.id)))
+
+            // Same applies to a list of empty filters.
+            db.delete(listOf(Filter(), Filter()))
+            assertEquals(2, db.count(Filter()))
+        }
+
+    @Test
+    fun testTransactionRollsBackOnException() =
+        forEachDB { db ->
+            val note1 = signer.sign(TextNoteEvent.build("kept", createdAt = 1))
+            val note2 = signer.sign(TextNoteEvent.build("rolled-back", createdAt = 2))
+
+            // Pre-existing event the test should not disturb.
+            db.insert(note1)
+            db.assertQuery(note1, Filter(ids = listOf(note1.id)))
+
+            // A user-level transaction that inserts note2 then throws should
+            // leave the DB exactly as it was before — note2 must NOT remain.
+            val sentinel = RuntimeException("boom")
+            try {
+                db.transaction {
+                    insert(note2)
+                    throw sentinel
+                }
+                error("transaction should have rethrown")
+            } catch (e: RuntimeException) {
+                kotlin.test.assertEquals(sentinel, e)
+            }
+
+            db.assertQuery(note1, Filter(ids = listOf(note1.id)))
+            db.assertQuery(null, Filter(ids = listOf(note2.id)))
+
+            // After a rollback, the DB must still accept new writes.
+            db.insert(note2)
+            db.assertQuery(note2, Filter(ids = listOf(note2.id)))
+        }
+
+    @Test
+    fun testTransactionRollsBackOnTriggerAbort() =
+        forEachDB { db ->
+            // Pre-load a target event and a deletion that blocks re-insertion.
+            val deletedTarget = signer.sign(TextNoteEvent.build("target", createdAt = 1))
+            val deletion = signer.sign(DeletionEvent.build(listOf(deletedTarget), createdAt = 100))
+            db.insert(deletion)
+            db.assertQuery(deletion, Filter(ids = listOf(deletion.id)))
+
+            val keptInThisTx = signer.sign(TextNoteEvent.build("kept-in-tx", createdAt = 2))
+
+            // A trigger ABORT in the middle of a multi-insert transaction must
+            // roll BOTH inserts back — `reject_deleted_events` only undoes its
+            // own statement, but the wrapping `connection.transaction` extension
+            // is responsible for ROLLBACK-ing the whole batch.
+            assertFailsWith<SQLiteException> {
+                db.transaction {
+                    insert(keptInThisTx)
+                    insert(deletedTarget) // blocked by reject_deleted_events
+                }
+            }
+
+            db.assertQuery(null, Filter(ids = listOf(keptInThisTx.id)))
+            db.assertQuery(null, Filter(ids = listOf(deletedTarget.id)))
+            // The deletion stored before the failed transaction must remain.
+            db.assertQuery(deletion, Filter(ids = listOf(deletion.id)))
+        }
+
+    @Test
+    fun testVacuumAndAnalyseSmoke() =
+        forEachDB { db ->
+            // Smoke test: VACUUM and ANALYZE must not throw on a populated DB
+            // and must leave existing rows intact. Also catches the comments
+            // for these two functions getting swapped again.
+            val note = signer.sign(TextNoteEvent.build("vacuum me"))
+            db.insert(note)
+
+            db.store.analyse()
+            db.store.vacuum()
+
+            db.assertQuery(note, Filter(ids = listOf(note.id)))
+        }
+
+    @Test
+    fun testSchemaRecreateIsIdempotent() =
+        forEachDB { db ->
+            // The v1->v2 upgrade in SQLiteEventStore.onUpgrade does
+            // modules.reversed().forEach { it.drop(db) } then
+            // modules.forEach { it.create(db) }. Pre-fix, FullTextSearchModule
+            // left dummy_fts3/4/5 tables behind on first probe, so the
+            // second create() would throw "already exists".
+            db.store.modules
+                .reversed()
+                .forEach { it.drop(db.store.connection) }
+            db.store.modules.forEach { it.create(db.store.connection) }
+
+            // After re-creation the store is still usable.
+            val note = signer.sign(TextNoteEvent.build("test1"))
+            db.store.insertEvent(note)
+            db.store.assertQuery(note, Filter(ids = listOf(note.id)))
         }
 
     @Test

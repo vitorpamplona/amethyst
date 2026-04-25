@@ -93,11 +93,17 @@ internal class FsIndexer(
         }
     }
 
-    fun ownerHash(event: Event): Long =
+    fun ownerHash(event: Event): Long = hasher.hash(ownerPubKey(event))
+
+    /**
+     * Pubkey-form counterpart of [ownerHash]. Same SQLite parity rule —
+     * recipient (p-tag) for GiftWraps, sender pubkey otherwise.
+     */
+    fun ownerPubKey(event: Event): String =
         if (event is GiftWrapEvent) {
-            event.recipientPubKey()?.let { hasher.hash(it) } ?: hasher.hash(event.pubKey)
+            event.recipientPubKey() ?: event.pubKey
         } else {
-            hasher.hash(event.pubKey)
+            event.pubKey
         }
 
     private fun createLink(

@@ -60,7 +60,7 @@ class SqlSelectionBuilder(
 
             is Condition.NotEquals -> {
                 if (cond.value == null) {
-                    "${cond.column} IS NULL"
+                    "${cond.column} IS NOT NULL"
                 } else {
                     selectionArgs.add(cond.value.toString())
                     "${cond.column} != ?"

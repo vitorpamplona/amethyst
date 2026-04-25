@@ -70,6 +70,37 @@ class RightToVanishTest : BaseDBTest() {
         }
 
     @Test
+    fun testVanishForDifferentRelayIsNoOp() =
+        forEachDB { db ->
+            // The default EventStore is bound to wss://quartz.local. A vanish
+            // request that names a *different* relay must not delete the
+            // user's events on this relay — RightToVanishModule.insert checks
+            // shouldVanishFrom(relay) and returns without writing event_vanish.
+            val time = TimeUtils.now()
+            val note = signer.sign(TextNoteEvent.build("kept", createdAt = time))
+            db.insert(note)
+            db.assertQuery(note, Filter(ids = listOf(note.id)))
+
+            val vanishElsewhere =
+                signer.sign(
+                    RequestToVanishEvent.build(
+                        "wss://some-other-relay.example".normalizeRelayUrl(),
+                        createdAt = time + 1,
+                    ),
+                )
+            db.insert(vanishElsewhere)
+
+            // The vanish event itself is stored, but it must not delete
+            // events from this relay nor block re-insertion of new ones.
+            db.assertQuery(vanishElsewhere, Filter(ids = listOf(vanishElsewhere.id)))
+            db.assertQuery(note, Filter(ids = listOf(note.id)))
+
+            val newNote = signer.sign(TextNoteEvent.build("still accepted", createdAt = time + 2))
+            db.insert(newNote)
+            db.assertQuery(newNote, Filter(ids = listOf(newNote.id)))
+        }
+
+    @Test
     fun testInsertDeleteGiftWrap() =
         forEachDB { db ->
             val time = TimeUtils.now()

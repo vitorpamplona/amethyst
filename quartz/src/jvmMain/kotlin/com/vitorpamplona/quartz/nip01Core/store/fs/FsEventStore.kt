@@ -111,10 +111,16 @@ open class FsEventStore(
 
         val slot = slots.slotPathFor(event)
         val existingSlot = slot?.let { slots.readSlot(it) }
-        if (existingSlot != null && existingSlot.createdAt >= event.createdAt) {
-            // Newer or equal-timestamp version already owns this slot.
-            // Matches ReplaceableModule / AddressableModule blocking
-            // behaviour in SQLite.
+        if (existingSlot != null &&
+            (
+                existingSlot.createdAt > event.createdAt ||
+                    (existingSlot.createdAt == event.createdAt && existingSlot.id <= event.id)
+            )
+        ) {
+            // Existing slot winner outranks the incoming event under NIP-01
+            // (later createdAt, or same createdAt with the lexically smaller
+            // id). Matches the ReplaceableModule / AddressableModule trigger
+            // condition in SQLite.
             return
         }
 
@@ -178,12 +184,17 @@ open class FsEventStore(
 
     /**
      * NIP-09 pre-insert guard. Parity with SQLite's `reject_deleted_events`
-     * BEFORE INSERT trigger: id-scoped tombstones always block; address-
-     * scoped tombstones block when the existing cutoff is `>=` the new
-     * event's createdAt.
+     * BEFORE INSERT trigger: id and addr tombstones only block when the
+     * deletion's author matches the candidate event's owner pubkey —
+     * SQLite checks `event_tags.pubkey_hash = NEW.pubkey_owner_hash`. For
+     * GiftWraps the owner is the recipient (p-tag), matching `pubkey_
+     * owner_hash`. Addr tombstones additionally enforce the
+     * `event.createdAt <= cutoff` window.
      */
     private fun isBlockedByTombstone(event: Event): Boolean {
-        if (tombstones.hasIdTombstone(event.id)) return true
+        val ownerPubKey = indexer.ownerPubKey(event)
+        val tombstoneAuthor = tombstones.idTombstoneOwnerPubKey(event.id)
+        if (tombstoneAuthor != null && tombstoneAuthor == ownerPubKey) return true
         if (event is AddressableEvent && event.kind.isAddressable()) {
             val cutoff = tombstones.addrTombstoneCutoff(event.kind, event.pubKey, event.dTag())
             if (cutoff != null && event.createdAt <= cutoff) return true
@@ -227,22 +238,25 @@ open class FsEventStore(
         }
 
         for (addr in deletion.deleteAddresses()) {
-            // Cascade is only honoured when the address's author matches
-            // the deletion author — matching SQLite's WHERE pubkey = ?.
-            if (addr.pubKeyHex == deletion.pubKey) {
-                val slot =
-                    when {
-                        addr.kind.isReplaceable() -> layout.replaceableSlot(addr.kind, addr.pubKeyHex)
-                        addr.kind.isAddressable() -> layout.addressableSlot(addr.kind, addr.pubKeyHex, addr.dTag)
-                        else -> null
-                    }
-                if (slot != null) {
-                    val winner = slots.readSlot(slot)
-                    if (winner != null && winner.createdAt <= deletion.createdAt) {
-                        indexer.unlink(winner)
-                        layout.canonical(winner.id).deleteIfExists()
-                        slots.clear(slot)
-                    }
+            // Per NIP-09 only the original author can delete their own
+            // addressable. If the deletion's author doesn't own the
+            // address, ignore both the cascade AND the tombstone install
+            // — otherwise a stranger's stray `a`-tag would block the
+            // legitimate owner from re-publishing.
+            if (addr.pubKeyHex != deletion.pubKey) continue
+
+            val slot =
+                when {
+                    addr.kind.isReplaceable() -> layout.replaceableSlot(addr.kind, addr.pubKeyHex)
+                    addr.kind.isAddressable() -> layout.addressableSlot(addr.kind, addr.pubKeyHex, addr.dTag)
+                    else -> null
+                }
+            if (slot != null) {
+                val winner = slots.readSlot(slot)
+                if (winner != null && winner.createdAt <= deletion.createdAt) {
+                    indexer.unlink(winner)
+                    layout.canonical(winner.id).deleteIfExists()
+                    slots.clear(slot)
                 }
             }
             tombstones.installAddr(addr.kind, addr.pubKeyHex, addr.dTag, deletion, deletionCanonical)
@@ -323,17 +337,27 @@ open class FsEventStore(
     // Delete
     // ------------------------------------------------------------------
 
+    /**
+     * Safe-by-default: an empty filter (or a list of only empty filters)
+     * deletes nothing, so a stray `delete(Filter())` cannot wipe the
+     * entire store. This is asymmetric with `query(Filter())` which
+     * intentionally returns every event — same contract as `SQLiteEventStore`.
+     */
     override fun delete(filter: Filter) =
         lockManager.withWriteLock {
+            if (filter.isEmpty()) return@withWriteLock
             val ids = ArrayList<HexKey>()
             query<Event>(filter) { ids.add(it.id) }
             ids.forEach { deleteLocked(it) }
         }
 
+    /** See [delete] for the empty-filter contract. */
     override fun delete(filters: List<Filter>) =
         lockManager.withWriteLock {
+            val nonEmpty = filters.filterNot { it.isEmpty() }
+            if (nonEmpty.isEmpty()) return@withWriteLock
             val ids = HashSet<HexKey>()
-            query<Event>(filters) { ids.add(it.id) }
+            query<Event>(nonEmpty) { ids.add(it.id) }
             ids.forEach { deleteLocked(it) }
         }
 
