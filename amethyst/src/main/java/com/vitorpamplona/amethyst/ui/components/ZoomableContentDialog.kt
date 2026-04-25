@@ -274,15 +274,22 @@ private fun DialogContent(
                     .graphicsLayer {
                         val src = sourceBounds
                         val img = imageBounds
-                        if (src != null && img != null && img.width > 0f && img.height > 0f) {
+                        if (src != null && img != null &&
+                            src.width > 0f && src.height > 0f &&
+                            img.width > 0f && img.height > 0f
+                        ) {
                             transformOrigin = TransformOrigin(0f, 0f)
-                            val startScaleX = src.width / img.width
-                            val startScaleY = src.height / img.height
+                            // Uniform scale so non-square images keep their aspect ratio during
+                            // the grow animation. max() so the image covers the source rect in
+                            // at least one dimension; the other overflows centered on the tap.
+                            val startScale = maxOf(src.width / img.width, src.height / img.height)
+                            val srcCenter = src.center
+                            val imgCenter = img.center
                             val p = progress()
-                            scaleX = lerp(startScaleX, 1f, p)
-                            scaleY = lerp(startScaleY, 1f, p)
-                            translationX = lerp(src.left - img.left * startScaleX, 0f, p)
-                            translationY = lerp(src.top - img.top * startScaleY, 0f, p)
+                            scaleX = lerp(startScale, 1f, p)
+                            scaleY = lerp(startScale, 1f, p)
+                            translationX = lerp(srcCenter.x - startScale * imgCenter.x, 0f, p)
+                            translationY = lerp(srcCenter.y - startScale * imgCenter.y, 0f, p)
                         } else {
                             // No source bounds: fall back to a plain fade.
                             alpha = progress()
