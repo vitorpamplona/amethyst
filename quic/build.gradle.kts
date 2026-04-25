@@ -99,3 +99,28 @@ kotlin {
         }
     }
 }
+
+/**
+ * Run the live-interop runner against a real QUIC server. Configure target
+ * via -PinteropHost=… -PinteropPort=… -PinteropTimeoutSec=…
+ *
+ * Usage:
+ *   ./gradlew :quic:interop -PinteropHost=127.0.0.1 -PinteropPort=4433
+ */
+tasks.register<JavaExec>("interop") {
+    group = "verification"
+    description = "Drive QuicConnection against a real QUIC server (default 127.0.0.1:4433)."
+    dependsOn("jvmTestClasses", "jvmJar")
+    classpath =
+        files(
+            tasks.named("jvmJar"),
+            configurations.named("jvmTestRuntimeClasspath"),
+            layout.buildDirectory.dir("classes/kotlin/jvm/test"),
+        )
+    mainClass.set("com.vitorpamplona.quic.interop.InteropRunnerKt")
+    val host = (project.findProperty("interopHost") as? String) ?: "127.0.0.1"
+    val port = (project.findProperty("interopPort") as? String) ?: "4433"
+    val timeoutSec = (project.findProperty("interopTimeoutSec") as? String) ?: "10"
+    args(host, port)
+    systemProperty("interopTimeoutSec", timeoutSec)
+}
