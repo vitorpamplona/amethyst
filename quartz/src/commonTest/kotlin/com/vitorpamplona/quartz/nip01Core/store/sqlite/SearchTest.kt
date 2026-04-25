@@ -22,11 +22,16 @@ package com.vitorpamplona.quartz.nip01Core.store.sqlite
 
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.test.Test
 
 class SearchTest : BaseDBTest() {
+    val signer = NostrSignerSync()
+
     companion object {
         val profile =
             MetadataEvent(
@@ -88,5 +93,40 @@ class SearchTest : BaseDBTest() {
 
             db.assertQuery(comment, Filter(search = "testing"))
             db.assertQuery(comment, Filter(kinds = listOf(CommentEvent.KIND), search = "testing"))
+        }
+
+    @Test
+    fun testFtsCleanedUpAfterReplaceableRotation() =
+        forEachDB { db ->
+            // The fts_foreign_key trigger fires on event_headers DELETE, so
+            // when an addressable is superseded its FTS row should also be
+            // removed. Otherwise stale content would keep matching searches.
+            val time = TimeUtils.now()
+            val v1 =
+                signer.sign(
+                    LongTextNoteEvent.build(
+                        "first version uniqalpha",
+                        title = "blog title",
+                        dTag = "fts-rotation",
+                        createdAt = time,
+                    ),
+                )
+            val v2 =
+                signer.sign(
+                    LongTextNoteEvent.build(
+                        "second version uniqbeta",
+                        title = "blog title",
+                        dTag = "fts-rotation",
+                        createdAt = time + 1,
+                    ),
+                )
+
+            db.store.insertEvent(v1)
+            db.assertQuery(v1, Filter(search = "uniqalpha"))
+
+            db.store.insertEvent(v2)
+            // v1's FTS row must be gone; v2's content takes over.
+            db.assertQuery(null, Filter(search = "uniqalpha"))
+            db.assertQuery(v2, Filter(search = "uniqbeta"))
         }
 }

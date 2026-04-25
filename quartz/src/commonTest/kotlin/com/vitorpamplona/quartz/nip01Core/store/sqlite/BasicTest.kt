@@ -20,16 +20,19 @@
  */
 package com.vitorpamplona.quartz.nip01Core.store.sqlite
 
+import androidx.sqlite.SQLiteException
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.isTaggedHash
+import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class BasicTest : BaseDBTest() {
@@ -251,6 +254,49 @@ class BasicTest : BaseDBTest() {
             // After a rollback, the DB must still accept new writes.
             db.insert(note2)
             db.assertQuery(note2, Filter(ids = listOf(note2.id)))
+        }
+
+    @Test
+    fun testTransactionRollsBackOnTriggerAbort() =
+        forEachDB { db ->
+            // Pre-load a target event and a deletion that blocks re-insertion.
+            val deletedTarget = signer.sign(TextNoteEvent.build("target", createdAt = 1))
+            val deletion = signer.sign(DeletionEvent.build(listOf(deletedTarget), createdAt = 100))
+            db.insert(deletion)
+            db.assertQuery(deletion, Filter(ids = listOf(deletion.id)))
+
+            val keptInThisTx = signer.sign(TextNoteEvent.build("kept-in-tx", createdAt = 2))
+
+            // A trigger ABORT in the middle of a multi-insert transaction must
+            // roll BOTH inserts back — `reject_deleted_events` only undoes its
+            // own statement, but the wrapping `connection.transaction` extension
+            // is responsible for ROLLBACK-ing the whole batch.
+            assertFailsWith<SQLiteException> {
+                db.transaction {
+                    insert(keptInThisTx)
+                    insert(deletedTarget) // blocked by reject_deleted_events
+                }
+            }
+
+            db.assertQuery(null, Filter(ids = listOf(keptInThisTx.id)))
+            db.assertQuery(null, Filter(ids = listOf(deletedTarget.id)))
+            // The deletion stored before the failed transaction must remain.
+            db.assertQuery(deletion, Filter(ids = listOf(deletion.id)))
+        }
+
+    @Test
+    fun testVacuumAndAnalyseSmoke() =
+        forEachDB { db ->
+            // Smoke test: VACUUM and ANALYZE must not throw on a populated DB
+            // and must leave existing rows intact. Also catches the comments
+            // for these two functions getting swapped again.
+            val note = signer.sign(TextNoteEvent.build("vacuum me"))
+            db.insert(note)
+
+            db.store.analyse()
+            db.store.vacuum()
+
+            db.assertQuery(note, Filter(ids = listOf(note.id)))
         }
 
     @Test
