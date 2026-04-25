@@ -49,7 +49,9 @@
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">Ön nyilvános kulcsot használ, és a nyilvános kulccsal csak olvashatóak a bejegyzések. Jelentkezzen be a privát kulcsával, hogy meg tudja tolni a bejegyzéseket</string>
     <string name="login_with_a_private_key_to_like_posts">Ön nyilvános kulcsot használ, és a nyilvános kulcsok csak olvashatóak. Jelentkezzen be a privát kulccsal a hozzászólások kedveléséhez</string>
     <string name="no_zap_amount_setup_long_press_to_change">Nincs beállítva Zap-összeg. Koppintson hosszan a beállításhoz</string>
+    <string name="chat_zap_amount_suffix">%1$s satot küldött</string>
     <string name="chat_zap_anonymous">Névtelen</string>
+    <string name="chat_raid_is_raiding">raidet indít</string>
     <string name="chat_clip_created_a_clip">létrehozott egy klippet</string>
     <string name="login_with_a_private_key_to_be_able_to_send_zaps">Ön nyilvános kulcsot használ, és a nyilvános kulccsal csak olvashatók a bejegyzések. Jelentkezzen be a privát kulcsával, hogy Zap-et tudjon küldeni</string>
     <string name="login_with_a_private_key_to_be_able_to_follow">Ön nyilvános kulcsot használ, és a nyilvános kulccsal csak olvashatóak a bejegyzések. Jelentkezzen be a privát kulcsával, hogy követni tudjon embereket</string>
@@ -457,7 +459,10 @@
     <string name="follow_packs">Követési csomagok</string>
     <string name="live_streams">Élő közvetítések</string>
     <string name="audio_rooms">Hangszobák</string>
+    <string name="audio_room_stage">Állapot</string>
     <string name="audio_room_audience">Közönség</string>
+    <string name="audio_room_raise_hand">Kéz felemelése</string>
+    <string name="audio_room_lower_hand">Kéz leengedése</string>
     <string name="longs">Videók</string>
     <string name="articles">Cikkek</string>
     <string name="private_bookmarks">Privát könyvjelzők</string>
@@ -771,6 +776,15 @@
     <string name="app_notification_chess_challenge_accepted">%1$s elfogadta az Ön sakk-kihívását</string>
     <string name="app_notification_chess_your_turn">%1$s lépett - Ön következik</string>
     <string name="app_notification_chess_summary">Sakkfrissítések</string>
+    <string name="app_notification_replies_channel_name">Válaszok</string>
+    <string name="app_notification_replies_channel_description">Értesítés, amikor valaki válaszol az egyik bejegyzésre</string>
+    <string name="app_notification_replies_channel_message">%1$s válaszolt</string>
+    <string name="app_notification_replies_channel_message_for">ekkor: %1$s</string>
+    <string name="app_notification_replies_summary">Új válaszok</string>
+    <string name="app_notification_mentions_channel_name">Említések</string>
+    <string name="app_notification_mentions_channel_description">Értesítés, ha valaki megemlíti vagy hivatkozik Önre egy bejegyzésben</string>
+    <string name="app_notification_mentions_channel_message">%1$s megemlítette Önt</string>
+    <string name="app_notification_mentions_summary">Új említések</string>
     <!-- Call notifications and UI -->
     <string name="app_notification_calls_channel_name">Bejövő hívások</string>
     <string name="app_notification_calls_channel_description">Értesítések a bejövő hang- és videóhívásokhoz</string>
@@ -993,7 +1007,12 @@
     <string name="account_settings">Fiókbeállítások</string>
     <string name="app_settings">Alkalmazásbeállítások</string>
     <string name="danger_zone">Kritikus beállítások</string>
+    <string name="reset_marmot_state">Marmot-állapot visszaállítása</string>
+    <string name="reset_marmot_confirm_title">Visszaállítja a Marmot-állapotot?</string>
+    <string name="reset_marmot_confirm_body">Ez a művelet véglegesen töröl minden Marmot csoportos csevegést, üzenetelőzményt és MLS-kulcsot ezen az eszközön a jelenlegi fiókhoz. A partnerek nem kapnak erről értesítést, és a következő véglegesítésükig továbbra is láthatják Önt a csoportokban. Ez a művelet nem vonható vissza. Egy új kulcscsomag lesz közzétéve az alkalmazás következő szinkronizálásakor.</string>
     <string name="reset_marmot_confirm_action">Visszaállítás</string>
+    <string name="reset_marmot_success">Marmot-állapot visszaállítva.</string>
+    <string name="reset_marmot_failure">Nem sikerült visszaállítani a Marmot-állapotot: %1$s</string>
     <string name="connectivity_type_always">Mindig</string>
     <string name="connectivity_type_wifi_only">Csak Wi-Fi-n</string>
     <string name="connectivity_type_unmetered_wifi_only">Korlátlan Wi-Fi</string>
@@ -2212,6 +2231,7 @@
     <string name="my_emoji_list_title">Saját emodzsilista</string>
     <string name="my_emoji_list_explainer">Kiválasztott listához hozzáadott emodzsicsomagok (NIP-51 típus 10030)</string>
     <string name="my_emoji_list_empty">Még nincsenek emodzsicsomagok a listán</string>
+    <string name="my_emoji_list_by_author">%1$s által</string>
     <string name="add_emoji_fab">Emodzsi hozzáadása</string>
     <string name="emoji_add_dialog_title">Egyéni emodzsi hozzáadása</string>
     <string name="emoji_remove_dialog_title">%1$s eltávolítása:?</string>
@@ -2226,4 +2246,5 @@
     <string name="emoji_private_badge">Privát emodzsi</string>
     <string name="emoji_public_explainer">A nyilvános emodzsik mindenki számára láthatók, és megjelennek a reakciómenüben, valamint a „:” automatikus kiegészítő listájában, ha ez a csomag szerepel az emodzsilistában.</string>
     <string name="emoji_private_explainer">A privát emodzsik titkosítva kerülnek tárolásra az átjátszókon, és csak Önnek láthatók. Ugyanúgy megjelennek a reakciómenüben és a „:” automatikus kiegészítésben, mint a nyilvánosak.</string>
+    <string name="gif">Gif</string>
 </resources>

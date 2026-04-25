@@ -777,6 +777,15 @@ anz der Bedingungen ist erforderlich</string>
     <string name="app_notification_chess_challenge_accepted">%1$s hat deine Schachherausforderung angenommen</string>
     <string name="app_notification_chess_your_turn">%1$s hat gezogen — du bist dran</string>
     <string name="app_notification_chess_summary">Schach-Updates</string>
+    <string name="app_notification_replies_channel_name">Antworten</string>
+    <string name="app_notification_replies_channel_description">Benachrichtigt dich, wenn jemand auf deinen Beitrag antwortet</string>
+    <string name="app_notification_replies_channel_message">%1$s hat geantwortet</string>
+    <string name="app_notification_replies_channel_message_for">auf: %1$s</string>
+    <string name="app_notification_replies_summary">Neue Antworten</string>
+    <string name="app_notification_mentions_channel_name">Erwähnungen</string>
+    <string name="app_notification_mentions_channel_description">Benachrichtigt dich, wenn dich jemand in einem Beitrag erwähnt oder zitiert</string>
+    <string name="app_notification_mentions_channel_message">%1$s hat dich erwähnt</string>
+    <string name="app_notification_mentions_summary">Neue Erwähnungen</string>
     <!-- Call notifications and UI -->
     <string name="app_notification_calls_channel_name">Eingehende Anrufe</string>
     <string name="app_notification_calls_channel_description">Benachrichtigungen für eingehende Sprach- und Videoanrufe</string>
@@ -999,6 +1008,12 @@ anz der Bedingungen ist erforderlich</string>
     <string name="account_settings">Kontoeinstellungen</string>
     <string name="app_settings">App-Einstellungen</string>
     <string name="danger_zone">Gefahrenzone</string>
+    <string name="reset_marmot_state">Marmot-Status zurücksetzen</string>
+    <string name="reset_marmot_confirm_title">Marmot-Status zurücksetzen?</string>
+    <string name="reset_marmot_confirm_body">Dadurch werden alle Marmot-Gruppenchats, der Nachrichtenverlauf und alle MLS-Schlüssel auf diesem Gerät für das aktuelle Konto dauerhaft gelöscht. Andere Teilnehmer werden nicht benachrichtigt und können dich bis zu ihrem nächsten Commit weiterhin in Gruppen sehen. Dies kann nicht rückgängig gemacht werden. Beim nächsten Synchronisieren der App wird ein neues KeyPackage veröffentlicht.</string>
+    <string name="reset_marmot_confirm_action">Zurücksetzen</string>
+    <string name="reset_marmot_success">Marmot-Status zurückgesetzt.</string>
+    <string name="reset_marmot_failure">Marmot-Status konnte nicht zurückgesetzt werden: %1$s</string>
     <string name="connectivity_type_always">Immer</string>
     <string name="connectivity_type_wifi_only">Nur WLAN</string>
     <string name="connectivity_type_unmetered_wifi_only">Unbegrenztes WLAN</string>
@@ -2231,20 +2246,4 @@ anz der Bedingungen ist erforderlich</string>
     <string name="emoji_private_badge">Privates Emoji</string>
     <string name="emoji_public_explainer">Öffentliche Emojis sind für alle sichtbar und erscheinen in deinem Reaktionsmenü und in der \":\"-Autovervollständigungsauswahl, wenn dieses Paket in deiner Emoji-Liste ist.</string>
     <string name="emoji_private_explainer">Private Emojis werden verschlüsselt auf Relays gespeichert und sind nur für dich sichtbar. Sie erscheinen in deinem Reaktionsmenü und in der \":\"-Autovervollständigung wie öffentliche.</string>
-    <string name="app_notification_mentions_channel_description">Benachrichtigt dich, wenn dich jemand in einem Beitrag erwähnt oder zitiert</string>
-    <string name="app_notification_mentions_channel_message">%1$s hat dich erwähnt</string>
-    <string name="app_notification_mentions_channel_name">Erwähnungen</string>
-    <string name="app_notification_mentions_summary">Neue Erwähnungen</string>
-    <string name="app_notification_replies_channel_description">Benachrichtigt dich, wenn jemand auf deinen Beitrag antwortet</string>
-    <string name="app_notification_replies_channel_message">%1$s hat geantwortet</string>
-    <string name="app_notification_replies_channel_message_for">auf: %1$s</string>
-    <string name="app_notification_replies_channel_name">Antworten</string>
-    <string name="app_notification_replies_summary">Neue Antworten</string>
-    <string name="gif">Gif</string>
-    <string name="reset_marmot_confirm_action">Zurücksetzen</string>
-    <string name="reset_marmot_confirm_body">Dadurch werden alle Marmot-Gruppenchats, der Nachrichtenverlauf und alle MLS-Schlüssel auf diesem Gerät für das aktuelle Konto dauerhaft gelöscht. Andere Teilnehmer werden nicht benachrichtigt und können dich bis zu ihrem nächsten Commit weiterhin in Gruppen sehen. Dies kann nicht rückgängig gemacht werden. Beim nächsten Synchronisieren der App wird ein neues KeyPackage veröffentlicht.</string>
-    <string name="reset_marmot_confirm_title">Marmot-Status zurücksetzen?</string>
-    <string name="reset_marmot_failure">Marmot-Status konnte nicht zurückgesetzt werden: %1$s</string>
-    <string name="reset_marmot_state">Marmot-Status zurücksetzen</string>
-    <string name="reset_marmot_success">Marmot-Status zurückgesetzt.</string>
 </resources>
