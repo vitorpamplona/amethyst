@@ -71,6 +71,23 @@ class SecretTree(
 
         /** Maximum consumed generation entries to track per sender before pruning. */
         const val MAX_CONSUMED_GENERATIONS_PER_SENDER = 1000
+
+        /**
+         * Hard cap on how many ratchet steps a single decrypt request may
+         * fast-forward through. Without this an attacker who can deliver a
+         * single PrivateMessage with a forged `generation` field can force
+         * the receiver into ~`generation` HKDF-Expand steps — trivially
+         * many seconds of CPU per packet. The skipped-key cache itself
+         * stops at [MAX_SKIPPED_KEYS] entries, but the ratchet keeps
+         * advancing past that point, so the cache cap doesn't bound
+         * compute cost.
+         *
+         * 4096 leaves room for a realistic application/handshake gap
+         * (e.g. mobile catching up after a long sleep) while making the
+         * attack worst-case ~4096 SHA-256 invocations — bounded enough
+         * that the receiver stays responsive.
+         */
+        const val MAX_RATCHET_STEPS_PER_CALL = 4096
     }
 
     /**
@@ -149,6 +166,15 @@ class SecretTree(
         require(generation >= state.applicationGeneration) {
             "Generation $generation already consumed (current: ${state.applicationGeneration})"
         }
+        // DoS guard: a malicious sender can put any uint32 in the
+        // PrivateMessage generation field, and without this cap a single
+        // packet would force unbounded HKDF-Expand work. See
+        // MAX_RATCHET_STEPS_PER_CALL.
+        require(generation - state.applicationGeneration <= MAX_RATCHET_STEPS_PER_CALL) {
+            "Application generation jump too large: " +
+                "${generation - state.applicationGeneration} steps (cap $MAX_RATCHET_STEPS_PER_CALL); " +
+                "sender $leafIndex from ${state.applicationGeneration} to $generation"
+        }
 
         // Replay detection: reject if this (sender, generation) was already used
         val senderConsumed = consumedGenerations.getOrPut(leafIndex) { mutableSetOf() }
@@ -218,6 +244,11 @@ class SecretTree(
 
         require(generation >= state.handshakeGeneration) {
             "Handshake generation $generation already consumed (current: ${state.handshakeGeneration})"
+        }
+        require(generation - state.handshakeGeneration <= MAX_RATCHET_STEPS_PER_CALL) {
+            "Handshake generation jump too large: " +
+                "${generation - state.handshakeGeneration} steps (cap $MAX_RATCHET_STEPS_PER_CALL); " +
+                "sender $leafIndex from ${state.handshakeGeneration} to $generation"
         }
 
         val senderConsumed = consumedHandshakeGenerations.getOrPut(leafIndex) { mutableSetOf() }

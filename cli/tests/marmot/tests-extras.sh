@@ -55,8 +55,26 @@ test_09_reply_react_unreact() {
     record_result "$id" fail "amy marmot message react failed"; return
   fi
 
-  # Round-trip: B should surface amy's kind:7 reaction in its messages stream.
-  if wait_for_message B "$mls_gid" "🍕" 90; then
+  # Round-trip: B should surface amy's kind:7 reaction. wn aggregates
+  # reactions onto the anchor message (`.reactions.by_emoji[<emoji>]`),
+  # not as a standalone entry whose `.content` is the emoji — so polling
+  # `messages list` for an entry whose content equals "🍕" would never
+  # match, even when the reaction was successfully decrypted. Look for
+  # the emoji under any message's `reactions.by_emoji` keys instead.
+  local deadline=$(( $(date +%s) + 90 )) saw=0
+  while [[ $(date +%s) -lt $deadline ]]; do
+    local payload
+    payload=$(wn_b_json messages list "$mls_gid" --limit 50 2>/dev/null || true)
+    if [[ -n "$payload" ]] && \
+         printf '%s' "$payload" \
+           | jq -e '(.result // .) | .[]? | (.reactions.by_emoji // {}) | keys[]?' \
+                  2>/dev/null \
+           | grep -qF '"🍕"'; then
+      saw=1; break
+    fi
+    sleep 3
+  done
+  if [[ "$saw" -eq 1 ]]; then
     record_result "$id" pass
   else
     record_result "$id" fail "B didn't receive amy's reaction"
@@ -89,7 +107,10 @@ test_10_concurrent_commits() {
 
   sleep 10
   local b_name
-  b_name=$(wn_b --json groups show "$mls_gid" 2>/dev/null | jq -r '(.result // .) | .name // empty')
+  # whitenoise-rs ≥ v0.2.x wraps the group payload one level deeper as
+  # `{"result": {"group": {…name…}}}`; the older shape was a bare group
+  # object under `.result`. Accept both.
+  b_name=$(wn_b --json groups show "$mls_gid" 2>/dev/null | jq -r '(.result // .) | (.group // .) | .name // empty')
   local a_name
   a_name=$(amy_field '.name' marmot group show "$gid" 2>/dev/null || echo "")
 
@@ -237,12 +258,24 @@ test_14_wn_removes_a() {
 
   # Amy should observe that she's no longer a member. `group show` returns
   # a not_member error as soon as the Remove commit is applied locally.
+  #
+  # The amy CLI contract puts error JSON on stderr (README: "stdout is
+  # JSON … stderr is for humans"), but stderr is interleaved with debug
+  # logs from `Log.d(…)` calls in quartz, so feeding the captured stream
+  # straight into `jq` fails to parse. Capture stderr alongside stdout
+  # via `2>&1` and grep for the `"error":"not_member"` literal — that
+  # signature is unambiguous (the debug log lines never produce JSON).
+  # Also tee the per-iteration capture into $LOG_FILE so post-mortem
+  # logs include each polling sync's `[cli] ingest …` trace, mirroring
+  # what amy_json normally writes when stderr isn't being captured.
   local deadline=$(( $(date +%s) + 120 )) removed=0
   while [[ $(date +%s) -lt $deadline ]]; do
     local show rc
-    show=$(amy_json marmot group show "$a_gid" 2>&1)
+    show=$("$AMY_BIN" --data-dir "$A_DIR" --secret-backend plaintext \
+              marmot group show "$a_gid" 2>&1)
     rc=$?
-    if [[ $rc -ne 0 ]] && printf '%s' "$show" | jq -e '.error == "not_member"' >/dev/null 2>&1; then
+    printf '%s\n' "$show" >>"$LOG_FILE"
+    if [[ $rc -ne 0 ]] && printf '%s' "$show" | grep -qE '"error":[[:space:]]*"not_member"'; then
       removed=1; break
     fi
     sleep 3

@@ -35,6 +35,84 @@ application {
     applicationName = "amy"
 }
 
+// Inject `LANG=C.UTF-8` (and the matching Windows code page) into the
+// launcher scripts when `LANG`/`LC_ALL` aren't already set. Without this,
+// running amy under a POSIX/C locale leaves `sun.jnu.encoding` as
+// `ANSI_X3.4-1968` (i.e. ASCII) — JEP 400 pins `file.encoding` to UTF-8
+// but deliberately leaves `sun.jnu.encoding` tied to the OS locale, and
+// it's read by the JVM *before* any `-D` flag has a chance to apply. So
+// `-Dsun.jnu.encoding=UTF-8` does nothing; the encoding has to be set in
+// the environment that launches Java.
+//
+// The symptom this fixes: `marmot message react "$gid" "$id" "🍕"` —
+// the shell hands the four UTF-8 bytes (F0 9F 8D 95) to the JVM, the
+// JVM decodes each one as ASCII (every byte > 0x7F → U+FFFD), and amy
+// then signs a kind:7 whose `content` is four replacement characters.
+// Whitenoise rejects it with "Invalid reaction content".
+val patchAmyLauncherCharset by tasks.registering {
+    val appName = application.applicationName
+    val startScriptsTask = tasks.named("startScripts")
+    dependsOn(startScriptsTask)
+    // Patch the scripts at their source location so installDist (and any
+    // downstream packaging like jpackage) copies the patched copies.
+    doLast {
+        val unixScript = layout.buildDirectory.file("scripts/$appName").get().asFile
+        if (unixScript.exists()) {
+            val text = unixScript.readText()
+            val marker = "# Default LANG to UTF-8 so the JVM picks UTF-8 for sun.jnu.encoding"
+            if (!text.contains(marker)) {
+                // Build the snippet with explicit literal `$` characters to avoid
+                // regex-replacement-string escapes when we splice it in.
+                val injected = buildString {
+                    append("\n")
+                    append(marker).append("\n")
+                    append("# (POSIX/C locales force ANSI_X3.4-1968, which mangles non-ASCII argv).\n")
+                    append("if [ -z \"")
+                    append("$").append("{LANG-}").append("$").append("{LC_ALL-}")
+                    append("\" ]; then\n")
+                    append("    export LANG=C.UTF-8\n")
+                    append("fi\n")
+                }
+                // Insert right after the shebang. Use indexOf+substring instead
+                // of regex replaceFirst so the `$` chars in `injected` aren't
+                // mistaken for backreferences.
+                val nl = text.indexOf('\n')
+                val patched =
+                    if (nl >= 0 && text.startsWith("#!")) {
+                        text.substring(0, nl + 1) + injected + text.substring(nl + 1)
+                    } else {
+                        injected.trimStart('\n') + text
+                    }
+                unixScript.writeText(patched)
+            }
+        }
+        val batScript = layout.buildDirectory.file("scripts/$appName.bat").get().asFile
+        if (batScript.exists()) {
+            val text = batScript.readText()
+            val marker = "rem Pin code page to UTF-8 so sun.jnu.encoding picks UTF-8"
+            if (!text.contains(marker)) {
+                val injected =
+                    "$marker\r\n" +
+                        "chcp 65001 > NUL 2>&1\r\n"
+                val anchor = "@if \"%DEBUG%\"==\"\" @echo off"
+                val idx = text.indexOf(anchor)
+                if (idx >= 0) {
+                    val afterAnchor = text.indexOf('\n', idx)
+                    if (afterAnchor >= 0) {
+                        val patched =
+                            text.substring(0, afterAnchor + 1) + injected + text.substring(afterAnchor + 1)
+                        batScript.writeText(patched)
+                    }
+                }
+            }
+        }
+    }
+}
+
+tasks.named("installDist") {
+    dependsOn(patchAmyLauncherCharset)
+}
+
 // ---------------------------------------------------------------------------
 // Native distribution (jlink + jpackage)
 //

@@ -74,7 +74,11 @@ test_07_metadata_rename() {
 
   local deadline=$(( $(date +%s) + 120 )) seen=""
   while [[ $(date +%s) -lt $deadline ]]; do
-    seen=$(wn_b --json groups show "$mls_gid" 2>/dev/null | jq -r '(.result // .) | .name // empty')
+    # whitenoise-rs ≥ v0.2.x wraps the group payload one level deeper as
+    # `{"result": {"group": {…name…}}}`; older builds returned the bare
+    # group object under `.result`. Probe both shapes so the test survives
+    # either schema.
+    seen=$(wn_b --json groups show "$mls_gid" 2>/dev/null | jq -r '(.result // .) | (.group // .) | .name // empty')
     [[ "$seen" == "Interop-02-renamed" ]] && break
     sleep 3
   done
