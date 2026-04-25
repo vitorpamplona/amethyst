@@ -144,6 +144,9 @@ class DataDir(
     val groupsDir = File(marmotDir, "groups")
     val keyPackageBundleFile = File(marmotDir, "keypackages.bundle")
 
+    /** Root of the file-backed Nostr event store (`FsEventStore`). */
+    val eventsDir = File(root, "events-store")
+
     init {
         root.mkdirs()
         groupsDir.mkdirs()

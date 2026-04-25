@@ -39,6 +39,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip01Core.store.IEventStore
+import com.vitorpamplona.quartz.nip01Core.store.fs.FsEventStore
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
@@ -89,6 +91,16 @@ class Context(
     private val mlsStore = FileMlsGroupStateStore(dataDir.groupsDir)
     private val keyPackageStore = FileKeyPackageBundleStore(dataDir.keyPackageBundleFile)
     private val messageStore = FileMarmotMessageStore(dataDir.groupsDir)
+
+    /**
+     * Filesystem-backed Nostr event store, rooted at [DataDir.eventsDir].
+     * Lazy so commands that don't touch persistent event state pay zero
+     * open cost (no `.lock` file, no seed allocation). Closed by
+     * [close] when this Context shuts down.
+     */
+    val store: IEventStore by lazy {
+        FsEventStore(dataDir.eventsDir.toPath())
+    }
 
     /** Fully-wired manager. Call [prepare] once before use to load persisted state. */
     val marmot: MarmotManager = MarmotManager(signer, mlsStore, messageStore, keyPackageStore)
@@ -386,6 +398,25 @@ class Context(
         try {
             client.close()
         } catch (_: Exception) {
+        }
+        // Only close the store if it was actually opened — by-lazy
+        // otherwise allocates the lock channel just to release it.
+        if (storeIsInitialized()) {
+            try {
+                store.close()
+            } catch (_: Exception) {
+            }
+        }
+    }
+
+    private fun storeIsInitialized(): Boolean {
+        // Reflect on the lazy delegate to avoid forcing initialisation in close().
+        return try {
+            val field = javaClass.getDeclaredField("store\$delegate").apply { isAccessible = true }
+            val delegate = field.get(this) as Lazy<*>
+            delegate.isInitialized()
+        } catch (_: Throwable) {
+            false
         }
     }
 
