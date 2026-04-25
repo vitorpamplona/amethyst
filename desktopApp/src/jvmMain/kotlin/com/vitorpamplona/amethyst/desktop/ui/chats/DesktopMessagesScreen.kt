@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.desktop.ui.chats
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -30,7 +32,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -49,12 +50,14 @@ import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.IAccount
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
-import com.vitorpamplona.amethyst.commons.ui.chat.DmBroadcastStatus
 import com.vitorpamplona.amethyst.commons.viewmodels.ChatNewMessageState
 import com.vitorpamplona.amethyst.commons.viewmodels.ChatroomFeedViewModel
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
@@ -62,6 +65,7 @@ import com.vitorpamplona.amethyst.desktop.model.DesktopIAccount
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import kotlinx.coroutines.CoroutineScope
+import java.awt.Cursor
 
 private val isMacOS = System.getProperty("os.name").lowercase().contains("mac")
 
@@ -272,6 +276,15 @@ private fun SplitMessagesContent(
     onShowRelayPicker: () -> Unit = {},
     keyHandler: Modifier,
 ) {
+    // Draggable split: the conversation list width is user-adjustable and
+    // persisted so it survives app restarts.
+    var listWidth by remember {
+        androidx.compose.runtime.mutableStateOf(
+            com.vitorpamplona.amethyst.desktop.DesktopPreferences.messagesListWidthDp.dp,
+        )
+    }
+    val density = androidx.compose.ui.platform.LocalDensity.current
+
     Row(modifier = Modifier.fillMaxSize().then(keyHandler)) {
         ConversationListPane(
             state = listState,
@@ -280,12 +293,25 @@ private fun SplitMessagesContent(
             onNewConversation = onShowNewDm,
             onShowRelayPicker = onShowRelayPicker,
             focusRequester = listFocusRequester,
-            modifier = Modifier.width(280.dp),
+            modifier = Modifier.width(listWidth),
         )
 
-        VerticalDivider(modifier = Modifier.fillMaxHeight())
+        MessagesDraggableDivider(
+            onDrag = { deltaPx ->
+                val deltaDp = with(density) { deltaPx.toDp() }
+                val next = (listWidth + deltaDp).coerceIn(220.dp, 480.dp)
+                listWidth = next
+                com.vitorpamplona.amethyst.desktop.DesktopPreferences.messagesListWidthDp = next.value
+            },
+        )
 
-        Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+        Box(
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .background(MaterialTheme.colorScheme.surface),
+        ) {
             val currentRoom = selectedRoom
             if (currentRoom != null) {
                 val feedViewModel =
@@ -348,5 +374,45 @@ private fun EmptyConversationState() {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+    }
+}
+
+/**
+ * Draggable vertical divider between the conversation list pane and the chat
+ * pane. The hit area is split in half horizontally: the left half takes the
+ * conversation list's surfaceContainer fill, the right half takes the chat
+ * pane's surface fill, so the divider reads as a continuation of the two panes
+ * instead of a single contrasting stripe. Cursor flips to the horizontal
+ * resize arrow on hover.
+ */
+@Composable
+private fun MessagesDraggableDivider(onDrag: (Float) -> Unit) {
+    Row(
+        modifier =
+            Modifier
+                .width(12.dp)
+                .fillMaxHeight()
+                .pointerHoverIcon(PointerIcon(Cursor(Cursor.E_RESIZE_CURSOR)))
+                .pointerInput(Unit) {
+                    detectDragGestures { change, dragAmount ->
+                        change.consume()
+                        onDrag(dragAmount.x)
+                    }
+                },
+    ) {
+        Box(
+            modifier =
+                Modifier
+                    .width(6.dp)
+                    .fillMaxHeight()
+                    .background(MaterialTheme.colorScheme.surfaceContainer),
+        )
+        Box(
+            modifier =
+                Modifier
+                    .width(6.dp)
+                    .fillMaxHeight()
+                    .background(MaterialTheme.colorScheme.surface),
+        )
     }
 }

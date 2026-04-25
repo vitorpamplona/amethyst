@@ -18,11 +18,12 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.ui.feed
+package com.vitorpamplona.amethyst.desktop.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -33,10 +34,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.commons.ui.theme.RelayStatusColors
 
 /**
- * Header component for feed screens with title and relay connection status.
+ * Compact Messages-style header for feed screens: titleMedium on the left,
+ * a single refresh IconButton on the right. Relay count is rolled into the
+ * refresh button's content description so it still surfaces in hover tooltips
+ * / accessibility readers without stealing a whole row.
  *
  * @param title The feed title
  * @param connectedRelayCount Number of connected relays
@@ -51,62 +54,28 @@ fun FeedHeader(
     modifier: Modifier = Modifier,
 ) {
     Row(
-        modifier = modifier.fillMaxWidth(),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(horizontal = readingHorizontalPadding(), vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             title,
-            style = MaterialTheme.typography.headlineMedium,
+            style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onBackground,
         )
 
-        RelayStatusIndicator(
-            connectedCount = connectedRelayCount,
-            onRefresh = onRefresh,
-        )
-    }
-}
-
-/**
- * Compact relay connection status indicator with refresh button.
- */
-@Composable
-fun RelayStatusIndicator(
-    connectedCount: Int,
-    onRefresh: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier,
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        val statusColor =
-            when {
-                connectedCount == 0 -> RelayStatusColors.Disconnected
-                connectedCount < 3 -> RelayStatusColors.Connecting
-                else -> RelayStatusColors.Connected
-            }
-
-        Icon(
-            symbol = if (connectedCount > 0) MaterialSymbols.Check else MaterialSymbols.Close,
-            contentDescription = null,
-            tint = statusColor,
-            modifier = Modifier.size(16.dp),
-        )
-
-        Text(
-            "$connectedCount relay${if (connectedCount != 1) "s" else ""}",
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            style = MaterialTheme.typography.bodySmall,
-        )
-
-        IconButton(onClick = onRefresh) {
+        IconButton(
+            onClick = onRefresh,
+            modifier = Modifier.size(32.dp),
+        ) {
             Icon(
                 MaterialSymbols.Refresh,
-                contentDescription = "Reconnect",
+                contentDescription = "Refresh ($connectedRelayCount relays connected)",
                 tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp),
             )
         }
     }

@@ -22,10 +22,12 @@ package com.vitorpamplona.amethyst.desktop.ui
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -246,18 +248,20 @@ fun BookmarksScreen(
     val currentEvents = if (selectedTab == BookmarkTab.PUBLIC) publicEvents else privateEvents
     val currentBookmarkIds = if (selectedTab == BookmarkTab.PUBLIC) publicBookmarkIds else privateBookmarkIds
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    ReadingColumn {
+        val sidePadding = readingHorizontalPadding()
         // Header with tabs
         Row(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
+                    .heightIn(min = 48.dp)
+                    .padding(horizontal = sidePadding, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
                 text = "Bookmarks",
-                style = MaterialTheme.typography.headlineMedium,
+                style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onBackground,
             )
 
@@ -303,6 +307,7 @@ fun BookmarksScreen(
             else -> {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(horizontal = sidePadding),
                 ) {
                     items(currentEvents, key = { it.id }) { event ->
                         Column(

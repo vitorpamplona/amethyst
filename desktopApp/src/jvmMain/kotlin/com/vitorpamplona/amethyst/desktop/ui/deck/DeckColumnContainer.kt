@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -130,9 +129,10 @@ fun DeckColumnContainer(
 
         HorizontalDivider()
 
-        Box(
-            modifier = Modifier.fillMaxSize().padding(12.dp),
-        ) {
+        // Content runs edge-to-edge; each screen adds its own header padding
+        // to match the Messages pattern (padding(horizontal = 12, vertical = 8)
+        // on the title row, no outer wrapper).
+        Box(modifier = Modifier.fillMaxSize()) {
             // Always keep RootContent composed so state (e.g. search results) survives navigation
             RootContent(
                 columnType = column.type,
@@ -460,6 +460,7 @@ internal fun OverlayContent(
                 nwcConnection = nwcConnection,
                 subscriptionsCoordinator = subscriptionsCoordinator,
                 onBack = onBack,
+                canGoBack = true,
                 onCompose = onShowComposeDialog,
                 onNavigateToProfile = onNavigateToProfile,
                 onNavigateToThread = onNavigateToThread,

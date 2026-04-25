@@ -22,9 +22,9 @@ package com.vitorpamplona.amethyst.desktop.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -56,7 +56,6 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.rememberMaterialSymbolPa
 import com.vitorpamplona.amethyst.commons.state.EventCollectionState
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
-import com.vitorpamplona.amethyst.commons.ui.feed.FeedHeader
 import com.vitorpamplona.amethyst.commons.util.toTimeAgo
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
@@ -238,14 +237,12 @@ fun NotificationsScreen(
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    ReadingColumn {
         FeedHeader(
             title = "Notifications",
             connectedRelayCount = connectedRelays.size,
             onRefresh = { relayManager.connect() },
         )
-
-        Spacer(Modifier.height(16.dp))
 
         if (connectedRelays.isEmpty()) {
             LoadingState("Connecting to relays...")
@@ -259,6 +256,7 @@ fun NotificationsScreen(
             )
         } else {
             LazyColumn(
+                contentPadding = PaddingValues(horizontal = readingHorizontalPadding()),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 items(notifications.distinctBy { it.event.id }, key = { it.event.id }) { notification ->

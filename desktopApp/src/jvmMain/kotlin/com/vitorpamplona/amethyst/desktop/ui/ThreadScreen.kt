@@ -24,6 +24,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -196,23 +197,25 @@ fun ThreadScreen(
     val replyNotes = threadNotes.filter { it.idHex != noteId }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            // Header with back button
+        ReadingColumn {
+            val sidePadding = readingHorizontalPadding()
+            // Header — Messages-style: compact row with back + titleMedium
             Row(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = sidePadding, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                IconButton(onClick = onBack) {
+                IconButton(onClick = onBack, modifier = Modifier.size(32.dp)) {
                     Icon(
                         MaterialSymbols.AutoMirrored.ArrowBack,
                         contentDescription = "Back",
-                        modifier = Modifier.size(24.dp),
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp),
                     )
                 }
                 Spacer(Modifier.width(8.dp))
                 Text(
                     "Thread",
-                    style = MaterialTheme.typography.headlineMedium,
+                    style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onBackground,
                 )
             }
@@ -237,6 +240,7 @@ fun ThreadScreen(
 
                 else -> {
                     LazyColumn(
+                        contentPadding = PaddingValues(horizontal = sidePadding),
                         verticalArrangement = Arrangement.spacedBy(0.dp),
                     ) {
                         // Root note

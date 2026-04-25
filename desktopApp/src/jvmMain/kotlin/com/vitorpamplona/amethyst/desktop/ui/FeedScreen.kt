@@ -20,12 +20,12 @@
  */
 package com.vitorpamplona.amethyst.desktop.ui
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.TooltipArea
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -33,14 +33,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -487,9 +486,8 @@ fun FeedScreen(
         onDispose { subId?.let { coordinator.releaseInteractions(it) } }
     }
 
-    @OptIn(ExperimentalLayoutApi::class)
     Box(modifier = Modifier.fillMaxSize()) {
-        Column(modifier = Modifier.fillMaxSize()) {
+        ReadingColumn {
             // Header with compose button
             FeedHeader(
                 feedMode = feedMode,
@@ -546,7 +544,9 @@ fun FeedScreen(
 
                 is FeedState.Loaded -> {
                     val loadedState by state.feed.collectAsState()
+                    val sidePadding = LocalReadingSidePadding.current
                     LazyColumn(
+                        contentPadding = PaddingValues(horizontal = sidePadding + 12.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         items(loadedState.list, key = { it.idHex }) { note ->
@@ -627,9 +627,15 @@ fun FeedScreen(
 }
 
 /**
- * Feed header with title, mode selector, relay count, and compose button.
+ * Feed header \u2014 Messages-style single row: Following/Global tabs on the left,
+ * compact icon buttons on the right (relays, refresh, compose). The selected
+ * tab IS the title; no redundant "Global Feed" / "Following Feed" label.
+ *
+ * Relay count and followed-users count are surfaced via a hover tooltip on
+ * the relays icon (desktop convention \u2014 the at-a-glance info is preserved
+ * without stealing header real estate).
  */
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun FeedHeader(
     feedMode: FeedMode,
@@ -642,90 +648,100 @@ private fun FeedHeader(
     onNavigateToRelays: () -> Unit = {},
     onOpenRelayPicker: () -> Unit = {},
 ) {
-    FlowRow(
-        modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+    val sidePadding = LocalReadingSidePadding.current
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = sidePadding + 12.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column {
-            FlowRow(
-                verticalArrangement = Arrangement.Center,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Text(
-                    if (feedMode == FeedMode.GLOBAL) "Global Feed" else "Following Feed",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = MaterialTheme.colorScheme.onBackground,
+        // Tabs \u2014 the selected one is the screen title.
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (account != null) {
+                FilterChip(
+                    selected = feedMode == FeedMode.FOLLOWING,
+                    onClick = { onFeedModeChange(FeedMode.FOLLOWING) },
+                    label = { Text("Following") },
                 )
-
-                if (account != null) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        FilterChip(
-                            selected = feedMode == FeedMode.GLOBAL,
-                            onClick = { onFeedModeChange(FeedMode.GLOBAL) },
-                            label = { Text("Global") },
-                        )
-                        FilterChip(
-                            selected = feedMode == FeedMode.FOLLOWING,
-                            onClick = { onFeedModeChange(FeedMode.FOLLOWING) },
-                            label = { Text("Following") },
-                        )
-                    }
-                }
             }
-
-            Spacer(Modifier.height(4.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    "${feedRelays.size} relays",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier =
-                        Modifier.clickable { onNavigateToRelays() },
-                )
-                if (feedMode == FeedMode.FOLLOWING) {
-                    Text(
-                        " \u2022 $followedUsersCount followed",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                Spacer(Modifier.width(8.dp))
-                if (account != null && !account.isReadOnly) {
-                    IconButton(
-                        onClick = onOpenRelayPicker,
-                        modifier = Modifier.size(24.dp),
-                    ) {
-                        Icon(
-                            MaterialSymbols.Dns,
-                            contentDescription = "Edit Feed Relays",
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(18.dp),
-                        )
-                    }
-                    Spacer(Modifier.width(4.dp))
-                }
-                IconButton(
-                    onClick = onRefresh,
-                    modifier = Modifier.size(24.dp),
-                ) {
-                    Icon(
-                        MaterialSymbols.Refresh,
-                        contentDescription = "Refresh",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(18.dp),
-                    )
-                }
-            }
+            FilterChip(
+                selected = feedMode == FeedMode.GLOBAL,
+                onClick = { onFeedModeChange(FeedMode.GLOBAL) },
+                label = { Text("Global") },
+            )
         }
 
-        Button(
-            onClick = onCompose,
-            enabled = account != null && !account.isReadOnly,
-        ) {
-            Icon(MaterialSymbols.Add, "New Post", Modifier.size(18.dp))
-            Spacer(Modifier.width(8.dp))
-            Text("New Post")
+        // Actions \u2014 compact icon buttons at the same scale as the Messages header.
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            val relaysTooltip =
+                buildString {
+                    append("${feedRelays.size} relays")
+                    if (feedMode == FeedMode.FOLLOWING) {
+                        append(" \u2022 $followedUsersCount followed")
+                    }
+                }
+            TooltipArea(
+                tooltip = {
+                    Surface(
+                        shape = MaterialTheme.shapes.small,
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        tonalElevation = 2.dp,
+                        shadowElevation = 4.dp,
+                    ) {
+                        Text(
+                            relaysTooltip,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                },
+            ) {
+                IconButton(
+                    onClick = {
+                        if (account != null && !account.isReadOnly) {
+                            onOpenRelayPicker()
+                        } else {
+                            onNavigateToRelays()
+                        }
+                    },
+                    modifier = Modifier.size(32.dp),
+                ) {
+                    Icon(
+                        MaterialSymbols.Dns,
+                        contentDescription = relaysTooltip,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+            }
+
+            IconButton(
+                onClick = onRefresh,
+                modifier = Modifier.size(32.dp),
+            ) {
+                Icon(
+                    MaterialSymbols.Refresh,
+                    contentDescription = "Refresh",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+
+            if (account != null && !account.isReadOnly) {
+                IconButton(
+                    onClick = onCompose,
+                    modifier = Modifier.size(32.dp),
+                ) {
+                    Icon(
+                        MaterialSymbols.Add,
+                        contentDescription = "New Post",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+            }
         }
     }
 }

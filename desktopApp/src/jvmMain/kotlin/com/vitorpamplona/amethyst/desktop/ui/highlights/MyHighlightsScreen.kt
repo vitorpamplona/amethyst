@@ -23,11 +23,12 @@ package com.vitorpamplona.amethyst.desktop.ui.highlights
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -70,14 +71,24 @@ fun MyHighlightsScreen(
     val scope = rememberCoroutineScope()
     var deleteTarget by remember { mutableStateOf<HighlightData?>(null) }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        Text(
-            "Highlights",
-            style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.onBackground,
-        )
-
-        Spacer(Modifier.height(16.dp))
+    com.vitorpamplona.amethyst.desktop.ui.ReadingColumn {
+        val sidePadding =
+            com.vitorpamplona.amethyst.desktop.ui
+                .readingHorizontalPadding()
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 48.dp)
+                    .padding(horizontal = sidePadding, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                "Highlights",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onBackground,
+            )
+        }
 
         if (allHighlights.isEmpty()) {
             EmptyState(
@@ -86,6 +97,7 @@ fun MyHighlightsScreen(
             )
         } else {
             LazyColumn(
+                contentPadding = PaddingValues(horizontal = sidePadding),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 allHighlights.forEach { (addressTag, highlights) ->

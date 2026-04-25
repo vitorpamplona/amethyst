@@ -27,6 +27,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -113,6 +114,7 @@ fun UserProfileScreen(
     nwcConnection: com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect.Nip47URINorm? = null,
     subscriptionsCoordinator: DesktopRelaySubscriptionsCoordinator? = null,
     onBack: () -> Unit,
+    canGoBack: Boolean = false,
     onCompose: () -> Unit = {},
     onNavigateToProfile: (String) -> Unit = {},
     onNavigateToThread: (String) -> Unit = {},
@@ -434,483 +436,512 @@ fun UserProfileScreen(
         previousFirstVisibleItemScrollOffset = currentOffset
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        if (connectedRelays.isEmpty()) {
-            LoadingState("Connecting to relays...")
-        } else {
-            LazyColumn(
-                state = listState,
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxSize(),
-            ) {
-                // Broadcast banner
-                item(key = "broadcast") {
-                    ProfileBroadcastBanner(
-                        status = broadcastStatus,
-                        onTap = {
-                            if (broadcastStatus is ProfileBroadcastStatus.Success ||
-                                broadcastStatus is ProfileBroadcastStatus.Failed
-                            ) {
-                                broadcastStatus = ProfileBroadcastStatus.Idle
-                            }
-                        },
-                    )
-                }
+    ReadingColumn {
+        Box(modifier = Modifier.fillMaxSize()) {
+            if (connectedRelays.isEmpty()) {
+                LoadingState("Connecting to relays...")
+            } else {
+                LazyColumn(
+                    state = listState,
+                    contentPadding = PaddingValues(horizontal = readingHorizontalPadding()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    // Broadcast banner
+                    item(key = "broadcast") {
+                        ProfileBroadcastBanner(
+                            status = broadcastStatus,
+                            onTap = {
+                                if (broadcastStatus is ProfileBroadcastStatus.Success ||
+                                    broadcastStatus is ProfileBroadcastStatus.Failed
+                                ) {
+                                    broadcastStatus = ProfileBroadcastStatus.Idle
+                                }
+                            },
+                        )
+                    }
 
-                // Header with back button
-                item(key = "header") {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            IconButton(onClick = onBack) {
-                                Icon(MaterialSymbols.AutoMirrored.ArrowBack, "Back")
-                            }
-                            Spacer(Modifier.width(8.dp))
-                            Text(
-                                "Profile",
-                                style = MaterialTheme.typography.headlineMedium,
-                            )
-                        }
-
-                        // Edit button for own profile
-                        if (isOwnProfile && account.isReadOnly == false) {
-                            OutlinedButton(
-                                onClick = {
-                                    editingDisplayName = displayName ?: ""
-                                    showEditDialog = true
-                                },
-                            ) {
-                                Icon(
-                                    MaterialSymbols.Edit,
-                                    contentDescription = "Edit profile",
-                                    modifier = Modifier.size(18.dp),
+                    // Header — Messages-style: compact row, titleMedium title.
+                    // Horizontal gutter already supplied by LazyColumn.contentPadding.
+                    item(key = "header") {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                // Back is shown only when stacked onto a nav stack (e.g.
+                                // clicked a user in the feed). Top-level "My Profile"
+                                // from the nav rail sets canGoBack = false so no arrow.
+                                if (canGoBack) {
+                                    IconButton(onClick = onBack, modifier = Modifier.size(32.dp)) {
+                                        Icon(
+                                            MaterialSymbols.AutoMirrored.ArrowBack,
+                                            contentDescription = "Back",
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(20.dp),
+                                        )
+                                    }
+                                    Spacer(Modifier.width(8.dp))
+                                }
+                                Text(
+                                    "Profile",
+                                    style = MaterialTheme.typography.titleMedium,
                                 )
-                                Spacer(Modifier.width(8.dp))
-                                Text("Edit Profile")
                             }
-                        }
 
-                        // Follow/Unfollow button for other profiles
-                        if (account != null && !account.isReadOnly && pubKeyHex != account.pubKeyHex) {
-                            Column(horizontalAlignment = Alignment.End) {
-                                Button(
+                            // Edit button for own profile — compact IconButton to match
+                            // the action-icon pattern every other screen's header uses.
+                            if (isOwnProfile && account.isReadOnly == false) {
+                                IconButton(
                                     onClick = {
-                                        scope.launch {
-                                            val currentStatus = followState.currentStatusOrNull()
+                                        editingDisplayName = displayName ?: ""
+                                        showEditDialog = true
+                                    },
+                                    modifier = Modifier.size(32.dp),
+                                ) {
+                                    Icon(
+                                        MaterialSymbols.Edit,
+                                        contentDescription = "Edit Profile",
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(20.dp),
+                                    )
+                                }
+                            }
 
-                                            followState.setFollowLoading()
-                                            try {
-                                                val updatedEvent =
-                                                    if (currentStatus?.isFollowing == true) {
-                                                        unfollowUser(pubKeyHex, account, relayManager, myContactList)
-                                                    } else {
-                                                        followUser(pubKeyHex, account, relayManager, myContactList)
-                                                    }
+                            // Follow/Unfollow button for other profiles — compact to
+                            // match the header row height (32dp); primary-coloured
+                            // text button so the affordance is still legible.
+                            if (account != null && !account.isReadOnly && pubKeyHex != account.pubKeyHex) {
+                                Column(horizontalAlignment = Alignment.End) {
+                                    Button(
+                                        onClick = {
+                                            scope.launch {
+                                                val currentStatus = followState.currentStatusOrNull()
 
-                                                // Update both stored contact list and followState
-                                                myContactList = updatedEvent
-                                                followState.setFollowSuccess(updatedEvent, pubKeyHex)
-                                            } catch (e: Exception) {
-                                                e.printStackTrace()
-                                                followState.setFollowError(e.message ?: "Failed to update follow status", e)
+                                                followState.setFollowLoading()
+                                                try {
+                                                    val updatedEvent =
+                                                        if (currentStatus?.isFollowing == true) {
+                                                            unfollowUser(pubKeyHex, account, relayManager, myContactList)
+                                                        } else {
+                                                            followUser(pubKeyHex, account, relayManager, myContactList)
+                                                        }
+
+                                                    // Update both stored contact list and followState
+                                                    myContactList = updatedEvent
+                                                    followState.setFollowSuccess(updatedEvent, pubKeyHex)
+                                                } catch (e: Exception) {
+                                                    e.printStackTrace()
+                                                    followState.setFollowError(e.message ?: "Failed to update follow status", e)
+                                                }
+                                            }
+                                        },
+                                        enabled = contactListLoaded && followState.state.value !is com.vitorpamplona.amethyst.commons.state.LoadingState.Loading,
+                                        modifier = Modifier.height(32.dp),
+                                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
+                                    ) {
+                                        val state = followState.state.collectAsState().value
+                                        val isFollowing = (state as? com.vitorpamplona.amethyst.commons.state.LoadingState.Success)?.data?.isFollowing ?: false
+                                        val isLoading = state is com.vitorpamplona.amethyst.commons.state.LoadingState.Loading
+
+                                        when {
+                                            !contactListLoaded -> {
+                                                androidx.compose.material3.CircularProgressIndicator(
+                                                    modifier = Modifier.size(16.dp),
+                                                    strokeWidth = 2.dp,
+                                                    color = MaterialTheme.colorScheme.onPrimary,
+                                                )
+                                                Spacer(Modifier.width(8.dp))
+                                                Text("Loading...")
+                                            }
+
+                                            isLoading -> {
+                                                androidx.compose.material3.CircularProgressIndicator(
+                                                    modifier = Modifier.size(16.dp),
+                                                    strokeWidth = 2.dp,
+                                                    color = MaterialTheme.colorScheme.onPrimary,
+                                                )
+                                                Spacer(Modifier.width(8.dp))
+                                                Text(if (isFollowing) "Unfollowing..." else "Following...")
+                                            }
+
+                                            else -> {
+                                                Icon(
+                                                    if (isFollowing) MaterialSymbols.PersonRemove else MaterialSymbols.PersonAdd,
+                                                    contentDescription = if (isFollowing) "Unfollow" else "Follow",
+                                                    modifier = Modifier.size(18.dp),
+                                                )
+                                                Spacer(Modifier.width(8.dp))
+                                                Text(if (isFollowing) "Unfollow" else "Follow")
                                             }
                                         }
-                                    },
-                                    enabled = contactListLoaded && followState.state.value !is com.vitorpamplona.amethyst.commons.state.LoadingState.Loading,
-                                ) {
-                                    val state = followState.state.collectAsState().value
-                                    val isFollowing = (state as? com.vitorpamplona.amethyst.commons.state.LoadingState.Success)?.data?.isFollowing ?: false
-                                    val isLoading = state is com.vitorpamplona.amethyst.commons.state.LoadingState.Loading
-
-                                    when {
-                                        !contactListLoaded -> {
-                                            androidx.compose.material3.CircularProgressIndicator(
-                                                modifier = Modifier.size(16.dp),
-                                                strokeWidth = 2.dp,
-                                                color = MaterialTheme.colorScheme.onPrimary,
-                                            )
-                                            Spacer(Modifier.width(8.dp))
-                                            Text("Loading...")
-                                        }
-
-                                        isLoading -> {
-                                            androidx.compose.material3.CircularProgressIndicator(
-                                                modifier = Modifier.size(16.dp),
-                                                strokeWidth = 2.dp,
-                                                color = MaterialTheme.colorScheme.onPrimary,
-                                            )
-                                            Spacer(Modifier.width(8.dp))
-                                            Text(if (isFollowing) "Unfollowing..." else "Following...")
-                                        }
-
-                                        else -> {
-                                            Icon(
-                                                if (isFollowing) MaterialSymbols.PersonRemove else MaterialSymbols.PersonAdd,
-                                                contentDescription = if (isFollowing) "Unfollow" else "Follow",
-                                                modifier = Modifier.size(18.dp),
-                                            )
-                                            Spacer(Modifier.width(8.dp))
-                                            Text(if (isFollowing) "Unfollow" else "Follow")
-                                        }
                                     }
-                                }
 
-                                val errorMessage =
-                                    followState.state
-                                        .collectAsState()
-                                        .value
-                                        .errorOrNull()
-                                errorMessage?.let { error ->
-                                    Spacer(Modifier.height(4.dp))
-                                    Text(
-                                        error,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.error,
-                                    )
+                                    val errorMessage =
+                                        followState.state
+                                            .collectAsState()
+                                            .value
+                                            .errorOrNull()
+                                    errorMessage?.let { error ->
+                                        Spacer(Modifier.height(4.dp))
+                                        Text(
+                                            error,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.error,
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
-                }
 
-                // Profile card
-                item(key = "profile-card") {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors =
-                            CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            ),
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                verticalAlignment = Alignment.Top,
-                            ) {
-                                UserAvatar(
-                                    userHex = pubKeyHex,
-                                    pictureUrl = picture,
-                                    size = 56.dp,
-                                    contentDescription = "Profile picture",
-                                )
-
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        displayName ?: (pubKeyHex.hexToByteArrayOrNull()?.toNpub()?.take(20) ?: pubKeyHex.take(20)),
-                                        style = MaterialTheme.typography.titleLarge,
-                                        fontWeight = FontWeight.Bold,
+                    // Profile card
+                    item(key = "profile-card") {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors =
+                                CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                ),
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    verticalAlignment = Alignment.Top,
+                                ) {
+                                    UserAvatar(
+                                        userHex = pubKeyHex,
+                                        pictureUrl = picture,
+                                        size = 56.dp,
+                                        contentDescription = "Profile picture",
                                     )
-                                    Spacer(Modifier.height(4.dp))
-                                    val npub = pubKeyHex.hexToByteArrayOrNull()?.toNpub()
-                                    var copied by remember { mutableStateOf(false) }
 
-                                    LaunchedEffect(copied) {
-                                        if (copied) {
-                                            delay(2000)
-                                            copied = false
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            displayName ?: (pubKeyHex.hexToByteArrayOrNull()?.toNpub()?.take(20) ?: pubKeyHex.take(20)),
+                                            style = MaterialTheme.typography.titleLarge,
+                                            fontWeight = FontWeight.Bold,
+                                        )
+                                        Spacer(Modifier.height(4.dp))
+                                        val npub = pubKeyHex.hexToByteArrayOrNull()?.toNpub()
+                                        var copied by remember { mutableStateOf(false) }
+
+                                        LaunchedEffect(copied) {
+                                            if (copied) {
+                                                delay(2000)
+                                                copied = false
+                                            }
+                                        }
+
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                        ) {
+                                            Text(
+                                                (npub?.take(32) ?: pubKeyHex.take(32)) + "...",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                            if (npub != null) {
+                                                IconButton(
+                                                    onClick = {
+                                                        val clipboard = Toolkit.getDefaultToolkit().systemClipboard
+                                                        clipboard.setContents(StringSelection(npub), null)
+                                                        copied = true
+                                                    },
+                                                    modifier = Modifier.size(20.dp),
+                                                ) {
+                                                    Icon(
+                                                        if (copied) MaterialSymbols.Check else MaterialSymbols.ContentCopy,
+                                                        contentDescription = if (copied) "Copied" else "Copy npub",
+                                                        modifier = Modifier.size(14.dp),
+                                                        tint =
+                                                            if (copied) {
+                                                                MaterialTheme.colorScheme.primary
+                                                            } else {
+                                                                MaterialTheme.colorScheme.onSurfaceVariant
+                                                            },
+                                                    )
+                                                }
+                                            }
                                         }
                                     }
+                                }
 
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                    ) {
+                                if (about != null) {
+                                    Spacer(Modifier.height(12.dp))
+                                    Text(
+                                        about!!,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                    )
+                                }
+
+                                Spacer(Modifier.height(12.dp))
+
+                                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                                    Column {
                                         Text(
-                                            (npub?.take(32) ?: pubKeyHex.take(32)) + "...",
+                                            "$followersCount",
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.Bold,
+                                        )
+                                        Text(
+                                            "Followers",
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
-                                        if (npub != null) {
-                                            IconButton(
-                                                onClick = {
-                                                    val clipboard = Toolkit.getDefaultToolkit().systemClipboard
-                                                    clipboard.setContents(StringSelection(npub), null)
-                                                    copied = true
-                                                },
-                                                modifier = Modifier.size(20.dp),
-                                            ) {
-                                                Icon(
-                                                    if (copied) MaterialSymbols.Check else MaterialSymbols.ContentCopy,
-                                                    contentDescription = if (copied) "Copied" else "Copy npub",
-                                                    modifier = Modifier.size(14.dp),
-                                                    tint =
-                                                        if (copied) {
-                                                            MaterialTheme.colorScheme.primary
-                                                        } else {
-                                                            MaterialTheme.colorScheme.onSurfaceVariant
-                                                        },
+                                    }
+                                    Column {
+                                        Text(
+                                            "$followingCount",
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.Bold,
+                                        )
+                                        Text(
+                                            "Following",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Tabs
+                    item(key = "tabs") {
+                        PrimaryTabRow(selectedTabIndex = selectedTab) {
+                            Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }) {
+                                Text("Notes", modifier = Modifier.padding(12.dp))
+                            }
+                            Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }) {
+                                Text(
+                                    "Reads${if (articleEvents.isNotEmpty()) " (${articleEvents.size})" else ""}",
+                                    modifier = Modifier.padding(12.dp),
+                                )
+                            }
+                            Tab(selected = selectedTab == 2, onClick = { selectedTab = 2 }) {
+                                Text("Gallery", modifier = Modifier.padding(12.dp))
+                            }
+                            Tab(selected = selectedTab == 3, onClick = { selectedTab = 3 }) {
+                                Text(
+                                    "Highlights${if (highlightEvents.isNotEmpty()) " (${highlightEvents.size})" else ""}",
+                                    modifier = Modifier.padding(12.dp),
+                                )
+                            }
+                        }
+                    }
+
+                    // Tab content
+                    when (selectedTab) {
+                        0 -> {
+                            when (profileFeedState) {
+                                is FeedState.Loading -> {
+                                    item(key = "loading") {
+                                        Box(
+                                            modifier = Modifier.fillMaxWidth().padding(32.dp),
+                                            contentAlignment = Alignment.Center,
+                                        ) {
+                                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                                androidx.compose.material3.CircularProgressIndicator()
+                                                Spacer(Modifier.height(16.dp))
+                                                Text(
+                                                    "Loading posts...",
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                 )
                                             }
                                         }
                                     }
                                 }
-                            }
 
-                            if (about != null) {
-                                Spacer(Modifier.height(12.dp))
-                                Text(
-                                    about!!,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                )
-                            }
-
-                            Spacer(Modifier.height(12.dp))
-
-                            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                                Column {
-                                    Text(
-                                        "$followersCount",
-                                        style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = FontWeight.Bold,
-                                    )
-                                    Text(
-                                        "Followers",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                                Column {
-                                    Text(
-                                        "$followingCount",
-                                        style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = FontWeight.Bold,
-                                    )
-                                    Text(
-                                        "Following",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Tabs
-                item(key = "tabs") {
-                    PrimaryTabRow(selectedTabIndex = selectedTab) {
-                        Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }) {
-                            Text("Notes", modifier = Modifier.padding(12.dp))
-                        }
-                        Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }) {
-                            Text(
-                                "Reads${if (articleEvents.isNotEmpty()) " (${articleEvents.size})" else ""}",
-                                modifier = Modifier.padding(12.dp),
-                            )
-                        }
-                        Tab(selected = selectedTab == 2, onClick = { selectedTab = 2 }) {
-                            Text("Gallery", modifier = Modifier.padding(12.dp))
-                        }
-                        Tab(selected = selectedTab == 3, onClick = { selectedTab = 3 }) {
-                            Text(
-                                "Highlights${if (highlightEvents.isNotEmpty()) " (${highlightEvents.size})" else ""}",
-                                modifier = Modifier.padding(12.dp),
-                            )
-                        }
-                    }
-                }
-
-                // Tab content
-                when (selectedTab) {
-                    0 -> {
-                        when (profileFeedState) {
-                            is FeedState.Loading -> {
-                                item(key = "loading") {
-                                    Box(
-                                        modifier = Modifier.fillMaxWidth().padding(32.dp),
-                                        contentAlignment = Alignment.Center,
-                                    ) {
-                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                            androidx.compose.material3.CircularProgressIndicator()
-                                            Spacer(Modifier.height(16.dp))
+                                is FeedState.Empty -> {
+                                    item(key = "empty") {
+                                        Box(
+                                            modifier = Modifier.fillMaxWidth().padding(32.dp),
+                                            contentAlignment = Alignment.Center,
+                                        ) {
                                             Text(
-                                                "Loading posts...",
+                                                "No posts yet",
                                                 style = MaterialTheme.typography.bodyMedium,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             )
                                         }
                                     }
                                 }
-                            }
 
-                            is FeedState.Empty -> {
-                                item(key = "empty") {
+                                is FeedState.FeedError -> {
+                                    item(key = "error") {
+                                        Box(
+                                            modifier = Modifier.fillMaxWidth().padding(32.dp),
+                                            contentAlignment = Alignment.Center,
+                                        ) {
+                                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                                Text(
+                                                    "Failed to load posts",
+                                                    style = MaterialTheme.typography.titleMedium,
+                                                    color = MaterialTheme.colorScheme.error,
+                                                )
+                                                Spacer(Modifier.height(8.dp))
+                                                Text(
+                                                    (profileFeedState as FeedState.FeedError).errorMessage,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                )
+                                                Spacer(Modifier.height(16.dp))
+                                                OutlinedButton(onClick = { retryTrigger++ }) {
+                                                    Text("Retry")
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                is FeedState.Loaded -> {
+                                    // loadedNotes collected outside LazyColumn in profileLoadedNotes
+                                    items(profileLoadedNotes, key = { it.idHex }) { note ->
+                                        FeedNoteCard(
+                                            note = note,
+                                            relayManager = relayManager,
+                                            localCache = localCache,
+                                            account = account,
+                                            nwcConnection = nwcConnection,
+                                            onReply = onCompose,
+                                            onZapFeedback = onZapFeedback,
+                                            onNavigateToProfile = onNavigateToProfile,
+                                            onNavigateToThread = onNavigateToThread,
+                                            onImageClick = { urls, index ->
+                                                lightboxState = LightboxState(urls, index)
+                                            },
+                                            onMediaClick = { urls, index, seekPos ->
+                                                com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
+                                                    .playVideo(urls[index], seekPos)
+                                                com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
+                                                    .toggleFullscreen()
+                                            },
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        1 -> {
+                            if (articleEvents.isEmpty()) {
+                                item(key = "no-articles") {
                                     Box(
                                         modifier = Modifier.fillMaxWidth().padding(32.dp),
                                         contentAlignment = Alignment.Center,
                                     ) {
                                         Text(
-                                            "No posts yet",
+                                            "No long-form articles",
                                             style = MaterialTheme.typography.bodyMedium,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
                                     }
                                 }
+                            } else {
+                                items(
+                                    articleEvents.sortedWith(compareByDescending<LongTextNoteEvent> { it.publishedAt() ?: it.createdAt }.thenBy { it.id }),
+                                    key = { "art-${it.id}" },
+                                ) { article ->
+                                    LongFormCard(
+                                        event = article,
+                                        localCache = localCache,
+                                        onAuthorClick = { onNavigateToProfile(article.pubKey) },
+                                        onClick = {
+                                            val addressTag = "${LongTextNoteEvent.KIND}:${article.pubKey}:${article.dTag()}"
+                                            onNavigateToArticle(addressTag)
+                                        },
+                                    )
+                                }
                             }
+                        }
 
-                            is FeedState.FeedError -> {
-                                item(key = "error") {
+                        2 -> {
+                            item(key = "gallery") {
+                                GalleryTab(
+                                    pictureEvents = pictureEvents,
+                                    onImageClick = { urls, index -> lightboxState = LightboxState(urls, index) },
+                                    modifier = Modifier.fillParentMaxHeight(),
+                                )
+                            }
+                        }
+
+                        3 -> {
+                            if (highlightEvents.isEmpty()) {
+                                item(key = "no-highlights") {
                                     Box(
                                         modifier = Modifier.fillMaxWidth().padding(32.dp),
                                         contentAlignment = Alignment.Center,
                                     ) {
-                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                            Text(
-                                                "Failed to load posts",
-                                                style = MaterialTheme.typography.titleMedium,
-                                                color = MaterialTheme.colorScheme.error,
-                                            )
-                                            Spacer(Modifier.height(8.dp))
-                                            Text(
-                                                (profileFeedState as FeedState.FeedError).errorMessage,
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            )
-                                            Spacer(Modifier.height(16.dp))
-                                            OutlinedButton(onClick = { retryTrigger++ }) {
-                                                Text("Retry")
-                                            }
-                                        }
+                                        Text(
+                                            "No published highlights",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
                                     }
                                 }
-                            }
-
-                            is FeedState.Loaded -> {
-                                // loadedNotes collected outside LazyColumn in profileLoadedNotes
-                                items(profileLoadedNotes, key = { it.idHex }) { note ->
-                                    FeedNoteCard(
-                                        note = note,
-                                        relayManager = relayManager,
+                            } else {
+                                items(
+                                    highlightEvents.sortedWith(compareByDescending<HighlightEvent> { it.createdAt }.thenBy { it.id }),
+                                    key = { "hl-${it.id}" },
+                                ) { highlight ->
+                                    PublishedHighlightCard(
+                                        highlight = highlight,
                                         localCache = localCache,
-                                        account = account,
-                                        nwcConnection = nwcConnection,
-                                        onReply = onCompose,
-                                        onZapFeedback = onZapFeedback,
-                                        onNavigateToProfile = onNavigateToProfile,
-                                        onNavigateToThread = onNavigateToThread,
-                                        onImageClick = { urls, index ->
-                                            lightboxState = LightboxState(urls, index)
-                                        },
-                                        onMediaClick = { urls, index, seekPos ->
-                                            com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
-                                                .playVideo(urls[index], seekPos)
-                                            com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
-                                                .toggleFullscreen()
-                                        },
                                     )
                                 }
-                            }
-                        }
-                    }
-
-                    1 -> {
-                        if (articleEvents.isEmpty()) {
-                            item(key = "no-articles") {
-                                Box(
-                                    modifier = Modifier.fillMaxWidth().padding(32.dp),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    Text(
-                                        "No long-form articles",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                            }
-                        } else {
-                            items(
-                                articleEvents.sortedWith(compareByDescending<LongTextNoteEvent> { it.publishedAt() ?: it.createdAt }.thenBy { it.id }),
-                                key = { "art-${it.id}" },
-                            ) { article ->
-                                LongFormCard(
-                                    event = article,
-                                    localCache = localCache,
-                                    onAuthorClick = { onNavigateToProfile(article.pubKey) },
-                                    onClick = {
-                                        val addressTag = "${LongTextNoteEvent.KIND}:${article.pubKey}:${article.dTag()}"
-                                        onNavigateToArticle(addressTag)
-                                    },
-                                )
-                            }
-                        }
-                    }
-
-                    2 -> {
-                        item(key = "gallery") {
-                            GalleryTab(
-                                pictureEvents = pictureEvents,
-                                onImageClick = { urls, index -> lightboxState = LightboxState(urls, index) },
-                                modifier = Modifier.fillParentMaxHeight(),
-                            )
-                        }
-                    }
-
-                    3 -> {
-                        if (highlightEvents.isEmpty()) {
-                            item(key = "no-highlights") {
-                                Box(
-                                    modifier = Modifier.fillMaxWidth().padding(32.dp),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    Text(
-                                        "No published highlights",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                            }
-                        } else {
-                            items(
-                                highlightEvents.sortedWith(compareByDescending<HighlightEvent> { it.createdAt }.thenBy { it.id }),
-                                key = { "hl-${it.id}" },
-                            ) { highlight ->
-                                PublishedHighlightCard(
-                                    highlight = highlight,
-                                    localCache = localCache,
-                                )
                             }
                         }
                     }
                 }
             }
-        }
 
-        // Floating header — appears on scroll up when profile header is out of view
-        AnimatedVisibility(
-            visible = showFloatingHeader,
-            enter = slideInVertically { -it },
-            exit = slideOutVertically { -it },
-            modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth(),
-        ) {
-            Row(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.95f))
-                        .padding(horizontal = 8.dp, vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
+            // Floating header — appears on scroll up when profile header is out of view.
+            // Fully-qualified call to force the non-scoped overload; ReadingColumn
+            // provides a ColumnScope in the outer lambda which would otherwise win
+            // overload resolution and break the BoxScope Modifier.align call below.
+            androidx.compose.animation.AnimatedVisibility(
+                visible = showFloatingHeader,
+                enter = slideInVertically { -it },
+                exit = slideOutVertically { -it },
+                modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth(),
             ) {
-                IconButton(onClick = onBack) {
-                    Icon(MaterialSymbols.AutoMirrored.ArrowBack, "Back")
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.95f))
+                            .padding(horizontal = 12.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (canGoBack) {
+                        IconButton(onClick = onBack, modifier = Modifier.size(32.dp)) {
+                            Icon(
+                                MaterialSymbols.AutoMirrored.ArrowBack,
+                                contentDescription = "Back",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
+                        Spacer(Modifier.width(4.dp))
+                    }
+                    UserAvatar(
+                        userHex = pubKeyHex,
+                        pictureUrl = picture,
+                        size = 28.dp,
+                        contentDescription = "Profile picture",
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        displayName ?: pubKeyHex.take(12) + "...",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                    )
                 }
-                Spacer(Modifier.width(8.dp))
-                UserAvatar(
-                    userHex = pubKeyHex,
-                    pictureUrl = picture,
-                    size = 28.dp,
-                    contentDescription = "Profile picture",
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    displayName ?: pubKeyHex.take(12) + "...",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                )
             }
         }
     }

@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.ui.chat
+package com.vitorpamplona.amethyst.desktop.ui.chats
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
@@ -34,6 +34,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import com.vitorpamplona.amethyst.commons.ui.theme.ChatBubbleMaxSizeModifier
@@ -128,18 +129,23 @@ fun ChatBubbleLayout(
                 )
             }
 
+        val bubbleShape = if (isLoggedInUser) ChatBubbleShapeMe else ChatBubbleShapeThem
+        // Clip the hover/ripple to the bubble shape — combinedClickable otherwise
+        // paints a rectangular ripple that ignores the Surface's rounded corners.
         val clickableModifier =
-            remember {
-                Modifier.combinedClickable(
-                    onClick = {
-                        if (!onClick()) {
-                            if (!isComplete) {
-                                showDetails.value = !showDetails.value
+            remember(bubbleShape) {
+                Modifier
+                    .clip(bubbleShape)
+                    .combinedClickable(
+                        onClick = {
+                            if (!onClick()) {
+                                if (!isComplete) {
+                                    showDetails.value = !showDetails.value
+                                }
                             }
-                        }
-                    },
-                    onLongClick = { popupExpanded.value = true },
-                )
+                        },
+                        onLongClick = { popupExpanded.value = true },
+                    )
             }
 
         Row(
@@ -148,7 +154,7 @@ fun ChatBubbleLayout(
         ) {
             Surface(
                 color = bgColor.value,
-                shape = if (isLoggedInUser) ChatBubbleShapeMe else ChatBubbleShapeThem,
+                shape = bubbleShape,
                 modifier = clickableModifier,
             ) {
                 Column(modifier = MessageBubbleLimits, verticalArrangement = ChatRowColSpacing5dp) {

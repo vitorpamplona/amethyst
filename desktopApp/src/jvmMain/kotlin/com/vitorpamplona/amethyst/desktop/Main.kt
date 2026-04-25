@@ -20,14 +20,17 @@
  */
 package com.vitorpamplona.amethyst.desktop
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -45,7 +48,6 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
-import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -60,6 +62,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.BitmapPainter
+import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyShortcut
 import androidx.compose.ui.unit.dp
@@ -81,6 +85,7 @@ import com.vitorpamplona.amethyst.desktop.model.DesktopRelayCategories
 import com.vitorpamplona.amethyst.desktop.network.DefaultRelays
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.network.Nip11Fetcher
+import com.vitorpamplona.amethyst.desktop.platform.applyNativeWindowChrome
 import com.vitorpamplona.amethyst.desktop.service.highlights.DesktopHighlightStore
 import com.vitorpamplona.amethyst.desktop.service.images.DesktopImageLoaderSetup
 import com.vitorpamplona.amethyst.desktop.service.media.VlcjPlayerPool
@@ -130,7 +135,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.time.Duration.Companion.seconds
 
-private val isMacOS = System.getProperty("os.name").lowercase().contains("mac")
+private val isMacOS = com.vitorpamplona.amethyst.desktop.platform.PlatformInfo.isMacOS
 
 enum class LayoutMode {
     SINGLE_PANE,
@@ -183,6 +188,42 @@ sealed class DesktopScreen {
 private var activeTorManager: com.vitorpamplona.amethyst.desktop.tor.DesktopTorManager? = null
 
 fun main() {
+    // macOS: route the app's MenuBar to the system menu bar at the top of the
+    // screen and set the application name shown in the apple-menu. Both must be
+    // set before AWT initializes (i.e. before any Swing/AWT class loads).
+    if (com.vitorpamplona.amethyst.desktop.platform.PlatformInfo.isMacOS) {
+        System.setProperty("apple.laf.useScreenMenuBar", "true")
+        System.setProperty("apple.awt.application.name", "Amethyst")
+        System.setProperty("apple.awt.application.appearance", "system")
+    }
+
+    // Set the dock / taskbar icon image before any window is shown.
+    //
+    // On macOS the Cmd+Tab app switcher and the dock use the Taskbar API's
+    // iconImage, NOT the Window(icon=) composable parameter (which only sets
+    // the in-title-bar proxy icon). Without this, a JVM launched via gradle
+    // shows the generic Java coffee-cup square in Cmd+Tab. ImageIO preserves
+    // the PNG alpha channel so the dock renders the logo with transparency;
+    // on macOS the logo is then wrapped in a squircle so it matches
+    // first-party dock icons.
+    try {
+        val bytes = Unit::class.java.getResourceAsStream("/icon.png")!!.readBytes()
+        val raw = javax.imageio.ImageIO.read(java.io.ByteArrayInputStream(bytes))
+        val adapted =
+            raw?.let {
+                com.vitorpamplona.amethyst.desktop.platform.PlatformAppIcon
+                    .adaptForHost(it)
+            }
+        if (adapted != null && java.awt.Taskbar.isTaskbarSupported()) {
+            val taskbar = java.awt.Taskbar.getTaskbar()
+            if (taskbar.isSupported(java.awt.Taskbar.Feature.ICON_IMAGE)) {
+                taskbar.iconImage = adapted
+            }
+        }
+    } catch (e: Exception) {
+        Log.w("Main") { "Failed to set dock icon: ${e.message}" }
+    }
+
     Log.minLevel = LogLevel.DEBUG
     DesktopImageLoaderSetup.setup()
     Runtime.getRuntime().addShutdownHook(
@@ -241,11 +282,35 @@ fun main() {
         // Callback set by App() for single pane navigation from MenuBar
         var navigateToScreen by remember { mutableStateOf<((DeckColumnType) -> Unit)?>(null) }
 
+        // Window title-bar / taskbar thumbnail icon. On macOS the source logo
+        // is wrapped in a squircle so it matches every other dock icon; on
+        // other platforms the raw transparent logo is used as-is.
+        val appIcon =
+            remember {
+                val bytes = Unit::class.java.getResourceAsStream("/icon.png")!!.readBytes()
+                val raw = javax.imageio.ImageIO.read(java.io.ByteArrayInputStream(bytes))
+                val adapted =
+                    com.vitorpamplona.amethyst.desktop.platform.PlatformAppIcon
+                        .adaptForHost(raw)
+                val buf = java.io.ByteArrayOutputStream()
+                javax.imageio.ImageIO.write(adapted, "png", buf)
+                val bitmap =
+                    org.jetbrains.skia.Image
+                        .makeFromEncoded(buf.toByteArray())
+                        .toComposeImageBitmap()
+                BitmapPainter(bitmap)
+            }
+
         Window(
             onCloseRequest = ::exitApplication,
             state = windowState,
             title = "Amethyst",
+            icon = appIcon,
         ) {
+            // macOS: transparent + full-window-content title bar so the deck/sidebar
+            // shows through, with traffic lights still drawn on top. No-op elsewhere.
+            applyNativeWindowChrome()
+
             MenuBar {
                 Menu("File") {
                     Item(
@@ -737,10 +802,13 @@ fun App(
         }
     }
 
-    MaterialTheme(
-        colorScheme = darkColorScheme(),
-    ) {
-        ProvideMaterialSymbols {
+    val isDark by com.vitorpamplona.amethyst.desktop.platform
+        .rememberSystemDark(LocalAwtWindow.current)
+
+    com.vitorpamplona.amethyst.desktop.platform.PlatformMaterialTheme(isDark = isDark) {
+        ProvideMaterialSymbols(
+            weight = com.vitorpamplona.amethyst.desktop.platform.PlatformIconWeight.current,
+        ) {
             Surface(
                 modifier = Modifier.fillMaxSize(),
                 color = MaterialTheme.colorScheme.background,
@@ -1254,213 +1322,232 @@ fun RelaySettingsScreen(
         accountManager.loadNwcConnection()
     }
 
-    Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
-    ) {
-        Text(
-            "Settings",
-            style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.onBackground,
-        )
-
-        Spacer(Modifier.height(24.dp))
-
-        // Wallet Connect Section
-        Text(
-            "Wallet Connect (NWC)",
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onBackground,
-        )
-        Spacer(Modifier.height(8.dp))
-
-        Text(
-            "Connect a Lightning wallet to enable zaps. Get a connection string from Alby, Mutiny, or other NWC-compatible wallets.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-
-        Spacer(Modifier.height(12.dp))
-
-        if (nwcConnection != null) {
+    com.vitorpamplona.amethyst.desktop.ui.ReadingColumn {
+        val sidePadding =
+            com.vitorpamplona.amethyst.desktop.ui
+                .readingHorizontalPadding()
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = sidePadding),
+        ) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 48.dp)
+                        .padding(vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Column {
-                    Text(
-                        "Wallet Connected",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                    Text(
-                        "Relay: ${nwcConnection!!.relayUri.url}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                OutlinedButton(
-                    onClick = { accountManager.clearNwcConnection() },
-                    colors =
-                        ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.error,
-                        ),
+                Text(
+                    "Settings",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onBackground,
+                )
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            // Wallet Connect Section
+            Text(
+                "Wallet Connect (NWC)",
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onBackground,
+            )
+            Spacer(Modifier.height(8.dp))
+
+            Text(
+                "Connect a Lightning wallet to enable zaps. Get a connection string from Alby, Mutiny, or other NWC-compatible wallets.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            Spacer(Modifier.height(12.dp))
+
+            if (nwcConnection != null) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("Disconnect")
+                    Column {
+                        Text(
+                            "Wallet Connected",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                        Text(
+                            "Relay: ${nwcConnection!!.relayUri.url}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    OutlinedButton(
+                        onClick = { accountManager.clearNwcConnection() },
+                        colors =
+                            ButtonDefaults.outlinedButtonColors(
+                                contentColor = MaterialTheme.colorScheme.error,
+                            ),
+                    ) {
+                        Text("Disconnect")
+                    }
+                }
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    OutlinedTextField(
+                        value = nwcInput,
+                        onValueChange = {
+                            nwcInput = it
+                            nwcError = null
+                        },
+                        label = { Text("NWC Connection String") },
+                        placeholder = { Text("nostr+walletconnect://...") },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        isError = nwcError != null,
+                        supportingText = nwcError?.let { { Text(it, color = MaterialTheme.colorScheme.error) } },
+                    )
+                    Button(
+                        onClick = {
+                            val result = accountManager.setNwcConnection(nwcInput)
+                            result.fold(
+                                onSuccess = { nwcInput = "" },
+                                onFailure = { nwcError = it.message ?: "Invalid connection string" },
+                            )
+                        },
+                        enabled = nwcInput.isNotBlank(),
+                    ) {
+                        Text("Connect")
+                    }
                 }
             }
-        } else {
+
+            Spacer(Modifier.height(24.dp))
+            HorizontalDivider()
+            Spacer(Modifier.height(24.dp))
+
+            // Media Server Settings
+            MediaServerSettings(
+                initialServers = DesktopPreferences.blossomServers,
+                onServersChanged = { DesktopPreferences.blossomServers = it },
+            )
+            Spacer(Modifier.height(24.dp))
+            HorizontalDivider()
+            Spacer(Modifier.height(24.dp))
+
+            // Tor Settings
+            com.vitorpamplona.amethyst.desktop.ui.tor.TorSettingsSection(
+                torStatus = torStatus,
+                currentSettings = torSettings,
+                onSettingsChanged = onTorSettingsChanged,
+            )
+            Spacer(Modifier.height(24.dp))
+            HorizontalDivider()
+            Spacer(Modifier.height(24.dp))
+
+            // Developer Settings Section (only in debug mode)
+            if (DebugConfig.isDebugMode) {
+                com.vitorpamplona.amethyst.desktop.ui
+                    .DevSettingsSection(account = account)
+                Spacer(Modifier.height(24.dp))
+                HorizontalDivider()
+                Spacer(Modifier.height(24.dp))
+            }
+
+            Text(
+                "Relay Settings",
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onBackground,
+            )
+            Spacer(Modifier.height(8.dp))
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(
+                    "${connectedRelays.size} of ${relayStatuses.size} relays connected",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                IconButton(onClick = { relayManager.connect() }) {
+                    Icon(
+                        MaterialSymbols.Refresh,
+                        contentDescription = "Reconnect",
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 OutlinedTextField(
-                    value = nwcInput,
-                    onValueChange = {
-                        nwcInput = it
-                        nwcError = null
-                    },
-                    label = { Text("NWC Connection String") },
-                    placeholder = { Text("nostr+walletconnect://...") },
+                    value = newRelayUrl,
+                    onValueChange = { newRelayUrl = it },
+                    label = { Text("Add relay") },
+                    placeholder = { Text("wss://relay.example.com") },
                     modifier = Modifier.weight(1f),
                     singleLine = true,
-                    isError = nwcError != null,
-                    supportingText = nwcError?.let { { Text(it, color = MaterialTheme.colorScheme.error) } },
                 )
                 Button(
                     onClick = {
-                        val result = accountManager.setNwcConnection(nwcInput)
-                        result.fold(
-                            onSuccess = { nwcInput = "" },
-                            onFailure = { nwcError = it.message ?: "Invalid connection string" },
-                        )
+                        if (newRelayUrl.isNotBlank()) {
+                            relayManager.addRelay(newRelayUrl)
+                            newRelayUrl = ""
+                        }
                     },
-                    enabled = nwcInput.isNotBlank(),
+                    enabled = newRelayUrl.isNotBlank(),
                 ) {
-                    Text("Connect")
+                    Text("Add")
                 }
             }
-        }
 
-        Spacer(Modifier.height(24.dp))
-        HorizontalDivider()
-        Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(16.dp))
 
-        // Media Server Settings
-        MediaServerSettings(
-            initialServers = DesktopPreferences.blossomServers,
-            onServersChanged = { DesktopPreferences.blossomServers = it },
-        )
-        Spacer(Modifier.height(24.dp))
-        HorizontalDivider()
-        Spacer(Modifier.height(24.dp))
-
-        // Tor Settings
-        com.vitorpamplona.amethyst.desktop.ui.tor.TorSettingsSection(
-            torStatus = torStatus,
-            currentSettings = torSettings,
-            onSettingsChanged = onTorSettingsChanged,
-        )
-        Spacer(Modifier.height(24.dp))
-        HorizontalDivider()
-        Spacer(Modifier.height(24.dp))
-
-        // Developer Settings Section (only in debug mode)
-        if (DebugConfig.isDebugMode) {
-            com.vitorpamplona.amethyst.desktop.ui
-                .DevSettingsSection(account = account)
-            Spacer(Modifier.height(24.dp))
-            HorizontalDivider()
-            Spacer(Modifier.height(24.dp))
-        }
-
-        Text(
-            "Relay Settings",
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onBackground,
-        )
-        Spacer(Modifier.height(8.dp))
-
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Text(
-                "${connectedRelays.size} of ${relayStatuses.size} relays connected",
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            IconButton(onClick = { relayManager.connect() }) {
-                Icon(
-                    MaterialSymbols.Refresh,
-                    contentDescription = "Reconnect",
-                    tint = MaterialTheme.colorScheme.primary,
-                )
-            }
-        }
-
-        Spacer(Modifier.height(16.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            OutlinedTextField(
-                value = newRelayUrl,
-                onValueChange = { newRelayUrl = it },
-                label = { Text("Add relay") },
-                placeholder = { Text("wss://relay.example.com") },
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.weight(1f),
-                singleLine = true,
-            )
-            Button(
-                onClick = {
-                    if (newRelayUrl.isNotBlank()) {
-                        relayManager.addRelay(newRelayUrl)
-                        newRelayUrl = ""
-                    }
-                },
-                enabled = newRelayUrl.isNotBlank(),
             ) {
-                Text("Add")
+                items(relayStatuses.values.toList(), key = { it.url.url }) { status ->
+                    RelayStatusCard(
+                        status = status,
+                        onRemove = { relayManager.removeRelay(status.url) },
+                    )
+                }
             }
-        }
 
-        Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(16.dp))
 
-        LazyColumn(
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.weight(1f),
-        ) {
-            items(relayStatuses.values.toList(), key = { it.url.url }) { status ->
-                RelayStatusCard(
-                    status = status,
-                    onRemove = { relayManager.removeRelay(status.url) },
-                )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = { relayManager.addDefaultRelays() }) {
+                    Text("Reset to Defaults")
+                }
             }
-        }
 
-        Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(16.dp))
 
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = { relayManager.addDefaultRelays() }) {
-                Text("Reset to Defaults")
+            val logoutScope = rememberCoroutineScope()
+            OutlinedButton(
+                onClick = { logoutScope.launch { accountManager.logout(deleteKey = true) } },
+                colors =
+                    ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error,
+                    ),
+            ) {
+                Text("Logout")
             }
-        }
-
-        Spacer(Modifier.height(16.dp))
-
-        val logoutScope = rememberCoroutineScope()
-        OutlinedButton(
-            onClick = { logoutScope.launch { accountManager.logout(deleteKey = true) } },
-            colors =
-                ButtonDefaults.outlinedButtonColors(
-                    contentColor = MaterialTheme.colorScheme.error,
-                ),
-        ) {
-            Text("Logout")
         }
     }
 }

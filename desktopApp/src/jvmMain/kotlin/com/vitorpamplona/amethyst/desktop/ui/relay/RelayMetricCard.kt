@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.desktop.ui.relay
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -62,9 +61,9 @@ fun RelayMetricCard(
         value = nip11Fetcher.fetch(status.url)
     }
 
-    Card(modifier = modifier.fillMaxWidth()) {
+    Card(onClick = onToggleExpand, modifier = modifier.fillMaxWidth()) {
         Column(
-            modifier = Modifier.clickable { onToggleExpand() }.padding(12.dp),
+            modifier = Modifier.padding(12.dp),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),

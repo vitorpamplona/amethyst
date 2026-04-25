@@ -20,11 +20,13 @@
  */
 package com.vitorpamplona.amethyst.desktop.ui.relay
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.PrimaryTabRow
-import androidx.compose.material3.Tab
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -34,7 +36,9 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.nip65RelayList.Nip65RelayListState
 import com.vitorpamplona.amethyst.desktop.model.DesktopAccountRelays
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
@@ -50,7 +54,6 @@ enum class DashboardTab(
     CONFIGURE("Configure"),
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RelayDashboardScreen(
     relayManager: DesktopRelayConnectionManager,
@@ -79,12 +82,17 @@ fun RelayDashboardScreen(
     }
 
     Column(modifier = modifier.fillMaxSize()) {
-        PrimaryTabRow(selectedTabIndex = DashboardTab.entries.indexOf(selectedTab)) {
+        // Header — Messages-style tabs-first: selected chip acts as the screen title.
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             DashboardTab.entries.forEach { tab ->
-                Tab(
+                FilterChip(
                     selected = selectedTab == tab,
                     onClick = { selectedTab = tab },
-                    text = { Text(tab.label) },
+                    label = { Text(tab.label) },
                 )
             }
         }

@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -52,6 +53,7 @@ import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.network.Nip11Fetcher
+import com.vitorpamplona.amethyst.desktop.platform.titleBarInsetTop
 import com.vitorpamplona.amethyst.desktop.service.highlights.DesktopHighlightStore
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.desktop.ui.ZapFeedback
@@ -97,7 +99,9 @@ fun SinglePaneLayout(
         if (!isImmersive) {
             NavigationRail(
                 modifier = Modifier.width(80.dp).fillMaxHeight(),
-                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                // macOS: push rail items below the traffic lights.
+                header = { Spacer(Modifier.height(titleBarInsetTop)) },
             ) {
                 val pinnedScreens by pinnedNavBarState.pinnedScreens.collectAsState()
                 pinnedScreens.forEach { screenType ->
@@ -176,9 +180,10 @@ fun SinglePaneLayout(
         }
 
         Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
-            Box(
-                modifier = Modifier.fillMaxSize().padding(if (isImmersive) 0.dp else 12.dp),
-            ) {
+            // Content extends to the window edges; individual screens add their
+            // own internal padding where appropriate (Messages uses full-bleed
+            // panes to match native two-column chat apps).
+            Box(modifier = Modifier.fillMaxSize()) {
                 // Always keep RootContent composed so state (e.g. search results) survives navigation
                 RootContent(
                     columnType = currentColumnType,

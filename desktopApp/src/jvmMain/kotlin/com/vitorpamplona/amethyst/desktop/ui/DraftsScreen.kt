@@ -20,19 +20,19 @@
  */
 package com.vitorpamplona.amethyst.desktop.ui
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.IconButton
@@ -52,6 +52,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.desktop.service.drafts.DesktopDraftStore
 import com.vitorpamplona.amethyst.desktop.service.drafts.DraftEntry
 import kotlinx.coroutines.launch
@@ -65,33 +66,42 @@ fun DraftsScreen(
     val scope = rememberCoroutineScope()
     var deleteTarget by remember { mutableStateOf<DraftEntry?>(null) }
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    ReadingColumn {
+        val sidePadding = readingHorizontalPadding()
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 48.dp)
+                    .padding(horizontal = sidePadding, vertical = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
                 "Drafts",
-                style = MaterialTheme.typography.headlineMedium,
+                style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onBackground,
             )
-            Button(onClick = { onOpenEditor(null) }) {
-                Icon(MaterialSymbols.Add, contentDescription = null)
-                Text("New Draft", modifier = Modifier.padding(start = 4.dp))
+            // Convert "New Draft" button to an icon for consistency with other
+            // screens' tabs-first + icon-actions header pattern.
+            IconButton(onClick = { onOpenEditor(null) }, modifier = Modifier.size(32.dp)) {
+                Icon(
+                    MaterialSymbols.Add,
+                    contentDescription = "New Draft",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp),
+                )
             }
         }
 
-        Spacer(Modifier.height(16.dp))
-
         if (drafts.isEmpty()) {
-            Text(
-                "No drafts yet. Click \"New Draft\" to start writing.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            EmptyState(
+                title = "No drafts yet",
+                description = "Click \"New Draft\" to start writing.",
             )
         } else {
             LazyColumn(
+                contentPadding = PaddingValues(horizontal = sidePadding),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 items(drafts, key = { it.slug }) { entry ->
@@ -139,7 +149,8 @@ private fun DraftCard(
     onDelete: () -> Unit,
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
         colors =
             CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surface,
