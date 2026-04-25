@@ -48,6 +48,15 @@ class InProcessTlsServer(
     private val random: ByteArray = RandomInstance.bytes(32),
     private val transportParameters: ByteArray = ByteArray(0),
     private val alpn: ByteArray = TlsConstants.ALPN_H3,
+    /**
+     * Server-side cipher suite preference order. The first suite from the
+     * client's offered list that matches one in [preferredCiphers] wins.
+     */
+    private val preferredCiphers: List<Int> =
+        listOf(
+            TlsConstants.CIPHER_TLS_AES_128_GCM_SHA256,
+            TlsConstants.CIPHER_TLS_CHACHA20_POLY1305_SHA256,
+        ),
 ) {
     private val transcript = TlsTranscriptHash()
     private val keySchedule = TlsKeySchedule(transcript)
@@ -84,8 +93,9 @@ class InProcessTlsServer(
         r.readBytes(32) // random
         r.readTlsOpaque1() // legacy_session_id
         val cipherSuiteCount = r.readUint16() / 2
+        val offered = (0 until cipherSuiteCount).map { r.readUint16() }
         val pickedSuite =
-            (0 until cipherSuiteCount).map { r.readUint16() }.firstOrNull {
+            preferredCiphers.firstOrNull { it in offered } ?: offered.firstOrNull {
                 it == TlsConstants.CIPHER_TLS_AES_128_GCM_SHA256 ||
                     it == TlsConstants.CIPHER_TLS_CHACHA20_POLY1305_SHA256
             } ?: error("no acceptable cipher suite in ClientHello")

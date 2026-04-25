@@ -91,11 +91,49 @@ class TlsRoundTripTest {
         assertContentEquals(tps, client.peerTransportParameters)
     }
 
+    /**
+     * The same handshake but the in-process server is configured to prefer
+     * ChaCha20-Poly1305 over AES-GCM. This catches the class of bug where
+     * the client hardcodes a cipher suite and silently miscomputes 1-RTT
+     * keys when the server picks the other one.
+     */
+    @Test
+    fun handshake_completes_with_chacha20_cipher() {
+        val capturedSecrets = CapturedSecrets()
+        val server =
+            InProcessTlsServer(
+                preferredCiphers = listOf(TlsConstants.CIPHER_TLS_CHACHA20_POLY1305_SHA256),
+            )
+        val client =
+            TlsClient(
+                serverName = "example.test",
+                transportParameters = ByteArray(0),
+                secretsListener = capturedSecrets,
+                certificateValidator = null,
+            )
+        client.start()
+
+        val ch = client.pollOutbound(TlsClient.Level.INITIAL)!!
+        server.receiveClientHello(ch)
+        client.pushHandshakeBytes(TlsClient.Level.INITIAL, server.pollOutboundInitial()!!)
+        client.pushHandshakeBytes(TlsClient.Level.HANDSHAKE, server.pollOutboundHandshake()!!)
+        client.pushHandshakeBytes(TlsClient.Level.HANDSHAKE, server.pollOutboundHandshake()!!)
+        server.receiveClientFinished(client.pollOutbound(TlsClient.Level.HANDSHAKE)!!)
+
+        assertEquals(TlsConstants.CIPHER_TLS_CHACHA20_POLY1305_SHA256, server.negotiatedCipherSuite)
+        // The client's onApplicationKeysReady reports the negotiated suite.
+        assertEquals(TlsConstants.CIPHER_TLS_CHACHA20_POLY1305_SHA256, capturedSecrets.applicationCipherSuite)
+        assertContentEquals(server.clientApplicationSecret, capturedSecrets.applicationClient)
+        assertContentEquals(server.serverApplicationSecret, capturedSecrets.applicationServer)
+        assertTrue(capturedSecrets.handshakeComplete)
+    }
+
     private class CapturedSecrets : TlsSecretsListener {
         var handshakeClient: ByteArray? = null
         var handshakeServer: ByteArray? = null
         var applicationClient: ByteArray? = null
         var applicationServer: ByteArray? = null
+        var applicationCipherSuite: Int = -1
         var handshakeComplete = false
 
         override fun onHandshakeKeysReady(
@@ -114,6 +152,7 @@ class TlsRoundTripTest {
         ) {
             applicationClient = clientSecret
             applicationServer = serverSecret
+            applicationCipherSuite = cipherSuite
         }
 
         override fun onHandshakeComplete() {
