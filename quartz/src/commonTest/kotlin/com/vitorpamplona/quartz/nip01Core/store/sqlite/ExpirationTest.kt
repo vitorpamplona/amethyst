@@ -82,4 +82,26 @@ class ExpirationTest : BaseDBTest() {
                 db.insert(note1)
             }
         }
+
+    @Test
+    fun testInsertingEventExpiringExactlyNow() =
+        forEachDB { db ->
+            val time = TimeUtils.now()
+
+            // Per NIP-40 the event is expired once `expiration` is reached;
+            // the SQL trigger uses `<= unixepoch()` and Kotlin's isExpired
+            // now agrees, so an event whose expiration equals "now" must be
+            // rejected by both layers — not silently let through the Kotlin
+            // pre-check only to fail in the trigger.
+            val note =
+                signer.sign(
+                    TextNoteEvent.build("expires-now", createdAt = time - 1) {
+                        expiration(time)
+                    },
+                )
+
+            assertFailsWith<SQLiteException> {
+                db.insert(note)
+            }
+        }
 }

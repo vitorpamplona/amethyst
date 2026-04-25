@@ -201,6 +201,59 @@ class BasicTest : BaseDBTest() {
         }
 
     @Test
+    fun testDeleteWithEmptyFilterIsSafe() =
+        forEachDB { db ->
+            val note1 = signer.sign(TextNoteEvent.build("test1", createdAt = 1))
+            val note2 = signer.sign(TextNoteEvent.build("test2", createdAt = 2))
+
+            db.insert(note1)
+            db.insert(note2)
+
+            // Empty filter: query returns everything, but delete must NOT
+            // wipe the store. This asymmetry is intentional safe-by-default.
+            assertEquals(2, db.count(Filter()))
+            db.delete(Filter())
+
+            db.assertQuery(note1, Filter(ids = listOf(note1.id)))
+            db.assertQuery(note2, Filter(ids = listOf(note2.id)))
+
+            // Same applies to a list of empty filters.
+            db.delete(listOf(Filter(), Filter()))
+            assertEquals(2, db.count(Filter()))
+        }
+
+    @Test
+    fun testTransactionRollsBackOnException() =
+        forEachDB { db ->
+            val note1 = signer.sign(TextNoteEvent.build("kept", createdAt = 1))
+            val note2 = signer.sign(TextNoteEvent.build("rolled-back", createdAt = 2))
+
+            // Pre-existing event the test should not disturb.
+            db.insert(note1)
+            db.assertQuery(note1, Filter(ids = listOf(note1.id)))
+
+            // A user-level transaction that inserts note2 then throws should
+            // leave the DB exactly as it was before — note2 must NOT remain.
+            val sentinel = RuntimeException("boom")
+            try {
+                db.transaction {
+                    insert(note2)
+                    throw sentinel
+                }
+                error("transaction should have rethrown")
+            } catch (e: RuntimeException) {
+                kotlin.test.assertEquals(sentinel, e)
+            }
+
+            db.assertQuery(note1, Filter(ids = listOf(note1.id)))
+            db.assertQuery(null, Filter(ids = listOf(note2.id)))
+
+            // After a rollback, the DB must still accept new writes.
+            db.insert(note2)
+            db.assertQuery(note2, Filter(ids = listOf(note2.id)))
+        }
+
+    @Test
     fun testSchemaRecreateIsIdempotent() =
         forEachDB { db ->
             // The v1->v2 upgrade in SQLiteEventStore.onUpgrade does

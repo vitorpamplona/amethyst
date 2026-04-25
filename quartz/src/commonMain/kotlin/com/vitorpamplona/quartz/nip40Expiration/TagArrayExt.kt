@@ -27,10 +27,10 @@ fun TagArray.expiration() = this.firstNotNullOfOrNull(ExpirationTag::parse)
 
 fun TagArray.isExpired(): Boolean {
     val exp = expiration() ?: return false
-    return exp < TimeUtils.now()
+    return exp <= TimeUtils.now()
 }
 
 fun TagArray.isExpirationBefore(time: Long): Boolean {
     val exp = expiration() ?: return false
-    return exp < time
+    return exp <= time
 }
