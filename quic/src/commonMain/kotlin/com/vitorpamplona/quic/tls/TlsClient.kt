@@ -50,7 +50,14 @@ class TlsClient(
     val serverName: String,
     val transportParameters: ByteArray,
     val secretsListener: TlsSecretsListener,
-    val certificateValidator: CertificateValidator? = null,
+    /**
+     * Certificate validator MUST be supplied for any production / network-facing
+     * use. The only acceptable null is in-process tests where there's no real
+     * server identity to authenticate (e.g. [TlsRoundTripTest]'s loopback). A
+     * null validator here means "no MITM protection" — a misconfigured caller
+     * must fail loudly, not silently accept any certificate.
+     */
+    val certificateValidator: CertificateValidator?,
     /** When non-null, used as the X25519 ephemeral key (for deterministic tests). */
     val fixedKeyPair: X25519KeyPair? = null,
     /** When non-null, used as the ClientHello random (for deterministic tests). */
@@ -98,6 +105,7 @@ class TlsClient(
     private var keyPair: X25519KeyPair? = null
     private var serverKeyShare: ByteArray? = null
     private var sharedSecret: ByteArray? = null
+    private var negotiatedCipherSuite: Int = -1
 
     /** Begin the handshake by emitting a ClientHello at Initial level. */
     fun start() {
@@ -169,6 +177,7 @@ class TlsClient(
                 ) {
                     throw QuicCodecException("server picked unsupported cipher 0x${cipher.toString(16)}")
                 }
+                negotiatedCipherSuite = cipher
                 serverKeyShare = sh.serverKeyShareX25519
                 transcript.append(msg)
 
@@ -273,12 +282,8 @@ class TlsClient(
     }
 
     private fun currentCipherSuite(): Int {
-        // For Phase B we always negotiate TLS_AES_128_GCM_SHA256 first; if that's
-        // not the picked one, the only other we accept is ChaCha20-Poly1305-SHA256.
-        // The ServerHello has already validated this. We carry it implicitly via
-        // the SHA-256 schedule; the cipher choice only affects the AEAD/HP picked
-        // by the QUIC layer.
-        return TlsConstants.CIPHER_TLS_AES_128_GCM_SHA256
+        check(negotiatedCipherSuite != -1) { "cipher suite not yet negotiated" }
+        return negotiatedCipherSuite
     }
 }
 

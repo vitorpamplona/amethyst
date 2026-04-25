@@ -26,18 +26,22 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 /**
  * Owns the UDP socket and runs the read + send loops for a [QuicConnection].
  *
- * Lifecycle:
- *   - [open] connects the UDP socket, calls [QuicConnection.start], spawns
- *     read + send loops, and suspends until handshake completes.
- *   - [close] cancels the loops and closes the socket.
+ * Synchronization: every public mutator on [QuicConnection] takes
+ * `connection.lock`; the driver acquires the same lock around feed + drain.
+ * That guarantees the read loop, send loop, and app coroutines never see a
+ * mid-mutation state of the streams map / datagram queues / counters.
+ *
+ * The send loop is woken by a `Channel<Unit>(CONFLATED)` rather than a
+ * polling timer — no idle CPU. App writes ([QuicConnection.queueDatagram]
+ * and [QuicConnection.openBidiStream]/[com.vitorpamplona.quic.stream.SendBuffer.enqueue])
+ * call [wakeup] to nudge the send loop.
  */
 class QuicConnectionDriver(
     val connection: QuicConnection,
@@ -47,39 +51,48 @@ class QuicConnectionDriver(
 ) {
     private val job = SupervisorJob(parentScope.coroutineContext[Job])
     private val scope = CoroutineScope(parentScope.coroutineContext + job + Dispatchers.IO)
-    private val sendLock = Mutex()
+    private val sendWakeup = Channel<Unit>(Channel.CONFLATED)
 
     fun start() {
         connection.start()
         scope.launch { readLoop() }
         scope.launch { sendLoop() }
+        // Initial nudge so the ClientHello goes out immediately.
+        sendWakeup.trySend(Unit)
+    }
+
+    /** Nudge the send loop. Safe to call from any coroutine. */
+    fun wakeup() {
+        sendWakeup.trySend(Unit)
     }
 
     private suspend fun readLoop() {
-        while (true) {
+        while (connection.status != QuicConnection.Status.CLOSED) {
             val datagram = socket.receive() ?: break
-            sendLock.withLock {
+            connection.lock.withLock {
                 feedDatagram(connection, datagram, nowMillis())
             }
+            // Inbound data may have produced new outbound (acks, crypto, etc.).
+            wakeup()
         }
     }
 
     private suspend fun sendLoop() {
         while (connection.status != QuicConnection.Status.CLOSED) {
-            sendLock.withLock {
+            connection.lock.withLock {
                 while (true) {
                     val out = drainOutbound(connection, nowMillis()) ?: break
                     socket.send(out)
                 }
             }
-            // Tiny sleep to avoid tight-spin between drains; in practice, application
-            // writes (via stream.send.enqueue + queueDatagram) wake the loop next tick.
-            delay(2)
+            // Suspend until the next wakeup — no busy polling.
+            sendWakeup.receive()
         }
     }
 
-    fun close() {
+    suspend fun close() {
         connection.close(0L, "")
+        wakeup() // let the send loop emit CONNECTION_CLOSE
         scope.cancel()
         socket.close()
     }

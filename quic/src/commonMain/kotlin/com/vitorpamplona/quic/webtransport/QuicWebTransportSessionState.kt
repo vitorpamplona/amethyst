@@ -42,36 +42,39 @@ class QuicWebTransportSessionState(
         get() = connection.status == QuicConnection.Status.CONNECTED
 
     /** Open a new client-initiated bidirectional WebTransport stream. */
-    fun openBidiStream(): QuicStream {
+    suspend fun openBidiStream(): QuicStream {
         val s = connection.openBidiStream()
         // Prefix bytes go onto the new stream first.
         s.send.enqueue(encodeWtBidiStreamPrefix(connectStreamId))
+        driver.wakeup()
         return s
     }
 
     /** Open a new client-initiated unidirectional WebTransport stream. */
-    fun openUniStream(): QuicStream {
+    suspend fun openUniStream(): QuicStream {
         val s = connection.openUniStream()
         s.send.enqueue(encodeWtUniStreamPrefix(connectStreamId))
+        driver.wakeup()
         return s
     }
 
     /** Send a WebTransport datagram via QUIC's datagram extension. */
-    fun sendDatagram(payload: ByteArray) {
+    suspend fun sendDatagram(payload: ByteArray) {
         val wrapped = WtDatagram.encode(connectStreamId, payload)
         connection.queueDatagram(wrapped)
+        driver.wakeup()
     }
 
-    fun pollIncomingDatagram(): ByteArray? {
+    suspend fun pollIncomingDatagram(): ByteArray? {
         val raw = connection.pollIncomingDatagram() ?: return null
         val decoded = WtDatagram.decode(raw) ?: return null
         if (decoded.sessionStreamId != connectStreamId) return null
         return decoded.payload
     }
 
-    fun pollIncomingPeerStream(): QuicStream? = connection.pollIncomingPeerStream()
+    suspend fun pollIncomingPeerStream(): QuicStream? = connection.pollIncomingPeerStream()
 
-    fun close(
+    suspend fun close(
         errorCode: Int = 0,
         reason: String = "",
     ) {

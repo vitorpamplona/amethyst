@@ -26,6 +26,8 @@ import com.vitorpamplona.quic.connection.QuicConnectionDriver
 import com.vitorpamplona.quic.http3.Http3StreamType
 import com.vitorpamplona.quic.http3.buildClientWebTransportSettings
 import com.vitorpamplona.quic.stream.QuicStream
+import com.vitorpamplona.quic.tls.CertificateValidator
+import com.vitorpamplona.quic.tls.JdkCertificateValidator
 import com.vitorpamplona.quic.transport.UdpSocket
 import com.vitorpamplona.quic.webtransport.QuicWebTransportSessionState
 import com.vitorpamplona.quic.webtransport.buildExtendedConnectHeaders
@@ -61,6 +63,12 @@ import kotlinx.coroutines.flow.flow
 class QuicWebTransportFactory(
     private val parentScope: CoroutineScope =
         CoroutineScope(SupervisorJob() + Dispatchers.IO),
+    /**
+     * Certificate validator. Defaults to [JdkCertificateValidator], which
+     * delegates to the platform / JDK system trust store. Tests or self-signed
+     * dev environments can pass a permissive validator explicitly.
+     */
+    private val certificateValidator: CertificateValidator = JdkCertificateValidator(),
 ) : WebTransportFactory {
     override suspend fun connect(
         authority: String,
@@ -69,13 +77,24 @@ class QuicWebTransportFactory(
     ): WebTransportSession {
         val (host, port) = splitAuthority(authority)
         val socket = UdpSocket.connect(host, port)
-        val conn = QuicConnection(serverName = host, config = QuicConnectionConfig())
+        val conn =
+            QuicConnection(
+                serverName = host,
+                config = QuicConnectionConfig(),
+                tlsCertificateValidator = certificateValidator,
+            )
         val driver = QuicConnectionDriver(conn, socket, parentScope)
         driver.start()
 
-        // Spin until handshake completes or fails. In Phase L+ this is a deadline.
-        while (conn.status == QuicConnection.Status.HANDSHAKING) {
-            kotlinx.coroutines.delay(20)
+        try {
+            conn.awaitHandshake()
+        } catch (t: Throwable) {
+            driver.close()
+            throw WebTransportException(
+                kind = WebTransportException.Kind.HandshakeFailed,
+                message = "QUIC handshake failed: ${t.message}",
+                cause = t,
+            )
         }
         if (conn.status != QuicConnection.Status.CONNECTED) {
             driver.close()
@@ -117,7 +136,7 @@ class QuicWebTransportSession(
 
     override suspend fun openBidiStream(): WebTransportBidiStream {
         val s = state.openBidiStream()
-        return QuicBidiStreamAdapter(s)
+        return QuicBidiStreamAdapter(s, state.driver)
     }
 
     override fun incomingUniStreams(): Flow<WebTransportReadStream> =
@@ -153,15 +172,18 @@ class QuicWebTransportSession(
 
 private class QuicBidiStreamAdapter(
     private val stream: QuicStream,
+    private val driver: com.vitorpamplona.quic.connection.QuicConnectionDriver,
 ) : WebTransportBidiStream {
     override fun incoming(): Flow<ByteArray> = stream.incoming
 
     override suspend fun write(chunk: ByteArray) {
         stream.send.enqueue(chunk)
+        driver.wakeup()
     }
 
     override suspend fun finish() {
         stream.send.finish()
+        driver.wakeup()
     }
 }
 

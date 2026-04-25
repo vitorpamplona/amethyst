@@ -213,15 +213,15 @@ private fun buildApplicationPacket(
     state.ackTracker.buildAckFrame(nowMillis, conn.config.ackDelayExponent.toInt())?.let { frames += it }
 
     // Pending datagrams
-    while (conn.pendingDatagramsView().isNotEmpty()) {
-        val payload = conn.pendingDatagramsView().removeFirst()
+    while (conn.pendingDatagramsLocked().isNotEmpty()) {
+        val payload = conn.pendingDatagramsLocked().removeFirst()
         frames += DatagramFrame(payload, explicitLength = true)
         if (frames.size >= 16) break
     }
 
     // Drain stream send buffers — round-robin keeping packet under MTU.
     var packetBudget = 1100
-    for ((id, stream) in conn.streamsView()) {
+    for ((id, stream) in conn.streamsLocked()) {
         if (packetBudget <= 64) break
         val chunk = stream.send.takeChunk(maxBytes = packetBudget - 32) ?: continue
         if (chunk.data.isNotEmpty() || chunk.fin) {

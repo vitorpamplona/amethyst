@@ -29,6 +29,9 @@ import com.vitorpamplona.quic.stream.StreamId
 import com.vitorpamplona.quic.tls.TlsClient
 import com.vitorpamplona.quic.tls.TlsConstants
 import com.vitorpamplona.quic.tls.TlsSecretsListener
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * QUIC v1 client connection. The orchestrator that owns:
@@ -55,7 +58,14 @@ import com.vitorpamplona.quic.tls.TlsSecretsListener
 class QuicConnection(
     val serverName: String,
     val config: QuicConnectionConfig,
-    val tlsCertificateValidator: com.vitorpamplona.quic.tls.CertificateValidator? = null,
+    /**
+     * MUST be non-null for any network-facing connection. Pass an explicit
+     * `null` only when the caller has audited the threat model and accepts
+     * unauthenticated TLS (e.g. an in-process test loopback). There is no
+     * silent default — production callers either pass a system-trust-store
+     * validator or get a misconfiguration that's obvious in code review.
+     */
+    val tlsCertificateValidator: com.vitorpamplona.quic.tls.CertificateValidator?,
     val nowMillis: () -> Long = {
         kotlin.time.Clock.System
             .now()
@@ -124,8 +134,24 @@ class QuicConnection(
                 handshakeComplete = true
                 if (status == Status.HANDSHAKING) status = Status.CONNECTED
                 applyPeerTransportParameters()
+                handshakeDoneSignal.complete(Unit)
             }
         }
+
+    private val handshakeDoneSignal = CompletableDeferred<Unit>()
+
+    /**
+     * Suspend until the handshake completes or fails. Throws if the connection
+     * was closed before reaching CONNECTED.
+     */
+    suspend fun awaitHandshake() {
+        handshakeDoneSignal.await()
+    }
+
+    /** Mark the handshake as failed (called by the driver when read loop dies during handshaking). */
+    internal fun signalHandshakeFailed(cause: Throwable) {
+        if (!handshakeDoneSignal.isCompleted) handshakeDoneSignal.completeExceptionally(cause)
+    }
 
     val tls: TlsClient =
         TlsClient(
@@ -187,48 +213,61 @@ class QuicConnection(
         }
     }
 
-    /** Allocate a new client-initiated bidirectional stream. */
-    fun openBidiStream(): QuicStream {
-        val id = StreamId.build(StreamId.Kind.CLIENT_BIDI, nextLocalBidiIndex++)
-        val stream = QuicStream(id, QuicStream.Direction.BIDIRECTIONAL)
-        stream.sendCredit = peerTransportParameters?.initialMaxStreamDataBidiRemote ?: config.initialMaxStreamDataBidiRemote
-        stream.receiveLimit = config.initialMaxStreamDataBidiLocal
-        streams[id] = stream
-        return stream
-    }
+    /**
+     * Single mutex protecting connection-wide mutable state: streams map,
+     * datagram queues, stream-id counters, status. The driver acquires this
+     * around its read/send loops; public API methods listed below acquire it
+     * before mutating. Internal-only methods (used only from inside the
+     * driver loops) do NOT lock — caller must hold the lock.
+     */
+    val lock: Mutex = Mutex()
 
-    /** Allocate a new client-initiated unidirectional (write-only) stream. */
-    fun openUniStream(): QuicStream {
-        val id = StreamId.build(StreamId.Kind.CLIENT_UNI, nextLocalUniIndex++)
-        val stream = QuicStream(id, QuicStream.Direction.UNIDIRECTIONAL_LOCAL_TO_REMOTE)
-        stream.sendCredit = peerTransportParameters?.initialMaxStreamDataUni ?: config.initialMaxStreamDataUni
-        stream.receiveLimit = 0L // can't receive
-        streams[id] = stream
-        return stream
-    }
+    /** Allocate a new client-initiated bidirectional stream. Locked. */
+    suspend fun openBidiStream(): QuicStream =
+        lock.withLock {
+            val id = StreamId.build(StreamId.Kind.CLIENT_BIDI, nextLocalBidiIndex++)
+            val stream = QuicStream(id, QuicStream.Direction.BIDIRECTIONAL)
+            stream.sendCredit = peerTransportParameters?.initialMaxStreamDataBidiRemote ?: config.initialMaxStreamDataBidiRemote
+            stream.receiveLimit = config.initialMaxStreamDataBidiLocal
+            streams[id] = stream
+            stream
+        }
 
-    fun pollIncomingPeerStream(): QuicStream? = newPeerStreams.removeFirstOrNull()
+    /** Allocate a new client-initiated unidirectional (write-only) stream. Locked. */
+    suspend fun openUniStream(): QuicStream =
+        lock.withLock {
+            val id = StreamId.build(StreamId.Kind.CLIENT_UNI, nextLocalUniIndex++)
+            val stream = QuicStream(id, QuicStream.Direction.UNIDIRECTIONAL_LOCAL_TO_REMOTE)
+            stream.sendCredit = peerTransportParameters?.initialMaxStreamDataUni ?: config.initialMaxStreamDataUni
+            stream.receiveLimit = 0L // can't receive
+            streams[id] = stream
+            stream
+        }
 
-    fun streamById(id: Long): QuicStream? = streams[id]
+    suspend fun pollIncomingPeerStream(): QuicStream? = lock.withLock { newPeerStreams.removeFirstOrNull() }
 
-    fun queueDatagram(payload: ByteArray) {
-        pendingDatagrams.addLast(payload)
-    }
+    suspend fun streamById(id: Long): QuicStream? = lock.withLock { streams[id] }
 
-    fun pollIncomingDatagram(): ByteArray? = incomingDatagrams.removeFirstOrNull()
+    suspend fun queueDatagram(payload: ByteArray) = lock.withLock { pendingDatagrams.addLast(payload) }
+
+    suspend fun pollIncomingDatagram(): ByteArray? = lock.withLock { incomingDatagrams.removeFirstOrNull() }
 
     /** Initiate a graceful close. */
-    fun close(
+    suspend fun close(
         errorCode: Long,
         reason: String,
-    ) {
-        if (status == Status.CLOSED || status == Status.CLOSING) return
+    ) = lock.withLock {
+        if (status == Status.CLOSED || status == Status.CLOSING) return@withLock
         closeErrorCode = errorCode
         closeReason = reason
         status = Status.CLOSING
     }
 
-    internal fun getOrCreatePeerStream(id: Long): QuicStream {
+    /**
+     * Caller must hold [lock]. Used by [QuicConnectionParser] inside the
+     * driver's read loop, which already holds the connection lock.
+     */
+    internal fun getOrCreatePeerStreamLocked(id: Long): QuicStream {
         streams[id]?.let { return it }
         val direction =
             when (StreamId.kindOf(id)) {
@@ -252,9 +291,15 @@ class QuicConnection(
             EncryptionLevel.APPLICATION -> application
         }
 
-    fun streamsView(): Map<Long, QuicStream> = streams
+    /** Caller must hold [lock]. Snapshot of streams for the driver's send loop. */
+    internal fun streamsLocked(): Map<Long, QuicStream> = streams
 
-    fun pendingDatagramsView(): ArrayDeque<ByteArray> = pendingDatagrams
+    /** Caller must hold [lock]. Pending datagram queue for the driver's send loop. */
+    internal fun pendingDatagramsLocked(): ArrayDeque<ByteArray> = pendingDatagrams
 
-    fun incomingDatagramsBuffer(): ArrayDeque<ByteArray> = incomingDatagrams
+    /** Caller must hold [lock]. Inbound datagram queue, written by the read loop. */
+    internal fun incomingDatagramsLocked(): ArrayDeque<ByteArray> = incomingDatagrams
+
+    /** Caller must hold [lock]. */
+    internal fun streamByIdLocked(id: Long): QuicStream? = streams[id]
 }

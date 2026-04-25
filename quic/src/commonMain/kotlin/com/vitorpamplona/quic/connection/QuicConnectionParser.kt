@@ -100,7 +100,7 @@ private fun feedLongHeaderPacket(
         conn.destinationConnectionId = parsed.packet.scid
     }
 
-    dispatchFrames(conn, level, parsed.packet.payload, nowMillis)
+    dispatchFrames(conn, level, parsed.packet.payload, parsed.packet.packetNumber, nowMillis)
     return parsed.consumed
 }
 
@@ -125,13 +125,14 @@ private fun feedShortHeaderPacket(
             largestReceivedInSpace = state.pnSpace.largestReceived,
         ) ?: return
     state.pnSpace.observeInbound(parsed.packet.packetNumber, nowMillis)
-    dispatchFrames(conn, EncryptionLevel.APPLICATION, parsed.packet.payload, nowMillis)
+    dispatchFrames(conn, EncryptionLevel.APPLICATION, parsed.packet.payload, parsed.packet.packetNumber, nowMillis)
 }
 
 private fun dispatchFrames(
     conn: QuicConnection,
     level: EncryptionLevel,
     payload: ByteArray,
+    packetNumber: Long,
     nowMillis: Long,
 ) {
     val frames = decodeFrames(payload)
@@ -164,7 +165,7 @@ private fun dispatchFrames(
 
             is StreamFrame -> {
                 ackEliciting = true
-                val stream = conn.getOrCreatePeerStream(frame.streamId)
+                val stream = conn.getOrCreatePeerStreamLocked(frame.streamId)
                 stream.receive.insert(frame.offset, frame.data, frame.fin)
                 val data = stream.receive.readContiguous()
                 if (data.isNotEmpty()) {
@@ -177,7 +178,7 @@ private fun dispatchFrames(
 
             is DatagramFrame -> {
                 ackEliciting = true
-                conn.incomingDatagramsBuffer().addLast(frame.data)
+                conn.incomingDatagramsLocked().addLast(frame.data)
             }
 
             is MaxDataFrame -> {
@@ -185,7 +186,7 @@ private fun dispatchFrames(
             }
 
             is MaxStreamDataFrame -> {
-                conn.streamById(frame.streamId)?.let {
+                conn.streamByIdLocked(frame.streamId)?.let {
                     if (frame.maxStreamData > it.sendCredit) it.sendCredit = frame.maxStreamData
                 }
             }
@@ -216,13 +217,10 @@ private fun dispatchFrames(
             }
         }
     }
-    if (ackEliciting) {
-        // Get largest received from pn space and feed into ack tracker.
-        val pn = state.pnSpace.largestReceived
-        if (pn >= 0) {
-            state.ackTracker.receivedPacket(pn, ackEliciting = true, receivedAtMillis = nowMillis)
-        }
-    }
+    // Always record the packet's actual PN — even non-ack-eliciting packets
+    // need to appear in our ACK ranges so the peer's loss-recovery sees a
+    // contiguous picture of what we received.
+    state.ackTracker.receivedPacket(packetNumber, ackEliciting = ackEliciting, receivedAtMillis = nowMillis)
 }
 
 private fun drainTlsOutbound(conn: QuicConnection) {

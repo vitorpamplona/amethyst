@@ -49,6 +49,7 @@ class TlsRoundTripTest {
                 serverName = "example.test",
                 transportParameters = ByteArray(0),
                 secretsListener = capturedSecrets,
+                certificateValidator = null, // in-process loopback; no cert chain to validate
             )
         client.start()
 

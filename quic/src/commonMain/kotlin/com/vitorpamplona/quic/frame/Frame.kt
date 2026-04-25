@@ -235,56 +235,42 @@ fun decodeFrames(data: ByteArray): List<Frame> {
     val out = mutableListOf<Frame>()
     val r = QuicReader(data)
     while (r.hasMore()) {
-        val typeByte = r.readByte()
-        if (typeByte == 0x00) {
-            // Padding — skip; many padding bytes coalesce into one logical PaddingFrame.
-            continue
-        }
-        // Move back one byte: type can be a varint, but for the codes < 0x40 it's identical.
-        // For datagrams with length prefix the type is 0x31 which fits in 1 byte.
-        // ACK_ECN (0x03), STREAM with all flag combinations (0x08..0x0f) all <= 0x40.
-        // We don't expect any frame type to exceed 0x40 in our minimal subset.
-        val type = typeByte.toLong()
+        // Frame types are varints per RFC 9000 §12.4; for codes < 0x40 the
+        // varint is a single byte, but we MUST decode as varint so future
+        // extension frame types ≥ 0x40 are correctly recognized (or rejected).
+        val type = r.readVarint()
+        if (type == FrameType.PADDING) continue
+
         when {
             type == FrameType.PING -> {
                 out += PingFrame
             }
 
-            type == FrameType.ACK -> {
+            type == FrameType.ACK || type == FrameType.ACK_ECN -> {
                 val largest = r.readVarint()
                 val delay = r.readVarint()
-                val numRanges = r.readVarint().toInt()
+                val numRangesRaw = r.readVarint()
+                // Cap range count at remaining bytes — each range needs ≥ 2 varint bytes.
+                val numRanges = boundedRangeCount(numRangesRaw, r.remaining)
                 val firstRange = r.readVarint()
-                val ranges = mutableListOf<AckRange>()
-                repeat(numRanges) {
+                val ranges = ArrayList<AckRange>(numRanges)
+                for (i in 0 until numRanges) {
                     val gap = r.readVarint()
                     val len = r.readVarint()
                     ranges += AckRange(gap, len)
                 }
-                out += AckFrame(largest, delay, firstRange, ranges)
-            }
-
-            type == FrameType.ACK_ECN -> {
-                val largest = r.readVarint()
-                val delay = r.readVarint()
-                val numRanges = r.readVarint().toInt()
-                val firstRange = r.readVarint()
-                val ranges = mutableListOf<AckRange>()
-                repeat(numRanges) {
-                    val gap = r.readVarint()
-                    val len = r.readVarint()
-                    ranges += AckRange(gap, len)
+                if (type == FrameType.ACK_ECN) {
+                    // Skip ECT0, ECT1, CE counts.
+                    r.readVarint()
+                    r.readVarint()
+                    r.readVarint()
                 }
-                // skip ECN counts
-                r.readVarint()
-                r.readVarint()
-                r.readVarint()
                 out += AckFrame(largest, delay, firstRange, ranges)
             }
 
             type == FrameType.CRYPTO -> {
                 val offset = r.readVarint()
-                val len = r.readVarint().toInt()
+                val len = boundedLength(r.readVarint(), r.remaining, "CRYPTO")
                 val data2 = r.readBytes(len)
                 out += CryptoFrame(offset, data2)
             }
@@ -298,7 +284,7 @@ fun decodeFrames(data: ByteArray): List<Frame> {
                 val offset = if (hasOff) r.readVarint() else 0L
                 val payload =
                     if (hasLen) {
-                        val ln = r.readVarint().toInt()
+                        val ln = boundedLength(r.readVarint(), r.remaining, "STREAM")
                         r.readBytes(ln)
                     } else {
                         // "remainder of the packet"
@@ -341,6 +327,9 @@ fun decodeFrames(data: ByteArray): List<Frame> {
                 val seq = r.readVarint()
                 val retire = r.readVarint()
                 val cidLen = r.readByte()
+                if (cidLen !in 1..20) {
+                    throw QuicCodecException("NEW_CONNECTION_ID cidLen out of range: $cidLen")
+                }
                 val cid = r.readBytes(cidLen)
                 val token = r.readBytes(16)
                 out += NewConnectionIdFrame(seq, retire, cid, token)
@@ -361,14 +350,14 @@ fun decodeFrames(data: ByteArray): List<Frame> {
             type == FrameType.CONNECTION_CLOSE_TRANSPORT -> {
                 val err = r.readVarint()
                 val frameType2 = r.readVarint()
-                val reasonLen = r.readVarint().toInt()
+                val reasonLen = boundedLength(r.readVarint(), r.remaining, "CONNECTION_CLOSE reason")
                 val reason = r.readBytes(reasonLen).decodeToString()
                 out += ConnectionCloseFrame(err, frameType2, reason)
             }
 
             type == FrameType.CONNECTION_CLOSE_APP -> {
                 val err = r.readVarint()
-                val reasonLen = r.readVarint().toInt()
+                val reasonLen = boundedLength(r.readVarint(), r.remaining, "CONNECTION_CLOSE reason")
                 val reason = r.readBytes(reasonLen).decodeToString()
                 out += ConnectionCloseFrame(err, null, reason)
             }
@@ -383,7 +372,7 @@ fun decodeFrames(data: ByteArray): List<Frame> {
             }
 
             type == FrameType.DATAGRAM_LEN -> {
-                val ln = r.readVarint().toInt()
+                val ln = boundedLength(r.readVarint(), r.remaining, "DATAGRAM")
                 out += DatagramFrame(r.readBytes(ln), explicitLength = true)
             }
 
@@ -400,4 +389,33 @@ fun encodeFrames(frames: List<Frame>): ByteArray {
     val w = QuicWriter()
     for (f in frames) f.encode(w)
     return w.toByteArray()
+}
+
+/**
+ * Validate that a varint length value can be represented as a non-negative
+ * Int and fits within the remaining buffer. Hostile peers may send 62-bit
+ * lengths that, if uncritically truncated by `.toInt()`, become negative or
+ * absurdly large and lead to a crash or DoS allocation.
+ */
+private fun boundedLength(
+    value: Long,
+    remaining: Int,
+    field: String,
+): Int {
+    if (value < 0L || value > remaining) {
+        throw QuicCodecException("$field length $value out of bounds (remaining=$remaining)")
+    }
+    return value.toInt()
+}
+
+/** Same as [boundedLength] but for an ACK frame range count (each range needs ≥ 2 varint bytes). */
+private fun boundedRangeCount(
+    value: Long,
+    remaining: Int,
+): Int {
+    val maxRanges = remaining / 2 // varint min 1 byte; 2 varints per range
+    if (value < 0L || value > maxRanges) {
+        throw QuicCodecException("ACK range count $value out of bounds (remaining=$remaining)")
+    }
+    return value.toInt()
 }
