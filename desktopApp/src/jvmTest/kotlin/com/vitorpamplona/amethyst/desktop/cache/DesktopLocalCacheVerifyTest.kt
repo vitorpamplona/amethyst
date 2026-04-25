@@ -78,7 +78,9 @@ class DesktopLocalCacheVerifyTest {
     }
 
     @Test
-    fun `consume rejects an event with an all-zero signature`() {
+    fun `consume rejects an event whose id-hash does not match its content`() {
+        // Synthetic event with arbitrary id and signature — fails the id check
+        // before the Schnorr verify is even attempted.
         val cache = DesktopLocalCache()
         val event =
             TextNoteEvent(
@@ -128,7 +130,7 @@ class DesktopLocalCacheVerifyTest {
     }
 
     @Test
-    fun `consumeAssumingVerified bypass still routes test events`() {
+    fun `wasVerified bypass routes synthetic test events`() {
         val cache = DesktopLocalCache()
         val event =
             TextNoteEvent(
@@ -140,9 +142,9 @@ class DesktopLocalCacheVerifyTest {
                 sig = "0".repeat(128),
             )
 
-        val consumed = cache.consumeAssumingVerified(event, relayUrl)
+        val consumed = cache.consume(event, relayUrl, wasVerified = true)
 
-        assertTrue(consumed, "consumeAssumingVerified must skip the signature check")
+        assertTrue(consumed, "wasVerified=true must skip the signature check")
         assertNotNull(cache.getNoteIfExists(event.id))
     }
 }

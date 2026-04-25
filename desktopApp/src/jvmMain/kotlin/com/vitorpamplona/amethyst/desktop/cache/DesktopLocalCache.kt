@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.model.cache.LargeSoftCache
 import com.vitorpamplona.amethyst.commons.services.nwc.NwcPaymentTracker
 import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.checkSignature
@@ -52,6 +53,7 @@ import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.utils.DualCase
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.channels.BufferOverflow
@@ -165,19 +167,12 @@ class DesktopLocalCache : ICacheProvider {
         }
     }
 
-    // ----- Event verification -----
-
-    /**
-     * Verifies an event's id-hash and Schnorr signature. On failure, logs
-     * the offending kind/createdAt and returns false so callers can drop it.
-     * Mirrors Amethyst Android's [com.vitorpamplona.amethyst.model.LocalCache.justVerify]
-     * so unverified relay traffic never reaches the desktop cache.
-     */
     fun justVerify(event: Event): Boolean =
         if (!event.verify()) {
             try {
                 event.checkSignature()
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 Log.w("Event Verification Failed") {
                     "Kind: ${event.kind} createdAt=${event.createdAt} id=${event.id} pubkey=${event.pubKey} reason=${e.message}"
                 }
@@ -189,25 +184,16 @@ class DesktopLocalCache : ICacheProvider {
 
     // ----- Event consumption -----
 
-    /**
-     * Routes an event to the appropriate consume method.
-     * Returns true if the event was consumed (new), false if already seen
-     * or if signature verification failed.
-     */
     fun consume(
         event: Event,
         relay: NormalizedRelayUrl?,
+        wasVerified: Boolean = false,
     ): Boolean {
-        if (!justVerify(event)) return false
-        return consumeAssumingVerified(event, relay)
+        if (!wasVerified && !justVerify(event)) return false
+        return route(event, relay)
     }
 
-    /**
-     * Routes an already-verified event to its consume method. Internal seam
-     * exposed for tests that exercise routing/cache logic with synthetic
-     * events whose signatures are not real.
-     */
-    internal fun consumeAssumingVerified(
+    private fun route(
         event: Event,
         relay: NormalizedRelayUrl?,
     ): Boolean =
@@ -493,8 +479,9 @@ class DesktopLocalCache : ICacheProvider {
         zappedNote: Note?,
         relay: NormalizedRelayUrl?,
         onResponse: suspend (LnZapPaymentResponseEvent) -> Unit,
+        wasVerified: Boolean = false,
     ): Boolean {
-        if (!justVerify(event)) return false
+        if (!wasVerified && !justVerify(event)) return false
         val note = getOrCreateNote(event.id)
         val author = getOrCreateUser(event.pubKey)
 
@@ -521,8 +508,9 @@ class DesktopLocalCache : ICacheProvider {
     fun consume(
         event: LnZapPaymentResponseEvent,
         relay: NormalizedRelayUrl?,
+        wasVerified: Boolean = false,
     ): Boolean {
-        if (!justVerify(event)) return false
+        if (!wasVerified && !justVerify(event)) return false
         val requestId = event.requestId()
         val pending = paymentTracker.onResponseReceived(requestId) ?: return false
 
@@ -589,7 +577,7 @@ class DesktopLocalCache : ICacheProvider {
         if (!justVerify(event)) return false
         // For addressable/replaceable events, store in the addressable note cache
         // so state holders (Nip65RelayListState, etc.) pick it up via their flows
-        if (event is com.vitorpamplona.quartz.nip01Core.core.AddressableEvent) {
+        if (event is AddressableEvent) {
             val address = event.address()
             val note = getOrCreateAddressableNote(address)
             val author = getOrCreateUser(event.pubKey) ?: return false

@@ -33,6 +33,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -120,43 +122,22 @@ class DesktopRelaySubscriptionsCoordinator(
     fun consumeEvent(
         event: Event,
         relay: NormalizedRelayUrl?,
+        wasVerified: Boolean = false,
     ) {
         scope.launch(Dispatchers.IO) {
             try {
-                runConsume(localCache.consume(event, relay), event)
+                if (!localCache.consume(event, relay, wasVerified)) return@launch
+                _lastEventAt.value = System.currentTimeMillis()
+                val note = localCache.getNoteIfExists(event.id) ?: return@launch
+                eventBundler.invalidateList(note) { batch ->
+                    localCache.eventStream.emitNewNotes(batch)
+                }
             } catch (e: Exception) {
-                println("Coordinator: failed to consume kind=${event.kind} id=${event.id} relay=$relay: ${e.message}")
+                if (e is CancellationException) throw e
+                Log.w("DesktopRelaySubscriptionsCoordinator") {
+                    "Failed to consume kind=${event.kind} id=${event.id} relay=$relay: ${e.message}"
+                }
             }
-        }
-    }
-
-    /**
-     * Test-only seam — bypasses signature verification in the cache so unit
-     * tests can pump synthetic events through the full coordinator pipeline.
-     * Production code MUST use [consumeEvent].
-     */
-    internal fun consumeEventAssumingVerified(
-        event: Event,
-        relay: NormalizedRelayUrl?,
-    ) {
-        scope.launch(Dispatchers.IO) {
-            try {
-                runConsume(localCache.consumeAssumingVerified(event, relay), event)
-            } catch (e: Exception) {
-                println("Coordinator: failed to consume kind=${event.kind} id=${event.id} relay=$relay: ${e.message}")
-            }
-        }
-    }
-
-    private suspend fun runConsume(
-        consumed: Boolean,
-        event: Event,
-    ) {
-        if (!consumed) return
-        _lastEventAt.value = System.currentTimeMillis()
-        val note = localCache.getNoteIfExists(event.id) ?: return
-        eventBundler.invalidateList(note) { batch ->
-            localCache.eventStream.emitNewNotes(batch)
         }
     }
 
