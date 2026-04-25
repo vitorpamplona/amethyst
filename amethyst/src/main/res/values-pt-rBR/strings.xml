@@ -772,6 +772,15 @@
     <string name="app_notification_chess_challenge_accepted">%1$s aceitou seu desafio de xadrez</string>
     <string name="app_notification_chess_your_turn">%1$s jogou — a sua vez</string>
     <string name="app_notification_chess_summary">Atualizações de xadrez</string>
+    <string name="app_notification_replies_channel_name">Respostas</string>
+    <string name="app_notification_replies_channel_description">Notifica você quando alguém responde à sua publicação</string>
+    <string name="app_notification_replies_channel_message">%1$s respondeu</string>
+    <string name="app_notification_replies_channel_message_for">em: %1$s</string>
+    <string name="app_notification_replies_summary">Novas respostas</string>
+    <string name="app_notification_mentions_channel_name">Menções</string>
+    <string name="app_notification_mentions_channel_description">Notifica você quando alguém menciona ou cita você em uma publicação</string>
+    <string name="app_notification_mentions_channel_message">%1$s mencionou você</string>
+    <string name="app_notification_mentions_summary">Novas menções</string>
     <!-- Call notifications and UI -->
     <string name="app_notification_calls_channel_name">Chamadas recebidas</string>
     <string name="app_notification_calls_channel_description">Notificações de chamadas de voz e vídeo recebidas</string>
@@ -994,6 +1003,12 @@
     <string name="account_settings">Configurações da Conta</string>
     <string name="app_settings">Configurações do App</string>
     <string name="danger_zone">Zona de Perigo</string>
+    <string name="reset_marmot_state">Redefinir estado do Marmot</string>
+    <string name="reset_marmot_confirm_title">Redefinir estado do Marmot?</string>
+    <string name="reset_marmot_confirm_body">Isto excluirá permanentemente todos os chats em grupo Marmot, histórico de mensagens e chaves MLS deste dispositivo para a conta atual. Os participantes não serão notificados e ainda poderão ver você nos grupos até a próxima confirmação deles. Esta ação não pode ser desfeita. Um novo KeyPackage será publicado na próxima sincronização do aplicativo.</string>
+    <string name="reset_marmot_confirm_action">Redefinir</string>
+    <string name="reset_marmot_success">Estado do Marmot redefinido.</string>
+    <string name="reset_marmot_failure">Falha ao redefinir o estado do Marmot: %1$s</string>
     <string name="connectivity_type_always">Sempre</string>
     <string name="connectivity_type_wifi_only">Somente wifi</string>
     <string name="connectivity_type_unmetered_wifi_only">WiFi não medida</string>
@@ -2226,20 +2241,4 @@
     <string name="emoji_private_badge">Emoji privado</string>
     <string name="emoji_public_explainer">Emojis públicos são visíveis para todos e aparecem no seu menu de reações e no seletor de autocompletar \":\" quando este pacote está na sua lista de emojis.</string>
     <string name="emoji_private_explainer">Emojis privados são armazenados criptografados em relays e visíveis apenas para você. Eles aparecem no seu menu de reações e no autocompletar \":\" assim como os públicos.</string>
-    <string name="app_notification_mentions_channel_description">Notifica você quando alguém menciona ou cita você em uma publicação</string>
-    <string name="app_notification_mentions_channel_message">%1$s mencionou você</string>
-    <string name="app_notification_mentions_channel_name">Menções</string>
-    <string name="app_notification_mentions_summary">Novas menções</string>
-    <string name="app_notification_replies_channel_description">Notifica você quando alguém responde à sua publicação</string>
-    <string name="app_notification_replies_channel_message">%1$s respondeu</string>
-    <string name="app_notification_replies_channel_message_for">em: %1$s</string>
-    <string name="app_notification_replies_channel_name">Respostas</string>
-    <string name="app_notification_replies_summary">Novas respostas</string>
-    <string name="gif">Gif</string>
-    <string name="reset_marmot_confirm_action">Redefinir</string>
-    <string name="reset_marmot_confirm_body">Isto excluirá permanentemente todos os chats em grupo Marmot, histórico de mensagens e chaves MLS deste dispositivo para a conta atual. Os participantes não serão notificados e ainda poderão ver você nos grupos até a próxima confirmação deles. Esta ação não pode ser desfeita. Um novo KeyPackage será publicado na próxima sincronização do aplicativo.</string>
-    <string name="reset_marmot_confirm_title">Redefinir estado do Marmot?</string>
-    <string name="reset_marmot_failure">Falha ao redefinir o estado do Marmot: %1$s</string>
-    <string name="reset_marmot_state">Redefinir estado do Marmot</string>
-    <string name="reset_marmot_success">Estado do Marmot redefinido.</string>
 </resources>
