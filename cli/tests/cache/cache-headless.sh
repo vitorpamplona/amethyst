@@ -168,9 +168,12 @@ T2=$(amy_a profile show)
 T2_SRC=$(printf '%s' "$T2" | jq -r '.source')
 T2_FOUND=$(printf '%s' "$T2" | jq -r '.found')
 T2_NAME=$(printf '%s' "$T2" | jq -r '.metadata.name // ""')
-assert_eq T2.source "cache" "$T2_SRC" "default reads should hit the local store"
-assert_eq T2.found "true" "$T2_FOUND" ""
-assert_eq T2.name "AAA" "$T2_NAME" "profile edit must round-trip"
+assert_eq "$T2_SRC" "cache" T2.source "default reads should hit the local store" \
+    && record_result T2.source pass "self profile-show served from cache"
+assert_eq "$T2_FOUND" "true" T2.found "" \
+    && record_result T2.found pass ""
+assert_eq "$T2_NAME" "AAA" T2.name "profile edit must round-trip" \
+    && record_result T2.name pass "metadata.name round-trips"
 
 # ----------------------------------------------------------------------
 # 3. profile show --refresh forces a relay drain.
@@ -179,7 +182,8 @@ banner "T3 — --refresh forces source: relays"
 T3=$(amy_a profile show --refresh)
 T3_SRC=$(printf '%s' "$T3" | jq -r '.source')
 T3_QR=$(printf '%s' "$T3" | jq -r '.queried_relays | length')
-assert_eq T3.source "relays" "$T3_SRC" "--refresh must skip cache"
+assert_eq "$T3_SRC" "relays" T3.source "--refresh must skip cache" \
+    && record_result T3.source pass "--refresh switched source to relays"
 if [[ "$T3_QR" -ge 1 ]]; then
   record_result T3.queried_relays pass "$T3_QR relay(s) queried"
 else
@@ -193,14 +197,18 @@ banner "T4 — B sees A first via relay, then via cache"
 T4A=$(amy_b_json profile show "$A_NPUB")
 T4A_SRC=$(printf '%s' "$T4A" | jq -r '.source')
 T4A_NAME=$(printf '%s' "$T4A" | jq -r '.metadata.name // ""')
-assert_eq T4a.source "relays" "$T4A_SRC" "first lookup of a stranger comes from relays"
-assert_eq T4a.name "AAA" "$T4A_NAME" "B should resolve A's name on first fetch"
+assert_eq "$T4A_SRC" "relays" T4a.source "first lookup of a stranger comes from relays" \
+    && record_result T4a.source pass "first profile lookup of stranger hit relays"
+assert_eq "$T4A_NAME" "AAA" T4a.name "B should resolve A's name on first fetch" \
+    && record_result T4a.name pass "B resolved A's metadata"
 
 T4B=$(amy_b_json profile show "$A_NPUB")
 T4B_SRC=$(printf '%s' "$T4B" | jq -r '.source')
 T4B_NAME=$(printf '%s' "$T4B" | jq -r '.metadata.name // ""')
-assert_eq T4b.source "cache" "$T4B_SRC" "second lookup of the same stranger must serve from cache"
-assert_eq T4b.name "AAA" "$T4B_NAME" "cached metadata must match"
+assert_eq "$T4B_SRC" "cache" T4b.source "second lookup of the same stranger must serve from cache" \
+    && record_result T4b.source pass "second lookup served from B's cache"
+assert_eq "$T4B_NAME" "AAA" T4b.name "cached metadata must match" \
+    && record_result T4b.name pass "cached metadata identical to fresh"
 
 # ----------------------------------------------------------------------
 # 5. relay list reads URLs back from the local kind:10002 / 10050 / 10051.
@@ -245,8 +253,12 @@ T7_STAT=$(${AMY_BIN} --data-dir "$TMP_NO_ID" store stat)
 T7_SWEEP=$(${AMY_BIN} --data-dir "$TMP_NO_ID" store sweep-expired)
 T7_SCRUB=$(${AMY_BIN} --data-dir "$TMP_NO_ID" store scrub)
 T7_COMPACT=$(${AMY_BIN} --data-dir "$TMP_NO_ID" store compact)
-assert_eq T7.stat.events "0" "$(printf '%s' "$T7_STAT" | jq -r '.events')" ""
-assert_eq T7.sweep.swept "0" "$(printf '%s' "$T7_SWEEP" | jq -r '.swept')" ""
-assert_eq T7.scrub.ok "true" "$(printf '%s' "$T7_SCRUB" | jq -r '.ok')" ""
-assert_eq T7.compact.ok "true" "$(printf '%s' "$T7_COMPACT" | jq -r '.ok')" ""
+assert_eq "$(printf '%s' "$T7_STAT" | jq -r '.events')" "0" T7.stat.events "" \
+    && record_result T7.stat pass "stat works without identity"
+assert_eq "$(printf '%s' "$T7_SWEEP" | jq -r '.swept')" "0" T7.sweep.swept "" \
+    && record_result T7.sweep pass "sweep-expired works without identity"
+assert_eq "$(printf '%s' "$T7_SCRUB" | jq -r '.ok')" "true" T7.scrub.ok "" \
+    && record_result T7.scrub pass "scrub works without identity"
+assert_eq "$(printf '%s' "$T7_COMPACT" | jq -r '.ok')" "true" T7.compact.ok "" \
+    && record_result T7.compact pass "compact works without identity"
 rm -rf "$TMP_NO_ID"
