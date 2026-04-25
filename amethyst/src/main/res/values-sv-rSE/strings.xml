@@ -2240,4 +2240,5 @@
     <string name="emoji_private_badge">Privat emoji</string>
     <string name="emoji_public_explainer">Offentliga emojis är synliga för alla och visas i din reaktionsmeny och i \":\"-autokompletteringen när detta paket finns i din emoji-lista.</string>
     <string name="emoji_private_explainer">Privata emojis lagras krypterade på relän och är endast synliga för dig. De visas i din reaktionsmeny och i autokomplettering med \":\" precis som offentliga.</string>
+    <string name="gif">Gif</string>
 </resources>
