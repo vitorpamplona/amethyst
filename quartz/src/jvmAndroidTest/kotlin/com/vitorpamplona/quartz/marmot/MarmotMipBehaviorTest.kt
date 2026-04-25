@@ -552,6 +552,92 @@ class MarmotMipBehaviorTest {
         }
 
     // ----------------------------------------------------------------------
+    // RFC 9420 §6.3.2 standalone PrivateMessage proposal RX
+    // ----------------------------------------------------------------------
+
+    /**
+     * Round-trip: Bob (member 1) encrypts a SelfRemove as a
+     * PrivateMessage PROPOSAL, Alice (admin, member 0) decrypts it.
+     * Alice's pending pool picks it up with the AC bytes captured for
+     * RFC 9420 §5.2 ProposalRef matching, so a follow-on commit
+     * referencing the proposal by hash resolves.
+     */
+    @Test
+    fun decrypt_acceptsStandaloneSelfRemoveAsPrivateMessage() =
+        runBlocking<Unit> {
+            val (alice, bob) = build2MemberGroupWithBobJoined()
+
+            val proposal =
+                com.vitorpamplona.quartz.marmot.mls.messages
+                    .Proposal
+                    .SelfRemove()
+            val before = alice.pendingProposalsSnapshot().size
+            val wireBytes = bob.encryptProposalAsPrivateMessage(proposal)
+            val result = alice.decrypt(wireBytes)
+
+            assertEquals(
+                com.vitorpamplona.quartz.marmot.mls.framing.ContentType.PROPOSAL,
+                result.contentType,
+            )
+            assertEquals(bob.leafIndex, result.senderLeafIndex)
+            val after = alice.pendingProposalsSnapshot()
+            assertEquals(before + 1, after.size, "decrypt must stage the proposal in pending pool")
+            val staged = after.last()
+            assertIs<com.vitorpamplona.quartz.marmot.mls.messages.Proposal.SelfRemove>(staged.proposal)
+            assertEquals(bob.leafIndex, staged.senderLeafIndex)
+            assertNotNull(
+                staged.authenticatedContentBytes,
+                "PrivateMessage proposal must capture AC bytes for RFC 9420 §5.2 ProposalRef matching",
+            )
+            assertTrue(staged.authenticatedContentBytes.isNotEmpty())
+        }
+
+    /**
+     * Standalone PrivateMessage proposals are restricted to SelfRemove
+     * (mirrors `receivePublicMessageProposal`'s policy). A peer that
+     * tries to pre-stage e.g. a PSK proposal must be rejected, even
+     * though the AEAD layer accepted the frame.
+     */
+    @Test
+    fun decrypt_rejectsNonSelfRemovePrivateMessageProposal() =
+        runBlocking<Unit> {
+            val (alice, bob) = build2MemberGroupWithBobJoined()
+
+            val proposal =
+                com.vitorpamplona.quartz.marmot.mls.messages
+                    .Proposal
+                    .Psk(pskType = 1, pskId = ByteArray(16) { 0xAB.toByte() }, pskNonce = ByteArray(16))
+            val wireBytes = bob.encryptProposalAsPrivateMessage(proposal)
+
+            val ex =
+                assertFailsWith<IllegalArgumentException> {
+                    alice.decrypt(wireBytes)
+                }
+            assertTrue(
+                ex.message!!.contains("Only SelfRemove"),
+                "rejection must explain the policy: ${ex.message}",
+            )
+        }
+
+    /**
+     * Build a two-member group via the real Welcome flow so Alice and
+     * Bob have INDEPENDENT [MlsGroup] instances (independent secret-tree
+     * consumed-generation sets) — required for any test that
+     * encrypts on one side and decrypts on the other.
+     */
+    private suspend fun build2MemberGroupWithBobJoined(): Pair<MlsGroup, MlsGroup> {
+        val manager = createGroupManager()
+        manager.createGroup(groupId, aliceId.hexToByteArray())
+        val bobBundle = createStandaloneKeyPackage(bobId)
+        val commitResult = manager.addMember(groupId, bobBundle.keyPackage.toTlsBytes())
+        val alice = manager.getGroup(groupId)!!
+        val welcomeBytes =
+            requireNotNull(commitResult.welcomeBytes) { "addMember must produce a Welcome" }
+        val bob = MlsGroup.processWelcome(welcomeBytes, bobBundle)
+        return alice to bob
+    }
+
+    // ----------------------------------------------------------------------
     // DoS guards: forward-ratchet cap + PrivateMessage size caps
     // ----------------------------------------------------------------------
 

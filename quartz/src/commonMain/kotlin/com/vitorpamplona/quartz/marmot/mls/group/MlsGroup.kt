@@ -874,6 +874,101 @@ class MlsGroup private constructor(
     }
 
     /**
+     * Encrypt a standalone Proposal as a PrivateMessage (RFC 9420 §6.3.2,
+     * content_type = PROPOSAL). Mirrors [encrypt] but writes a Proposal
+     * struct + signature in the PrivateMessageContent instead of
+     * application_data. The receiver-side counterpart lives in [decrypt]
+     * under `ContentType.PROPOSAL`.
+     *
+     * Used today only for tests — production callers publish SelfRemove
+     * via [buildSelfRemoveProposalMessage] (PublicMessage) — but exposing
+     * the encode path keeps the wire format symmetric so a future caller
+     * that wants a fully-encrypted proposal envelope doesn't have to
+     * re-derive it.
+     */
+    internal fun encryptProposalAsPrivateMessage(proposal: Proposal): ByteArray {
+        if (sentKeys.size > MAX_SENT_KEYS) {
+            val sortedKeys = sentKeys.keys.sorted()
+            val toRemove = sortedKeys.take(sentKeys.size - MAX_SENT_KEYS)
+            for (key in toRemove) sentKeys.remove(key)
+        }
+
+        // PROPOSALs ride the handshake ratchet (RFC 9420 §6.3.2), not
+        // the application ratchet — same as PrivateMessage commits.
+        val kng = secretTree.nextHandshakeKeyNonce(myLeafIndex)
+
+        val reuseGuard = MlsCryptoProvider.randomBytes(REUSE_GUARD_LENGTH)
+        val guardedNonce = kng.nonce.copyOf()
+        for (i in 0 until REUSE_GUARD_LENGTH) {
+            guardedNonce[i] = (guardedNonce[i].toInt() xor reuseGuard[i].toInt()).toByte()
+        }
+
+        val proposalWriter = TlsWriter()
+        proposal.encodeTls(proposalWriter)
+        val proposalBytes = proposalWriter.toByteArray()
+
+        // FramedContentTBS for a member-sender PROPOSAL over PRIVATE_MESSAGE.
+        val tbsWriter = TlsWriter()
+        tbsWriter.putUint16(MlsMessage.MLS_VERSION_10)
+        tbsWriter.putUint16(WireFormat.PRIVATE_MESSAGE.value)
+        tbsWriter.putOpaqueVarInt(groupId)
+        tbsWriter.putUint64(epoch)
+        encodeSender(tbsWriter, Sender(SenderType.MEMBER, myLeafIndex))
+        tbsWriter.putOpaqueVarInt(ByteArray(0)) // authenticated_data
+        tbsWriter.putUint8(ContentType.PROPOSAL.value)
+        tbsWriter.putBytes(proposalBytes)
+        tbsWriter.putBytes(groupContext.toTlsBytes())
+        val signature = MlsCryptoProvider.signWithLabel(signingPrivateKey, "FramedContentTBS", tbsWriter.toByteArray())
+
+        // PrivateMessageContent for PROPOSAL: proposal struct (no length
+        // prefix) || signature<V> || padding.
+        val pmcWriter = TlsWriter()
+        pmcWriter.putBytes(proposalBytes)
+        pmcWriter.putOpaqueVarInt(signature)
+        val pmcPlaintext = pmcWriter.toByteArray()
+
+        val contentAad = buildPrivateContentAAD(groupId, epoch, ContentType.PROPOSAL, ByteArray(0))
+        val ciphertext = MlsCryptoProvider.aeadEncrypt(kng.key, guardedNonce, contentAad, pmcPlaintext)
+
+        val senderDataWriter = TlsWriter()
+        senderDataWriter.putUint32(myLeafIndex.toLong())
+        senderDataWriter.putUint32(kng.generation.toLong())
+        senderDataWriter.putBytes(reuseGuard)
+        val senderDataPlain = senderDataWriter.toByteArray()
+
+        val ciphertextSample = ciphertext.copyOfRange(0, minOf(ciphertext.size, MlsCryptoProvider.HASH_OUTPUT_LENGTH))
+        val senderDataKey =
+            MlsCryptoProvider.expandWithLabel(
+                epochSecrets.senderDataSecret,
+                "key",
+                ciphertextSample,
+                MlsCryptoProvider.AEAD_KEY_LENGTH,
+            )
+        val senderDataNonce =
+            MlsCryptoProvider.expandWithLabel(
+                epochSecrets.senderDataSecret,
+                "nonce",
+                ciphertextSample,
+                MlsCryptoProvider.AEAD_NONCE_LENGTH,
+            )
+        val senderDataAad = buildSenderDataAAD(groupId, epoch, ContentType.PROPOSAL)
+        val encryptedSenderData =
+            MlsCryptoProvider.aeadEncrypt(senderDataKey, senderDataNonce, senderDataAad, senderDataPlain)
+
+        return MlsMessage
+            .fromPrivateMessage(
+                PrivateMessage(
+                    groupId = groupId,
+                    epoch = epoch,
+                    contentType = ContentType.PROPOSAL,
+                    authenticatedData = ByteArray(0),
+                    encryptedSenderData = encryptedSenderData,
+                    ciphertext = ciphertext,
+                ),
+            ).toTlsBytes()
+    }
+
+    /**
      * Decrypt an application message from a PrivateMessage.
      * Returns null if decryption fails (e.g., corrupted message, wrong epoch).
      */
@@ -1049,7 +1144,90 @@ class MlsGroup private constructor(
             }
 
             ContentType.PROPOSAL -> {
-                throw IllegalStateException("Standalone PrivateMessage proposals not yet supported")
+                // PrivateMessageContent for a Proposal: the Proposal struct
+                // (no length prefix) followed by signature<V>, then zero
+                // padding. There's no membership_tag — PrivateMessage is
+                // already AEAD-protected by sender membership in the
+                // secret tree, so RFC 9420 §6.2's HMAC isn't applied.
+                val proposal = Proposal.decodeTls(pmcReader)
+                val proposalWriter = TlsWriter()
+                proposal.encodeTls(proposalWriter)
+                val proposalBytes = proposalWriter.toByteArray()
+                val signature = pmcReader.readOpaqueVarInt()
+                while (pmcReader.hasRemaining) {
+                    require(pmcReader.readBytes(1)[0] == 0.toByte()) {
+                        "PrivateMessageContent padding must be zero"
+                    }
+                }
+
+                // Mirror the same defensive policy as
+                // [receivePublicMessageProposal]: only SelfRemove proposals
+                // legitimately arrive standalone today (openmls/mdk emit
+                // it as a separate PROPOSAL message because non-admins
+                // can't self-remove via a commit). Reject anything else
+                // here so a peer can't pre-stage e.g. an Add we never asked
+                // to fold in. Widen if/when interop demands it.
+                require(proposal is Proposal.SelfRemove) {
+                    "Only SelfRemove is accepted as a standalone PrivateMessage proposal " +
+                        "(got ${proposal::class.simpleName}); other proposal types must be folded into a commit"
+                }
+
+                // Verify the FramedContent signature with wire_format =
+                // PRIVATE_MESSAGE (not PUBLIC_MESSAGE) so the TBS bytes
+                // match what the sender signed.
+                val tbsWriter = TlsWriter()
+                tbsWriter.putUint16(MlsMessage.MLS_VERSION_10)
+                tbsWriter.putUint16(WireFormat.PRIVATE_MESSAGE.value)
+                tbsWriter.putOpaqueVarInt(privMsg.groupId)
+                tbsWriter.putUint64(privMsg.epoch)
+                encodeSender(tbsWriter, Sender(SenderType.MEMBER, senderLeafIndex))
+                tbsWriter.putOpaqueVarInt(privMsg.authenticatedData)
+                tbsWriter.putUint8(ContentType.PROPOSAL.value)
+                tbsWriter.putBytes(proposalBytes)
+                tbsWriter.putBytes(groupContext.toTlsBytes()) // member sender appends context
+                val tbs = tbsWriter.toByteArray()
+
+                val senderLeaf =
+                    requireNotNull(tree.getLeaf(senderLeafIndex)) {
+                        "Sender leaf is blank at index $senderLeafIndex"
+                    }
+                require(
+                    MlsCryptoProvider.verifyWithLabel(
+                        senderLeaf.signatureKey,
+                        "FramedContentTBS",
+                        tbs,
+                        signature,
+                    ),
+                ) { "FramedContentTBS signature verification failed on PrivateMessage proposal" }
+
+                // RFC 9420 §5.2: ProposalRef hashes the encoded
+                // AuthenticatedContent. For PrivateMessage proposals the
+                // AC carries no membership_tag — auth = signature only.
+                // Stash these bytes so a future commit referencing this
+                // proposal by hash resolves against our pool.
+                val acWriter = TlsWriter()
+                acWriter.putUint16(WireFormat.PRIVATE_MESSAGE.value)
+                acWriter.putOpaqueVarInt(privMsg.groupId)
+                acWriter.putUint64(privMsg.epoch)
+                encodeSender(acWriter, Sender(SenderType.MEMBER, senderLeafIndex))
+                acWriter.putOpaqueVarInt(privMsg.authenticatedData)
+                acWriter.putUint8(ContentType.PROPOSAL.value)
+                acWriter.putBytes(proposalBytes)
+                acWriter.putOpaqueVarInt(signature)
+                pendingProposals.add(
+                    PendingProposal(
+                        proposal = proposal,
+                        senderLeafIndex = senderLeafIndex,
+                        authenticatedContentBytes = acWriter.toByteArray(),
+                    ),
+                )
+
+                return DecryptedMessage(
+                    senderLeafIndex = senderLeafIndex,
+                    contentType = privMsg.contentType,
+                    content = proposalBytes,
+                    epoch = privMsg.epoch,
+                )
             }
         }
     }
