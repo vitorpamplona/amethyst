@@ -39,6 +39,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -67,7 +68,6 @@ import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ParticipantTa
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.StatusTag
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
-import java.util.Locale
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.StatusTag as MeetingSpaceStatusTag
 
 @Composable
@@ -250,6 +250,8 @@ private fun RenderParticipants(
         }
     }
 
+    val locale = LocalConfiguration.current.locales.get(0)
+
     participantUsers.forEach {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -266,7 +268,7 @@ private fun RenderParticipants(
                 Text(
                     text =
                         it.replaceFirstChar {
-                            if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString()
+                            if (it.isLowerCase()) it.titlecase(locale) else it.toString()
                         },
                     color = MaterialTheme.colorScheme.placeholderText,
                     maxLines = 1,
