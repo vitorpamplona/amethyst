@@ -552,6 +552,67 @@ class MarmotMipBehaviorTest {
         }
 
     // ----------------------------------------------------------------------
+    // DoS guards: forward-ratchet cap + PrivateMessage size caps
+    // ----------------------------------------------------------------------
+
+    /**
+     * A receiver that's been silent at generation 0 for one peer must
+     * NOT be forced to do unbounded HKDF-Expand work just because the
+     * peer (or an attacker) sets a multi-billion `generation` field on
+     * an inbound PrivateMessage. The SecretTree caps the per-call
+     * ratchet jump at 4096 — anything past that throws before any HKDF
+     * runs.
+     */
+    @Test
+    fun secretTree_rejectsRatchetJumpsBeyondCap() {
+        val st =
+            com.vitorpamplona.quartz.marmot.mls.schedule.SecretTree(
+                encryptionSecret = ByteArray(32),
+                leafCount = 1,
+            )
+        // 4096 is allowed (boundary case — fast-forwards 4096 steps).
+        st.applicationKeyNonceForGeneration(0, 4096)
+        // 4097 above the previous head is rejected.
+        val ex =
+            assertFailsWith<IllegalArgumentException> {
+                st.applicationKeyNonceForGeneration(0, 4096 + 4097 + 1)
+            }
+        assertTrue(ex.message!!.contains("jump too large"), "must explain the cap: ${ex.message}")
+    }
+
+    /**
+     * Marmot tightens `authenticated_data` to 64 KiB even though the
+     * underlying TlsReader cap is 1 MiB — those fields are never
+     * legitimately that large, and tightening turns a 1 MiB pre-
+     * verification allocation into 64 KiB. Hand-build a frame with a
+     * 65 KiB authenticated_data and verify rejection.
+     */
+    @Test
+    fun privateMessage_rejectsOversizedAuthenticatedData() {
+        val w =
+            com.vitorpamplona.quartz.marmot.mls.codec
+                .TlsWriter()
+        w.putOpaqueVarInt(ByteArray(32)) // group_id
+        w.putUint64(0L) // epoch
+        w.putUint8(1) // content_type = APPLICATION
+        w.putOpaqueVarInt(ByteArray((1 shl 16) + 1)) // authenticated_data: 64 KiB + 1
+        w.putOpaqueVarInt(ByteArray(0)) // encrypted_sender_data
+        w.putOpaqueVarInt(ByteArray(64)) // ciphertext (small)
+        val ex =
+            assertFailsWith<IllegalArgumentException> {
+                com.vitorpamplona.quartz.marmot.mls.framing.PrivateMessage
+                    .decodeTls(
+                        com.vitorpamplona.quartz.marmot.mls.codec
+                            .TlsReader(w.toByteArray()),
+                    )
+            }
+        assertTrue(
+            ex.message!!.contains("authenticated_data too large"),
+            "must name the field: ${ex.message}",
+        )
+    }
+
+    // ----------------------------------------------------------------------
     // RFC 9420 §7.9 parent_hash chain validation on Welcome
     // ----------------------------------------------------------------------
 
