@@ -33,16 +33,24 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.MainActivity
+import com.vitorpamplona.amethyst.ui.components.toasts.multiline.UserBasedErrorMessage
+import com.vitorpamplona.amethyst.ui.note.ZapCustomDialog
+import com.vitorpamplona.amethyst.ui.note.payViaIntent
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.experimental.audiorooms.admin.AdminCommandEvent
+import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
@@ -142,6 +150,59 @@ internal fun ParticipantHostActionsSheet(
                     )
                 }
                 onDismiss()
+            }
+            // Zap — opens the standard ZapCustomDialog targeting the
+            // user's kind-0 metadata note (the canonical "zap a user"
+            // base note throughout amethyst). Single-payable invoices
+            // hand off to a wallet via payViaIntent; split-zap targets
+            // (uncommon for personal LN addresses) are routed back to
+            // the profile screen rather than wired into a non-nav-host
+            // ModalBottomSheet.
+            var showZapDialog by rememberSaveable { mutableStateOf(false) }
+            ActionRow(stringRes(R.string.audio_room_participant_zap)) {
+                showZapDialog = true
+            }
+            if (showZapDialog) {
+                val targetMetadataNote =
+                    remember(target) {
+                        com.vitorpamplona.amethyst.model.LocalCache
+                            .getOrCreateAddressableNote(MetadataEvent.createAddress(target))
+                    }
+                // Pre-resolved at composition because callbacks below run
+                // outside a @Composable scope (stringRes is composable-only).
+                val splitUnsupportedMsg = stringRes(R.string.audio_room_participant_zap_split_unsupported)
+                ZapCustomDialog(
+                    onZapStarts = {},
+                    onClose = {
+                        showZapDialog = false
+                        onDismiss()
+                    },
+                    onError = { _, message, user ->
+                        accountViewModel.toastManager.toast(
+                            R.string.error_dialog_zap_error,
+                            UserBasedErrorMessage(message, user),
+                        )
+                    },
+                    onProgress = { /* no progress UI inside the sheet — single-payable handoff is fast */ },
+                    onPayViaIntent = { payables ->
+                        if (payables.size == 1) {
+                            val payable = payables.first()
+                            payViaIntent(payable.invoice, context, { }) { error ->
+                                accountViewModel.toastManager.toast(
+                                    R.string.error_dialog_zap_error,
+                                    UserBasedErrorMessage(error, payable.info.user),
+                                )
+                            }
+                        } else {
+                            accountViewModel.toastManager.toast(
+                                R.string.error_dialog_zap_error,
+                                UserBasedErrorMessage(splitUnsupportedMsg, null),
+                            )
+                        }
+                    },
+                    accountViewModel = accountViewModel,
+                    baseNote = targetMetadataNote,
+                )
             }
             ActionRow(
                 text =

@@ -540,6 +540,8 @@
     <string name="audio_room_demote_listener">Demote to listener</string>
     <string name="audio_room_kick_action">Kick</string>
     <string name="audio_room_participant_view_profile">View profile</string>
+    <string name="audio_room_participant_zap">Send zap</string>
+    <string name="audio_room_participant_zap_split_unsupported">Split zaps are not supported from inside an audio room. Open the profile screen to send.</string>
     <string name="audio_room_participant_follow">Follow</string>
     <string name="audio_room_participant_unfollow">Unfollow</string>
     <string name="audio_room_participant_mute">Mute</string>
