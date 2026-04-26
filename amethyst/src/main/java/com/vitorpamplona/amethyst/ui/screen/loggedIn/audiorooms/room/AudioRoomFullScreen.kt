@@ -63,6 +63,7 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size40dp
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
+import com.vitorpamplona.quartz.nip19Bech32.toNAddr
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ParticipantTag
 
@@ -111,18 +112,28 @@ internal fun AudioRoomFullScreen(
                     modifier = Modifier.weight(1f),
                 )
             }
-            if (isHost) {
-                Box {
-                    androidx.compose.material3.IconButton(onClick = { showHostMenu = true }) {
-                        Icon(
-                            symbol = MaterialSymbols.MoreVert,
-                            contentDescription = stringRes(R.string.audio_room_overflow_menu),
-                        )
-                    }
-                    androidx.compose.material3.DropdownMenu(
-                        expanded = showHostMenu,
-                        onDismissRequest = { showHostMenu = false },
-                    ) {
+            // Overflow menu — visible to everyone (Share); host-only
+            // rows (Edit) are gated inside.
+            Box {
+                androidx.compose.material3.IconButton(onClick = { showHostMenu = true }) {
+                    Icon(
+                        symbol = MaterialSymbols.MoreVert,
+                        contentDescription = stringRes(R.string.audio_room_overflow_menu),
+                    )
+                }
+                val context = androidx.compose.ui.platform.LocalContext.current
+                androidx.compose.material3.DropdownMenu(
+                    expanded = showHostMenu,
+                    onDismissRequest = { showHostMenu = false },
+                ) {
+                    androidx.compose.material3.DropdownMenuItem(
+                        text = { Text(stringRes(R.string.audio_room_share_action)) },
+                        onClick = {
+                            showHostMenu = false
+                            shareRoomNaddr(context, event)
+                        },
+                    )
+                    if (isHost) {
                         androidx.compose.material3.DropdownMenuItem(
                             text = { Text(stringRes(R.string.audio_room_edit_title)) },
                             onClick = {
@@ -460,4 +471,26 @@ private fun TalkRow(
             }
         }
     }
+}
+
+/**
+ * Build an `nostr:naddr1...` URI for the room and hand it to the
+ * system share sheet. Includes the room title in the share text
+ * so the receiving app can render a preview without round-tripping
+ * the relay.
+ */
+private fun shareRoomNaddr(
+    context: android.content.Context,
+    event: MeetingSpaceEvent,
+) {
+    val aTag = ATag(event.kind, event.pubKey, event.dTag(), null)
+    val naddr = aTag.toNAddr()
+    val title = event.room().orEmpty()
+    val text = if (title.isNotBlank()) "$title — nostr:$naddr" else "nostr:$naddr"
+    val intent =
+        android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(android.content.Intent.EXTRA_TEXT, text)
+        }
+    context.startActivity(android.content.Intent.createChooser(intent, null))
 }

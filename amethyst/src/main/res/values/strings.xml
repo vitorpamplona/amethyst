@@ -544,6 +544,7 @@
     <string name="audio_room_participant_unfollow">Unfollow</string>
     <string name="audio_room_participant_mute">Mute</string>
     <string name="audio_room_participant_unmute">Unmute</string>
+    <string name="audio_room_share_action">Share room</string>
     <string name="audio_room_create_fab">Start space</string>
     <string name="audio_room_create_title">Start a new audio room</string>
     <string name="audio_room_create_field_room">Room name</string>
