@@ -69,6 +69,17 @@ class QuicStream(
     var receiveLimit: Long = 0L
         internal set
 
+    /**
+     * Marker the parser sets whenever [receive.contiguousEnd] advances; the
+     * writer's appendFlowControlUpdates consumes it to skip streams that
+     * haven't received any new bytes since the last MAX_STREAM_DATA emission.
+     *
+     * Pre-fix the writer iterated EVERY open stream on every drain
+     * (audit-4 perf #9 — O(streams) × ~50 drains/sec; significant for audio
+     * rooms with many WT streams).
+     */
+    internal var receiveDirtyForFlowControl: Boolean = false
+
     /** True once we've FIN'd our write side and the peer FIN'd theirs. */
     val isClosed: Boolean
         get() = send.finSent && receive.finReceived

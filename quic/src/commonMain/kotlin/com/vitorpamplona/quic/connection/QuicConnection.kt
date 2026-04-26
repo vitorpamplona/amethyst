@@ -101,6 +101,16 @@ class QuicConnection(
         private set
 
     private val streams = mutableMapOf<Long, QuicStream>()
+
+    /**
+     * Round-4 perf #10: parallel insertion-ordered list of streams so the
+     * writer's round-robin scan can index by position without
+     * `streams.entries.toList()` allocating per drain. Streams are only ever
+     * added (no removal in the current model), so the two stay in sync as
+     * long as `getOrCreatePeerStreamLocked` and `openBidi/UniStream` append
+     * to both.
+     */
+    private val streamsList = mutableListOf<QuicStream>()
     private var nextLocalBidiIndex: Long = 0L
     private var nextLocalUniIndex: Long = 0L
 
@@ -340,6 +350,7 @@ class QuicConnection(
             stream.sendCredit = peerTransportParameters?.initialMaxStreamDataBidiRemote ?: config.initialMaxStreamDataBidiRemote
             stream.receiveLimit = config.initialMaxStreamDataBidiLocal
             streams[id] = stream
+            streamsList += stream
             stream
         }
 
@@ -357,6 +368,7 @@ class QuicConnection(
             stream.sendCredit = peerTransportParameters?.initialMaxStreamDataUni ?: config.initialMaxStreamDataUni
             stream.receiveLimit = 0L // can't receive
             streams[id] = stream
+            streamsList += stream
             stream
         }
 
@@ -492,6 +504,7 @@ class QuicConnection(
                 StreamId.Kind.CLIENT_BIDI -> config.initialMaxStreamDataBidiLocal
             }
         streams[id] = stream
+        streamsList += stream
         newPeerStreams.addLast(stream)
         // Wake any awaitIncomingPeerStream caller. trySend on a CONFLATED
         // channel can never fail in steady state.
@@ -517,6 +530,14 @@ class QuicConnection(
 
     /** Caller must hold [lock]. Snapshot of streams for the driver's send loop. */
     internal fun streamsLocked(): Map<Long, QuicStream> = streams
+
+    /**
+     * Insertion-ordered list view used by the writer's round-robin scan.
+     * Stays in sync with [streams] because the only mutation paths
+     * (openBidi/UniStream, getOrCreatePeerStreamLocked) append to both. No
+     * remove path exists today; if/when one is added it MUST update both.
+     */
+    internal fun streamsListLocked(): List<QuicStream> = streamsList
 
     /** Caller must hold [lock]. Pending datagram queue for the driver's send loop. */
     internal fun pendingDatagramsLocked(): ArrayDeque<ByteArray> = pendingDatagrams

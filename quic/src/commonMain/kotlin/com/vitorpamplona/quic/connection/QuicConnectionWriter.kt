@@ -268,12 +268,15 @@ private fun buildApplicationPacket(
     val connRemaining =
         (conn.sendConnectionFlowCredit - conn.sendConnectionFlowConsumed).coerceAtLeast(0L)
     var connBudget = connRemaining
-    val streamsList = conn.streamsLocked().entries.toList()
-    if (streamsList.isNotEmpty()) {
-        val start = conn.streamRoundRobinStart % streamsList.size
-        for (i in streamsList.indices) {
+    // Round-4 perf #10: use the connection's pre-built list view instead of
+    // allocating a fresh `entries.toList()` per drain. The list is
+    // insertion-ordered and stays in sync with the streams map.
+    val streamsView = conn.streamsListLocked()
+    if (streamsView.isNotEmpty()) {
+        val start = conn.streamRoundRobinStart % streamsView.size
+        for (i in streamsView.indices) {
             if (packetBudget <= 64) break
-            val (id, stream) = streamsList[(start + i) % streamsList.size]
+            val stream = streamsView[(start + i) % streamsView.size]
             val streamRemaining = (stream.sendCredit - stream.send.sentOffset).coerceAtLeast(0L)
             // Skip if both stream and connection have no credit; FIN-only
             // (zero-byte) chunks may still go through because they don't
@@ -284,13 +287,20 @@ private fun buildApplicationPacket(
                 minOf(packetBudget - 32, effectiveCap.coerceAtMost(Int.MAX_VALUE.toLong()).toInt())
             val chunk = stream.send.takeChunk(maxBytes = maxBytes) ?: continue
             if (chunk.data.isNotEmpty() || chunk.fin) {
-                frames += StreamFrame(streamId = id, offset = chunk.offset, data = chunk.data, fin = chunk.fin, explicitLength = true)
+                frames +=
+                    StreamFrame(
+                        streamId = stream.streamId,
+                        offset = chunk.offset,
+                        data = chunk.data,
+                        fin = chunk.fin,
+                        explicitLength = true,
+                    )
                 packetBudget -= chunk.data.size + 32
                 connBudget -= chunk.data.size
                 conn.sendConnectionFlowConsumed += chunk.data.size
             }
         }
-        conn.streamRoundRobinStart = (start + 1) % streamsList.size
+        conn.streamRoundRobinStart = (start + 1) % streamsView.size
     }
 
     if (frames.isEmpty()) return null
@@ -319,9 +329,20 @@ private fun appendFlowControlUpdates(
 ) {
     val cfg = conn.config
     var totalRecvAdvanced = 0L
+    // Round-4 perf #9: only walk streams flagged by the parser since the last
+    // drain. Streams whose receive frontier hasn't advanced cannot need a
+    // new MAX_STREAM_DATA frame, so iterating them is wasted work. The
+    // connection-level totalRecvAdvanced sum still requires looking at each
+    // stream's contiguousEnd, but only when the dirty flag is set.
     for ((id, stream) in conn.streamsLocked()) {
         val rcv = stream.receive.contiguousEnd()
         if (rcv == 0L) continue
+        if (!stream.receiveDirtyForFlowControl) {
+            // Stream has data but nothing changed since last drain — skip the
+            // per-direction window lookup and the comparison.
+            totalRecvAdvanced += rcv
+            continue
+        }
         // Pick the per-direction window matching the stream kind so a
         // uni-only deployment with bidi=0 doesn't accidentally use the bidi
         // window and vice versa.
@@ -343,6 +364,10 @@ private fun appendFlowControlUpdates(
                 frames += MaxStreamDataFrame(id, newLimit)
             }
         }
+        // Clear the dirty flag once we've considered this stream — even if we
+        // didn't emit a new MAX_STREAM_DATA, the threshold-check work doesn't
+        // need to repeat until more bytes arrive.
+        stream.receiveDirtyForFlowControl = false
         totalRecvAdvanced += rcv
     }
     // Connection-level: only re-grant when the new total would exceed our

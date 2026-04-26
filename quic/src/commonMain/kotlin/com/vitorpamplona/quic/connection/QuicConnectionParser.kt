@@ -218,6 +218,11 @@ private fun dispatchFrames(
                 stream.receive.insert(frame.offset, frame.data, frame.fin)
                 val data = stream.receive.readContiguous()
                 if (data.isNotEmpty()) {
+                    // Round-4 perf #9: mark the stream as needing a flow-
+                    // control re-credit check. Writer's
+                    // appendFlowControlUpdates consults this flag instead of
+                    // walking every open stream on every drain.
+                    stream.receiveDirtyForFlowControl = true
                     val delivered = stream.deliverIncoming(data)
                     if (!delivered) {
                         // Audit-4 #3: incoming channel saturated. Closing the

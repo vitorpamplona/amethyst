@@ -92,6 +92,12 @@ class AckTracker {
      */
     fun purgeBelow(threshold: Long) {
         if (threshold <= 0L) return
+        if (ranges.isEmpty()) return
+        // Round-4 perf #11: short-circuit when nothing in the tail is below
+        // the threshold (the common case for steady receivers — purgeBelow
+        // is called per inbound ACK). Pre-fix every ACK triggered a full
+        // ListIterator walk even when there was nothing to remove.
+        if (ranges.last().start >= threshold) return
         // ranges are descending by lo; drop the tail.
         val it = ranges.listIterator(ranges.size)
         while (it.hasPrevious()) {
@@ -108,12 +114,27 @@ class AckTracker {
 
     fun largestReceived(): Long = if (ranges.isEmpty()) -1L else ranges[0].endInclusive
 
-    /** Build an ACK frame covering everything we've received. */
+    /**
+     * Build an ACK frame covering everything we've received, OR null if nothing
+     * new ack-eliciting has arrived since the last call.
+     *
+     * Round-4 perf #1: pre-fix this returned non-null whenever the range list
+     * was non-empty, so EVERY outbound packet (~50/sec for an audio room)
+     * carried a redundant ACK. RFC 9000 §13.2 only requires ACKs in response
+     * to ack-eliciting packets, within max_ack_delay. Gating on
+     * [ackElicitingPending] satisfies the RFC requirement and saves a varint-
+     * heavy frame per drain.
+     *
+     * Note: the flag is cleared by this method only when an ACK is actually
+     * built. Pre-fix the flag was cleared even when buildAckFrame returned a
+     * stale frame, which compounded the problem.
+     */
     fun buildAckFrame(
         nowMillis: Long,
         ackDelayExponent: Int = 3,
     ): AckFrame? {
         if (ranges.isEmpty()) return null
+        if (!ackElicitingPending) return null
         val largest = ranges[0].endInclusive
         val firstRangeLength = largest - ranges[0].start
         val rest = mutableListOf<AckRange>()
