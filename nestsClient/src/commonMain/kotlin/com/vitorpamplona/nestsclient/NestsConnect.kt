@@ -43,6 +43,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
  *      bearer token.
  *   3. Run the MoQ SETUP handshake.
  *
+ * Note: step 3 runs the IETF `draft-ietf-moq-transport-17` SETUP, which is
+ * NOT what nostrnests's relay (moq-lite) expects. Steps 1 and 2 are
+ * already on the moq-rs wire shape (path = `/<namespace>`, JWT in
+ * `?jwt=`). The MoQ framing layer needs a moq-lite codec swap before
+ * end-to-end interop works — see
+ * `nestsClient/plans/2026-04-26-moq-lite-gap.md`.
+ *
  * The returned [NestsListener] is in state [NestsListenerState.Connected];
  * if any step fails, the listener is returned in
  * [NestsListenerState.Failed] with the underlying cause attached and the

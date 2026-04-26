@@ -2,6 +2,18 @@
 
 What's left between today's code and shippable audio rooms in Amethyst.
 
+> **STATUS UPDATE (2026-04-26 PM):** the interop test suite (phases 1–4 of
+> the nostrnests work, see commits `3283d30` → `1887bd1`) uncovered that
+> nostrnests's stack runs on **moq-lite** (kixelated's variant), NOT IETF
+> `draft-ietf-moq-transport-17` — which is what `:nestsClient`'s MoQ layer
+> currently implements. The two are wire-incompatible. Concrete impact:
+> the listener path described under "Where we are" below works against
+> any IETF MoQ-transport server but cannot exchange a single MoQ message
+> with the real nostrnests relay until a moq-lite codec lands. Tracking
+> doc: [`2026-04-26-moq-lite-gap.md`](2026-04-26-moq-lite-gap.md). Phase
+> M1 below should be re-read with that gap in mind — manual validation
+> against `nostrnests.com` is on hold until the moq-lite phase ships.
+
 ## Where we are
 
 The transport stack is **done** and audited

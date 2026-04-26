@@ -12,8 +12,11 @@ architecture while sharing the back end components with the android counterpart.
 a non-interactive JVM command-line client that drives the same `quartz` + `commons` code — used by
 humans, agents, and interop tests. `quic` is a from-scratch pure-Kotlin QUIC v1 + HTTP/3 +
 WebTransport client (no JNI, no BouncyCastle), built because no Android-compatible Java QUIC library
-exists. `nestsClient` runs the MoQ-transport audio-room protocol on top of `:quic` for the NIP-53
-audio-rooms feature.
+exists. `nestsClient` runs the audio-room protocol on top of `:quic` for the NIP-53
+audio-rooms feature. It currently implements IETF `draft-ietf-moq-transport-17`; the
+real nostrnests relay speaks **moq-lite** (kixelated's wire-incompatible variant),
+so end-to-end interop is gated on a moq-lite codec — see
+`nestsClient/plans/2026-04-26-moq-lite-gap.md`.
 
 ## Architecture
 
@@ -35,7 +38,7 @@ amethyst/
 │       ├── commonMain/    # Protocol, frame/packet codecs, TLS state machine
 │       ├── jvmAndroid/    # JCA-backed AEAD + UDP socket actuals
 │       └── commonTest/    # RFC vector + adversarial tests
-├── nestsClient/    # MoQ-transport audio-room client on top of :quic
+├── nestsClient/    # Audio-room client (IETF MoQ-transport today; moq-lite phase pending)
 │   └── src/
 │       ├── commonMain/    # MoQ session, NestsListener, audio glue
 │       └── jvmAndroid/    # Opus encode/decode, AudioRecord/AudioTrack

@@ -56,7 +56,17 @@ object MoqVersion {
 }
 
 /**
- * Session wrapper over a [WebTransportSession] that speaks MoQ-transport.
+ * Session wrapper over a [WebTransportSession] that speaks IETF
+ * `draft-ietf-moq-transport-17` (CLIENT_SETUP / SERVER_SETUP, namespace
+ * tuples, OBJECT_DATAGRAM with `track_alias`).
+ *
+ * **Wire-protocol scope:** this is the IETF MoQ-transport flavour, NOT
+ * kixelated's moq-lite. The two are wire-incompatible (single-string
+ * paths vs. tuple namespaces, different ANNOUNCE/SUBSCRIBE shape).
+ * nostrnests's reference relay (`kixelated/moq-rs`) speaks moq-lite, so
+ * this session cannot exchange a single MoQ message with the real
+ * nostrnests stack. See `nestsClient/plans/2026-04-26-moq-lite-gap.md`
+ * for the gap and the planned moq-lite parallel codec.
  *
  * Lifecycle:
  *   1. [client] / [server] attaches to a transport. No traffic yet.
