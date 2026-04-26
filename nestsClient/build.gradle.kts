@@ -95,4 +95,7 @@ kotlin {
 tasks.withType<Test>().configureEach {
     System.getProperty("nestsInterop")?.let { systemProperty("nestsInterop", it) }
     System.getProperty("nestsInteropRev")?.let { systemProperty("nestsInteropRev", it) }
+    System.getProperty("nestsInteropMoqRev")?.let { systemProperty("nestsInteropMoqRev", it) }
+    System.getProperty("nestsInteropExternal")?.let { systemProperty("nestsInteropExternal", it) }
+    System.getProperty("nestsInteropDebug")?.let { systemProperty("nestsInteropDebug", it) }
 }

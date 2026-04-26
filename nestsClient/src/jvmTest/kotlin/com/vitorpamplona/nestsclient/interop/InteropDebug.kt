@@ -167,6 +167,10 @@ object InteropDebug {
                 else -> error("unsupported expectedClass=$expectedClass")
             }
         if (!ok) {
+            // Land the rich state dump on stdout too — JUnit captures the
+            // fail message separately, but the standard-output section is
+            // what people glance at first when debugging.
+            checkpoint(scope, "✘ speaker NOT @ $expectedClass — actual=${describe(actual)}")
             fail("[$scope] speaker did not reach $expectedClass — was ${describe(actual)}")
         }
         checkpoint(scope, "speaker @ $expectedClass — ${describe(actual)}")
@@ -183,6 +187,7 @@ object InteropDebug {
                 else -> error("unsupported expectedClass=$expectedClass")
             }
         if (!ok) {
+            checkpoint(scope, "✘ listener NOT @ $expectedClass — actual=${describe(actual)}")
             fail("[$scope] listener did not reach $expectedClass — was ${describe(actual)}")
         }
         checkpoint(scope, "listener @ $expectedClass — ${describe(actual)}")

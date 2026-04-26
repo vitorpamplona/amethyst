@@ -45,7 +45,7 @@ import java.nio.file.Path
  * across as many cases as possible.
  */
 class NostrNestsHarness private constructor(
-    private val workDir: File,
+    private val workDir: File?,
     val authBaseUrl: String,
     val moqEndpoint: String,
 ) : AutoCloseable {
@@ -54,15 +54,36 @@ class NostrNestsHarness private constructor(
     override fun close() {
         if (stopped) return
         stopped = true
-        runDocker(workDir, "down", "-v", "--remove-orphans")
+        // External mode: caller owns the lifecycle of moq-auth +
+        // moq-relay. Nothing for us to tear down.
+        val dir = workDir ?: return
+        runDocker(dir, "down", "-v", "--remove-orphans")
     }
 
     companion object {
         /** System property gate. Tests should call [assumeNestsInterop] first. */
         const val ENABLE_PROPERTY = "nestsInterop"
 
+        /**
+         * Bypass-Docker mode. When `-DnestsInteropExternal=true`, the
+         * harness doesn't try to bring up containers — it assumes the
+         * caller has already started `moq-auth` on [AUTH_HOST_PORT] and
+         * `moq-relay` on [MOQ_HOST_PORT] (e.g. via
+         * `nests/dev-config/start-dev.sh`). Useful on machines without a
+         * Docker daemon (sandboxes, restricted CI), and for fast
+         * iteration since each test no longer pays the
+         * `docker compose up` / `docker compose down` cost.
+         *
+         * The harness still port-probes + health-checks both endpoints
+         * before declaring "ready", so a half-started external stack
+         * fails the same way a half-started Docker stack would.
+         */
+        const val EXTERNAL_PROPERTY = "nestsInteropExternal"
+
         /** Tests that depend on the harness call this in `@BeforeTest`. */
         fun isEnabled(): Boolean = System.getProperty(ENABLE_PROPERTY) == "true"
+
+        private fun isExternal(): Boolean = System.getProperty(EXTERNAL_PROPERTY) == "true"
 
         /**
          * Pin the nostrnests revision to a known-good SHA. Bump deliberately
@@ -138,6 +159,8 @@ class NostrNestsHarness private constructor(
                     "Call NostrNestsHarness.assumeNestsInterop() first to skip cleanly."
             }
 
+            if (isExternal()) return startExternal()
+
             val workDir = ensureRepo()
             // The compose file `build:`s `./moq` — the upstream moq-rs
             // sources — but nostrnests does NOT ship that directory; it
@@ -182,6 +205,37 @@ class NostrNestsHarness private constructor(
                 // The path under this base is the namespace literal (per
                 // moq-rs `claims.root` matching); the `:nestsClient` connect
                 // helpers append `/<namespace>?jwt=<token>` themselves.
+                moqEndpoint = "https://127.0.0.1:$MOQ_HOST_PORT/",
+            )
+        }
+
+        /**
+         * "External" path: caller has already started moq-auth +
+         * moq-relay (e.g. via `nests/dev-config/start-dev.sh` or a
+         * `cargo install moq-relay` build kicked off by hand). We just
+         * port-probe + health-check, then return a harness whose
+         * [close] is a no-op.
+         *
+         * Skip Docker entirely — useful on machines without a Docker
+         * daemon, and dramatically faster on developer iteration.
+         */
+        private fun startExternal(): NostrNestsHarness {
+            try {
+                waitForPort("127.0.0.1", AUTH_HOST_PORT, PORT_READY_TIMEOUT_MS)
+                waitForPort("127.0.0.1", MOQ_HOST_PORT, PORT_READY_TIMEOUT_MS)
+                waitForHealth("http://127.0.0.1:$AUTH_HOST_PORT/health", PORT_READY_TIMEOUT_MS)
+            } catch (t: Throwable) {
+                throw IllegalStateException(
+                    "external moq-auth / moq-relay not reachable on 127.0.0.1:" +
+                        "$AUTH_HOST_PORT and 127.0.0.1:$MOQ_HOST_PORT — " +
+                        "did you start the stack? See nests/dev-config/start-dev.sh.\n" +
+                        "Original error: ${t.message}",
+                    t,
+                )
+            }
+            return NostrNestsHarness(
+                workDir = null,
+                authBaseUrl = "http://127.0.0.1:$AUTH_HOST_PORT",
                 moqEndpoint = "https://127.0.0.1:$MOQ_HOST_PORT/",
             )
         }
