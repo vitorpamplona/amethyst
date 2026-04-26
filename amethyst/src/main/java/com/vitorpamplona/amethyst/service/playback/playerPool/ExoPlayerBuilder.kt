@@ -24,6 +24,7 @@ import android.content.Context
 import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSource
+import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
 import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCache
@@ -42,10 +43,35 @@ class ExoPlayerBuilder(
             .Builder(context)
             .apply {
                 setMediaSourceFactory(CustomMediaSourceFactory(videoCache, dataSourceFactory))
+                setLoadControl(feedTunedLoadControl())
             }.build()
             .apply {
                 addListener(AspectRatioCacher(MediaAspectRatioCache))
                 addListener(KeepVideosPlaying(this))
                 addListener(CurrentPlayPositionCacher(this, VideoViewedPositionCache))
             }
+
+    companion object {
+        // Default DefaultLoadControl buffers 50s ahead before slowing down. Every visible video
+        // in the feed is prepared eagerly so it's ready when the user scrolls to it; with the
+        // default settings 5 simultaneous preloads would fight for ~250s of buffer between them
+        // and chew through ~30+ MB per HD player. Feed playback is optimized for "the active
+        // video plays smoothly while a few neighbours stay warm," so we cap the buffer at ~15s
+        // and let playback kick in as soon as ~750 ms is buffered. Fullscreen still gets a
+        // healthy buffer because seeks-within-15s are virtually instant from disk cache.
+        private fun feedTunedLoadControl() =
+            DefaultLoadControl
+                .Builder()
+                .setBufferDurationsMs(
+                    // minBufferMs =
+                    10_000,
+                    // maxBufferMs =
+                    15_000,
+                    // bufferForPlaybackMs =
+                    750,
+                    // bufferForPlaybackAfterRebufferMs =
+                    2_000,
+                ).setPrioritizeTimeOverSizeThresholds(true)
+                .build()
+    }
 }

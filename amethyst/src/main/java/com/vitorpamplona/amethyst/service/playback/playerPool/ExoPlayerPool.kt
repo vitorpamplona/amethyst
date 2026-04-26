@@ -34,7 +34,9 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.yield
 import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.atomic.AtomicBoolean
 
 @OptIn(UnstableApi::class)
 class ExoPlayerPool(
@@ -54,9 +56,26 @@ class ExoPlayerPool(
 
     private val mutex = Mutex()
 
+    // Guards against firing the warmup more than once if create() is called repeatedly
+    // (e.g. on reconfiguration or when both pools share a startup hook).
+    private val warmupStarted = AtomicBoolean(false)
+
+    /**
+     * Pre-warms the pool with [poolStartingSize] ExoPlayer instances on the main looper, yielding
+     * between each build so the warmup is spread across frames instead of stalling the UI in one
+     * burst. ExoPlayer must be constructed on the same thread that will operate it (the main
+     * thread for this pool), so we cannot fan out across IO threads here. Idempotent — additional
+     * calls are no-ops.
+     */
     fun create(context: Context) {
-        while (playerPool.size < poolStartingSize) {
-            playerPool.offer(builder.build(context))
+        if (!warmupStarted.compareAndSet(false, true)) return
+        scope.launch {
+            while (playerPool.size < poolStartingSize) {
+                playerPool.offer(builder.build(context))
+                // Hand the frame back so an in-flight onGetSession / acquirePlayer / layout
+                // pass isn't blocked behind the next build.
+                yield()
+            }
         }
     }
 

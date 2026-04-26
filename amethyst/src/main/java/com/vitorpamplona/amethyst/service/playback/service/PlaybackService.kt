@@ -105,7 +105,15 @@ class PlaybackService : MediaSessionService() {
             val blossomServerResolver = Amethyst.instance.blossomResolver
 
             // creates new
-            return newPool(videoCache, okHttpClient, blossomServerResolver).also { poolNoProxy = it }
+            return newPool(videoCache, okHttpClient, blossomServerResolver)
+                .also {
+                    poolNoProxy = it
+                    // Kick off the player pool warmup as soon as we know this pool is being used.
+                    // It runs async on the main looper, yielding between builds, so the very first
+                    // session still acquires synchronously while subsequent ones can grab a warm
+                    // ExoPlayer instead of paying the build cost on the main thread.
+                    it.exoPlayerPool.create(applicationContext)
+                }
         } else {
             poolWithProxy?.let { return it }
 
@@ -116,7 +124,11 @@ class PlaybackService : MediaSessionService() {
             val videoCache = Amethyst.instance.videoCache
             val blossomServerResolver = Amethyst.instance.blossomResolver
 
-            return newPool(videoCache, okHttpClient, blossomServerResolver).also { poolWithProxy = it }
+            return newPool(videoCache, okHttpClient, blossomServerResolver)
+                .also {
+                    poolWithProxy = it
+                    it.exoPlayerPool.create(applicationContext)
+                }
         }
     }
 
@@ -161,23 +173,27 @@ class PlaybackService : MediaSessionService() {
             return
         }
 
-        playing.forEachIndexed { idx, it ->
+        playing.forEach {
             if (it.session.player.isPlaying && it.session.player.volume > 0 && it.session.id == BackgroundMedia.bgInstance?.id) {
                 super.onUpdateNotification(it.session, startInForegroundRequired)
                 return
             }
         }
 
-        playing.forEachIndexed { idx, it ->
+        playing.forEach {
             if (it.session.player.isPlaying && it.session.player.volume > 0) {
                 super.onUpdateNotification(it.session, startInForegroundRequired)
                 return
             }
         }
 
-        playing.forEachIndexed { idx, it ->
+        // Falls through to the first muted-but-playing session. Earlier this loop missed
+        // its return and called super.onUpdateNotification once per playing session,
+        // hammering the notification system whenever multiple feed videos were preloading.
+        playing.forEach {
             if (it.session.player.isPlaying) {
                 super.onUpdateNotification(it.session, startInForegroundRequired)
+                return
             }
         }
     }
