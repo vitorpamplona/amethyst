@@ -175,6 +175,7 @@ import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessa
 import com.vitorpamplona.quartz.nip53LiveActivities.clip.LiveActivitiesClipEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.nestsServers.NestsServersEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresenceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.raid.LiveActivitiesRaidEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
@@ -2737,7 +2738,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                     consumeBaseReplaceable(event, relay, wasVerified)
                 }
 
-                is com.vitorpamplona.quartz.nip53LiveActivities.nestsServers.NestsServersEvent -> {
+                is NestsServersEvent -> {
                     consumeBaseReplaceable(event, relay, wasVerified)
                 }
 

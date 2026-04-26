@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.model.nip53NestsServers
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.NoteState
+import com.vitorpamplona.amethyst.model.nipB7Blossom.BlossomServerListState
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip53LiveActivities.nestsServers.NestsServersEvent
 import kotlinx.coroutines.CoroutineScope
@@ -36,8 +37,7 @@ import kotlinx.coroutines.flow.stateIn
 /**
  * Per-account state for the user's preferred audio-room (NIP-53 / nests)
  * MoQ host servers — kind 10112 [NestsServersEvent]. Mirror of
- * [com.vitorpamplona.amethyst.model.nipB7Blossom.BlossomServerListState]
- * for the nests use case.
+ * [BlossomServerListState] for the nests use case.
  *
  * Surfaces:
  *   - [flow] — current `List<String>` of saved server base URLs
@@ -46,10 +46,9 @@ import kotlinx.coroutines.flow.stateIn
  *   - [saveNestsServersList] — build + sign a new replaceable kind 10112
  *     event (preserving prior tags' alt etc.)
  *
- * The list is consumed by [com.vitorpamplona.amethyst.ui.screen.loggedIn.audiorooms.create.CreateAudioRoomViewModel]
- * to default the "MoQ service URL" / "MoQ endpoint URL" fields when
- * starting a new space, and by the Settings screen for edit / add /
- * remove.
+ * The list is consumed by `CreateAudioRoomViewModel` to default the
+ * "MoQ service URL" / "MoQ endpoint URL" fields when starting a new
+ * space, and by the Settings screen for edit / add / remove.
  */
 class NestsServerListState(
     val signer: NostrSigner,

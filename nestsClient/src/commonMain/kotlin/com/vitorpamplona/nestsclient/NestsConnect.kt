@@ -23,8 +23,10 @@ package com.vitorpamplona.nestsclient
 import com.vitorpamplona.nestsclient.audio.AudioCapture
 import com.vitorpamplona.nestsclient.audio.OpusEncoder
 import com.vitorpamplona.nestsclient.moq.SubscribeHandle
+import com.vitorpamplona.nestsclient.moq.lite.MoqLiteSession
 import com.vitorpamplona.nestsclient.transport.WebTransportException
 import com.vitorpamplona.nestsclient.transport.WebTransportFactory
+import com.vitorpamplona.nestsclient.transport.WebTransportSession
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -35,14 +37,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
  *
  *   1. Mint a JWT — POST `<authBase>/auth` with NIP-98 + namespace body
  *      (see [NestsClient.mintToken]).
- *   2. Open a [com.vitorpamplona.nestsclient.transport.WebTransportSession]
- *      against the [room.endpoint] via [transport]. The path is
- *      `/<moqNamespace>?jwt=<token>` — moq-rs treats the URL path as
- *      `claims.root` and reads the JWT from `?jwt=`.
- *   3. Wrap the WT session in a [com.vitorpamplona.nestsclient.moq.lite.MoqLiteSession].
- *      moq-lite Lite-03 has NO in-band SETUP message — the WT handshake
- *      itself is the handshake, version is selected by the ALPN
- *      `moq-lite-03`.
+ *   2. Open a [WebTransportSession] against the [room.endpoint] via
+ *      [transport]. The path is `/<moqNamespace>?jwt=<token>` — moq-rs
+ *      treats the URL path as `claims.root` and reads the JWT from
+ *      `?jwt=`.
+ *   3. Wrap the WT session in a [MoqLiteSession]. moq-lite Lite-03 has
+ *      NO in-band SETUP message — the WT handshake itself is the
+ *      handshake, version is selected by the ALPN `moq-lite-03`.
  *
  * The returned [NestsListener] is in state [NestsListenerState.Connected];
  * if any step fails, the listener is returned in
@@ -110,8 +111,7 @@ suspend fun connectNestsListener(
     // `moq-lite-03`.
     val moq =
         try {
-            com.vitorpamplona.nestsclient.moq.lite.MoqLiteSession
-                .client(webTransport, scope)
+            MoqLiteSession.client(webTransport, scope)
         } catch (t: Throwable) {
             runCatching { webTransport.close(0, "moq-lite session init failed") }
             state.value = NestsListenerState.Failed("moq-lite session init failed: ${t.message}", t)
@@ -225,8 +225,7 @@ suspend fun connectNestsSpeaker(
     // path — version is selected by the `moq-lite-03` ALPN.
     val moq =
         try {
-            com.vitorpamplona.nestsclient.moq.lite.MoqLiteSession
-                .client(webTransport, scope)
+            MoqLiteSession.client(webTransport, scope)
         } catch (t: Throwable) {
             runCatching { webTransport.close(0, "moq-lite session init failed") }
             state.value = NestsSpeakerState.Failed("moq-lite session init failed: ${t.message}", t)

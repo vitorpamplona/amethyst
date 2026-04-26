@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.audiorooms.create
 
 import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.audiorooms.room.AudioRoomActivity
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.endpoint
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.image
@@ -38,7 +39,7 @@ import kotlinx.coroutines.flow.update
  * Backing ViewModel for [CreateAudioRoomSheet]. Holds form state, runs
  * [publishAndBuildLaunchInfo] which signs and broadcasts a NIP-53 kind
  * 30312 [MeetingSpaceEvent] tagging the user as `host`, then returns
- * the launch parameters for [com.vitorpamplona.amethyst.ui.screen.loggedIn.audiorooms.room.AudioRoomActivity].
+ * the launch parameters for [AudioRoomActivity].
  *
  * The defaults point at `nostrnests.com`'s public moq-rs deployment so a
  * blank form produces a working room. The user can edit them to point at

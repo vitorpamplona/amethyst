@@ -49,6 +49,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.AllMediaServersScreen
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.MediaServerEditField
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
@@ -62,15 +63,16 @@ import com.vitorpamplona.amethyst.ui.theme.SettingsCategoryFirstModifier
 import com.vitorpamplona.amethyst.ui.theme.SettingsCategorySpacingModifier
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.grayText
+import com.vitorpamplona.quartz.nip53LiveActivities.nestsServers.NestsServersEvent
 
 /**
  * Settings screen for the user's preferred audio-room (NIP-53 / nests)
- * MoQ host servers — kind 10112 [com.vitorpamplona.quartz.nip53LiveActivities.nestsServers.NestsServersEvent].
+ * MoQ host servers — kind 10112 [NestsServersEvent].
  *
- * Mirrors [com.vitorpamplona.amethyst.ui.actions.mediaServers.AllMediaServersScreen]
- * — top bar with Cancel / Save, list of saved servers with delete
- * buttons, edit-field row to add a new one, and a "Use defaults" row
- * for one-tap inclusion of `nostrnests.com`.
+ * Mirrors [AllMediaServersScreen] — top bar with Cancel / Save, list
+ * of saved servers with delete buttons, edit-field row to add a new
+ * one, and a "Use defaults" row for one-tap inclusion of
+ * `nostrnests.com`.
  *
  * Reachable from `Settings → Audio-room servers`.
  */

@@ -23,7 +23,9 @@ package com.vitorpamplona.amethyst.ui.actions.nestsServers
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.BlossomServersViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.quartz.nip53LiveActivities.nestsServers.NestsServersEvent
 import com.vitorpamplona.quartz.utils.Rfc3986
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -31,10 +33,10 @@ import kotlinx.coroutines.flow.update
 
 /**
  * Edit-buffer for the user's audio-room (NIP-53 / nests) MoQ server
- * list. Mirror of [com.vitorpamplona.amethyst.ui.actions.mediaServers.BlossomServersViewModel]
- * scoped down to a plain `List<String>` of base URLs since nests
- * servers don't have a "selected default" concept (clients pick the
- * first entry when starting a new space).
+ * list. Mirror of [BlossomServersViewModel] scoped down to a plain
+ * `List<String>` of base URLs since nests servers don't have a
+ * "selected default" concept (clients pick the first entry when
+ * starting a new space).
  *
  * The flow:
  *   1. [init] binds the [AccountViewModel].
@@ -42,8 +44,8 @@ import kotlinx.coroutines.flow.update
  *      [_servers] buffer.
  *   3. [addServer] / [removeServer] / [removeAllServers] mutate the
  *      buffer, marking [isModified] = true.
- *   4. [save] publishes a fresh kind-10112 [com.vitorpamplona.quartz.nip53LiveActivities.nestsServers.NestsServersEvent]
- *      via [Account.sendNestsServersList].
+ *   4. [save] publishes a fresh kind-10112 [NestsServersEvent] via
+ *      [Account.sendNestsServersList].
  */
 @Stable
 class NestsServersViewModel : ViewModel() {

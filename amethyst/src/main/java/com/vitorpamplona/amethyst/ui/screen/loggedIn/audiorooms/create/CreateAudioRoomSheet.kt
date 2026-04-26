@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.audiorooms.AudioRoomsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.audiorooms.room.AudioRoomActivity
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.audiorooms.room.AudioRoomBridge
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -66,7 +67,7 @@ import kotlinx.coroutines.launch
  * Talk button enabled.
  *
  * Hidden by default; surfaced by the "Start space" FAB on
- * [com.vitorpamplona.amethyst.ui.screen.loggedIn.audiorooms.AudioRoomsScreen].
+ * [AudioRoomsScreen].
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

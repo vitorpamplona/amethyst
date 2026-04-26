@@ -20,10 +20,12 @@
  */
 package com.vitorpamplona.nestsclient
 
+import com.vitorpamplona.nestsclient.moq.MoqProtocolException
 import com.vitorpamplona.nestsclient.moq.MoqSession
 import com.vitorpamplona.nestsclient.moq.SubscribeFilter
 import com.vitorpamplona.nestsclient.moq.SubscribeHandle
 import com.vitorpamplona.nestsclient.moq.TrackNamespace
+import com.vitorpamplona.nestsclient.transport.WebTransportSession
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -45,8 +47,7 @@ interface NestsListener {
      * Opus stream under the namespace `["nests", <roomId>]` with the
      * speaker's pubkey hex as the track name.
      *
-     * @throws com.vitorpamplona.nestsclient.moq.MoqProtocolException if the
-     *   publisher rejects the subscription.
+     * @throws MoqProtocolException if the publisher rejects the subscription.
      * @throws IllegalStateException if the listener is not in [NestsListenerState.Connected].
      */
     suspend fun subscribeSpeaker(speakerPubkeyHex: String): SubscribeHandle
@@ -107,8 +108,7 @@ sealed class NestsListenerState {
  * MoQ-transport target.
  *
  * Delegates to a [MoqSession] already set up on a
- * [com.vitorpamplona.nestsclient.transport.WebTransportSession];
- * construction does NOT open the transport.
+ * [WebTransportSession]; construction does NOT open the transport.
  */
 class DefaultNestsListener internal constructor(
     private val session: MoqSession,

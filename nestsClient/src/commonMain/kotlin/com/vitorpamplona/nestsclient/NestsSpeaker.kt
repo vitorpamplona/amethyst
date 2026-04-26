@@ -23,6 +23,7 @@ package com.vitorpamplona.nestsclient
 import com.vitorpamplona.nestsclient.audio.AudioCapture
 import com.vitorpamplona.nestsclient.audio.AudioRoomBroadcaster
 import com.vitorpamplona.nestsclient.audio.OpusEncoder
+import com.vitorpamplona.nestsclient.moq.MoqProtocolException
 import com.vitorpamplona.nestsclient.moq.MoqSession
 import com.vitorpamplona.nestsclient.moq.TrackNamespace
 import kotlinx.coroutines.CoroutineScope
@@ -52,8 +53,7 @@ interface NestsSpeaker {
      *
      * @throws IllegalStateException if a broadcast is already running on
      *   this speaker or the session is not [NestsSpeakerState.Connected].
-     * @throws com.vitorpamplona.nestsclient.moq.MoqProtocolException if the
-     *   peer rejects the ANNOUNCE.
+     * @throws MoqProtocolException if the peer rejects the ANNOUNCE.
      */
     suspend fun startBroadcasting(): BroadcastHandle
 
