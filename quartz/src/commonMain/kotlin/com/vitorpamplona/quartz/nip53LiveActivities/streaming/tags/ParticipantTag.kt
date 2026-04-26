@@ -47,6 +47,26 @@ data class ParticipantTag(
     val role: String?,
     val proof: String?,
 ) : PubKeyReferenceTag {
+    /** Match the role string against [ROLE], case-insensitive. */
+    fun effectiveRole(): ROLE? = role?.let { r -> ROLE.entries.firstOrNull { it.code.equals(r, ignoreCase = true) } }
+
+    fun isHost(): Boolean = effectiveRole() == ROLE.HOST
+
+    fun isModerator(): Boolean = effectiveRole() == ROLE.MODERATOR
+
+    fun isSpeaker(): Boolean = effectiveRole() == ROLE.SPEAKER
+
+    /**
+     * `true` for hosts, moderators, and speakers — anyone who has
+     * the floor / can publish audio. Audience members
+     * (`role == null` or `ROLE.PARTICIPANT`) return `false`.
+     */
+    fun canSpeak(): Boolean =
+        when (effectiveRole()) {
+            ROLE.HOST, ROLE.MODERATOR, ROLE.SPEAKER -> true
+            ROLE.PARTICIPANT, null -> false
+        }
+
     companion object {
         const val TAG_NAME = "p"
 
