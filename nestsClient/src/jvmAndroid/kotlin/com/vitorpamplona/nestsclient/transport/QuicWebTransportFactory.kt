@@ -79,6 +79,18 @@ class QuicWebTransportFactory(
      * the Extended CONNECT request stream before giving up with HandshakeFailed.
      */
     private val connectTimeoutMillis: Long = 10_000L,
+    /**
+     * WebTransport sub-protocols to advertise on the Extended CONNECT request,
+     * via the `wt-available-protocols` header (RFC 8941 Structured Field List
+     * of strings — see draft-ietf-webtrans-http3-14 §3.3).
+     *
+     * For nests, this MUST contain `moq-lite-03`; without it, moq-relay falls
+     * back to the legacy in-band SETUP exchange (moq-lite-02) and our first
+     * post-CONNECT message is decoded as SETUP_CLIENT, producing
+     * `connection closed err=invalid value` on the relay side and a stalled
+     * subscribe / `subscribe stream FIN before reply` on the client side.
+     */
+    private val webTransportSubProtocols: List<String> = listOf("moq-lite-03"),
 ) : WebTransportFactory {
     override suspend fun connect(
         authority: String,
@@ -136,7 +148,13 @@ class QuicWebTransportFactory(
 
             // Open the Extended CONNECT request stream.
             val requestStream = conn.openBidiStream()
-            val headers = buildExtendedConnectHeaders(authority, path, bearerToken)
+            val extraHeaders =
+                if (webTransportSubProtocols.isNotEmpty()) {
+                    listOf("wt-available-protocols" to encodeSfStringList(webTransportSubProtocols))
+                } else {
+                    emptyList()
+                }
+            val headers = buildExtendedConnectHeaders(authority, path, bearerToken, extraHeaders)
             requestStream.send.enqueue(encodeHeadersFrame(headers))
             driver.wakeup()
 
@@ -213,6 +231,21 @@ class QuicWebTransportFactory(
     private class HeadersReceived(
         val status: Int,
     ) : RuntimeException()
+
+    /**
+     * Encode [items] as an RFC 8941 Structured Field List of bare strings
+     * (the format `wt-available-protocols` requires per draft-ietf-webtrans-http3
+     * §3.3). Each entry becomes `"value"`; the items are comma-separated.
+     *
+     * The values we emit (e.g. `moq-lite-03`) are bare ASCII so we don't
+     * need to handle escaping — assert it instead of silently mis-emitting.
+     */
+    private fun encodeSfStringList(items: List<String>): String {
+        require(items.all { p -> p.all { it in 0x20.toChar()..0x7e.toChar() && it != '"' && it != '\\' } }) {
+            "wt-available-protocols entry contains characters that need RFC 8941 escaping: $items"
+        }
+        return items.joinToString(", ") { "\"$it\"" }
+    }
 
     private fun splitAuthority(authority: String): Pair<String, Int> {
         val idx = authority.lastIndexOf(':')

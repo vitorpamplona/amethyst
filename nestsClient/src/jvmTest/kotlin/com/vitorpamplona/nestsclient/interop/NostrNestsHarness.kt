@@ -222,8 +222,14 @@ class NostrNestsHarness private constructor(
         private fun startExternal(): NostrNestsHarness {
             try {
                 waitForPort("127.0.0.1", AUTH_HOST_PORT, PORT_READY_TIMEOUT_MS)
-                waitForPort("127.0.0.1", MOQ_HOST_PORT, PORT_READY_TIMEOUT_MS)
                 waitForHealth("http://127.0.0.1:$AUTH_HOST_PORT/health", PORT_READY_TIMEOUT_MS)
+                // moq-relay is UDP only — the Docker compose forwarder
+                // happens to open TCP on 4443 too, which is what the
+                // Docker-mode probe relies on. Bare-metal moq-relay
+                // doesn't, so a TCP probe fails with ConnectException
+                // even though the UDP listener is healthy. Skip it
+                // here; the actual QUIC handshake from the test will
+                // surface a real connection problem if there is one.
             } catch (t: Throwable) {
                 throw IllegalStateException(
                     "external moq-auth / moq-relay not reachable on 127.0.0.1:" +
