@@ -123,16 +123,28 @@ class AudioRoomViewModel(
     private var autoRetryAttempts = 0
     private var autoRetryJob: Job? = null
 
+    // True between scheduleAutoRetry() and the launched coroutine's
+    // `finally`. Single source of truth — Job.isActive flips to false
+    // the moment the launched body starts running, which created a
+    // window where two retries could both pass the gate.
+    private var retryPending = false
+
     // Speaker / publisher path
     private var speaker: NestsSpeaker? = null
     private var broadcastHandle: BroadcastHandle? = null
     private var speakerStateJob: Job? = null
     private var speakerConnectJob: Job? = null
 
-    /** Push the latest known speaker set from the room event. */
+    /**
+     * Push the latest known speaker set from the room event. The user's
+     * own pubkey (when broadcasting) is filtered out so we don't subscribe
+     * to our own forwarded audio — that would echo through the local
+     * playback device whenever our broadcast track loops back from the relay.
+     */
     fun updateSpeakers(speakerPubkeys: Set<String>) {
         if (closed) return
-        requestedSpeakers = speakerPubkeys
+        val selfHex = signer.pubKey
+        requestedSpeakers = if (selfHex.isEmpty()) speakerPubkeys else speakerPubkeys - selfHex
         if (_uiState.value.connection is ConnectionUiState.Connected) {
             reconcileSubscriptions()
         }
@@ -151,6 +163,12 @@ class AudioRoomViewModel(
         autoRetryJob?.cancel()
         autoRetryJob = null
         autoRetryAttempts = 0
+        retryPending = false
+        // Cancel any previous state observer too — otherwise its delayed
+        // emissions can clobber the fresh Connecting UI we set below
+        // (audit VM #8).
+        stateObserverJob?.cancel()
+        stateObserverJob = null
 
         _uiState.update { it.copy(connection = ConnectionUiState.Connecting(ConnectionUiState.Step.ResolvingRoom)) }
 
@@ -258,19 +276,31 @@ class AudioRoomViewModel(
             }
     }
 
-    /** Toggle the speaker-side mic mute. Cheap; the network keeps running. */
+    /**
+     * Toggle the speaker-side mic mute. Cheap; the network keeps running.
+     *
+     * UI flips AFTER the suspending `broadcastHandle.setMuted(...)` returns
+     * so the indicator never claims muted while audio is still flowing
+     * (audit VM #7). We accept a small UI latency in exchange for an
+     * accurate state machine.
+     */
     fun setMicMuted(muted: Boolean) {
         if (closed) return
+        val handle = broadcastHandle ?: return
         viewModelScope.launch {
-            broadcastHandle?.runCatching { setMuted(muted) }
-        }
-        _uiState.update {
-            val current = it.broadcast
-            if (current is BroadcastUiState.Broadcasting) {
-                it.copy(broadcast = current.copy(isMuted = muted))
-            } else {
-                it
-            }
+            handle
+                .runCatching { setMuted(muted) }
+                .onSuccess {
+                    if (closed) return@onSuccess
+                    _uiState.update {
+                        val current = it.broadcast
+                        if (current is BroadcastUiState.Broadcasting) {
+                            it.copy(broadcast = current.copy(isMuted = muted))
+                        } else {
+                            it
+                        }
+                    }
+                }
         }
     }
 
@@ -286,6 +316,11 @@ class AudioRoomViewModel(
         autoRetryJob?.cancel()
         autoRetryJob = null
         autoRetryAttempts = 0
+        retryPending = false
+        // Forget the requested speaker set so a fresh connect() to a
+        // different room (or same room after a long pause) doesn't reuse
+        // a stale snapshot that may no longer be on stage.
+        requestedSpeakers = emptySet()
         teardownBroadcast(BroadcastUiState.Idle, finalCleanup = false)
         teardown(targetState = ConnectionUiState.Idle, finalCleanup = false)
     }
@@ -383,24 +418,34 @@ class AudioRoomViewModel(
      * Auto-reconnect on listener Failed with capped exponential backoff.
      * The user can still tap Connect manually at any time; that resets the
      * retry counter via the `connect()` path.
+     *
+     * `retryPending` is the single source of truth — `Job.isActive` returns
+     * false the moment a coroutine starts running its body, which created a
+     * window where two scheduleAutoRetry calls could both pass the gate
+     * (audit VM #4).
      */
     private fun scheduleAutoRetry() {
         if (closed) return
-        if (autoRetryJob?.isActive == true) return
+        if (retryPending) return
         if (autoRetryAttempts >= MAX_AUTO_RETRIES) return
 
+        retryPending = true
         val attempt = autoRetryAttempts
         autoRetryAttempts = attempt + 1
         val backoffMs = minOf(MAX_RETRY_BACKOFF_MS, INITIAL_RETRY_BACKOFF_MS shl attempt)
         autoRetryJob =
             viewModelScope.launch {
-                delay(backoffMs)
-                if (closed) return@launch
-                if (_uiState.value.connection !is ConnectionUiState.Failed) return@launch
-                // Drop the previous listener cleanly before starting a new
-                // attempt. Reset state to Idle so the connect() guard passes.
-                teardown(targetState = ConnectionUiState.Idle)
-                connectInternal()
+                try {
+                    delay(backoffMs)
+                    if (closed) return@launch
+                    if (_uiState.value.connection !is ConnectionUiState.Failed) return@launch
+                    // Drop the previous listener cleanly before starting a new
+                    // attempt. Reset state to Idle so the connect() guard passes.
+                    teardown(targetState = ConnectionUiState.Idle)
+                    connectInternal()
+                } finally {
+                    retryPending = false
+                }
             }
     }
 
@@ -469,17 +514,21 @@ class AudioRoomViewModel(
     }
 
     /**
-     * Stop the per-speaker player synchronously (releases the audio device
-     * immediately) and fire-and-forget the MoQ UNSUBSCRIBE on the VM scope.
+     * Stop the per-speaker player + fire-and-forget UNSUBSCRIBE on the VM
+     * scope. Both `AudioRoomPlayer.stop()` and `SubscribeHandle.unsubscribe()`
+     * are suspend, so we route them through one coroutine instead of two.
      */
     private fun closeSubscription(slot: ActiveSubscription) {
-        val handle = slot.detach()
+        val (roomPlayer, handle) = slot.detach()
         speakingExpiryJobs.remove(slot.pubkey)?.cancel()
         if (_uiState.value.speakingNow.contains(slot.pubkey)) {
             _uiState.update { it.copy(speakingNow = (it.speakingNow - slot.pubkey).toPersistentSet()) }
         }
-        if (handle != null) {
-            viewModelScope.launch { runCatching { handle.unsubscribe() } }
+        if (roomPlayer != null || handle != null) {
+            viewModelScope.launch {
+                roomPlayer?.runCatching { stop() }
+                handle?.runCatching { unsubscribe() }
+            }
         }
     }
 
@@ -532,22 +581,29 @@ class AudioRoomViewModel(
         connectJob = null
         stateObserverJob?.cancel()
         stateObserverJob = null
-        // Stop players synchronously — unsubscribe happens implicitly when
-        // the listener.close() below tears down the MoQ session.
-        activeSubscriptions.values.forEach { it.detach() }
+        // Detach + suspend-stop each player on the cleanup scope. The
+        // listener.close() below tears down the MoQ session and drops
+        // every active subscription, so we don't need to call
+        // unsubscribe() per-handle here — but we DO need to await each
+        // AudioRoomPlayer.stop() so the native MediaCodec / AudioTrack
+        // is released after its decode loop has unwound.
+        val scope = if (finalCleanup) cleanupScope else viewModelScope
+        val players = activeSubscriptions.values.map { it.detach().first }
         activeSubscriptions.clear()
         speakingExpiryJobs.values.forEach { it.cancel() }
         speakingExpiryJobs.clear()
+        if (players.isNotEmpty()) {
+            scope.launch {
+                players.forEach { p -> p?.runCatching { stop() } }
+            }
+        }
         val l = listener
         listener = null
         if (l != null) {
             // Listener.close() sends MoQ control frames (UNSUBSCRIBE etc.)
-            // before the QUIC transport drops. User-driven disconnect uses
-            // the still-alive viewModelScope; onCleared has already had its
-            // viewModelScope cancelled, so it routes through cleanupScope
-            // (a process-lived scope) so the peer sees a clean teardown
-            // rather than a hard QUIC drop.
-            val scope = if (finalCleanup) cleanupScope else viewModelScope
+            // before the QUIC transport drops. Same scope rule as the
+            // player stop above: viewModelScope when alive, cleanupScope
+            // for onCleared so the wire teardown survives.
             scope.launch { runCatching { l.close() } }
         }
         _uiState.update {
@@ -615,18 +671,20 @@ class AudioRoomViewModel(
         }
 
         /**
-         * Stop the player + decoder synchronously and return the
-         * [SubscribeHandle] (if any) so the caller can fire-and-forget
-         * UNSUBSCRIBE on its own coroutine scope.
+         * Hand the player + handle back to the caller's coroutine scope —
+         * `AudioRoomPlayer.stop()` and `SubscribeHandle.unsubscribe()` are
+         * both suspend, and the caller has the right scope to await them
+         * (so native MediaCodec/AudioTrack release runs after the decode
+         * loop has unwound, per audit MoQ #11/#12).
          */
-        fun detach(): SubscribeHandle? {
+        fun detach(): Pair<AudioRoomPlayer?, SubscribeHandle?> {
             isPlaying = false
-            roomPlayer?.let { runCatching { it.stop() } }
+            val p = roomPlayer
             val h = handle
             roomPlayer = null
             handle = null
             player = null
-            return h
+            return p to h
         }
 
         companion object {

@@ -72,20 +72,30 @@ class AudioRoomForegroundService : Service() {
         flags: Int,
         startId: Int,
     ): Int {
-        when (intent?.action) {
-            ACTION_PROMOTE_TO_MIC -> {
-                startForegroundWithType(includeMic = true)
+        // Always call startForeground first — Android's contract is that
+        // every onStartCommand for a service started via
+        // startForegroundService MUST call startForeground within 5 s, on
+        // every invocation (audit Android #8). Even the STOP path needs a
+        // foreground state before stopForeground can demote it cleanly.
+        val mic =
+            when (intent?.action) {
+                ACTION_PROMOTE_TO_MIC -> true
+                else -> promoted
             }
-
-            ACTION_STOP -> {
-                stopForeground(STOP_FOREGROUND_REMOVE)
+        runCatching { startForegroundWithType(includeMic = mic) }
+            .onFailure {
+                // foreground-not-allowed (mic-only restrictions, etc.) —
+                // bail cleanly rather than leak a wake-lock / partial state.
                 stopSelf()
+                return START_NOT_STICKY
             }
 
-            else -> {
-                startForegroundWithType(includeMic = promoted)
-            }
+        if (intent?.action == ACTION_STOP) {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            stopSelf()
+            return START_NOT_STICKY
         }
+
         if (wakeLock?.isHeld != true) {
             wakeLock?.acquire(WAKE_LOCK_TIMEOUT_MS)
         }
@@ -173,7 +183,12 @@ class AudioRoomForegroundService : Service() {
         private const val NOTIFICATION_ID = 0xA0D10
         private const val ACTION_PROMOTE_TO_MIC = "com.vitorpamplona.amethyst.audio_room.PROMOTE_MIC"
         private const val ACTION_STOP = "com.vitorpamplona.amethyst.audio_room.STOP"
-        private const val WAKE_LOCK_TIMEOUT_MS = 12L * 60 * 60 * 1000 // 12 hours hard cap
+
+        // 4-hour hard cap — long enough for typical audio-room sessions
+        // (2-3 h podcasts / panels) plus headroom, short enough to release
+        // the device from a stuck connection that fails to detect a
+        // network drop. Refresh on each ACTION_PROMOTE_TO_MIC arrival.
+        private const val WAKE_LOCK_TIMEOUT_MS = 4L * 60 * 60 * 1000
 
         /** Start the service in listener-only foreground mode. Idempotent. */
         fun startListening(context: Context) {

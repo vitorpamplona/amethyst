@@ -24,6 +24,7 @@ import com.vitorpamplona.nestsclient.moq.MoqSession.Companion.client
 import com.vitorpamplona.nestsclient.moq.MoqSession.Companion.server
 import com.vitorpamplona.nestsclient.transport.WebTransportBidiStream
 import com.vitorpamplona.nestsclient.transport.WebTransportSession
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -356,13 +357,31 @@ class MoqSession private constructor(
     // ---------------------------------------------------------------- Pumps
 
     private fun startPumps() {
+        // If a pump exits unexpectedly (transport died, peer hung up), the
+        // session is no longer healthy — failing in-flight subscribe/announce
+        // waiters and flipping `closed=true` prevents new operations from
+        // hanging on a peer that will never reply. The control pump is the
+        // primary signal for transport death; the datagram pump exiting on
+        // its own is rare but treated the same way.
         controlPumpJob =
             pumpScope.launch {
-                runControlPump()
+                try {
+                    runControlPump()
+                } catch (ce: CancellationException) {
+                    throw ce
+                } catch (t: Throwable) {
+                    runCatching { close(0, "control pump failed: ${t.message}") }
+                }
             }
         datagramPumpJob =
             pumpScope.launch {
-                runDatagramPump()
+                try {
+                    runDatagramPump()
+                } catch (ce: CancellationException) {
+                    throw ce
+                } catch (t: Throwable) {
+                    runCatching { close(0, "datagram pump failed: ${t.message}") }
+                }
             }
     }
 
@@ -424,16 +443,41 @@ class MoqSession private constructor(
             }
 
             is AnnounceError -> {
-                val deferred =
+                // Two cases:
+                //   (a) ANNOUNCE_ERROR arrives BEFORE ANNOUNCE_OK — the peer
+                //       refused our announce. The deferred is still pending;
+                //       fail it and remove the announces[] entry we
+                //       optimistically inserted in announce().
+                //   (b) ANNOUNCE_ERROR arrives AFTER ANNOUNCE_OK — the peer
+                //       is revoking a previously-accepted announce
+                //       (session-level kick, e.g. policy change). Mark the
+                //       handle session-closed so further sends/openTracks
+                //       short-circuit, but don't remove from announces[]
+                //       since unannounce() is still the canonical removal
+                //       path and inbound SUBSCRIBE must continue to see the
+                //       namespace as "withdrawn" rather than missing.
+                val handle =
                     stateMutex.withLock {
-                        announces.remove(msg.namespace)
-                        pendingAnnounces.remove(msg.namespace)
+                        val pending = pendingAnnounces.remove(msg.namespace)
+                        if (pending != null) {
+                            announces.remove(msg.namespace)
+                            pending.completeExceptionally(
+                                MoqProtocolException(
+                                    "ANNOUNCE rejected: code=${msg.errorCode} reason=${msg.reasonPhrase}",
+                                ),
+                            )
+                            null
+                        } else {
+                            announces[msg.namespace]
+                        }
                     }
-                deferred?.completeExceptionally(
-                    MoqProtocolException(
-                        "ANNOUNCE rejected: code=${msg.errorCode} reason=${msg.reasonPhrase}",
-                    ),
-                )
+                handle?.let { existing ->
+                    stateMutex.withLock { existing.markSessionClosedLocked() }
+                    runCatching {
+                        writeMutex.withLock { controlStream.write(MoqCodec.encode(Unannounce(msg.namespace))) }
+                    }
+                    stateMutex.withLock { announces.remove(msg.namespace) }
+                }
             }
 
             is Subscribe -> {
@@ -573,8 +617,18 @@ class MoqSession private constructor(
             inboundSubscribers.clear()
             publisherSubscribers.clear()
         }
-        controlPumpJob?.cancel()
-        datagramPumpJob?.cancel()
+        // Cancel pumps then JOIN them, so any in-flight pump write
+        // (handleInboundSubscribe writing SUBSCRIBE_OK / SUBSCRIBE_ERROR,
+        // handleInboundUnsubscribe writing SUBSCRIBE_DONE) finishes its
+        // writeMutex.withLock { ... } critical section before we send FIN
+        // on the control stream. Joining a cancelled coroutine waits for
+        // its `finally`s to run, including the lock release.
+        val ctrlPump = controlPumpJob
+        val datagramPump = datagramPumpJob
+        ctrlPump?.cancel()
+        datagramPump?.cancel()
+        runCatching { ctrlPump?.join() }
+        runCatching { datagramPump?.join() }
         runCatching { writeMutex.withLock { controlStream.finish() } }
         runCatching { transport.close(code, reason) }
     }
@@ -673,13 +727,24 @@ class MoqSession private constructor(
                 sessionClosed = true
                 toClose = tracks.values.toList()
                 tracks.clear()
-                announces.remove(namespace)
+                // Note: keep `announces[namespace] = this` until UNANNOUNCE
+                // is on the wire. Inbound SUBSCRIBE during this window will
+                // see `sessionClosed=true` via publisherForLocked → null →
+                // we reply SUBSCRIBE_ERROR(TRACK_DOES_NOT_EXIST), which is
+                // accurate (no track to serve). Removing now would race
+                // with the control pump and leave a window where the peer
+                // thinks the namespace exists but our state has dropped it.
             }
             toClose.forEach { runCatching { it.close() } }
-            if (closed) return
-            runCatching {
-                writeMutex.withLock { controlStream.write(MoqCodec.encode(Unannounce(namespace))) }
+            if (!closed) {
+                runCatching {
+                    writeMutex.withLock { controlStream.write(MoqCodec.encode(Unannounce(namespace))) }
+                }
             }
+            // Now safe to forget the namespace entirely — UNANNOUNCE is on
+            // the wire so any later inbound SUBSCRIBE was sent without
+            // knowing the namespace was withdrawn.
+            stateMutex.withLock { announces.remove(namespace) }
         }
 
         /**
@@ -727,6 +792,16 @@ class MoqSession private constructor(
                     )
                 runCatching { transport.sendDatagram(datagram) }
                     .onSuccess { anySent = true }
+            }
+            // Roll the objectId back if the entire fan-out failed (e.g.
+            // transport down). Audio-rooms NIP wants strictly contiguous
+            // object ids per group; a gap from a fully-failed send would
+            // trip strict subscribers. We roll back only if the next send
+            // hasn't already grabbed an id past us.
+            if (!anySent) {
+                stateMutex.withLock {
+                    if (nextObjectId == objectId + 1) nextObjectId = objectId
+                }
             }
             return anySent
         }

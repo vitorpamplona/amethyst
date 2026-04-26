@@ -199,13 +199,23 @@ class DefaultNestsSpeaker internal constructor(
     }
 
     override suspend fun close() {
+        // Take the active handle under `gate` (so a concurrent
+        // `startBroadcasting` can't observe a half-closed state), then
+        // release the lock before calling `handle.close()` and
+        // `session.close()` — both are long-running suspend operations
+        // (broadcaster.stop awaits cancelAndJoin; session.close fires
+        // SUBSCRIBE_DONE per attached subscriber and joins pumps). Holding
+        // the gate through them would block any other API call on this
+        // speaker for the entire teardown duration.
+        val handle: DefaultBroadcastHandle?
         gate.withLock {
             if (state.value is NestsSpeakerState.Closed) return
-            activeHandle?.let { runCatching { it.close() } }
+            handle = activeHandle
             activeHandle = null
-            runCatching { session.close() }
             mutableState.value = NestsSpeakerState.Closed
         }
+        handle?.runCatching { close() }
+        runCatching { session.close() }
     }
 }
 

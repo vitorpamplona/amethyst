@@ -24,6 +24,7 @@ import com.vitorpamplona.nestsclient.moq.MoqSession
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
 
 /**
@@ -129,11 +130,18 @@ class AudioRoomBroadcaster(
      * Stop the loop, release the mic, release the encoder, close the MoQ
      * publisher (which fires SUBSCRIBE_DONE to every attached subscriber).
      * Idempotent.
+     *
+     * Implementation note: we `cancelAndJoin` the loop before releasing
+     * the encoder and closing the publisher. Otherwise the loop's last
+     * `encoder.encode(...)` or `publisher.send(...)` could race
+     * `encoder.release()` / `publisher.close()` and produce orphan
+     * OBJECT_DATAGRAMs to subscribers that already received SUBSCRIBE_DONE,
+     * or use-after-release on the native MediaCodec.
      */
     suspend fun stop() {
         if (stopped) return
         stopped = true
-        job?.cancel()
+        job?.cancelAndJoin()
         runCatching { capture.stop() }
         runCatching { encoder.release() }
         runCatching { publisher.close() }

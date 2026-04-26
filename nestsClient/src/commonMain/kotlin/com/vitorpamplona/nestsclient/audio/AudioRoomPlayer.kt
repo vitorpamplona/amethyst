@@ -24,6 +24,7 @@ import com.vitorpamplona.nestsclient.moq.MoqObject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 
@@ -101,11 +102,19 @@ class AudioRoomPlayer(
             }
     }
 
-    /** Stop playback, cancel the decode loop, release the decoder. Idempotent. */
-    fun stop() {
+    /**
+     * Stop playback, cancel the decode loop, release the decoder. Idempotent.
+     *
+     * Suspending so callers can await the loop's exit before releasing
+     * native resources. Calling `decoder.release()` while another coroutine
+     * is mid-`decoder.decode(...)` is undefined behaviour for MediaCodec
+     * (and most native decoders); `cancelAndJoin` waits for the loop to
+     * unwind through its CancellationException path before we proceed.
+     */
+    suspend fun stop() {
         if (stopped) return
         stopped = true
-        job?.cancel()
+        job?.cancelAndJoin()
         runCatching { player.stop() }
         runCatching { decoder.release() }
     }

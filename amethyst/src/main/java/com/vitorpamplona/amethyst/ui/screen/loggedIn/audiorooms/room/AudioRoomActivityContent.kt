@@ -167,16 +167,35 @@ private fun AudioRoomActivityBody(
             is BroadcastUiState.Broadcasting -> b.isMuted
             else -> null
         }
-    LaunchedEffect(event.address().toValue(), handRaised, micMutedTag) {
+    // Heartbeat loop — publishes once on enter / hand-raise change, then
+    // every 30 s. micMutedTag is intentionally NOT a key here: every mute
+    // toggle would otherwise trigger a presence publish + relay round trip
+    // (audit Android #11). The next heartbeat picks up the latest mic
+    // state up to 30 s later, which is well within the user's "did the
+    // peer see my mute" tolerance.
+    LaunchedEffect(event.address().toValue(), handRaised) {
         publishPresence(account, event, handRaised, micMutedTag)
         while (isActive) {
             delay(PRESENCE_REFRESH_MS)
             publishPresence(account, event, handRaised, micMutedTag)
         }
     }
+    // Debounced state-change publisher: after a mute toggle, wait
+    // PRESENCE_DEBOUNCE_MS for further changes before sending a fresh
+    // presence event. The LaunchedEffect's auto-cancel on key change
+    // serves as the debounce mechanism.
+    LaunchedEffect(micMutedTag) {
+        delay(PRESENCE_DEBOUNCE_MS)
+        publishPresence(account, event, handRaised, micMutedTag)
+    }
     DisposableEffect(event.address().toValue()) {
         onDispose {
-            scope.launch(Dispatchers.IO) {
+            // Final "leaving" presence runs on a non-cancellable scope so
+            // it survives the composable's scope being cancelled mid-
+            // network. Without this the leave event almost never reaches
+            // the relay (audit Android #12).
+            @OptIn(kotlinx.coroutines.DelicateCoroutinesApi::class)
+            kotlinx.coroutines.GlobalScope.launch(Dispatchers.IO) {
                 runCatching { publishPresence(account, event, handRaised = false, micMuted = null) }
             }
         }
@@ -219,6 +238,7 @@ private fun AudioRoomActivityBody(
 }
 
 private const val PRESENCE_REFRESH_MS = 30_000L
+private const val PRESENCE_DEBOUNCE_MS = 500L
 
 private suspend fun publishPresence(
     account: com.vitorpamplona.amethyst.model.Account,

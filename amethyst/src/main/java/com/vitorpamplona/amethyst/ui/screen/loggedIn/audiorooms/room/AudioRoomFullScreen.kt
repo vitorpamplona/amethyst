@@ -258,6 +258,25 @@ private fun TalkRow(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error,
                     )
+                    // After "Don't ask again" the permission launcher
+                    // silently returns false. Give the user a path to
+                    // toggle the permission in system settings (audit
+                    // Android #14).
+                    OutlinedButton(onClick = {
+                        runCatching {
+                            context.startActivity(
+                                android.content
+                                    .Intent(
+                                        android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                        android.net.Uri.fromParts("package", context.packageName, null),
+                                    ).apply {
+                                        addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    },
+                            )
+                        }
+                    }) {
+                        Text(stringRes(R.string.audio_room_open_settings))
+                    }
                 }
             }
 

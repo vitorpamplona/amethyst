@@ -96,6 +96,19 @@ class AudioRoomActivity : AppCompatActivity() {
         val serviceBase = intent.getStringExtra(EXTRA_SERVICE_BASE)
         val roomId = intent.getStringExtra(EXTRA_ROOM_ID)
         if (accountViewModel == null || addressValue == null || serviceBase == null || roomId == null) {
+            // After process death the bridge is empty (the previous
+            // process's AccountViewModel is gone). Bounce the user back to
+            // MainActivity so they land on the lobby instead of a black
+            // screen flashing closed (audit Android #7).
+            if (accountViewModel == null) {
+                runCatching {
+                    startActivity(
+                        Intent(this, com.vitorpamplona.amethyst.ui.MainActivity::class.java).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
+                        },
+                    )
+                }
+            }
             finish()
             return
         }
@@ -148,20 +161,39 @@ class AudioRoomActivity : AppCompatActivity() {
         runCatching { enterPictureInPictureMode(buildPipParams()) }
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        // singleTask brings an existing instance forward when the user
+        // taps Join from a different room. We finish + let the new
+        // intent's startActivity create a fresh activity rather than
+        // silently keeping the old room running (audit Android #16).
+        val newAddress = intent.getStringExtra(EXTRA_ADDRESS)
+        val currentAddress = getIntent()?.getStringExtra(EXTRA_ADDRESS)
+        if (newAddress != null && newAddress != currentAddress) {
+            finish()
+            startActivity(intent)
+        }
+    }
+
     override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean) {
         super.onPictureInPictureModeChanged(isInPictureInPictureMode)
         isInPipMode.value = isInPictureInPictureMode
     }
 
     private fun updatePipParams() {
-        if (!isInPipMode.value) return
+        // Pre-stage params even outside PIP so the next entry shows the
+        // correct mute icon (audit Android #15). setPictureInPictureParams
+        // is legal in any state on API 26+.
         runCatching { setPictureInPictureParams(buildPipParams()) }
     }
 
     private fun buildPipParams(): PictureInPictureParams =
         PictureInPictureParams
             .Builder()
-            .setAspectRatio(Rational(9, 16))
+            // Landscape ratio — the PIP layout is a horizontal row of
+            // avatars under a title (see AudioRoomPipScreen), which 9:16
+            // squeezed into a sliver. 16:9 fits the row and the room name.
+            .setAspectRatio(Rational(16, 9))
             .setActions(buildPipActions())
             .build()
 
