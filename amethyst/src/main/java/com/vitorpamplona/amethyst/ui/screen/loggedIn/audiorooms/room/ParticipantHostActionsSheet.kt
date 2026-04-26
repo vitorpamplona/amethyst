@@ -36,12 +36,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.experimental.audiorooms.admin.AdminCommandEvent
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
+import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ROLE
 import kotlinx.coroutines.launch
@@ -111,11 +114,35 @@ internal fun ParticipantHostActionsSheet(
                 style = MaterialTheme.typography.titleSmall,
             )
             Spacer(Modifier.height(8.dp))
-            // Audience-side rows. View-profile navigation is
-            // intentionally omitted in v1: AudioRoomActivity is a
-            // separate Android Activity without an in-room nav
-            // stack to push a profile screen onto. Adding it later
-            // means launching MainActivity with a deep-link Intent.
+            // View Profile — AudioRoomActivity is a separate Android
+            // Activity without its own nav stack, so the deep-link
+            // path goes through MainActivity. Launching `nostr:npub1...`
+            // via ACTION_VIEW lets the existing MainActivity URI
+            // handler route to Route.Profile (matches the path that
+            // an external app or a clicked link inside the feed
+            // would take). NEW_TASK + REORDER_TO_FRONT brings the
+            // already-running MainActivity instance forward; the
+            // audio-room foreground service keeps audio alive while
+            // the user is on the profile screen.
+            val context = LocalContext.current
+            ActionRow(stringRes(R.string.audio_room_participant_view_profile)) {
+                val npub = NPub.create(target)
+                runCatching {
+                    context.startActivity(
+                        android.content
+                            .Intent(android.content.Intent.ACTION_VIEW)
+                            .apply {
+                                data = android.net.Uri.parse("nostr:$npub")
+                                setClass(context, MainActivity::class.java)
+                                addFlags(
+                                    android.content.Intent.FLAG_ACTIVITY_NEW_TASK or
+                                        android.content.Intent.FLAG_ACTIVITY_REORDER_TO_FRONT,
+                                )
+                            },
+                    )
+                }
+                onDismiss()
+            }
             ActionRow(
                 text =
                     stringRes(
