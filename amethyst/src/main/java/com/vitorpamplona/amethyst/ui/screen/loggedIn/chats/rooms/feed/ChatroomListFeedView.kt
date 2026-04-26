@@ -25,14 +25,16 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
+import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.feeds.FeedEmpty
 import com.vitorpamplona.amethyst.ui.feeds.FeedError
@@ -45,6 +47,12 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.ChatroomHeaderCompose
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
+import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
+import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
+import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
+import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 
 @Composable
 fun ChatroomListFeedView(
@@ -103,14 +111,16 @@ private fun FeedLoaded(
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
 
+    val myPubKey = accountViewModel.userProfile().pubkeyHex
+
     LazyColumn(
         contentPadding = rememberFeedContentPadding(FeedPadding),
         state = listState,
     ) {
-        itemsIndexed(
+        items(
             items.list,
-            key = { index, item -> if (index == 0) index else item.idHex },
-        ) { _, item ->
+            key = { item -> chatroomLazyKey(item, myPubKey) },
+        ) { item ->
             Row(Modifier.fillMaxWidth()) {
                 ChatroomHeaderCompose(
                     item,
@@ -122,6 +132,43 @@ private fun FeedLoaded(
             HorizontalDivider(
                 thickness = DividerThickness,
             )
+        }
+    }
+}
+
+// Stable per-chatroom key — derived from chatroom identity, not the latest
+// message id, so reorders move the row instead of recreating it.
+private fun chatroomLazyKey(
+    item: Note,
+    myPubKey: HexKey,
+): String {
+    item.inGatherers
+        ?.firstNotNullOfOrNull { it as? MarmotGroupChatroom }
+        ?.let { return "marmot:${it.nostrGroupId}" }
+
+    return when (val event = item.event) {
+        is ChannelMessageEvent -> {
+            "ch:${event.channelId() ?: item.idHex}"
+        }
+
+        is ChannelMetadataEvent -> {
+            "ch:${event.channelId() ?: item.idHex}"
+        }
+
+        is ChannelCreateEvent -> {
+            "ch:${event.id}"
+        }
+
+        is EphemeralChatEvent -> {
+            "eph:${event.roomId()?.toKey() ?: item.idHex}"
+        }
+
+        is ChatroomKeyable -> {
+            "dm:${event.chatroomKey(myPubKey).users.sorted().joinToString(",")}"
+        }
+
+        else -> {
+            item.idHex
         }
     }
 }
