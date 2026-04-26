@@ -68,6 +68,7 @@ import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActiviti
 import com.vitorpamplona.amethyst.commons.viewmodels.AudioRoomViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.BroadcastUiState
 import com.vitorpamplona.amethyst.commons.viewmodels.ConnectionUiState
+import com.vitorpamplona.amethyst.service.audiorooms.AudioRoomForegroundService
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -95,20 +96,19 @@ import kotlinx.coroutines.launch
  * Clubhouse-style audio-room "stage" rendered in place of the video player when
  * the underlying activity is a NIP-53 kind 30312 [MeetingSpaceEvent].
  *
- * Responsibilities (M1 = listener-only):
+ * Responsibilities:
  *   - Displays host / speaker / audience avatars parsed from the 30312 `p` tags.
- *   - Publishes kind 10312 presence on enter and every 30 s while composed.
- *   - Hand-raise toggle flips the `["hand","1"|"0"]` tag on that presence event
- *     so a host on any NIP-53 client can see the request and promote.
- *   - **Connect button** opens the listener-side audio pipeline (HTTP →
- *     WebTransport over QUIC → MoQ → Opus decode → AudioTrack). On Connected,
- *     auto-subscribes to every host's speaker track.
- *   - **Mute toggle** silences the local audio device without halting the
- *     network pipeline so unmute is instant.
- *
- * Speaker-side (mic capture + publish) is M5+ in the audio-rooms completion
- * plan — `nestsClient/plans/2026-04-26-audio-rooms-completion.md`. Until then
- * the presence event omits the `muted` tag (we have no mic to mute).
+ *     Avatars get a primary-color ring while their MoQ track is delivering audio.
+ *   - Publishes kind 10312 presence on enter and every 30 s while composed,
+ *     reflecting the hand-raise + mic-mute state.
+ *   - **Listener** path: Connect button → HTTP → WebTransport over QUIC → MoQ
+ *     listener session → Opus decode → AudioTrack. Auto-subscribes to every
+ *     host + speaker track. Mute toggle silences the local device without
+ *     halting the network so unmute is instant.
+ *   - **Speaker** path (only for users in the room's `p` tags as host or
+ *     speaker): Talk button → RECORD_AUDIO permission → second MoQ session
+ *     in publisher mode → AudioRecord → MediaCodec Opus encoder → MoQ
+ *     OBJECT_DATAGRAM emission. Live indicator + mic-mute toggle.
  */
 @Composable
 fun AudioRoomStage(
@@ -144,25 +144,6 @@ private fun AudioRoomStageContent(
     val scope = rememberCoroutineScope()
     val account = accountViewModel.account
 
-    // Publish initial presence on enter and refresh every PRESENCE_REFRESH_MS while composed.
-    LaunchedEffect(event.address().toValue(), handRaised) {
-        publishPresence(account, event, handRaised)
-        while (isActive) {
-            delay(PRESENCE_REFRESH_MS)
-            publishPresence(account, event, handRaised)
-        }
-    }
-
-    // Best-effort "leave" — re-publish a lowered-hand presence so peers see us
-    // drop sooner than the 30 s heartbeat would otherwise allow.
-    DisposableEffect(event.address().toValue()) {
-        onDispose {
-            scope.launch(Dispatchers.IO) {
-                runCatching { publishPresence(account, event, handRaised = false) }
-            }
-        }
-    }
-
     val serviceBase = event.service()
     val roomId = event.address().dTag
     val audioAvailable = !serviceBase.isNullOrBlank() && roomId.isNotBlank()
@@ -192,6 +173,52 @@ private fun AudioRoomStageContent(
 
     val ui = viewModel?.uiState?.collectAsState()?.value
     val speakingNow = ui?.speakingNow ?: persistentSetOf()
+
+    // Foreground-service lifecycle. The service is a process-anchor — it
+    // doesn't own the audio resources (those live in the VM) but its
+    // foreground notification + wake-lock keep audio playing with the
+    // screen off. Promotes to mediaPlayback+microphone type while the user
+    // broadcasts (Android 14+ split foreground-type permission model).
+    val context = LocalContext.current
+    val isConnected = ui?.connection is ConnectionUiState.Connected
+    val isBroadcasting = ui?.broadcast is BroadcastUiState.Broadcasting
+    LaunchedEffect(isConnected, isBroadcasting) {
+        when {
+            isConnected && isBroadcasting -> AudioRoomForegroundService.promoteToMicrophone(context)
+            isConnected -> AudioRoomForegroundService.startListening(context)
+            else -> AudioRoomForegroundService.stop(context)
+        }
+    }
+    DisposableEffect(Unit) {
+        onDispose { AudioRoomForegroundService.stop(context) }
+    }
+    // Mic state for the presence event: null when not broadcasting (we have
+    // no mic stream to be muted on), explicit true/false while live so other
+    // clients can render the mute indicator on our avatar.
+    val micMutedTag: Boolean? =
+        when (val b = ui?.broadcast) {
+            is BroadcastUiState.Broadcasting -> b.isMuted
+            else -> null
+        }
+
+    // Publish initial presence on enter and refresh every PRESENCE_REFRESH_MS while composed.
+    LaunchedEffect(event.address().toValue(), handRaised, micMutedTag) {
+        publishPresence(account, event, handRaised, micMutedTag)
+        while (isActive) {
+            delay(PRESENCE_REFRESH_MS)
+            publishPresence(account, event, handRaised, micMutedTag)
+        }
+    }
+
+    // Best-effort "leave" — re-publish a lowered-hand presence so peers see us
+    // drop sooner than the 30 s heartbeat would otherwise allow.
+    DisposableEffect(event.address().toValue()) {
+        onDispose {
+            scope.launch(Dispatchers.IO) {
+                runCatching { publishPresence(account, event, handRaised = false, micMuted = null) }
+            }
+        }
+    }
 
     Card(
         modifier = Modifier.fillMaxWidth().padding(8.dp),
@@ -530,16 +557,17 @@ private suspend fun publishPresence(
     account: com.vitorpamplona.amethyst.model.Account,
     event: MeetingSpaceEvent,
     handRaised: Boolean,
+    micMuted: Boolean?,
 ) {
     runCatching {
         account.signAndComputeBroadcast(
             MeetingRoomPresenceEvent.build(
                 root = event,
                 handRaised = handRaised,
-                // muted tag intentionally omitted — listener-only mute (M1)
-                // silences our speakers, not a mic we don't yet broadcast.
-                // Re-evaluate when M5 (publisher path) lands.
-                muted = null,
+                // null = not broadcasting (no mic stream); true/false reflect
+                // the speaker's current mic state so other clients can show a
+                // mute indicator on the avatar.
+                muted = micMuted,
             ),
         )
     }

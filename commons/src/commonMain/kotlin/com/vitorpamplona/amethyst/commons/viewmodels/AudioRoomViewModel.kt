@@ -109,6 +109,12 @@ class AudioRoomViewModel(
     private var requestedSpeakers: Set<String> = emptySet()
     private var closed = false
 
+    // Auto-reconnect state — incremented every time we observe Failed and
+    // schedule a retry; reset to 0 on Connected or on a user-initiated
+    // connect()/disconnect() so manual recovery starts fresh.
+    private var autoRetryAttempts = 0
+    private var autoRetryJob: Job? = null
+
     // Speaker / publisher path
     private var speaker: NestsSpeaker? = null
     private var broadcastHandle: BroadcastHandle? = null
@@ -132,6 +138,11 @@ class AudioRoomViewModel(
         if (closed) return
         val current = _uiState.value.connection
         if (current is ConnectionUiState.Connecting || current is ConnectionUiState.Connected) return
+
+        // User-initiated connect — clear any pending auto-retry timer + counter.
+        autoRetryJob?.cancel()
+        autoRetryJob = null
+        autoRetryAttempts = 0
 
         _uiState.update { it.copy(connection = ConnectionUiState.Connecting(ConnectionUiState.Step.ResolvingRoom)) }
 
@@ -264,12 +275,17 @@ class AudioRoomViewModel(
     /** Tear down without finalizing the VM (e.g. user pressed Disconnect). */
     fun disconnect() {
         if (closed) return
+        autoRetryJob?.cancel()
+        autoRetryJob = null
+        autoRetryAttempts = 0
         teardownBroadcast(BroadcastUiState.Idle)
         teardown(targetState = ConnectionUiState.Idle)
     }
 
     override fun onCleared() {
         closed = true
+        autoRetryJob?.cancel()
+        autoRetryJob = null
         teardownBroadcast(BroadcastUiState.Idle)
         teardown(targetState = ConnectionUiState.Closed)
         super.onCleared()
@@ -323,9 +339,83 @@ class AudioRoomViewModel(
                     _uiState.update { ui ->
                         ui.copy(connection = state.toUiState(ui.connection))
                     }
-                    if (state is NestsListenerState.Connected) {
-                        reconcileSubscriptions()
+                    when (state) {
+                        is NestsListenerState.Connected -> {
+                            autoRetryAttempts = 0
+                            reconcileSubscriptions()
+                        }
+
+                        is NestsListenerState.Failed -> {
+                            scheduleAutoRetry()
+                        }
+
+                        else -> { /* no extra side effect */ }
                     }
+                }
+            }
+    }
+
+    /**
+     * Auto-reconnect on listener Failed with capped exponential backoff.
+     * The user can still tap Connect manually at any time; that resets the
+     * retry counter via the `connect()` path.
+     */
+    private fun scheduleAutoRetry() {
+        if (closed) return
+        if (autoRetryJob?.isActive == true) return
+        if (autoRetryAttempts >= MAX_AUTO_RETRIES) return
+
+        val attempt = autoRetryAttempts
+        autoRetryAttempts = attempt + 1
+        val backoffMs = minOf(MAX_RETRY_BACKOFF_MS, INITIAL_RETRY_BACKOFF_MS shl attempt)
+        autoRetryJob =
+            viewModelScope.launch {
+                delay(backoffMs)
+                if (closed) return@launch
+                if (_uiState.value.connection !is ConnectionUiState.Failed) return@launch
+                // Drop the previous listener cleanly before starting a new
+                // attempt. Reset state to Idle so the connect() guard passes.
+                teardown(targetState = ConnectionUiState.Idle)
+                connectInternal()
+            }
+    }
+
+    /**
+     * Internal connect that bypasses the auto-retry counter reset — used by
+     * [scheduleAutoRetry] so successive auto-retries continue to back off.
+     */
+    private fun connectInternal() {
+        if (closed) return
+        val current = _uiState.value.connection
+        if (current is ConnectionUiState.Connecting || current is ConnectionUiState.Connected) return
+
+        _uiState.update { it.copy(connection = ConnectionUiState.Connecting(ConnectionUiState.Step.ResolvingRoom)) }
+
+        connectJob =
+            viewModelScope.launch {
+                try {
+                    val l =
+                        connector.connect(
+                            httpClient = httpClient,
+                            transport = transport,
+                            scope = viewModelScope,
+                            serviceBase = serviceBase,
+                            roomId = roomId,
+                            signer = signer,
+                        )
+                    if (closed) {
+                        runCatching { l.close() }
+                        return@launch
+                    }
+                    listener = l
+                    observeListenerState(l)
+                } catch (ce: CancellationException) {
+                    throw ce
+                } catch (t: Throwable) {
+                    _uiState.update {
+                        it.copy(connection = ConnectionUiState.Failed(t.message ?: t::class.simpleName ?: "connect failed"))
+                    }
+                    scheduleAutoRetry()
                 }
             }
     }
@@ -587,6 +677,15 @@ sealed class BroadcastUiState {
  * indicator flicker.
  */
 const val SPEAKING_TIMEOUT_MS: Long = 250L
+
+/** Max number of auto-reconnect attempts after a Failed listener state. */
+private const val MAX_AUTO_RETRIES = 3
+
+/** First auto-retry backoff in ms; doubles each subsequent attempt. */
+private const val INITIAL_RETRY_BACKOFF_MS = 1_000L
+
+/** Cap on the auto-retry backoff so the wait stays human-acceptable. */
+private const val MAX_RETRY_BACKOFF_MS = 16_000L
 
 /**
  * Indirection over the top-level `connectNestsListener` so tests can drive

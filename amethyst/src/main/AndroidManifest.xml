@@ -260,6 +260,12 @@
             android:stopWithTask="false"
             android:exported="false" />
 
+        <service
+            android:name=".service.audiorooms.AudioRoomForegroundService"
+            android:foregroundServiceType="mediaPlayback|microphone"
+            android:stopWithTask="true"
+            android:exported="false" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.provider"

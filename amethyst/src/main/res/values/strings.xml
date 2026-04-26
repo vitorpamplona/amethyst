@@ -512,6 +512,12 @@
     <string name="audio_room_broadcasting">Live</string>
     <string name="audio_room_broadcast_failed">Broadcast failed: %1$s</string>
     <string name="audio_room_record_permission_required">Microphone access is required to talk in this room.</string>
+    <string name="audio_room_notification_channel">Audio rooms</string>
+    <string name="audio_room_notification_channel_description">Keeps audio playing while a room is open.</string>
+    <string name="audio_room_notification_listening">Audio room connected</string>
+    <string name="audio_room_notification_broadcasting">Audio room — Live</string>
+    <string name="audio_room_notification_text">Tap to return.</string>
+    <string name="audio_room_notification_stop">Stop</string>
     <string name="longs">Videos</string>
     <string name="articles">Articles</string>
     <string name="private_bookmarks">Private Bookmarks</string>
