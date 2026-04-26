@@ -24,13 +24,19 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.nestsclient.BroadcastHandle
 import com.vitorpamplona.nestsclient.NestsClient
 import com.vitorpamplona.nestsclient.NestsListener
 import com.vitorpamplona.nestsclient.NestsListenerState
+import com.vitorpamplona.nestsclient.NestsSpeaker
+import com.vitorpamplona.nestsclient.NestsSpeakerState
+import com.vitorpamplona.nestsclient.audio.AudioCapture
 import com.vitorpamplona.nestsclient.audio.AudioPlayer
 import com.vitorpamplona.nestsclient.audio.AudioRoomPlayer
 import com.vitorpamplona.nestsclient.audio.OpusDecoder
+import com.vitorpamplona.nestsclient.audio.OpusEncoder
 import com.vitorpamplona.nestsclient.connectNestsListener
+import com.vitorpamplona.nestsclient.connectNestsSpeaker
 import com.vitorpamplona.nestsclient.moq.SubscribeHandle
 import com.vitorpamplona.nestsclient.transport.WebTransportFactory
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
@@ -79,10 +85,17 @@ class AudioRoomViewModel(
     private val signer: NostrSigner,
     private val serviceBase: String,
     private val roomId: String,
+    // Speaker-side audio capture/encode actuals. Optional — desktop and
+    // listener-only callers pass null and the speaker UI hides the talk
+    // button. Android passes `{ AudioRecordCapture() }` /
+    // `{ MediaCodecOpusEncoder() }`.
+    private val captureFactory: (() -> AudioCapture)? = null,
+    private val encoderFactory: (() -> OpusEncoder)? = null,
     // Seam for tests — production code uses the default which delegates to
     // the real `connectNestsListener`. Tests inject a fake that returns a
     // listener whose state they can drive directly.
     private val connector: NestsListenerConnector = DefaultNestsListenerConnector,
+    private val speakerConnector: NestsSpeakerConnector = DefaultNestsSpeakerConnector,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(AudioRoomUiState())
     val uiState: StateFlow<AudioRoomUiState> = _uiState.asStateFlow()
@@ -95,6 +108,12 @@ class AudioRoomViewModel(
     private val speakingExpiryJobs = mutableMapOf<String, Job>()
     private var requestedSpeakers: Set<String> = emptySet()
     private var closed = false
+
+    // Speaker / publisher path
+    private var speaker: NestsSpeaker? = null
+    private var broadcastHandle: BroadcastHandle? = null
+    private var speakerStateJob: Job? = null
+    private var speakerConnectJob: Job? = null
 
     /** Push the latest known speaker set from the room event. */
     fun updateSpeakers(speakerPubkeys: Set<String>) {
@@ -150,16 +169,150 @@ class AudioRoomViewModel(
         activeSubscriptions.values.forEach { it.player?.setMutedSafe(muted) }
     }
 
+    /**
+     * Whether this VM was constructed with capture + encoder factories. The
+     * UI uses this to decide whether to render the talk button at all —
+     * desktop and listener-only screens leave it false.
+     */
+    val canBroadcast: Boolean = captureFactory != null && encoderFactory != null
+
+    /**
+     * Begin broadcasting our own pubkey's audio. Caller must have already
+     * obtained `RECORD_AUDIO`. Idempotent: returns immediately if a
+     * broadcast is already in flight.
+     *
+     * If the listener path isn't [ConnectionUiState.Connected] yet, the
+     * call is a no-op (the UI shouldn't expose the talk button before
+     * Connected anyway).
+     *
+     * Note that the listener and speaker paths each own their own MoQ
+     * session over a separate WebTransport — nests' protocol uses one
+     * session per direction.
+     */
+    fun startBroadcast(speakerPubkeyHex: String) {
+        if (closed || !canBroadcast) return
+        if (_uiState.value.connection !is ConnectionUiState.Connected) return
+        if (_uiState.value.broadcast is BroadcastUiState.Broadcasting ||
+            _uiState.value.broadcast is BroadcastUiState.Connecting
+        ) {
+            return
+        }
+        _uiState.update {
+            it.copy(broadcast = BroadcastUiState.Connecting)
+        }
+        speakerConnectJob =
+            viewModelScope.launch {
+                try {
+                    val s =
+                        speakerConnector.connect(
+                            httpClient = httpClient,
+                            transport = transport,
+                            scope = viewModelScope,
+                            serviceBase = serviceBase,
+                            roomId = roomId,
+                            signer = signer,
+                            speakerPubkeyHex = speakerPubkeyHex,
+                            captureFactory = captureFactory!!,
+                            encoderFactory = encoderFactory!!,
+                        )
+                    if (closed) {
+                        runCatching { s.close() }
+                        return@launch
+                    }
+                    speaker = s
+                    observeSpeakerState(s)
+                    val handle = s.startBroadcasting()
+                    broadcastHandle = handle
+                    _uiState.update { it.copy(broadcast = BroadcastUiState.Broadcasting(isMuted = false)) }
+                } catch (ce: CancellationException) {
+                    throw ce
+                } catch (t: Throwable) {
+                    _uiState.update {
+                        it.copy(
+                            broadcast =
+                                BroadcastUiState.Failed(
+                                    t.message ?: t::class.simpleName ?: "broadcast failed",
+                                ),
+                        )
+                    }
+                }
+            }
+    }
+
+    /** Toggle the speaker-side mic mute. Cheap; the network keeps running. */
+    fun setMicMuted(muted: Boolean) {
+        if (closed) return
+        viewModelScope.launch {
+            broadcastHandle?.runCatching { setMuted(muted) }
+        }
+        _uiState.update {
+            val current = it.broadcast
+            if (current is BroadcastUiState.Broadcasting) {
+                it.copy(broadcast = current.copy(isMuted = muted))
+            } else {
+                it
+            }
+        }
+    }
+
+    /** Stop broadcasting. UI keeps the listener path connected. Idempotent. */
+    fun stopBroadcast() {
+        if (closed) return
+        teardownBroadcast(BroadcastUiState.Idle)
+    }
+
     /** Tear down without finalizing the VM (e.g. user pressed Disconnect). */
     fun disconnect() {
         if (closed) return
+        teardownBroadcast(BroadcastUiState.Idle)
         teardown(targetState = ConnectionUiState.Idle)
     }
 
     override fun onCleared() {
         closed = true
+        teardownBroadcast(BroadcastUiState.Idle)
         teardown(targetState = ConnectionUiState.Closed)
         super.onCleared()
+    }
+
+    private fun observeSpeakerState(s: NestsSpeaker) {
+        speakerStateJob?.cancel()
+        speakerStateJob =
+            viewModelScope.launch {
+                s.state.collect { state ->
+                    when (state) {
+                        is NestsSpeakerState.Failed -> {
+                            _uiState.update {
+                                it.copy(broadcast = BroadcastUiState.Failed(state.reason))
+                            }
+                        }
+
+                        NestsSpeakerState.Closed -> {
+                            _uiState.update { it.copy(broadcast = BroadcastUiState.Idle) }
+                        }
+
+                        else -> { /* startBroadcast already set Broadcasting; no extra action */ }
+                    }
+                }
+            }
+    }
+
+    private fun teardownBroadcast(targetState: BroadcastUiState) {
+        speakerConnectJob?.cancel()
+        speakerConnectJob = null
+        speakerStateJob?.cancel()
+        speakerStateJob = null
+        val handle = broadcastHandle
+        val s = speaker
+        broadcastHandle = null
+        speaker = null
+        if (handle != null || s != null) {
+            viewModelScope.launch {
+                handle?.runCatching { close() }
+                s?.runCatching { close() }
+            }
+        }
+        _uiState.update { it.copy(broadcast = targetState) }
     }
 
     private fun observeListenerState(l: NestsListener) {
@@ -409,7 +562,24 @@ data class AudioRoomUiState(
     val activeSpeakers: ImmutableSet<String> = persistentSetOf(),
     /** Pubkeys whose audio track delivered an object in the last [SPEAKING_TIMEOUT_MS]. */
     val speakingNow: ImmutableSet<String> = persistentSetOf(),
+    /** Speaker / publisher state — only relevant when [AudioRoomViewModel.canBroadcast]. */
+    val broadcast: BroadcastUiState = BroadcastUiState.Idle,
 )
+
+@Immutable
+sealed class BroadcastUiState {
+    data object Idle : BroadcastUiState()
+
+    data object Connecting : BroadcastUiState()
+
+    data class Broadcasting(
+        val isMuted: Boolean,
+    ) : BroadcastUiState()
+
+    data class Failed(
+        val reason: String,
+    ) : BroadcastUiState()
+}
 
 /**
  * How long a speaker stays "speaking" after their last received MoQ object.
@@ -443,6 +613,36 @@ private val DefaultNestsListenerConnector =
             serviceBase = serviceBase,
             roomId = roomId,
             signer = signer,
+        )
+    }
+
+/** Speaker-side equivalent of [NestsListenerConnector]. */
+fun interface NestsSpeakerConnector {
+    suspend fun connect(
+        httpClient: NestsClient,
+        transport: WebTransportFactory,
+        scope: CoroutineScope,
+        serviceBase: String,
+        roomId: String,
+        signer: NostrSigner,
+        speakerPubkeyHex: String,
+        captureFactory: () -> AudioCapture,
+        encoderFactory: () -> OpusEncoder,
+    ): NestsSpeaker
+}
+
+private val DefaultNestsSpeakerConnector =
+    NestsSpeakerConnector { httpClient, transport, scope, serviceBase, roomId, signer, pubkey, capF, encF ->
+        connectNestsSpeaker(
+            httpClient = httpClient,
+            transport = transport,
+            scope = scope,
+            serviceBase = serviceBase,
+            roomId = roomId,
+            signer = signer,
+            speakerPubkeyHex = pubkey,
+            captureFactory = capF,
+            encoderFactory = encF,
         )
     }
 

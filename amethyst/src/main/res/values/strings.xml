@@ -504,6 +504,14 @@
     <string name="audio_room_connected">Audio connected</string>
     <string name="audio_room_audio_failed">Audio failed: %1$s</string>
     <string name="audio_room_audio_unavailable">Audio is not available for this room</string>
+    <string name="audio_room_talk">Talk</string>
+    <string name="audio_room_stop_talking">Stop talking</string>
+    <string name="audio_room_mic_mute">Mute mic</string>
+    <string name="audio_room_mic_unmute">Unmute mic</string>
+    <string name="audio_room_broadcast_connecting">Going live…</string>
+    <string name="audio_room_broadcasting">Live</string>
+    <string name="audio_room_broadcast_failed">Broadcast failed: %1$s</string>
+    <string name="audio_room_record_permission_required">Microphone access is required to talk in this room.</string>
     <string name="longs">Videos</string>
     <string name="articles">Articles</string>
     <string name="private_bookmarks">Private Bookmarks</string>

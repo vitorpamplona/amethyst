@@ -20,6 +20,10 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.audiorooms.room
 
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -51,7 +55,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -60,6 +66,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.commons.viewmodels.AudioRoomViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.BroadcastUiState
 import com.vitorpamplona.amethyst.commons.viewmodels.ConnectionUiState
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
@@ -68,8 +75,10 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size40dp
 import com.vitorpamplona.nestsclient.OkHttpNestsClient
+import com.vitorpamplona.nestsclient.audio.AudioRecordCapture
 import com.vitorpamplona.nestsclient.audio.AudioTrackPlayer
 import com.vitorpamplona.nestsclient.audio.MediaCodecOpusDecoder
+import com.vitorpamplona.nestsclient.audio.MediaCodecOpusEncoder
 import com.vitorpamplona.nestsclient.transport.QuicWebTransportFactory
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresenceEvent
@@ -226,6 +235,11 @@ private fun AudioRoomStageContent(
 
             if (viewModel != null && ui != null) {
                 AudioConnectionRow(viewModel = viewModel, ui = ui)
+                val myPubkey = account.signer.pubKey
+                val canTalkRoleWise = onStage.any { it.pubKey == myPubkey }
+                if (viewModel.canBroadcast && canTalkRoleWise) {
+                    AudioTalkRow(viewModel = viewModel, ui = ui, speakerPubkeyHex = myPubkey)
+                }
             } else {
                 Text(
                     text = stringRes(R.string.audio_room_audio_unavailable),
@@ -376,10 +390,119 @@ private fun connectingLabel(connection: ConnectionUiState.Connecting): String =
     }
 
 /**
+ * Talk button + mic-mute toggle + Live indicator. Hidden unless the user is
+ * in the room's `p` tags as host or speaker AND the listener path is
+ * Connected (this composable's caller already checks `canBroadcast` +
+ * role).
+ */
+@Composable
+private fun AudioTalkRow(
+    viewModel: AudioRoomViewModel,
+    ui: com.vitorpamplona.amethyst.commons.viewmodels.AudioRoomUiState,
+    speakerPubkeyHex: String,
+) {
+    if (ui.connection !is ConnectionUiState.Connected) return
+
+    val context = LocalContext.current
+    var permissionDeniedShown by rememberSaveable { mutableStateOf(false) }
+    val permissionLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            if (granted) {
+                viewModel.startBroadcast(speakerPubkeyHex)
+            } else {
+                permissionDeniedShown = true
+            }
+        }
+
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        when (val broadcast = ui.broadcast) {
+            BroadcastUiState.Idle -> {
+                Button(
+                    onClick = {
+                        val granted =
+                            ContextCompat.checkSelfPermission(
+                                context,
+                                Manifest.permission.RECORD_AUDIO,
+                            ) == PackageManager.PERMISSION_GRANTED
+                        if (granted) {
+                            viewModel.startBroadcast(speakerPubkeyHex)
+                        } else {
+                            permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                        }
+                    },
+                ) {
+                    Text(stringRes(R.string.audio_room_talk))
+                }
+                if (permissionDeniedShown) {
+                    Text(
+                        text = stringRes(R.string.audio_room_record_permission_required),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                }
+            }
+
+            BroadcastUiState.Connecting -> {
+                AssistChip(
+                    onClick = {},
+                    enabled = false,
+                    label = { Text(stringRes(R.string.audio_room_broadcast_connecting)) },
+                )
+            }
+
+            is BroadcastUiState.Broadcasting -> {
+                AssistChip(
+                    onClick = {},
+                    enabled = false,
+                    label = { Text(stringRes(R.string.audio_room_broadcasting)) },
+                    colors =
+                        AssistChipDefaults.assistChipColors(
+                            disabledLabelColor = MaterialTheme.colorScheme.error,
+                        ),
+                )
+                FilledTonalIconToggleButton(
+                    checked = broadcast.isMuted,
+                    onCheckedChange = { viewModel.setMicMuted(it) },
+                ) {
+                    Icon(
+                        symbol = if (broadcast.isMuted) MaterialSymbols.AutoMirrored.VolumeOff else MaterialSymbols.AutoMirrored.VolumeUp,
+                        contentDescription =
+                            stringRes(
+                                if (broadcast.isMuted) R.string.audio_room_mic_unmute else R.string.audio_room_mic_mute,
+                            ),
+                    )
+                }
+                OutlinedButton(onClick = { viewModel.stopBroadcast() }) {
+                    Text(stringRes(R.string.audio_room_stop_talking))
+                }
+            }
+
+            is BroadcastUiState.Failed -> {
+                Text(
+                    text = stringRes(R.string.audio_room_broadcast_failed, broadcast.reason),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                Button(onClick = { viewModel.startBroadcast(speakerPubkeyHex) }) {
+                    Text(stringRes(R.string.audio_room_talk))
+                }
+            }
+        }
+    }
+}
+
+/**
  * Android-side Factory for [AudioRoomViewModel]. The ViewModel itself lives
  * in `commons/` so a future desktop port can reuse the orchestration once
  * Compose Desktop has WebTransport; this factory binds it to the Android
- * actuals (OkHttp HTTP, pure-Kotlin QUIC, MediaCodec Opus, AudioTrack).
+ * actuals (OkHttp HTTP, pure-Kotlin QUIC, MediaCodec Opus, AudioTrack +
+ * AudioRecord on the speaker side).
  */
 private class AudioRoomViewModelFactory(
     private val signer: com.vitorpamplona.quartz.nip01Core.signers.NostrSigner,
@@ -396,6 +519,8 @@ private class AudioRoomViewModelFactory(
             signer = signer,
             serviceBase = serviceBase,
             roomId = roomId,
+            captureFactory = { AudioRecordCapture() },
+            encoderFactory = { MediaCodecOpusEncoder() },
         ) as T
 }
 
