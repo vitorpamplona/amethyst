@@ -171,12 +171,12 @@ internal fun AudioRoomFullScreen(
 
         val reactionsByPubkey by viewModel.recentReactions.collectAsState()
         var hostMenuTarget by rememberSaveable { mutableStateOf<String?>(null) }
-        val onLongPressParticipant: ((String) -> Unit)? =
-            if (isHost) {
-                { target -> if (target != event.pubKey) hostMenuTarget = target }
-            } else {
-                null
-            }
+        // Long-press opens the participant context sheet for ANYONE
+        // (T2 #2). The sheet's own gating decides which rows to show
+        // (follow/mute always; promote/demote/kick host-only).
+        val onLongPressParticipant: ((String) -> Unit) = { target ->
+            if (target != accountViewModel.account.signer.pubKey) hostMenuTarget = target
+        }
         if (onStage.isNotEmpty()) {
             StagePeopleRow(
                 label = stringRes(R.string.audio_room_stage),

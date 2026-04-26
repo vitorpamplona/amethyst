@@ -33,6 +33,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -46,20 +47,22 @@ import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ROLE
 import kotlinx.coroutines.launch
 
 /**
- * Host-only management sheet for one room participant. Surfaces:
- *   * Promote to speaker (idempotent — re-promoting a current speaker
- *     just re-publishes the same role; no harm, no warning needed).
- *   * Demote to listener (no-op for the host themselves; the underlying
- *     [RoomParticipantActions.demoteToListener] returns null in that
- *     case and the action is a silent skip).
- *   * Kick (sends an AdminCommandEvent.kick — relay forwards;
- *     recipients gate on signer being host/moderator).
+ * Per-participant context sheet (T2 #2). Always shows the
+ * audience-friendly rows (View profile / Follow-Unfollow / Mute);
+ * appends the host management rows (Promote / Demote / Kick) when
+ * the local user is the room's host.
  *
- * The kick path doesn't ALSO demote the target — that's nostrnests'
- * own behaviour: the kicked user's session ends and any future
- * presence events from them get dropped by the recipient's
- * server-side filter. A future commit can chain the two actions
- * if we want a "kick AND remove from participants" flow.
+ *   * Promote to speaker — idempotent re-publish.
+ *   * Demote to listener — no-op for the host themselves
+ *     (RoomParticipantActions.demoteToListener returns null in
+ *     that case).
+ *   * Kick — sends an AdminCommandEvent.kick. Relay just forwards;
+ *     recipients gate on signer being host/moderator.
+ *
+ * The kick path doesn't ALSO demote the target — that's
+ * nostrnests' behaviour: the kicked user's session ends and any
+ * future presence events from them get dropped by the recipient's
+ * client-side filter.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -68,6 +71,7 @@ internal fun ParticipantHostActionsSheet(
     event: MeetingSpaceEvent,
     accountViewModel: AccountViewModel,
     onDismiss: () -> Unit,
+    isLocalUserHost: Boolean = accountViewModel.account.signer.pubKey == event.pubKey,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
@@ -85,6 +89,18 @@ internal fun ParticipantHostActionsSheet(
         scope.launch { runCatching { accountViewModel.account.signAndComputeBroadcast(template) } }
     }
 
+    val targetUser =
+        remember(target) {
+            com.vitorpamplona.amethyst.model.LocalCache
+                .getOrCreateUser(target)
+        }
+    val isFollowing = accountViewModel.isFollowing(target)
+    val isHidden =
+        remember(target) {
+            accountViewModel.account.hiddenUsers.flow.value.hiddenUsers
+                .contains(target)
+        }
+
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
@@ -95,20 +111,56 @@ internal fun ParticipantHostActionsSheet(
                 style = MaterialTheme.typography.titleSmall,
             )
             Spacer(Modifier.height(8.dp))
-            ActionRow(stringRes(R.string.audio_room_promote_speaker)) {
-                broadcast(RoomParticipantActions.setRole(event, target, ROLE.SPEAKER))
-                onDismiss()
-            }
-            ActionRow(stringRes(R.string.audio_room_demote_listener)) {
-                broadcast(RoomParticipantActions.demoteToListener(event, target))
+            // Audience-side rows. View-profile navigation is
+            // intentionally omitted in v1: AudioRoomActivity is a
+            // separate Android Activity without an in-room nav
+            // stack to push a profile screen onto. Adding it later
+            // means launching MainActivity with a deep-link Intent.
+            ActionRow(
+                text =
+                    stringRes(
+                        if (isFollowing) {
+                            R.string.audio_room_participant_unfollow
+                        } else {
+                            R.string.audio_room_participant_follow
+                        },
+                    ),
+            ) {
+                if (isFollowing) accountViewModel.unfollow(targetUser) else accountViewModel.follow(targetUser)
                 onDismiss()
             }
             ActionRow(
-                text = stringRes(R.string.audio_room_kick_action),
-                color = MaterialTheme.colorScheme.error,
+                text =
+                    stringRes(
+                        if (isHidden) {
+                            R.string.audio_room_participant_unmute
+                        } else {
+                            R.string.audio_room_participant_mute
+                        },
+                    ),
             ) {
-                broadcast(AdminCommandEvent.kick(roomATag, target))
+                if (isHidden) accountViewModel.show(targetUser) else accountViewModel.hide(targetUser)
                 onDismiss()
+            }
+
+            // Host-only rows.
+            if (isLocalUserHost && target != event.pubKey) {
+                Spacer(Modifier.height(4.dp))
+                ActionRow(stringRes(R.string.audio_room_promote_speaker)) {
+                    broadcast(RoomParticipantActions.setRole(event, target, ROLE.SPEAKER))
+                    onDismiss()
+                }
+                ActionRow(stringRes(R.string.audio_room_demote_listener)) {
+                    broadcast(RoomParticipantActions.demoteToListener(event, target))
+                    onDismiss()
+                }
+                ActionRow(
+                    text = stringRes(R.string.audio_room_kick_action),
+                    color = MaterialTheme.colorScheme.error,
+                ) {
+                    broadcast(AdminCommandEvent.kick(roomATag, target))
+                    onDismiss()
+                }
             }
         }
     }
