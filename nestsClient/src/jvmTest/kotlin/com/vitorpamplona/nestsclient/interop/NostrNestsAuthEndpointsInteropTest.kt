@@ -103,14 +103,13 @@ class NostrNestsAuthEndpointsInteropTest {
         @JvmStatic
         fun setUpHarness() {
             if (NostrNestsHarness.isEnabled()) {
-                harnessOrNull = NostrNestsHarness.start()
+                harnessOrNull = NostrNestsHarness.shared()
             }
         }
 
         @AfterClass
         @JvmStatic
         fun tearDownHarness() {
-            harnessOrNull?.close()
             harnessOrNull = null
         }
     }

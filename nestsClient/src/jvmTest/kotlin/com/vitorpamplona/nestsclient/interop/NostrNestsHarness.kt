@@ -90,10 +90,49 @@ class NostrNestsHarness private constructor(
         private const val PORT_PROBE_INTERVAL_MS = 500L
 
         /**
+         * Process-level singleton instance. Once a test class brings the
+         * stack up, every other test class in the same JVM run shares
+         * the same containers — bringing the moq-relay Cargo build down
+         * and back up between every `@BeforeClass` is both slow (~30 s
+         * compile) and flaky (port-bind / network-create races leave
+         * the second start in a half-broken state). Container teardown
+         * is registered once with the JVM as a shutdown hook.
+         */
+        @Volatile private var sharedInstance: NostrNestsHarness? = null
+        private val sharedLock = Any()
+
+        /**
+         * Bring the stack up if not already running, returning the
+         * shared instance for this JVM run. Subsequent callers reuse
+         * the same containers. Use this in @BeforeClass.
+         */
+        fun shared(): NostrNestsHarness {
+            sharedInstance?.let { return it }
+            synchronized(sharedLock) {
+                sharedInstance?.let { return it }
+                val instance = doStart()
+                Runtime
+                    .getRuntime()
+                    .addShutdownHook(
+                        Thread({
+                            runCatching { instance.close() }
+                        }, "NostrNestsHarness-shutdown"),
+                    )
+                sharedInstance = instance
+                return instance
+            }
+        }
+
+        /**
          * Bring the stack up. Caller must `close()` to tear it down — use
          * `try-with-resources` / Kotlin's `use { … }`.
+         *
+         * Most callers should use [shared] instead so the stack is
+         * reused across test classes.
          */
-        fun start(): NostrNestsHarness {
+        fun start(): NostrNestsHarness = doStart()
+
+        private fun doStart(): NostrNestsHarness {
             check(isEnabled()) {
                 "NostrNestsHarness.start called without -D$ENABLE_PROPERTY=true. " +
                     "Call NostrNestsHarness.assumeNestsInterop() first to skip cleanly."
