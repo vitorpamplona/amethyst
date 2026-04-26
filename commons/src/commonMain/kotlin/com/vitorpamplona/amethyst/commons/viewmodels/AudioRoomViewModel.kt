@@ -149,6 +149,16 @@ class AudioRoomViewModel(
         MutableStateFlow<List<com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent>>(emptyList())
     val chat: StateFlow<List<com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent>> = _chat.asStateFlow()
 
+    /**
+     * Recent kind-7 reactions for the floating speaker-avatar overlay
+     * (#3). Keyed by target pubkey; room-wide reactions land under the
+     * empty-string key. Sliding 30 s window driven by the platform
+     * layer's tick (typically every 1 s).
+     */
+    private val reactionsAgg = RoomReactionsAggregator()
+    private val _recentReactions = MutableStateFlow<Map<String, List<RoomReaction>>>(emptyMap())
+    val recentReactions: StateFlow<Map<String, List<RoomReaction>>> = _recentReactions.asStateFlow()
+
     private var listener: NestsListener? = null
     private var connectJob: Job? = null
     private var stateObserverJob: Job? = null
@@ -277,6 +287,31 @@ class AudioRoomViewModel(
         if (chatById.containsKey(event.id)) return
         chatById[event.id] = event
         _chat.value = chatById.values.sortedBy { it.createdAt }
+    }
+
+    /**
+     * Apply one kind-7 reaction event to the sliding-window aggregator.
+     * Caller passes [nowSec] (so tests can be deterministic) and the
+     * fixed 30-s window. Mirror of [evictReactions] for the per-tick
+     * cleanup.
+     */
+    fun onReactionEvent(
+        event: com.vitorpamplona.quartz.nip25Reactions.ReactionEvent,
+        nowSec: Long,
+        windowSec: Long = REACTION_WINDOW_SEC,
+    ) {
+        if (closed) return
+        _recentReactions.value = reactionsAgg.apply(event, nowSec, windowSec)
+    }
+
+    /**
+     * Drop reactions older than the staleness threshold. Platform
+     * layer drives this on a 1-s tick to update the floating overlay
+     * without per-component animation timers.
+     */
+    fun evictReactions(olderThanSec: Long) {
+        if (closed) return
+        _recentReactions.value = reactionsAgg.evictAndSnapshot(olderThanSec)
     }
 
     /**
@@ -916,6 +951,14 @@ sealed class BroadcastUiState {
  * indicator flicker.
  */
 const val SPEAKING_TIMEOUT_MS: Long = 250L
+
+/**
+ * How long a kind-7 reaction stays in
+ * [AudioRoomViewModel.recentReactions] before the eviction sweep
+ * drops it. Matches the duration of the floating-up animation in the
+ * SpeakerReactionOverlay.
+ */
+const val REACTION_WINDOW_SEC: Long = 30L
 
 /** Max number of auto-reconnect attempts after a Failed listener state. */
 private const val MAX_AUTO_RETRIES = 3

@@ -268,6 +268,37 @@ class AudioRoomViewModelTest {
         }
 
     @Test
+    fun onReactionEventGroupsByTargetAndEvictsOnTick() =
+        runTest {
+            val vm = newViewModel { FakeNestsListener() }
+            val alice = "a".repeat(64)
+            val bob = "b".repeat(64)
+
+            fun rxn(
+                from: String,
+                to: String,
+                content: String,
+                createdAt: Long,
+            ) = com.vitorpamplona.quartz.nip25Reactions.ReactionEvent(
+                id = "0".repeat(64),
+                pubKey = from,
+                createdAt = createdAt,
+                tags = arrayOf(arrayOf("a", "30312:host:room"), arrayOf("p", to)),
+                content = content,
+                sig = "0".repeat(128),
+            )
+
+            // Two reactions land within the 30-s window.
+            vm.onReactionEvent(rxn(alice, bob, "🔥", 100L), nowSec = 100L)
+            vm.onReactionEvent(rxn(alice, bob, "👏", 105L), nowSec = 105L)
+            assertEquals(2, vm.recentReactions.value[bob]!!.size)
+
+            // Tick advances past the window — both reactions evicted.
+            vm.evictReactions(olderThanSec = 200L)
+            assertEquals(emptyMap(), vm.recentReactions.value)
+        }
+
+    @Test
     fun publishingNowDerivesFromBroadcastStateAndMute() {
         // Idle / connecting / failed: never publishing.
         assertFalse(AudioRoomUiState().publishingNow)
