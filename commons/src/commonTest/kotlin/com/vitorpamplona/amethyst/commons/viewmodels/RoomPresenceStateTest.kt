@@ -116,12 +116,14 @@ class RoomPresenceStateTest {
     }
 
     @Test
-    fun roomPresenceEqualityIsPubkeyOnly() {
-        // Two snapshots of the same peer at different times are
-        // "equal" so a Set<RoomPresence> deduplicates correctly.
+    fun roomPresenceEqualityIsAllFields() {
+        // Two snapshots of the same peer at different timestamps are
+        // NOT equal — Map<String, RoomPresence>.equals(Map) reaches
+        // value.equals(value); a pubkey-only equals would suppress
+        // StateFlow emissions on heartbeat-only updates because
+        // old.equals(new) would return true.
         val a1 = RoomPresence.from(event(alice, 100L, handRaised = false))
         val a2 = RoomPresence.from(event(alice, 200L, handRaised = true))
-        assertEquals(a1, a2)
-        assertEquals(a1.hashCode(), a2.hashCode())
+        assertEquals(false, a1 == a2)
     }
 }

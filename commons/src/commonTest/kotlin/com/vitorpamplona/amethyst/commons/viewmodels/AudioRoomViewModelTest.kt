@@ -152,6 +152,69 @@ class AudioRoomViewModelTest {
         }
 
     @Test
+    fun onPresenceEventPopulatesPresencesMapAndDedupesByPubkey() =
+        runTest {
+            val vm = newViewModel { FakeNestsListener() }
+
+            val alice = "a".repeat(64)
+            val bob = "b".repeat(64)
+
+            fun ev(
+                pk: String,
+                createdAt: Long,
+                handRaised: Boolean,
+            ) = com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresenceEvent(
+                id = "0".repeat(64),
+                pubKey = pk,
+                createdAt = createdAt,
+                tags = arrayOf(arrayOf("a", "30312:host:room"), arrayOf("hand", if (handRaised) "1" else "0")),
+                content = "",
+                sig = "0".repeat(128),
+            )
+
+            vm.onPresenceEvent(ev(alice, 100L, handRaised = false))
+            vm.onPresenceEvent(ev(bob, 100L, handRaised = false))
+            vm.onPresenceEvent(ev(alice, 200L, handRaised = true))
+
+            val snap = vm.presences.value
+            assertEquals(setOf(alice, bob), snap.keys)
+            assertTrue(snap[alice]!!.handRaised)
+            assertEquals(200L, snap[alice]!!.updatedAtSec)
+        }
+
+    @Test
+    fun evictStalePresencesDropsOldPeers() =
+        runTest {
+            val vm = newViewModel { FakeNestsListener() }
+            val alice = "a".repeat(64)
+            val bob = "b".repeat(64)
+
+            vm.onPresenceEvent(
+                com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresenceEvent(
+                    id = "0".repeat(64),
+                    pubKey = alice,
+                    createdAt = 100L,
+                    tags = arrayOf(arrayOf("a", "30312:host:room")),
+                    content = "",
+                    sig = "0".repeat(128),
+                ),
+            )
+            vm.onPresenceEvent(
+                com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresenceEvent(
+                    id = "0".repeat(64),
+                    pubKey = bob,
+                    createdAt = 500L,
+                    tags = arrayOf(arrayOf("a", "30312:host:room")),
+                    content = "",
+                    sig = "0".repeat(128),
+                ),
+            )
+
+            vm.evictStalePresences(olderThanSec = 400L)
+            assertEquals(setOf(bob), vm.presences.value.keys)
+        }
+
+    @Test
     fun publishingNowDerivesFromBroadcastStateAndMute() {
         // Idle / connecting / failed: never publishing.
         assertFalse(AudioRoomUiState().publishingNow)

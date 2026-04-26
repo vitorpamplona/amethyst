@@ -119,6 +119,21 @@ class AudioRoomViewModel(
     private val _uiState = MutableStateFlow(AudioRoomUiState())
     val uiState: StateFlow<AudioRoomUiState> = _uiState.asStateFlow()
 
+    /**
+     * Listener-side aggregation of every peer's most recent kind-10312
+     * presence in this room. Populated by the platform layer
+     * (amethyst observes [LocalCache] for `kinds=[10312], #a=[roomATag]`
+     * and pipes events through [onPresenceEvent]) — keeping the data
+     * source platform-specific lets commons stay free of
+     * Android-only references.
+     *
+     * The participant grid (Tier 2 #1), hand-raise queue (T1 #5), and
+     * listener counter (T1 #8) all subscribe to this StateFlow.
+     */
+    private val presenceAgg = RoomPresenceAggregator()
+    private val _presences = MutableStateFlow<Map<String, RoomPresence>>(emptyMap())
+    val presences: StateFlow<Map<String, RoomPresence>> = _presences.asStateFlow()
+
     private var listener: NestsListener? = null
     private var connectJob: Job? = null
     private var stateObserverJob: Job? = null
@@ -211,6 +226,29 @@ class AudioRoomViewModel(
     fun setOnStage(onStage: Boolean) {
         if (closed) return
         _uiState.update { it.copy(onStageNow = onStage) }
+    }
+
+    /**
+     * Apply one kind-10312 presence event to the in-memory aggregator.
+     * Caller owns the LocalCache → VM plumbing (the platform layer
+     * filters events by the current room's `a`-tag before invoking
+     * this). Out-of-order arrivals can't downgrade fresher state —
+     * see [RoomPresenceAggregator.apply].
+     */
+    fun onPresenceEvent(event: com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresenceEvent) {
+        if (closed) return
+        _presences.value = presenceAgg.apply(event)
+    }
+
+    /**
+     * Drop peers whose last heartbeat is older than [olderThanSec].
+     * The platform layer drives this on a periodic tick (typically
+     * every 60 s with `now - 6 * 60` so a peer that's missed one
+     * heartbeat plus a 5-min "still here" window gets evicted).
+     */
+    fun evictStalePresences(olderThanSec: Long) {
+        if (closed) return
+        _presences.value = presenceAgg.evictOlderThan(olderThanSec)
     }
 
     /**

@@ -29,8 +29,11 @@ import com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresence
  * the relay subscription, and the participant grid + listener
  * counter render off it.
  *
- * Equality is by pubkey alone so a `Map<String, RoomPresence>` swap
- * on update doesn't double-count when only the timestamp changes.
+ * Standard data-class equality (all fields). A pubkey-only equals
+ * was tempting but breaks `Map.equals(Map)` change detection on a
+ * heartbeat-only update — `StateFlow` would suppress the emission
+ * because old.equals(new) returns true even though
+ * handRaised / publishing flipped.
  */
 @Immutable
 data class RoomPresence(
@@ -41,10 +44,6 @@ data class RoomPresence(
     val onstage: Boolean,
     val updatedAtSec: Long,
 ) {
-    override fun equals(other: Any?): Boolean = other is RoomPresence && other.pubkey == pubkey
-
-    override fun hashCode(): Int = pubkey.hashCode()
-
     companion object {
         /**
          * Project a kind-10312 event into a [RoomPresence]. Tags missing
