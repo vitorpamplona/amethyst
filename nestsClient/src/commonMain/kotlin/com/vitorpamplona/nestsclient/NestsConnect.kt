@@ -39,16 +39,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
  *   1. Mint a JWT — POST `<authBase>/auth` with NIP-98 + namespace body
  *      (see [NestsClient.mintToken]).
  *   2. Open a [com.vitorpamplona.nestsclient.transport.WebTransportSession]
- *      against the [room.endpoint] via [transport], passing the JWT as the
- *      bearer token.
- *   3. Run the MoQ SETUP handshake.
- *
- * Note: step 3 runs the IETF `draft-ietf-moq-transport-17` SETUP, which is
- * NOT what nostrnests's relay (moq-lite) expects. Steps 1 and 2 are
- * already on the moq-rs wire shape (path = `/<namespace>`, JWT in
- * `?jwt=`). The MoQ framing layer needs a moq-lite codec swap before
- * end-to-end interop works — see
- * `nestsClient/plans/2026-04-26-moq-lite-gap.md`.
+ *      against the [room.endpoint] via [transport]. The path is
+ *      `/<moqNamespace>?jwt=<token>` — moq-rs treats the URL path as
+ *      `claims.root` and reads the JWT from `?jwt=`.
+ *   3. Wrap the WT session in a [com.vitorpamplona.nestsclient.moq.lite.MoqLiteSession].
+ *      moq-lite Lite-03 has NO in-band SETUP message — the WT handshake
+ *      itself is the handshake, version is selected by the ALPN
+ *      `moq-lite-03`.
  *
  * The returned [NestsListener] is in state [NestsListenerState.Connected];
  * if any step fails, the listener is returned in
@@ -58,9 +55,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
  * @param room per-room config built from the NIP-53 kind 30312 event by
  *   the caller (UI / VM).
  * @param signer NIP-98 signer for the mintToken HTTP call.
- * @param scope where the [MoqSession] pumps live (typically the caller's
+ * @param scope where the moq-lite pumps live (typically the caller's
  *   ViewModel scope so they cancel when the screen leaves).
- * @param supportedMoqVersions in preference order; defaults to draft-17.
+ * @param supportedMoqVersions retained for source-compatible callers but
+ *   currently a no-op — moq-lite negotiates via ALPN, not an in-band
+ *   SETUP message. Will be repurposed to drive ALPN preference once a
+ *   second moq-lite version ships.
  */
 suspend fun connectNestsListener(
     httpClient: NestsClient,
@@ -113,34 +113,36 @@ suspend fun connectNestsListener(
 
     state.value = NestsListenerState.Connecting(NestsListenerState.Connecting.ConnectStep.MoqHandshake)
 
+    // moq-lite Lite-03 has NO setup message — the WebTransport handshake
+    // itself is the handshake, version is selected by ALPN. The
+    // `supportedMoqVersions` parameter is retained for backward compat
+    // with callers that may want to gate on a version mismatch in
+    // future, but it is currently a no-op.
     val moq =
         try {
-            MoqSession.client(webTransport, scope).also { it.setup(supportedMoqVersions) }
+            com.vitorpamplona.nestsclient.moq.lite.MoqLiteSession
+                .client(webTransport, scope)
         } catch (t: Throwable) {
-            runCatching { webTransport.close(0, "moq setup failed") }
-            state.value = NestsListenerState.Failed("MoQ handshake failed: ${t.message}", t)
+            runCatching { webTransport.close(0, "moq-lite session init failed") }
+            state.value = NestsListenerState.Failed("moq-lite session init failed: ${t.message}", t)
             return failedListener(state)
         }
 
-    val negotiatedVersion =
-        moq.selectedVersion ?: run {
-            runCatching { moq.close() }
-            state.value = NestsListenerState.Failed("MoQ session reported no negotiated version")
-            return failedListener(state)
-        }
-
-    state.value = NestsListenerState.Connected(room, negotiatedVersion)
-    return DefaultNestsListener(
+    state.value = NestsListenerState.Connected(room, MOQ_LITE_03_VERSION)
+    return MoqLiteNestsListener(
         session = moq,
-        // moq-auth's JWT claim is `root: "<moqNamespace>"` — the simplest
-        // wire-level mapping is a 1-segment TrackNamespace whose only
-        // element is that exact string. Phase-3 interop test will
-        // confirm; if the real relay expects a multi-segment tuple
-        // (e.g. split on `/` or `:`), adjust here.
-        roomNamespace = TrackNamespace.of(room.moqNamespace()),
         mutableState = state,
     )
 }
+
+/**
+ * Synthetic version code reported on [NestsListenerState.Connected.negotiatedMoqVersion]
+ * for moq-lite Lite-03 sessions. moq-lite negotiates the wire version
+ * via ALPN rather than an in-band SETUP exchange, so there is no real
+ * "version" the peer reports back. The constant carries the ALPN suffix
+ * `-03` in the low bytes for diagnostic display.
+ */
+const val MOQ_LITE_03_VERSION: Long = 0x6D71_6C03L
 
 /**
  * Build a no-op [NestsListener] in a Failed state for callers that want a

@@ -20,10 +20,6 @@
  */
 package com.vitorpamplona.nestsclient
 
-import com.vitorpamplona.nestsclient.moq.ClientSetup
-import com.vitorpamplona.nestsclient.moq.MoqCodec
-import com.vitorpamplona.nestsclient.moq.MoqVersion
-import com.vitorpamplona.nestsclient.moq.ServerSetup
 import com.vitorpamplona.nestsclient.transport.FakeWebTransport
 import com.vitorpamplona.nestsclient.transport.WebTransportException
 import com.vitorpamplona.nestsclient.transport.WebTransportFactory
@@ -31,8 +27,6 @@ import com.vitorpamplona.nestsclient.transport.WebTransportSession
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
-import kotlinx.coroutines.async
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -50,20 +44,15 @@ class NestsConnectTest {
         )
 
     @Test
-    fun connect_walks_mintToken_then_transport_then_moq_handshake() =
+    fun connect_walks_mintToken_then_transport_then_moq_lite_session() =
         runTest {
-            val (clientSide, serverSide) = FakeWebTransport.pair()
+            val (clientSide, _) = FakeWebTransport.pair()
             val httpClient = FakeNestsClient(token = "tok-abc")
             val transport = ConstantWebTransportFactory(clientSide)
 
-            // Server-side raw peer answers SETUP.
-            val server =
-                async {
-                    val control = serverSide.peerOpenedBidiStreams().first()
-                    val cs = MoqCodec.decode(control.incoming().first())!!.message as ClientSetup
-                    control.write(MoqCodec.encode(ServerSetup(cs.supportedVersions.first())))
-                }
-
+            // moq-lite Lite-03 has NO setup message — the WT handshake
+            // itself is the handshake. As soon as connect returns, the
+            // listener is in Connected and ready to subscribe.
             val listener =
                 connectNestsListener(
                     httpClient = httpClient,
@@ -72,11 +61,14 @@ class NestsConnectTest {
                     room = room,
                     signer = NostrSignerInternal(KeyPair()),
                 )
-            server.await()
 
             val connected = assertIs<NestsListenerState.Connected>(listener.state.value)
             assertEquals(room, connected.room)
-            assertEquals(MoqVersion.DRAFT_17, connected.negotiatedMoqVersion)
+            assertEquals(
+                MOQ_LITE_03_VERSION,
+                connected.negotiatedMoqVersion,
+                "synthesised version code identifies the moq-lite-03 ALPN",
+            )
 
             assertEquals("relay.example.com", transport.lastConnectedAuthority)
             assertEquals(
