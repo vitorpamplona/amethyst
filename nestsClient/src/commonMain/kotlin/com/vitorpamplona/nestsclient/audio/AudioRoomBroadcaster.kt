@@ -53,19 +53,33 @@ class AudioRoomBroadcaster(
     private val scope: CoroutineScope,
 ) {
     private var job: Job? = null
-    private var stopped = false
+
+    @Volatile private var stopped: Boolean = false
 
     @Volatile private var muted: Boolean = false
 
     /**
      * Start capturing + encoding + publishing in the background. Returns
-     * immediately. Calling twice is an error.
+     * immediately. Calling twice is an error. If [AudioCapture.start]
+     * throws (mic device unavailable, etc.), the broadcaster is left in
+     * a stopped state and the exception propagates so the caller can
+     * surface it to the user.
      */
     fun start(onError: (AudioException) -> Unit = { /* swallow */ }) {
         check(!stopped) { "AudioRoomBroadcaster already stopped" }
         check(job == null) { "AudioRoomBroadcaster.start already called" }
 
-        capture.start()
+        // Audit round-2 MoQ #7: capture.start() can throw before we have
+        // a job. Mark stopped + propagate so a half-started capture isn't
+        // left holding the mic and the broadcaster instance can't be
+        // accidentally re-started.
+        try {
+            capture.start()
+        } catch (t: Throwable) {
+            stopped = true
+            runCatching { capture.stop() }
+            throw t
+        }
         job =
             scope.launch {
                 try {

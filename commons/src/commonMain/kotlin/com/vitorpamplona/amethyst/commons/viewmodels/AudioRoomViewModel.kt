@@ -164,11 +164,16 @@ class AudioRoomViewModel(
         autoRetryJob = null
         autoRetryAttempts = 0
         retryPending = false
-        // Cancel any previous state observer too — otherwise its delayed
-        // emissions can clobber the fresh Connecting UI we set below
-        // (audit VM #8).
-        stateObserverJob?.cancel()
-        stateObserverJob = null
+        // If a stale listener is still set (e.g. arrived in Failed and the
+        // user is manually retrying before the auto-retry fires, or
+        // entering from a server-Closed-but-not-yet-disconnected state),
+        // tear it down so the new connect doesn't leave the old MoQ
+        // session open and unowned (audit round-2 VM #3). teardown()
+        // also cancels stateObserverJob so its delayed emissions can't
+        // clobber the fresh Connecting UI.
+        if (listener != null || stateObserverJob != null) {
+            teardown(targetState = ConnectionUiState.Idle, finalCleanup = false)
+        }
 
         _uiState.update { it.copy(connection = ConnectionUiState.Connecting(ConnectionUiState.Step.ResolvingRoom)) }
 
@@ -549,19 +554,39 @@ class AudioRoomViewModel(
                 viewModelScope.launch { runCatching { handle.unsubscribe() } }
                 return
             }
+            // Allocate native resources (MediaCodec decoder + AudioTrack
+            // player on Android). Both are heavy and leaky if dropped on
+            // the floor — wrap them in a nested try so any cancellation
+            // or throw between here and slot.attach releases them
+            // (audit round-2 VM #7).
             val decoder = decoderFactory()
-            val player = playerFactory()
-            val isMuted = _uiState.value.isMuted
-            val roomPlayer = AudioRoomPlayer(decoder, player, viewModelScope)
-            // Apply current mute state before play() opens the device so the
-            // first frame respects it.
-            player.setMutedSafe(isMuted)
-            // Tap the object flow to drive the speaking-now indicator before
-            // the decoder consumes it.
-            val instrumented = handle.objects.onEach { onSpeakerActivity(pubkey) }
-            roomPlayer.play(instrumented, onError = { /* swallow per-packet decoder errors */ })
-            slot.attach(handle, roomPlayer, player)
-            publishActiveSpeakers()
+            val player =
+                try {
+                    playerFactory()
+                } catch (t: Throwable) {
+                    runCatching { decoder.release() }
+                    throw t
+                }
+            try {
+                val isMuted = _uiState.value.isMuted
+                val roomPlayer = AudioRoomPlayer(decoder, player, viewModelScope)
+                // Apply current mute state before play() opens the device so the
+                // first frame respects it.
+                player.setMutedSafe(isMuted)
+                // Tap the object flow to drive the speaking-now indicator before
+                // the decoder consumes it.
+                val instrumented = handle.objects.onEach { onSpeakerActivity(pubkey) }
+                roomPlayer.play(instrumented, onError = { /* swallow per-packet decoder errors */ })
+                slot.attach(handle, roomPlayer, player)
+                publishActiveSpeakers()
+            } catch (t: Throwable) {
+                // Either CancellationException (scope cancelled mid-construction)
+                // or an unexpected throw — release the half-built pipeline and
+                // re-throw so the outer catch handles slot rollback.
+                runCatching { player.stop() }
+                runCatching { decoder.release() }
+                throw t
+            }
         } catch (ce: CancellationException) {
             throw ce
         } catch (t: Throwable) {

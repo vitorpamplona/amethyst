@@ -228,8 +228,22 @@ private fun TalkRow(
     var permissionDenied by rememberSaveable { mutableStateOf(false) }
     val permissionLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-            if (granted) viewModel.startBroadcast(speakerPubkeyHex) else permissionDenied = true
+            if (granted) {
+                permissionDenied = false
+                viewModel.startBroadcast(speakerPubkeyHex)
+            } else {
+                permissionDenied = true
+            }
         }
+    // If the user grants RECORD_AUDIO via the system Settings deep-link
+    // and returns to the activity, the permissionLauncher callback never
+    // fires and `permissionDenied` would otherwise stay true. Recompute
+    // every time the permission state could have changed (audit round-2
+    // Android #12).
+    val showDenialWarning =
+        permissionDenied &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) !=
+            PackageManager.PERMISSION_GRANTED
 
     Row(
         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
@@ -252,7 +266,7 @@ private fun TalkRow(
                 }) {
                     Text(stringRes(R.string.audio_room_talk))
                 }
-                if (permissionDenied) {
+                if (showDenialWarning) {
                     Text(
                         text = stringRes(R.string.audio_room_record_permission_required),
                         style = MaterialTheme.typography.bodySmall,

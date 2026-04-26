@@ -30,6 +30,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -472,9 +473,23 @@ class MoqSession private constructor(
                         }
                     }
                 handle?.let { existing ->
-                    stateMutex.withLock { existing.markSessionClosedLocked() }
-                    runCatching {
-                        writeMutex.withLock { controlStream.write(MoqCodec.encode(Unannounce(msg.namespace))) }
+                    val shouldWrite =
+                        stateMutex.withLock {
+                            existing.markSessionClosedLocked()
+                            // Same compare-and-set as unannounce() to avoid
+                            // a duplicate UNANNOUNCE on the wire when a
+                            // concurrent unannounce() is mid-flight.
+                            if (existing.unannounceWritten) {
+                                false
+                            } else {
+                                existing.unannounceWritten = true
+                                true
+                            }
+                        }
+                    if (shouldWrite) {
+                        runCatching {
+                            writeMutex.withLock { controlStream.write(MoqCodec.encode(Unannounce(msg.namespace))) }
+                        }
                     }
                     stateMutex.withLock { announces.remove(msg.namespace) }
                 }
@@ -621,14 +636,21 @@ class MoqSession private constructor(
         // (handleInboundSubscribe writing SUBSCRIBE_OK / SUBSCRIBE_ERROR,
         // handleInboundUnsubscribe writing SUBSCRIBE_DONE) finishes its
         // writeMutex.withLock { ... } critical section before we send FIN
-        // on the control stream. Joining a cancelled coroutine waits for
-        // its `finally`s to run, including the lock release.
+        // on the control stream.
+        //
+        // Self-join guard: when close() is called from a pump's own
+        // exception handler (the try/catch in startPumps), `coroutineContext[Job]`
+        // is the very Job we're trying to join. Joining ourselves
+        // suspends forever — the lambda can't finish until close() returns,
+        // and close() can't return until the lambda finishes. Skip the
+        // join in that case (round-2 audit MoQ #1).
         val ctrlPump = controlPumpJob
         val datagramPump = datagramPumpJob
         ctrlPump?.cancel()
         datagramPump?.cancel()
-        runCatching { ctrlPump?.join() }
-        runCatching { datagramPump?.join() }
+        val self = currentCoroutineContext()[Job]
+        runCatching { if (ctrlPump != null && ctrlPump !== self) ctrlPump.join() }
+        runCatching { if (datagramPump != null && datagramPump !== self) datagramPump.join() }
         runCatching { writeMutex.withLock { controlStream.finish() } }
         runCatching { transport.close(code, reason) }
     }
@@ -704,6 +726,11 @@ class MoqSession private constructor(
         internal val tracks = HashMap<TrackKey, TrackPublisherImpl>()
         internal var sessionClosed = false
 
+        // True once UNANNOUNCE has been written on the wire, so a
+        // concurrent unannounce() + post-OK AnnounceError handler don't
+        // both emit it (audit round-2 MoQ #2). Read/written under stateMutex.
+        internal var unannounceWritten = false
+
         override suspend fun openTrack(name: ByteArray): TrackPublisher {
             val key = TrackKey(name)
             val publisher = TrackPublisherImpl(name)
@@ -736,7 +763,20 @@ class MoqSession private constructor(
                 // thinks the namespace exists but our state has dropped it.
             }
             toClose.forEach { runCatching { it.close() } }
-            if (!closed) {
+            // Race guard: a post-OK AnnounceError handler may have already
+            // written UNANNOUNCE for this namespace (audit round-2 MoQ #2).
+            // Compare-and-set under stateMutex so only one writer fires
+            // the wire frame.
+            val shouldWrite =
+                stateMutex.withLock {
+                    if (unannounceWritten) {
+                        false
+                    } else {
+                        unannounceWritten = true
+                        true
+                    }
+                }
+            if (shouldWrite && !closed) {
                 runCatching {
                     writeMutex.withLock { controlStream.write(MoqCodec.encode(Unannounce(namespace))) }
                 }
