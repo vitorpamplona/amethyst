@@ -113,12 +113,21 @@ class JdkCertificateValidator(
     private fun jcaSignatureFor(algorithm: Int): Signature =
         when (algorithm) {
             TlsConstants.SIG_ECDSA_SECP256R1_SHA256 -> Signature.getInstance("SHA256withECDSA")
+
             TlsConstants.SIG_ECDSA_SECP384R1_SHA384 -> Signature.getInstance("SHA384withECDSA")
+
             TlsConstants.SIG_RSA_PSS_RSAE_SHA256 -> rsaPss("SHA-256", 32)
+
             TlsConstants.SIG_RSA_PSS_RSAE_SHA384 -> rsaPss("SHA-384", 48)
+
             TlsConstants.SIG_RSA_PSS_RSAE_SHA512 -> rsaPss("SHA-512", 64)
-            TlsConstants.SIG_RSA_PKCS1_SHA256 -> Signature.getInstance("SHA256withRSA")
+
             TlsConstants.SIG_ED25519 -> Signature.getInstance("Ed25519")
+
+            // Audit-4 #2: rsa_pkcs1_* schemes are forbidden in CertificateVerify
+            // by RFC 8446 §4.2.3 (only allowed in CertificateRequest for
+            // legacy compat). Accepting them allowed a server to sign with
+            // weaker PKCS#1 v1.5 instead of RSA-PSS.
             else -> throw QuicCodecException("unsupported signature algorithm 0x${algorithm.toString(16)}")
         }
 
@@ -139,10 +148,17 @@ class JdkCertificateValidator(
         // Normalize host once: IDN → ASCII for DNS comparison, parsed-and-
         // re-stringified for IP literals so v6 forms compare equal.
         val normalizedHost = idnAscii(host)
+        // Audit-4 #4: do NOT call InetAddress.getByName on a hostname — it
+        // performs a DNS A/AAAA lookup, leaking the hostname over plaintext
+        // DNS at the TLS-validation step. Only resolve confirmed IP literals.
         val hostAsIp =
-            try {
-                InetAddress.getByName(host).hostAddress
-            } catch (_: Throwable) {
+            if (looksLikeIpLiteral(host)) {
+                try {
+                    InetAddress.getByName(host).hostAddress
+                } catch (_: Throwable) {
+                    null
+                }
+            } else {
                 null
             }
         for (entry in sans) {
@@ -169,6 +185,19 @@ class JdkCertificateValidator(
         } catch (_: Throwable) {
             name.lowercase()
         }
+
+    /**
+     * Pattern-match check for IPv4 / IPv6 literals so we don't trigger DNS
+     * lookups for hostnames during cert validation (audit-4 #4). IPv4 is
+     * "digits and dots only"; IPv6 is "contains a colon". Bracketed IPv6
+     * literals (`[::1]`) are accepted by stripping the brackets first.
+     */
+    private fun looksLikeIpLiteral(host: String): Boolean {
+        val unbracketed =
+            if (host.startsWith("[") && host.endsWith("]")) host.substring(1, host.length - 1) else host
+        if (unbracketed.contains(':')) return true // IPv6
+        return unbracketed.all { it.isDigit() || it == '.' } && unbracketed.contains('.')
+    }
 
     private fun dnsMatches(
         pattern: String,

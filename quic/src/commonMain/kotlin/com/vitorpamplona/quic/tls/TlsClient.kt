@@ -51,13 +51,19 @@ class TlsClient(
     val transportParameters: ByteArray,
     val secretsListener: TlsSecretsListener,
     /**
-     * Certificate validator MUST be supplied for any production / network-facing
-     * use. The only acceptable null is in-process tests where there's no real
-     * server identity to authenticate (e.g. [TlsRoundTripTest]'s loopback). A
-     * null validator here means "no MITM protection" — a misconfigured caller
-     * must fail loudly, not silently accept any certificate.
+     * Audit-4 #1: certificate validator is REQUIRED (non-null). For tests that
+     * connect to a self-signed in-process server, pass an explicit
+     * [PermissiveCertificateValidator] — the type system makes "no MITM
+     * protection" a deliberate, code-review-visible choice instead of a quiet
+     * forgotten null.
      */
-    val certificateValidator: CertificateValidator?,
+    val certificateValidator: CertificateValidator,
+    /**
+     * The ALPN values we offered in ClientHello. Used to validate the server's
+     * EncryptedExtensions ALPN selection (audit-4 #20: a server picking an
+     * unknown ALPN was previously accepted silently).
+     */
+    val offeredAlpns: List<ByteArray> = listOf(TlsConstants.ALPN_H3),
     /** When non-null, used as the X25519 ephemeral key (for deterministic tests). */
     val fixedKeyPair: X25519KeyPair? = null,
     /** When non-null, used as the ClientHello random (for deterministic tests). */
@@ -97,6 +103,11 @@ class TlsClient(
         mutableMapOf(
             Level.INITIAL to ByteArrayBuilder(),
             Level.HANDSHAKE to ByteArrayBuilder(),
+            // Audit-4 #6: include APPLICATION so post-handshake CRYPTO
+            // (NewSessionTicket / KeyUpdate detection) actually reaches the
+            // SENT_CLIENT_FINISHED handler. Pre-fix, pushHandshakeBytes at
+            // APPLICATION threw because the buffer wasn't registered.
+            Level.APPLICATION to ByteArrayBuilder(),
         )
 
     private val transcript = TlsTranscriptHash()
@@ -138,6 +149,13 @@ class TlsClient(
         level: Level,
         bytes: ByteArray,
     ) {
+        // Audit-4 #7: once a handshake error has fired, refuse further bytes
+        // rather than re-entering parsing on stale state. The QUIC layer
+        // sees the FAILED state via the bubbled QuicCodecException and
+        // closes the connection.
+        if (state == State.FAILED) {
+            throw QuicCodecException("TLS handshake already failed; ignoring further bytes at $level")
+        }
         val buf = inboundBuffers[level] ?: throw QuicCodecException("no buffer at level $level")
         buf.append(bytes)
         drainInbound(level, buf)
@@ -149,7 +167,14 @@ class TlsClient(
     ) {
         while (true) {
             val msg = buf.takeHandshakeMessage() ?: break
-            handleHandshakeMessage(level, msg)
+            try {
+                handleHandshakeMessage(level, msg)
+            } catch (t: Throwable) {
+                // Audit-4 #7: any throw from a handler transitions to FAILED
+                // so a retry doesn't re-enter parsing on inconsistent state.
+                state = State.FAILED
+                throw t
+            }
         }
     }
 
@@ -207,7 +232,17 @@ class TlsClient(
                 if (type != TlsConstants.HS_ENCRYPTED_EXTENSIONS) throw QuicCodecException("expected EncryptedExtensions, got type=$type")
                 if (level != Level.HANDSHAKE) throw QuicCodecException("EncryptedExtensions must arrive at Handshake level")
                 val ee = TlsEncryptedExtensions.decodeBody(bodyReader)
-                negotiatedAlpn = ee.alpn
+                // Audit-4 #20: validate the server actually selected one of
+                // the ALPNs we offered. Pre-fix any negotiated ALPN was
+                // accepted; a server picking an unknown ALPN would silently
+                // proceed with HTTP/3 code paths assuming h3.
+                val alpn = ee.alpn
+                if (alpn != null && !offeredAlpns.any { it.contentEquals(alpn) }) {
+                    throw QuicCodecException(
+                        "server selected ALPN '${alpn.decodeToString()}' which we did not offer",
+                    )
+                }
+                negotiatedAlpn = alpn
                 peerTransportParameters = ee.quicTransportParameters
                 transcript.append(msg)
                 state = State.WAITING_CERTIFICATE_OR_FINISHED
@@ -217,15 +252,22 @@ class TlsClient(
                 when (type) {
                     TlsConstants.HS_CERTIFICATE -> {
                         val cert = TlsCertificateChain.decodeBody(bodyReader)
-                        certificateValidator?.validateChain(cert.certificates, serverName)
+                        certificateValidator.validateChain(cert.certificates, serverName)
                         transcript.append(msg)
                         state = State.WAITING_CERTIFICATE_VERIFY
                     }
 
                     TlsConstants.HS_FINISHED -> {
-                        // PSK-only handshake skips Certificate/CertificateVerify. We never use PSK,
-                        // but the state machine handles the transition for completeness.
-                        handleServerFinished(msg, bodyReader, len)
+                        // Audit-4 #3: we never offer a `pre_shared_key`
+                        // extension, so a server MUST send Certificate +
+                        // CertificateVerify. A Finished here means a
+                        // misbehaving server (or an MITM that stripped the
+                        // cert messages). Hard-fail rather than completing
+                        // a handshake with no peer authentication.
+                        throw QuicCodecException(
+                            "server skipped Certificate/CertificateVerify but we never offered PSK " +
+                                "(unauthenticated handshake refused)",
+                        )
                     }
 
                     else -> {
@@ -238,7 +280,7 @@ class TlsClient(
                 if (type != TlsConstants.HS_CERTIFICATE_VERIFY) throw QuicCodecException("expected CertificateVerify, got type=$type")
                 val cv = TlsCertificateVerify.decodeBody(bodyReader)
                 val transcriptHash = transcript.snapshot()
-                certificateValidator?.verifySignature(cv.signatureAlgorithm, cv.signature, transcriptHash)
+                certificateValidator.verifySignature(cv.signatureAlgorithm, cv.signature, transcriptHash)
                 transcript.append(msg)
                 state = State.WAITING_SERVER_FINISHED
             }

@@ -82,15 +82,30 @@ class CapsuleReaderTest {
     }
 
     @Test
-    fun decodes_empty_body_close_session_as_zero_error_empty_reason() {
-        // Spec lower bound: body length 0, no error code present.
-        val empty = encodeCapsule(WtCapsuleType.WT_CLOSE_SESSION, ByteArray(0))
+    fun rejects_close_session_with_truncated_body_below_4_bytes() {
+        // Audit-4 #13: body shorter than the mandatory 4-byte error_code
+        // field is malformed; the decoder MUST surface this rather than
+        // synthesising a `WtCloseSession(0, "")` that the application can't
+        // distinguish from a clean close.
+        val truncated = encodeCapsule(WtCapsuleType.WT_CLOSE_SESSION, ByteArray(0))
         val reader = CapsuleReader()
-        reader.push(empty)
-        val parsed = reader.next()
-        assertIs<WtCloseSession>(parsed)
-        assertEquals(0, parsed.errorCode)
-        assertEquals("", parsed.reason)
+        reader.push(truncated)
+        kotlin.test.assertFailsWith<com.vitorpamplona.quic.QuicCodecException> {
+            reader.next()
+        }
+    }
+
+    @Test
+    fun rejects_close_session_with_oversized_reason() {
+        // Audit-4 #14: draft-ietf-webtrans-http3 §5 caps the reason at 8192
+        // bytes. We reject overlong reasons rather than passing them on.
+        val body = ByteArray(4 + 8193) // 4 bytes error code + 8193-byte reason
+        val capsule = encodeCapsule(WtCapsuleType.WT_CLOSE_SESSION, body)
+        val reader = CapsuleReader()
+        reader.push(capsule)
+        kotlin.test.assertFailsWith<com.vitorpamplona.quic.QuicCodecException> {
+            reader.next()
+        }
     }
 
     @Test

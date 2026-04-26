@@ -106,17 +106,30 @@ class CapsuleReader {
         pos = bodyEnd
         return when (typeRes.value) {
             WtCapsuleType.WT_CLOSE_SESSION -> {
+                // Audit-4 #13: a body shorter than the mandatory 4-byte
+                // application_error_code field is malformed. Pre-fix we
+                // silently substituted (0, "") which the application could
+                // not distinguish from a legitimate clean close.
                 if (body.size < 4) {
-                    WtCloseSession(0, "")
-                } else {
-                    val errorCode =
-                        ((body[0].toInt() and 0xFF) shl 24) or
-                            ((body[1].toInt() and 0xFF) shl 16) or
-                            ((body[2].toInt() and 0xFF) shl 8) or
-                            (body[3].toInt() and 0xFF)
-                    val reason = body.copyOfRange(4, body.size).decodeToString()
-                    WtCloseSession(errorCode, reason)
+                    throw com.vitorpamplona.quic.QuicCodecException(
+                        "WT_CLOSE_SESSION body too short (${body.size} < 4)",
+                    )
                 }
+                // Audit-4 #14: draft-ietf-webtrans-http3 §5 caps the reason
+                // string at 8192 bytes. Reject overlong reasons rather than
+                // letting them through.
+                if (body.size - 4 > 8192) {
+                    throw com.vitorpamplona.quic.QuicCodecException(
+                        "WT_CLOSE_SESSION reason exceeds 8192 bytes (${body.size - 4})",
+                    )
+                }
+                val errorCode =
+                    ((body[0].toInt() and 0xFF) shl 24) or
+                        ((body[1].toInt() and 0xFF) shl 16) or
+                        ((body[2].toInt() and 0xFF) shl 8) or
+                        (body[3].toInt() and 0xFF)
+                val reason = body.copyOfRange(4, body.size).decodeToString()
+                WtCloseSession(errorCode, reason)
             }
 
             else -> {

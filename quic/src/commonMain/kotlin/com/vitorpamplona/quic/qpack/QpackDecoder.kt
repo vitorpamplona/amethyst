@@ -60,7 +60,7 @@ class QpackDecoder {
                     if (!isStatic) throw QuicCodecException("QPACK dynamic indexed field line unsupported")
                     val r = QpackInteger.decode(payload, pos, 6)
                     pos += r.bytesConsumed
-                    val entry = QpackStaticTable.entries[r.value.toInt()]
+                    val entry = staticEntryAt(r.value)
                     out += entry
                 }
 
@@ -70,7 +70,7 @@ class QpackDecoder {
                     if (!isStatic) throw QuicCodecException("QPACK dynamic name-ref field line unsupported")
                     val nameRef = QpackInteger.decode(payload, pos, 4)
                     pos += nameRef.bytesConsumed
-                    val name = QpackStaticTable.entries[nameRef.value.toInt()].first
+                    val name = staticEntryAt(nameRef.value).first
                     val (value, valueLen) = readStringLiteral(payload, pos)
                     pos += valueLen
                     out += name to value
@@ -81,7 +81,12 @@ class QpackDecoder {
                     val nameH = (first and 0x08) != 0
                     val nameLenR = QpackInteger.decode(payload, pos, 3)
                     pos += nameLenR.bytesConsumed
-                    val nameBytes = ByteArray(nameLenR.value.toInt())
+                    // Audit-4 #10: bound the literal length before truncating
+                    // to Int and allocating. A malformed encoder could otherwise
+                    // pass a value > Int.MAX_VALUE that wraps negative or
+                    // OOMs.
+                    val nameLen = boundedQpackLength(nameLenR.value, payload.size - pos, "QPACK literal name")
+                    val nameBytes = ByteArray(nameLen)
                     payload.copyInto(nameBytes, 0, pos, pos + nameBytes.size)
                     pos += nameBytes.size
                     val name = if (nameH) QpackHuffman.decode(nameBytes).decodeToString() else nameBytes.decodeToString()
@@ -108,8 +113,36 @@ class QpackDecoder {
         val huffman = (first and 0x80) != 0
         val lenR = QpackInteger.decode(payload, offset, 7)
         val dataStart = offset + lenR.bytesConsumed
-        val raw = payload.copyOfRange(dataStart, dataStart + lenR.value.toInt())
+        // Audit-4 #10: range-check before allocating. payload.size - dataStart
+        // is the upper bound on a legitimate literal; a value past it is
+        // malformed.
+        val len = boundedQpackLength(lenR.value, payload.size - dataStart, "QPACK literal value")
+        val raw = payload.copyOfRange(dataStart, dataStart + len)
         val str = if (huffman) QpackHuffman.decode(raw).decodeToString() else raw.decodeToString()
         return str to (lenR.bytesConsumed + raw.size)
+    }
+
+    /**
+     * Static-table index lookup with explicit bounds. Pre-fix a malformed
+     * encoder (or a `Long → Int` truncation that wrapped negative) produced
+     * raw IndexOutOfBoundsException; we now throw a typed QuicCodecException
+     * the caller's `catch (_: Throwable)` paths can distinguish.
+     */
+    private fun staticEntryAt(index: Long): Pair<String, String> {
+        if (index < 0L || index >= QpackStaticTable.entries.size.toLong()) {
+            throw QuicCodecException("QPACK static-table index $index out of range")
+        }
+        return QpackStaticTable.entries[index.toInt()]
+    }
+
+    private fun boundedQpackLength(
+        value: Long,
+        remaining: Int,
+        field: String,
+    ): Int {
+        if (value < 0L || value > remaining) {
+            throw QuicCodecException("$field length $value out of bounds (remaining=$remaining)")
+        }
+        return value.toInt()
     }
 }

@@ -72,7 +72,21 @@ object QpackInteger {
         while (true) {
             if (pos >= src.size) throw QuicCodecException("truncated QPACK integer continuation")
             val b = src[pos++].toInt() and 0xFF
+            // Audit-4 #12: range-check BEFORE shifting. Pre-fix the check ran
+            // after `shift += 7`, so a continuation byte read with shift == 63
+            // could already wrap Long quietly before the next iteration's
+            // check fired. We also reject values that would overflow at the
+            // top of the 63-bit range.
+            if (shift >= 63 && (b and 0x7F) > 0) {
+                throw QuicCodecException("QPACK integer too large")
+            }
             value += ((b and 0x7F).toLong() shl shift)
+            if (value < 0L) {
+                // Defence-in-depth: any sign-bit flip indicates overflow that
+                // slipped past the shift check (shouldn't happen, but the
+                // cost is one branch per continuation byte).
+                throw QuicCodecException("QPACK integer overflowed Long")
+            }
             if ((b and 0x80) == 0) return DecodeResult(value, pos - offset)
             shift += 7
             if (shift > 63) throw QuicCodecException("QPACK integer too large")

@@ -59,11 +59,34 @@ class InMemoryQuicPipe(
     val client: QuicConnection,
     val initialDcid: ByteArray,
     /**
-     * Optional pre-configured TLS server. Tests that need to advertise non-empty
-     * QUIC transport parameters (e.g. to exercise MAX_STREAMS routing) build
-     * their own [InProcessTlsServer] and pass it here.
+     * Server-side source connection id. Exposed on the constructor so the
+     * [tlsServer] can advertise it as `initial_source_connection_id` in
+     * transport parameters (RFC 9000 §7.3 — REQUIRED). Defaults to a fresh
+     * 8-byte random id.
      */
-    private val tlsServer: InProcessTlsServer = InProcessTlsServer(),
+    val serverScid: ConnectionId = ConnectionId.random(8),
+    /**
+     * Optional pre-configured TLS server. The default builds one that
+     * advertises the bare-minimum transport parameters required by audit-4
+     * #7's CID-validation: `initial_source_connection_id = serverScid` plus
+     * generous data/stream caps so handshake tests work without each having
+     * to construct their own. Tests that want to exercise specific TP values
+     * build their own server and pass it.
+     */
+    private val tlsServer: InProcessTlsServer =
+        InProcessTlsServer(
+            transportParameters =
+                TransportParameters(
+                    initialMaxData = 1_000_000,
+                    initialMaxStreamDataBidiLocal = 100_000,
+                    initialMaxStreamDataBidiRemote = 100_000,
+                    initialMaxStreamDataUni = 100_000,
+                    initialMaxStreamsBidi = 16,
+                    initialMaxStreamsUni = 16,
+                    initialSourceConnectionId = serverScid.bytes,
+                    originalDestinationConnectionId = initialDcid,
+                ).encode(),
+        ),
 ) {
     private val initial = InitialSecrets.derive(initialDcid)
     private val hp = AesEcbHeaderProtection(PlatformAesOneBlock)
@@ -74,7 +97,6 @@ class InMemoryQuicPipe(
     private var serverApplicationRx: PacketProtection? = null
     private var serverApplicationTx: PacketProtection? = null
 
-    private val serverScid = ConnectionId.random(8)
     private val initialPnSpace = PacketNumberSpaceState()
     private val handshakePnSpace = PacketNumberSpaceState()
     private val applicationPnSpace = PacketNumberSpaceState()

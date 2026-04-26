@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quic.connection
 
+import com.vitorpamplona.quic.QuicCodecException
 import com.vitorpamplona.quic.frame.AckFrame
 import com.vitorpamplona.quic.frame.ConnectionCloseFrame
 import com.vitorpamplona.quic.frame.CryptoFrame
@@ -29,12 +30,16 @@ import com.vitorpamplona.quic.frame.MaxDataFrame
 import com.vitorpamplona.quic.frame.MaxStreamDataFrame
 import com.vitorpamplona.quic.frame.MaxStreamsFrame
 import com.vitorpamplona.quic.frame.NewConnectionIdFrame
+import com.vitorpamplona.quic.frame.NewTokenFrame
 import com.vitorpamplona.quic.frame.PingFrame
+import com.vitorpamplona.quic.frame.ResetStreamFrame
+import com.vitorpamplona.quic.frame.StopSendingFrame
 import com.vitorpamplona.quic.frame.StreamFrame
 import com.vitorpamplona.quic.frame.decodeFrames
 import com.vitorpamplona.quic.packet.LongHeaderPacket
 import com.vitorpamplona.quic.packet.LongHeaderType
 import com.vitorpamplona.quic.packet.ShortHeaderPacket
+import com.vitorpamplona.quic.stream.StreamId
 import com.vitorpamplona.quic.tls.TlsClient
 
 /**
@@ -141,7 +146,18 @@ private fun dispatchFrames(
     packetNumber: Long,
     nowMillis: Long,
 ) {
-    val frames = decodeFrames(payload)
+    // Audit-4 #1: malformed frames in an otherwise-AEAD-validated payload (or
+    // unknown frame types from a future-extension peer) used to throw straight
+    // through the read loop's `finally` block, dropping the connection without
+    // ever sending CONNECTION_CLOSE. Catch decode exceptions and turn them
+    // into a graceful close so the peer learns why we tore down.
+    val frames =
+        try {
+            decodeFrames(payload)
+        } catch (e: QuicCodecException) {
+            conn.markClosedExternally("frame decode failed: ${e.message}")
+            return
+        }
     val state = conn.levelState(level)
     var ackEliciting = false
     for (frame in frames) {
@@ -175,11 +191,23 @@ private fun dispatchFrames(
 
             is StreamFrame -> {
                 ackEliciting = true
+                // Audit-4 #5: reject peer-attempted CLIENT_BIDI / CLIENT_UNI
+                // stream IDs that don't match a stream we've opened. Per RFC
+                // 9000 §19.8, only the side that owns the parity may open;
+                // a server squatting on a CLIENT_* id is a protocol violation
+                // and could otherwise inject phantom streams into newPeerStreams.
+                if (StreamId.isClientInitiated(frame.streamId) &&
+                    conn.streamByIdLocked(frame.streamId) == null
+                ) {
+                    conn.markClosedExternally(
+                        "peer opened stream ${frame.streamId} on client-initiated id space (STREAM_STATE_ERROR)",
+                    )
+                    return
+                }
                 val stream = conn.getOrCreatePeerStreamLocked(frame.streamId)
                 // RFC 9000 §4.1: peer MUST NOT send beyond the limit we advertised.
-                // We don't enforce per-stream limit here yet (it'd require closing
-                // with FLOW_CONTROL_ERROR), but we DO enforce connection-level
-                // bound to prevent unbounded memory growth from a misbehaving peer.
+                // The connection-level kill protects against unbounded memory
+                // growth from a misbehaving peer.
                 val frameEnd = frame.offset + frame.data.size
                 if (frameEnd > stream.receiveLimit) {
                     conn.markClosedExternally(
@@ -190,21 +218,53 @@ private fun dispatchFrames(
                 stream.receive.insert(frame.offset, frame.data, frame.fin)
                 val data = stream.receive.readContiguous()
                 if (data.isNotEmpty()) {
-                    stream.deliverIncoming(data)
+                    val delivered = stream.deliverIncoming(data)
+                    if (!delivered) {
+                        // Audit-4 #3: incoming channel saturated. Closing the
+                        // connection beats silently dropping bytes — a stalled
+                        // consumer is better surfaced as an error than as a
+                        // mysterious hole in the application's data. Use
+                        // INTERNAL_ERROR (RFC 9000 §20.1).
+                        conn.markClosedExternally(
+                            "INTERNAL_ERROR: stream ${frame.streamId} consumer overflowed " +
+                                "incoming channel (slow consumer)",
+                        )
+                        return
+                    }
                 }
-                if (stream.receive.finReceived) {
+                // Audit-4 #4: only close the incoming channel once the
+                // contiguous read frontier has actually reached the FIN
+                // offset. Closing on FIN-arrival drops any later-arriving
+                // fill chunks silently because trySend on a closed channel
+                // returns failure — the application would see a truncated
+                // stream with no error signal.
+                if (stream.receive.finReceived && stream.receive.isFullyRead()) {
                     stream.closeIncoming()
                 }
             }
 
             is DatagramFrame -> {
                 ackEliciting = true
-                conn.incomingDatagramsLocked().addLast(frame.data)
+                // Audit-4 #8: cap the inbound datagram queue. RFC 9221
+                // datagrams are outside connection flow control; a peer can
+                // otherwise pin arbitrary memory by spamming DATAGRAM frames.
+                // We drop the OLDEST queued datagram when full — preferable
+                // for audio rooms (live streams) over rejecting fresh ones.
+                val queue = conn.incomingDatagramsLocked()
+                if (queue.size >= QuicConnection.MAX_INCOMING_DATAGRAM_QUEUE) {
+                    queue.removeFirst()
+                }
+                queue.addLast(frame.data)
                 conn.signalIncomingDatagram()
             }
 
             is MaxDataFrame -> {
-                // Updates connection-level send credit; left to the orchestrator.
+                // Audit-4 #9 + #12: previously a no-op, which silently stalled
+                // the writer once we sent more than initialMaxData total bytes.
+                // RFC 9000 §19.9: MAX_DATA only ever raises the cap.
+                if (frame.maxData > conn.sendConnectionFlowCredit) {
+                    conn.sendConnectionFlowCredit = frame.maxData
+                }
             }
 
             is MaxStreamDataFrame -> {
@@ -228,15 +288,51 @@ private fun dispatchFrames(
                 }
             }
 
+            is ResetStreamFrame -> {
+                // Audit-4 #2: peer aborted the send side of a stream. We
+                // accept the frame for survival; the receive buffer keeps
+                // whatever it had. Closing the local read flow is left to
+                // the application or a future enhancement that surfaces the
+                // application error code.
+                ackEliciting = true
+                conn.streamByIdLocked(frame.streamId)?.closeIncoming()
+            }
+
+            is StopSendingFrame -> {
+                // Audit-4 #2: peer asks us to stop sending on its read side.
+                // We don't model an outbound abort yet — this is acknowledged
+                // and dropped. A peer using STOP_SENDING to back-pressure
+                // would have to fall back to MAX_STREAM_DATA = 0, which we
+                // already honour.
+                ackEliciting = true
+            }
+
+            is NewTokenFrame -> {
+                // Audit-4 #2: 0-RTT/resumption token. Out-of-scope; drop.
+                ackEliciting = true
+            }
+
             is NewConnectionIdFrame -> {
                 // We don't support migration; ignore.
             }
 
             is ConnectionCloseFrame -> {
+                // Audit-4 #13: any frames following CONNECTION_CLOSE in the
+                // same payload MUST NOT be dispatched — they could create
+                // streams or deliver bytes on an already-closed connection.
                 conn.markClosedExternally("peer CONNECTION_CLOSE: ${frame.reason}")
+                return
             }
 
             is HandshakeDoneFrame -> {
+                // Audit-4 #14: HANDSHAKE_DONE is permitted ONLY at Application
+                // level (RFC 9000 §19.20). Anywhere else is PROTOCOL_VIOLATION.
+                if (level != EncryptionLevel.APPLICATION) {
+                    conn.markClosedExternally(
+                        "HANDSHAKE_DONE at $level (PROTOCOL_VIOLATION; allowed only at APPLICATION)",
+                    )
+                    return
+                }
                 conn.status = QuicConnection.Status.CONNECTED
             }
 

@@ -259,8 +259,15 @@ private fun buildApplicationPacket(
 
     // Drain stream send buffers — round-robin starting from a rotating index
     // so streams created earlier don't starve streams created later under MTU
-    // pressure. Honors per-stream send credit (RFC 9000 §4).
+    // pressure. Honors per-stream send credit (RFC 9000 §4) AND connection-
+    // level send credit (audit-4 #9: previously the writer ignored it
+    // entirely; the peer's initial_max_data was decoded then forgotten,
+    // causing the connection to be torn down with FLOW_CONTROL_ERROR once
+    // we cumulatively sent past the cap).
     var packetBudget = 1100
+    val connRemaining =
+        (conn.sendConnectionFlowCredit - conn.sendConnectionFlowConsumed).coerceAtLeast(0L)
+    var connBudget = connRemaining
     val streamsList = conn.streamsLocked().entries.toList()
     if (streamsList.isNotEmpty()) {
         val start = conn.streamRoundRobinStart % streamsList.size
@@ -268,12 +275,19 @@ private fun buildApplicationPacket(
             if (packetBudget <= 64) break
             val (id, stream) = streamsList[(start + i) % streamsList.size]
             val streamRemaining = (stream.sendCredit - stream.send.sentOffset).coerceAtLeast(0L)
-            if (streamRemaining <= 0L && !stream.send.finPending) continue
-            val maxBytes = minOf(packetBudget - 32, streamRemaining.coerceAtMost(Int.MAX_VALUE.toLong()).toInt())
+            // Skip if both stream and connection have no credit; FIN-only
+            // (zero-byte) chunks may still go through because they don't
+            // consume credit.
+            if (streamRemaining <= 0L && connBudget <= 0L && !stream.send.finPending) continue
+            val effectiveCap = minOf(streamRemaining, connBudget)
+            val maxBytes =
+                minOf(packetBudget - 32, effectiveCap.coerceAtMost(Int.MAX_VALUE.toLong()).toInt())
             val chunk = stream.send.takeChunk(maxBytes = maxBytes) ?: continue
             if (chunk.data.isNotEmpty() || chunk.fin) {
                 frames += StreamFrame(streamId = id, offset = chunk.offset, data = chunk.data, fin = chunk.fin, explicitLength = true)
                 packetBudget -= chunk.data.size + 32
+                connBudget -= chunk.data.size
+                conn.sendConnectionFlowConsumed += chunk.data.size
             }
         }
         conn.streamRoundRobinStart = (start + 1) % streamsList.size

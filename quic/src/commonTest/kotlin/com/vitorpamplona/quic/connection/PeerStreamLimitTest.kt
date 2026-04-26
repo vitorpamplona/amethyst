@@ -49,11 +49,34 @@ class PeerStreamLimitTest {
                 QuicConnection(
                     serverName = "example.test",
                     config = QuicConnectionConfig(),
-                    tlsCertificateValidator = null,
+                    tlsCertificateValidator =
+                        com.vitorpamplona.quic.tls
+                            .PermissiveCertificateValidator(),
                 )
-            // Default InProcessTlsServer sends empty transport parameters — so
-            // the client's peerMaxStreamsBidi resolves to 0 after handshake.
-            val pipe = InMemoryQuicPipe(client, client.destinationConnectionId.bytes)
+            // Explicitly advertise zero bidi streams. (The pipe's default TPs
+            // grant 16, so we override.)
+            val serverScid = ConnectionId.random(8)
+            val tlsServer =
+                InProcessTlsServer(
+                    transportParameters =
+                        TransportParameters(
+                            initialMaxData = 1_000_000,
+                            initialMaxStreamDataBidiLocal = 100_000,
+                            initialMaxStreamDataBidiRemote = 100_000,
+                            initialMaxStreamDataUni = 100_000,
+                            initialMaxStreamsBidi = 0,
+                            initialMaxStreamsUni = 0,
+                            initialSourceConnectionId = serverScid.bytes,
+                            originalDestinationConnectionId = client.destinationConnectionId.bytes,
+                        ).encode(),
+                )
+            val pipe =
+                InMemoryQuicPipe(
+                    client = client,
+                    initialDcid = client.destinationConnectionId.bytes,
+                    serverScid = serverScid,
+                    tlsServer = tlsServer,
+                )
             client.start()
             pipe.drive(maxRounds = 16)
             assertEquals(QuicConnection.Status.CONNECTED, client.status)
@@ -71,8 +94,13 @@ class PeerStreamLimitTest {
                 QuicConnection(
                     serverName = "example.test",
                     config = QuicConnectionConfig(),
-                    tlsCertificateValidator = null,
+                    tlsCertificateValidator =
+                        com.vitorpamplona.quic.tls
+                            .PermissiveCertificateValidator(),
                 )
+            // Build the TLS server with the audit-4 #7 required CIDs plus
+            // tight stream caps for the boundary test.
+            val serverScid = ConnectionId.random(8)
             val serverTpBytes =
                 TransportParameters(
                     initialMaxData = 1_000_000,
@@ -81,12 +109,15 @@ class PeerStreamLimitTest {
                     initialMaxStreamDataUni = 100_000,
                     initialMaxStreamsBidi = 3,
                     initialMaxStreamsUni = 0,
+                    initialSourceConnectionId = serverScid.bytes,
+                    originalDestinationConnectionId = client.destinationConnectionId.bytes,
                 ).encode()
             val tlsServer = InProcessTlsServer(transportParameters = serverTpBytes)
             val pipe =
                 InMemoryQuicPipe(
                     client = client,
                     initialDcid = client.destinationConnectionId.bytes,
+                    serverScid = serverScid,
                     tlsServer = tlsServer,
                 )
             client.start()

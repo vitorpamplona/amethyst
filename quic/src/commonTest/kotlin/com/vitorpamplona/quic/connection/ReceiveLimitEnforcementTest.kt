@@ -58,8 +58,14 @@ class ReceiveLimitEnforcementTest {
                         initialMaxStreamDataBidiRemote = 32,
                         initialMaxStreamDataBidiLocal = 32,
                     ),
-                tlsCertificateValidator = null,
+                tlsCertificateValidator =
+                    com.vitorpamplona.quic.tls
+                        .PermissiveCertificateValidator(),
             )
+        // Audit-4 #7: TPs MUST include initial_source_connection_id matching
+        // the SCID the server uses on the wire — otherwise the post-handshake
+        // CID-validation step closes the connection.
+        val serverScid = ConnectionId.random(8)
         val tlsServer =
             InProcessTlsServer(
                 transportParameters =
@@ -70,9 +76,11 @@ class ReceiveLimitEnforcementTest {
                         initialMaxStreamDataUni = 100_000,
                         initialMaxStreamsBidi = 16,
                         initialMaxStreamsUni = 16,
+                        initialSourceConnectionId = serverScid.bytes,
+                        originalDestinationConnectionId = client.destinationConnectionId.bytes,
                     ).encode(),
             )
-        val pipe = InMemoryQuicPipe(client, client.destinationConnectionId.bytes, tlsServer)
+        val pipe = InMemoryQuicPipe(client, client.destinationConnectionId.bytes, serverScid, tlsServer)
         client.start()
         pipe.drive(maxRounds = 16)
         assertEquals(QuicConnection.Status.CONNECTED, client.status)
@@ -113,8 +121,14 @@ class ReceiveLimitEnforcementTest {
                         initialMaxStreamDataBidiRemote = 64,
                         initialMaxStreamDataBidiLocal = 64,
                     ),
-                tlsCertificateValidator = null,
+                tlsCertificateValidator =
+                    com.vitorpamplona.quic.tls
+                        .PermissiveCertificateValidator(),
             )
+        // Audit-4 #7: TPs MUST include initial_source_connection_id matching
+        // the SCID the server uses on the wire — otherwise the post-handshake
+        // CID-validation step closes the connection.
+        val serverScid = ConnectionId.random(8)
         val tlsServer =
             InProcessTlsServer(
                 transportParameters =
@@ -125,9 +139,11 @@ class ReceiveLimitEnforcementTest {
                         initialMaxStreamDataUni = 100_000,
                         initialMaxStreamsBidi = 16,
                         initialMaxStreamsUni = 16,
+                        initialSourceConnectionId = serverScid.bytes,
+                        originalDestinationConnectionId = client.destinationConnectionId.bytes,
                     ).encode(),
             )
-        val pipe = InMemoryQuicPipe(client, client.destinationConnectionId.bytes, tlsServer)
+        val pipe = InMemoryQuicPipe(client, client.destinationConnectionId.bytes, serverScid, tlsServer)
         client.start()
         pipe.drive(maxRounds = 16)
         assertEquals(QuicConnection.Status.CONNECTED, client.status)

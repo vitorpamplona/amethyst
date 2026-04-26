@@ -44,7 +44,9 @@ class InMemoryQuicPipeTest {
             QuicConnection(
                 serverName = "example.test",
                 config = QuicConnectionConfig(),
-                tlsCertificateValidator = null,
+                tlsCertificateValidator =
+                    com.vitorpamplona.quic.tls
+                        .PermissiveCertificateValidator(),
             )
         val pipe = InMemoryQuicPipe(client = client, initialDcid = client.destinationConnectionId.bytes)
 

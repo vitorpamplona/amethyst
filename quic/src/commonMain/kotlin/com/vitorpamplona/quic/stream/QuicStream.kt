@@ -42,14 +42,24 @@ class QuicStream(
     /**
      * Bytes received and confirmed contiguous, exposed as a flow to the consumer.
      *
-     * Bounded buffer (64 chunks) — combined with the per-stream receive-limit
-     * enforced in the parser, this caps unbounded memory growth from a slow
-     * consumer. Producer (the parser) uses [trySend], dropping bytes if the
-     * channel is full; the receive-limit enforcement makes "channel full" a
-     * connection-level error long before it becomes a memory problem.
+     * Bounded buffer (64 chunks). The producer (parser) uses [trySend] and
+     * surfaces saturation by setting [overflowed]; the parser checks this flag
+     * after each delivery and tears the connection down with INTERNAL_ERROR
+     * rather than silently dropping bytes. Pre-audit-4 the failed `trySend`
+     * was discarded, leaving a hole in the stream that the application could
+     * never know about.
      */
     private val incomingChannel = Channel<ByteArray>(capacity = 64)
     val incoming: Flow<ByteArray> get() = incomingChannel.consumeAsFlow()
+
+    /**
+     * True once a [deliverIncoming] call failed because the channel was
+     * saturated (slow consumer). The parser observes this and closes the
+     * connection rather than letting bytes silently disappear.
+     */
+    @Volatile
+    var overflowed: Boolean = false
+        private set
 
     /** Per-stream send credit (peer's MAX_STREAM_DATA value). */
     var sendCredit: Long = 0L
@@ -63,10 +73,17 @@ class QuicStream(
     val isClosed: Boolean
         get() = send.finSent && receive.finReceived
 
-    internal fun deliverIncoming(data: ByteArray) {
-        if (data.isNotEmpty()) {
-            incomingChannel.trySend(data)
-        }
+    /**
+     * Pushes [data] toward the consumer. Returns false if the bounded channel
+     * was full; the caller (parser) is expected to escalate to a connection-
+     * level error in that case (audit-4 #3 — silent data loss is unacceptable
+     * because the peer believes the bytes were delivered).
+     */
+    internal fun deliverIncoming(data: ByteArray): Boolean {
+        if (data.isEmpty()) return true
+        val ok = incomingChannel.trySend(data).isSuccess
+        if (!ok) overflowed = true
+        return ok
     }
 
     internal fun closeIncoming() {

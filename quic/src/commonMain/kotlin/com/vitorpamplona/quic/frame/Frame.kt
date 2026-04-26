@@ -158,6 +158,60 @@ class ConnectionCloseFrame(
     }
 }
 
+/**
+ * RFC 9000 §19.4 — peer abruptly terminates the send side of a stream.
+ *
+ * Audit-4 finding: peers (aioquic, picoquic) routinely emit RESET_STREAM and
+ * the prior parser dropped the connection on first arrival because the frame
+ * type wasn't decoded. We accept and surface it; cleanup of the affected
+ * receive buffer is left to the orchestrator (no existing test exercises a
+ * post-reset read, but the parser must not crash).
+ */
+class ResetStreamFrame(
+    val streamId: Long,
+    val applicationErrorCode: Long,
+    val finalSize: Long,
+) : Frame() {
+    override fun encode(out: QuicWriter) {
+        out.writeByte(FrameType.RESET_STREAM.toInt())
+        out.writeVarint(streamId)
+        out.writeVarint(applicationErrorCode)
+        out.writeVarint(finalSize)
+    }
+}
+
+/**
+ * RFC 9000 §19.5 — peer asks us to stop sending on a stream we own. We don't
+ * model an outbound abort yet (MoQ-minimal scope), so we accept the frame
+ * for survival and let the application read [streamId]/[applicationErrorCode]
+ * if it ever wires a handler.
+ */
+class StopSendingFrame(
+    val streamId: Long,
+    val applicationErrorCode: Long,
+) : Frame() {
+    override fun encode(out: QuicWriter) {
+        out.writeByte(FrameType.STOP_SENDING.toInt())
+        out.writeVarint(streamId)
+        out.writeVarint(applicationErrorCode)
+    }
+}
+
+/**
+ * RFC 9000 §19.7 — server provides a token for use in a future Initial. We
+ * don't do 0-RTT or stateful resumption, so the token is dropped, but the
+ * frame MUST decode without killing the connection.
+ */
+class NewTokenFrame(
+    val token: ByteArray,
+) : Frame() {
+    override fun encode(out: QuicWriter) {
+        out.writeByte(FrameType.NEW_TOKEN.toInt())
+        out.writeVarint(token.size.toLong())
+        out.writeBytes(token)
+    }
+}
+
 class MaxDataFrame(
     val maxData: Long,
 ) : Frame() {
@@ -268,11 +322,29 @@ fun decodeFrames(data: ByteArray): List<Frame> {
                 out += AckFrame(largest, delay, firstRange, ranges)
             }
 
+            type == FrameType.RESET_STREAM -> {
+                val streamId = r.readVarint()
+                val errorCode = r.readVarint()
+                val finalSize = r.readVarint()
+                out += ResetStreamFrame(streamId, errorCode, finalSize)
+            }
+
+            type == FrameType.STOP_SENDING -> {
+                val streamId = r.readVarint()
+                val errorCode = r.readVarint()
+                out += StopSendingFrame(streamId, errorCode)
+            }
+
             type == FrameType.CRYPTO -> {
                 val offset = r.readVarint()
                 val len = boundedLength(r.readVarint(), r.remaining, "CRYPTO")
                 val data2 = r.readBytes(len)
                 out += CryptoFrame(offset, data2)
+            }
+
+            type == FrameType.NEW_TOKEN -> {
+                val tokenLen = boundedLength(r.readVarint(), r.remaining, "NEW_TOKEN")
+                out += NewTokenFrame(r.readBytes(tokenLen))
             }
 
             type in FrameType.STREAM_BASE..(FrameType.STREAM_BASE or 0x07) -> {

@@ -88,7 +88,9 @@ class CoalescedPacketSkipTest {
             QuicConnection(
                 serverName = "example.test",
                 config = QuicConnectionConfig(),
-                tlsCertificateValidator = null,
+                tlsCertificateValidator =
+                    com.vitorpamplona.quic.tls
+                        .PermissiveCertificateValidator(),
             )
         val secrets = InitialSecrets.derive(client.destinationConnectionId.bytes)
         val serverScid = ConnectionId.random(8)
@@ -119,7 +121,9 @@ class CoalescedPacketSkipTest {
             QuicConnection(
                 serverName = "example.test",
                 config = QuicConnectionConfig(),
-                tlsCertificateValidator = null,
+                tlsCertificateValidator =
+                    com.vitorpamplona.quic.tls
+                        .PermissiveCertificateValidator(),
             )
         val secrets = InitialSecrets.derive(client.destinationConnectionId.bytes)
         val serverScid = ConnectionId.random(8)
@@ -155,7 +159,9 @@ class CoalescedPacketSkipTest {
             QuicConnection(
                 serverName = "example.test",
                 config = QuicConnectionConfig(),
-                tlsCertificateValidator = null,
+                tlsCertificateValidator =
+                    com.vitorpamplona.quic.tls
+                        .PermissiveCertificateValidator(),
             )
         val secrets = InitialSecrets.derive(client.destinationConnectionId.bytes)
         val serverScid = ConnectionId.random(8)

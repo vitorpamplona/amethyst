@@ -61,13 +61,12 @@ class QuicConnection(
     val serverName: String,
     val config: QuicConnectionConfig,
     /**
-     * MUST be non-null for any network-facing connection. Pass an explicit
-     * `null` only when the caller has audited the threat model and accepts
-     * unauthenticated TLS (e.g. an in-process test loopback). There is no
-     * silent default — production callers either pass a system-trust-store
-     * validator or get a misconfiguration that's obvious in code review.
+     * Certificate validator is REQUIRED (audit-4 #1). For in-process tests
+     * pass an explicit [com.vitorpamplona.quic.tls.PermissiveCertificateValidator];
+     * the type system catches "forgot to validate" misconfigurations instead
+     * of letting null silently disable MITM protection.
      */
-    val tlsCertificateValidator: com.vitorpamplona.quic.tls.CertificateValidator?,
+    val tlsCertificateValidator: com.vitorpamplona.quic.tls.CertificateValidator,
     val nowMillis: () -> Long = {
         kotlin.time.Clock.System
             .now()
@@ -133,7 +132,18 @@ class QuicConnection(
     internal var streamRoundRobinStart: Int = 0
     private val pendingDatagrams = ArrayDeque<ByteArray>()
     private val incomingDatagrams = ArrayDeque<ByteArray>()
-    private var sendConnectionFlowCredit: Long = 0L
+
+    /**
+     * Connection-level send credit, refreshed by inbound MAX_DATA frames
+     * (RFC 9000 §19.9). Internal because the parser updates it directly under
+     * the connection lock; the writer reads it via [sendConnectionFlowCreditSnapshot]
+     * to gate stream-frame emission once we've sent past the peer's cap.
+     */
+    internal var sendConnectionFlowCredit: Long = 0L
+
+    /** Total stream bytes we've already sent against [sendConnectionFlowCredit]. */
+    internal var sendConnectionFlowConsumed: Long = 0L
+
     private var receiveConnectionFlowLimit: Long = config.initialMaxData
 
     /** Streams the peer has opened that we haven't surfaced yet. */
@@ -214,6 +224,7 @@ class QuicConnection(
             transportParameters = buildLocalTransportParameters().encode(),
             secretsListener = tlsListener,
             certificateValidator = tlsCertificateValidator,
+            offeredAlpns = alpnList,
         )
 
     init {
@@ -256,6 +267,30 @@ class QuicConnection(
     private fun applyPeerTransportParameters() {
         val raw = tls.peerTransportParameters ?: return
         val tp = TransportParameters.decode(raw)
+        // Audit-4 #7: RFC 9000 §7.3 MUST checks. The peer's
+        //   initial_source_connection_id MUST equal the SCID it put in its
+        //     first Initial (which we adopted as `destinationConnectionId`).
+        //   original_destination_connection_id MUST equal the DCID we put in
+        //     our first Initial (`originalDestinationConnectionId`).
+        // Skipping these opens a CID-substitution / downgrade window where
+        // an attacker who can rewrite the first Initial can swap CIDs.
+        val iscid = tp.initialSourceConnectionId
+        if (iscid == null || !iscid.contentEquals(destinationConnectionId.bytes)) {
+            markClosedExternally(
+                "TRANSPORT_PARAMETER_ERROR: peer initial_source_connection_id mismatch",
+            )
+            return
+        }
+        val odcid = tp.originalDestinationConnectionId
+        // We don't speak Retry yet, so the peer SHOULD echo our original DCID.
+        // If it's missing (some servers omit it pre-handshake-complete) we
+        // accept; if present but wrong we close.
+        if (odcid != null && !odcid.contentEquals(originalDestinationConnectionId.bytes)) {
+            markClosedExternally(
+                "TRANSPORT_PARAMETER_ERROR: peer original_destination_connection_id mismatch",
+            )
+            return
+        }
         peerTransportParameters = tp
         sendConnectionFlowCredit = tp.initialMaxData ?: 0L
         peerMaxStreamsBidi = tp.initialMaxStreamsBidi ?: 0L
@@ -424,19 +459,34 @@ class QuicConnection(
      */
     internal fun getOrCreatePeerStreamLocked(id: Long): QuicStream {
         streams[id]?.let { return it }
+        val kind = StreamId.kindOf(id)
         val direction =
-            when (StreamId.kindOf(id)) {
+            when (kind) {
                 StreamId.Kind.CLIENT_BIDI, StreamId.Kind.SERVER_BIDI -> QuicStream.Direction.BIDIRECTIONAL
                 StreamId.Kind.SERVER_UNI -> QuicStream.Direction.UNIDIRECTIONAL_REMOTE_TO_LOCAL
                 StreamId.Kind.CLIENT_UNI -> QuicStream.Direction.UNIDIRECTIONAL_LOCAL_TO_REMOTE
             }
         val stream = QuicStream(id, direction)
-        stream.sendCredit = 0L
+        // Audit-4 #11: SERVER_BIDI peer-opened streams inherit
+        // peerTransportParameters.initialMaxStreamDataBidiLocal as their
+        // sendCredit (we are writing back on a stream the peer initiated;
+        // the local-flow side's value applies). Previously they got 0L,
+        // which silently blocked any reply until an unsolicited
+        // MAX_STREAM_DATA arrived.
+        val tp = peerTransportParameters
+        stream.sendCredit =
+            when (kind) {
+                StreamId.Kind.SERVER_BIDI -> tp?.initialMaxStreamDataBidiLocal ?: 0L
+
+                // Peer-uni and (defensively) peer-attempted CLIENT_* streams
+                // can't be written from our side, so 0 is correct.
+                else -> 0L
+            }
         // Pick the local receive-limit appropriate for the stream's direction
         // — peer-bidi → we advertised initialMaxStreamDataBidiRemote;
         // peer-uni → we advertised initialMaxStreamDataUni.
         stream.receiveLimit =
-            when (StreamId.kindOf(id)) {
+            when (kind) {
                 StreamId.Kind.SERVER_UNI, StreamId.Kind.CLIENT_UNI -> config.initialMaxStreamDataUni
                 StreamId.Kind.SERVER_BIDI -> config.initialMaxStreamDataBidiRemote
                 StreamId.Kind.CLIENT_BIDI -> config.initialMaxStreamDataBidiLocal
@@ -476,6 +526,21 @@ class QuicConnection(
 
     /** Caller must hold [lock]. */
     internal fun streamByIdLocked(id: Long): QuicStream? = streams[id]
+
+    companion object {
+        /**
+         * Bound on the inbound datagram queue depth. RFC 9221 datagrams are
+         * outside connection-level flow control, so without this cap a peer
+         * can pin arbitrary memory by spamming DATAGRAM frames. 256 entries
+         * × ~1200 bytes/datagram ≈ 300 KB worst case, which is fine even on
+         * memory-constrained devices and well above any realistic burst at
+         * audio-room rates (~50/sec).
+         *
+         * On overflow the parser drops the OLDEST queued datagram — for live
+         * audio/video, fresh frames matter more than stale ones.
+         */
+        const val MAX_INCOMING_DATAGRAM_QUEUE: Int = 256
+    }
 }
 
 /** Connection was closed (locally or by peer) before reaching CONNECTED. */

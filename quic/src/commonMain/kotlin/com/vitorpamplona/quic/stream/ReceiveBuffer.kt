@@ -41,8 +41,17 @@ class ReceiveBuffer {
     var readOffset: Long = 0L
         private set
 
-    /** True once all sender-emitted bytes have been fully delivered. */
+    /** True once a STREAM frame carrying FIN has been observed. */
     var finReceived: Boolean = false
+        private set
+
+    /**
+     * Total stream length, set the moment any frame carrying FIN arrives.
+     * Equals `offset + data.size` of the FIN-bearing frame; null until then.
+     * Used by [isFullyRead] to distinguish "FIN seen but holes remain" from
+     * "FIN seen and contiguous read frontier reached the end".
+     */
+    var finOffset: Long? = null
         private set
 
     /** Insert a chunk at [offset] of size [data.size]. Idempotent on overlap. */
@@ -52,7 +61,15 @@ class ReceiveBuffer {
         fin: Boolean = false,
     ) {
         if (data.isEmpty() && !fin) return
-        if (fin) finReceived = true
+        if (fin) {
+            finReceived = true
+            // The FIN flag carries an implicit final offset = offset + data.size.
+            // RFC 9000 §4.5: once set, this MUST NOT change; ignore subsequent
+            // FIN frames whose final size disagrees (they should already have
+            // been rejected at the stream-state level, but be defensive here).
+            val finalSize = offset + data.size
+            if (finOffset == null) finOffset = finalSize
+        }
         if (data.isEmpty()) return
 
         val end = offset + data.size
@@ -120,6 +137,14 @@ class ReceiveBuffer {
 
     /** Highest contiguous offset received so far. */
     fun contiguousEnd(): Long = readOffset
+
+    /**
+     * True once the contiguous read frontier has reached the FIN offset, i.e.
+     * the application has received every byte the sender ever sent. Closing
+     * the consumer-facing channel before this point would silently drop any
+     * later-arriving fill chunks — that's the audit-4 #4 bug.
+     */
+    fun isFullyRead(): Boolean = finReceived && chunks.isEmpty() && finOffset == readOffset
 
     private class Chunk(
         val offset: Long,

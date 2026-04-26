@@ -49,7 +49,7 @@ class TlsRoundTripTest {
                 serverName = "example.test",
                 transportParameters = ByteArray(0),
                 secretsListener = capturedSecrets,
-                certificateValidator = null, // in-process loopback; no cert chain to validate
+                certificateValidator = PermissiveCertificateValidator(),
             )
         client.start()
 
@@ -63,14 +63,14 @@ class TlsRoundTripTest {
         assertNotNull(sh, "server should produce ServerHello at Initial level")
         client.pushHandshakeBytes(TlsClient.Level.INITIAL, sh)
 
-        // 3) Drain EncryptedExtensions + Finished (Handshake level) → client
-        val ee = server.pollOutboundHandshake()
-        assertNotNull(ee, "server should produce EncryptedExtensions")
-        client.pushHandshakeBytes(TlsClient.Level.HANDSHAKE, ee)
-
-        val sf = server.pollOutboundHandshake()
-        assertNotNull(sf, "server should produce server Finished")
-        client.pushHandshakeBytes(TlsClient.Level.HANDSHAKE, sf)
+        // 3) Drain EncryptedExtensions + Certificate + CertificateVerify +
+        //    Finished (Handshake level) → client. The InProcessTlsServer now
+        //    emits all four (audit-4 #3 — TlsClient hard-fails any non-PSK
+        //    handshake that omits Certificate/CertificateVerify).
+        while (true) {
+            val msg = server.pollOutboundHandshake() ?: break
+            client.pushHandshakeBytes(TlsClient.Level.HANDSHAKE, msg)
+        }
 
         // 4) Drain client Finished → server
         val cf = client.pollOutbound(TlsClient.Level.HANDSHAKE)
@@ -109,15 +109,18 @@ class TlsRoundTripTest {
                 serverName = "example.test",
                 transportParameters = ByteArray(0),
                 secretsListener = capturedSecrets,
-                certificateValidator = null,
+                certificateValidator = PermissiveCertificateValidator(),
             )
         client.start()
 
         val ch = client.pollOutbound(TlsClient.Level.INITIAL)!!
         server.receiveClientHello(ch)
         client.pushHandshakeBytes(TlsClient.Level.INITIAL, server.pollOutboundInitial()!!)
-        client.pushHandshakeBytes(TlsClient.Level.HANDSHAKE, server.pollOutboundHandshake()!!)
-        client.pushHandshakeBytes(TlsClient.Level.HANDSHAKE, server.pollOutboundHandshake()!!)
+        // EE + Certificate + CertificateVerify + Finished (audit-4 #3).
+        while (true) {
+            val msg = server.pollOutboundHandshake() ?: break
+            client.pushHandshakeBytes(TlsClient.Level.HANDSHAKE, msg)
+        }
         server.receiveClientFinished(client.pollOutbound(TlsClient.Level.HANDSHAKE)!!)
 
         assertEquals(TlsConstants.CIPHER_TLS_CHACHA20_POLY1305_SHA256, server.negotiatedCipherSuite)

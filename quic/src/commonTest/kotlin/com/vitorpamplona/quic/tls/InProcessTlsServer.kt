@@ -136,6 +136,20 @@ class InProcessTlsServer(
         transcript.append(ee)
         outboundHandshake.addLast(ee)
 
+        // Audit-4 #3: TlsClient now hard-fails any handshake that skips
+        // Certificate + CertificateVerify (no PSK was offered, so a peer that
+        // omits them is either misbehaving or a partial-MITM stripping the
+        // cert proof). Emit syntactically-valid stubs that
+        // [PermissiveCertificateValidator] will accept; the test path goes
+        // through the same code as a real handshake.
+        val cert = buildCertificateStub()
+        transcript.append(cert)
+        outboundHandshake.addLast(cert)
+
+        val cv = buildCertificateVerifyStub()
+        transcript.append(cv)
+        outboundHandshake.addLast(cv)
+
         // 7. Build server Finished
         val sf = buildFinished(serverHandshakeSecret!!)
         transcript.append(sf)
@@ -206,6 +220,37 @@ class InProcessTlsServer(
         val w = QuicWriter()
         w.writeByte(TlsConstants.HS_FINISHED)
         w.withUint24Length { writeBytes(tag) }
+        return w.toByteArray()
+    }
+
+    /**
+     * Encode a Certificate message with one stub leaf cert. The DER bytes are
+     * not a real cert — [PermissiveCertificateValidator] doesn't parse them.
+     * We just need the framing to round-trip through TlsCertificateChain.decodeBody.
+     */
+    private fun buildCertificateStub(): ByteArray {
+        val w = QuicWriter()
+        w.writeByte(TlsConstants.HS_CERTIFICATE)
+        w.withUint24Length {
+            // certificate_request_context (opaque<0..255>) — empty for server cert.
+            writeTlsOpaque1(ByteArray(0))
+            // certificate_list — single CertificateEntry with one stub cert and zero exts.
+            withUint24Length {
+                writeTlsOpaque3(byteArrayOf(0x30, 0x00)) // minimal DER-ish placeholder
+                writeTlsOpaque2(ByteArray(0)) // per-cert extensions
+            }
+        }
+        return w.toByteArray()
+    }
+
+    /** Encode a CertificateVerify message with a fake RSA-PSS-SHA256 signature. */
+    private fun buildCertificateVerifyStub(): ByteArray {
+        val w = QuicWriter()
+        w.writeByte(TlsConstants.HS_CERTIFICATE_VERIFY)
+        w.withUint24Length {
+            writeUint16(TlsConstants.SIG_RSA_PSS_RSAE_SHA256)
+            writeTlsOpaque2(ByteArray(64)) // any bytes — Permissive accepts
+        }
         return w.toByteArray()
     }
 }

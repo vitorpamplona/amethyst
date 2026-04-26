@@ -42,7 +42,7 @@ class HelloRetryRequestTest {
                 serverName = "example.test",
                 transportParameters = ByteArray(0),
                 secretsListener = NoopSecretsListener,
-                certificateValidator = null,
+                certificateValidator = PermissiveCertificateValidator(),
             )
         tls.start()
         // Drain (and discard) ClientHello.

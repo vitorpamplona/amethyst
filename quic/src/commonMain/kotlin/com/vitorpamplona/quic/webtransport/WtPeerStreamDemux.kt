@@ -163,6 +163,10 @@ class WtPeerStreamDemux(
                 }
                 emitStripped(stream, pending, chunkChannel, isUni = false)
             }
+        } catch (ce: kotlinx.coroutines.CancellationException) {
+            // Audit-4 #17: don't swallow cancellation — needs to propagate
+            // to actually tear down the coroutine when scope is cancelled.
+            throw ce
         } catch (_: Throwable) {
             // peer closed mid-prefix or framing error — drop quietly
         }
@@ -193,11 +197,24 @@ class WtPeerStreamDemux(
                 is Http3Frame.Goaway -> {
                     // GOAWAY body is a single varint Stream ID. Decode it so
                     // applications can observe drain state via
-                    // [peerGoawayStreamId]. Malformed bodies are dropped — RFC
-                    // 9114 §7.2.6 says servers SHOULD send a single varint
-                    // but we don't kill the connection over a parse error here.
+                    // [peerGoawayStreamId]. Malformed bodies are dropped.
+                    //
+                    // Audit-4 #5: RFC 9114 §5.2 — a subsequent GOAWAY id MUST
+                    // be ≤ the previous one (the "last accepted" id only
+                    // shrinks). A peer regressing this is H3_ID_ERROR; we
+                    // throw, the surrounding `route` catch maps that to a
+                    // black-hole, and the application sees the previously
+                    // recorded id stay put.
                     val res = Varint.decode(frame.body, 0)
-                    if (res != null) peerGoawayStreamId = res.value
+                    if (res != null) {
+                        val prev = peerGoawayStreamId
+                        if (prev != null && res.value > prev) {
+                            throw com.vitorpamplona.quic.QuicCodecException(
+                                "H3_ID_ERROR: GOAWAY id increased ($prev → ${res.value})",
+                            )
+                        }
+                        peerGoawayStreamId = res.value
+                    }
                 }
 
                 // no new requests; we don't enforce yet

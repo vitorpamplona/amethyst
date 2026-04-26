@@ -114,10 +114,18 @@ class QuicWebTransportSessionState(
                         // application needs them.
                     }
                 }
-            } catch (_: Throwable) {
-                // Stream closed before a capsule arrived. Leave peerCloseDeferred
-                // uncompleted — the connection-level close path is the source
-                // of truth in that case.
+            } catch (ce: kotlinx.coroutines.CancellationException) {
+                // Audit-4 #17: do NOT swallow CancellationException — the
+                // session's scope.cancel() needs it to actually terminate
+                // the coroutine, not get caught here.
+                throw ce
+            } catch (t: Throwable) {
+                // Audit-4 #15: a malformed capsule (e.g. truncated CLOSE_SESSION
+                // body) used to leave peerCloseDeferred forever-suspended.
+                // Surface the error so awaitPeerClose() exits with cause.
+                if (!peerCloseDeferred.isCompleted) {
+                    peerCloseDeferred.completeExceptionally(t)
+                }
             }
         }
     }

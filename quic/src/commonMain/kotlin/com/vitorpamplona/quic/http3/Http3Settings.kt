@@ -55,6 +55,14 @@ data class Http3Settings(
             while (r.hasMore()) {
                 val id = r.readVarint()
                 val value = r.readVarint()
+                // Audit-4 #18: RFC 9114 §7.2.4.1 — duplicate SETTINGS ids
+                // MUST cause a connection error of type H3_SETTINGS_ERROR.
+                // Pre-fix the second value silently overwrote the first.
+                if (map.containsKey(id)) {
+                    throw com.vitorpamplona.quic.QuicCodecException(
+                        "duplicate HTTP/3 SETTINGS id 0x${id.toString(16)}",
+                    )
+                }
                 map[id] = value
             }
             return Http3Settings(map)
