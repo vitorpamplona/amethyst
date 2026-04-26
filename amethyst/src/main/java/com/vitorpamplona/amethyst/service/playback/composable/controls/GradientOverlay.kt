@@ -38,24 +38,33 @@ import androidx.compose.ui.unit.dp
 private val FadeIn = fadeIn()
 private val FadeOut = fadeOut()
 
-private val TopGradientColors =
-    listOf(
-        Color.Black.copy(alpha = 0.6f),
-        Color.Black.copy(alpha = 0.3f),
-        Color.Transparent,
+// Both gradient brushes are static; pre-build them once at class init so we don't allocate a
+// new Brush on every recomposition while the controllers are visible (which is most of the
+// time during playback / interaction).
+private val TopGradientBrush =
+    Brush.verticalGradient(
+        colors =
+            listOf(
+                Color.Black.copy(alpha = 0.6f),
+                Color.Black.copy(alpha = 0.3f),
+                Color.Transparent,
+            ),
     )
 
-private val BottomGradientColors =
-    listOf(
-        Color.Transparent,
-        Color.Black.copy(alpha = 0.4f),
-        Color.Black.copy(alpha = 0.7f),
+private val BottomGradientBrush =
+    Brush.verticalGradient(
+        colors =
+            listOf(
+                Color.Transparent,
+                Color.Black.copy(alpha = 0.4f),
+                Color.Black.copy(alpha = 0.7f),
+            ),
     )
 
 @Composable
 private fun GradientOverlay(
     controllerVisible: State<Boolean>,
-    colors: List<Color>,
+    brush: Brush,
     height: Dp,
     modifier: Modifier = Modifier,
 ) {
@@ -70,7 +79,7 @@ private fun GradientOverlay(
                 Modifier
                     .fillMaxWidth()
                     .height(height)
-                    .background(brush = Brush.verticalGradient(colors = colors)),
+                    .background(brush = brush),
         )
     }
 }
@@ -80,11 +89,11 @@ fun TopGradientOverlay(
     controllerVisible: State<Boolean>,
     modifier: Modifier = Modifier,
     height: Dp = 80.dp,
-) = GradientOverlay(controllerVisible, TopGradientColors, height, modifier)
+) = GradientOverlay(controllerVisible, TopGradientBrush, height, modifier)
 
 @Composable
 fun BottomGradientOverlay(
     controllerVisible: State<Boolean>,
     modifier: Modifier = Modifier,
     height: Dp = 120.dp,
-) = GradientOverlay(controllerVisible, BottomGradientColors, height, modifier)
+) = GradientOverlay(controllerVisible, BottomGradientBrush, height, modifier)

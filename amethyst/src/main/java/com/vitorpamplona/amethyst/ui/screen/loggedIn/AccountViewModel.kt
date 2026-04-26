@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.graphics.drawable.Drawable
 import android.os.Handler
 import android.os.Looper
 import android.util.LruCache
@@ -34,9 +33,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import coil3.asDrawable
-import coil3.imageLoader
-import coil3.request.ImageRequest
 import com.vitorpamplona.amethyst.AccountInfo
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
@@ -1576,29 +1572,6 @@ class AccountViewModel(
             .clear()
         feedStates.destroy()
         super.onCleared()
-    }
-
-    fun loadThumb(
-        context: Context,
-        thumbUri: String,
-        onReady: (Drawable?) -> Unit,
-        onError: (String?) -> Unit,
-    ) {
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val request = ImageRequest.Builder(context).data(thumbUri).build()
-                val myCover =
-                    context.imageLoader
-                        .execute(request)
-                        .image
-                        ?.asDrawable(context.resources)
-                onReady(myCover)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                Log.e("VideoView", "Fail to load cover $thumbUri", e)
-                onError(e.message)
-            }
-        }
     }
 
     fun loadMentions(

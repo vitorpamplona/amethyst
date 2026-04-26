@@ -59,6 +59,11 @@ fun VideoViewInner(
     // keeps a copy of the value to avoid recompositions here when the DEFAULT value changes
     val muted = remember(videoUri) { DEFAULT_MUTED_SETTING.value }
 
+    // The proxy port is decided once per video URI; recomputing on every recomposition does
+    // pointless work (the result is anyway dropped because GetMediaItem.remember is keyed on the
+    // URI alone, so the cached MediaItemData is locked in on the first frame).
+    val proxyPort = remember(videoUri) { accountViewModel.httpClientBuilder.proxyPortForVideo(videoUri) }
+
     GetMediaItem(
         videoUri = videoUri,
         title = title,
@@ -67,7 +72,7 @@ fun VideoViewInner(
         callbackUri = nostrUriCallback,
         mimeType = mimeType,
         aspectRatio = aspectRatio,
-        proxyPort = accountViewModel.httpClientBuilder.proxyPortForVideo(videoUri),
+        proxyPort = proxyPort,
         keepPlaying = true,
         waveformData = waveform,
         isLiveStream = isLiveStream,

@@ -47,9 +47,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size30Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size50Modifier
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.VolumeBottomIconSize
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 @Preview
 @Composable
@@ -79,11 +77,12 @@ fun MuteButton(
             )
         }
 
+    // LaunchedEffect already runs on Main, and delay() suspends without holding a thread, so
+    // the previous launch(Dispatchers.IO) was just unnecessary dispatcher hopping for a state
+    // mutation that's also fine on Main.
     LaunchedEffect(key1 = controllerVisible) {
-        launch(Dispatchers.IO) {
-            delay(2000)
-            holdOn.value = false
-        }
+        delay(2000)
+        holdOn.value = false
     }
 
     val mutedInstance = remember(startingMuteState) { mutableStateOf(startingMuteState) }
