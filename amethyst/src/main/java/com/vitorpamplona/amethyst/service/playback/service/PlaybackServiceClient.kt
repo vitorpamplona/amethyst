@@ -56,11 +56,15 @@ object PlaybackServiceClient {
             Bundle().apply {
                 // link the id with the client's id to make sure it can return the
                 // same session on background media.
-                putString("id", id)
-                putBoolean("keepPlaying", keepPlaying)
+                putString(PlaybackService.HINT_ID, id)
+                putBoolean(PlaybackService.HINT_KEEP_PLAYING, keepPlaying)
                 proxyPort?.let {
-                    putInt("proxyPort", it)
+                    putInt(PlaybackService.HINT_PROXY_PORT, it)
                 }
+                // Carry the URI so the service can ask the player pool for an existing warm
+                // (paused-with-buffer) ExoPlayer that already holds this MediaItem. Falls back
+                // gracefully — if no warm match exists, the pool returns a cold player.
+                putString(PlaybackService.HINT_VIDEO_URI, videoUri)
             }
 
         val session = SessionToken(appContext, ComponentName(appContext, PlaybackService::class.java))

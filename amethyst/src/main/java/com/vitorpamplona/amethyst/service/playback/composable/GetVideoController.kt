@@ -21,10 +21,11 @@
 package com.vitorpamplona.amethyst.service.playback.composable
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.media3.common.Player
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.LoadedMediaItem
 import com.vitorpamplona.amethyst.service.playback.pip.BackgroundMedia
 import com.vitorpamplona.amethyst.service.playback.service.PlaybackServiceClient
@@ -49,25 +50,43 @@ fun GetVideoController(
             ).onEach { state ->
                 Log.d("PlaybackService") { "Controller instance: ${state.controller}" }
 
-                if (BackgroundMedia.isPlaying()) {
-                    // There is a video playing, start this one on mute.
-                    state.controller.volume = 0f
-                    Log.d("PlaybackService") { "OnEach Muted due to BackgroundMedia.isPlaying" }
-                } else {
-                    // There is no other video playing. Use the default mute state to
-                    // decide if sound is on or not.
-                    state.controller.volume = if (muted) 0f else 1f
-                    Log.d("PlaybackService") { "OnEach $muted" }
+                // The default ExoPlayer volume is 1f and the MediaSessionPool reset lambda
+                // sets it to 0f when the player is acquired, so the controller arrives at 0f.
+                // Read first and only push an IPC if the value actually needs to change —
+                // with several feed videos preloading at once each volume= write was a
+                // round-trip to the service for nothing.
+                val targetVolume =
+                    when {
+                        BackgroundMedia.isPlaying() -> 0f
+                        muted -> 0f
+                        else -> 1f
+                    }
+                if (state.controller.volume != targetVolume) {
+                    state.controller.volume = targetVolume
+                    Log.d("PlaybackService") { "OnEach volume=$targetVolume" }
                 }
 
                 if (play) {
                     state.controller.playWhenReady = true
                 }
 
-                state.controller.setMediaItem(mediaItem.item)
-                state.controller.prepare()
+                // Warm-pool fast path: when the underlying ExoPlayer was retained paused-with-
+                // buffer for this exact MediaItem, the MediaController's local mirror already
+                // shows the matching mediaId. Calling setMediaItem in that case would reset the
+                // player and discard the buffer — exactly what the warm pool exists to avoid.
+                // We still re-prepare if the player ended up IDLE somehow (e.g. it was demoted
+                // to cold and resurfaced, or hit an error before we attached).
+                val targetMediaId = mediaItem.item.mediaId
+                val needsLoad = state.controller.currentMediaItem?.mediaId != targetMediaId
+                if (needsLoad) {
+                    state.controller.setMediaItem(mediaItem.item)
+                    state.controller.prepare()
+                } else if (state.controller.playbackState == Player.STATE_IDLE) {
+                    Log.d("PlaybackService") { "Warm controller in STATE_IDLE — re-preparing" }
+                    state.controller.prepare()
+                }
             }
-    }.collectAsStateWithLifecycle(null)
+    }.collectAsState(null)
 
     controllerState?.let {
         inner(it)

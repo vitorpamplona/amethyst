@@ -37,13 +37,14 @@ import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.MediaItemCache
 import com.vitorpamplona.amethyst.ui.MainActivity
-import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicLong
 
 class SessionListener(
     val session: MediaSession,
@@ -72,7 +73,22 @@ class MediaSessionPool(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main + exceptionHandler)
 
     val globalCallback = MediaSessionCallback(this, appContext)
-    var lastCleanup = TimeUtils.now()
+
+    // Last cleanup timestamp in nanos, guarded by CAS so concurrent releaseSession() calls
+    // can't all win the time check and each launch a redundant scope.launch sweep.
+    private val lastCleanupNs = AtomicLong(System.nanoTime())
+
+    // The bitmap loader is stateless w.r.t. the session; a fresh allocation per session was
+    // pure noise. ExoPlayer's DEFAULT_EXECUTOR_SERVICE is a process-wide singleton, the
+    // dataSourceFactory is owned by the pool, and the appContext is already retained.
+    @OptIn(UnstableApi::class)
+    private val sharedBitmapLoader by lazy {
+        DataSourceBitmapLoader
+            .Builder(appContext)
+            .setExecutorService(DataSourceBitmapLoader.DEFAULT_EXECUTOR_SERVICE.get())
+            .setDataSourceFactory(dataSourceFactory)
+            .build()
+    }
 
     // protects from LruCache killing playing sessions
     private val playingMap = mutableMapOf<String, SessionListener>()
@@ -102,18 +118,16 @@ class MediaSessionPool(
         id: String,
         keepPlaying: Boolean,
         context: Context,
+        // Best-effort affinity hint: when the pool still has a paused player carrying this
+        // exact mediaId (matches MediaItem.mediaId, which is the videoUri), the warm player
+        // is reused so the populated buffer survives. Null falls back to a cold acquire.
+        preferredMediaId: String?,
     ): MediaSession {
         val mediaSession =
             MediaSession
-                .Builder(context, exoPlayerPool.acquirePlayer(context))
+                .Builder(context, exoPlayerPool.acquirePlayer(context, preferredMediaId))
                 .apply {
-                    setBitmapLoader(
-                        DataSourceBitmapLoader
-                            .Builder(context)
-                            .setExecutorService(DataSourceBitmapLoader.DEFAULT_EXECUTOR_SERVICE.get())
-                            .setDataSourceFactory(dataSourceFactory)
-                            .build(),
-                    )
+                    setBitmapLoader(sharedBitmapLoader)
                     setId(id)
                     setCallback(globalCallback)
                 }.build()
@@ -142,16 +156,17 @@ class MediaSessionPool(
     }
 
     fun cleanupUnused() {
-        if (lastCleanup < TimeUtils.oneMinuteAgo()) {
-            lastCleanup = TimeUtils.now()
-            scope.launch {
-                val snap = cache.snapshot()
-                snap.values.forEach {
-                    if (it.session.connectedControllers.isEmpty()) {
-                        releaseSession(it.session)
-                    }
+        val now = System.nanoTime()
+        val previous = lastCleanupNs.get()
+        if (now - previous < CLEANUP_INTERVAL_NS) return
+        // CAS so only one caller actually launches the sweep when many releases fire at once.
+        if (!lastCleanupNs.compareAndSet(previous, now)) return
+        scope.launch {
+            val snap = cache.snapshot()
+            snap.values.forEach {
+                if (it.session.connectedControllers.isEmpty()) {
+                    releaseSession(it.session)
                 }
-                lastCleanup = TimeUtils.now()
             }
         }
     }
@@ -175,13 +190,14 @@ class MediaSessionPool(
         id: String,
         keepPlaying: Boolean,
         context: Context,
+        preferredMediaId: String? = null,
     ): MediaSession {
         val existingSession = playingMap.get(id) ?: cache.get(id)
         if (existingSession != null) {
             return existingSession.session
         }
 
-        return newSession(id, keepPlaying, context)
+        return newSession(id, keepPlaying, context, preferredMediaId)
     }
 
     fun playingContent() = playingMap.values
@@ -233,5 +249,9 @@ class MediaSessionPool(
                 pool.playingMap.remove(mediaSession.id)
             }
         }
+    }
+
+    companion object {
+        private val CLEANUP_INTERVAL_NS = TimeUnit.MINUTES.toNanos(1)
     }
 }

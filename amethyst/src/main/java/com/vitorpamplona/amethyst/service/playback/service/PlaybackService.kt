@@ -204,7 +204,17 @@ class PlaybackService : MediaSessionService() {
         val id = controllerInfo.connectionHints.getString("id") ?: return null
         val proxyPort = controllerInfo.connectionHints.getInt("proxyPort")
         val keepPlaying = controllerInfo.connectionHints.getBoolean("keepPlaying", true)
+        // Optional warm-pool affinity hint: when the pool still has a paused ExoPlayer
+        // holding this exact URI, the new session reuses it so the buffer survives.
+        val preferredMediaId = controllerInfo.connectionHints.getString(HINT_VIDEO_URI)
         val manager = lazyPool(proxyPort)
-        return manager.getSession(id, keepPlaying, applicationContext)
+        return manager.getSession(id, keepPlaying, applicationContext, preferredMediaId)
+    }
+
+    companion object {
+        const val HINT_ID = "id"
+        const val HINT_PROXY_PORT = "proxyPort"
+        const val HINT_KEEP_PLAYING = "keepPlaying"
+        const val HINT_VIDEO_URI = "videoUri"
     }
 }
