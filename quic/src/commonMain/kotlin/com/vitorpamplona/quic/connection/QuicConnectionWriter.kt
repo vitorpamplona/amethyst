@@ -329,12 +329,13 @@ private fun appendFlowControlUpdates(
 ) {
     val cfg = conn.config
     var totalRecvAdvanced = 0L
-    // Round-4 perf #9: only walk streams flagged by the parser since the last
+    // Round-4 perf #9 + round-5 #9: walk the streams via the index-friendly
+    // list view (no `entries.toList()` allocation), and only do per-stream
+    // window/threshold work for streams flagged by the parser since the last
     // drain. Streams whose receive frontier hasn't advanced cannot need a
-    // new MAX_STREAM_DATA frame, so iterating them is wasted work. The
-    // connection-level totalRecvAdvanced sum still requires looking at each
-    // stream's contiguousEnd, but only when the dirty flag is set.
-    for ((id, stream) in conn.streamsLocked()) {
+    // new MAX_STREAM_DATA frame.
+    for (stream in conn.streamsListLocked()) {
+        val id = stream.streamId
         val rcv = stream.receive.contiguousEnd()
         if (rcv == 0L) continue
         if (!stream.receiveDirtyForFlowControl) {

@@ -264,8 +264,10 @@ private fun dispatchFrames(
             }
 
             is MaxDataFrame -> {
-                // Audit-4 #9 + #12: previously a no-op, which silently stalled
-                // the writer once we sent more than initialMaxData total bytes.
+                // RFC 9000 §13.2.1: MAX_DATA is ack-eliciting. Without this,
+                // a packet carrying only MAX_DATA would record the PN but
+                // never trigger an ACK (round-4 ACK gating regression).
+                ackEliciting = true
                 // RFC 9000 §19.9: MAX_DATA only ever raises the cap.
                 if (frame.maxData > conn.sendConnectionFlowCredit) {
                     conn.sendConnectionFlowCredit = frame.maxData
@@ -273,12 +275,14 @@ private fun dispatchFrames(
             }
 
             is MaxStreamDataFrame -> {
+                ackEliciting = true
                 conn.streamByIdLocked(frame.streamId)?.let {
                     if (frame.maxStreamData > it.sendCredit) it.sendCredit = frame.maxStreamData
                 }
             }
 
             is MaxStreamsFrame -> {
+                ackEliciting = true
                 // RFC 9000 §19.11: MAX_STREAMS only ever raises the cap.
                 // Frames with values smaller than the current cap are ignored.
                 // Bidi vs uni is signaled via the frame's `bidi` flag.
@@ -294,31 +298,42 @@ private fun dispatchFrames(
             }
 
             is ResetStreamFrame -> {
-                // Audit-4 #2: peer aborted the send side of a stream. We
-                // accept the frame for survival; the receive buffer keeps
-                // whatever it had. Closing the local read flow is left to
-                // the application or a future enhancement that surfaces the
-                // application error code.
+                // RFC 9000 §3.5: RESET_STREAM is the peer aborting THEIR send
+                // side of the stream. Round-5 #2: it's only legal on streams
+                // where the peer owns a send side (server-initiated streams,
+                // or our own bidi). A peer RESETting one of OUR uni streams
+                // (CLIENT_UNI = id%4==2) is STREAM_STATE_ERROR — they don't
+                // have a send side to abort.
                 ackEliciting = true
+                if (StreamId.kindOf(frame.streamId) == StreamId.Kind.CLIENT_UNI) {
+                    conn.markClosedExternally(
+                        "STREAM_STATE_ERROR: peer RESET_STREAM on client-uni id ${frame.streamId} (peer has no send side)",
+                    )
+                    return
+                }
+                // Mark the peer's stream aborted and close our read side; the
+                // application sees a truncated incoming flow.
                 conn.streamByIdLocked(frame.streamId)?.closeIncoming()
             }
 
             is StopSendingFrame -> {
-                // Audit-4 #2: peer asks us to stop sending on its read side.
+                // Round-4 #2: peer asks us to stop sending on its read side.
                 // We don't model an outbound abort yet — this is acknowledged
-                // and dropped. A peer using STOP_SENDING to back-pressure
-                // would have to fall back to MAX_STREAM_DATA = 0, which we
-                // already honour.
+                // and dropped. A future enhancement should emit RESET_STREAM
+                // back per RFC 9000 §3.5.
                 ackEliciting = true
             }
 
             is NewTokenFrame -> {
-                // Audit-4 #2: 0-RTT/resumption token. Out-of-scope; drop.
+                // Round-4 #2: 0-RTT/resumption token. Out-of-scope; drop.
                 ackEliciting = true
             }
 
             is NewConnectionIdFrame -> {
-                // We don't support migration; ignore.
+                // RFC 9000 §13.2.1: NEW_CONNECTION_ID is ack-eliciting. We
+                // don't support migration but still need to ACK to keep
+                // peer's loss-recovery happy.
+                ackEliciting = true
             }
 
             is ConnectionCloseFrame -> {
@@ -338,7 +353,15 @@ private fun dispatchFrames(
                     )
                     return
                 }
-                conn.status = QuicConnection.Status.CONNECTED
+                ackEliciting = true
+                // Round-5 #13: only flip to CONNECTED if we're still in
+                // HANDSHAKING. Pre-fix this unconditionally overwrote the
+                // status, which would resurrect a connection that
+                // applyPeerTransportParameters had just closed via
+                // markClosedExternally because of a CID validation failure.
+                if (conn.status == QuicConnection.Status.HANDSHAKING) {
+                    conn.status = QuicConnection.Status.CONNECTED
+                }
             }
 
             is PingFrame -> {

@@ -61,6 +61,16 @@ class QuicConnectionDriver(
     private var readJob: Job? = null
     private var sendJob: Job? = null
 
+    /**
+     * Round-5 concurrency #5: close() guard. A second concurrent invocation
+     * (e.g. session close + read-loop death close racing) used to launch a
+     * parallel teardown that called scope.cancel() and socket.close() while
+     * the first close was mid-joinAll. We now memoize the teardown Job so
+     * the second caller awaits the first's completion instead.
+     */
+    @Volatile
+    private var closeJob: Job? = null
+
     fun start() {
         connection.start()
         readJob = scope.launch { readLoop() }
@@ -147,45 +157,42 @@ class QuicConnectionDriver(
      * datagrams or skipping the CONNECTION_CLOSE entirely.
      */
     fun close() {
-        parentScope.launch {
-            connection.close(0L, "")
-            wakeup()
-            val send = sendJob
-            // Bounded wait for the send loop to flush CONNECTION_CLOSE. We
-            // don't want to hang forever if the writer is wedged — the timeout
-            // is the upper bound on how long close() can block.
-            withTimeoutOrNull(CLOSE_FLUSH_TIMEOUT_MILLIS) {
-                // Spin until the writer has actually drained the queued close
-                // (queues are empty AND the send loop has cycled at least
-                // once). Easiest proxy: write was attempted and there's
-                // nothing more to send. We approximate by giving the loop a
-                // chance to drain by sleeping briefly. This is the one place
-                // a short sleep is acceptable because we're racing a flush.
-                while (true) {
-                    val drained =
-                        connection.lock.withLock {
-                            // No more pending datagrams or stream bytes? Then
-                            // CONNECTION_CLOSE has either been sent or there
-                            // was nothing to send.
-                            connection.pendingDatagramsLocked().isEmpty()
+        // Round-5 #5: idempotent close. Memoize the teardown launch so a
+        // second concurrent caller (which is common: session.close() and
+        // read-loop death both race to close()) awaits the same Job rather
+        // than launching a parallel teardown.
+        if (closeJob != null) return
+        synchronized(this) {
+            if (closeJob != null) return
+            closeJob =
+                parentScope.launch {
+                    connection.close(0L, "")
+                    wakeup()
+                    val send = sendJob
+                    // Bounded wait for the send loop to flush CONNECTION_CLOSE.
+                    // We don't want to hang forever if the writer is wedged —
+                    // the timeout is the upper bound on how long close() blocks.
+                    withTimeoutOrNull(CLOSE_FLUSH_TIMEOUT_MILLIS) {
+                        // Spin until the writer has actually drained the queued
+                        // close. The CLOSING-status check transitions to CLOSED
+                        // once drainOutbound builds the CONNECTION_CLOSE packet.
+                        while (connection.status == QuicConnection.Status.CLOSING) {
+                            kotlinx.coroutines.delay(1)
                         }
-                    if (drained) break
-                    kotlinx.coroutines.delay(1)
+                    }
+                    // Now flip to CLOSED so both loops exit their while-guards.
+                    connection.markClosedExternally("driver close requested")
+                    wakeup()
+                    // Wait for both loops to actually exit — joinAll won't
+                    // return until the in-flight socket.send() completes.
+                    withTimeoutOrNull(CLOSE_FLUSH_TIMEOUT_MILLIS) {
+                        listOfNotNull(readJob, send).joinAll()
+                    }
+                    // Final teardown — cancel guarantees both jobs are done
+                    // before we close the socket.
+                    scope.cancel()
+                    socket.close()
                 }
-            }
-            // Now flip to CLOSED so both loops exit their while-guards.
-            connection.markClosedExternally("driver close requested")
-            wakeup()
-            // Wait for both loops to actually exit — joinAll won't return
-            // until the in-flight socket.send() (if any) completes.
-            withTimeoutOrNull(CLOSE_FLUSH_TIMEOUT_MILLIS) {
-                listOfNotNull(readJob, send).joinAll()
-            }
-            // Final teardown. By now both jobs have either exited cleanly or
-            // exceeded the timeout — cancel guarantees they're done before we
-            // close the socket.
-            scope.cancel()
-            socket.close()
         }
     }
 

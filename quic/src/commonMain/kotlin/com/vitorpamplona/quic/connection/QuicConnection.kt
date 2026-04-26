@@ -122,8 +122,16 @@ class QuicConnection(
      *
      * [openBidiStream] consults this cap; opening past it would violate the
      * peer's flow control and trigger STREAM_LIMIT_ERROR on their side.
+     *
+     * Round-5 concurrency #7: `@Volatile` because [peerMaxStreamsBidiSnapshot]
+     * is documented as lock-free; without volatile, JLS allows long-tearing on
+     * 32-bit JVMs (still common on Android) and the JIT may cache a stale
+     * value indefinitely.
      */
+    @Volatile
     internal var peerMaxStreamsBidi: Long = 0L
+
+    @Volatile
     internal var peerMaxStreamsUni: Long = 0L
 
     /**
@@ -453,7 +461,7 @@ class QuicConnection(
         if (!handshakeComplete) {
             signalHandshakeFailed(QuicConnectionClosedException("connection closed before handshake completed: $reason"))
         }
-        closedSignal.close()
+        closeAllSignals()
     }
 
     /** Called by the parser on inbound CONNECTION_CLOSE or by the driver on read-loop death. */
@@ -462,7 +470,21 @@ class QuicConnection(
         if (!handshakeComplete) {
             signalHandshakeFailed(QuicConnectionClosedException("connection closed externally: $reason"))
         }
+        closeAllSignals()
+    }
+
+    /**
+     * Close every wakeup channel so suspended awaiters exit promptly. Round-5
+     * concurrency #11: closing only `closedSignal` left `peerStreamSignal` and
+     * `incomingDatagramSignal` open, so a parser frame racing teardown could
+     * still `trySend(Unit)` into a never-consumed channel. All three channels
+     * close idempotently, so calling this from both `close()` and
+     * `markClosedExternally` is safe.
+     */
+    private fun closeAllSignals() {
         closedSignal.close()
+        peerStreamSignal.close()
+        incomingDatagramSignal.close()
     }
 
     /**

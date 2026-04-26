@@ -27,6 +27,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 
@@ -141,6 +142,14 @@ class QuicWebTransportSessionState(
     val peerGoawayStreamId get() = demux.peerGoawayStreamId
 
     /**
+     * Non-null when the peer's CONTROL stream produced a protocol error that
+     * the demux can't act on by itself (e.g. an H3_ID_ERROR GOAWAY id
+     * regression — round-5 #4). Applications should poll this and close the
+     * connection if set.
+     */
+    val peerGoawayProtocolError get() = demux.peerGoawayProtocolError
+
+    /**
      * The WT_CLOSE_SESSION capsule the peer sent on the CONNECT bidi, or null
      * if no graceful close has arrived yet. Applications wanting to react
      * synchronously can `peerCloseSession()` and check for null; coroutines
@@ -205,5 +214,20 @@ class QuicWebTransportSessionState(
             it.send.finish()
         }
         driver.close()
+        // Round-5 concurrency #1: cancel the WT scope so the demux pump
+        // and capsule reader coroutines launched in init{} actually exit.
+        // Pre-fix they kept running past close, holding references to
+        // the QuicStream / chunk channels indefinitely and producing
+        // memory growth on long sessions that opened/closed many WT
+        // sessions.
+        scope.cancel()
+        // Round-5 #8: if any caller is suspended on awaitPeerClose() and
+        // we're tearing down without ever observing a peer-initiated
+        // close, fail the deferred so the awaiter exits.
+        if (!peerCloseDeferred.isCompleted) {
+            peerCloseDeferred.cancel(
+                kotlinx.coroutines.CancellationException("WebTransport session closed locally"),
+            )
+        }
     }
 }

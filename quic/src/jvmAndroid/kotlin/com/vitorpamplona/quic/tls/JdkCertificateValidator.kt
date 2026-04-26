@@ -53,11 +53,19 @@ class JdkCertificateValidator(
         expectedHost: String,
     ) {
         if (chain.isEmpty()) throw QuicCodecException("server sent empty certificate chain")
+        // Round-5 #5: parse certificates inside the try block so a malformed
+        // DER blob throws QuicCodecException (which the read loop maps to
+        // CONNECTION_CLOSE) instead of an uncaught CertificateException.
         val cf = CertificateFactory.getInstance("X.509")
-        val parsed =
-            chain.map {
-                cf.generateCertificate(ByteArrayInputStream(it)) as X509Certificate
-            }
+        val parsed: List<X509Certificate>
+        try {
+            parsed =
+                chain.map {
+                    cf.generateCertificate(ByteArrayInputStream(it)) as X509Certificate
+                }
+        } catch (t: Throwable) {
+            throw QuicCodecException("certificate chain parse failed: ${t.message}", t)
+        }
         try {
             // X509TrustManager auth-type string is the TLS key-exchange / sig-alg
             // pair derived from the cipher suite name — for TLS 1.3 we use the
@@ -187,16 +195,28 @@ class JdkCertificateValidator(
         }
 
     /**
-     * Pattern-match check for IPv4 / IPv6 literals so we don't trigger DNS
-     * lookups for hostnames during cert validation (audit-4 #4). IPv4 is
-     * "digits and dots only"; IPv6 is "contains a colon". Bracketed IPv6
-     * literals (`[::1]`) are accepted by stripping the brackets first.
+     * Strict pattern-match for IPv4 / IPv6 literals — round-5 #3 tightens
+     * audit-4 #4. The previous check (`all digits/dots and contains a dot`)
+     * accepted strings like "1.2.3.4.5" or "1.2" that Java's
+     * `InetAddress.getByName` happily resolves via DNS, defeating the SNI-
+     * leak fix. IPv4 must be exactly four dot-separated octets each in
+     * 0..255; IPv6 must contain a colon (further parsing is left to the
+     * JDK once we've confirmed it's a literal).
      */
     private fun looksLikeIpLiteral(host: String): Boolean {
         val unbracketed =
             if (host.startsWith("[") && host.endsWith("]")) host.substring(1, host.length - 1) else host
-        if (unbracketed.contains(':')) return true // IPv6
-        return unbracketed.all { it.isDigit() || it == '.' } && unbracketed.contains('.')
+        if (unbracketed.contains(':')) return true // IPv6 — parse via JDK
+        // IPv4: 4 octets 0..255, no leading zeros tolerated as integers.
+        val parts = unbracketed.split('.')
+        if (parts.size != 4) return false
+        for (p in parts) {
+            if (p.isEmpty() || p.length > 3) return false
+            if (!p.all { it.isDigit() }) return false
+            val n = p.toIntOrNull() ?: return false
+            if (n !in 0..255) return false
+        }
+        return true
     }
 
     private fun dnsMatches(

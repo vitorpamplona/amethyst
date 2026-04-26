@@ -79,6 +79,18 @@ class WtPeerStreamDemux(
     var peerGoawayStreamId: Long? = null
         private set
 
+    /**
+     * Round-5 #4: surface H3_ID_ERROR (RFC 9114 §5.2 violation: GOAWAY id
+     * increased) so the QUIC layer can act on it instead of having the
+     * route()-level `catch (_: Throwable)` swallow it. Stays null until a
+     * regressing GOAWAY arrives. Application code (or
+     * [QuicWebTransportSessionState]) should poll this and close the
+     * connection if non-null.
+     */
+    @Volatile
+    var peerGoawayProtocolError: String? = null
+        private set
+
     val incomingStrippedStreams: Flow<StrippedWtStream> = readyStreams.consumeAsFlow()
 
     /**
@@ -90,85 +102,100 @@ class WtPeerStreamDemux(
     }
 
     private suspend fun route(stream: QuicStream) {
-        // Build a buffered chunk source: keeps unconsumed bytes until we
-        // know what kind of stream we're looking at.
-        val pending = ArrayDeque<ByteArray>()
-        val flowIterator = stream.incoming
-        val chunkChannel = Channel<ByteArray>(Channel.UNLIMITED)
-        scope.launch {
+        // Round-5 concurrency #2: wrap the whole route in coroutineScope so
+        // the inner collector launched below is joined on EVERY exit path,
+        // not just the ones that called drainBlackHole. Pre-fix four early-
+        // return sites (mismatched stream-type prefixes, unknown WT signal,
+        // foreign session id) left the collector orphaned, draining
+        // stream.incoming into a chunkChannel nobody read — unbounded
+        // memory growth per misbehaving peer stream.
+        kotlinx.coroutines.coroutineScope {
+            val pending = ArrayDeque<ByteArray>()
+            val flowIterator = stream.incoming
+            val chunkChannel = Channel<ByteArray>(Channel.UNLIMITED)
+            val collector =
+                launch {
+                    try {
+                        flowIterator.collect { chunkChannel.send(it) }
+                    } finally {
+                        chunkChannel.close()
+                    }
+                }
+
+            // Helper: read the next available bytes; returns null on stream close
+            // before enough bytes are present.
+            suspend fun moreBytes(): Boolean {
+                val chunk = chunkChannel.receiveCatching().getOrNull() ?: return false
+                pending.addLast(chunk)
+                return true
+            }
+
+            suspend fun readVarintFromPending(): Long? {
+                while (true) {
+                    val flat = flatten(pending)
+                    val res = Varint.decode(flat, 0)
+                    if (res != null) {
+                        consumeFromPending(pending, res.bytesConsumed)
+                        return res.value
+                    }
+                    if (!moreBytes()) return null
+                }
+            }
+
             try {
-                flowIterator.collect { chunkChannel.send(it) }
-            } finally {
-                chunkChannel.close()
-            }
-        }
-
-        // Helper: read the next available bytes; returns null on stream close
-        // before enough bytes are present.
-        suspend fun moreBytes(): Boolean {
-            val chunk = chunkChannel.receiveCatching().getOrNull() ?: return false
-            pending.addLast(chunk)
-            return true
-        }
-
-        suspend fun readVarintFromPending(): Long? {
-            while (true) {
-                val flat = flatten(pending)
-                val res = Varint.decode(flat, 0)
-                if (res != null) {
-                    consumeFromPending(pending, res.bytesConsumed)
-                    return res.value
-                }
-                if (!moreBytes()) return null
-            }
-        }
-
-        try {
-            if (StreamId.isUnidirectional(stream.streamId)) {
-                val streamType = readVarintFromPending() ?: return
-                when (streamType) {
-                    Http3StreamType.CONTROL -> {
-                        drainControlStream(pending, chunkChannel)
+                if (StreamId.isUnidirectional(stream.streamId)) {
+                    val streamType = readVarintFromPending()
+                    if (streamType == null) {
+                        collector.cancel()
+                        return@coroutineScope
                     }
-
-                    Http3StreamType.QPACK_ENCODER, Http3StreamType.QPACK_DECODER -> {
-                        drainBlackHole(chunkChannel)
-                    }
-
-                    Http3StreamType.WEBTRANSPORT_UNI_STREAM -> {
-                        val quarter = readVarintFromPending() ?: return
-                        if (quarter * 4L != expectedConnectStreamId) {
-                            drainBlackHole(chunkChannel) // not our session
-                            return
+                    when (streamType) {
+                        Http3StreamType.CONTROL -> {
+                            drainControlStream(pending, chunkChannel)
                         }
-                        emitStripped(stream, pending, chunkChannel, isUni = true)
-                    }
 
-                    else -> {
+                        Http3StreamType.QPACK_ENCODER, Http3StreamType.QPACK_DECODER -> {
+                            drainBlackHole(chunkChannel)
+                        }
+
+                        Http3StreamType.WEBTRANSPORT_UNI_STREAM -> {
+                            val quarter = readVarintFromPending()
+                            if (quarter == null || quarter * 4L != expectedConnectStreamId) {
+                                drainBlackHole(chunkChannel) // not our session / truncated
+                                return@coroutineScope
+                            }
+                            emitStripped(stream, pending, chunkChannel, isUni = true)
+                        }
+
+                        else -> {
+                            drainBlackHole(chunkChannel) // unknown — drop per RFC 9114 §9
+                        }
+                    }
+                } else {
+                    // Server-initiated bidi: per draft-ietf-webtrans-http3, prefixed
+                    // with WT_BIDI_STREAM (0x41) varint then quarter session id.
+                    val signal = readVarintFromPending()
+                    if (signal == null || signal != WtStreamType.WT_BIDI_STREAM) {
                         drainBlackHole(chunkChannel)
-                    } // unknown — drop per RFC 9114 §9
+                        return@coroutineScope
+                    }
+                    val quarter = readVarintFromPending()
+                    if (quarter == null || quarter * 4L != expectedConnectStreamId) {
+                        drainBlackHole(chunkChannel)
+                        return@coroutineScope
+                    }
+                    emitStripped(stream, pending, chunkChannel, isUni = false)
                 }
-            } else {
-                // Server-initiated bidi: per draft-ietf-webtrans-http3, prefixed
-                // with WT_BIDI_STREAM (0x41) varint then quarter session id.
-                val signal = readVarintFromPending() ?: return
-                if (signal != WtStreamType.WT_BIDI_STREAM) {
-                    drainBlackHole(chunkChannel)
-                    return
-                }
-                val quarter = readVarintFromPending() ?: return
-                if (quarter * 4L != expectedConnectStreamId) {
-                    drainBlackHole(chunkChannel)
-                    return
-                }
-                emitStripped(stream, pending, chunkChannel, isUni = false)
+            } catch (ce: kotlinx.coroutines.CancellationException) {
+                // Audit-4 #17: don't swallow cancellation — needs to propagate
+                // to actually tear down the coroutine when scope is cancelled.
+                throw ce
+            } catch (_: Throwable) {
+                // peer closed mid-prefix or framing error — drop quietly. The
+                // surrounding coroutineScope joins the collector on exit, so
+                // no leak even on swallowed errors.
+                collector.cancel()
             }
-        } catch (ce: kotlinx.coroutines.CancellationException) {
-            // Audit-4 #17: don't swallow cancellation — needs to propagate
-            // to actually tear down the coroutine when scope is cancelled.
-            throw ce
-        } catch (_: Throwable) {
-            // peer closed mid-prefix or framing error — drop quietly
         }
     }
 
@@ -209,8 +236,16 @@ class WtPeerStreamDemux(
                     if (res != null) {
                         val prev = peerGoawayStreamId
                         if (prev != null && res.value > prev) {
+                            // Round-5 #4: surface the protocol error via
+                            // peerGoawayProtocolError so the QUIC layer can
+                            // close the connection. Throwing also exits this
+                            // CONTROL-stream reader; the surrounding route()
+                            // catch handles cleanup (collector cancel +
+                            // chunkChannel close).
+                            peerGoawayProtocolError =
+                                "H3_ID_ERROR: GOAWAY id increased ($prev → ${res.value})"
                             throw com.vitorpamplona.quic.QuicCodecException(
-                                "H3_ID_ERROR: GOAWAY id increased ($prev → ${res.value})",
+                                peerGoawayProtocolError!!,
                             )
                         }
                         peerGoawayStreamId = res.value
