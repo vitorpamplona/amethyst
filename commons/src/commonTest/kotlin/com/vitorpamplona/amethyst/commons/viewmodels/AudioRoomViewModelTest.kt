@@ -137,6 +137,41 @@ class AudioRoomViewModelTest {
         }
 
     @Test
+    fun onStageNowDefaultsTrueAndSetOnStageFlipsIt() =
+        runTest {
+            val vm = newViewModel { FakeNestsListener() }
+
+            // Defaults to true so a freshly-joined speaker advertises
+            // onstage=1 on the first heartbeat (the heartbeat in
+            // AudioRoomActivityContent reads this as the tag value).
+            assertTrue(vm.uiState.value.onStageNow)
+            vm.setOnStage(false)
+            assertFalse(vm.uiState.value.onStageNow)
+            vm.setOnStage(true)
+            assertTrue(vm.uiState.value.onStageNow)
+        }
+
+    @Test
+    fun publishingNowDerivesFromBroadcastStateAndMute() {
+        // Idle / connecting / failed: never publishing.
+        assertFalse(AudioRoomUiState().publishingNow)
+        assertFalse(AudioRoomUiState(broadcast = BroadcastUiState.Connecting).publishingNow)
+        assertFalse(AudioRoomUiState(broadcast = BroadcastUiState.Failed("boom")).publishingNow)
+
+        // Broadcasting unmuted: publishing.
+        assertTrue(
+            AudioRoomUiState(broadcast = BroadcastUiState.Broadcasting(isMuted = false)).publishingNow,
+        )
+
+        // Broadcasting muted: NOT publishing — matches the wire-tag
+        // semantics ("publishing=1" means actually pushing packets,
+        // not "hold a slot but silenced").
+        assertFalse(
+            AudioRoomUiState(broadcast = BroadcastUiState.Broadcasting(isMuted = true)).publishingNow,
+        )
+    }
+
+    @Test
     fun connectIsIdempotentWhileConnecting() =
         runTest {
             val fakeListener = FakeNestsListener()

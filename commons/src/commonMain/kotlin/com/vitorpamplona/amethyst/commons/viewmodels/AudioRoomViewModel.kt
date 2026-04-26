@@ -202,6 +202,18 @@ class AudioRoomViewModel(
     }
 
     /**
+     * Toggle whether we hold a speaker slot. Tier-2's "leave the stage"
+     * tap flips this to `false`; the next kind-10312 heartbeat picks up
+     * the change via [AudioRoomUiState.onStageNow]. Does NOT stop a
+     * running broadcast — UI / caller is expected to call
+     * [BroadcastHandle.close] separately when leaving the stage.
+     */
+    fun setOnStage(onStage: Boolean) {
+        if (closed) return
+        _uiState.update { it.copy(onStageNow = onStage) }
+    }
+
+    /**
      * Whether this VM was constructed with capture + encoder factories. The
      * UI uses this to decide whether to render the talk button at all —
      * desktop and listener-only screens leave it false.
@@ -792,7 +804,23 @@ data class AudioRoomUiState(
     val speakingNow: ImmutableSet<String> = persistentSetOf(),
     /** Speaker / publisher state — only relevant when [AudioRoomViewModel.canBroadcast]. */
     val broadcast: BroadcastUiState = BroadcastUiState.Idle,
-)
+    /**
+     * `true` when we hold a speaker slot vs being pure audience. Defaults
+     * to `true` for users with [AudioRoomViewModel.canBroadcast]; the
+     * "leave the stage" tap (Tier 2) flips it to `false`. Drives the
+     * `["onstage", "0|1"]` tag on emitted kind-10312 presence events.
+     */
+    val onStageNow: Boolean = true,
+) {
+    /**
+     * Derived: are we currently pushing audio packets to the relay?
+     * `true` only when the broadcast handle is live AND we're not muted.
+     * Drives the `["publishing", "0|1"]` tag on emitted kind-10312
+     * presence events.
+     */
+    val publishingNow: Boolean
+        get() = broadcast is BroadcastUiState.Broadcasting && !broadcast.isMuted
+}
 
 @Immutable
 sealed class BroadcastUiState {

@@ -163,17 +163,20 @@ private fun AudioRoomActivityBody(
             is BroadcastUiState.Broadcasting -> b.isMuted
             else -> null
         }
-    // Heartbeat loop — publishes once on enter / hand-raise change, then
-    // every 30 s. micMutedTag is intentionally NOT a key here: every mute
-    // toggle would otherwise trigger a presence publish + relay round trip
-    // (audit Android #11). The next heartbeat picks up the latest mic
-    // state up to 30 s later, which is well within the user's "did the
-    // peer see my mute" tolerance.
-    LaunchedEffect(event.address().toValue(), handRaised) {
-        publishPresence(account, event, handRaised, micMutedTag)
+    val publishingTag: Boolean = ui.publishingNow
+    val onstageTag: Boolean = ui.onStageNow
+    // Heartbeat loop — publishes once on enter / hand-raise / onstage
+    // change, then every 30 s. micMutedTag and publishingTag are
+    // intentionally NOT keys here: every mute toggle would otherwise
+    // trigger a presence publish + relay round trip (audit Android #11).
+    // The next heartbeat picks up the latest mic / publishing state up
+    // to 30 s later, which is well within the user's "did the peer see
+    // my mute" tolerance.
+    LaunchedEffect(event.address().toValue(), handRaised, onstageTag) {
+        publishPresence(account, event, handRaised, micMutedTag, publishingTag, onstageTag)
         while (isActive) {
             delay(PRESENCE_REFRESH_MS)
-            publishPresence(account, event, handRaised, micMutedTag)
+            publishPresence(account, event, handRaised, micMutedTag, publishingTag, onstageTag)
         }
     }
     // Debounced state-change publisher: after a mute toggle, wait
@@ -188,7 +191,7 @@ private fun AudioRoomActivityBody(
     if (micMutedTag != null) {
         LaunchedEffect(micMutedTag) {
             delay(PRESENCE_DEBOUNCE_MS)
-            publishPresence(account, event, handRaised, micMutedTag)
+            publishPresence(account, event, handRaised, micMutedTag, publishingTag, onstageTag)
         }
     }
     DisposableEffect(event.address().toValue()) {
@@ -196,10 +199,21 @@ private fun AudioRoomActivityBody(
             // Final "leaving" presence runs on a non-cancellable scope so
             // it survives the composable's scope being cancelled mid-
             // network. Without this the leave event almost never reaches
-            // the relay (audit Android #12).
+            // the relay (audit Android #12). publishing=false / onstage=false
+            // tells aggregating peers to drop us from the participant grid
+            // immediately rather than wait out the staleness window.
             @OptIn(kotlinx.coroutines.DelicateCoroutinesApi::class)
             kotlinx.coroutines.GlobalScope.launch(Dispatchers.IO) {
-                runCatching { publishPresence(account, event, handRaised = false, micMuted = null) }
+                runCatching {
+                    publishPresence(
+                        account = account,
+                        event = event,
+                        handRaised = false,
+                        micMuted = null,
+                        publishing = false,
+                        onstage = false,
+                    )
+                }
             }
         }
     }
@@ -248,6 +262,8 @@ private suspend fun publishPresence(
     event: MeetingSpaceEvent,
     handRaised: Boolean,
     micMuted: Boolean?,
+    publishing: Boolean? = null,
+    onstage: Boolean? = null,
 ) {
     runCatching {
         account.signAndComputeBroadcast(
@@ -255,6 +271,8 @@ private suspend fun publishPresence(
                 root = event,
                 handRaised = handRaised,
                 muted = micMuted,
+                publishing = publishing,
+                onstage = onstage,
             ),
         )
     }
