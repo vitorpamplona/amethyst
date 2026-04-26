@@ -83,14 +83,17 @@ class MediaSessionPool(
     // The bitmap loader is stateless w.r.t. the session; a fresh allocation per session was
     // pure noise. ExoPlayer's DEFAULT_EXECUTOR_SERVICE is a process-wide singleton, the
     // dataSourceFactory is owned by the pool, and the appContext is already retained.
+    // The init is in a separate function so the @OptIn lands on a real declaration —
+    // applying it to a `by lazy` property doesn't propagate into the lambda body.
+    private val sharedBitmapLoader by lazy { buildSharedBitmapLoader() }
+
     @OptIn(UnstableApi::class)
-    private val sharedBitmapLoader by lazy {
+    private fun buildSharedBitmapLoader(): DataSourceBitmapLoader =
         DataSourceBitmapLoader
             .Builder(appContext)
             .setExecutorService(DataSourceBitmapLoader.DEFAULT_EXECUTOR_SERVICE.get())
             .setDataSourceFactory(dataSourceFactory)
             .build()
-    }
 
     // protects from LruCache killing playing sessions
     private val playingMap = mutableMapOf<String, SessionListener>()
