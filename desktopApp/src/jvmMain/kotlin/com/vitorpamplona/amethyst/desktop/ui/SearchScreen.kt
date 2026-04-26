@@ -130,7 +130,7 @@ fun SearchScreen(
 
     val connectedRelays by relayManager.connectedRelays.collectAsState()
     val relayStatuses by relayManager.relayStatuses.collectAsState()
-    val allRelayUrls = remember(relayStatuses) { relayStatuses.keys }
+    val allRelayUrls = relayStatuses.keys
     val relayCategories = LocalRelayCategories.current
     val searchRelays by relayCategories.searchRelays.collectAsState()
     val displayText by state.displayText.collectAsState()

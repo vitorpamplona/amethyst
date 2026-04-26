@@ -122,7 +122,7 @@ fun UserProfileScreen(
     onZapFeedback: (ZapFeedback) -> Unit = {},
 ) {
     val relayStatuses by relayManager.relayStatuses.collectAsState()
-    val connectedRelays = remember(relayStatuses) { relayStatuses.keys }
+    val connectedRelays = relayStatuses.keys
 
     // User metadata — seed from cache so returning to profile is instant
     val cachedUser = remember(pubKeyHex) { localCache.getUserIfExists(pubKeyHex) }

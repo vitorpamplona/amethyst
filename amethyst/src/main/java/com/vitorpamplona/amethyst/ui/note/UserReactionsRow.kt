@@ -29,7 +29,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -75,19 +74,19 @@ fun UserReactionsRow(
             )
         }
 
-        Row(verticalAlignment = CenterVertically, modifier = remember { Modifier.weight(1f) }) {
+        Row(verticalAlignment = CenterVertically, modifier = Modifier.weight(1f)) {
             UserReplyModel(model)
         }
 
-        Row(verticalAlignment = CenterVertically, modifier = remember { Modifier.weight(1f) }) {
+        Row(verticalAlignment = CenterVertically, modifier = Modifier.weight(1f)) {
             UserBoostModel(model)
         }
 
-        Row(verticalAlignment = CenterVertically, modifier = remember { Modifier.weight(1f) }) {
+        Row(verticalAlignment = CenterVertically, modifier = Modifier.weight(1f)) {
             UserReactionModel(model)
         }
 
-        Row(verticalAlignment = CenterVertically, modifier = remember { Modifier.weight(1f) }) {
+        Row(verticalAlignment = CenterVertically, modifier = Modifier.weight(1f)) {
             UserZapModel(model)
         }
     }

@@ -78,15 +78,11 @@ fun AudioWaveformReadOnly(
     amplitudes: List<Float>,
     onProgressChange: (Float) -> Unit,
 ) {
-    val progressState = remember(progress) { progress.coerceIn(MIN_PROGRESS, MAX_PROGRESS) }
-    val spikeWidthState =
-        remember(spikeWidth) { spikeWidth.coerceIn(MinSpikeWidthDp, MaxSpikeWidthDp) }
-    val spikePaddingState =
-        remember(spikePadding) { spikePadding.coerceIn(MinSpikePaddingDp, MaxSpikePaddingDp) }
-    val spikeRadiusState =
-        remember(spikeRadius) { spikeRadius.coerceIn(MinSpikeRadiusDp, MaxSpikeRadiusDp) }
-    val spikeTotalWidthState =
-        remember(spikeWidth, spikePadding) { spikeWidthState + spikePaddingState }
+    val progressState = progress.coerceIn(MIN_PROGRESS, MAX_PROGRESS)
+    val spikeWidthState = spikeWidth.coerceIn(MinSpikeWidthDp, MaxSpikeWidthDp)
+    val spikePaddingState = spikePadding.coerceIn(MinSpikePaddingDp, MaxSpikePaddingDp)
+    val spikeRadiusState = spikeRadius.coerceIn(MinSpikeRadiusDp, MaxSpikeRadiusDp)
+    val spikeTotalWidthState = spikeWidthState + spikePaddingState
     var canvasSize by remember { mutableStateOf(Size(0f, 0f)) }
     var spikes by remember { mutableFloatStateOf(0F) }
     val spikesAmplitudes =

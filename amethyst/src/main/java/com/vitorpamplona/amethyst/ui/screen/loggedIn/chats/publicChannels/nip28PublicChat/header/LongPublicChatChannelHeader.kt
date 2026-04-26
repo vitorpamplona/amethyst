@@ -167,7 +167,7 @@ fun LongPublicChatChannelHeader(
                     modifier = Modifier.width(75.dp),
                 )
                 Spacer(DoubleHorzSpacer)
-                NormalTimeAgo(note, remember { Modifier.weight(1f) })
+                NormalTimeAgo(note, Modifier.weight(1f))
                 MoreOptionsButton(note, null, accountViewModel, nav)
             }
         }

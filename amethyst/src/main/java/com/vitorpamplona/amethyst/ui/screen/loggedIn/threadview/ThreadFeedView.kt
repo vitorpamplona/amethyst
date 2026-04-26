@@ -535,7 +535,7 @@ private fun FullBleedNoteCompose(
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(
-                        remember { Modifier.weight(1f) },
+                        Modifier.weight(1f),
                     ) {
                         if (noteEvent is IForkableEvent && noteEvent.isAFork()) {
                             ShowForkInformation(noteEvent, Modifier, accountViewModel, nav)
