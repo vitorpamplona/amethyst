@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocket
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocketListener
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket.Companion.exceptionHandler
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
@@ -39,11 +40,21 @@ class OkHttpWebSocket(
     val url: NormalizedRelayUrl,
     val httpClient: (url: NormalizedRelayUrl) -> OkHttpClient,
     val out: WebSocketListener,
+    /**
+     * Optional URL rewriter invoked once per [connect] before the OkHttp
+     * `Request` is built. Returning a different URL routes the WebSocket
+     * handshake to that endpoint while keeping [url] as the canonical
+     * relay identifier (used by relay tags, UI, etc.).
+     *
+     * Defaults to identity (no rewrite).
+     */
+    val urlRewriter: (NormalizedRelayUrl) -> String = { it.url },
 ) : WebSocket {
     private var usingOkHttp: OkHttpClient? = null
     private var socket: okhttp3.WebSocket? = null
+    private var connectUrl: String = url.url
 
-    fun buildRequest() = Request.Builder().url(url.url).build()
+    fun buildRequest() = Request.Builder().url(connectUrl).build()
 
     override fun needsReconnect(): Boolean {
         if (socket == null) return true
@@ -69,6 +80,17 @@ class OkHttpWebSocket(
 
     override fun connect() {
         usingOkHttp = httpClient(url)
+        connectUrl =
+            try {
+                val rewritten = urlRewriter(url)
+                if (rewritten != url.url) {
+                    Log.d("OkHttpWebSocket") { "Rewriting connect URL ${url.url} -> $rewritten" }
+                }
+                rewritten
+            } catch (t: Throwable) {
+                Log.w("OkHttpWebSocket") { "URL rewriter failed for ${url.url}: ${t.message}" }
+                url.url
+            }
         socket = usingOkHttp?.newWebSocket(buildRequest(), OkHttpWebsocketListener(out))
     }
 
@@ -133,12 +155,14 @@ class OkHttpWebSocket(
 
     class Builder(
         val httpClient: (NormalizedRelayUrl) -> OkHttpClient,
+        /** Optional URL rewriter (e.g. for `.bit` relay resolution). */
+        val urlRewriter: (NormalizedRelayUrl) -> String = { it.url },
     ) : WebsocketBuilder {
         // Called when connecting.
         override fun build(
             url: NormalizedRelayUrl,
             out: WebSocketListener,
-        ) = OkHttpWebSocket(url, httpClient, out)
+        ) = OkHttpWebSocket(url, httpClient, out, urlRewriter)
     }
 
     override fun disconnect() {

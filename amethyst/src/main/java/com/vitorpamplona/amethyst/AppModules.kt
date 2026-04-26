@@ -48,6 +48,7 @@ import com.vitorpamplona.amethyst.service.images.ImageCacheFactory
 import com.vitorpamplona.amethyst.service.images.ImageLoaderSetup
 import com.vitorpamplona.amethyst.service.images.ThumbnailDiskCache
 import com.vitorpamplona.amethyst.service.location.LocationState
+import com.vitorpamplona.amethyst.service.namecoin.BitRelayUrlRewriter
 import com.vitorpamplona.amethyst.service.notifications.PokeyReceiver
 import com.vitorpamplona.amethyst.service.okhttp.DualHttpClientManager
 import com.vitorpamplona.amethyst.service.okhttp.DualHttpClientManagerForRelays
@@ -84,8 +85,10 @@ import com.vitorpamplona.quartz.nip03Timestamp.VerificationStateCache
 import com.vitorpamplona.quartz.nip03Timestamp.ots.OtsBlockHeightCache
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Client
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.OkHttpNip05Fetcher
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.BitRelayResolver
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.DEFAULT_ELECTRUMX_SERVERS
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumXClient
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumxServer
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.TOR_ELECTRUMX_SERVERS
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
@@ -209,20 +212,28 @@ class AppModules(
         client
     }
 
+    /**
+     * Single source of truth for which ElectrumX servers to query, shared
+     * by [namecoinResolver] (NIP-05 identity path) and [bitRelayResolver]
+     * (`.bit` relay path). User-configured custom servers take priority,
+     * otherwise we pick a Tor-aware default list.
+     */
+    val namecoinServerListProvider: () -> List<ElectrumxServer> =
+        {
+            namecoinPrefs.customServersOrNull
+                ?: if (roleBasedHttpClientBuilder.shouldUseTorForNIP05("https://electrumx.example.com")) {
+                    TOR_ELECTRUMX_SERVERS
+                } else {
+                    DEFAULT_ELECTRUMX_SERVERS
+                }
+        }
+
     val namecoinResolver by
         lazy {
             Log.d("AppModules", "Namecoin Resolver Init")
             NamecoinNameResolver(
                 electrumxClient = electrumXClient,
-                serverListProvider = {
-                    // User-configured custom servers take priority
-                    namecoinPrefs.customServersOrNull
-                        ?: if (roleBasedHttpClientBuilder.shouldUseTorForNIP05("https://electrumx.example.com")) {
-                            TOR_ELECTRUMX_SERVERS
-                        } else {
-                            DEFAULT_ELECTRUMX_SERVERS
-                        }
-                },
+                serverListProvider = namecoinServerListProvider,
             )
         }
 
@@ -268,12 +279,24 @@ class AppModules(
             scope = applicationIOScope,
         )
 
+    // Resolves `.bit` (Namecoin) relay hostnames to their underlying real wss:// endpoint
+    // at WebSocket-handshake time. Delegates the ElectrumX call to the same
+    // [namecoinResolver] used by the NIP-05 identity path, so Tor / pinned-cert /
+    // server-selection / timeout / exception-translation behaviour carries over for free.
+    val bitRelayResolver by lazy {
+        Log.d("AppModules", "BitRelayResolver Init")
+        BitRelayResolver(nameResolver = namecoinResolver)
+    }
+
     // Connects the INostrClient class with okHttp
     val websocketBuilder =
-        OkHttpWebSocket.Builder { url ->
-            val useTor = torEvaluatorFlow.flow.value.useTor(url)
-            okHttpClientForRelays.getHttpClient(useTor)
-        }
+        OkHttpWebSocket.Builder(
+            httpClient = { url ->
+                val useTor = torEvaluatorFlow.flow.value.useTor(url)
+                okHttpClientForRelays.getHttpClient(useTor)
+            },
+            urlRewriter = BitRelayUrlRewriter(bitRelayResolver),
+        )
 
     // Caches all events in Memory
     val cache: LocalCache = LocalCache

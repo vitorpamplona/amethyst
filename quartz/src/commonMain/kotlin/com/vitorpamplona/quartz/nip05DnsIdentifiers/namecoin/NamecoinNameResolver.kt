@@ -20,8 +20,10 @@
  */
 package com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin
 
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonArray
@@ -93,6 +95,12 @@ class NamecoinNameResolver(
     companion object {
         private val HEX_PUBKEY_REGEX = Regex("^[0-9a-fA-F]{64}$")
 
+        private val SHARED_JSON =
+            Json {
+                ignoreUnknownKeys = true
+                isLenient = true
+            }
+
         /**
          * Check whether an identifier should be routed to Namecoin
          * resolution rather than standard NIP-05.
@@ -103,31 +111,201 @@ class NamecoinNameResolver(
                 normalized.startsWith("d/") ||
                 normalized.startsWith("id/")
         }
+
+        /**
+         * Map a user-supplied identifier to the Namecoin key the resolver
+         * would query (e.g. `example.bit` → `d/example`, `id/alice` → `id/alice`).
+         *
+         * Returns null for unparseable inputs. Multi-label `.bit` names are
+         * not supported by the Namecoin spec and return null.
+         */
+        fun toNamecoinName(identifier: String): String? = parseIdentifierFlat(identifier)?.namecoinName
+
+        /**
+         * Pure (no-IO) parser shared by the instance lookup path and external
+         * callers like the `.bit` relay resolver.
+         */
+        fun parseIdentifierFlat(raw: String): ParsedIdentifierFlat? {
+            val input = raw.trim()
+
+            if (input.startsWith("d/", ignoreCase = true)) {
+                return ParsedIdentifierFlat(input.lowercase(), "_", isIdentityNamespace = false)
+            }
+            if (input.startsWith("id/", ignoreCase = true)) {
+                return ParsedIdentifierFlat(input.lowercase(), "_", isIdentityNamespace = true)
+            }
+            // Lowercase early so `.bit` suffix-strip is safe regardless of original casing.
+            val lower = input.lowercase()
+            if (lower.contains("@") && lower.endsWith(".bit")) {
+                val parts = lower.split("@", limit = 2)
+                if (parts.size != 2) return null
+                val localPart = parts[0].ifEmpty { "_" }
+                val domain = parts[1].removeSuffix(".bit")
+                if (domain.isEmpty()) return null
+                return ParsedIdentifierFlat("d/$domain", localPart, isIdentityNamespace = false)
+            }
+            if (lower.endsWith(".bit")) {
+                val domain = lower.removeSuffix(".bit")
+                if (domain.isEmpty()) return null
+                return ParsedIdentifierFlat("d/$domain", "_", isIdentityNamespace = false)
+            }
+            return null
+        }
+
+        /**
+         * Parse a Namecoin `d/<name>` value JSON for any Nostr relay URLs.
+         *
+         * Recognises (in priority order):
+         *   1. `relay` (string)
+         *   2. `relays` (array of strings)
+         *   3. `nostr.relay` (string)
+         *   4. `nostr.relays` (array of strings)
+         *   5. `nostr.relays[<pubkey>]` (array of strings keyed by pubkey)
+         *
+         * URLs are de-duplicated, returned in priority order, and only those
+         * with a `ws://` or `wss://` scheme are kept.
+         */
+        fun parseRelayUrls(rawValueJson: String): List<String> =
+            try {
+                collectRelayUrls(SHARED_JSON.parseToJsonElement(rawValueJson).jsonObject)
+            } catch (_: Exception) {
+                emptyList()
+            }
+
+        private fun collectRelayUrls(obj: JsonObject): List<String> {
+            val out = mutableListOf<String>()
+
+            pushWsString(obj["relay"], out)
+            pushWsArray(obj["relays"], out)
+
+            val nostr = obj["nostr"] as? JsonObject
+            if (nostr != null) {
+                pushWsString(nostr["relay"], out)
+                pushWsArray(nostr["relays"], out)
+
+                // pubkey-keyed shape: nostr.relays[<pubkey>] = ["wss://..."]
+                val pubkeyKeyed = nostr["relays"] as? JsonObject
+                if (pubkeyKeyed != null) {
+                    for ((_, value) in pubkeyKeyed.entries) pushWsArray(value, out)
+                }
+            }
+            return out.distinct()
+        }
+
+        private fun pushWsString(
+            value: JsonElement?,
+            out: MutableList<String>,
+        ) {
+            if (value is JsonPrimitive && value.isString) {
+                val trimmed = value.content.trim()
+                // Reuse the canonical Quartz scheme test instead of a local one.
+                if (RelayUrlNormalizer.isRelayUrl(trimmed)) {
+                    out += trimmed
+                }
+            }
+        }
+
+        private fun pushWsArray(
+            value: JsonElement?,
+            out: MutableList<String>,
+        ) {
+            try {
+                value?.jsonArray?.forEach { pushWsString(it, out) }
+            } catch (_: Exception) {
+                // not an array; ignore
+            }
+        }
     }
+
+    /** Flat parsed identifier surface used by [toNamecoinName] and the instance parser. */
+    data class ParsedIdentifierFlat(
+        val namecoinName: String,
+        val localPart: String,
+        val isIdentityNamespace: Boolean,
+    )
 
     /**
      * Resolve a user-supplied identifier to a Nostr pubkey via Namecoin.
      *
      * @param identifier User input, e.g. "alice@example.bit", "id/alice", "example.bit"
-     * @return [NamecoinNostrResult] on success, null if resolution failed
+     * @return [NamecoinNostrResult] on success, null if resolution failed.
+     *
+     * Implemented as a thin wrapper over [resolveDetailed] so the
+     * lookup/timeout/exception logic lives in exactly one place.
      */
-    suspend fun resolve(identifier: String): NamecoinNostrResult? {
-        val parsed = parseIdentifier(identifier) ?: return null
-        return withTimeoutOrNull(lookupTimeoutMs) {
-            performLookup(parsed)
-        }
-    }
+    suspend fun resolve(identifier: String): NamecoinNostrResult? = (resolveDetailed(identifier) as? NamecoinResolveOutcome.Success)?.result
 
     /**
      * Resolve with detailed outcome for error reporting in UI flows.
+     *
+     * The timeout is applied inside [lookupNameDetailed]; no outer
+     * `withTimeoutOrNull` wrapper is needed here.
      */
     suspend fun resolveDetailed(identifier: String): NamecoinResolveOutcome {
         val parsed =
             parseIdentifier(identifier)
                 ?: return NamecoinResolveOutcome.InvalidIdentifier(identifier)
+        return performLookupDetailed(parsed)
+    }
+
+    /** Outcome of a low-level `name_show` lookup. */
+    sealed class NameLookupOutcome {
+        data class Found(
+            val result: NameShowResult,
+        ) : NameLookupOutcome()
+
+        data class NotFound(
+            val name: String,
+        ) : NameLookupOutcome()
+
+        data class ServersUnreachable(
+            val message: String,
+        ) : NameLookupOutcome()
+
+        data object Timeout : NameLookupOutcome()
+    }
+
+    /**
+     * Run a `name_show` lookup with the standard timeout + exception
+     * translation used throughout this package.
+     *
+     * Both [resolveDetailed] (NIP-05 identity path) and
+     * [BitRelayResolver.resolveRaw] (`.bit` relay path) call this helper
+     * so the timeout / `NameNotFound` / `NameExpired` / `ServersUnreachable`
+     * mapping is implemented exactly once.
+     */
+    suspend fun lookupNameDetailed(namecoinName: String): NameLookupOutcome {
         val result =
-            withTimeoutOrNull(lookupTimeoutMs) { performLookupDetailed(parsed) }
-        return result ?: NamecoinResolveOutcome.Timeout
+            withTimeoutOrNull(lookupTimeoutMs) {
+                runCatching {
+                    electrumxClient.nameShowWithFallback(namecoinName, serverListProvider())
+                }
+            } ?: return NameLookupOutcome.Timeout
+
+        result.exceptionOrNull()?.let { e ->
+            return when (e) {
+                is NamecoinLookupException.NameNotFound -> {
+                    NameLookupOutcome.NotFound(namecoinName)
+                }
+
+                is NamecoinLookupException.NameExpired -> {
+                    NameLookupOutcome.NotFound(namecoinName)
+                }
+
+                is NamecoinLookupException.ServersUnreachable -> {
+                    NameLookupOutcome.ServersUnreachable(
+                        e.message ?: "All ElectrumX servers unreachable",
+                    )
+                }
+
+                else -> {
+                    NameLookupOutcome.ServersUnreachable(e.message ?: "Lookup failed")
+                }
+            }
+        }
+
+        val nameShow = result.getOrNull() ?: return NameLookupOutcome.NotFound(namecoinName)
+        return NameLookupOutcome.Found(nameShow)
     }
 
     // ── Identifier Parsing ─────────────────────────────────────────────
@@ -157,81 +335,40 @@ class NamecoinNameResolver(
      *   "example.bit"        → d/example, localPart=_
      *   "d/example"          → d/example, localPart=_
      *   "id/alice"           → id/alice,  localPart=_
+     *
+     * Implementation delegates to the static [parseIdentifierFlat] so external
+     * callers (e.g. the `.bit` relay resolver) use the exact same parser.
      */
     private fun parseIdentifier(raw: String): ParsedIdentifier? {
-        val input = raw.trim()
-
-        // Direct namespace references
-        if (input.startsWith("d/", ignoreCase = true)) {
-            return ParsedIdentifier(
-                namecoinName = input.lowercase(),
-                localPart = "_",
-                namespace = Namespace.DOMAIN,
-            )
-        }
-        if (input.startsWith("id/", ignoreCase = true)) {
-            return ParsedIdentifier(
-                namecoinName = input.lowercase(),
-                localPart = "_",
-                namespace = Namespace.IDENTITY,
-            )
-        }
-
-        // NIP-05 style: user@domain.bit
-        if (input.contains("@") && input.endsWith(".bit", ignoreCase = true)) {
-            val parts = input.split("@", limit = 2)
-            if (parts.size != 2) return null
-            val localPart = parts[0].lowercase().ifEmpty { "_" }
-            val domain = parts[1].removeSuffix(".bit").lowercase()
-            if (domain.isEmpty()) return null
-            return ParsedIdentifier(
-                namecoinName = "d/$domain",
-                localPart = localPart,
-                namespace = Namespace.DOMAIN,
-            )
-        }
-
-        // Bare domain: example.bit
-        if (input.endsWith(".bit", ignoreCase = true)) {
-            val domain = input.removeSuffix(".bit").lowercase()
-            if (domain.isEmpty()) return null
-            return ParsedIdentifier(
-                namecoinName = "d/$domain",
-                localPart = "_",
-                namespace = Namespace.DOMAIN,
-            )
-        }
-
-        return null
+        val flat = parseIdentifierFlat(raw) ?: return null
+        return ParsedIdentifier(
+            namecoinName = flat.namecoinName,
+            localPart = flat.localPart,
+            namespace = if (flat.isIdentityNamespace) Namespace.IDENTITY else Namespace.DOMAIN,
+        )
     }
 
     // ── Lookup & Value Parsing ─────────────────────────────────────────
 
-    private suspend fun performLookup(parsed: ParsedIdentifier): NamecoinNostrResult? {
-        val nameResult = electrumxClient.nameShowWithFallback(parsed.namecoinName, serverListProvider()) ?: return null
-        val valueJson = tryParseJson(nameResult.value) ?: return null
-
-        return when (parsed.namespace) {
-            Namespace.DOMAIN -> extractFromDomainValue(valueJson, parsed)
-            Namespace.IDENTITY -> extractFromIdentityValue(valueJson, parsed)
-        }
-    }
-
     private suspend fun performLookupDetailed(parsed: ParsedIdentifier): NamecoinResolveOutcome {
-        val nameResult: NameShowResult
-        try {
-            nameResult =
-                electrumxClient.nameShowWithFallback(parsed.namecoinName, serverListProvider())
-                    ?: return NamecoinResolveOutcome.NameNotFound(parsed.namecoinName)
-        } catch (e: NamecoinLookupException.NameNotFound) {
-            return NamecoinResolveOutcome.NameNotFound(parsed.namecoinName)
-        } catch (e: NamecoinLookupException.NameExpired) {
-            return NamecoinResolveOutcome.NameNotFound(parsed.namecoinName)
-        } catch (e: NamecoinLookupException.ServersUnreachable) {
-            return NamecoinResolveOutcome.ServersUnreachable(
-                e.message ?: "All ElectrumX servers unreachable",
-            )
-        }
+        val nameResult =
+            when (val outcome = lookupNameDetailed(parsed.namecoinName)) {
+                is NameLookupOutcome.Found -> {
+                    outcome.result
+                }
+
+                is NameLookupOutcome.NotFound -> {
+                    return NamecoinResolveOutcome.NameNotFound(outcome.name)
+                }
+
+                is NameLookupOutcome.ServersUnreachable -> {
+                    return NamecoinResolveOutcome.ServersUnreachable(outcome.message)
+                }
+
+                NameLookupOutcome.Timeout -> {
+                    return NamecoinResolveOutcome.Timeout
+                }
+            }
 
         val valueJson =
             tryParseJson(nameResult.value)
