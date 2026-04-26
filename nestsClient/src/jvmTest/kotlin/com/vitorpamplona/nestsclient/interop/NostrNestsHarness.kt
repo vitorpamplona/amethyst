@@ -152,12 +152,19 @@ class NostrNestsHarness private constructor(
             val rev = System.getProperty("nestsInteropRev") ?: DEFAULT_REVISION
             val target = cacheRoot().resolve("nests").toFile()
             if (!target.exists()) {
-                runProcess(cacheRoot().toFile(), "git", "clone", REPO_URL, "nests")
+                // Recurse-submodules pulls in the `moq` (kixelated/moq-rs)
+                // and `moq-auth` build contexts that docker-compose-moq.yml
+                // references via `build: ./moq` / `./moq-auth`. Without
+                // them docker compose fails with "unable to prepare
+                // context: path '<repo>/moq' not found".
+                runProcess(cacheRoot().toFile(), "git", "clone", "--recurse-submodules", REPO_URL, "nests")
             }
             // Always fetch + checkout the requested revision so test runs
-            // are reproducible even if `main` advances.
+            // are reproducible even if `main` advances. Sync submodules to
+            // whatever the checked-out commit pins.
             runProcess(target, "git", "fetch", "origin", "--quiet")
             runProcess(target, "git", "checkout", "--quiet", rev)
+            runProcess(target, "git", "submodule", "update", "--init", "--recursive")
             return target
         }
 
