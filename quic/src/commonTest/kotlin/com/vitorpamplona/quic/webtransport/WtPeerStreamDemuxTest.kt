@@ -102,6 +102,59 @@ class WtPeerStreamDemuxTest {
     }
 
     @Test
+    fun goaway_id_increasing_after_initial_value_is_rejected() {
+        // Audit-4 #5: RFC 9114 §5.2 — GOAWAY ids MUST NOT increase. The
+        // demux's `route` catches the resulting QuicCodecException so the
+        // stream black-holes; the previously recorded id stays put.
+        runBlocking {
+            val stream = QuicStream(3L, QuicStream.Direction.UNIDIRECTIONAL_REMOTE_TO_LOCAL)
+            val demuxScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+            val demux = WtPeerStreamDemux(expectedConnectStreamId = 0L, scope = demuxScope)
+            demux.process(stream)
+
+            val typePrefix = QuicWriter().also { it.writeVarint(Http3StreamType.CONTROL) }.toByteArray()
+            val settingsFrame = Http3Settings(emptyMap()).encodeFrame()
+            // First GOAWAY = 8.
+            val ga1Body = QuicWriter().also { it.writeVarint(8L) }.toByteArray()
+            val ga1 =
+                QuicWriter()
+                    .apply {
+                        writeVarint(Http3FrameType.GOAWAY)
+                        writeVarint(ga1Body.size.toLong())
+                        writeBytes(ga1Body)
+                    }.toByteArray()
+            // Second GOAWAY = 12 (illegal; must be ≤ 8).
+            val ga2Body = QuicWriter().also { it.writeVarint(12L) }.toByteArray()
+            val ga2 =
+                QuicWriter()
+                    .apply {
+                        writeVarint(Http3FrameType.GOAWAY)
+                        writeVarint(ga2Body.size.toLong())
+                        writeBytes(ga2Body)
+                    }.toByteArray()
+
+            stream.deliverIncoming(typePrefix)
+            stream.deliverIncoming(settingsFrame)
+            stream.deliverIncoming(ga1)
+            stream.deliverIncoming(ga2)
+            stream.closeIncoming()
+
+            // Wait for the demux to observe the first GOAWAY.
+            val ok =
+                withTimeoutOrNull(2_000L) {
+                    while (demux.peerGoawayStreamId == null) delay(5)
+                    true
+                }
+            assertEquals(true, ok)
+            // First GOAWAY recorded; second one was rejected by the
+            // QuicCodecException + outer route catch.
+            assertEquals(8L, demux.peerGoawayStreamId)
+
+            demuxScope.cancel()
+        }
+    }
+
+    @Test
     fun control_stream_without_goaway_leaves_peer_goaway_null() {
         runBlocking {
             // Same setup minus the GOAWAY frame — peerGoawayStreamId stays null,
