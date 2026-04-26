@@ -59,6 +59,12 @@ import kotlinx.coroutines.sync.withLock
  *     per-connection in SQLite — `journal_mode=WAL` is the only
  *     database-wide one; subsequent connections inherit it).
  *  3. [close] drains the reader channel and closes every connection.
+ *
+ * Reentrancy: [Mutex] is **not** reentrant — calling [useWriter] (or, on
+ * an in-memory DB, [useReader]) from inside an already-acquired
+ * [useWriter] block deadlocks. Module logic that runs under [useWriter]
+ * (e.g. `innerInsertEvent`) must operate on the `SQLiteConnection`
+ * handed to its block; it must not re-enter the pool.
  */
 class SQLiteConnectionPool(
     val driver: SQLiteDriver,
