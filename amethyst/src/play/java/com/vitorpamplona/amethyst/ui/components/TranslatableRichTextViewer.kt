@@ -34,11 +34,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -47,13 +45,13 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.os.ConfigurationCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.service.lang.LanguageTranslatorService
 import com.vitorpamplona.amethyst.service.lang.TranslationsCache
-import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -61,9 +59,9 @@ import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.MaxWidthPaddingTop5dp
 import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.tasks.await
 import java.util.Locale
 
 @Composable
@@ -107,51 +105,109 @@ fun TranslatableRichTextViewer(
     accountViewModel: AccountViewModel,
     displayText: @Composable (String) -> Unit,
 ) {
-    var translatedTextState by translateAndWatchLanguageChanges(content, id, accountViewModel)
+    val languages = accountViewModel.account.settings.syncedSettings.languages
+    val translateTo by languages.translateTo.collectAsStateWithLifecycle()
+    val dontTranslateFrom by languages.dontTranslateFrom.collectAsStateWithLifecycle()
+    val languagePreferences by languages.languagePreferences.collectAsStateWithLifecycle()
 
-    CrossfadeIfEnabled(targetState = translatedTextState, accountViewModel = accountViewModel) {
-        RenderTextWithTranslateOptions(
-            translatedTextState = it,
-            content = content,
-            translationMessageModifier = translationMessageModifier,
-            accountViewModel = accountViewModel,
-            displayText = displayText,
-        )
+    val translatedTextState =
+        remember(id, content, translateTo, dontTranslateFrom) {
+            mutableStateOf(
+                TranslationsCache.get(content, translateTo, dontTranslateFrom)
+                    ?: TranslationConfig(content, null, null),
+            )
+        }
+
+    LaunchedEffect(content, translateTo, dontTranslateFrom) {
+        TranslationsCache.get(content, translateTo, dontTranslateFrom)?.let {
+            translatedTextState.value = it
+            return@LaunchedEffect
+        }
+
+        val noOp = TranslationConfig(content, null, null)
+        try {
+            val task = LanguageTranslatorService.autoTranslate(content, dontTranslateFrom, translateTo)
+            // ML Kit cancels the task to signal "no translation needed" (same language, "und",
+            // blocklisted). await() bridges that into a CancellationException; cache the no-op so
+            // we don't re-run language identification next time the same text scrolls into view.
+            val raw =
+                try {
+                    task.await()
+                } catch (e: CancellationException) {
+                    coroutineContext.ensureActive()
+                    TranslationsCache.set(content, translateTo, dontTranslateFrom, noOp)
+                    translatedTextState.value = noOp
+                    return@LaunchedEffect
+                }
+
+            coroutineContext.ensureActive()
+
+            val translated = raw.result
+            val source = raw.sourceLang
+            val target = raw.targetLang
+            val newConfig =
+                if (
+                    translated != null &&
+                    source != null &&
+                    target != null &&
+                    source != target &&
+                    translated != content
+                ) {
+                    TranslationConfig(translated, source, target)
+                } else {
+                    noOp
+                }
+            TranslationsCache.set(content, translateTo, dontTranslateFrom, newConfig)
+            translatedTextState.value = newConfig
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            // Network / model download / translator failure — keep showing the original. Do not
+            // cache: a transient failure shouldn't block future attempts on the same text.
+        }
     }
+
+    RenderTextWithTranslateOptions(
+        translatedTextState = translatedTextState.value,
+        content = content,
+        languagePreferences = languagePreferences,
+        translationMessageModifier = translationMessageModifier,
+        accountViewModel = accountViewModel,
+        displayText = displayText,
+    )
 }
 
 @Composable
 private fun RenderTextWithTranslateOptions(
     translatedTextState: TranslationConfig,
     content: String,
+    languagePreferences: Map<String, String>,
     translationMessageModifier: Modifier = MaxWidthPaddingTop5dp,
     accountViewModel: AccountViewModel,
     displayText: @Composable (String) -> Unit,
 ) {
-    var showOriginal by
-        remember(translatedTextState) { mutableStateOf(translatedTextState.showOriginal) }
+    val source = translatedTextState.sourceLang
+    val target = translatedTextState.targetLang
+    val translationOccurred = source != null && target != null && source != target
 
-    val toBeViewed by
-        remember(translatedTextState) {
-            derivedStateOf { if (showOriginal) content else translatedTextState.result ?: content }
+    val storedPreference = if (translationOccurred) languagePreferences["$source,$target"] else null
+    var showOriginal by
+        remember(translatedTextState, storedPreference) {
+            mutableStateOf(storedPreference == source)
         }
+
+    val toBeViewed = if (showOriginal || !translationOccurred) content else translatedTextState.result
 
     Column {
         displayText(toBeViewed)
 
-        if (
-            translatedTextState.sourceLang != null &&
-            translatedTextState.targetLang != null &&
-            translatedTextState.sourceLang != translatedTextState.targetLang
-        ) {
+        if (translationOccurred) {
             TranslationMessage(
-                translatedTextState.sourceLang,
-                translatedTextState.targetLang,
-                translationMessageModifier,
-                accountViewModel,
-            ) {
-                showOriginal = it
-            }
+                source = source,
+                target = target,
+                modifier = translationMessageModifier,
+                accountViewModel = accountViewModel,
+            ) { showOriginal = it }
         }
     }
 }
@@ -165,21 +221,24 @@ private fun TranslationMessage(
     onChangeWhatToShow: (Boolean) -> Unit,
 ) {
     var langSettingsPopupExpanded by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
 
-    Row(
-        modifier = modifier,
-    ) {
+    val sourceDisplay = remember(source) { Locale.forLanguageTag(source).displayName }
+    val targetDisplay = remember(target) { Locale.forLanguageTag(target).displayName }
+    val autoLabel = stringRes(R.string.translations_auto)
+    val translatedFromLabel = stringRes(R.string.translations_translated_from)
+    val toLabel = stringRes(R.string.translations_to)
+
+    Row(modifier = modifier) {
         val textColor = MaterialTheme.colorScheme.lessImportantLink
 
         Text(
             text =
                 buildAnnotatedString {
-                    appendLink(stringRes(R.string.translations_auto), textColor) { langSettingsPopupExpanded = !langSettingsPopupExpanded }
-                    append(" ${stringRes(R.string.translations_translated_from)} ")
-                    appendLink(Locale.forLanguageTag(source).displayName, textColor) { onChangeWhatToShow(true) }
-                    append(" ${stringRes(R.string.translations_to)} ")
-                    appendLink(Locale.forLanguageTag(target).displayName, textColor) { onChangeWhatToShow(false) }
+                    appendLink(autoLabel, textColor) { langSettingsPopupExpanded = !langSettingsPopupExpanded }
+                    append(" $translatedFromLabel ")
+                    appendLink(sourceDisplay, textColor) { onChangeWhatToShow(true) }
+                    append(" $toLabel ")
+                    appendLink(targetDisplay, textColor) { onChangeWhatToShow(false) }
                 },
             style =
                 LocalTextStyle.current.copy(
@@ -190,198 +249,109 @@ private fun TranslationMessage(
             maxLines = 3,
         )
 
-        DropdownMenu(
-            expanded = langSettingsPopupExpanded,
-            onDismissRequest = { langSettingsPopupExpanded = false },
-        ) {
-            DropdownMenuItem(
-                text = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (source in accountViewModel.dontTranslateFrom()) {
-                            Icon(
-                                symbol = MaterialSymbols.Check,
-                                contentDescription = null,
-                                modifier = Modifier.size(24.dp),
-                            )
-                        } else {
-                            Spacer(modifier = Modifier.size(24.dp))
-                        }
-
-                        Spacer(modifier = Modifier.size(10.dp))
-
-                        Text(
-                            stringRes(
-                                R.string.translations_never_translate_from_lang,
-                                Locale.forLanguageTag(source).displayName,
-                            ),
-                        )
-                    }
-                },
-                onClick = {
-                    accountViewModel.toggleDontTranslateFrom(source)
-                    langSettingsPopupExpanded = false
-                },
+        if (langSettingsPopupExpanded) {
+            LangSettingsDropdown(
+                expanded = true,
+                source = source,
+                target = target,
+                sourceDisplay = sourceDisplay,
+                targetDisplay = targetDisplay,
+                accountViewModel = accountViewModel,
+                onDismiss = { langSettingsPopupExpanded = false },
             )
-            HorizontalDivider(thickness = DividerThickness)
-            DropdownMenuItem(
-                text = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (accountViewModel.account.settings.preferenceBetween(source, target) == source) {
-                            Icon(
-                                symbol = MaterialSymbols.Check,
-                                contentDescription = null,
-                                modifier = Modifier.size(24.dp),
-                            )
-                        } else {
-                            Spacer(modifier = Modifier.size(24.dp))
-                        }
-
-                        Spacer(modifier = Modifier.size(10.dp))
-
-                        Text(
-                            stringRes(
-                                R.string.translations_show_in_lang_first,
-                                Locale.forLanguageTag(source).displayName,
-                            ),
-                        )
-                    }
-                },
-                onClick = {
-                    accountViewModel.prefer(source, target, source)
-                    langSettingsPopupExpanded = false
-                },
-            )
-            DropdownMenuItem(
-                text = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (accountViewModel.account.settings.syncedSettings.languages
-                                .preferenceBetween(source, target) == target
-                        ) {
-                            Icon(
-                                symbol = MaterialSymbols.Check,
-                                contentDescription = null,
-                                modifier = Modifier.size(24.dp),
-                            )
-                        } else {
-                            Spacer(modifier = Modifier.size(24.dp))
-                        }
-
-                        Spacer(modifier = Modifier.size(10.dp))
-
-                        Text(
-                            stringRes(
-                                R.string.translations_show_in_lang_first,
-                                Locale.forLanguageTag(target).displayName,
-                            ),
-                        )
-                    }
-                },
-                onClick = {
-                    scope.launch(Dispatchers.IO) {
-                        accountViewModel.prefer(source, target, target)
-                        langSettingsPopupExpanded = false
-                    }
-                },
-            )
-            HorizontalDivider(thickness = DividerThickness)
-
-            val languageList = ConfigurationCompat.getLocales(Resources.getSystem().configuration)
-            for (i in 0 until languageList.size()) {
-                languageList.get(i)?.let { lang ->
-                    DropdownMenuItem(
-                        text = {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                if (accountViewModel.account.settings.translateToContains(lang.language)) {
-                                    Icon(
-                                        symbol = MaterialSymbols.Check,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(24.dp),
-                                    )
-                                } else {
-                                    Spacer(modifier = Modifier.size(24.dp))
-                                }
-
-                                Spacer(modifier = Modifier.size(10.dp))
-
-                                Text(
-                                    stringRes(
-                                        R.string.translations_always_translate_to_lang,
-                                        lang.displayName,
-                                    ),
-                                )
-                            }
-                        },
-                        onClick = {
-                            langSettingsPopupExpanded = false
-                            accountViewModel.updateTranslateTo(lang.language)
-                        },
-                    )
-                }
-            }
         }
     }
 }
 
 @Composable
-fun translateAndWatchLanguageChanges(
-    content: String,
-    id: String,
+private fun LangSettingsDropdown(
+    expanded: Boolean,
+    source: String,
+    target: String,
+    sourceDisplay: String,
+    targetDisplay: String,
     accountViewModel: AccountViewModel,
-): MutableState<TranslationConfig> {
-    val translatedTextState = remember(id) { mutableStateOf(TranslationsCache.get(content)) }
-
-    TranslateAndWatchLanguageChanges(
-        content,
-        accountViewModel,
-    ) { result ->
-        if (
-            !translatedTextState.value.result.equals(result.result, true) ||
-            translatedTextState.value.sourceLang != result.sourceLang ||
-            translatedTextState.value.targetLang != result.targetLang
-        ) {
-            TranslationsCache.set(content, result)
-            translatedTextState.value = result
-        }
-    }
-
-    return translatedTextState
-}
-
-@Composable
-fun TranslateAndWatchLanguageChanges(
-    content: String,
-    accountViewModel: AccountViewModel,
-    onTranslated: (TranslationConfig) -> Unit,
+    onDismiss: () -> Unit,
 ) {
-    LaunchedEffect(Unit) {
-        // This takes some time. Launches as a Composition scope to make sure this gets cancel if this
-        // item gets out of view.
-        withContext(Dispatchers.IO) {
-            LanguageTranslatorService
-                .autoTranslate(
-                    content,
-                    accountViewModel.dontTranslateFrom(),
-                    accountViewModel.translateTo(),
-                ).addOnCompleteListener { task ->
-                    if (task.isSuccessful && !content.equals(task.result.result, true)) {
-                        if (task.result.sourceLang != null && task.result.targetLang != null) {
-                            val preference =
-                                accountViewModel.account.settings.preferenceBetween(
-                                    task.result.sourceLang!!,
-                                    task.result.targetLang!!,
-                                )
-                            val newConfig =
-                                TranslationConfig(
-                                    result = task.result.result,
-                                    sourceLang = task.result.sourceLang,
-                                    targetLang = task.result.targetLang,
-                                    showOriginal = preference == task.result.sourceLang,
-                                )
-
-                            onTranslated(newConfig)
-                        }
-                    }
-                }
+    val deviceLocales =
+        remember {
+            val list = ConfigurationCompat.getLocales(Resources.getSystem().configuration)
+            (0 until list.size()).mapNotNull { list.get(it) }
         }
+
+    DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
+        DropdownMenuItem(
+            text = {
+                CheckmarkRow(
+                    checked = source in accountViewModel.dontTranslateFrom(),
+                    label = stringRes(R.string.translations_never_translate_from_lang, sourceDisplay),
+                )
+            },
+            onClick = {
+                accountViewModel.toggleDontTranslateFrom(source)
+                onDismiss()
+            },
+        )
+        HorizontalDivider(thickness = DividerThickness)
+        DropdownMenuItem(
+            text = {
+                CheckmarkRow(
+                    checked = accountViewModel.account.settings.preferenceBetween(source, target) == source,
+                    label = stringRes(R.string.translations_show_in_lang_first, sourceDisplay),
+                )
+            },
+            onClick = {
+                accountViewModel.prefer(source, target, source)
+                onDismiss()
+            },
+        )
+        DropdownMenuItem(
+            text = {
+                CheckmarkRow(
+                    checked = accountViewModel.account.settings.preferenceBetween(source, target) == target,
+                    label = stringRes(R.string.translations_show_in_lang_first, targetDisplay),
+                )
+            },
+            onClick = {
+                accountViewModel.prefer(source, target, target)
+                onDismiss()
+            },
+        )
+        HorizontalDivider(thickness = DividerThickness)
+
+        for (lang in deviceLocales) {
+            DropdownMenuItem(
+                text = {
+                    CheckmarkRow(
+                        checked = accountViewModel.account.settings.translateToContains(lang.language),
+                        label = stringRes(R.string.translations_always_translate_to_lang, lang.displayName),
+                    )
+                },
+                onClick = {
+                    onDismiss()
+                    accountViewModel.updateTranslateTo(lang.language)
+                },
+            )
+        }
+    }
+}
+
+@Composable
+private fun CheckmarkRow(
+    checked: Boolean,
+    label: String,
+) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        if (checked) {
+            Icon(
+                symbol = MaterialSymbols.Check,
+                contentDescription = null,
+                modifier = Modifier.size(24.dp),
+            )
+        } else {
+            Spacer(modifier = Modifier.size(24.dp))
+        }
+        Spacer(modifier = Modifier.size(10.dp))
+        Text(label)
     }
 }

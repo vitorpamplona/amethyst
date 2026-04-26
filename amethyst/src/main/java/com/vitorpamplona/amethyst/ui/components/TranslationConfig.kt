@@ -22,10 +22,17 @@ package com.vitorpamplona.amethyst.ui.components
 
 import androidx.compose.runtime.Immutable
 
+/**
+ * The current translation state for a piece of content.
+ *
+ * `sourceLang` and `targetLang` are non-null only when an actual translation took place;
+ * a no-op (same language, undetected, blocklisted) keeps both null and `result` equal to the
+ * original content. The user-facing "show original" toggle is derived live from
+ * `AccountLanguagePreferences.preferenceBetween(...)` and is not stored here.
+ */
 @Immutable
 data class TranslationConfig(
-    val result: String?,
+    val result: String,
     val sourceLang: String?,
     val targetLang: String?,
-    val showOriginal: Boolean,
 )
