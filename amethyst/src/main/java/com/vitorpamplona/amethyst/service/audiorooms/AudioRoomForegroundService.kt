@@ -57,6 +57,7 @@ import com.vitorpamplona.amethyst.ui.MainActivity
 class AudioRoomForegroundService : Service() {
     private var wakeLock: PowerManager.WakeLock? = null
     private var promoted = false
+    private var audioFocusRequest: android.media.AudioFocusRequest? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -65,6 +66,43 @@ class AudioRoomForegroundService : Service() {
             (getSystemService(Context.POWER_SERVICE) as PowerManager)
                 .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "amethyst:audio-room")
                 .apply { setReferenceCounted(false) }
+        requestAudioFocus()
+    }
+
+    /**
+     * Request transient-may-duck audio focus so an inbound phone
+     * call lowers the room volume cleanly instead of mixing two
+     * voices on top of each other. Acquired once per service
+     * lifetime; released in [onDestroy].
+     */
+    private fun requestAudioFocus() {
+        if (audioFocusRequest != null) return
+        val mgr = getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
+        val attrs =
+            android.media.AudioAttributes
+                .Builder()
+                .setUsage(android.media.AudioAttributes.USAGE_VOICE_COMMUNICATION)
+                .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SPEECH)
+                .build()
+        val request =
+            android.media.AudioFocusRequest
+                .Builder(android.media.AudioManager.AUDIOFOCUS_GAIN)
+                .setAudioAttributes(attrs)
+                .setAcceptsDelayedFocusGain(false)
+                .setOnAudioFocusChangeListener({ /* no-op — duck-on-loss handled by the OS */ })
+                .build()
+        // Best-effort: a refused request just means the OS will
+        // duck/pause us based on its own policy. Don't fail the
+        // service start over a focus denial.
+        runCatching { mgr.requestAudioFocus(request) }
+        audioFocusRequest = request
+    }
+
+    private fun abandonAudioFocus() {
+        val request = audioFocusRequest ?: return
+        val mgr = getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
+        runCatching { mgr.abandonAudioFocusRequest(request) }
+        audioFocusRequest = null
     }
 
     override fun onStartCommand(
@@ -173,6 +211,7 @@ class AudioRoomForegroundService : Service() {
     override fun onDestroy() {
         wakeLock?.takeIf { it.isHeld }?.release()
         wakeLock = null
+        abandonAudioFocus()
         super.onDestroy()
     }
 
