@@ -71,6 +71,20 @@ class MeetingSpaceEvent(
 
     fun endpoint() = tags.firstNotNullOfOrNull(EndpointUrlTag::parse)
 
+    /**
+     * Theme tints — every `["c", hex, "background"|"text"|"primary"]`
+     * tag, in event order. Clients use the first hex per target;
+     * extras are spec-defined as fallbacks for clients with palette
+     * support (out of scope for v1).
+     */
+    fun colors() = tags.mapNotNull(com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.ColorTag::parse)
+
+    /**
+     * Background image / pattern for the room screen. Returns the
+     * first valid `["bg", url, mode]` tag.
+     */
+    fun background() = tags.firstNotNullOfOrNull(com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.BackgroundTag::parse)
+
     fun relays() = tags.mapNotNull(RelayListTag::parse).flatten()
 
     fun allRelayUrls() = tags.mapNotNull(RelayListTag::parse).flatten()
