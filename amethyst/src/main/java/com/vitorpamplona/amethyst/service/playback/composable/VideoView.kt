@@ -105,15 +105,29 @@ fun VideoView(
     thumbhash: String? = null,
 ) {
     val initialAutoStart = if (alwaysShowVideo) true else accountViewModel.settings.startVideoPlayback()
-    val automaticallyStartPlayback = remember { mutableStateOf(initialAutoStart) }
+    // Reset the manual-show toggle when the video URI changes so a recycled feed slot
+    // doesn't inherit "tapped to show" state from a prior video.
+    val automaticallyStartPlayback = remember(videoUri) { mutableStateOf(initialAutoStart) }
 
     // Once the video is being shown, only honor the user's autoplay preference when it was auto-loaded.
     // If the user manually tapped the download button, they want it to play.
     val autoplay = alwaysShowVideo || (initialAutoStart && accountViewModel.settings.autoPlayVideos()) || (!initialAutoStart && automaticallyStartPlayback.value)
 
-    if (blurhash == null && thumbhash == null) {
-        val ratio = dimensions?.aspectRatio() ?: MediaAspectRatioCache.get(videoUri)
+    // Resolve the aspect ratio once per composition. Prime the URL-keyed cache from the imeta
+    // dim tag so the next time this video appears (PiP, dialog, list re-enter) the cache hits
+    // without waiting for ExoPlayer's onVideoSizeChanged.
+    val ratio =
+        remember(videoUri, dimensions) {
+            val fromDim = dimensions?.takeIf { it.hasSize() }
+            if (fromDim != null) {
+                MediaAspectRatioCache.add(videoUri, fromDim.width, fromDim.height)
+                fromDim.aspectRatio()
+            } else {
+                MediaAspectRatioCache.get(videoUri)
+            }
+        }
 
+    if (blurhash == null && thumbhash == null) {
         val modifier =
             if (ratio != null && automaticallyStartPlayback.value) {
                 Modifier.aspectRatio(ratio)
@@ -149,8 +163,6 @@ fun VideoView(
             }
         }
     } else {
-        val ratio = dimensions?.aspectRatio() ?: MediaAspectRatioCache.get(videoUri)
-
         val modifier =
             if (ratio != null) {
                 Modifier.aspectRatio(ratio)

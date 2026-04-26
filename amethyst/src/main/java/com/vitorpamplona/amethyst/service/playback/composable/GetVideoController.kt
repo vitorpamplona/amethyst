@@ -52,7 +52,7 @@ fun GetVideoController(
                 if (BackgroundMedia.isPlaying()) {
                     // There is a video playing, start this one on mute.
                     state.controller.volume = 0f
-                    Log.d("PlaybackService", "OnEach Muted due to BackgroundMedia.isPlaying")
+                    Log.d("PlaybackService") { "OnEach Muted due to BackgroundMedia.isPlaying" }
                 } else {
                     // There is no other video playing. Use the default mute state to
                     // decide if sound is on or not.

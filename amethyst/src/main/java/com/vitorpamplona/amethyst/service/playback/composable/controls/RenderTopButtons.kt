@@ -105,7 +105,7 @@ fun RenderTopButtons(
     accountViewModel: AccountViewModel,
 ) {
     val context = LocalContext.current
-    val isLive = isLiveStreaming(mediaData.videoUri)
+    val isLive = remember(mediaData.videoUri) { isLiveStreaming(mediaData.videoUri) }
     val pipSupported =
         remember {
             context.packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)
