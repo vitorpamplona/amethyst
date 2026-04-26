@@ -534,6 +534,8 @@
     <string name="audio_room_edit_save">Save</string>
     <string name="audio_room_close_action">Close room</string>
     <string name="audio_room_overflow_menu">Room actions</string>
+    <string name="audio_room_hand_raise_queue_title">Raised hands</string>
+    <string name="audio_room_hand_raise_approve">Approve</string>
     <string name="audio_room_create_fab">Start space</string>
     <string name="audio_room_create_title">Start a new audio room</string>
     <string name="audio_room_create_field_room">Room name</string>

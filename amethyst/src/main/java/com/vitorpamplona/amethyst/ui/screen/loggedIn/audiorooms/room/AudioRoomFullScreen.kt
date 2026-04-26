@@ -190,6 +190,14 @@ internal fun AudioRoomFullScreen(
             )
         }
 
+        if (isHost) {
+            HandRaiseQueueSection(
+                event = event,
+                viewModel = viewModel,
+                accountViewModel = accountViewModel,
+            )
+        }
+
         ConnectionRow(viewModel = viewModel, ui = ui)
 
         val myPubkey = accountViewModel.account.signer.pubKey
