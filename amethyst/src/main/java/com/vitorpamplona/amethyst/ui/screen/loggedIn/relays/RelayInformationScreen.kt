@@ -543,6 +543,7 @@ fun kindDisplayName(kind: Int): Int =
         BadgeDefinitionEvent.KIND -> R.string.kind_badge_definitions
         BlockedRelayListEvent.KIND -> R.string.kind_blocked_relays
         BlossomServersEvent.KIND -> R.string.kind_blossom_servers
+        com.vitorpamplona.quartz.nip53LiveActivities.nestsServers.NestsServersEvent.KIND -> R.string.kind_nests_servers
         BlossomAuthorizationEvent.KIND -> R.string.kind_blossom_auth
         BroadcastRelayListEvent.KIND -> R.string.kind_broadcast_relays
         BookmarkListEvent.KIND -> R.string.kind_bookmark_list

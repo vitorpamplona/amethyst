@@ -379,6 +379,10 @@ class Account(
 
     val blossomServers = BlossomServerListState(signer, cache, scope, settings)
 
+    val nestsServers =
+        com.vitorpamplona.amethyst.model.nip53NestsServers
+            .NestsServerListState(signer, cache, scope)
+
     // Relay settings
     val homeRelays = AccountHomeRelayState(nip65RelayList, privateStorageRelayList, localRelayList, scope)
     val outboxRelays = AccountOutboxRelayState(nip65RelayList, privateStorageRelayList, localRelayList, broadcastRelayList, scope)
@@ -3001,6 +3005,7 @@ class Account(
             bookmarkState.getBookmarkList(),
             pinState.getPinList(),
             blossomServers.getBlossomServersList(),
+            nestsServers.getNestsServersList(),
             paymentTargetsState.getPaymentTargetsEvent(),
             trustProviderList.getTrustProviderList(),
             cache.getAddressableNoteIfExists(appSpecific.getAppSpecificDataAddress())?.event,
@@ -3068,6 +3073,8 @@ class Account(
     }
 
     suspend fun sendBlossomServersList(servers: List<String>) = sendMyPublicAndPrivateOutbox(blossomServers.saveBlossomServersList(servers))
+
+    suspend fun sendNestsServersList(servers: List<String>) = sendMyPublicAndPrivateOutbox(nestsServers.saveNestsServersList(servers))
 
     suspend fun savePaymentTargets(targets: List<PaymentTarget>) = sendMyPublicAndPrivateOutbox(paymentTargetsState.savePaymentTargets(targets))
 

@@ -1,0 +1,197 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.audiorooms.create
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.audiorooms.room.AudioRoomActivity
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.audiorooms.room.AudioRoomBridge
+import com.vitorpamplona.amethyst.ui.stringRes
+import kotlinx.coroutines.launch
+
+/**
+ * Bottom sheet that lets the logged-in user start a new NIP-53 kind 30312
+ * audio room. On submit, [CreateAudioRoomViewModel] builds and signs the
+ * MeetingSpaceEvent (with the user as `host`), broadcasts it to the
+ * account's relays, and then launches [AudioRoomActivity] against the
+ * fresh address — the user lands inside the room as host with the
+ * Talk button enabled.
+ *
+ * Hidden by default; surfaced by the "Start space" FAB on
+ * [com.vitorpamplona.amethyst.ui.screen.loggedIn.audiorooms.AudioRoomsScreen].
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CreateAudioRoomSheet(
+    accountViewModel: AccountViewModel,
+    onDismiss: () -> Unit,
+) {
+    val viewModelKey = remember(accountViewModel) { accountViewModel.account.userProfile().pubkeyHex }
+    val viewModel: CreateAudioRoomViewModel =
+        viewModel(key = "CreateAudioRoom-$viewModelKey")
+    LaunchedEffect(viewModel) { viewModel.bindAccountIfMissing(accountViewModel) }
+
+    val state by viewModel.state.collectAsState()
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = stringRes(R.string.audio_room_create_title),
+                style = MaterialTheme.typography.titleLarge,
+            )
+
+            OutlinedTextField(
+                value = state.roomName,
+                onValueChange = viewModel::onRoomNameChange,
+                label = { Text(stringRes(R.string.audio_room_create_field_room)) },
+                singleLine = true,
+                isError = state.error != null && state.roomName.isBlank(),
+                modifier = Modifier.fillMaxWidth(),
+            )
+
+            OutlinedTextField(
+                value = state.summary,
+                onValueChange = viewModel::onSummaryChange,
+                label = { Text(stringRes(R.string.audio_room_create_field_summary)) },
+                modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+            )
+
+            OutlinedTextField(
+                value = state.serviceUrl,
+                onValueChange = viewModel::onServiceUrlChange,
+                label = { Text(stringRes(R.string.audio_room_create_field_service)) },
+                singleLine = true,
+                isError = state.error != null && state.serviceUrl.isBlank(),
+                supportingText = { Text(stringRes(R.string.audio_room_create_field_service_hint)) },
+                modifier = Modifier.fillMaxWidth(),
+            )
+
+            OutlinedTextField(
+                value = state.endpointUrl,
+                onValueChange = viewModel::onEndpointUrlChange,
+                label = { Text(stringRes(R.string.audio_room_create_field_endpoint)) },
+                singleLine = true,
+                isError = state.error != null && state.endpointUrl.isBlank(),
+                supportingText = { Text(stringRes(R.string.audio_room_create_field_endpoint_hint)) },
+                modifier = Modifier.fillMaxWidth(),
+            )
+
+            OutlinedTextField(
+                value = state.imageUrl,
+                onValueChange = viewModel::onImageUrlChange,
+                label = { Text(stringRes(R.string.audio_room_create_field_image)) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+
+            state.error?.let { error ->
+                Text(
+                    text = error,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+
+            Spacer(Modifier.height(4.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+            ) {
+                TextButton(onClick = onDismiss, enabled = !state.isPublishing) {
+                    Text(stringRes(R.string.audio_room_create_cancel))
+                }
+                Spacer(Modifier.width(8.dp))
+                Button(
+                    onClick = {
+                        scope.launch {
+                            val launchInfo = viewModel.publishAndBuildLaunchInfo() ?: return@launch
+                            // Hand the active AccountViewModel to the
+                            // separately-tasked AudioRoomActivity (mirrors
+                            // the join-card flow).
+                            AudioRoomBridge.set(accountViewModel)
+                            AudioRoomActivity.launch(
+                                context = context,
+                                addressValue = launchInfo.addressValue,
+                                authBaseUrl = launchInfo.authBaseUrl,
+                                endpoint = launchInfo.endpoint,
+                                hostPubkey = launchInfo.hostPubkey,
+                                roomId = launchInfo.roomId,
+                                kind = launchInfo.kind,
+                            )
+                            onDismiss()
+                        }
+                    },
+                    enabled = !state.isPublishing && state.canSubmit,
+                ) {
+                    if (state.isPublishing) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            strokeWidth = 2.dp,
+                        )
+                    } else {
+                        Text(stringRes(R.string.audio_room_create_submit))
+                    }
+                }
+            }
+        }
+    }
+}

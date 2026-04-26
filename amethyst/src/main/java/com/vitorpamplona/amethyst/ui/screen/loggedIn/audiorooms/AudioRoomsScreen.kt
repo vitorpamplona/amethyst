@@ -20,10 +20,18 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.audiorooms
 
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.feeds.RenderFeedContentState
@@ -35,7 +43,9 @@ import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.audiorooms.create.CreateAudioRoomSheet
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.audiorooms.datasource.AudioRoomsFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.ui.stringRes
 
 @Composable
 fun AudioRoomsScreen(
@@ -59,6 +69,8 @@ fun AudioRoomsScreen(
     WatchAccountForAudioRoomsScreen(audioRoomsFeedState = audioRoomsFeedContentState, accountViewModel = accountViewModel)
     AudioRoomsFilterAssemblerSubscription(accountViewModel)
 
+    var showCreateSheet by remember { mutableStateOf(false) }
+
     DisappearingScaffold(
         isInvertedLayout = false,
         topBar = {
@@ -71,6 +83,17 @@ fun AudioRoomsScreen(
                 } else {
                     nav.navBottomBar(route)
                 }
+            }
+        },
+        floatingButton = {
+            FloatingActionButton(
+                onClick = { showCreateSheet = true },
+                shape = CircleShape,
+            ) {
+                Icon(
+                    symbol = MaterialSymbols.Add,
+                    contentDescription = stringRes(R.string.audio_room_create_fab),
+                )
             }
         },
         accountViewModel = accountViewModel,
@@ -94,6 +117,13 @@ fun AudioRoomsScreen(
                 )
             }
         }
+    }
+
+    if (showCreateSheet) {
+        CreateAudioRoomSheet(
+            accountViewModel = accountViewModel,
+            onDismiss = { showCreateSheet = false },
+        )
     }
 }
 

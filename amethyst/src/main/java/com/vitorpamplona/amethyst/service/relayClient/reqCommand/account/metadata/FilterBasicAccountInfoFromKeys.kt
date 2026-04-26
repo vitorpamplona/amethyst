@@ -52,6 +52,7 @@ val BasicAccountInfoKinds =
         SearchRelayListEvent.KIND,
         FileServersEvent.KIND,
         BlossomServersEvent.KIND,
+        com.vitorpamplona.quartz.nip53LiveActivities.nestsServers.NestsServersEvent.KIND,
     )
 
 val BasicAccountInfoKinds2 =

@@ -58,6 +58,7 @@ val AccountInfoAndListsFromKeyKinds =
         SearchRelayListEvent.KIND,
         FileServersEvent.KIND,
         BlossomServersEvent.KIND,
+        com.vitorpamplona.quartz.nip53LiveActivities.nestsServers.NestsServersEvent.KIND,
         PrivateOutboxRelayListEvent.KIND,
     )
 
